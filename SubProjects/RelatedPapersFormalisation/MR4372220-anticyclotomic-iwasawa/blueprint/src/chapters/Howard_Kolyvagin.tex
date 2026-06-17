@@ -1,0 +1,213 @@
+\providecommand{\Fcal}{\mathcal{F}}
+\providecommand{\rH}{\mathrm{H}}
+
+\chapter{Howard--Kolyvagin Bound}
+\label{chap:howard-kolyvagin}
+
+% archon:covers MR4372220OnTheAnticyclotomicIwasawaTheoryOfRationalEllipticCurvesAtEisensteinPrimes/Howard.lean
+
+The goal of this chapter is to prove one divisibility of characteristic ideals towards the anticyclotomic Iwasawa main conjecture, following Howard's extension of Kolyvagin-system methods to the residually reducible setting. The argument runs in two sub-phases: an abstract \(\mathbb{Z}_p\)-twisted Selmer-group bound (\cref{thm:Zp-twisted}) and its \(\Lambda\)-adic specialization (\cref{thm:howard}), followed by the construction of a nonzero Kolyvagin system from Heegner points (\cref{thm:howard-HPKS}), combining to give the main divisibility (\cref{thm:howard-HP}).
+
+Throughout, \(E/\mathbb{Q}\) is an elliptic curve of conductor \(N\), \(p \nmid 2N\) a prime of good ordinary reduction for \(E\), and \(K\) an imaginary quadratic field of discriminant \(D_K\) prime to \(Np\) satisfying the Heegner hypothesis and \(E(K)[p] = 0\). We write \(\Gamma = \mathrm{Gal}(K_\infty/K)\) for the Galois group of the anticyclotomic \(\mathbb{Z}_p\)-extension of \(K\), \(\Lambda = \mathbb{Z}_p\llbracket\Gamma\rrbracket\), \(\mathbf{T} = T_p E \otimes_{\mathbb{Z}_p} \Lambda\), and \(M_E = T_p E \otimes_{\mathbb{Z}_p} \Lambda^\vee\) as in \cref{def:iwasawa-algebra}.
+
+\begin{definition}[Selmer triple and Kolyvagin system]
+  \label{def:selmer-triple}
+  \lean{MR4372220.Howard.selmerTriple}
+  \uses{def:iwasawa-algebra}
+  % SOURCE: [MR4372220], §A Kolyvagin system argument, "Selmer structures and Kolyvagin systems" (read from references/MR4372220-anticyclotomic-iwasawa-source/Eisenstein.tex)
+  % SOURCE QUOTE: "As in \cite{howard}, we call a \emph{Selmer triple} $(M,\mathcal{F},\cL)$ the data of a Selmer structure $\mathcal{F}$ on $M$ and a subset $\cL\subset\cL_0$ with $\cL\cap\Sigma(\mathcal{F})=\emptyset$."
+  % SOURCE QUOTE (Kolyvagin system): "A \emph{Kolyvagin system} for a Selmer triple $(T,\Fcal,\cL)$ is a collection of classes $\kappa=\{\kappa_n\in\rH^1_{\Fcal(n)}(K,T/I_nT)\otimes G_n\}_{n\in\cN}$ such that $(\phi_\lambda^{\rm fs}\otimes 1)({\rm loc}_\lambda(\kappa_n))={\rm loc}_\lambda(\kappa_{n\ell})$ for all $n\ell\in\cN$."
+  % SOURCE QUOTE (finite-singular comparison): "Hence by \cite[Lem.~1.2.1]{mazrub} there is a \emph{finite-singular comparison isomorphism} $\phi_\lambda^{\rm fs}:\rH^1_{\rm f}(K_\lambda,T/I_\ell T)\simeq T/I_\ell T\simeq\rH^1_{\rm s}(K_\lambda,T/I_\ell T)\otimes G_\ell.$"
+  \textit{Source: MR4372220, §A Kolyvagin system argument, Selmer structures and Kolyvagin systems.}
+
+  Let \((R, \mathfrak{m})\) be a complete Noetherian local ring with finite residue field of characteristic \(p\), and let \(T\) be a compact \(R\)-module with continuous \(G_K\)-action unramified outside a finite set of primes.
+  A \emph{Selmer structure} \(\mathcal{F}\) on \(T\) is a finite set \(\Sigma = \Sigma(\mathcal{F})\) of places of \(K\) containing \(\infty\), the primes above \(p\), and the ramified primes, together with a choice of \(R\)-submodules (local conditions) \(\rH^1_{\mathcal{F}}(K_w, T) \subset \rH^1(K_w, T)\) for every \(w \in \Sigma\). The associated Selmer group is
+  \[
+    \rH^1_{\mathcal{F}}(K, T) := \ker\!\left\{\rH^1(K^\Sigma/K, T) \to \prod_{w \in \Sigma} \frac{\rH^1(K_w, T)}{\rH^1_{\mathcal{F}}(K_w, T)}\right\}.
+  \]
+
+  Let \(\mathcal{L}_0 = \mathcal{L}_0(T)\) be the set of rational primes \(\ell \neq p\) that are inert in \(K\) and at which \(T\) is unramified. For \(\lambda \mid \ell \in \mathcal{L}_0\), let \(I_\ell\) be the smallest ideal containing \(\ell + 1\) for which \(\mathrm{Frob}_\lambda \in G_{K_\lambda}\) acts trivially on \(T/I_\ell T\), and set \(G_\ell = \mathrm{Gal}(K[\ell]/K[1])\). There is a \emph{finite-singular comparison isomorphism}
+  \[
+    \phi_\lambda^{\mathrm{fs}} : \rH^1_{\mathrm{f}}(K_\lambda, T/I_\ell T) \xrightarrow{\sim} T/I_\ell T \xrightarrow{\sim} \rH^1_{\mathrm{s}}(K_\lambda, T/I_\ell T) \otimes G_\ell.
+  \]
+
+  A \emph{Selmer triple} \((T, \mathcal{F}, \mathcal{L})\) is the data of a Selmer structure \(\mathcal{F}\) on \(T\) and a subset \(\mathcal{L} \subset \mathcal{L}_0\) with \(\mathcal{L} \cap \Sigma(\mathcal{F}) = \emptyset\). For pairwise coprime integers \(a, b, c\) divisible only by primes in \(\mathcal{L}_0\), the \emph{modified Selmer group} \(\rH^1_{\mathcal{F}^a_b(c)}(K, T)\) has \(\Sigma(\mathcal{F}^a_b(c)) = \Sigma(\mathcal{F}) \cup \{w \mid abc\}\) and local conditions equal to \(\rH^1(K_\lambda, T)\) at \(\lambda \mid a\), to zero at \(\lambda \mid b\), to the transverse condition \(\rH^1_{\mathrm{tr}}(K_\lambda, T)\) at \(\lambda \mid c\), and to \(\rH^1_{\mathcal{F}}(K_w, T)\) otherwise.
+
+  For \(n \in \mathcal{N}(\mathcal{L})\) the set of squarefree products of primes in \(\mathcal{L}\), set \(I_n = \sum_{\ell \mid n} I_\ell\) and \(G_n = \bigotimes_{\ell \mid n} G_\ell\). A \emph{Kolyvagin system} for \((T, \mathcal{F}, \mathcal{L})\) is a collection
+  \[
+    \kappa = \bigl\{\kappa_n \in \rH^1_{\mathcal{F}(n)}(K, T/I_n T) \otimes G_n\bigr\}_{n \in \mathcal{N}}
+  \]
+  satisfying \((\phi_\lambda^{\mathrm{fs}} \otimes 1)(\mathrm{loc}_\lambda(\kappa_n)) = \mathrm{loc}_\lambda(\kappa_{n\ell})\) for all \(n\ell \in \mathcal{N}\). The \(R\)-module of Kolyvagin systems is denoted \(\mathbf{KS}(T, \mathcal{F}, \mathcal{L})\).
+
+  The ordinary Selmer structure \(\mathcal{F}_{\mathrm{ord}}\) on \(T_\alpha := T_p E \otimes_{\mathbb{Z}_p} R(\alpha)\) for a character \(\alpha : \Gamma \to R^\times\) uses the image of \(\rH^1(K_w, \mathrm{Fil}_w^+(T_\alpha))\) at primes \(w \mid p\) and the unramified condition elsewhere, where \(\mathrm{Fil}_w^+(T_p E) = \ker(T_p E \to T_p \tilde{E})\) and \(\mathrm{Fil}_w^+(T_\alpha) = \mathrm{Fil}_w^+(T_p E) \otimes_{\mathbb{Z}_p} R(\alpha)\). The \(\Lambda\)-adic Selmer structure \(\mathcal{F}_\Lambda\) on \(\mathbf{T}\) is defined analogously using \(\mathrm{Fil}_w^+(\mathbf{T}) = \mathrm{Fil}_w^+(T_p E) \otimes_{\mathbb{Z}_p} \Lambda\). The set of auxiliary primes is \(\mathcal{L}_E = \{\ell \in \mathcal{L}_0(T_p E) : a_\ell \equiv \ell + 1 \equiv 0 \pmod{p}\}\).
+\end{definition}
+
+\begin{lemma}[\v{C}ebotarev density for Kolyvagin primes]
+  \label{lem:cebotarev-kolyvagin}
+  \lean{MR4372220.Howard.cebotarevKolyvagin}
+  \uses{def:selmer-triple}
+  % SOURCE: [MR4372220], §A Kolyvagin system argument, "Bounding Selmer groups", Čebotarev input (read from references/MR4372220-anticyclotomic-iwasawa-source/Eisenstein.tex)
+  % SOURCE QUOTE: "a Čebotarev density argument provides, for each $k$ and each nontrivial class $x$, a prime $\ell\in\cL^{(k)}$ such that ${\rm loc}_\lambda(x)$ generates $\rH^1_{\rm s}(K_\lambda,T^{(k)}/I_\ell T^{(k)})\otimes G_\ell$"
+  \textit{Source: MR4372220, §A Kolyvagin system argument, Bounding Selmer groups.}
+
+  Let \((T, \mathcal{F}, \mathcal{L})\) be a Selmer triple and let \(k \geq 0\). For every nonzero class \(x \in \rH^1_{\mathcal{F}(n)}(K, T^{(k)})\) in a modified Selmer group with \(n \in \mathcal{N}^{(k)}\), there exists a prime \(\ell \in \mathcal{L}^{(k)} \setminus \{{\rm primes} \mid n\}\) such that
+  \[
+    \mathrm{loc}_\lambda(x) \in \rH^1_{\mathrm{s}}(K_\lambda, T^{(k)}/I_\ell T^{(k)}) \otimes G_\ell
+  \]
+  is a generator (here \(\lambda\) is the prime of \(K\) above \(\ell\) used to define the Kolyvagin system structure).
+\end{lemma}
+
+\begin{proof}
+  \uses{def:selmer-triple}
+  The proof is a standard application of the Čebotarev density theorem. The set \(\mathcal{L}^{(k)}\) consists of primes \(\ell\) for which the Frobenius \(\mathrm{Frob}_\ell\) at \(\ell\) (in \(\mathrm{Gal}(\mathbb{Q}(T^{(k)}, E[I_\ell])/\mathbb{Q})\)) satisfies the Kolyvagin density condition. By the Čebotarev theorem this set has positive density. For a given nonzero class \(x\), the evaluation map \(\mathrm{loc}_\lambda(x)\) is a nonzero element of the singular cohomology at the primes in \(\mathcal{L}^{(k)}\); the density argument provides a prime \(\ell\) where this evaluation is a generator. The finite index set \(\{{\rm primes} \mid n\}\) is excluded by restricting to \(\ell\nmid n\).
+\end{proof}
+
+\begin{lemma}[Kolyvagin inductive step]
+  \label{lem:kolyvagin-inductive-step}
+  \lean{MR4372220.Howard.kolyvaginInductiveStep}
+  \uses{def:selmer-triple, lem:cebotarev-kolyvagin}
+  % SOURCE: [MR4372220], §A Kolyvagin system argument, "Bounding Selmer groups", inductive step (read from references/MR4372220-anticyclotomic-iwasawa-source/Eisenstein.tex)
+  % SOURCE QUOTE: "the class $\kappa_{n\ell}$ in the modified Selmer group bounds the length of $M^{(k)}(n)$"
+  \textit{Source: MR4372220, §A Kolyvagin system argument, Bounding Selmer groups, inductive step.}
+
+  Let \((T, \mathcal{F}, \mathcal{L})\) be a Selmer triple, fix \(k \geq 0\), and for \(n \in \mathcal{N}^{(k)}\) write
+  \[
+    \rH^1_{\mathcal{F}(n)}(K, T^{(k)}) \simeq (R^{(k)})^{\varepsilon} \oplus M^{(k)}(n) \oplus M^{(k)}(n)
+  \]
+  for the structure furnished by Howard's Proposition~1.5.5 (\(\varepsilon \in \{0,1\}\) independent of \(k,n\)). If \(\kappa \in \mathbf{KS}(T, \mathcal{F}, \mathcal{L})\) has \(\kappa_n \neq 0\), then for the prime \(\ell \in \mathcal{L}^{(k)}\) supplied by \cref{lem:cebotarev-kolyvagin},
+  \[
+    \mathrm{length}_{R^{(k)}}(M^{(k)}(n)) \leq \mathrm{length}_{R^{(k)}}(M^{(k)}(n\ell)).
+  \]
+  Taking \(n = 1\) and iterating gives
+  \[
+    \mathrm{length}_{R^{(k)}}(M^{(k)}(1)) \leq \mathrm{length}_{R^{(k)}}\!\left(\rH^1_{\mathcal{F}_{\mathrm{ord}}}(K, T^{(k)}) / R^{(k)} \cdot \kappa_1^{(k)}\right).
+  \]
+\end{lemma}
+
+\begin{proof}
+  \uses{def:selmer-triple, lem:cebotarev-kolyvagin}
+  Given \(\kappa_n \neq 0\) in \(\rH^1_{\mathcal{F}(n)}(K, T^{(k)}) \simeq (R^{(k)})^{\varepsilon} \oplus M^{(k)}(n)^2\), \cref{lem:cebotarev-kolyvagin} supplies \(\ell \in \mathcal{L}^{(k)}\) such that \(\mathrm{loc}_\lambda(\kappa_n)\) generates the singular cohomology \(\rH^1_{\mathrm{s}}(K_\lambda, T^{(k)}/I_\ell T^{(k)}) \otimes G_\ell\). The Kolyvagin system norm relation \((\phi_\lambda^{\mathrm{fs}} \otimes 1)(\mathrm{loc}_\lambda(\kappa_n)) = \mathrm{loc}_\lambda(\kappa_{n\ell})\) from \cref{def:selmer-triple} implies that \(\mathrm{loc}_\lambda(\kappa_{n\ell}) \neq 0\) in the finite part, and hence \(\kappa_{n\ell}\) contributes to \(M^{(k)}(n\ell)\) via the structure theorem. The comparison of the two module structures via the exact sequence relating \(\rH^1_{\mathcal{F}(n\ell)}\) and \(\rH^1_{\mathcal{F}(n)}\) (which inserts the transverse condition at \(\lambda\)) then gives the length inequality by a counting argument.
+\end{proof}
+
+\begin{theorem}[\(\mathbb{Z}_p\)-twisted Kolyvagin bound]
+  \label{thm:Zp-twisted}
+  \lean{MR4372220.Howard.zpTwistedBound}
+  \uses{def:selmer-triple, def:iwasawa-algebra, lem:cebotarev-kolyvagin, lem:kolyvagin-inductive-step}
+  % SOURCE: [MR4372220], §A Kolyvagin system argument, "Bounding Selmer groups", Theorem thm:Zp-twisted (read from references/MR4372220-anticyclotomic-iwasawa-source/Eisenstein.tex)
+  % SOURCE QUOTE: "Suppose $\alpha\neq 1$ and there is a Kolyvagin system $\kappa_\alpha=\{\kappa_{\alpha,n}\}_{n\in\cN}\in\mathbf{KS}(T_\alpha,\Fcal_{\rm ord},\cL_E)$ with $\kappa_{\alpha,1}\neq 0$. Then $\rH^1_{\Fcal_{\rm ord}}(K,T_\alpha)$ has rank one, and there is a finite $R$-module $M_\alpha$ such that ${\rm H}^1_{\Fcal_{\rm ord}}(K,A_\alpha)\simeq(\Phi/R)\oplus M_\alpha\oplus M_\alpha$ with ${\rm length}_R(M_\alpha)\leqslant {\rm length}_R\bigl({\rm H}^1_{\Fcal_{\rm ord}}(K,T_\alpha)/R\cdot\kappa_{\alpha,1}\bigr)+E_\alpha$ for some constant $E_\alpha\in\Z_{\geqslant 0}$ depending only on $C_{\alpha}$, $T_pE$, and ${\rm rank}_{\bZ_p}(R)$."
+  \textit{Source: MR4372220, §A Kolyvagin system argument, Bounding Selmer groups.}
+
+  Let \(\Phi/\mathbb{Q}_p\) be a finite extension with ring of integers \(R\). Let \(\alpha : \Gamma \to R^\times\) be a character with \(\alpha \neq 1\). Set \(T_\alpha = T_p E \otimes_{\mathbb{Z}_p} R(\alpha)\) and \(A_\alpha = T_\alpha \otimes_R \Phi/R\). Define
+  \[
+    C_\alpha =
+    \begin{cases}
+      v_p\!\bigl(\alpha(\gamma) - \alpha^{-1}(\gamma)\bigr) & \text{if } \alpha \neq \alpha^{-1}, \\
+      0 & \text{if } \alpha = \alpha^{-1},
+    \end{cases}
+  \]
+  and let \(E_\alpha \geq 0\) be a constant depending only on \(C_\alpha\), \(T_p E\), and \(\mathrm{rank}_{\mathbb{Z}_p}(R)\).
+
+  If there is a Kolyvagin system \(\kappa_\alpha \in \mathbf{KS}(T_\alpha, \mathcal{F}_{\mathrm{ord}}, \mathcal{L}_E)\) with \(\kappa_{\alpha,1} \neq 0\), then \(\rH^1_{\mathcal{F}_{\mathrm{ord}}}(K, T_\alpha)\) has rank one over \(R\), and there is a finite \(R\)-module \(M_\alpha\) such that
+  \[
+    \rH^1_{\mathcal{F}_{\mathrm{ord}}}(K, A_\alpha) \simeq (\Phi/R) \oplus M_\alpha \oplus M_\alpha
+  \]
+  with
+  \[
+    \mathrm{length}_R(M_\alpha) \leq \mathrm{length}_R\!\left(\rH^1_{\mathcal{F}_{\mathrm{ord}}}(K, T_\alpha) / R \cdot \kappa_{\alpha,1}\right) + E_\alpha.
+  \]
+\end{theorem}
+
+% SOURCE QUOTE PROOF: "To ease notation, let $(T,\mathcal{F},\cL)$ denote the Selmer triple $(T_\alpha,\Fcal_{\rm ord},\cL_E)$, and let $\rho=\rho_\alpha$. For any $k\geqslant 0$, let $R^{(k)}=R/\fm^kR,\quad T^{(k)}=T/\fm^kT,\quad\cL^{(k)}=\{\ell\in\cL\colon I_\ell\subset p^k\Z_p\}$, and let $\mathscr{N}^{(k)}$ be the set of square-free products of primes $\ell\in\cL^{(k)}$. We begin by recalling two preliminary results from \cite{mazrub} and \cite{howard}."
+\begin{proof}
+  \uses{def:selmer-triple, def:iwasawa-algebra}
+  The proof runs by induction on the level \(k\) of mod-\(\mathfrak{m}^k\) approximations. Set \(R^{(k)} = R/\mathfrak{m}^k R\), \(T^{(k)} = T_\alpha/\mathfrak{m}^k T_\alpha\), and let \(\mathcal{L}^{(k)} \subset \mathcal{L}_E\) be the subset of primes with \(I_\ell \subset p^k \mathbb{Z}_p\).
+
+  Two key structural inputs are used: (1) for every \(n \in \mathcal{N}^{(k)}\) there is an isomorphism \(\rH^1_{\mathcal{F}(n)}(K, T^{(k)}) \simeq (R^{(k)})^\varepsilon \oplus M^{(k)}(n) \oplus M^{(k)}(n)\) for a constant \(\varepsilon \in \{0,1\}\) independent of \(k\) and \(n\) (Howard, Prop.~1.5.5, valid under \(E(K)[p] = 0\)); (2) a \v{C}ebotarev density argument provides, for each \(k\) and each nontrivial class \(x\) in the Selmer group, a prime \(\ell \in \mathcal{L}^{(k)}\) such that \(\mathrm{loc}_\lambda(x)\) generates \(\rH^1_{\mathrm{s}}(K_\lambda, T^{(k)}/I_\ell T^{(k)}) \otimes G_\ell\).
+
+  Via the Kolyvagin system relations and the finite-singular comparison \(\phi_\lambda^{\mathrm{fs}}\) from \cref{def:selmer-triple}, the class \(\kappa_{n\ell}\) in the modified Selmer group (with transverse condition at \(\ell\)) bounds the length of \(M^{(k)}(n)\). Taking \(n = 1\) and letting \(k \to \infty\) gives the length bound, with the error term \(E_\alpha\) absorbing the defect from the self-duality discrepancy \(C_\alpha\). The rank-one assertion follows from \(\varepsilon = 1\) (forced by \(\kappa_{\alpha,1} \neq 0\) and the structure theorem).
+
+  The full proof is multi-page; sub-splitting into the \v{C}ebotarev argument and the inductive Kolyvagin step is recommended for formalization (see notes).
+\end{proof}
+
+\begin{theorem}[\(\Lambda\)-adic Howard bound]
+  \label{thm:howard}
+  \lean{MR4372220.Howard.howardBound}
+  \uses{thm:Zp-twisted, def:selmer-triple, def:iwasawa-algebra}
+  % SOURCE: [MR4372220], §A Kolyvagin system argument, "Iwasawa theory", Theorem thm:howard (read from references/MR4372220-anticyclotomic-iwasawa-source/Eisenstein.tex)
+  % SOURCE QUOTE: "Suppose there is a Kolyvagin system $\kappa\in\mathbf{KS}(\mathbf{T},\Fcal_\Lambda,\cL_E)$ with $\kappa_1\neq 0$. Then $\rH^1_{\Fcal_\Lambda}(K,\mathbf{T})$ has $\Lambda$-rank one, and there is a finitely generated torsion $\Lambda$-module $M$ such that (i) $\mathcal{X}\sim\Lambda\oplus M\oplus M$, (ii) ${\rm char}_\Lambda(M)$ divides ${\rm char}_\Lambda\bigl(\rH^1_{\Fcal_\Lambda}(K,\mathbf{T})/\Lambda\kappa_1\bigr)$ in $\Lambda[1/p,1/(\gamma-1)]$."
+  \textit{Source: MR4372220, §A Kolyvagin system argument, Iwasawa theory.}
+
+  Let \(\mathcal{X} = \rH^1_{\mathcal{F}_\Lambda}(K, M_E)^\vee\) be the Pontryagin dual of the \(\Lambda\)-adic Selmer group. If there is a Kolyvagin system \(\kappa \in \mathbf{KS}(\mathbf{T}, \mathcal{F}_\Lambda, \mathcal{L}_E)\) with \(\kappa_1 \neq 0\), then \(\rH^1_{\mathcal{F}_\Lambda}(K, \mathbf{T})\) has \(\Lambda\)-rank one, and there is a finitely generated torsion \(\Lambda\)-module \(M\) such that:
+  \begin{enumerate}
+    \item[(i)] \(\mathcal{X} \sim \Lambda \oplus M \oplus M\) (pseudo-isomorphism of \(\Lambda\)-modules),
+    \item[(ii)] \(\mathrm{char}_\Lambda(M)\) divides \(\mathrm{char}_\Lambda\bigl(\rH^1_{\mathcal{F}_\Lambda}(K, \mathbf{T})/\Lambda\kappa_1\bigr)\) in \(\Lambda[1/p, 1/(\gamma-1)]\).
+  \end{enumerate}
+  Moreover, if \(\rH^1_{\mathcal{F}}(K, E[p^\infty])\) has \(\mathbb{Z}_p\)-corank one, then the divisibility in \textup{(ii)} holds in \(\Lambda[1/p]\).
+\end{theorem}
+
+% SOURCE QUOTE PROOF: "This follows by applying Theorem~\ref{thm:Zp-twisted} for the specializations of $\mathbf{T}$ at height one primes of $\Lambda$, similarly as in the proof of \cite[Thm.~2.2.10]{howard}. We only explain how to deduce the divisibility in part (ii), since part (i) is shown exactly as in \cite[Thm.~2.2.10]{howard}."
+\begin{proof}
+  \uses{thm:Zp-twisted, def:selmer-triple}
+  For each height-one prime \(\mathfrak{P} \neq p\Lambda\) of \(\Lambda\), form the specialization \(T_{\mathfrak{P}} = \mathbf{T} \otimes_\Lambda S_{\mathfrak{P}}\), where \(S_{\mathfrak{P}}\) is the integral closure of \(\Lambda/\mathfrak{P}\), and write \(\alpha_{\mathfrak{P}} : \Gamma \to S_{\mathfrak{P}}^\times\) for the reduction of the tautological character. Then \(T_{\mathfrak{P}} = T_p E \otimes_{\mathbb{Z}_p} S_{\mathfrak{P}}(\alpha_{\mathfrak{P}})\) is of the type in \cref{thm:Zp-twisted}.
+
+  Write \(\mathfrak{P} = (g)\) and set \(\mathfrak{Q} = (g + p^m)\) for \(m \gg 0\). There is a specialization map \(\mathbf{KS}(\mathbf{T}, \mathcal{F}_\Lambda, \mathcal{L}_E) \to \mathbf{KS}(T_{\mathfrak{Q}}, \mathcal{F}_{\mathrm{ord}}, \mathcal{L}_E)\), and the image \(\kappa^{(\mathfrak{Q})}\) has nonzero first component for \(m \gg 0\). Applying \cref{thm:Zp-twisted}, one obtains
+  \[
+    \mathrm{length}_{\mathbb{Z}_p}\!\left(\rH^1_{\mathcal{F}_{\mathfrak{Q}}}(K, T_{\mathfrak{Q}})/S_{\mathfrak{Q}}\kappa_1^{(\mathfrak{Q})}\right) = md \cdot \mathrm{ord}_{\mathfrak{P}}(f_\Lambda) + O(1),
+  \]
+  where \(d = \mathrm{rank}_{\mathbb{Z}_p}(\Lambda/\mathfrak{P})\) and \(f_\Lambda\) is a characteristic power series for \(\rH^1_{\mathcal{F}_\Lambda}(K, \mathbf{T})/\Lambda\kappa_1\). Similarly \(2\,\mathrm{length}_{\mathbb{Z}_p}(M_{\mathfrak{Q}}) = md \cdot \mathrm{ord}_{\mathfrak{P}}(\mathrm{char}_\Lambda(\mathcal{X}_{\mathrm{tors}})) + O(1)\). The error term \(E_{\alpha_{\mathfrak{Q}}}\) in \cref{thm:Zp-twisted} is bounded independently of \(m\) for \(\mathfrak{P} \neq \mathfrak{P}_0 = (\gamma-1)\). Letting \(m \to \infty\) yields
+  \[
+    \mathrm{ord}_{\mathfrak{P}}\!\left(\mathrm{char}_\Lambda(\mathcal{X}_{\mathrm{tors}})\right) \leq 2\,\mathrm{ord}_{\mathfrak{P}}(f_\Lambda)
+  \]
+  for all \(\mathfrak{P} \neq (p), \mathfrak{P}_0\), giving divisibility in \(\Lambda[1/p, 1/(\gamma-1)]\). Under the corank-one hypothesis, \(\mathrm{ord}_{\mathfrak{P}_0}(\mathrm{char}_\Lambda(\mathcal{X}_{\mathrm{tors}})) = 0\), which removes the \(1/(\gamma-1)\) denominator.
+\end{proof}
+
+\begin{theorem}[Heegner Kolyvagin system]
+  \label{thm:howard-HPKS}
+  \lean{MR4372220.Howard.heegnerKolyvaginSystem}
+  \uses{def:selmer-triple, cor:characters}
+  % SOURCE: [MR4372220], §Proof of Theorem C and Corollary D, "Preliminaries", Theorem thm:howard-HPKS (read from references/MR4372220-anticyclotomic-iwasawa-source/Eisenstein.tex)
+  % SOURCE QUOTE: "Assume $E(K)[p]=0$. Then there exists a Kolyvagin system $\kappa^{\rm Hg}\in\mathbf{KS}(\mathbf{T},\mathcal{F}_\Lambda,\cL_E)$ such that $\kappa_1^{\rm Hg}\in\rH^1_{\Fcal_\Lambda}(K,\mathbf{T})$ is nonzero."
+  \textit{Source: MR4372220, §Proof of Theorem C and Corollary D, Preliminaries.}
+
+  Assume \(E(K)[p] = 0\). Then there exists a Kolyvagin system \(\kappa^{\mathrm{Hg}} \in \mathbf{KS}(\mathbf{T}, \mathcal{F}_\Lambda, \mathcal{L}_E)\) such that the first component \(\kappa_1^{\mathrm{Hg}} \in \rH^1_{\mathcal{F}_\Lambda}(K, \mathbf{T})\) is nonzero.
+\end{theorem}
+
+% SOURCE QUOTE PROOF: "Under the additional hypotheses that $p\nmid h_K$, the class number of $K$, and the representation $G_K\rightarrow{\rm Aut}_{\Z_p}(T)$ is surjective, this is \cite[Thm.~2.3.1]{howard}. In the following paragraphs, we explain how to adapt Howard's arguments to our situation. ... Finally, that $\kappa_1^{\rm Hg}$ is nonzero follows from the works of Cornut and Vatsal \cite{cornut, vatsal}."
+\begin{proof}
+  \uses{def:selmer-triple, cor:characters}
+  The construction follows Howard's method. Let \(K_k \subset K_\infty\) be the subfield with \([K_k : K] = p^k\), and for \(n \in \mathcal{N}\) set
+  \[
+    P_k[n] := \mathrm{Norm}_{K[np^{d(k)}]/K_k[n]}(P[np^{d(k)}]) \in E(K_k[n]),
+  \]
+  where \(d(k) = \min\{d \geq 0 : K_k \subset K[p^d]\}\) and \(P[m] = \pi(x_m) \in E(K[m])\) is the Heegner point of conductor \(m\) (with \(\pi : X_0(N) \to E\) a modular parametrization and \(x_m\) the CM point). The Heegner point norm relations give a compatible system in \(\mathbf{H}[n] = \varprojlim_k H_k[n]\), where \(H_k[n]\) is the \(\mathbb{Z}_p[\mathrm{Gal}(K_k[n]/K)]\)-submodule generated by the Heegner points. There exists (Howard, Lem.~2.3.3) a family \(\{Q[n]\}_{n \in \mathcal{N}}\) with \(Q_0[n] = \Phi P[n]\) for an explicit multiplier \(\Phi\) and satisfying the norm relation \(\mathrm{Norm}_{K_\infty[n\ell]/K_\infty[n]}(Q[n\ell]) = a_\ell Q[n]\).
+
+  Using Kolyvagin's derivative operators \(D_n \in \mathbb{Z}_p[G(n)]\), the class \(\kappa_n \in \rH^1(K, \mathbf{T}/I_n\mathbf{T})\) is defined as the image of \(\sum_{s \in S} s D_n Q[n] \in \mathbf{H}[n]\) under the composite of the Kummer map and the restriction isomorphism (which is an isomorphism because the extensions \(K[n]\) and \(\mathbb{Q}(E[p])\) are linearly disjoint and \(E(K_\infty)[p] = 0\)). The residual exactness of \cref{cor:characters} ensures the restriction map is indeed an isomorphism.
+
+  That \(\kappa_n \in \rH^1_{\mathcal{F}_\Lambda}(K, \mathbf{T}/I_n\mathbf{T})\) and that the classes can be modified to a system \(\kappa^{\mathrm{Hg}} = \{\kappa_n^{\mathrm{Hg}}\}\) satisfying the Kolyvagin system relations follows as in Howard, Lem.~2.3.4, whose arguments apply verbatim even when \(p \mid h_K\).
+
+  The non-vanishing \(\kappa_1^{\mathrm{Hg}} \neq 0\) follows from the theorem of Cornut and Vatsal on non-vanishing of Heegner points over the anticyclotomic tower: their result implies the Kummer image of the Heegner class at level one is nonzero in \(\rH^1_{\mathcal{F}_\Lambda}(K, \mathbf{T})\).
+\end{proof}
+
+\begin{theorem}[Heegner--Howard divisibility]
+  \label{thm:howard-HP}
+  \lean{MR4372220.Howard.heegnerHoward}
+  \uses{thm:howard, thm:howard-HPKS, def:iwasawa-algebra}
+  % SOURCE: [MR4372220], §Proof of Theorem C and Corollary D, Theorem thm:howard-HP (read from references/MR4372220-anticyclotomic-iwasawa-source/Eisenstein.tex)
+  % SOURCE QUOTE: "Assume $E(K)[p]=0$. Then the module $\rH^1_{\Fcal_\Lambda}(K,\mathbf{T})$ has $\Lambda$-rank one, and there is a finitely generated torsion $\Lambda$-module $M$ such that (i) $\mathcal{X}\sim\Lambda\oplus M\oplus M$, (ii) ${\rm char}_\Lambda(M)$ divides ${\rm char}_\Lambda\bigl(\rH^1_{\Fcal_\Lambda}(K,\mathbf{T})/\Lambda\kappa_1^{\rm Hg}\bigr)$ in $\Lambda[1/p,1/(\gamma-1)]$. Moreover, if $\rH^1_{\CF}(K,E[p^\infty])$ has $\Z_p$-corank one, then ${\rm char}_\Lambda(M)$ divides ${\rm char}_\Lambda\bigl(\rH^1_{\Fcal_\Lambda}(K,\mathbf{T})/\Lambda\kappa_1^{\rm Hg}\bigr)$ in $\Lambda[1/p]$."
+  \textit{Source: MR4372220, §Proof of Theorem C and Corollary D.}
+
+  Assume \(E(K)[p] = 0\). Let \(\mathcal{X} = \rH^1_{\mathcal{F}_\Lambda}(K, M_E)^\vee\) and let \(\kappa^{\mathrm{Hg}}\) be the Heegner Kolyvagin system of \cref{thm:howard-HPKS}. Then \(\rH^1_{\mathcal{F}_\Lambda}(K, \mathbf{T})\) has \(\Lambda\)-rank one, and there is a finitely generated torsion \(\Lambda\)-module \(M\) such that:
+  \begin{enumerate}
+    \item[(i)] \(\mathcal{X} \sim \Lambda \oplus M \oplus M\),
+    \item[(ii)] \(\mathrm{char}_\Lambda(M)\) divides \(\mathrm{char}_\Lambda\bigl(\rH^1_{\mathcal{F}_\Lambda}(K, \mathbf{T})/\Lambda\kappa_1^{\mathrm{Hg}}\bigr)\) in \(\Lambda[1/p, 1/(\gamma-1)]\).
+  \end{enumerate}
+  Moreover, if \(\rH^1_{\mathcal{F}}(K, E[p^\infty])\) has \(\mathbb{Z}_p\)-corank one, then the divisibility in \textup{(ii)} holds in \(\Lambda[1/p]\).
+\end{theorem}
+
+% SOURCE QUOTE PROOF: "Applying Theorem~\ref{thm:howard} and Corollary~\ref{cor:howard} to the Kolyvagin system $\kappa^{\rm Hg}$ of Theorem~\ref{thm:howard-HPKS}, we thus obtain the following."
+\begin{proof}
+  \uses{thm:howard, thm:howard-HPKS}
+  By \cref{thm:howard-HPKS}, there exists \(\kappa^{\mathrm{Hg}} \in \mathbf{KS}(\mathbf{T}, \mathcal{F}_\Lambda, \mathcal{L}_E)\) with \(\kappa_1^{\mathrm{Hg}} \neq 0\). Applying \cref{thm:howard} to this Kolyvagin system immediately yields the pseudo-isomorphism \(\mathcal{X} \sim \Lambda \oplus M \oplus M\) and the divisibility of \(\mathrm{char}_\Lambda(M)\) by \(\mathrm{char}_\Lambda(\rH^1_{\mathcal{F}_\Lambda}(K, \mathbf{T})/\Lambda\kappa_1^{\mathrm{Hg}})\) in \(\Lambda[1/p, 1/(\gamma-1)]\).
+
+  The refinement to \(\Lambda[1/p]\): the additional corank-one hypothesis implies \(\mathrm{ord}_{\mathfrak{P}_0}(\mathrm{char}_\Lambda(\mathcal{X}_{\mathrm{tors}})) = 0\) (as shown in the corollary to \cref{thm:howard} in the source), which removes the \(1/(\gamma-1)\) denominator and gives the divisibility in \(\Lambda[1/p]\).
+\end{proof}

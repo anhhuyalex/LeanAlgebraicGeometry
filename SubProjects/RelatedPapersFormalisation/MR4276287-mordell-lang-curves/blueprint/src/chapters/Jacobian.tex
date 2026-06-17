@@ -1,0 +1,190 @@
+\chapter{Jacobian variety of a curve}
+\label{chap:jacobian}
+
+% archon:covers MR4276287UniformityInMordellLangForCurves/Jacobian.lean
+
+This chapter axiomatizes the Jacobian abelian variety of a smooth genus-\(g\) curve,
+the Abel--Jacobi embedding, the Faltings--Zhang morphism, and their key properties.
+Because the Picard-group / theta-divisor construction of \(\mathrm{Jac}(C)\) as a
+\(g\)-dimensional abelian variety is not available in Mathlib (Mathlib's
+\texttt{WeierstrassCurve.Jacobian} covers only Jacobian coordinates for genus-1
+elliptic curves), every declaration in this chapter is treated as an axiom stub;
+the \(\lean{}\) targets name the noncomputable Lean declarations to be filled in
+the project.
+
+\section{The Jacobian as a principally polarized abelian variety}
+
+\begin{definition}[Jacobian abelian variety]
+  \label{def:jacobian_av}
+  \lean{MR4276287UniformityInMordellLangForCurves.Jacobian.jacobianAV}
+  Let \(g \ge 2\) and let \(C\) be a smooth projective curve of genus \(g\) defined
+  over \(\IQbar\), together with a base point \(P_0 \in C(\IQbar)\).
+  The \emph{Jacobian} \(\mathrm{Jac}(C)\) is a \(g\)-dimensional abelian variety
+  over \(\IQbar\) equipped with the following universal property: for any abelian
+  variety \(A\) over \(\IQbar\) and any morphism \(f \colon C \to A\) with
+  \(f(P_0) = 0_A\), there exists a unique group homomorphism
+  \(\varphi \colon \mathrm{Jac}(C) \to A\) such that \(\varphi \circ \iota_{P_0} = f\),
+  where \(\iota_{P_0} \colon C \to \mathrm{Jac}(C)\) is the Abel--Jacobi embedding
+  of \cref{def:abel_jacobi}.
+
+  Concretely, \(\mathrm{Jac}(C)\) is isomorphic as a group variety to
+  \(\mathrm{Pic}^0(C)\), the group of degree-zero line bundles on \(C\) modulo
+  linear equivalence. This isomorphism is the canonical one sending
+  \(\iota_{P_0}(P) \mapsto [\mathcal{O}_C(P - P_0)]\).
+
+  This object is axiomatized (not constructed from the Picard group in this project):
+  the existence and universal property of \(\mathrm{Jac}(C)\) are taken as axioms
+  in the Lean formalization.
+  % SOURCE: Section 6 of \cite{MR4276287-mordell-lang-curves} (read from
+  %   references/MR4276287-mordell-lang-curves-source/SettingUp.tex)
+  % SOURCE QUOTE: "By definition we have $\mathrm{Jac}(\mathfrak{C}_g) =
+  %   \mathrm{Pic}^0(\mathfrak{C}_g/\mathbb{M}_g)$."
+  \textit{Source: Section 6 of \cite{MR4276287-mordell-lang-curves} (read from
+  references/MR4276287-mordell-lang-curves-source/SettingUp.tex).}
+\end{definition}
+
+\begin{lemma}[Principal polarization of the Jacobian]
+  \label{lem:jacobian_ppav}
+  \lean{MR4276287UniformityInMordellLangForCurves.Jacobian.jacobianPpav}
+  \uses{def:jacobian_av}
+  \(\mathrm{Jac}(C)\) carries a canonical \emph{principal polarization}: a group
+  isomorphism \(\theta \colon \mathrm{Jac}(C) \xrightarrow{\;\sim\;} \mathrm{Jac}(C)^\vee\)
+  arising from the theta divisor \(\Theta \subset \mathrm{Jac}(C)\).
+  Here \(\mathrm{Jac}(C)^\vee = \mathrm{Pic}^0(\mathrm{Jac}(C))\) is the dual
+  abelian variety. In particular, \((\mathrm{Jac}(C), \theta)\) is a principally
+  polarized abelian variety of dimension \(g\).
+  % SOURCE: Section 6 of \cite{MR4276287-mordell-lang-curves} (read from
+  %   references/MR4276287-mordell-lang-curves-source/SettingUp.tex)
+  % SOURCE QUOTE: "Denote by $\mathrm{Jac}(\mathfrak{C}_g)$ the relative Jacobian of
+  %   $\mathfrak{C}_g \rightarrow \mathbb{M}_g$. It is an abelian scheme
+  %   coming with a natural principal polarization and equipped with level-$\ell$-structure,
+  %   see \cite[Proposition 6.9]{MFK:GIT94}."
+  \textit{Source: Section 6 of \cite{MR4276287-mordell-lang-curves} (read from
+  references/MR4276287-mordell-lang-curves-source/SettingUp.tex).}
+\end{lemma}
+
+\begin{proof}
+  \uses{def:jacobian_av}
+  This is a standard fact; see \cite[Proposition~6.9]{MFK:GIT94}.
+  The theta divisor \(\Theta \subset \mathrm{Jac}(C)\) is defined as the image of
+  the \((g-1)\)-th symmetric power \(C^{(g-1)} \to \mathrm{Jac}(C)\) under the map
+  sending an effective divisor \(D\) to \([D - (g-1)P_0]\).
+  The line bundle \(\mathcal{O}(\Theta)\) is ample on \(\mathrm{Jac}(C)\) and
+  the induced map \(\mathrm{Jac}(C) \to \mathrm{Jac}(C)^\vee\),
+  \(x \mapsto t_x^*\mathcal{O}(\Theta) \otimes \mathcal{O}(\Theta)^{-1}\),
+  is an isomorphism (the principal polarization \(\theta\)).
+  In the Lean formalization, the existence of \(\theta\) is taken as an axiom.
+\end{proof}
+
+\section{The Abel--Jacobi embedding}
+
+\begin{definition}[Abel--Jacobi embedding]
+  \label{def:abel_jacobi}
+  \lean{MR4276287UniformityInMordellLangForCurves.Jacobian.abelJacobi}
+  \uses{def:jacobian_av}
+  Fix a base point \(P_0 \in C(\IQbar)\). The \emph{Abel--Jacobi embedding} is the
+  morphism
+  \[
+    \iota_{P_0} \colon C \to \mathrm{Jac}(C), \qquad P \mapsto [\mathcal{O}_C(P - P_0)].
+  \]
+  In other words, \(\iota_{P_0}(P)\) is the class of the degree-zero divisor \(P - P_0\)
+  in \(\mathrm{Pic}^0(C) \cong \mathrm{Jac}(C)\). By construction
+  \(\iota_{P_0}(P_0) = 0_{\mathrm{Jac}(C)}\).
+  % SOURCE: Section 8 of \cite{MR4276287-mordell-lang-curves} (read from
+  %   references/MR4276287-mordell-lang-curves-source/RatPt.tex)
+  % SOURCE QUOTE: "We consider the Abel--Jacobi embedding $C-P_0\subset \mathrm{Jac}(C)$
+  %   defined over $F$. Then $\# C(F)\le \# (C_{F'}(\IQbar)-P_0)\cap\Gamma = \#
+  %   (\mathfrak{C}_s(\IQbar)-P_0)\cap \Gamma$."
+  \textit{Source: Section 8 of \cite{MR4276287-mordell-lang-curves} (read from
+  references/MR4276287-mordell-lang-curves-source/RatPt.tex).}
+\end{definition}
+
+\begin{theorem}[Abel--Jacobi is a closed immersion]
+  \label{thm:abel_jacobi_closed_immersion}
+  \lean{MR4276287UniformityInMordellLangForCurves.Jacobian.abelJacobi_closedImmersion}
+  \uses{def:abel_jacobi}
+  For \(g \ge 2\), the Abel--Jacobi map \(\iota_{P_0} \colon C \to \mathrm{Jac}(C)\)
+  is a closed immersion of algebraic varieties.
+\end{theorem}
+
+\begin{proof}
+  \uses{def:abel_jacobi, def:jacobian_av}
+  This is a classical result; see, e.g., \cite[Chapter~IV, Theorem~4.2]{ACG:Curve}.
+  Injectivity on points follows because \(\iota_{P_0}(P) = \iota_{P_0}(Q)\) implies
+  \(\mathcal{O}_C(P - Q) \cong \mathcal{O}_C\), i.e., \(P \sim Q\) linearly, which
+  for a genus-\(g \ge 2\) curve forces \(P = Q\).
+  The differential of \(\iota_{P_0}\) is injective at every point (Torelli-type
+  argument), so \(\iota_{P_0}\) is a locally closed immersion; since \(C\) is
+  projective and \(\mathrm{Jac}(C)\) is separated, it is a closed immersion.
+  In the Lean formalization, this theorem is taken as an axiom stub.
+\end{proof}
+
+\section{The Faltings--Zhang morphism}
+
+\begin{definition}[Faltings--Zhang morphism]
+  \label{def:faltings_zhang}
+  \lean{MR4276287UniformityInMordellLangForCurves.Jacobian.faltingsZhang}
+  \uses{def:jacobian_av, def:abel_jacobi}
+  Let \(M \ge 1\) be an integer. The \emph{Faltings--Zhang morphism} is the map
+  \[
+    \mathscr{D}_M \colon C^{M+1} \to \mathrm{Jac}(C)^M,
+    \qquad
+    (Q_0, Q_1, \ldots, Q_M) \mapsto (Q_1 - Q_0,\, Q_2 - Q_0,\, \ldots,\, Q_M - Q_0),
+  \]
+  where the differences \(Q_i - Q_0 := \iota_{Q_0}(Q_i) \in \mathrm{Jac}(C)\)
+  are computed via the Abel--Jacobi map based at \(Q_0\) (varying with the tuple).
+
+  In the relative setting of the paper, for a base \(S \to \mathbb{M}_g\) and the
+  universal curve \(\mathfrak{C}_S\), this globalizes to a morphism of schemes
+  \[
+    \mathscr{D}_M \colon \mathfrak{C}_S^{[M+1]} \to
+    \mathfrak{A}_g^{[M]} \times_{\mathbb{A}_g} S
+  \]
+  over \(S\) (the Faltings--Zhang morphism as in \cite[(\ref*{DefFaltingsZhang3})]{MR4276287-mordell-lang-curves}).
+  This morphism is proper because the diagonal arrow in the defining Cartesian
+  diagram is proper.
+  % SOURCE: Section 6 of \cite{MR4276287-mordell-lang-curves} (read from
+  %   references/MR4276287-mordell-lang-curves-source/SettingUp.tex)
+  % SOURCE QUOTE: "For $P_0,\ldots,P_M\in C(k)$ the morphism
+  %   (\ref{eq:prefaltingszhang}) maps $(P_0,P_1,\ldots,P_M) \mapsto
+  %   (P_1-P_0,P_2-P_0,\ldots,P_M-P_0)$ where the difference takes place in
+  %   the Jacobian of $C$."
+  \textit{Source: Section 6 of \cite{MR4276287-mordell-lang-curves} (read from
+  references/MR4276287-mordell-lang-curves-source/SettingUp.tex).}
+\end{definition}
+
+\section{Curve generates its Jacobian}
+
+\begin{lemma}[Curve generates its Jacobian]
+  \label{lem:curve_generates_jacobian}
+  \lean{MR4276287UniformityInMordellLangForCurves.Jacobian.curveGeneratesJacobian}
+  \uses{def:abel_jacobi, def:jacobian_av}
+  For \(g \ge 2\), the image \(\iota_{P_0}(C) \subset \mathrm{Jac}(C)\) generates
+  \(\mathrm{Jac}(C)\) as an abelian group (or equivalently, as an abelian variety):
+  the smallest abelian subvariety of \(\mathrm{Jac}(C)\) containing \(\iota_{P_0}(C)\)
+  is \(\mathrm{Jac}(C)\) itself.
+  % SOURCE: Section 6 of \cite{MR4276287-mordell-lang-curves} (read from
+  %   references/MR4276287-mordell-lang-curves-source/SettingUp.tex)
+  % SOURCE QUOTE: "hypothesis (b) is satisfied because each curve generates its
+  %   Jacobian"
+  \textit{Source: Section 6 of \cite{MR4276287-mordell-lang-curves} (read from
+  references/MR4276287-mordell-lang-curves-source/SettingUp.tex).}
+\end{lemma}
+
+\begin{proof}
+  \uses{def:abel_jacobi, def:jacobian_av, lem:jacobian_ppav}
+  This is a standard consequence of the definition of the Jacobian.
+  Let \(B \subset \mathrm{Jac}(C)\) be an abelian subvariety containing
+  \(\iota_{P_0}(C)\). The universal property of \(\mathrm{Jac}(C)\) applies to
+  the inclusion \(\iota_{P_0} \colon C \to B \hookrightarrow \mathrm{Jac}(C)\)
+  and to the composition \(C \xrightarrow{\iota_{P_0}} B\). It gives a unique
+  group homomorphism \(\mathrm{Jac}(C) \to B\) splitting the inclusion; combined
+  with the inclusion \(B \hookrightarrow \mathrm{Jac}(C)\), this shows
+  \(\mathrm{Jac}(C)\) and \(B\) are isogenous.
+  Since \(\dim B \le g = \dim \mathrm{Jac}(C)\) and \(B\) is a subvariety, we
+  conclude \(B = \mathrm{Jac}(C)\).
+  The property is invoked in the proof of \cref{thm:nondeg_for_bd} (via Gao's
+  Theorem~1.3, hypothesis~(b)) to verify that the Abel--Jacobi image satisfies
+  the non-degeneracy hypotheses.
+  In the Lean formalization, this is axiomatized as an axiom stub.
+\end{proof}

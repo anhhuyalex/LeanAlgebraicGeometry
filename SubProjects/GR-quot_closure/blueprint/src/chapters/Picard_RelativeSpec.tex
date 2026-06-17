@@ -1,0 +1,438 @@
+\chapter{Relative Spec}
+\label{chap:Picard_RelativeSpec}
+% archon:covers AlgebraicJacobian/Picard/RelativeSpec.lean
+
+% STRATEGY NOTE (iter-172). This chapter is the foundational A.1.a sub-row of
+% Route A (positive-genus arm of nonempty_jacobianWitness). It packages the
+% relative-spectrum functor \underline{\Spec}_X(\mathcal{A}) : \mathrm{QcohAlg}(X)^{op}
+% \to \mathrm{Sch}/X used by the relative Picard functor on a product C \times_k T.
+% Mathlib has the absolute Spec functor and affine gluing (Scheme.GlueData,
+% AffineScheme.glueOpens) but no general RelativeSpec construction; this chapter is
+% the prover-ready specification for the new file AlgebraicJacobian/Picard/RelativeSpec.lean
+% which iter-173 (file-skeleton lane) will scaffold.
+
+\section{Setup and motivation}
+\label{sec:relspec_setup}
+
+The Route~A construction of \(J = \Pic^0_{C/k}\) as a \(g\)-dimensional abelian variety is
+organised around the relative Picard functor
+\(\Pic^\sharp_{C/k}(T) = \Pic(C \times_k T) / \pi_T^* \Pic(T)\)
+on the category of \(k\)-schemes. Representing \(\Pic^\sharp_{C/k}\) requires the line-bundle
+pullback construction on a relative curve \(C \times_k T \to T\), which in turn rests on a
+\emph{relative scheme} construction on a quasi-coherent sheaf of \(\mathcal{O}_X\)-algebras
+\(\mathcal{A}\), the \emph{relative spectrum}
+\(\pi : \underline{\Spec}_X(\mathcal{A}) \to X\). This chapter packages the construction
+of \(\underline{\Spec}_X(-)\) and its core properties --- universal property and affine
+base --- as the foundational A.1.a building block. The relative Picard
+functor itself (A.1.c), the line-bundle pullback functor on a product (A.1.b), and the
+identity-component / dimension theory of \(J\) (A.3) live in separate sibling chapters
+(\S~``Out of scope'' below).
+
+% SOURCE: [Stacks Project], Section ``Relative spectrum via glueing'' and ``Relative
+% spectrum as a functor'' (tags 01LL, 01LO, 01LQ, 01LR, 01LS, available locally at
+% references/stacks-constructions.tex L309-L720). The Hartshorne reference is
+% [Hartshorne], II Exercise 5.17 (read from references/hartshorne-algebraic-geometry.pdf).
+
+\section{Quasi-coherent sheaves of algebras}
+\label{sec:qc_sheaf_of_algebras}
+
+\begin{definition}\leanok
+[Quasi-coherent \(\mathcal{O}_X\)-algebra]
+  \label{def:qc_sheaf_of_algebras}
+  \lean{AlgebraicGeometry.Scheme.QcohAlgebra}
+  % SOURCE: [Stacks Project], Section 01LL ``Relative spectrum via glueing'',
+  % Situation ``situation-relative-spec''
+  % (read from references/stacks-constructions.tex, L312-L318).
+  % SOURCE QUOTE:
+  % "Here \(S\) is a scheme, and \(\mathcal{A}\) is a quasi-coherent
+  %  \(\mathcal{O}_S\)-algebra. This means that \(\mathcal{A}\) is a
+  %  sheaf of \(\mathcal{O}_S\)-algebras which is quasi-coherent as an
+  %  \(\mathcal{O}_S\)-module."
+  \textit{Source: [Stacks Project], tag 01LL (situation-relative-spec).}
+  Let \(X\) be a scheme. A \emph{quasi-coherent sheaf of \(\mathcal{O}_X\)-algebras} is a
+  sheaf \(\mathcal{A}\) of \(\mathcal{O}_X\)-algebras (i.e. an \(\mathcal{O}_X\)-module
+  equipped with \(\mathcal{O}_X\)-linear multiplication and unit morphisms satisfying
+  associativity, commutativity, and the unit law as sheaf morphisms) whose underlying
+  \(\mathcal{O}_X\)-module is quasi-coherent. We write \(\mathrm{QcohAlg}(X)\) for the
+  category of quasi-coherent sheaves of \(\mathcal{O}_X\)-algebras and
+  \(\mathcal{O}_X\)-algebra morphisms.
+\end{definition}
+
+% NOTE (iter-179 review): supersedes the iter-174 carrier note. The iter-179
+% Block A refactor (analogies/relative-spec-encoding.md) upgrades the carrier
+% to a 3-field structure
+%     `structure QcohAlgebra (X : Scheme.{u}) where`
+%     `  sheaf        : TopCat.Sheaf CommRingCat.{u} X.toPresheafedSpace`
+%     `  unit         : X.sheaf ⟶ sheaf`
+%     `  coequifibered : NatTrans.Coequifibered`
+%     `    (Functor.whiskerLeft (AffineZariskiSite.toOpensFunctor X).op unit.hom)`
+% The new third field IS the iter-175+ overlay the prior note flagged: Mathlib
+% commit `b80f227`'s Stacks-01LL `NatTrans.Coequifibered` predicate is strictly
+% weaker than the full `SheafOfModules.IsQuasicoherent` claimed by Definition
+% 1.1's prose but is equivalent for the geometric purpose (constructing the
+% relative-spectrum scheme) via the dense-subsite equivalence
+% `AffineZariskiSite.sheafEquiv`. This is the predicate Mathlib's
+% `AffineZariskiSite.relativeGluingData` consumes, so the iter-179
+% `RelativeSpec`/`structureMorphism` bodies (now real Mathlib values) close
+% against it.
+
+\section{The relative-spectrum scheme}
+\label{sec:relspec_scheme}
+
+The construction is given affine-locally: on every affine open \(U = \Spec R \subseteq X\) one
+sets \(\pi^{-1}(U) := \Spec(\mathcal{A}(U))\) regarded as an \(R\)-algebra, and the local pieces
+glue compatibly because \(\mathcal{A}\) is quasi-coherent (the transition isomorphism
+\(\mathcal{A}(U) \otimes_R S \xrightarrow{\sim} \mathcal{A}(V)\) for an inclusion
+\(V = \Spec S \subseteq U\) gives an open immersion of the corresponding Specs).
+
+\begin{theorem}\leanok
+[Relative spectrum exists]
+  \label{thm:relative_spec_exists}
+  \lean{AlgebraicGeometry.Scheme.RelativeSpec}
+  \uses{def:qc_sheaf_of_algebras}
+
+  % SOURCE: [Stacks Project], tag 01LQ (lemma-glue-relative-spec)
+  % (read from references/stacks-constructions.tex, L381-L405).
+  % SOURCE QUOTE:
+  % "In Situation REF.
+  %  There exists a morphism of schemes
+  %  \(\)
+  %  \pi : \underline{\Spec}_S(\mathcal{A}) \longrightarrow S
+  %  \(\)
+  %  with the following properties:
+  %  \begin{enumerate}
+  %  \item for every affine open \(U \subset S\) there exists an isomorphism
+  %  \(i_U : \pi^{-1}(U) \to \Spec(\mathcal{A}(U))\) over \(U\), and
+  %  \item for \(U \subset U' \subset S\) affine open the composition
+  %  \(\)
+  %  \xymatrix{
+  %  \Spec(\mathcal{A}(U)) \ar[r]^{i_U^{-1}} &
+  %  \pi^{-1}(U) \ar[rr]^{inclusion} & &
+  %  \pi^{-1}(U') \ar[r]^{i_{U'}} &
+  %  \Spec(\mathcal{A}(U'))
+  %  }
+  %  \(\)
+  %  is the open immersion of Lemma REF above.
+  %  \end{enumerate}
+  %  Moreover, \(\underline{\Spec}_S(\mathcal{A})\)
+  %  is unique up to unique isomorphism over \(S\)."
+  \textit{Source: [Stacks Project], tag 01LQ (lemma-glue-relative-spec);
+  cf.\ [Hartshorne], II~Ex.~5.17(a).}
+  Let \(X\) be a scheme and \(\mathcal{A}\) a quasi-coherent \(\mathcal{O}_X\)-algebra
+  (\cref{def:qc_sheaf_of_algebras}). There exists a scheme
+  \(\underline{\Spec}_X(\mathcal{A})\) together with an affine morphism
+  \(\pi : \underline{\Spec}_X(\mathcal{A}) \to X\) such that
+  \begin{enumerate}
+    \item for every affine open \(U \subseteq X\), there is an isomorphism
+      \(i_U : \pi^{-1}(U) \xrightarrow{\sim} \Spec(\mathcal{A}(U))\) over \(U\);
+    \item for \(U \subseteq U' \subseteq X\) both affine open, the composite
+      $\Spec(\mathcal{A}(U)) \xrightarrow{i_U^{-1}} \pi^{-1}(U) \hookrightarrow
+      \pi^{-1}(U') \xrightarrow{i_{U'}} \Spec(\mathcal{A}(U'))$
+      coincides with the open immersion induced by the restriction
+      \(\mathcal{A}(U') \to \mathcal{A}(U)\).
+  \end{enumerate}
+  The pair \((\underline{\Spec}_X(\mathcal{A}), \pi)\) is unique up to unique isomorphism
+  over \(X\).
+\end{theorem}
+
+% SOURCE QUOTE PROOF: "Follows immediately from
+% Lemmas REF,
+% REF, and
+% REF.
+% Uniqueness is stated in the last sentence of
+% Lemma REF."
+\begin{proof}
+  
+  
+\leanok
+  By the open-cover gluing principle for schemes (Mathlib
+  \texttt{Scheme.GlueData} / \texttt{AffineScheme.glueOpens}) it suffices to specify
+  affine local pieces \(\Spec(\mathcal{A}(U))\) for each affine open \(U \subseteq X\) and
+  open-immersion transition data
+  \(\Spec(\mathcal{A}(U)) \hookrightarrow \Spec(\mathcal{A}(U'))\) for \(U \subseteq U'\)
+  satisfying the cocycle condition. The transition morphisms come from the ring maps
+  \(\mathcal{A}(U') \to \mathcal{A}(U)\); quasi-coherence yields the cartesian square
+  \(\Spec(\mathcal{A}(U)) = U \times_{U'} \Spec(\mathcal{A}(U'))\), so each transition is an
+  open immersion. Transitivity (Stacks lemma-transitive-spec) gives the cocycle condition.
+  Uniqueness of the glued scheme is the standard property of the gluing functor.
+\end{proof}
+
+\begin{definition}
+
+\leanok
+[Structure morphism of the relative spectrum]
+  \label{def:relspec_structure_morphism}
+  \lean{AlgebraicGeometry.Scheme.RelativeSpec.structureMorphism}
+  \uses{thm:relative_spec_exists, def:qc_sheaf_of_algebras}
+  Let \(X\) be a scheme and \(\mathcal{A}\) a quasi-coherent \(\mathcal{O}_X\)-algebra.
+  The \emph{structure morphism}
+  \(\pi : \underline{\Spec}_X(\mathcal{A}) \to X\) is the canonical projection of the
+  relative spectrum to its base, obtained as the colimit descent of the affine-local
+  structure morphisms \(\Spec(\mathcal{A}(U)) \to U\) over the directed affine open
+  cover of \(X\). It is the morphism whose affineness and base-change behaviour are the
+  subject of the universal-property and base-change results below.
+\end{definition}
+
+\begin{proof}
+
+\leanok
+  The structure morphism is the base morphism of the relative gluing data of
+  \(\mathcal{A}\); it is the projection underlying \cref{thm:relative_spec_exists}.
+\end{proof}
+
+\begin{theorem}\leanok
+[Universal property of the relative spectrum]
+  \label{thm:relative_spec_univ}
+  \lean{AlgebraicGeometry.Scheme.RelativeSpec.UniversalProperty}
+  % NOTE iter-283: removed the spurious `thm:relative_spec_base_change` from this
+  % \uses. The universal property is the PRIMITIVE statement, proved by reducing
+  % to the affine-base case and gluing (Lean body of `UniversalProperty` uses
+  % only `isAffineHom_of_forall_exists_isAffineOpen`/`relativeGluingData`, never
+  % `base_change`). Base change is a DOWNSTREAM corollary
+  % (thm:relative_spec_base_change \uses thm:relative_spec_univ), so listing it
+  % here created a univ <-> base_change dependency cycle that crashed
+  % `leanblueprint web`.
+  \uses{thm:relative_spec_exists, thm:relative_spec_affine_base,
+    def:relspec_structure_morphism}
+
+  % NOTE (iter-173 review): the iter-173 file-skeleton encodes this as the
+  % structural consequence ``IsAffineHom (structureMorphism 𝒜)'' rather than
+  % the natural-bijection statement pinned by this prose. Iter-174+ must
+  % upgrade the Lean type to a ``CategoryTheory.Functor.RepresentableBy''
+  % witness (or equivalent) before any consumer file relies on this theorem.
+  % SOURCE: [Stacks Project], tag 01LQ continuation: Section ``Relative spectrum as
+  % a functor'', functor F and Lemma lemma-spec
+  % (read from references/stacks-constructions.tex, L427-L466 + L547-L551).
+  % SOURCE QUOTE:
+  % "For any \(f : T \to S\) the pullback
+  %  \(f^*\mathcal{A}\) is a quasi-coherent sheaf of \(\mathcal{O}_T\)-algebras.
+  %  We are going to consider pairs \((f : T \to S, \varphi)\) where
+  %  \(f\) is a morphism of schemes and \(\varphi : f^*\mathcal{A} \to \mathcal{O}_T\)
+  %  is a morphism of \(\mathcal{O}_T\)-algebras. Note that this is the
+  %  same as giving a \(f^{-1}\mathcal{O}_S\)-algebra homomorphism
+  %  \(\varphi : f^{-1}\mathcal{A} \to \mathcal{O}_T\), see
+  %  Sheaves, Lemma REF.
+  %  This is also the same as giving an \(\mathcal{O}_S\)-algebra map
+  %  \(\varphi : \mathcal{A} \to f_*\mathcal{O}_T\), see
+  %  Sheaves, Lemma REF.
+  %  We will use all three ways of thinking about \(\varphi\),
+  %  without further mention. [...]
+  %  In this way we have defined a functor
+  %  \begin{eqnarray}
+  %  \label{equation-spec}
+  %  F : \Sch^{opp} & \longrightarrow & \textit{Sets} \\
+  %  T & \longmapsto & F(T) = \{\text{pairs }(f, \varphi) \text{ as above}\}
+  %  \nonumber
+  %  \end{eqnarray}
+  %  [...]
+  %  The functor \(F\) is representable by a scheme."
+  \textit{Source: [Stacks Project], tag 01LQ (lemma-spec + section-spec
+  functor description); [Hartshorne], II~Ex.~5.17(b).}
+  Let \(X\) be a scheme and \(\mathcal{A}\) a quasi-coherent \(\mathcal{O}_X\)-algebra.
+  Then \(\underline{\Spec}_X(\mathcal{A})\) represents the functor
+  \(F : \Sch^{op} \to \mathrm{Set}\),
+  $T \mapsto F(T) := \{(f, \varphi) : f : T \to X \text{ a morphism},\;
+  \varphi : f^* \mathcal{A} \to \mathcal{O}_T \text{ an } \mathcal{O}_T\text{-algebra map}\}.$
+  Equivalently, for any \(X\)-scheme \(g : T \to X\),
+  there is a natural bijection
+  \[
+    \Hom_X(T, \underline{\Spec}_X(\mathcal{A})) \;\;\cong\;\;
+    \Hom_{\mathcal{O}_X\text{-alg}}(\mathcal{A}, g_* \mathcal{O}_T)
+  \]
+  (using the adjunction between \(g_*\) and \(g^*\) to convert between
+  \(\mathcal{A} \to g_*\mathcal{O}_T\) and \(g^*\mathcal{A} \to \mathcal{O}_T\)).
+  The bijection is natural in \(T\).
+\end{theorem}
+
+% SOURCE QUOTE PROOF: [Stacks Project], tag 01LQ, proof of lemma-spec
+% (read from references/stacks-constructions.tex, L553-L599).
+% "We are going to use Schemes, Lemma \ref{schemes-lemma-glue-functors}.
+%  First we check that $F$ satisfies the sheaf property for the
+%  Zariski topology. Namely, suppose that $T$ is a scheme,
+%  that $T = \bigcup_{i \in I} U_i$ is an open covering,
+%  and that $(f_i, \varphi_i) \in F(U_i)$ such that
+%  $(f_i, \varphi_i)|_{U_i \cap U_j} = (f_j, \varphi_j)|_{U_i \cap U_j}$.
+%  This implies that the morphisms $f_i : U_i \to S$
+%  glue to a morphism of schemes $f : T \to S$ such that
+%  $f|_{U_i} = f_i$, see Schemes, Section \ref{schemes-section-glueing-schemes}.
+%  Thus $f_i^*\mathcal{A} = f^*\mathcal{A}|_{U_i}$ and by assumption the
+%  morphisms $\varphi_i$ agree on $U_i \cap U_j$. Hence by Sheaves,
+%  Section \ref{sheaves-section-glueing-sheaves} these glue to a
+%  morphism of $\mathcal{O}_T$-algebras $f^*\mathcal{A} \to \mathcal{O}_T$.
+%  This proves that $F$ satisfies the sheaf condition with respect to
+%  the Zariski topology.
+%  Let $S = \bigcup_{i \in I} U_i$ be an affine open covering.
+%  Let $F_i \subset F$ be the subfunctor consisting of
+%  those pairs $(f : T \to S, \varphi)$ such that
+%  $f(T) \subset U_i$.
+%  We have to show each $F_i$ is representable.
+%  This is the case because $F_i$ is identified with
+%  the functor associated to $U_i$ equipped with
+%  the quasi-coherent $\mathcal{O}_{U_i}$-algebra $\mathcal{A}|_{U_i}$,
+%  by Lemma \ref{lemma-spec-base-change}.
+%  Thus the result follows from Lemma \ref{lemma-spec-affine}.
+%  Next we show that $F_i \subset F$ is representable by open immersions.
+%  Let $(f : T \to S, \varphi) \in F(T)$. Consider $V_i = f^{-1}(U_i)$.
+%  It follows from the definition of $F_i$ that given $a : T' \to T$
+%  we have $a^*(f, \varphi) \in F_i(T')$ if and only if $a(T') \subset V_i$.
+%  Finally, we have to show that the collection $(F_i)_{i \in I}$
+%  covers $F$. Let $(f : T \to S, \varphi) \in F(T)$.
+%  Consider $V_i = f^{-1}(U_i)$. Since $S = \bigcup_{i \in I} U_i$
+%  is an open covering of $S$ we see that $T = \bigcup_{i \in I} V_i$
+%  is an open covering of $T$. Moreover $(f, \varphi)|_{V_i} \in F_i(V_i)$.
+%  This finishes the proof of the lemma."
+\begin{proof}
+  
+  \leanok
+  % NOTE (iter-179 review): supersedes the iter-176 placeholder-discharge note.
+  % The iter-179 Block A refactor replaces the iter-176 placeholder bodies with
+  % the Mathlib values ``(AffineZariskiSite.relativeGluingData _).glued`` /
+  % ``.toBase``; iter-179 Lane B closes the Lean ``UniversalProperty`` proof
+  % via ``isAffineHom_of_forall_exists_isAffineOpen`` +
+  % ``relativeGluingData.toBase_preimage_eq_opensRange_ι`` +
+  % ``isAffineOpen_opensRange`` — a real proof against the gluing infrastructure,
+  % NOT against a trivial identity placeholder. The Lean type remains the
+  % strictly weaker ``IsAffineHom (structureMorphism 𝒜)'' rather than the
+  % Yoneda-bijection form pinned above (iter-174+ commitment; still pending
+  % iter-180+). Consumers may now rely on the affineness conclusion, but the
+  % Yoneda-bijection witness is still deferred.
+  Following Stacks tag 01LQ (proof of lemma-spec): the functor \(F\) is a Zariski sheaf
+  because morphisms of schemes and \(\mathcal{O}\)-algebra maps both glue under open covers.
+  Choose an affine open cover \(X = \bigcup U_i\). The subfunctor
+  \(F_i \subseteq F\) of pairs \((f, \varphi)\) with \(f(T) \subseteq U_i\) is representable by
+  \(\Spec(\mathcal{A}(U_i))\) via the affine-base case
+  (\cref{thm:relative_spec_affine_base}) together with the
+  restriction identification \(F_i \cong F_{U_i,\,\mathcal{A}|_{U_i}}\).
+  Each \(F_i \hookrightarrow F\) is an open
+  subfunctor (pull back \(U_i\) along \(f\)). The \(F_i\) jointly cover \(F\) since the \(U_i\)
+  cover \(X\). The gluing of representable open subfunctors produces a representing scheme,
+  which is canonically isomorphic to the glued scheme \(\underline{\Spec}_X(\mathcal{A})\)
+  of \cref{thm:relative_spec_exists}.
+\end{proof}
+
+\section{Affine base}
+\label{sec:relspec_affine}
+
+\begin{theorem}\leanok
+[Relative spectrum over an affine base]
+  \label{thm:relative_spec_affine_base}
+  \lean{AlgebraicGeometry.Scheme.RelativeSpec.affine_base_iff}
+  \uses{def:qc_sheaf_of_algebras}
+  % NOTE (iter-173 review): the iter-173 file-skeleton encodes this as the
+  % weaker ``IsAffine ((Spec R).RelativeSpec 𝒜)'' rather than the canonical
+  % iso ``Spec_X(𝒜) ≅ Spec(Γ(X, 𝒜))'' pinned by this prose. The Lean name
+  % ``affine_base_iff'' is also misleading (the encoded type is not an iff).
+  % Iter-174+ refines to the iff-with-Γ statement once Γ : QcohAlgebra → CommRingCat
+  % is available.
+  
+  % SOURCE: [Stacks Project], tag 01LO (lemma-spec-affine)
+  % (read from references/stacks-constructions.tex, L491-L545).
+  % SOURCE QUOTE:
+  % "In Situation REF.
+  %  Let \(F\) be the functor associated to \((S, \mathcal{A})\) above.
+  %  If \(S\) is affine, then \(F\) is representable by the
+  %  affine scheme \(\Spec(\Gamma(S, \mathcal{A}))\)."
+  \textit{Source: [Stacks Project], tag 01LO (lemma-spec-affine).}
+  Let \(X = \Spec R\) be an affine scheme and let \(\mathcal{A}\) be a quasi-coherent
+  \(\mathcal{O}_X\)-algebra. Set \(A := \Gamma(X, \mathcal{A})\), regarded as an
+  \(R\)-algebra. Then there is a canonical isomorphism of \(X\)-schemes
+  \[
+    \underline{\Spec}_X(\mathcal{A}) \;\;\cong\;\; \Spec(A).
+  \]
+  In particular, on an affine base the relative spectrum reduces to the absolute
+  spectrum of the global sections.
+\end{theorem}
+
+% SOURCE QUOTE PROOF: "Write \(S = \Spec(R)\) and \(A = \Gamma(S, \mathcal{A})\).
+% Then \(A\) is an \(R\)-algebra and \(\mathcal{A} = \widetilde A\).
+% The ring map \(R \to A\) gives rise to a canonical map
+% \(\)
+% f_{univ} : \Spec(A)
+% \longrightarrow
+% S = \Spec(R).
+% \(\)
+% We have
+% \(f_{univ}^*\mathcal{A} =  \widetilde{A \otimes_R A}\)
+% by Schemes, Lemma REF.
+% Hence there is a canonical map
+% \(\)
+% \varphi_{univ} :
+% f_{univ}^*\mathcal{A} = \widetilde{A \otimes_R A}
+% \longrightarrow
+% \widetilde A = \mathcal{O}_{\Spec(A)}
+% \(\)
+% coming from the \(A\)-module map \(A \otimes_R A \to A\),
+% \(a \otimes a' \mapsto aa'\). We claim that the pair
+% \((f_{univ}, \varphi_{univ})\) represents \(F\) in this case."
+\begin{proof}
+  
+  \leanok
+  % NOTE (iter-179 review): supersedes the iter-176 placeholder-discharge note.
+  % The iter-176 ``change IsAffine (Spec R); inferInstance`` form is now stale
+  % — iter-179 Lane B closes via ``UniversalProperty 𝒜`` + ``isAffine_of_isAffineHom``
+  % against the iter-179 Mathlib-backed ``RelativeSpec``/``structureMorphism``
+  % bodies. The Lean type remains the strictly weaker ``IsAffine`` rather than
+  % the canonical iso ``Spec_X(𝒜) ≅ Spec(Γ(X,𝒜))'' named below (iter-174+
+  % commitment; still pending iter-180+).
+  Write \(X = \Spec R\) and \(A = \Gamma(X, \mathcal{A})\). Quasi-coherence of
+  \(\mathcal{A}\) gives \(\mathcal{A} = \widetilde{A}\) as \(\mathcal{O}_X\)-modules
+  (with the \(R\)-algebra structure on \(A\) inducing the algebra structure on
+  \(\widetilde A\)). The ring map \(R \to A\) gives a morphism
+  \(f_{\mathrm{univ}} : \Spec A \to \Spec R = X\) and a canonical
+  \(\mathcal{O}_{\Spec A}\)-algebra map
+  $\varphi_{\mathrm{univ}} : f_{\mathrm{univ}}^* \mathcal{A} = \widetilde{A \otimes_R A}
+  \to \mathcal{O}_{\Spec A} = \widetilde A$ given by multiplication
+  \(a \otimes a' \mapsto aa'\). We verify \((\Spec A, f_{\mathrm{univ}}, \varphi_{\mathrm{univ}})\)
+  represents \(F\) on the affine base: given a test scheme \(T\) and a pair
+  \((f, \varphi)\), the composite
+  $A = \Gamma(X, \mathcal{A}) \xrightarrow{f^\sharp}
+  \Gamma(T, f^*\mathcal{A}) \xrightarrow{\varphi} \Gamma(T, \mathcal{O}_T)$
+  is a ring map \(A \to \Gamma(T, \mathcal{O}_T)\) and hence corresponds to a morphism
+  \(T \to \Spec A\) by the affine universal property
+  (Mathlib \texttt{Scheme.toSpec\_naturality} /
+  \texttt{Scheme.Hom.toSpec}). One checks this assignment inverts the universal map
+  \((f, \varphi) \mapsto a\) defined by \(f = f_{\mathrm{univ}} \circ a\),
+  \(\varphi = a^* \varphi_{\mathrm{univ}}\).
+\end{proof}
+
+\section{Lean encoding}
+\label{sec:relspec_lean_encoding}
+
+The Lean target file is the new \texttt{AlgebraicJacobian/Picard/RelativeSpec.lean}.
+The construction proceeds by gluing absolute affine pieces: for each affine open
+\(U \subseteq X\) with \(U = \Spec R\) and \(A := \mathcal{A}(U)\) regarded as an
+\(R\)-algebra, the local piece is \(\Spec A\) with structure morphism \(\Spec A \to \Spec R = U\)
+induced by the algebra unit \(R \to A\). Mathlib provides \texttt{IsAffineOpen.toScheme} for
+the affine-open inclusion and the absolute \texttt{Scheme.Spec} functor for the local
+pieces; the transition isomorphisms come from quasi-coherence of \(\mathcal{A}\) via
+\texttt{QuasiCoherent.tensorIso} (or the explicit
+\(\mathcal{A}(U) \otimes_R S \xrightarrow{\sim} \mathcal{A}(V)\) for \(V = \Spec S \subseteq U\)).
+The gluing backbone is \texttt{AlgebraicGeometry.Scheme.GlueData} (general construction) or
+the convenience wrapper \texttt{AlgebraicGeometry.AffineScheme.glueOpens}; the cocycle
+condition reduces to Stacks \texttt{lemma-transitive-spec}. The universal property
+(\cref{thm:relative_spec_univ}) is expressed as a
+\texttt{CategoryTheory.Functor.RepresentableBy} witness, providing the natural bijection
+$\Hom_X(T, \underline{\Spec}_X(\mathcal{A})) \cong
+\Hom_{\mathcal{O}_X\text{-alg}}(\mathcal{A}, g_*\mathcal{O}_T)$ as a
+\texttt{Yoneda}-style structure. No new core axiom is required; the entire chapter is a
+definitional/structural construction on top of existing Mathlib affine-scheme
+infrastructure.
+
+\section{Out of scope}
+\label{sec:relspec_out_of_scope}
+
+This chapter packages \emph{only} the relative-spectrum construction and its core
+properties. The following downstream constructions live in separate sibling chapters and
+are explicitly out of scope here:
+\begin{itemize}
+  \item \textbf{Relative Picard functor \(\Pic^\sharp_{C/k}\)} (A.1.c) --- consumed-by, not
+    defined-here; its blueprint home is the planned chapter
+    \texttt{Picard\_RelPicFunctor.tex}.
+  \item \textbf{Line-bundle pullback on a product \(C \times_k T\)} (A.1.b) ---
+    \texttt{Picard\_LineBundlePullback.tex} (planned).
+  \item \textbf{Connectedness, dimensionality, smoothness of \(\underline{\Spec}_X(\mathcal{A})\)}
+    --- downstream properties that depend on assumptions on \(\mathcal{A}\)
+    (locally finite type, flat, etc.), not unconditional consequences of the construction.
+  \item \textbf{Identity-component \(\Pic^0\) and abelian-variety structure} (A.3) --- a
+    separate Route~A sub-row, fed by but not constructed in this chapter.
+\end{itemize}

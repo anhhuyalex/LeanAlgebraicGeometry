@@ -1,0 +1,2 @@
+- Blueprint mathematically complete (0 ∞ nodes, 0 broken refs). Awaiting phase 0: replace `def hello := "world"` in `Basic.lean` with sorry'd/axiom'd Lean declarations for all 21 blueprint items.
+- Strategy updated: `lem:sm` (smoothness), Larson's theorem, and theta-class computation classified as named `axiom`s. Main theorem is honestly conditional on all three.
