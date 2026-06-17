@@ -1,0 +1,1 @@
+import MR4628606PixtonsFormulaAndAbelJacobiTheoryOnThePicardStack.Basic

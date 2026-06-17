@@ -1,5 +1,7 @@
 # LeanAG Scope
 
+> Note: You can consult the [dashboard](https://axeldlv00.github.io/LeanAlgebraicGeometry/), it allows to consult blueprints/code/progress/DAG of each project in a more visual way.
+
 This repository aims at formalizing a set of related algebraic-geometry projects in Lean 4 / Mathlib. 
 
 The main intent is solving the [Algebraic Jacobian challenge](https://leanprover.zulipchat.com/#narrow/channel/583336-Autoformalization/topic/Jacobian.20challenge/with/603571555) originally proposed by Kevin Buzzard in its Differential Geometry version on Zulip, while we focus on the [algebraic geometry version](https://leanprover.zulipchat.com/#narrow/channel/583336-Autoformalization/topic/Jacobian.20challenge/near/587802685) proposed by Christian Merten. 

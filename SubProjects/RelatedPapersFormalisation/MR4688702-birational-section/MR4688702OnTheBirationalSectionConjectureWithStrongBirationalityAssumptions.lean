@@ -1,0 +1,1 @@
+import MR4688702OnTheBirationalSectionConjectureWithStrongBirationalityAssumptions.Basic

@@ -1,0 +1,1 @@
+import MR4276287UniformityInMordellLangForCurves.Basic

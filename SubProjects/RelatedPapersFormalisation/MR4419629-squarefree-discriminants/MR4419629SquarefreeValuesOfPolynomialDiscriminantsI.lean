@@ -1,0 +1,1 @@
+import MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.Basic
