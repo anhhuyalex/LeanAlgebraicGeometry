@@ -1,0 +1,432 @@
+[
+  {
+    "timestamp": "2026-05-23T20:55:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects/GmScaling.lean",
+      "theorem": "gmScalingP1_chart_PLB_eq"
+    },
+    "session": {
+      "id": "session_179",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "pullbackSpecIso_hom_base / _fst silently refuses to unify due to a downstream defeq mismatch on the `Spec.map (algMap kbar (Away_i ⊗ GmRing))` middle-object type; even fin_cases + Algebra.compHom unfolding does not coax `rw`/`erw` to fire. `erw` heartbeat-times-out at 200k on Algebra instance synthesis.",
+      "key_lemmas_used": [
+        "awayι_comp_PLB_hom (project, axiom-clean iter-173) — works once outer ≫ middle-object is `change`'d to `Proj 𝒜`",
+        "homogeneousLocalizationAwayIso_algebraMap (project, axiom-clean iter-174)",
+        "MvPolynomial.algebraMap_eq + MvPolynomial.eval₂Hom_comp_C"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Verbatim recipe Step 3 (1): `unfold gmScalingP1_chart; rw [awayι_comp_PLB_hom kbar Nat.one_pos (X i) (isHomogeneous_X kbar i)]`",
+        "code_tried": "unfold gmScalingP1_chart\nrw [awayι_comp_PLB_hom kbar Nat.one_pos (X i) (isHomogeneous_X kbar i)]",
+        "line_number": "213",
+        "lean_error": "`rw` reported `Did not find an occurrence of the pattern` even though the pattern appears literally in the goal text.",
+        "result": "failed",
+        "insight": "rw silently refuses to match a lemma's LHS when the surrounding CategoryStruct.comp's middle-object type is defeq-but-not-syntactically-equal between goal and lemma. New trap, undocumented previously."
+      },
+      {
+        "attempt": 2,
+        "strategy": "`change` to force the outer ≫'s middle-object type to `Proj 𝒜` (matching the lemma's LHS), then `rw [h]`",
+        "code_tried": "change (gmScalingP1_cover_X_iso kbar i).hom ≫ _ ≫ ((Proj.awayι ... : ... ⟶ Proj 𝒜) ≫ (ProjectiveLineBar kbar).hom) = _\nrw [h]",
+        "line_number": "239-247",
+        "lean_error": "(none — closed this step)",
+        "result": "success",
+        "insight": "KEY load-bearing trick: when an ≫ chain's terminal middle-object type is defeq-but-not-syntactically-equal to what a Mathlib lemma expects, an explicit `change` annotating the middle-object's type unblocks `rw`. This is a NEW finding for the KB."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Chase through algebra-map merge: `← Spec.map_comp`, `← CommRingCat.ofHom_comp`, `RingHom.comp_assoc`, `homogeneousLocalizationAwayIso_algebraMap`, `MvPolynomial.algebraMap_eq`, `MvPolynomial.eval₂Hom_comp_C`",
+        "code_tried": "rw [h, ← Spec.map_comp, ← CommRingCat.ofHom_comp, RingHom.comp_assoc, homogeneousLocalizationAwayIso_algebraMap, MvPolynomial.algebraMap_eq, MvPolynomial.eval₂Hom_comp_C]",
+        "line_number": "247-249",
+        "lean_error": "(none — closed this step; new goal `iso.hom ≫ Spec.map (algMap kbar (Away_i ⊗ GmRing)) = (cover).f i ≫ (PLB ⊗ Gm).hom`)",
+        "result": "success",
+        "insight": "Chart-side ring map collapses cleanly to the algebra map."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Apply `pullbackSpecIso_hom_base` (Mathlib AlgebraicGeometry.pullbackSpecIso_hom_base) to reduce the remaining goal",
+        "code_tried": "rw [pullbackSpecIso_hom_base]  -- and slice_lhs 4 5 => rw [pullbackSpecIso_hom_base]",
+        "line_number": "post-249",
+        "lean_error": "rw/simp report `pullbackSpecIso_hom_base` as `unused` / pattern not found even though the visible LHS pattern matches character-for-character.",
+        "result": "failed",
+        "insight": "The Algebra.compHom-based algebra instance prevents pattern unification; same family of defeq trap as Attempt 1."
+      },
+      {
+        "attempt": 5,
+        "strategy": "fin_cases i + Matrix.cons_val_zero/one simp",
+        "code_tried": "fin_cases i <;> simp [Matrix.cons_val_zero, Matrix.cons_val_one]\n<;> rw [pullbackSpecIso_hom_base]",
+        "line_number": "post-249",
+        "lean_error": "fin_cases + simp work but `pullbackSpecIso_hom_base` still doesn't fire in canonical i=0/i=1 form; reported `unused`.",
+        "result": "partial",
+        "insight": "Fin normalization is necessary but not sufficient; the Algebra instance issue persists."
+      },
+      {
+        "attempt": 6,
+        "strategy": "erw [pullbackSpecIso_hom_base] (permit minor unfoldings)",
+        "code_tried": "erw [pullbackSpecIso_hom_base]",
+        "line_number": "post-249",
+        "lean_error": "deterministic timeout (200k heartbeats) at `isDefEq`; Algebra.compHom-based instance synthesis on `TensorProduct kbar Away_i GmRing` is the heartbeat sink.",
+        "result": "failed",
+        "insight": "Algebra instance synthesis times out under erw; cannot brute-force the unification."
+      },
+      {
+        "attempt": 7,
+        "strategy": "Iso.eq_inv_comp / Iso.inv_comp_eq to peel iso prefix",
+        "code_tried": "rw [Iso.eq_inv_comp ...]",
+        "line_number": "post-249",
+        "lean_error": "Pattern `?g = Iso.inv ?α ≫ ?f` doesn't match the goal's LHS form.",
+        "result": "failed",
+        "insight": "Cannot bypass the iso."
+      }
+    ],
+    "next_steps": "iter-180 plan-agent: fire iter-181 RETIRE-OR-ESCALATE EARLY (per Lane A reversal trigger). Candidates: (1) TO_USER.md escalation re Algebra.compHom + pullbackSpecIso_hom_base; (2) project-side wrapper pullbackSpecIso_hom_base' bypassing instance synthesis; (3) Mathlib upstream PR; (4) switch to Route C alternative (valuative-criterion ℙ¹→A const)."
+  },
+  {
+    "timestamp": "2026-05-23T20:55:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects/GmScaling.lean",
+      "theorem": "gmScalingP1_chart_agreement"
+    },
+    "session": {
+      "id": "session_179",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "(gmScalingP1_cover kbar).I₀ doesn't reduce to Fin 2; `fin_cases` fails with `failed to synthesize Fintype I₀`. Cross cases also gated on chart_PLB_eq closure.",
+      "key_lemmas_used": [
+        "(left as gmScalingP1_chart_data_temp axiom witness)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Diagonal cases via fst_eq_snd_of_mono_eq (cover.f i is IsOpenImmersion ⇒ mono); cross cases via the algebraic identity `λ·u = (1/t)·λ`",
+        "code_tried": "fin_cases x",
+        "line_number": "261-280",
+        "lean_error": "failed to synthesize Fintype (gmScalingP1_cover kbar).I₀",
+        "result": "failed",
+        "insight": "The cover's I₀ only reduces to Fin 2 after substantial unfolding (pullback₁ → openCover.I₀ → Fin 2) — elaborator doesn't see it. Body kept laundered against axiom."
+      }
+    ],
+    "next_steps": "Gated on chart_PLB_eq closure; will follow Lane A escalation."
+  },
+  {
+    "timestamp": "2026-05-23T20:55:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects/GmScaling.lean",
+      "theorem": "gmScalingP1_collapse_at_zero"
+    },
+    "session": {
+      "id": "session_179",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Same chart-bridge defeq blocker as chart_PLB_eq.",
+      "key_lemmas_used": [
+        "(left as gmScalingP1_collapse_at_zero_temp axiom witness)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Unfold gmScalingP1 = Over.homMk (glueMorphisms ...), apply Scheme.Cover.hom_ext, compute chart-1 ring map's action on zeroPt",
+        "code_tried": "(planned; not committed — bridging into chart-1 ring map requires the same Spec-middle-type chase)",
+        "line_number": "363",
+        "lean_error": "(gated)",
+        "result": "failed",
+        "insight": "Cannot compute gmScalingP1's action on zeroPt without chart-bridge defeq resolution."
+      }
+    ],
+    "next_steps": "Gated on chart_PLB_eq closure; will follow Lane A escalation."
+  },
+  {
+    "timestamp": "2026-05-23T20:55:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/RelativeSpec.lean",
+      "theorem": "UniversalProperty"
+    },
+    "session": {
+      "id": "session_179",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "AlgebraicGeometry.isAffineHom_of_forall_exists_isAffineOpen (Mathlib/AlgebraicGeometry/Morphisms/Affine.lean:185)",
+        "exists_isAffineOpen_mem_and_subset (Mathlib/AlgebraicGeometry/AffineScheme.lean:271)",
+        "Cover.RelativeGluingData.toBase_preimage_eq_opensRange_ι (Mathlib/AlgebraicGeometry/RelativeGluing.lean:166)",
+        "isAffineOpen_opensRange"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "apply isAffineHom_of_forall_exists_isAffineOpen; per x ∈ X get affine open via exists_isAffineOpen_mem_and_subset; rewrite (structureMorphism 𝒜) ⁻¹ᵁ U as (d.cover.f ⟨U,hU⟩).opensRange via toBase_preimage_eq_opensRange_ι + Opens.opensRange_ι; conclude isAffineOpen_opensRange after `change IsAffine (Scheme.Spec.obj _)`",
+        "code_tried": "apply isAffineHom_of_forall_exists_isAffineOpen ...",
+        "line_number": "229-242 (was 243-249)",
+        "lean_error": null,
+        "result": "success",
+        "insight": "`apply` (not `refine`) is needed to unify the implicit morphism `f := structureMorphism 𝒜`. `change` is needed to reshape `structureMorphism 𝒜 ⁻¹ᵁ U` to `d.toBase ⁻¹ᵁ U` (defeq via @[simps! X] projection)."
+      }
+    ],
+    "next_steps": "Closed kernel-clean (axioms = propext, Classical.choice, Quot.sound)."
+  },
+  {
+    "timestamp": "2026-05-23T20:55:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/RelativeSpec.lean",
+      "theorem": "affine_base_iff"
+    },
+    "session": {
+      "id": "session_179",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "AlgebraicGeometry.isAffine_of_isAffineHom (Mathlib/AlgebraicGeometry/Morphisms/Affine.lean:182)",
+        "UniversalProperty 𝒜 (project, just-closed)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Avoid heavier isColimitCocone adaptation by using `UniversalProperty 𝒜` (just-proved) to get `IsAffineHom (structureMorphism 𝒜)`, then `isAffine_of_isAffineHom` (Spec R is IsAffine by instance)",
+        "code_tried": "haveI := UniversalProperty 𝒜\nexact isAffine_of_isAffineHom _",
+        "line_number": "post-refactor",
+        "lean_error": null,
+        "result": "success",
+        "insight": "The directive's isColimitCocone adaptation collapses to the same conclusion via UniversalProperty + isAffine_of_isAffineHom."
+      }
+    ],
+    "next_steps": "Closed kernel-clean (axioms = propext, Classical.choice, Quot.sound)."
+  },
+  {
+    "timestamp": "2026-05-23T20:55:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/RelativeSpec.lean",
+      "theorem": "base_change"
+    },
+    "session": {
+      "id": "session_179",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Two genuine Mathlib gaps factored into 2 named helpers each carrying 1 sorry: (a) `Scheme.QcohAlgebra.pullback.coequifibered` — pushforward along an affine morphism preserves the Coequifibered overlay (Stacks 01LR pullback compatibility); (b) `Scheme.RelativeSpec.pullback_iso` — universal-property assembly of the iso from the directed affine cover of T (substantive cocone construction).",
+      "key_lemmas_used": [
+        "TopCat.Sheaf.pushforward (Mathlib/Topology/Sheaves/Functors.lean:62)",
+        "CategoryTheory.Limits.pullback.fst/.snd",
+        "MorphismProperty.pullback_fst"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Construct 𝒜' = g^* 𝒜 via helper Scheme.QcohAlgebra.pullback (concrete sheaf + unit fields, sorry on coequifibered); iso descends via helper Scheme.RelativeSpec.pullback_iso",
+        "code_tried": "exact ⟨𝒜.pullback g, ⟨pullback_iso g 𝒜⟩⟩",
+        "line_number": "306-315 (was)",
+        "lean_error": null,
+        "result": "partial",
+        "insight": "Helper budget 2/2 used; both helper types substantive (not laundering). File 3 → 2 sorries (both in named helpers with Mathlib-gap content)."
+      }
+    ],
+    "next_steps": "iter-180+: discharge `QcohAlgebra.pullback.coequifibered` via MorphismProperty.pullback_fst applied to UniversalProperty + IsAffineOpen.isLocalization_basicOpen; discharge `pullback_iso` via colimit cocone universal property of Cover.RelativeGluingData.glued."
+  },
+  {
+    "timestamp": "2026-05-23T20:55:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/RationalCurveIso.lean",
+      "theorem": "morphismToP1OfGlobalSections"
+    },
+    "session": {
+      "id": "session_179",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "Scheme.toSpecΓ_naturality",
+        "toSpecΓ_SpecMap_ΓSpecIso_inv",
+        "MvPolynomial.algebraMap_eq",
+        "CommRingCat.ofHom_comp",
+        "CommRingCat.ofHom_hom"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Per directive (after type-correction): thread `_halg : f.comp (algebraMap kbar (MvPolynomial (Fin 2) kbar)) = X.hom.appTop.hom.comp (Scheme.ΓSpecIso (CommRingCat.of kbar)).inv.hom` through the signature; close residual `X.left.toSpecΓ ≫ Spec.map (CommRingCat.ofHom (f.comp MvPolynomial.C)) = X.hom` via 4 rw blocks",
+        "code_tried": "(1) MvPolynomial.algebraMap_eq + CommRingCat.ofHom_comp + 2x CommRingCat.ofHom_hom to lift RingHom-level _halg to CommRingCat-level identity; (2) rw + Spec.map_comp; (3) backward Scheme.toSpecΓ_naturality on X.hom; (4) forward toSpecΓ_SpecMap_ΓSpecIso_inv + Category.comp_id",
+        "line_number": "198-243",
+        "lean_error": null,
+        "result": "success",
+        "insight": "Two CommRingCat.ofHom_hom rewrites turning `CommRingCat.ofHom X.hom.appTop.hom` back into `X.hom.appTop` are critical — without them the RingHom-level _halg cannot rejoin the CommRingCat-level goal. Directive's literal `_halg` form mixed RingHom + CommRingCat types; correct form verified via lean_run_code."
+      }
+    ],
+    "next_steps": "Pin 2 (morphism_degree_via_pole_divisor) and Pin 3 (iso_of_degree_one) remain — both off-target this iter."
+  },
+  {
+    "timestamp": "2026-05-23T20:55:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Albanese/CodimOneExtension.lean",
+      "theorem": "extend_iff_order_nonneg"
+    },
+    "session": {
+      "id": "session_179",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Path D1 (tighten signature to use Scheme.RationalMap.order) requires substantive new pullback machinery `RationalMap → function-field ring map` that does not ship in Mathlib at b80f227 and exceeds 30-LOC discharge cap. Chose Path D2 (rename + drop unused binders + relax docstring).",
+      "key_lemmas_used": [
+        "Scheme.RationalMap.mem_domain (the body re-shuffle)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Path D2: rename to `mem_domain_iff_exists_partialMap_through_point`; drop unused [Ring.KrullDimLE 1 _] + [IsLocallyNoetherian X.left] binders; update file header + section docstrings to honestly describe the 2-LOC reshuffle the body proves; preserve the substantive Hartshorne-II.6 reformulation as a future lemma `extend_iff_pullback_order_nonneg`",
+        "code_tried": "(rename + docstring edits)",
+        "line_number": "391 → 407 (renamed)",
+        "lean_error": null,
+        "result": "partial",
+        "insight": "Honest fallback: the body is genuinely a re-shuffle of mem_domain; the substantive Hartshorne content was claimed but not encoded. Auditor 178B finding RESOLVED via demotion."
+      }
+    ],
+    "next_steps": "iter-180+: add substantive `extend_iff_pullback_order_nonneg` lemma carrying Scheme.RationalMap.order if Mathlib pullback machinery becomes available."
+  },
+  {
+    "timestamp": "2026-05-23T20:55:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Albanese/CodimOneExtension.lean",
+      "theorem": "smooth_codim_one_maximalIdeal_isPrincipal_and_ne_bot"
+    },
+    "session": {
+      "id": "session_179",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Two orthogonal Mathlib gaps at b80f227: (i) Smooth scheme stalk is regular local (Stacks 00TT at scheme level — no scheme-level packaging in Mathlib); (ii) Topological-coheight-to-ringKrullDim bridge (Order.coheight z = 1 → ringKrullDim (X.presheaf.stalk z) = 1 — missing for general scheme stalks).",
+      "key_lemmas_used": [
+        "IsRegularLocalRing.iff_finrank_cotangentSpace (Mathlib.RingTheory.RegularLocalRing.Defs)",
+        "IsLocalRing.finrank_cotangentSpace_le_one_iff (Mathlib.RingTheory.Ideal.Cotangent)",
+        "IsLocalRing.isField_iff_maximalIdeal_eq + ringKrullDim_eq_zero_of_isField",
+        "LocallyOfFiniteType.isLocallyNoetherian"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Decompose Mathlib gap into single internal named hypothesis `hreg_dim : IsRegularLocalRing (stalk z) ∧ ringKrullDim (stalk z) = 1 := sorry`; then prove goal axiom-clean from hreg_dim via cotangent-space + dim chain",
+        "code_tried": "have hreg_dim : IsRegularLocalRing _ ∧ ringKrullDim _ = 1 := sorry\n... (axiom-clean discharge chain) ...",
+        "line_number": "222 (was 266)",
+        "lean_error": null,
+        "result": "partial",
+        "insight": "Net sorry change = 0 (sorry RELOCATED from bare body to named hypothesis with substantive type + axiom-clean discharge chain). Iter-178's bare `:= sorry` is replaced by a structured proof exposing the closure path."
+      }
+    ],
+    "next_steps": "iter-180+: file Scheme.IsSmooth.isRegularLocalRing_stalk + Scheme.ringKrullDim_stalk_of_coheight via mathlib-analogist (`smooth-stalk-regular`)."
+  },
+  {
+    "timestamp": "2026-05-23T20:55:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Albanese/Thm32RationalMapExtension.lean",
+      "theorem": "extend_to_av"
+    },
+    "session": {
+      "id": "session_179",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Helper `av_isIntegral_and_codimOneFree` consolidates 2 Mathlib gaps: (i) Smooth ⟹ IsReduced for schemes over algebraically-closed-field base (no Mathlib lemma at b80f227); (ii) codim-≥2 indeterminacy half of Milne Thm 3.2 — currently bundled inside `extend_of_codimOneFree_of_smooth` body (also sorry).",
+      "key_lemmas_used": [
+        "GeometricallyIrreducible.irreducibleSpace_of_subsingleton (Mathlib/AlgebraicGeometry/Geometrically/Irreducible.lean:98)",
+        "isIntegral_of_irreducibleSpace_of_isReduced",
+        "extend_of_codimOneFree_of_smooth (project)",
+        "CodimOneFree (project)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Reduce to `extend_of_codimOneFree_of_smooth` by discharging the `CodimOneFree f` hypothesis via a named helper `av_isIntegral_and_codimOneFree` consolidating the 2 Mathlib-gap pieces",
+        "code_tried": "haveI : IsSeparated A.hom := inferInstance\nhaveI : LocallyOfFiniteType A.hom := inferInstance\nobtain ⟨hint, hcod⟩ := av_isIntegral_and_codimOneFree f\nhaveI := hint\nhaveI : IsReduced A.left := inferInstance\nexact extend_of_codimOneFree_of_smooth f hcod",
+        "line_number": "162-173 (extend_to_av) + 187 (helper)",
+        "lean_error": null,
+        "result": "partial",
+        "insight": "Body of extend_to_av is 0 inline sorry; substantive content concentrated in 1 named helper (budget 1/1). New import AlgebraicJacobian.Albanese.CodimOneExtension added (no cycle)."
+      }
+    ],
+    "next_steps": "iter-180+: file `Scheme.Smooth.isReduced` (Mathlib gap) OR project-local instance; unbundle codim-≥2 half of `extend_of_codimOneFree_of_smooth` into a separate project lemma."
+  },
+  {
+    "timestamp": "2026-05-23T20:55:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Albanese/AuslanderBuchsbaum.lean",
+      "theorem": "projectiveDimension (docstring fix)"
+    },
+    "session": {
+      "id": "session_179",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Drop stale 'iter-175 file-skeleton' paragraph from projectiveDimension docstring; rewrite module-level Status block to record iter-178 kernel-clean closure + name the 5 remaining typed-sorry bodies",
+        "code_tried": "(docstring edits only)",
+        "line_number": "180-182 + 28-35",
+        "lean_error": null,
+        "result": "success",
+        "insight": "Auditor 178C must-fix landed; no body change."
+      }
+    ],
+    "next_steps": "Iter-180+: depth body via Stacks 00LF supremum (~10-15 LOC) unblocking 3 downstream depth-dependent sorries."
+  },
+  {
+    "timestamp": "2026-05-23T20:55:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Albanese/AuslanderBuchsbaum.lean",
+      "theorem": "depth (STRETCH re-export)"
+    },
+    "session": {
+      "id": "session_179",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Mathlib b80f227 ships no numeric `Module.depth` function — only depth-zero characterisations in `Mathlib.RingTheory.Regular.Depth` (`IsSMulRegular.subsingleton_linearMap_iff`).",
+      "key_lemmas_used": [
+        "Mathlib.RingTheory.Length (Module.length as ℕ∞-valued precedent)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Re-export Module.depth from Mathlib as a one-liner per Module.projectiveDimension template",
+        "code_tried": "(audited Mathlib; no numeric depth function exists at pinned commit)",
+        "line_number": "146",
+        "lean_error": null,
+        "result": "partial",
+        "insight": "Body remains typed sorry; new docstring paragraph documents the Mathlib gap for the iter-180+ body lane."
+      }
+    ],
+    "next_steps": "iter-180+: implement Module.depth via Stacks 00LF supremum (~10-15 LOC) — drop _I/_M underscores; verify RingTheory.Sequence.IsRegular semantics."
+  }
+]

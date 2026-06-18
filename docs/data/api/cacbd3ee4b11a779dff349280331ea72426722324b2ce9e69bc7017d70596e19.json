@@ -1,0 +1,124 @@
+[
+  {
+    "timestamp": "2026-06-01T02:05:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate/StalkTensor.lean",
+      "theorem": "PresheafOfModules.stalkTensorLinearMap"
+    },
+    "session": {
+      "id": "session_234",
+      "model": "claude-opus"
+    },
+    "findings": {
+      "blocker": "none — stage (iii) of lem:stalk_tensor_commutation closed; this was the iter's named convergence probe",
+      "key_lemmas_used": [
+        "TensorProduct.smul_tmul'",
+        "PresheafOfModules.germ_smul",
+        "PresheafOfModules.germ_exist",
+        "germ_res_apply",
+        "stalkTensorDescU_tmul",
+        "stalkTensorDesc_germ"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "stalkTensorDescU_smul: TensorProduct.induction_on, tmul case via rw [smul_tmul', stalkTensorDescU_tmul, germ_smul]",
+        "code_tried": "rw [TensorProduct.smul_tmul', stalkTensorDescU_tmul, stalkTensorDescU_tmul, PresheafOfModules.germ_smul A x U hx]; exact (TensorProduct.smul_tmul' _ _ _).symm",
+        "line_number": "109",
+        "lean_error": "failed to synthesize HSMul ↑(R.obj (op U)) ↑((Monoidal.tensorObj A B).obj (op U)) — carrier-duality: CommRingCat R(U) scalar vs RingCat-carrier module on A(U)⊗B(U)",
+        "result": "failed",
+        "insight": "rw [smul_tmul'] fails on instance synthesis: the section smul r•(a⊗ₜb) is over the RingCat carrier S(U)=(R⋙forget₂).obj(op U), not the CommRingCat carrier R(U); the two are defeq but not syntactic so rw keyed-matching fails"
+      },
+      {
+        "attempt": 2,
+        "strategy": "Pin scalar type S explicitly via set S := (R⋙forget₂).obj(op U) and @-explicit smul_tmul'/smul_zero",
+        "code_tried": "set S : Type u := ↑((R ⋙ forget₂ CommRingCat RingCat).obj (op U)); rw [smul_zero (M := S) ...]",
+        "line_number": "114",
+        "lean_error": "failed to synthesize Module S ↑(A.obj (op U)) / Module ↑((R⋙forget₂)...) ↑(A.obj (op U))",
+        "result": "failed",
+        "insight": "Explicitly naming the RingCat carrier as the scalar type breaks Module instance synthesis on the factor modules; the working route is to stay implicit and use erw/defeq"
+      },
+      {
+        "attempt": 3,
+        "strategy": "erw/defeq recipe: tmul via erw [stalkTensorDescU_tmul, germ_smul] + term-mode smul_tmul'.symm; add via refine (map_add _).trans + congrArg; zero via simp only + exact map_zero _",
+        "code_tried": "| zero => simp only [presheaf_obj_coe, ...map_zero, smul_zero]; exact map_zero _ | tmul a b => erw [stalkTensorDescU_tmul, stalkTensorDescU_tmul, PresheafOfModules.germ_smul A x U hx]; exact (TensorProduct.smul_tmul' _ _ _).symm | add p q hp hq => erw [smul_add]; refine (map_add _ _ _).trans ?_; rw [hp, hq, ← smul_add]; exact congrArg _ (map_add _ p q).symm",
+        "line_number": "109",
+        "lean_error": null,
+        "result": "success",
+        "insight": "CARRIER-DUALITY RECIPE: never rw [smul_tmul'] or map_add/map_zero directly on ConcreteCategory.hom g; instead (1) erw for stalkTensorDescU_tmul (defeq through reducible), (2) erw [smul_add]/[germ_smul] to pull raw-TensorProduct smul via defeq, (3) term-mode map_add/map_zero (refine ...trans / exact map_zero _) for the additive maps. r•0 is defeq 0 so exact map_zero _ fires."
+      },
+      {
+        "attempt": 4,
+        "strategy": "stalkTensorLinearMap map_smul': mirror d.1 stalkLinearMap — germ_exist r and ξ, pass to common nbhd W=U⊓V, chain ← germ_smul, stalkTensorDesc_germ, stalkTensorDescU_smul, ← stalkTensorDesc_germ",
+        "code_tried": "rw [hr, hz, ← PresheafOfModules.germ_smul (Monoidal.tensorObj A B) x W hxW, stalkTensorDesc_germ, stalkTensorDescU_smul, ← stalkTensorDesc_germ]",
+        "line_number": "188",
+        "lean_error": null,
+        "result": "success",
+        "insight": "stage (iii) deliverable: stalkTensorLinearMap : (A⊗ᵖB).stalk x →ₗ[R.stalk x] (A_x⊗_{R_x}B_x), axiom-clean {propext, Classical.choice, Quot.sound}. Forward half of the d.2 iso is now an R_x-linear map."
+      }
+    ],
+    "next_steps": "Stage (iv): reverse map stalkTensorRev via TensorProduct.lift of an R_x-bilinear nested colimit.desc (~150-250 LOC, no Mathlib tensor-commutes-with-filtered-colimit shortcut; TensorProduct.directLimit/Module.DirectLimit confirmed ABSENT). Stage (v): bundle stalkTensorIso via mutual inversion on germ generators + TensorProduct.induction_on, using stalkTensorLinearMap_germ_tmul (already landed). Reuse the carrier-duality recipe verbatim for germ_smul/tmul at section level."
+  },
+  {
+    "timestamp": "2026-06-01T01:55:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/FlatBaseChange.lean",
+      "theorem": "moduleSpecΓFunctor_pushforward_tilde_iso"
+    },
+    "session": {
+      "id": "session_234",
+      "model": "claude-opus"
+    },
+    "findings": {
+      "blocker": "map_smul' goal blocked by typeclass-instance wall: the intermediate Γ(Spec R,⊤)- and Γ(Spec R',⊤)-actions are buried inside Module.compHom / ModuleCat.restrictScalars and are not synthesizable SMul/Module instances on the final carrier type, so no change/rw/rfl/congr can name the common Γ(Spec R',⊤)-action to reduce to scalar equality (ΓSpecIso_inv_naturality). Not committed — no sorry left.",
+      "key_lemmas_used": [
+        "ModuleCat.restrictScalars.smul_def",
+        "Scheme.ΓSpecIso_inv_naturality",
+        "StructureSheaf.globalSectionsIso",
+        "set_option backward.isDefEq.respectTransparency false"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "LinearEquiv.toModuleIso with AddEquiv.refl on the common carrier; reduce to one map_smul' goal (needs respectTransparency false)",
+        "code_tried": "set_option backward.isDefEq.respectTransparency false in noncomputable def moduleSpecΓFunctor_pushforward_tilde_iso := LinearEquiv.toModuleIso (X₁:=…) (X₂:=…) ...",
+        "line_number": "186",
+        "lean_error": null,
+        "result": "partial",
+        "insight": "Construction skeleton typechecks; respectTransparency false is required for any iso between restrictScalars-of-Spec-modules to even typecheck. Carriers are defeq as types (rfl-confirmed)."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Close map_smul' by rewriting LHS to R'-action then to R-action: show φ.hom r • s = r • s after erw [restrictScalars.smul_def]",
+        "code_tried": "intro r s; show φ.hom r • s = r • s; rw [ModuleCat.restrictScalars.smul_def]",
+        "line_number": "200",
+        "lean_error": "'show' tactic failed: pattern (CommRingCat.Hom.hom φ) r • s = @HSMul.hSMul ... mismatch — RHS smul instance is the buried Module.compHom one, not defeq to named r • s",
+        "result": "failed",
+        "insight": "RHS r-action is Module.compHom (gSI R).hom of the Γ(Spec R,⊤)-action; not defeq to a nameable target smul"
+      },
+      {
+        "attempt": 3,
+        "strategy": "Name the common Γ(Spec R',⊤)-action: change (globalSectionsIso R').hom.hom (φ.hom r) • s = _",
+        "code_tried": "change (StructureSheaf.globalSectionsIso R').hom.hom (φ.hom r) • s = _",
+        "line_number": "201",
+        "lean_error": "failed to synthesize HSMul ↑((Spec.structureSheaf ↑R').obj.obj (op ⊤)) ↑((ModuleCat.restrictScalars φ.hom).obj ...) — the Γ(Spec R',⊤)-action is not a synthesizable SMul on the final carrier",
+        "result": "failed",
+        "insight": "The buried action cannot be named; this is the core instance wall. Tactic route is DEAD."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Element-free functorial probe (RECOMMENDED route): restrictScalarsComp'App + restrictScalarsId'App + eqToIso from ΓSpecIso_inv_naturality ring equality; no element smul touched",
+        "code_tried": "lean_run_code probes of step (a) rfl-confirmation and step (b) ψ extraction",
+        "line_number": "186",
+        "lean_error": "step (b): (Spec.map φ).toRingCatSheafHom is an InducedCategory.Hom, .val.app (op ⊤) does not project — could not dig out the pushforward ring map ψ",
+        "result": "partial",
+        "insight": "Step (a) CONFIRMED by rfl: (moduleSpecΓ R').obj (tilde M) = (restrictScalars (gSI R').hom.hom).obj W. Step (b) blocked on plumbing the pushforward ring map ψ out of SheafOfModules.pushforward internals. This element-free route is the recommended next probe."
+      }
+    ],
+    "next_steps": "Do NOT retry the tactic-level map_smul' route (instance wall confirmed dead). Next iter: the element-free restrictScalarsComp'App route — dig ψ : Γ(Spec R,⊤)→Γ(Spec R',⊤) out of PresheafOfModules.pushforward = pushforward₀ ⋙ restrictScalars internals, verify (Spec.map φ)⁻¹ᵁ⊤=⊤ by rfl (or insert eqToHom transport), then assemble from restrictScalarsComp'App + ΓSpecIso_inv_naturality ring-map equality. NOTE: even closing this Γ-fragment does NOT close affineBaseChange_pushforward_iso (still needs QC-of-pushforward + pullback dict + fibre-product id + cancelBaseChange match — multi-iter)."
+  }
+]

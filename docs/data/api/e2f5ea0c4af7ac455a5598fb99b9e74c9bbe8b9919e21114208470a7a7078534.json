@@ -1,0 +1,265 @@
+[
+  {
+    "timestamp": "2026-05-14T13:18:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "cechCofaceMap_pi_smul (hG per-summand discharge at L728/L768)"
+    },
+    "session": {
+      "id": "session_98",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Polymorphic-scalar pattern unification fails through the anonymous-closure codomain of `Pi.lift`. Six iter-099 routes were exhausted; six iter-100 routes (S1 `set h_sgn : k`, S2 `Linear.smul_comp`, ℤ-scalar `set h_sgn : ℤ` + `rw [ModuleCat.hom_zsmul]`, `Preadditive.zsmul_comp`, `Preadditive.nsmul_comp`, `change`-with-ascription, `set f' :=`) all FAIL at the same level. `ModuleCat.hom_zsmul` works in standalone `lean_run_code` tests on concrete shapes but the discrimination tree cannot locate the smul-occurrence in the goal in situ. Iter-100 pivoted to `funext j'` (per-coordinate strategy); structural step landed but residual per-coordinate R-linearity deferred.",
+      "key_lemmas_used": [
+        "ModuleCat.hom_comp",
+        "LinearMap.comp_apply",
+        "funext",
+        "ModuleCat.hom_zsmul (verified rfl-applicable in vacuum)",
+        "piIsoPi_hom_ker_subtype_apply (planned for iter-101)",
+        "Pi.lift_π_apply (planned)",
+        "presheafMap_restrict_collapse (planned)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Plan-recommended chain S1: pin scalar to k via `set h_sgn : k := (-1) ^ (↑i : ℕ) with h_sgn_def`",
+        "code_tried": "set h_sgn : k := (-1) ^ (↑i : ℕ) with h_sgn_def",
+        "line_number": "728",
+        "lean_error": "no error, but `set` does NOT fold the scalar — post-`set` goal still shows `(-1) ^ ↑i •` rather than `h_sgn •`. Diagnostic: `set h_sgn : ℤ := …` DOES substitute, confirming the scalar elaborates through the ℤ-SMul instance on `(∏ᶜ Z₁) ⟶ ∏ᶜ (anonymous-closure)`, not the k-scalar instance.",
+        "goal_before": "case h: e₂ ((eqToHom).hom ((((-1)^↑i) • Pi.lift_thing).hom (e₁.symm (r' • y')))) = r' • e₂ ((eqToHom).hom ((((-1)^↑i) • Pi.lift_thing).hom (e₁.symm y')))",
+        "goal_after": "unchanged — scalar not folded",
+        "result": "failed",
+        "insight": "Plan directive's recommendation `: k` was off-target: the scalar is elaborated in ℤ via the Preadditive ZSMul instance, not in k. Iter-100 plan should have used ℤ. This is a meta-lesson — `lean_multi_attempt` against the actual goal IS needed before transcribing a recipe verbatim."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Plan-recommended chain S2: rw [Linear.smul_comp] (k-action smul-comp extraction)",
+        "code_tried": "rw [Linear.smul_comp]",
+        "line_number": "728",
+        "lean_error": "rewrite tactic failed: pattern (?r • ?f) ≫ ?g not found in goal",
+        "goal_before": "case h: same as Attempt 1's goal",
+        "goal_after": "unchanged",
+        "result": "failed",
+        "insight": "Same pattern-not-found failure as iter-099 Approach 2b/2d. The k-action route is genuinely blocked here."
+      },
+      {
+        "attempt": 3,
+        "strategy": "ℤ-scalar variant: `set h_sgn : ℤ` then `rw [ModuleCat.hom_zsmul]`",
+        "code_tried": "set h_sgn : ℤ := (-1) ^ (↑i : ℕ) with h_sgn_def; rw [ModuleCat.hom_zsmul]",
+        "line_number": "728",
+        "lean_error": "set substitutes (goal now shows `h_sgn • Pi.lift_thing`), but `rw [ModuleCat.hom_zsmul]` FAILS: pattern `ModuleCat.Hom.hom (?n • ?f)` not found. Same for `simp only [ModuleCat.hom_zsmul]`, `simp_rw [ModuleCat.hom_zsmul]`, `dsimp only [ModuleCat.hom_zsmul]`, and an explicit `rw [h_test]` with locally bound `h_test : ∀ M N (n : ℤ) (f : M ⟶ N), (n • f).hom = n • f.hom := rfl`.",
+        "goal_before": "case h: e₂ ((eqToHom).hom ((h_sgn • Pi.lift_thing).hom (e₁.symm (r' • y')))) = r' • e₂ ((eqToHom).hom ((h_sgn • Pi.lift_thing).hom (e₁.symm y')))",
+        "goal_after": "unchanged on the hom_zsmul attempts",
+        "result": "failed",
+        "insight": "`ModuleCat.hom_zsmul` is rfl-applicable in vacuum (verified via `lean_run_code` on close-matched shapes), but the discrimination tree's pattern unification fails through the Pi.lift's anonymous-closure codomain in this in-context goal. This is a deep discrimination-tree issue, not a missing-lemma issue."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Diagnostic verification via lean_run_code in vacuum",
+        "code_tried": "example {ι : Type} {Z : ι → ModuleCat.{0} k} [HasProduct Z] {M : ModuleCat k} (n : ℤ) (f : M ⟶ ∏ᶜ Z) (x : M) : (n • f).hom x = n • f.hom x := by rw [ModuleCat.hom_zsmul]",
+        "line_number": "n/a (lean_run_code)",
+        "lean_error": null,
+        "goal_before": "n/a",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Confirms `ModuleCat.hom_zsmul` IS rfl-applicable on concretely-typed shapes. The failure in attempt 3 is specifically about the anonymous-closure codomain of `Pi.lift fun i_1 ↦ Pi.π Z₁ (i_1 ∘ δ i) ≫ (toModuleKPresheaf C).map ...` — the discrimination tree can elaborate the pattern but cannot syntactically locate the smul-occurrence."
+      },
+      {
+        "attempt": 5,
+        "strategy": "Categorical-level extraction: rw [Preadditive.zsmul_comp] (ℤ-action smul-comp) BEFORE the L727 simp",
+        "code_tried": "rw [Preadditive.zsmul_comp]",
+        "line_number": "728",
+        "lean_error": "rewrite tactic failed: pattern (?n • ?f) ≫ ?g not found",
+        "goal_before": "case h: e₂ ((((-1)^↑i • Pi.lift_thing) ≫ eqToHom).hom (e₁.symm (r' • y'))) = r' • e₂ ((((-1)^↑i • Pi.lift_thing) ≫ eqToHom).hom (e₁.symm y'))",
+        "goal_after": "unchanged",
+        "result": "failed",
+        "insight": "Same pattern-not-found as `Linear.smul_comp`. The categorical-comp form has the smul-scalar lifted to morphism-level but the discrimination tree still cannot locate it."
+      },
+      {
+        "attempt": 6,
+        "strategy": "Preadditive.nsmul_comp variant (ℕ-action) and CategoryTheory.Preadditive.zsmul_comp (fully-qualified)",
+        "code_tried": "rw [Preadditive.nsmul_comp]  -- and rw [CategoryTheory.Preadditive.zsmul_comp]",
+        "line_number": "728",
+        "lean_error": "same pattern failure for both",
+        "goal_before": "same as Attempt 5",
+        "goal_after": "unchanged",
+        "result": "failed",
+        "insight": "ℕ-action route also blocked; namespace-qualified form behaves identically to the bare one (resolves to the same constant)."
+      },
+      {
+        "attempt": 7,
+        "strategy": "set-binder abstraction of the morphism: `set f' := Pi.lift fun i_1 ↦ ...` to give the smul-target a name",
+        "code_tried": "set f' := Pi.lift fun (i_1 : Fin (n+1) → ↑s₀) ↦ (Pi.π (fun i ↦ ModuleCat.of k ↑(C.left.presheaf.obj (Opposite.op (∏ᶜ basicOpenCover ↑s₀ ∘ i)))) (i_1 ∘ ⇑(SimplexCategory.Hom.toOrderHom (SimplexCategory.δ i))) ≫ (toModuleKPresheaf C).map (Pi.lift fun x ↦ Pi.π (basicOpenCover ↑s₀ ∘ i_1) ((SimplexCategory.δ i).toOrderHom x)).op)",
+        "line_number": "728",
+        "lean_error": "elaboration error — the Pi.lift body has ambiguous metavariables; explicit annotation collides with type-level coercions through `δ i`",
+        "goal_before": "same as Attempt 5",
+        "goal_after": "n/a (set failed to elaborate)",
+        "result": "failed",
+        "insight": "Cannot give the Pi.lift's body a name without writing the full inferred type, but the inferred type involves elaboration-ambiguous holes. set-binder bypass is mechanically infeasible here."
+      },
+      {
+        "attempt": 8,
+        "strategy": "`change` with explicit type ascription `(-1 : ℤ)^↑i`",
+        "code_tried": "change e₂ ((ModuleCat.Hom.hom (eqToHom _)) ((((-1 : ℤ) ^ (↑i : ℕ)) • ModuleCat.Hom.hom (Pi.lift fun i_1 ↦ _)) (e₁.symm (r' • y')))) = _",
+        "line_number": "728",
+        "lean_error": "could not unify: inner `_` placeholders' types do not match across the cast",
+        "goal_before": "same as Attempt 5",
+        "goal_after": "n/a",
+        "result": "failed",
+        "insight": "`change` cannot ascend through the nested `eqToHom` cast because the codomain type of `Pi.lift _` differs on either side of `eqToHom` and the placeholders cannot be filled by Lean."
+      },
+      {
+        "attempt": 9,
+        "strategy": "PIVOT — `funext j'` to expose per-coordinate equation",
+        "code_tried": "funext j'",
+        "line_number": "728",
+        "lean_error": null,
+        "goal_before": "case h: e₂ ((eqToHom).hom (((-1)^↑i • Pi.lift_thing).hom (e₁.symm (r' • y')))) = r' • e₂ ((eqToHom).hom (((-1)^↑i • Pi.lift_thing).hom (e₁.symm y')))",
+        "goal_after": "case h.h (per-coordinate): e₂ (eqToHom_hom (smul_thing.hom (e₁.symm (r' • y')))) j' = (r' • e₂ (eqToHom_hom (smul_thing.hom (e₁.symm y')))) j'",
+        "result": "partial",
+        "insight": "PARTIAL STRUCTURAL ADVANCE — the per-coordinate equation isolates a single Z₂ j' output, where the eventual R-action is concretely `(presheaf.map _).hom` via `RingHom.toModule`, allowing `presheafMap_restrict_collapse` to apply directly without needing to push the `(-1)^↑i •` through the entire chain. Iter-101+ closes via: `simp only [Pi.smul_apply]` → `piIsoPi_hom_ker_subtype_apply Z₂ j'` → `← ModuleCat.hom_comp` (categorical fuse) → eqToHom-naturality on `eqToHom ≫ Pi.π Z₂ j'` → `Pi.lift_π_apply` → `presheafMap_restrict_collapse`. The `(-1)^↑i •` scalar commutes symmetrically and factors via `congr 1` / `mul_smul` at the end."
+      },
+      {
+        "attempt": 10,
+        "strategy": "Commit partial chain with `funext j'` + sorry, plus detailed iter-101 guidance comment",
+        "code_tried": "intro i _ r' y'; simp only [ModuleCat.hom_comp, LinearMap.comp_apply]; <iter-100 diagnostic comments L728-L746>; funext j'; <iter-101 plan comments L748-L767>; sorry",
+        "line_number": "726-768",
+        "lean_error": null,
+        "goal_before": "n/a",
+        "goal_after": "case h.h per-coordinate R-linearity goal (deferred to iter-101+)",
+        "result": "partial",
+        "insight": "Committed at L726-L768. File compiles (`lake build AlgebraicJacobian.Cohomology.BasicOpenCech` succeeds). Sorry count unchanged at 6 in BasicOpenCech.lean (hard cap met, target of 5 missed). Sorry shift: L728→L768 due to inserted diagnostic comment block."
+      }
+    ],
+    "next_steps": "Iter-101 plan-agent action: schedule prover on `BasicOpenCech.lean` to close the per-coordinate residual post-funext at L768. Detailed 6-step recipe in `task_results/AlgebraicJacobian_Cohomology_BasicOpenCech.lean.md` § 'Concrete next steps for iter-101+': (1) `simp only [Pi.smul_apply]` on RHS; (2) `piIsoPi_hom_ker_subtype_apply Z₂ j'`; (3) `← ModuleCat.hom_comp` to fuse `Pi.π Z₂ j' ∘ eqToHom`; (4) eqToHom-naturality + `Pi.lift_π_apply`; (5) `presheafMap_restrict_collapse` for the per-coordinate R-linearity; (6) `congr 1` / `mul_smul` to factor out the (-1)^↑i scalar. Alternative escalation: refactor `cechCofaceMap_pi_smul` to use `Pi.lift_thing` as a let-binder at the body level, so the family `G : ι' → (∏ᶜ Z₁ ⟶ ∏ᶜ Z_int)` is matched against the let-binder rather than the literal anonymous-closure — this sidesteps the discrimination-tree issue at the call site. The prover's three suggested iter-101 escalation paths are recorded in the task result."
+  },
+  {
+    "timestamp": "2026-05-14T13:18:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "(L860 augmented Čech substep (a))"
+    },
+    "session": {
+      "id": "session_98",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Augmented Čech simplicial-object infrastructure. Multi-iter deferred since iter-085.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Off-limits while L768 (cechCofaceMap_pi_smul Step 2) remains open."
+  },
+  {
+    "timestamp": "2026-05-14T13:18:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "(L1184, L1212 augmented Čech / extra-degeneracy)"
+    },
+    "session": {
+      "id": "session_98",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Augmented Čech / extra-degeneracy infrastructure. Multi-iter deferred.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Off-limits."
+  },
+  {
+    "timestamp": "2026-05-14T13:18:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "g_R.map_smul' (L1402) / h_loc_exact (L1431)"
+    },
+    "session": {
+      "id": "session_98",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Gated on cechCofaceMap_pi_smul body becoming sorry-free (L768).",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Off-limits until L768 closes."
+  },
+  {
+    "timestamp": "2026-05-14T13:18:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "cotangentExactSeq_structure (L636) / others (L122, L957, L974, L1116)"
+    },
+    "session": {
+      "id": "session_98",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Off-limits per plan; Route A/B decision still pending on L636.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Not assigned this iteration."
+  },
+  {
+    "timestamp": "2026-05-14T13:18:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Modules/Monoidal.lean",
+      "theorem": "instIsMonoidal_W (L173)"
+    },
+    "session": {
+      "id": "session_98",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Mathlib upstream gap; stalk-of-presheaf-tensor in the varying-ring setting. Off-limits since iter-081.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Do not assign."
+  },
+  {
+    "timestamp": "2026-05-14T13:18:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Jacobian.lean",
+      "theorem": "nonempty_jacobianWitness (L179)"
+    },
+    "session": {
+      "id": "session_98",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Phase C/E packaging; iter-101+.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Deferred until Phase C unblocks."
+  },
+  {
+    "timestamp": "2026-05-14T13:18:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/Functor.lean",
+      "theorem": "PicardFunctor.representable (L190)"
+    },
+    "session": {
+      "id": "session_98",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Gated on Phase C C0–C3.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Deferred."
+  }
+]

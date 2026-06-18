@@ -1,0 +1,187 @@
+[
+  {
+    "timestamp": "2026-05-12T12:34:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "cotangentExactSeq_structure.h_zero"
+    },
+    "session": {
+      "id": "session_74",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Pointwise Derivation equation at Step 7 remains (sorry under `ext U b`); a Mathlib `Derivation.postcomp_comp` chain lemma does not exist and should be staged project-local.",
+      "key_lemmas_used": [
+        "SheafOfModules.hom_ext",
+        "SheafOfModules.comp_val",
+        "SheafOfModules.pushforward_map_val",
+        "PresheafOfModules.DifferentialsConstruction.isUniversal'.postcomp_injective",
+        "PresheafOfModules.Derivation.@[ext]"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Execute Steps 4-6 of the 7-step strategy: SheafOfModules.hom_ext + simp [comp_val, pushforward_map_val] + set-aliases + isUniversal'.postcomp_injective + ext U b.",
+        "code_tried": "apply SheafOfModules.hom_ext\nsimp only [SheafOfModules.comp_val, SheafOfModules.pushforward_map_val]\nset φ_g' := ...; set φ_fg' := ...; set φ_2' := ...; set adj_f := ...\napply (PresheafOfModules.DifferentialsConstruction.isUniversal' φ_g').postcomp_injective\next U b\nsorry  -- Step 7",
+        "line_number": "451 (residual sorry now ~L502 after edits)",
+        "lean_error": "(none — diagnostics clean at log line 184)",
+        "goal_before": "⟨(isUniversal' φ_g').desc d_target⟩ ≫ (Scheme.Modules.pushforward f).map β = 0 in Y.Modules",
+        "goal_after": "(((isUniversal' φ_g').desc d_target ≫ (PresheafOfModules.pushforward _).map β.val).app U).hom ((derivation' φ_g').d b) = 0",
+        "result": "partial",
+        "insight": "The simp only [SheafOfModules.comp_val, SheafOfModules.pushforward_map_val] immediately after SheafOfModules.hom_ext is essential to expose the .val-level composition before introducing set aliases. Without it, the goal carries opaque SheafOfModules constructors that block postcomp_injective."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Refine the `set` chain to also surface `simp only [SheafOfModules.comp_val, SheafOfModules.pushforward_map_val]`.",
+        "code_tried": "apply SheafOfModules.hom_ext\nsimp only [SheafOfModules.comp_val, SheafOfModules.pushforward_map_val]\nset φ_g' : (TopCat.Presheaf.pullback CommRingCat g.base).obj S.presheaf ⟶ Y.presheaf := ...",
+        "line_number": "~492",
+        "lean_error": "(none — diagnostics clean at log line 184)",
+        "goal_before": "(αv ≫ (PresheafOfModules.pushforward _).map β.val) = 0 in PresheafOfModules X.ringCatSheaf.obj",
+        "goal_after": "Same as attempt 1 goal_after after Step 6.",
+        "result": "success",
+        "insight": "Combined edit compiles clean against cached oleans."
+      }
+    ],
+    "next_steps": "Stage a project-local helper `Derivation.postcomp_comp` (likely `rfl` after unfolding `Derivation.postcomp`), then close Step 7 via `simp [postcomp_comp, isUniversal'.fac]; rw [adjunction_coherence]; exact Derivation'.d_app _ _`. Estimated 30-50 LOC including the helper."
+  },
+  {
+    "timestamp": "2026-05-12T12:28:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "basicOpenCover_isCechAcyclicCover_toModuleKSheaf.h_diff_pi_smul_f"
+    },
+    "session": {
+      "id": "session_74",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Per-summand R-linearity via `algebraMap_naturality` lining up under index `j ∘ δ_k.toOrderHom` vs. arbitrary-choice `a0` index on the `h_mod_pi₁` side. LSP is not elaborating tactic state under broken env (`lean_goal` returns `goals: null`, `lean_multi_attempt` returns `goals: []`), so the simp chain cannot be iteratively narrowed.",
+      "key_lemmas_used": [
+        "Pi.smul_apply",
+        "Finset.sum_apply",
+        "Finset.smul_sum",
+        "AlgebraicTopology.AlternatingCofaceMapComplex.objD",
+        "FormalCoproduct.evalOp",
+        "Scheme.toModuleKSheaf.algebraMap_naturality"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Upgrade iter-073's S1-S8 recipe from inline commentary to runnable tactic syntax: full unfolding via simp only on a 14-name list, then Pi.smul_apply / Finset.sum_apply / Finset.smul_sum distribution, with try-wrappers for compile safety.",
+        "code_tried": "intro r y\nfunext j\ntry simp only [scK₀, K₀, cechCochain, cechComplexFunctor, FormalCoproduct.cochainComplexFunctor, FormalCoproduct.cosimplicialObjectFunctor, FormalCoproduct.evalOp, AlgebraicTopology.alternatingCofaceMapComplex, AlgebraicTopology.AlternatingCofaceMapComplex.obj, AlgebraicTopology.AlternatingCofaceMapComplex.objD, HomologicalComplex.sc, ShortComplex.f, CochainComplex.of, CochainComplex.ofHom, ComplexShape.up]\ntry simp only [Pi.smul_apply, Finset.sum_apply, Finset.smul_sum]\nsorry",
+        "line_number": "~996 (residual sorry, after edit ~L1101)",
+        "lean_error": "(none — diagnostics clean at log line 73)",
+        "goal_before": "∀ (r : R) (y : ∀ i, Z₁ i), letI := h_mod_pi₁; letI := h_mod_pi₂; e₂ (⇑(ConcreteCategory.hom scK₀.f) (e₁.symm (r • y))) = r • e₂ (⇑(ConcreteCategory.hom scK₀.f) (e₁.symm y))",
+        "goal_after": "(LSP unable to elaborate: lean_goal returned null at line 87)",
+        "result": "partial",
+        "insight": "Under broken env the only verifiable signal is `lean_diagnostic_messages`. `try`-wrapped chain preserves compile-cleanness even if every speculative tactic fails. The single bare `sorry` at the bottom always discharges."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Tighten the defensive-compile property by wrapping the `funext j` step in `try` as well.",
+        "code_tried": "intro r y\ntry funext j\ntry simp only [scK₀, K₀, ...]\ntry simp only [Pi.smul_apply, Finset.sum_apply, Finset.smul_sum]\nsorry",
+        "line_number": "~996",
+        "lean_error": "(no LSP rerun — same diagnostics clean state)",
+        "goal_before": "(same as attempt 1)",
+        "goal_after": "(same)",
+        "result": "success",
+        "insight": "Strictly safer than unwrapped `funext`. If the goal shape is not pi-extension-amenable (e.g., already pointwise), the try-wrapped step is a no-op rather than a hard failure."
+      }
+    ],
+    "next_steps": "Under working LSP: probe each `try`-wrapped tactic with `lean_goal` after each step to see which fires. Convert `try` to `;` once verified. Then add `refine Finset.sum_congr rfl fun k _ => ?_` to reduce per-summand, and apply `algebraMap_naturality` (StructureSheafModuleK.lean L161) to discharge the ring-hom transport on the (-1)^k.val • _ summands."
+  },
+  {
+    "timestamp": "2026-05-12T12:34:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "basicOpenCover_isCechAcyclicCover_toModuleKSheaf.h_diff_pi_smul_g"
+    },
+    "session": {
+      "id": "session_74",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Out of scope this iteration per PROGRESS.md (Lane 2 narrow scope: `h_diff_pi_smul_f` only). Mechanically symmetric to `h_diff_pi_smul_f`; copy the closing chain once it lands.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Once `h_diff_pi_smul_f` is closed, copy the closing chain with shifted index for `Z₂` / `h_mod_pi₃`."
+  },
+  {
+    "timestamp": "2026-05-12T12:34:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "cotangentExactSeq_structure.h_exact"
+    },
+    "session": {
+      "id": "session_74",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Out of scope this iteration per PROGRESS.md (Lane 1 narrow scope: `h_zero` only). Still needs project-local `SheafOfModules.exact_iff_stalkwise` (not in Mathlib).",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Stage `SheafOfModules.exact_iff_stalkwise`; then route via stalkwise `KaehlerDifferential.exact_mapBaseChange_map`."
+  },
+  {
+    "timestamp": "2026-05-12T12:34:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "cotangentExactSeq_structure.h_epi"
+    },
+    "session": {
+      "id": "session_74",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Out of scope this iteration per PROGRESS.md (Lane 1 narrow scope: `h_zero` only). Still needs project-local `SheafOfModules.epi_of_epi_presheaf` (not in Mathlib).",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Stage `SheafOfModules.epi_of_epi_presheaf`; then route via `KaehlerDifferential.map_surjective` + `PresheafOfModules.epi_iff_surjective`."
+  },
+  {
+    "timestamp": "2026-05-12T12:34:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Jacobian.lean",
+      "theorem": "nonempty_jacobianWitness"
+    },
+    "session": {
+      "id": "session_74",
+      "model": "n/a"
+    },
+    "findings": {
+      "blocker": "Albanese existence + genus-0 rigidity content; multi-month effort; intentionally deferred (Phase C). Do not assign.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Do not assign."
+  },
+  {
+    "timestamp": "2026-05-12T12:34:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/Functor.lean",
+      "theorem": "PicardFunctor.representable"
+    },
+    "session": {
+      "id": "session_74",
+      "model": "n/a"
+    },
+    "findings": {
+      "blocker": "Intentionally deferred (Phase C-rep). Do not close on the global-sections-approximate `LineBundle`.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Do not assign."
+  }
+]

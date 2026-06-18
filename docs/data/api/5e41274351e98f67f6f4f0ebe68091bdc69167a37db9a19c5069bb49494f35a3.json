@@ -1,0 +1,129 @@
+[
+  {
+    "timestamp": "2026-05-11T06:05:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/MayerVietoris.lean",
+      "theorem": "Scheme.basicOpenCover_isCechAcyclicCover_toModuleKSheaf"
+    },
+    "session": {
+      "id": "session_61",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Substep (a) extra-degeneracy infrastructure on slice cover + Substep (b)+(c) localised-Čech identification iso and `exact_of_isLocalized_span` ring-base bridge both remain as transient sorries. Substep (a) sorry at L1722 inside a per-`f` `have h_a` block; substep (b)+(c) sorry at L1778 after the mechanical `rw` conversion to `Function.Exact` shape. Both are substantive computational steps, not glue. Ring-base mismatch between `k`-linear ModuleCat maps and `Γ(C.left, U)`-linear local-to-global hypothesis remains open.",
+      "key_lemmas_used": [
+        "HomologicalComplex.exactAt_iff",
+        "ShortComplex.ShortExact.moduleCat_exact_iff_function_exact",
+        "Scheme.cechCohomology_subsingleton_of_cechCochain_exactAt (iter-060 helper, consumed at top of body)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Refactor iter-060 single transient sorry into a structured `have h_a : ∀ (f : s), (slice cover Čech).ExactAt n := by intro f; sorry` declaring substep (a)'s claim concretely with the curried slice-cover `fun f' => basicOpenCover s f' ⊓ C.left.basicOpen f.1`. Probed shape via `lean_multi_attempt` before committing.",
+        "code_tried": "have h_a : ∀ (f : s),\n    (cechCochain C (toModuleKSheaf C)\n        (fun (f' : s) => basicOpenCover (C := C) (U := U) s f' ⊓\n          C.left.basicOpen (f : Γ(C.left, U)))).ExactAt n := by\n  intro f\n  sorry  -- substep (a) infrastructure: augmented Čech simplicial object\n         -- + extraDegeneracyCech + homotopyEquiv + CochainComplex.opEquivalence",
+        "line_number": "1713-1723",
+        "lean_error": "",
+        "goal_before": "k : Type u\\ninst✝ : Field k\\nC : Over (Spec (CommRingCat.of k))\\nU : TopologicalSpace.Opens ↑C.left.toTopCat\\nhU : IsAffineOpen U\\ns : Set ↑Γ(C.left, U)\\nhs : Ideal.span s = ⊤\\nn : ℕ\\nhn : 0 < n\\n⊢ HomologicalComplex.ExactAt (cechCochain C (toModuleKSheaf C) (basicOpenCover s)) n",
+        "goal_after": "Same goal `(cechCochain C (toModuleKSheaf C) (basicOpenCover s)).ExactAt n` after `h_a` brought into scope. The substep-(b)+(c) sorry below the `have` still closes the body.",
+        "result": "success",
+        "insight": "Per-`f` quantified `have` shape (∀ (f : s), …) introduces h_a in the form directly consumable by `exact_of_isLocalized_span` in substep (c). The curried slice cover `fun f' => basicOpenCover s f' ⊓ C.left.basicOpen f.1` (rather than `basicOpenCover (U := D(f)) …`) preserves the original cochain factor types — a precondition for substep (b)'s localisation iso to type-check."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Insert a mechanical `rw [HomologicalComplex.exactAt_iff, ShortComplex.ShortExact.moduleCat_exact_iff_function_exact]` step before the substep (b)+(c) sorry to convert the goal from `ExactAt n` to the `Function.Exact ⇑f ⇑g` shape consumed by `exact_of_isLocalized_span`'s conclusion. Probed the two-lemma chain via `lean_multi_attempt`.",
+        "code_tried": "rw [HomologicalComplex.exactAt_iff,\n    ShortComplex.ShortExact.moduleCat_exact_iff_function_exact]\nsorry  -- substep (b)+(c) assembly: cochain-level localisation iso +\n       -- `exact_of_isLocalized_span` ring-base bridge.",
+        "line_number": "1772-1781",
+        "lean_error": "",
+        "goal_before": "(cechCochain C (toModuleKSheaf C) (basicOpenCover s)).ExactAt n  (with h_a in scope)",
+        "goal_after": "k : Type u\\ninst✝ : Field k\\nC : Over (Spec (CommRingCat.of k))\\nU : TopologicalSpace.Opens ↑C.left.toTopCat\\nhU : IsAffineOpen U\\ns : Set ↑Γ(C.left, U)\\nhs : Ideal.span s = ⊤\\nn : ℕ\\nhn : 0 < n\\nh_a : ∀ (f : ↑s), HomologicalComplex.ExactAt (cechCochain C (toModuleKSheaf C) fun f' ↦ basicOpenCover s f' ⊓ C.left.basicOpen ↑f) n\\n⊢ Function.Exact ⇑(ConcreteCategory.hom (HomologicalComplex.sc (cechCochain C (toModuleKSheaf C) (basicOpenCover s)) n).f) ⇑(ConcreteCategory.hom (HomologicalComplex.sc (cechCochain C (toModuleKSheaf C) (basicOpenCover s)) n).g)",
+        "result": "success",
+        "insight": "`ShortComplex.ShortExact.moduleCat_exact_iff_function_exact` is misleadingly namespaced — despite the `ShortExact.` prefix, it is about plain `ShortComplex.Exact`. The two-step rw chain (`HomologicalComplex.exactAt_iff` unfolds `ExactAt n` to `(K.sc n).Exact`; then the namespaced lemma unfolds `Exact` to `Function.Exact` on the underlying functions) lands the goal in the exact input shape consumed by `exact_of_isLocalized_span` — saving one mechanical step from iter-062+."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Considered (probed via `lean_multi_attempt` event line 35) but rejected: split substep (b) from substep (c) as separate sorries by introducing a `have h_b : <localised Čech identification iso>` before substep (c)'s application of `exact_of_isLocalized_span`.",
+        "code_tried": "have h_b : <iso between localised K and slice cover at degree n> := sorry",
+        "line_number": "(probed only, not committed)",
+        "lean_error": "(would need a noncomputable def for the localised cochain complex to type the iso's domain/codomain)",
+        "goal_before": "(same as Attempt 1's goal_after)",
+        "goal_after": "(would have added h_b but required a half-built `noncomputable def`)",
+        "result": "failed",
+        "insight": "Pre-committing to a particular shape for substep (b)'s localised cochain complex would constrain iter-062 without benefit — the natural shape is data-bearing (a `noncomputable def`) that iter-062 should build in full, not pre-typed as a half-formed `have`. The conservative choice was to leave substep (b)+(c) combined behind the `Function.Exact` shape."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Considered (probed by attempting `exact exact_of_localized_span s hs _ _ ?_`) but rejected: direct application of the local-to-global lemma after the `rw` conversion.",
+        "code_tried": "exact exact_of_localized_span s hs _ _ (fun f => sorry)",
+        "line_number": "(probed only, not committed)",
+        "lean_error": "Linear-map type mismatch: `exact_of_localized_span` expects `Γ(C.left, U)`-linear maps; `(K.sc n).f.hom` is `k`-linear over `ModuleCat k`. No `Module Γ(C.left, U) ((K.sc n).X₁ : Type u)` instance directly available.",
+        "goal_before": "Function.Exact ⇑(ConcreteCategory.hom ((K).sc n).f) ⇑(ConcreteCategory.hom ((K).sc n).g)",
+        "goal_after": "(failed to unify)",
+        "result": "failed",
+        "insight": "Ring-base reconciliation is substantive iter-062+ work — either (a) `letI := …` block installing `Module Γ(C.left, U)` instances on cochain factors, or (b) an explicit `Γ(C.left, U)`-linear upgrade of `(K.sc n).f.hom` matching the function via `Function.Exact`'s coincidence with the underlying-set view. Both are substantive."
+      }
+    ],
+    "next_steps": "Iter-062 should engage substep (b) — the localised-Čech identification iso — as a `noncomputable def` for the localised Čech short complex at degree n, plus a `ShortComplex.Iso` or `LinearEquiv` identifying it with the slice cover's `(slice Čech).sc n`. Substep (a)'s extra-degeneracy infrastructure (FormalCoproduct.extraDegeneracyCech + ExtraDegeneracy.homotopyEquiv + CochainComplex.opEquivalence) is delicate but well-charted by Mathlib and can be deferred to iter-063+. Substep (c)'s ring-base reconciliation should be addressed when substep (b) lands, since the iso provides the natural Γ(C.left, U)-module structure on the cochain factors."
+  },
+  {
+    "timestamp": "2026-05-11T06:05:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/MayerVietoris.lean",
+      "theorem": "basicOpenCover_isCechAcyclicCover_toModuleKSheaf::substep_a"
+    },
+    "session": {
+      "id": "session_61",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Extra-degeneracy infrastructure on the slice cover Čech complex. Requires: (1) augmented Čech simplicial object on the slice cover `fun f' => basicOpenCover s f' ⊓ C.left.basicOpen f.1` of `D(f)`; (2) `FormalCoproduct.extraDegeneracyCech` invocation with `i₀ := f` (the cover member `D(f') ⊓ D(f) = D(f)` at `f' = f` providing the terminal section); (3) `SimplicialObject.Augmented.ExtraDegeneracy.homotopyEquiv` packaging the extra-degeneracy as a homotopy equivalence with the constant complex; (4) op-passage via `CochainComplex.opEquivalence` from Mathlib's chain-complex form to the project's cochain-complex form; (5) read-off `ExactAt n` for `0 < n` from null-homotopy. The substep is stated as `have h_a : ∀ (f : s), … ExactAt n := by intro f; sorry` at L1713-1722 of `MayerVietoris.lean`.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Substep (a) was named as a `have` declaration but its body (the augmented Čech simplicial object construction + extra-degeneracy + op-passage chain) was left as a transient sorry per the iter-061 directive's substep-decomposition guidance.",
+        "code_tried": "intro f\nsorry  -- substep (a) infrastructure: augmented Čech simplicial object + extraDegeneracyCech + homotopyEquiv + CochainComplex.opEquivalence",
+        "line_number": "1717-1723",
+        "lean_error": "(intentional sorry, no error)",
+        "goal_before": "f : ↑s\\n⊢ HomologicalComplex.ExactAt (cechCochain C (toModuleKSheaf C) fun f' ↦ basicOpenCover s f' ⊓ C.left.basicOpen ↑f) n",
+        "goal_after": "no goals",
+        "result": "partial",
+        "insight": "The data-bearing per-`f` shape is in place. Iter-062 or iter-063 (depending on prioritisation) will build the augmented Čech object construction + extra-degeneracy invocation. Note that the `f' = f` case yielding `D(f) ⊓ D(f) = D(f)` provides the terminal section automatically — this is the only point where the choice of slice cover (curried over original index `s`) matters."
+      }
+    ],
+    "next_steps": "Substep (a) can wait for iter-063+. Its infrastructure (`FormalCoproduct.extraDegeneracyCech` in the slice cover's `Over D(f)` setting, or its op-dual on `Opens`, plus op-passage from chain to cochain complexes via `CochainComplex.opEquivalence`) is delicate but well-charted by Mathlib. Iter-062 is expected to focus on substep (b) (the data-bearing identification iso) first per the iter-061 prover's recommendation."
+  },
+  {
+    "timestamp": "2026-05-11T06:05:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/MayerVietoris.lean",
+      "theorem": "basicOpenCover_isCechAcyclicCover_toModuleKSheaf::substep_bc_assembly"
+    },
+    "session": {
+      "id": "session_61",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Substep (b)+(c) combined: cochain-level localisation iso + `exact_of_isLocalized_span` ring-base bridge. Requires: (1) constructing the localised Čech short complex at degree n as a `noncomputable def`; (2) a `ShortComplex.Iso` or `LinearEquiv` identifying it with `(slice cover Čech).sc n` via the iter-057 + iter-059 chain (`basicOpenCover_finset_inf'_eq_basicOpen_prod`, `basicOpenCover_finset_inf'_isLocalization`, localisation transitivity `R[1/(f·g)] = R[1/g][1/f]`, product-localisation commutation, `IsLocalizedModule.map_exact`); (3) `exact_of_isLocalized_span` application across `f ∈ s`; (4) ring-base reconciliation between `k`-linear ModuleCat maps and `Γ(C.left, U)`-linear local-to-global hypothesis. Substep (b)+(c) sorry at L1778 after the iter-061 mechanical `rw` conversion.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Substep (b)+(c) was left as a single sorry after the iter-061 mechanical `rw` step converted the goal to `Function.Exact ⇑f ⇑g` shape consumed by `exact_of_isLocalized_span`'s conclusion type.",
+        "code_tried": "sorry  -- substep (b)+(c) assembly: cochain-level localisation iso + `exact_of_isLocalized_span` ring-base bridge.",
+        "line_number": "1778-1781",
+        "lean_error": "(intentional sorry, no error)",
+        "goal_before": "Function.Exact ⇑(ConcreteCategory.hom (HomologicalComplex.sc (cechCochain C (toModuleKSheaf C) (basicOpenCover s)) n).f) ⇑(ConcreteCategory.hom (HomologicalComplex.sc (cechCochain C (toModuleKSheaf C) (basicOpenCover s)) n).g)  (with h_a : ∀ (f : s), … ExactAt n in scope)",
+        "goal_after": "no goals",
+        "result": "partial",
+        "insight": "Iter-061's mechanical-conversion-before-sorry pattern lands iter-062 in the exact goal shape ready for `exact_of_isLocalized_span`'s application. The remaining work is: build the localised Čech short complex (substep b's data) + apply `exact_of_isLocalized_span` (substep c's globalisation) + reconcile ring-bases (k vs Γ(C.left,U))."
+      }
+    ],
+    "next_steps": "Iter-062 should prioritise substep (b) per the iter-061 prover's recommendation: define the localised Čech short complex as a `noncomputable def`, construct the identification iso via the iter-057+/iter-059 chain, address the ring-base mismatch (likely via `letI` block installing `Module Γ(C.left, U)` instances on cochain factors), then apply `exact_of_isLocalized_span`."
+  }
+]

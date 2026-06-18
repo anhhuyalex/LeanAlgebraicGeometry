@@ -1,0 +1,72 @@
+[
+  {
+    "timestamp": "2026-05-09T19:24:50Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/StructureSheafModuleK.lean",
+      "theorem": "AlgebraicGeometry.Scheme.IsAffineHModuleHomFinite"
+    },
+    "session": {
+      "id": "session_41",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "AlgebraicGeometry.IsAffineOpen",
+        "CategoryTheory.presheafToSheaf",
+        "CategoryTheory.yoneda",
+        "ModuleCat.free",
+        "Module.Finite",
+        "TopologicalSpace.Opens.grothendieckTopology"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "single combined Edit appending both declarations inside `namespace AlgebraicGeometry.Scheme` between iter-040's `module_finite_HModule'_of_isAffineHModuleVanishing` (ending L383) and `end AlgebraicGeometry.Scheme` (was L385); short name without `Scheme.` prefix per known-dead-end #185 (already internalised iter-039 + iter-040)",
+        "code_tried": "class IsAffineHModuleHomFinite\n    (k : Type u) [Field k] (C : Over (Spec (CommRingCat.of k)))\n    (F : Sheaf (Opens.grothendieckTopology C.left.toTopCat) (ModuleCat.{u} k)) :\n    Prop where\n  module_finite_hom : ∀ {U : TopologicalSpace.Opens C.left.toTopCat},\n    AlgebraicGeometry.IsAffineOpen U →\n      Module.Finite k ((presheafToSheaf\n          (Opens.grothendieckTopology C.left.toTopCat) (ModuleCat.{u} k)).obj\n        ((yoneda ⋙ (Functor.whiskeringRight _ _ _).obj (ModuleCat.free k)).obj U) ⟶ F)",
+        "line_number": "395-403 (post-Edit)",
+        "lean_error": null,
+        "goal_before": "n/a (class declaration, not tactic-mode proof)",
+        "goal_after": "no goals (class accepted; field type-checked)",
+        "result": "success",
+        "insight": "Zero-corrective-Edit landing — third consecutive iteration (iter-039, iter-040, iter-041), all verbatim probe-confirmed. Mirrors iter-040's `IsAffineHModuleVanishing` carrier but on the H⁰ side: the field type is `Module.Finite k` directly on the morphism group (the H⁰ algebraic bridge) rather than `Subsingleton` on `HModule' k F i U` (the H^>0 side). `class` (not `structure`) chosen to enable typeclass synthesis of the consumer's `[IsAffineHModuleHomFinite k C F]` hypothesis. No new imports required — `presheafToSheaf`, `yoneda`, `ModuleCat.free`, etc. are all transitively in scope via the iter-005 prerequisite block."
+      }
+    ],
+    "next_steps": "Iter-042+ produces the carrier instance `IsAffineHModuleHomFinite k C (Scheme.toModuleKSheaf C)` (the H⁰-side parallel of the iter-041+ producer instance for `IsAffineHModuleVanishing`). Substantive geometric step — packages the statement that $\\Gamma(\\Spec A, \\struct C) \\simeq A$ on affine corners of a finite-type $k$-scheme, lifted to a finite $k$-module on the morphism group; multi-iteration expected."
+  },
+  {
+    "timestamp": "2026-05-09T19:24:50Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/StructureSheafModuleK.lean",
+      "theorem": "AlgebraicGeometry.Scheme.module_finite_HModule'_zero_of_isAffineHModuleHomFinite"
+    },
+    "session": {
+      "id": "session_41",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "AlgebraicGeometry.Scheme.IsAffineHModuleHomFinite.module_finite_hom",
+        "AlgebraicGeometry.Scheme.module_finite_HModule'_zero (iter-038)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "append in same Edit as Target 1; class hypothesis `[IsAffineHModuleHomFinite k C F]` activated; explicit `(hU : IsAffineOpen U)` blocks typeclass resolution so use `theorem` (not `instance`); body extracts class field as `Module.Finite k (Hom)` and chains through iter-038's `Scheme.module_finite_HModule'_zero` which transports `Module.Finite` across iter-015's H⁰ LinearEquiv bridge",
+        "code_tried": "theorem module_finite_HModule'_zero_of_isAffineHModuleHomFinite\n    (k : Type u) [Field k] (C : Over (Spec (CommRingCat.of k)))\n    (F : Sheaf (Opens.grothendieckTopology C.left.toTopCat) (ModuleCat.{u} k))\n    [IsAffineHModuleHomFinite k C F]\n    {U : TopologicalSpace.Opens C.left.toTopCat}\n    (hU : AlgebraicGeometry.IsAffineOpen U) :\n    Module.Finite k (Scheme.HModule' k F 0 U) :=\n  have : Module.Finite k ((presheafToSheaf\n        (Opens.grothendieckTopology C.left.toTopCat) (ModuleCat.{u} k)).obj\n      ((yoneda ⋙ (Functor.whiskeringRight _ _ _).obj (ModuleCat.free k)).obj U) ⟶ F) :=\n    IsAffineHModuleHomFinite.module_finite_hom hU\n  Scheme.module_finite_HModule'_zero k F U",
+        "line_number": "413-424 (post-Edit)",
+        "lean_error": null,
+        "goal_before": "Module.Finite k (Scheme.HModule' k F 0 U) under hypotheses [IsAffineHModuleHomFinite k C F], hU",
+        "goal_after": "no goals (Module.Finite transported across iter-015's HModule'_zero_linearEquiv via iter-038's module_finite_HModule'_zero)",
+        "result": "success",
+        "insight": "Three-line body (extract class field → chain through abstract H⁰ transport). Direct H⁰-side parallel of iter-040's two-line `have ... inferInstance` consumer for the H^>0 side — the difference is that the H⁰ class field already ends in `Module.Finite k _` rather than `Subsingleton _`, so the body chains through `module_finite_HModule'_zero` (iter-038) directly rather than relying on Mathlib's auto-derivation of `Module.Finite` from `Subsingleton`. Pattern reusable for any H⁰-flavoured carrier-predicate ⇒ structural-property consumer where the carrier already produces the structural property on the algebraic bridge object."
+      }
+    ],
+    "next_steps": "Once iter-042+ produces the `IsAffineHModuleHomFinite k C (Scheme.toModuleKSheaf C)` producer instance, this consumer plus iter-040's `module_finite_HModule'_of_isAffineHModuleVanishing` chain together to produce `Module.Finite k (Scheme.HModule' k F i U)` at *every* degree on each affine corner, completing the algebraic input the cover-evaluation chain consumes for the curve case. iter-043+ then chains via iter-029's LES exactness + iter-037's corner-bridge transport to land `Module.Finite k (Scheme.HModule k (Scheme.toModuleKSheaf C) 1)` — the genus carrier."
+  }
+]

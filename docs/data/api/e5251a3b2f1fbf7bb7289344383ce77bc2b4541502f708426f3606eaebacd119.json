@@ -1,0 +1,78 @@
+[
+  {
+    "timestamp": "2026-06-18T10:22:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "pullbackTensorMap_isIso_of_isOpenImmersion"
+    },
+    "session": {
+      "id": "session_21",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Residual hcompat (delta = e.hom): the strong-monoidal mate compatibility of leftAdjointUniq H1 — reconcile project lax structure presheafPushforwardLaxMonoidal phi' with the hadj-mate of pushforward beta's restrictScalarsMonoidalOfBijective strong structure. mathlib-build-scale.",
+      "key_lemmas_used": [
+        "isIso_pullbackTensorMap_of_isIso_sheafifyDelta",
+        "Functor.map_isIso",
+        "pullbackPushforwardAdjunction",
+        "Adjunction.leftAdjointUniq",
+        "pushforwardPushforwardAdj",
+        "restrictScalarsMonoidalOfBijective",
+        "Functor.Monoidal.μIso",
+        "Adjunction.leftAdjointOplaxMonoidal_δ",
+        "Equiv.symm_apply_eq",
+        "Adjunction.homEquiv_unit",
+        "Adjunction.unit_leftAdjointUniq_hom_app"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "STEP A: reduce IsIso(a_Y.map delta) to presheaf-level IsIso(delta(pullback phi') M.val N.val) via Functor.map_isIso",
+        "code_tried": "apply isIso_pullbackTensorMap_of_isIso_sheafifyDelta; ... exact Functor.map_isIso _ (Functor.OplaxMonoidal.δ (PresheafOfModules.pullback φ') M.val N.val)",
+        "line_number": "4142-4222",
+        "lean_error": "(gotchas) infer_instance / Functor.map_isIso _ _ FAIL ([IsIso f] becomes metavar); needed haveI hRA : (pushforward phi').IsRightAdjoint else delta has metavars; delta only elaborates with fully type-annotated letI phi'; instance must register against literal (f.toRingCatSheafHom).hom not let-var (zeta mismatch)",
+        "result": "success",
+        "insight": "Step A closes once the three elaboration gotchas are solved; delta term must be passed explicitly to Functor.map_isIso"
+      },
+      {
+        "attempt": 2,
+        "strategy": "STEP B: build strong-monoidal witness iso e of same type as delta, mirroring tensorObj_restrict_iso (H1 + H2)",
+        "code_tried": "let alpha; let beta := whiskerRight alpha (forget2); have hadj := pushforwardPushforwardAdj ...; let H1 := hadj.leftAdjointUniq (pullbackPushforwardAdjunction phi'); haveI hMonβ := restrictScalarsMonoidalOfBijective β' hβ; let μIsoβ := Functor.Monoidal.μIso ...; let e := (H1.app (M⊗N)).symm ⪡ μIsoβ.symm ⪡ tensorIso (H1.app M) (H1.app N)",
+        "line_number": "4154-4195",
+        "lean_error": "none (typechecks)",
+        "result": "success",
+        "insight": "e is the open-immersion analogue of tensorObj_restrict_iso's H1∘H2 witness; same model dodges the monoidal-carrier diamond"
+      },
+      {
+        "attempt": 3,
+        "strategy": "hcompat: reduce delta = e.hom by adjunction transposition",
+        "code_tried": "rw [Adjunction.leftAdjointOplaxMonoidal_δ, Equiv.symm_apply_eq, Adjunction.homEquiv_unit]  -- then verified rw [← Adjunction.unit_leftAdjointUniq_hom_app hadj (pullbackPushforwardAdjunction φ') M.val] fires",
+        "line_number": "4200-4219",
+        "lean_error": "none up to residual; remaining goal = mate compatibility (**): μIsoβ.inv equals hadj-mate of μ(pushforward φ')",
+        "result": "partial",
+        "insight": "transposition reduces (**) to a sheafification-free, delta-free unit/μ equation; Adjunction.IsMonoidal.leftAdjoint_μ CANNOT fire directly (expresses μ only at pushed-forward objects G X, G Y, not arbitrary M.val N.val); instIsMonoidal only yields the mate lax structure, not the project's explicit presheafPushforwardLaxMonoidal"
+      }
+    ],
+    "next_steps": "Switch route to mathlib-build / effort-breaker: prove a lemma identifying presheafPushforwardLaxMonoidal phi' with Adjunction.rightAdjointLaxMonoidal hadj (equivalently (Adjunction.leftAdjointOplaxMonoidal hadj).δ = μIsoβ.inv) for the open-immersion pushforward-pushforward adjunction. Do NOT retry functor-level Functor.Monoidal.transport (carrier diamond, dead 4x)."
+  },
+  {
+    "timestamp": "2026-06-18T10:22:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "exists_tensorObj_inverse"
+    },
+    "session": {
+      "id": "session_21",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Import-cycle gated: must MOVE downstream of DualInverse (RelPicFunctor sole code consumer). Not closeable in TensorObjSubstrate.lean. Untouched this iter per standing deferral.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Refactor-MOVE the decl downstream of DualInverse (RelPicFunctor.lean is the sole code consumer, grep-verified iter-020), then close via the dual chain. Out of scope for this file."
+  }
+]

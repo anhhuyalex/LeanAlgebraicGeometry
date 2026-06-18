@@ -1,0 +1,208 @@
+[
+  {
+    "timestamp": "2026-05-22T02:07:51Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects.lean",
+      "theorem": "projectiveLineBarAffineCover"
+    },
+    "session": {
+      "id": "session_168",
+      "model": "prover"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "Proj.affineOpenCoverOfIrrelevantLESpan",
+        "MvPolynomial.X_dvd_monomial",
+        "HomogeneousIdeal.mem_irrelevant_iff",
+        "MvPolynomial.homogeneousComponent_zero",
+        "MvPolynomial.C_injective",
+        "MvPolynomial.as_sum",
+        "MvPolynomial.decomposition.decompose'_apply",
+        "Ideal.mul_mem_left",
+        "Ideal.subset_span",
+        "MvPolynomial.mem_support_iff"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Direct specialisation of Proj.affineOpenCoverOfIrrelevantLESpan with ι=Fin 2, m=![1,1], f=![X 0, X 1]",
+        "code_tried": "Proj.affineOpenCoverOfIrrelevantLESpan (projectiveLineBarGrading kbar) (m := m) f (fun i => …) (fun i => …) (by classical; intro p hp; rw [HomogeneousIdeal.mem_iff, HomogeneousIdeal.mem_irrelevant_iff]; …)",
+        "line_number": "196",
+        "lean_error": "(none — landed axiom-clean)",
+        "goal_before": "AffineOpenCover of ProjectiveLineBarScheme",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Irrelevant-ideal ⊆ Ideal.span {X 0, X 1} reduces by MvPolynomial.as_sum + monomial-wise X i divisibility via MvPolynomial.X_dvd_monomial."
+      }
+    ],
+    "next_steps": "Consumed by projectiveLineBar_isReduced and (planned) gmScalingP1 body via Scheme.Cover.glueMorphisms."
+  },
+  {
+    "timestamp": "2026-05-22T02:07:51Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects.lean",
+      "theorem": "projectiveLineBar_isReduced"
+    },
+    "session": {
+      "id": "session_168",
+      "model": "prover"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "IsReduced.of_openCover",
+        "IsLocalization.isDomain_localization",
+        "powers_le_nonZeroDivisors_of_noZeroDivisors",
+        "MvPolynomial.X_ne_zero",
+        "HomogeneousLocalization.val_injective",
+        "Function.Injective.isDomain",
+        "instIsReducedSpecOfIsReducedCarrier"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Avoid the chart-ring iso entirely: derive IsDomain (Away 𝒜 (X i)) by injecting into Localization.Away (X i) via .val.",
+        "code_tried": "haveI : ∀ i : Fin 2, IsReduced ((projectiveLineBarAffineCover kbar).openCover.X i) := by intro i; …; haveI : IsDomain (Localization.Away (X i)) := IsLocalization.isDomain_localization …; haveI : IsDomain (HomogeneousLocalization.Away 𝒜 (X i)) := Function.Injective.isDomain (algebraMap …) (fun x y h => HomogeneousLocalization.val_injective _ h); infer_instance; exact IsReduced.of_openCover _ (projectiveLineBarAffineCover kbar).openCover",
+        "line_number": "719",
+        "lean_error": "(none — landed axiom-clean)",
+        "goal_before": "IsReduced (ProjectiveLineBar kbar).left",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "The original plan comment claimed HomogeneousLocalization.Away → IsDomain was a Mathlib gap. It is NOT: the algebraMap into Localization.Away is injective (definitionally = .val) and Function.Injective.isDomain finishes in <10 LOC."
+      }
+    ],
+    "next_steps": "Unblocks the projGm_isReduced chart-local recipe in principle; still gated on a tensor-of-domains-over-field bridge for the product."
+  },
+  {
+    "timestamp": "2026-05-22T02:07:51Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects.lean",
+      "theorem": "homogeneousLocalizationAwayIso"
+    },
+    "session": {
+      "id": "session_168",
+      "model": "prover"
+    },
+    "findings": {
+      "blocker": "aux_left (inverse ∘ forward = id) on Away — needs surjectivity-of-inverse + cancel-surjective, or MvPolynomial.IsWeightedHomogeneous.induction_on through Away.mk_surjective + val_injective.",
+      "key_lemmas_used": [
+        "RingEquiv.ofRingHom",
+        "MvPolynomial.ringHom_ext",
+        "Localization.awayLift",
+        "Localization.awayLift_mk",
+        "HomogeneousLocalization.algebraMap_apply",
+        "HomogeneousLocalization.Away.val_mk",
+        "HomogeneousLocalization.Away.isLocalizationElem",
+        "MvPolynomial.eval₂Hom",
+        "MvPolynomial.eval₂Hom_X'",
+        "MvPolynomial.eval₂Hom_C",
+        "SetLike.GradeZero.coe_algebraMap"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Build the iso as RingEquiv.ofRingHom of (a) forward = Localization.awayLift (chartEval) ∘ algebraMap and (b) inverse = MvPolynomial.eval₂Hom (k̄ → Away) (X () ↦ isLocalizationElem). Prove aux_right (MvPolynomial → MvPolynomial direction) via ringHom_ext and awayLift_mk with explicit unit witness v=1.",
+        "code_tried": "noncomputable def homogeneousLocalizationAwayIso … := RingEquiv.ofRingHom forward inverse aux_right aux_left; aux_right: apply MvPolynomial.ringHom_ext; rw [HomogeneousLocalization.algebraMap_apply]; change …; rw [Localization.awayLift_mk (v := 1) (hv := by simp [chartEvalRingHom_X_self])]; simp …",
+        "line_number": "378",
+        "lean_error": "(none on aux_right — closed axiom-clean; aux_left left as sorry)",
+        "goal_before": "RingEquiv between HomogeneousLocalization.Away 𝒜 (X i) and MvPolynomial Unit kbar",
+        "goal_after": "aux_right closed; aux_left = sorry",
+        "result": "partial",
+        "insight": "aux_right closes cleanly with chartEval sending X i ↦ 1 (a unit, so v = 1 satisfies the awayLift unit-witness predicate). aux_left needs the surjectivity-of-inverse trick (image = Algebra.adjoin (𝒜 0) {isLocalizationElem} = ⊤ by Away.adjoin_mk_prod_pow_eq_top with d=1, v=![X 0, X 1]) then cancel via aux_right."
+      }
+    ],
+    "next_steps": "Iter-169: close aux_left via surjective+cancel, OR side-step the iso entirely for gmScalingP1 by going directly through Proj.fromOfGlobalSections on chart-side ring maps (the task report's Recommendation 2)."
+  },
+  {
+    "timestamp": "2026-05-22T02:07:51Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects.lean",
+      "theorem": "gmScalingP1"
+    },
+    "session": {
+      "id": "session_168",
+      "model": "prover"
+    },
+    "findings": {
+      "blocker": "Time-budget — Steps 1+2+3 of the 6-step recipe consumed the lane budget. Steps 4-6 (chart-side morphism, cross-chart agreement, glue) not attempted this iter. body remains bare sorry."
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Recipe consideration: Scheme.Cover.glueMorphisms over projectiveLineBarAffineCover, chart morphisms via pullbackSpecIso + homogeneousLocalizationAwayIso.symm + Proj.awayι. Alternative: direct Proj.fromOfGlobalSections on chart-side ring maps MvPoly (Fin 2) kbar → Away 𝒜 (X i) ⊗ GmRing.",
+        "code_tried": "(not attempted — no edit at L661/L659)",
+        "line_number": "659",
+        "lean_error": "(not attempted)",
+        "goal_before": "ProjectiveLineBar ⊗ Gm ⟶ ProjectiveLineBar",
+        "goal_after": "unchanged",
+        "result": "failed",
+        "insight": "Body is now actually attemptable iter-169 because (a) projectiveLineBarAffineCover is available, (b) the chart ring iso forward direction is axiom-clean, and (c) the prover surfaced a clean alternative (direct Proj.fromOfGlobalSections) that doesn't depend on aux_left."
+      }
+    ],
+    "next_steps": "Iter-169 PRIMARY: gmScalingP1 body via either (a) the iso route (gated on closing aux_left) or (b) the direct Proj.fromOfGlobalSections route the prover identified."
+  },
+  {
+    "timestamp": "2026-05-22T02:07:51Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects.lean",
+      "theorem": "gmScalingP1_collapse_at_zero"
+    },
+    "session": {
+      "id": "session_168",
+      "model": "prover"
+    },
+    "findings": {
+      "blocker": "Gated on gmScalingP1 body landing (needs a concrete morphism to compute against)."
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Recipe: chart-1 direct ring-map computation (`λ·0 = 0` on the affine 𝔸¹ × 𝔾_m chart, defequal ring-map check).",
+        "code_tried": "(not attempted)",
+        "line_number": "674",
+        "lean_error": "(not attempted)",
+        "goal_before": "lift (toUnit Gm ≫ zeroPt) (𝟙 (Gm kbar)) ≫ gmScalingP1 = toUnit Gm ≫ zeroPt",
+        "goal_after": "unchanged",
+        "result": "failed",
+        "insight": "Sequential dependency on gmScalingP1 body."
+      }
+    ],
+    "next_steps": "Iter-169 HIGH: lands together with gmScalingP1 body."
+  },
+  {
+    "timestamp": "2026-05-22T02:07:51Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects.lean",
+      "theorem": "ga_grpObj"
+    },
+    "session": {
+      "id": "session_168",
+      "model": "prover"
+    },
+    "findings": {
+      "blocker": "OPT-IN target, prover did not reach it after Steps 1-3 budget exhausted."
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Recipe: AffineSpace.homOverEquiv per iter-167 gm-grpobj analogist (~2-3 LOC).",
+        "code_tried": "(not attempted)",
+        "line_number": "537",
+        "lean_error": "(not attempted)",
+        "goal_before": "GrpObj (Ga kbar)",
+        "goal_after": "unchanged",
+        "result": "failed",
+        "insight": "Listed OPT-IN, not on the rigidity critical path."
+      }
+    ],
+    "next_steps": "Optional iter-169+ pickup."
+  }
+]

@@ -1,0 +1,180 @@
+[
+  {
+    "timestamp": "2026-05-08T07:09:30Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/StructureSheafModuleK.lean",
+      "theorem": "AlgebraicGeometry.Scheme.ModuleCat_free_preservesMonomorphisms"
+    },
+    "session": {
+      "id": "session_30",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "CategoryTheory.mono_iff_injective",
+        "ModuleCat.mono_iff_injective",
+        "Finsupp.mapDomain_injective"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Adopt the probe-confirmed four-line tactic block verbatim from REFACTOR_DIRECTIVE.md. Bridge via mono_iff_injective on both sides plus Finsupp.mapDomain_injective.",
+        "code_tried": "instance ModuleCat_free_preservesMonomorphisms (k : Type u) [Field k] : (ModuleCat.free k).PreservesMonomorphisms := by\n  refine ⟨fun {X Y} f hf ↦ ?_⟩\n  have hf' : Function.Injective f := (CategoryTheory.mono_iff_injective f).mp hf\n  rw [ModuleCat.mono_iff_injective]\n  exact Finsupp.mapDomain_injective hf'",
+        "line_number": "491-496",
+        "lean_error": "",
+        "goal_before": "(ModuleCat.free k).PreservesMonomorphisms",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "The bridging chain CategoryTheory.mono_iff_injective → Function.Injective f → Finsupp.mapDomain_injective → ModuleCat.mono_iff_injective is the canonical Mathlib idiom for transferring monomorphism predicates between Type u and ModuleCat k. Mathlib gap-fill #2 (sibling to iter-019's ModuleCat_free_isLeftAdjoint)."
+      }
+    ],
+    "next_steps": "None — fully closed, kernel-only axioms via consumer-chain verification."
+  },
+  {
+    "timestamp": "2026-05-08T07:09:30Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/StructureSheafModuleK.lean",
+      "theorem": "AlgebraicGeometry.Scheme.HModule'_shortComplex_f_mono"
+    },
+    "session": {
+      "id": "session_30",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "mono_of_mono",
+        "biprod.lift_snd",
+        "ModuleCat_free_preservesMonomorphisms (project-local)",
+        "CategoryTheory.Functor.PreservesMonomorphisms"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Adopt the probe-confirmed body with /-- ... -/ doc-comment header above set_option ... in instance wrapper. Tactic block: have Mono ((shortComplex.f) ≫ biprod.snd) by dsimp; simp only [biprod.lift_snd]; infer_instance; then exact mono_of_mono _ biprod.snd.",
+        "code_tried": "/-- Phase A step 6 *Path 2* (iter-020): ... -/\nset_option backward.isDefEq.respectTransparency false in\ninstance HModule'_shortComplex_f_mono ... : Mono (HModule'_shortComplex k S).f := by\n  have : Mono ((HModule'_shortComplex k S).f ≫ biprod.snd) := by\n    dsimp\n    simp only [biprod.lift_snd]\n    infer_instance\n  exact mono_of_mono _ biprod.snd",
+        "line_number": "498-515",
+        "lean_error": "unexpected token 'set_option'; expected 'lemma' (line 509, column 78). Lean's parser does not accept a /-- ... -/ doc-comment above a set_option ... in <decl> wrapper.",
+        "goal_before": "(parser-level failure)",
+        "goal_after": "(parser-level failure)",
+        "result": "failed",
+        "insight": "New parser dead-end: doc-comments cannot precede set_option ... in <decl> wrappers. Mathlib L251 confirms by example — no docstring on the analog. Workaround: demote to -- line-comment block."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Demote /-- ... -/ doc-comment to a -- line-comment block. Body unchanged.",
+        "code_tried": "-- Phase A step 6 *Path 2* (iter-020): ...\n-- The `set_option backward.isDefEq.respectTransparency false in` attribute is\n-- required because the typeclass-search engine needs to unfold the `dsimp`-normal\n-- form of `(HModule'_shortComplex k S).f` past structure-literal projection.\nset_option backward.isDefEq.respectTransparency false in\ninstance HModule'_shortComplex_f_mono ... : Mono (HModule'_shortComplex k S).f := by\n  have : Mono ((HModule'_shortComplex k S).f ≫ biprod.snd) := by\n    dsimp\n    simp only [biprod.lift_snd]\n    infer_instance\n  exact mono_of_mono _ biprod.snd",
+        "line_number": "498-515",
+        "lean_error": "",
+        "goal_before": "Mono (HModule'_shortComplex k S).f",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Functionally equivalent prose; satisfies parser. set_option backward.isDefEq.respectTransparency false in is load-bearing — without it the typeclass-search engine cannot unfold the dsimp-normal form of (HModule'_shortComplex k S).f past structure-literal projection. Composition of Functor.PreservesMonomorphisms instances (auto-derived from ModuleCat_free_preservesMonomorphisms, presheafToSheaf exactness, yoneda mono-preservation, Mono S.f₁₃) closes the residual goal."
+      }
+    ],
+    "next_steps": "None — fully closed, kernel-only axioms verified."
+  },
+  {
+    "timestamp": "2026-05-08T07:09:30Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/StructureSheafModuleK.lean",
+      "theorem": "AlgebraicGeometry.Scheme.HModule'_shortComplex_g_epi"
+    },
+    "session": {
+      "id": "session_30",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "ShortComplex.exact_and_epi_g_iff_g_is_cokernel",
+        "HModule'_isPushoutModuleCatFreeSheaf (iter-019)",
+        "Square.IsPushout.isColimitCokernelCofork"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Adopt the probe-confirmed term-mode one-liner verbatim from REFACTOR_DIRECTIVE.md.",
+        "code_tried": "instance HModule'_shortComplex_g_epi ... : Epi (HModule'_shortComplex k S).g :=\n  ((HModule'_shortComplex k S).exact_and_epi_g_iff_g_is_cokernel.2\n    ⟨(HModule'_isPushoutModuleCatFreeSheaf k S).isColimitCokernelCofork⟩).2",
+        "line_number": "523-530",
+        "lean_error": "",
+        "goal_before": "Epi (HModule'_shortComplex k S).g",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "The term ((shortComplex).exact_and_epi_g_iff_g_is_cokernel.2 ⟨pushout.isColimitCokernelCofork⟩).2 extracts Epi via the iff's right-projection. Value-category-agnostic Mathlib idiom. lean_verify returns kernel-only axioms [propext, Classical.choice, Quot.sound]."
+      }
+    ],
+    "next_steps": "None — fully closed, kernel-only axioms verified."
+  },
+  {
+    "timestamp": "2026-05-08T07:09:30Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/StructureSheafModuleK.lean",
+      "theorem": "AlgebraicGeometry.Scheme.HModule'_shortComplex_exact"
+    },
+    "session": {
+      "id": "session_30",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "ShortComplex.exact_of_g_is_cokernel",
+        "HModule'_isPushoutModuleCatFreeSheaf (iter-019)",
+        "Square.IsPushout.isColimitCokernelCofork"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Adopt the probe-confirmed term-mode one-liner verbatim from REFACTOR_DIRECTIVE.md.",
+        "code_tried": "lemma HModule'_shortComplex_exact ... : (HModule'_shortComplex k S).Exact :=\n  ShortComplex.exact_of_g_is_cokernel _\n    (HModule'_isPushoutModuleCatFreeSheaf k S).isColimitCokernelCofork",
+        "line_number": "538-545",
+        "lean_error": "",
+        "goal_before": "(HModule'_shortComplex k S).Exact",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "ShortComplex.exact_of_g_is_cokernel is the standard Mathlib convenience-name for 'colimit-cocone witness for g as a cokernel ⇒ short complex is exact'. Value-category-agnostic. lean_verify returns kernel-only axioms [propext, Classical.choice, Quot.sound]."
+      }
+    ],
+    "next_steps": "None — fully closed, kernel-only axioms verified."
+  },
+  {
+    "timestamp": "2026-05-08T07:09:30Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/StructureSheafModuleK.lean",
+      "theorem": "AlgebraicGeometry.Scheme.HModule'_shortComplex_shortExact"
+    },
+    "session": {
+      "id": "session_30",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "ShortComplex.ShortExact (where-form)",
+        "HModule'_shortComplex_f_mono (iter-020 typeclass)",
+        "HModule'_shortComplex_g_epi (iter-020 typeclass)",
+        "HModule'_shortComplex_exact (iter-020)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Adopt the probe-confirmed where-form anonymous-constructor body verbatim from REFACTOR_DIRECTIVE.md. Mono f and Epi g are typeclass-resolved automatically.",
+        "code_tried": "lemma HModule'_shortComplex_shortExact ... : (HModule'_shortComplex k S).ShortExact where\n  exact := HModule'_shortComplex_exact k S",
+        "line_number": "556-562",
+        "lean_error": "",
+        "goal_before": "(HModule'_shortComplex k S).ShortExact",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "where-form is cleaner than ⟨…⟩ for ShortExact because the predicate has only one Prop-valued non-typeclass field (exact). The Mono f and Epi g fields resolve automatically from the iter-020 instance registrations. Mathlib L267–268 mirror. lean_verify returns kernel-only axioms [propext, Classical.choice, Quot.sound]. The named lemma is the substantive carrier consumed by iter-021+ as S.HModule'_shortComplex_shortExact.extClass : Ext _ _ 1 to define HModule'_δ."
+      }
+    ],
+    "next_steps": "iter-021+ defines HModule'_extClass and the connecting hom HModule'_δ via .extClass.precomp."
+  }
+]

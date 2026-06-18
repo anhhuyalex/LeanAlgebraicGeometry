@@ -1,0 +1,170 @@
+[
+  {
+    "timestamp": "2026-06-03T08:11:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/LineBundleCoherence.lean",
+      "theorem": "IsLocallyTrivial.isFinitePresentation (+ chartPresentation, isFiniteType, exists_trivializing_cover, chart_free_rank_one)"
+    },
+    "session": {
+      "id": "session_257",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "chartOverIso: M.over U ≅ unit (X.ringCatSheaf.over U) — modules-level lift of Opens.overEquivalence (slice site vs open-subscheme site). Mathlib-scale (~200-350 LOC). SAME wall as the dual lane.",
+      "key_lemmas_used": [
+        "SheafOfModules.Presentation.ofIsIso",
+        "Limits.coproductUniqueIso",
+        "Limits.isZero_kernel_of_mono",
+        "QuasicoherentData.shrink",
+        "TopologicalSpace.Opens.mem_iSup",
+        "Opens.grothendieckTopology.CoversTop"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "exists_trivializing_cover: I:=X (points), U x := (hM x).choose, iSup=⊤ via eq_top_iff + mem_iSup",
+        "code_tried": "refine ⟨X, fun x => (hM x).choose, ...⟩; rw [eq_top_iff]; intro x _; rw [TopologicalSpace.Opens.mem_iSup]; exact ⟨x, (hM x).choose_spec.1⟩",
+        "line_number": "121",
+        "result": "success",
+        "insight": "axiom-clean; closed"
+      },
+      {
+        "attempt": 2,
+        "strategy": "build unitPresentation bricks: freeUnitIso (coproductUniqueIso), unitGenerators (epi via iso), unitPresentation (PEmpty relations, epi from IsZero kernel of mono)",
+        "code_tried": "relations.I := PEmpty; epi := ⟨fun g h _ => hz.eq_of_src g h⟩ where hz : IsZero (kernel π) via Limits.isZero_kernel_of_mono",
+        "line_number": "147-182",
+        "result": "success",
+        "insight": "needed `have : Mono π := inferInstance` before isZero_kernel_of_mono to avoid stuck `Mono ?m`"
+      },
+      {
+        "attempt": 3,
+        "strategy": "isFinitePresentation: assemble QuasicoherentData, shrink index to site universe, IsFinitePresentation.mk",
+        "code_tried": "let q : M.QuasicoherentData := {...}; have hsh : q.shrink.IsFinitePresentation := by apply ...mk; intro i; exact inferInstanceAs (chartPresentation M _ _).IsFinite; exact { exists_quasicoherentData := ⟨q.shrink, hsh⟩ }",
+        "line_number": "236",
+        "lean_error": "earlier attempts: 'typeclass instance problem is stuck Category.{0,0} ?m' / universe mismatch Type u vs Type 1",
+        "result": "success",
+        "insight": "IsFinitePresentation's existential indexes QuasicoherentData at the SITE-OBJECT universe → must `q.shrink`; `apply ...mk` (not `refine ⟨…⟩`) avoids stuck Category metavar; `inferInstanceAs (chartPresentation ...).IsFinite` (not bare infer_instance) forces defeq reduction through shrink.presentation"
+      },
+      {
+        "attempt": 4,
+        "strategy": "chartOverIso via planner's Presentation.ofIsIso e.hom recipe",
+        "code_tried": "SheafOfModules.Presentation.ofIsIso (chartOverIso M U e).inv unitPresentation",
+        "line_number": "203",
+        "lean_error": "category mismatch: e lives in SheafOfModules (U:Scheme).ringCatSheaf; ofIsIso needs SheafOfModules (X.ringCatSheaf.over U)",
+        "result": "failed",
+        "insight": "planner's 'ofIsIso e.hom' recipe is type-incorrect; the over↔restrict bridge chartOverIso is genuinely needed and is the sole open sorry; reduced engine 5→1 by factoring everything through it"
+      }
+    ],
+    "next_steps": "Build SheafOfModules.overEquivalence (modules-level lift of Opens.overEquivalence) as a dedicated Mathlib-scale sub-step — it closes chartOverIso AND unblocks the dual chain. See informal/chartOverIso.md. Also: blueprint-writer must add a chartOverIso block to Picard_LineBundleCoherence.tex (lvb-lbc257 must-fix)."
+  },
+  {
+    "timestamp": "2026-06-03T08:00:46Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "pullbackTensorMap_restrict (D3')"
+    },
+    "session": {
+      "id": "session_257",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Sq2b: monoidality of PresheafOfModules.pullbackComp (δ-transport of leftAdjointCompIso) — Mathlib-absent; must mirror Adjunction.isMonoidal_comp by mate calculus. Three statement-level frictions: (1) CommRingCat/forget₂ monoidal-instance pin on δ(pullback φ'), (2) explicit (F:=_⋙_) + associativity defeq to unify δ against pullbackComp codomain, (3) reconciliation defeq not firing at .app even under respectTransparency false → needs eqToHom bridge.",
+      "key_lemmas_used": [
+        "Functor.OplaxMonoidal.comp_δ",
+        "PresheafOfModules.pullbackComp",
+        "rfl"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "close the Sq2 ring-map reconciliation as a standalone lemma",
+        "code_tried": "private lemma toRingCatSheafHom_comp_hom_reconcile ... := rfl",
+        "line_number": "2121",
+        "result": "success",
+        "insight": "the blueprint flags this as 'non-trivial transport up to Opens.map_comp' — it is actually DEFINITIONAL (rfl); Scheme composition defeqs hold at default transparency. axiom-clean."
+      },
+      {
+        "attempt": 2,
+        "strategy": "state Sq2b: pullbackComp is a monoidal natural iso (δ-transport lemma presheaf_pullbackComp_delta)",
+        "code_tried": "private lemma presheaf_pullbackComp_delta ... : Functor.OplaxMonoidal.δ (pullback (F:=Opens.map f.base ⋙ Opens.map h.base) ...) A B = pullbackComp.inv.app _ ≫ ...",
+        "line_number": "2138",
+        "lean_error": "failed to synthesize MonoidalCategoryStruct (PresheafOfModules ...); then Type mismatch on connecting object; then Unknown identifier CategoryTheory.whiskerLeft; reconciliation defeq not firing at .app even with respectTransparency false",
+        "result": "failed",
+        "insight": "three documented frictions; even Sq2a (comp_δ re-export) won't elaborate standalone (δ(pullback φ'_f) stuck on monoidal-instance metavar). Removed non-elaborating helpers to keep file green; left typed sorry + ROADMAP. Negative Mathlib search: no Adjunction.leftAdjointOplaxMonoidal_δ / leftAdjointCompIso δ-transport lemma."
+      }
+    ],
+    "next_steps": "Did NOT meet pc257 bar (Sq2 + one of Sq1/Sq4). Real Sq2 content = Sq2b, Mathlib-absent. Next: cross-domain mathlib-analogist consult to port Adjunction.isMonoidal_comp's mate-calculus to pullbackComp; needs the D1' canonical-spelling (show…from / let φ':…⋙forget₂) device + eqToHom bridge. Blueprint must add Sq2b sub-step (lvb-tos257 must-fix)."
+  },
+  {
+    "timestamp": "2026-06-03T08:06:15Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate/DualInverse.lean",
+      "theorem": "dual_restrict_iso (Step-4)"
+    },
+    "session": {
+      "id": "session_257",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "sliceDualTransport body: ~200-LOC sectionwise PresheafOfModules.Hom build (leg A: component reindex across f.opensFunctor + f.appIso ring iso; leg B: presheaf shadow of restrictScalarsRingIsoDualEquiv map_smul'). Plus cross-lane compilation race: this file imports TensorObjSubstrate.lean which the concurrent TS-cmp prover broke for most of the session, so LSP returned empty goals.",
+      "key_lemmas_used": [
+        "PresheafOfModules.isoMk",
+        "PresheafOfModules.pushforward_obj_obj",
+        "Hom.appIso",
+        "leftAdjointUniq",
+        "pullbackPushforwardAdjunction"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "decompose Step-4 residual into a per-V isoMk over sliceDualTransport",
+        "code_tried": "refine PresheafOfModules.isoMk (fun V => ?_) ?_  -- then sectionwise",
+        "line_number": "259",
+        "result": "partial",
+        "insight": "confirmed by `change` the Step-4 residual ((pushforward β).obj M.val.dual ≅ (M.restrict f).val.dual) is defeq to (pushforward β).obj (dual M.val) ≅ dual ((pushforward β).obj M.val) (mirrors closed tensorObj_restrict_iso)"
+      },
+      {
+        "attempt": 2,
+        "strategy": "extract standalone helper sliceDualTransport with verified signature; wire dual_restrict_iso assembly through it",
+        "code_tried": "noncomputable def sliceDualTransport (f) [IsOpenImmersion f] (M) (V) : ((pushforward β).obj (dual M.val)).obj V ≅ (dual ((pushforward β).obj M.val)).obj V := by ... sorry (+ in-file 30-line plan); exact PresheafOfModules.isoMk (fun V => sliceDualTransport f M V)",
+        "line_number": "171, 291",
+        "result": "partial",
+        "insight": "signature VERIFIED (per-V app typechecks against isoMk goal → all defeqs right); body left typed sorry; assembly naturality also sorry (provably can't discharge until body concrete). Sorry 1→2 DECOMPOSED, not regressed."
+      }
+    ],
+    "next_steps": "Fill sliceDualTransport body LSP-driven WHEN the dep is stable (do NOT co-schedule with a TS-cmp prover on TensorObjSubstrate.lean). Atoms: PresheafOfModules.Hom.mk, pushforward_obj_obj, f.appIso, image_preimage_of_le, restrictScalarsRingIsoDualEquiv, globalSMul/homModule. Route (1) inverse-uniqueness is DEAD (analogist). NOTE convergence: this is essentially the SAME over↔restrict wall as the engine's chartOverIso — a shared SheafOfModules.overEquivalence build may close both."
+  },
+  {
+    "timestamp": "2026-06-03T08:00:46Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "exists_tensorObj_inverse"
+    },
+    "session": {
+      "id": "session_257",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "cross-file gated on dual_restrict_iso (DualInverse.lean); correctly OFF-LIMITS / untouched this iter.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "not entered — gated, off-limits per objective",
+        "code_tried": "",
+        "line_number": "715",
+        "result": "partial",
+        "insight": "untouched; awaits dual_restrict_iso close"
+      }
+    ],
+    "next_steps": "Unblocked only after dual_restrict_iso (Step-4) closes."
+  }
+]

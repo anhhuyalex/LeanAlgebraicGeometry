@@ -1,0 +1,126 @@
+[
+  {
+    "timestamp": "2026-05-20T04:05:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cotangent/ChartAlgebra.lean",
+      "theorem": "KaehlerDifferential.mem_range_algebraMap_of_D_eq_zero"
+    },
+    "session": {
+      "id": "session_152",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "no prover lane this iter (intentional skip); architectural refactor only",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Architectural signature pivot (refactor, not prover): added [IsAlgClosed k] + [IsDomain B] to repair the previously-false bare-B statement. [IsDomain B] kills the B=k×k counterexample; [IsAlgClosed k] kills the Q(sqrt2)/Q counterexample. Joint addition is sound (iter-151 one-at-a-time pessimism corrected).",
+        "code_tried": "theorem ... [Field k] [IsAlgClosed k] [CharZero k] {B} [CommRing B] [IsDomain B] [Algebra k B] [Algebra.FiniteType k B] [Algebra.IsStandardSmoothOfRelativeDimension n k B] ... (body: (C.a)-(C.c) scaffold + single residual sorry at L383 for the field-of-fractions FT step)",
+        "line_number": "256",
+        "lean_error": null,
+        "goal_before": "false-as-stated (iter-151): D b = 0 -> b in range(algebraMap k B), no geometric hypothesis",
+        "goal_after": "now-TRUE: D b = 0 -> b in range(algebraMap k B), with k alg-closed in Frac B forced by hypotheses; residual sorry is the field-of-fractions argument",
+        "result": "partial",
+        "insight": "lake build clean; lemma is now mathematically TRUE with a genuine to-prove sorry, no longer a false-statement sorry. Verified sorryAx in axiom set (expected — open obligation)."
+      }
+    ],
+    "next_steps": "iter-153 prover lane: attempt the field-of-fractions FT.1-FT.3 closure. Confirm RigidityKbar.tex complete:true/correct:true (HARD GATE) first."
+  },
+  {
+    "timestamp": "2026-05-20T04:05:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cotangent/ChartAlgebra.lean",
+      "theorem": "constants_integral_over_base_field"
+    },
+    "session": {
+      "id": "session_152",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "no prover lane this iter; refactor re-routed body to a single alg-closed sorry",
+      "key_lemmas_used": [
+        "IsAlgClosed.algebraMap_bijective_of_isIntegral"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Refactor: added [IsAlgClosed k]; re-routed the body to a single clean sorry whose intended closure is the 3-step alg-closed chain (integral => Gamma is a field; finite_appTop_of_universallyClosed; IsAlgClosed.algebraMap_bijective_of_isIntegral). This DESCOPES the whole (S3.*) base-change-to-kbar chain.",
+        "code_tried": "theorem constants_integral_over_base_field {k} [Field k] [IsAlgClosed k] {X} [X.Over (Spec (.of k))] [IsProper ...] [Smooth ...] [IsReduced X] [GeometricallyIrreducible ...] : RingHom.range ((X ↘ Spec (CommRingCat.of k)).appTop.hom) = ⊤ := by ... sorry",
+        "line_number": "468",
+        "lean_error": null,
+        "goal_before": "RingHom.range (appTop.hom) = ⊤ via base-change-to-kbar + flat-base-change-of-Gamma (~150-250 LOC Mathlib gap S3.pi.1)",
+        "goal_after": "RingHom.range (appTop.hom) = ⊤ via alg-closed bijectivity (~15 LOC, no S3.* gap)",
+        "result": "partial",
+        "insight": "Under [IsAlgClosed k] the constants lemma collapses to a one-liner, retiring the ~5-iter S3.pi.1 flat-base-change blocker. GUARANTEED 9->8 next iter."
+      }
+    ],
+    "next_steps": "iter-153 prover lane: close via IsAlgClosed.algebraMap_bijective_of_isIntegral (planner expects guaranteed 9->8)."
+  },
+  {
+    "timestamp": "2026-05-20T04:05:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cotangent/ChartAlgebra.lean",
+      "theorem": "GrpObj.df_zero_factors_through_constant_on_chart"
+    },
+    "session": {
+      "id": "session_152",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "body sorry-free but transitively depends on the open KDM sorry (sorryAx in axiom set); not fully discharged",
+      "key_lemmas_used": [
+        "KaehlerDifferential.mem_range_algebraMap_of_D_eq_zero"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Refactor: propagated [IsAlgClosed k] + [IsDomain B] so the one-line delegation to the now-TRUE KDM typechecks.",
+        "code_tried": "theorem df_zero_factors_through_constant_on_chart ... [IsAlgClosed k] [CharZero k] [IsDomain B] ... := KaehlerDifferential.mem_range_algebraMap_of_D_eq_zero hDb",
+        "line_number": "411",
+        "lean_error": null,
+        "goal_before": "iter-151: delegate to a FALSE KDM lemma (sorryAx-laundering, unsound)",
+        "goal_after": "delegate to a now-TRUE KDM lemma (honest open obligation; still sorryAx transitively)",
+        "result": "partial",
+        "insight": "Plan's 'now SORRY-FREE / unsoundness RESOLVED' is half-right: the false-lemma unsoundness IS resolved (KDM no longer false), but lean_verify confirms df_zero STILL carries sorryAx transitively. Body is sorry-free; the result is not axiom-clean. sync_leanok will mark its proof-block \\leanok; a % NOTE was added to flag this."
+      }
+    ],
+    "next_steps": "Closes automatically once KDM closes. No direct prover action; track via KDM."
+  },
+  {
+    "timestamp": "2026-05-20T04:05:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RigidityKbar.lean",
+      "theorem": "rigidity_over_kbar"
+    },
+    "session": {
+      "id": "session_152",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "no prover lane; refactor added hypotheses only; body remains scaffold sorry",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Refactor: added [IsAlgClosed kbar] + [CharZero kbar] to align the over-kbar statement with the now-repaired chart-algebra chain. Downstream cost displaced to the genus-0 witness, which descends the conclusion along Spec kbar -> Spec k via Flat.epi_of_flat_of_surjective (verified to exist).",
+        "code_tried": "theorem rigidity_over_kbar {kbar} [Field kbar] [IsAlgClosed kbar] [CharZero kbar] ... := by sorry",
+        "line_number": "75",
+        "lean_error": null,
+        "goal_before": "over-kbar rigidity without alg-closed hypothesis",
+        "goal_after": "over-kbar rigidity with [IsAlgClosed kbar]+[CharZero kbar] (matches docstring intent; not protected)",
+        "result": "partial",
+        "insight": "Not protected; adding the hypothesis matches the docstring's existing 'kbar algebraically closed' assumption. genusZeroWitness does not call it, so nothing downstream broke. Body closure off-critical-path."
+      }
+    ],
+    "next_steps": "Body closure remains scaffolded; depends on the cotangent / chart-algebra shared pile. Off the iter-153 critical path."
+  }
+]

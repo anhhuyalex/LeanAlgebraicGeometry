@@ -1,0 +1,185 @@
+[
+  {
+    "timestamp": "2026-06-03T14:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.pushforwardComp_lax_μ"
+    },
+    "session": {
+      "id": "session_260",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "pushforward_μ_eq",
+        "restrictScalars_μ_app",
+        "ModuleCat.restrictScalars_μ_tmul",
+        "forget₂_restrictScalars_μ_hom_tmul",
+        "pushforward_map_restrictScalars_μ_app_tmul",
+        "Functor.LaxMonoidal.comp_μ",
+        "PresheafOfModules.hom_ext",
+        "ModuleCat.MonoidalCategory.tensor_ext"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Decompose pushforwardComp_lax_μ via tensor-induction on the section element, then collapse pure tensors with restrictScalars_μ_tmul",
+        "code_tried": "ext W x; induction x using TensorProduct.induction_on with | zero => simp | tmul m n => sorry | add a b ha hb => simp only [map_add, ha, hb]",
+        "line_number": "2169",
+        "lean_error": "case zero/add: `simp` made no progress; `map_add`/`map_zero` did not fire on ModuleCat.Hom.hom of the composite μ — the +/0 structure on the defeq carriers is syntactically distinct",
+        "goal_before": "(μ (pushforward ψ ⋙ pushforward φ) X Y).app W (m ⊗ₜ n) = (μ (pushforward (φ ≫ F.op ◁ ψ)) X Y).app W (m ⊗ₜ n)",
+        "goal_after": "pure-tensor case isolated",
+        "result": "partial",
+        "insight": "induction x leaves zero/add cases that map_zero/map_add cannot discharge on these carriers; replaced by hom_ext + tensor_ext which yields ONLY the pure-tensor case"
+      },
+      {
+        "attempt": 2,
+        "strategy": "Establish a morphism-level helper equating μ (pushforward φ).app W to the ModuleCat restrictScalars μ",
+        "code_tried": "(Functor.LaxMonoidal.μ (PresheafOfModules.pushforward φ) A B).app W = Functor.LaxMonoidal.μ (ModuleCat.restrictScalars (φ.app W).hom) (A.obj (F.op.obj W)) (B.obj (F.op.obj W))",
+        "line_number": "2135",
+        "lean_error": "Type mismatch: (presheaf-tensor).obj W is NOT defeq to the ModuleCat tensor of the .obj W's; even eqToHom (by rfl) fails (rfl: LHS not defeq RHS); failed to synthesize Module instance",
+        "goal_before": "morphism equality at section W",
+        "goal_after": "abandoned morphism-level form",
+        "result": "failed",
+        "insight": "Cannot state the reduction at ModuleCat morphism level — must stay at PresheafOfModules morphism level (pushforward_μ_eq) or go fully element-level"
+      },
+      {
+        "attempt": 3,
+        "strategy": "rfl-foundation pushforward_μ_eq: pushforward μ reduces definitionally to the lighter restrictScalars μ on the strongly-monoidal pushforward₀OfCommRingCat objects (μIso = refl)",
+        "code_tried": "μ (pushforward φ) A B = μ (restrictScalars φ') (pushforward₀OfCommRingCat F R₀ |>.obj A) (... B) := by rfl",
+        "line_number": "2213",
+        "lean_error": null,
+        "goal_before": null,
+        "goal_after": null,
+        "result": "success",
+        "insight": "BREAKTHROUGH: the pushforward μ is DEFINITIONALLY the restrictScalars μ on pushforward₀ objects, because pushforward = pushforward₀ ⋙ restrictScalars and pushforward₀ is strongly monoidal with μIso = refl. This was the discovery that unlocked the lemma — refuting the prior '~150-LOC extendScalarsComp build' estimate."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Final assembly: hom_ext + tensor_ext, comp_μ, pushforward_μ_eq×2, split composite hom application, then restrictScalars_μ_app + atom-helper erw to avoid whnf explosion",
+        "code_tried": "refine PresheafOfModules.hom_ext (fun W => ?_); refine ModuleCat.MonoidalCategory.tensor_ext (fun m n => ?_); rw [Functor.LaxMonoidal.comp_μ, pushforward_μ_eq, pushforward_μ_eq, PresheafOfModules.comp_app]; erw [ModuleCat.hom_comp, LinearMap.comp_apply]; rw [restrictScalars_μ_app (R := S₀) (S := F.op ⋙ R₀)]; erw [hinner]; erw [houter]",
+        "line_number": "2246",
+        "lean_error": null,
+        "goal_before": "(μ (restrictScalars φ) ... .app W ≫ (pushforward φ).map (μ (restrictScalars ψ) ...).app W) (m ⊗ₜ n) = ... (m ⊗ₜ n)",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Direct rw/erw/simp [restrictScalars_μ_tmul] whnf-explodes (>200k heartbeats even at 2M) because pushforward₀ section objects are huge. Robust pattern: instantiate an atom-stated helper with the goal's concrete heavy objects as EXPLICIT args into a `have`, then `erw [that_have]` — erw matches only residual defeq, never whnf-s the heavy objects. HO-match flakiness fixed by pinning implicits (R := S₀) (S := F.op ⋙ R₀) (inner-vs-outer forget₂ association). Verified axiom-clean: {propext, Classical.choice, Quot.sound}."
+      }
+    ],
+    "next_steps": "pushforwardComp_lax_μ + pullbackComp_δ both axiom-clean → Sq2b fully closed. The OUTER D3′ lemma pullbackTensorMap_restrict still needs Sq1 (sheafificationCompPullback) and Sq4 (pullbackValIso) composition coherences."
+  },
+  {
+    "timestamp": "2026-06-03T14:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.pullbackComp_δ"
+    },
+    "session": {
+      "id": "session_260",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "pushforwardComp_lax_μ",
+        "Functor.LaxMonoidal.μ_natural",
+        "MonoidalCategory.tensorHom_comp_tensorHom",
+        "Adjunction.unit_app_tensor_comp_map_δ",
+        "Category.assoc"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Sq2b mate calculus (~90 lines, proven iter-259) consuming the now-closed pushforwardComp_lax_μ residual",
+        "code_tried": "mate calculus through hconj/hmate/htri, pushforwardComp_lax_μ, μ_natural, tensorHom_comp_tensorHom; closes with exact Category.assoc _ _ _",
+        "line_number": "2307",
+        "lean_error": null,
+        "goal_before": "pullbackComp δ-coherence square",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Fell out axiom-clean ({propext, Classical.choice, Quot.sound}) the moment its sole residual pushforwardComp_lax_μ closed — confirmed first-hand via lean_verify."
+      }
+    ],
+    "next_steps": "Sq2b complete. Auditor flagged stale 'left for the follow-up' planning commentary at L2332-2363 inside this now-complete proof body — needs a prover comment cleanup on re-open."
+  },
+  {
+    "timestamp": "2026-06-03T14:35:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate/DualInverse.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.sliceDualTransport"
+    },
+    "session": {
+      "id": "session_260",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "route-(1) (consume shared-root restrictOverIso/unitOverIso) is STRUCTURALLY INSUFFICIENT: those are sheaf-object isos of restrict↦over / unit↦unit and say nothing about dual/internal-hom. The reduced goal's content is that the dual COMMUTES WITH SLICE REINDEXING along f.opensFunctor, which needs overEquivalence's functor (a SheafOfModules.pushforward) to be strong-monoidal CLOSED — the MonoidalClosed structure the project deliberately avoids. Route-(2) (the genuine close) was NOT undertaken per the armed reversing signal.",
+      "key_lemmas_used": [
+        "LinearEquiv.toModuleIso"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "directive step 1 — reduce the iso goal to an 𝒪_Y(V)-linear equivalence",
+        "code_tried": "refine LinearEquiv.toModuleIso ?_",
+        "line_number": "256",
+        "lean_error": null,
+        "goal_before": "sliceDualTransport f M V iso goal",
+        "goal_after": "(restr fV' M.val ⟶ restr fV' 𝟙_X) ≃ₗ[𝒪_Y(V)] (restr V (pushforward β M.val) ⟶ restr V 𝟙_Y)",
+        "result": "success",
+        "insight": "The Module 𝒪_Y(V) structure on the LHS synthesizes AUTOMATICALLY here — no `letI _ := Module.compHom … (β.app V)` is needed (it comes through internalHomObjModule/homModule of the pushforward). Refutes the directive's letI worry. Committed to code."
+      },
+      {
+        "attempt": 2,
+        "strategy": "directive route (1) — obtain the reduced ≃ₗ from restrictOverIso/unitOverIso localized to V",
+        "code_tried": "(intended) consume restrictOverIso U M / unitOverIso U localized to V + bridge f ≅ U.ι",
+        "line_number": "256",
+        "lean_error": "structural — restrictOverIso/unitOverIso are isos of SHEAF OBJECTS (restrict↦over, unit↦unit); they mention nothing about `dual`/internal-hom. The reduced goal is a ≃ₗ between presheaf internal-hom section modules over DIFFERENT slice categories whose content is dual-commutes-with-slice-reindexing. Grep of SheafOverEquivalence.lean confirms NO dual/internalHom lemma exists there.",
+        "goal_before": "reduced ≃ₗ",
+        "goal_after": "unchanged (typed sorry retained)",
+        "result": "failed",
+        "insight": "Armed reversing signal fired EXACTLY as designed: prover left a typed sorry + reported the precise failing step rather than unilaterally switching to route-(2). Route-(1) is dead for sliceDualTransport; route-(2) = leg A (homLocalSection-style eqToHom-conjugation across f.opensFunctor) ∘ leg B (restrictScalarsRingIsoDualEquiv along (f.appIso V).inv), a single ~150-250 LOC build NOT decomposable into independent compiling sub-pieces (leg B does not type-apply before leg A)."
+      }
+    ],
+    "next_steps": "PLANNER DECISION REQUIRED: sanction route-(2) sectionwise build (self-contained in this file, no cross-lane race; budget a dedicated multi-iter lane). FIRST: blueprint-writer must rewrite the route-(1) proof sketch of lem:dual_restrict_iso (tex ~5773-5800) to route-(2) and remove the stale \\uses edges lem:sheafofmodules_restrict_over_iso / lem:sheafofmodules_unit_over_iso (lvb-di260 2× must-fix). Do NOT re-dispatch route-(1)."
+  },
+  {
+    "timestamp": "2026-06-03T14:35:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate/DualInverse.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.dual_restrict_iso"
+    },
+    "session": {
+      "id": "session_260",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "transitively blocked on sliceDualTransport being concrete. The isoMk naturality square references (sliceDualTransport f M V).hom which is opaque (sorry); the square is an equation of concrete module morphisms depending on the concrete value of sliceDualTransport, NOT a Subsingleton hom-type, so it cannot be discharged until sliceDualTransport's body is concrete.",
+      "key_lemmas_used": [
+        "PresheafOfModules.isoMk"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Execute Steps 1-3 + H1 of dual_restrict_iso, assemble via isoMk; fix the stale STATUS NOTE (aud259 major)",
+        "code_tried": "isoMk assembly with two typed sorries (the component ≃ₗ from sliceDualTransport + the naturality square); STATUS NOTE updated: route (1) is no longer 'gated on in-flight shared root' — root is green but route (1) structurally insufficient",
+        "line_number": "388",
+        "lean_error": "naturality square depends on concrete sliceDualTransport value — cannot close while sliceDualTransport is sorry",
+        "goal_before": "((pushforward β).obj M.val.dual).map g ≫ (restrictScalars …).map (…W).hom = (…V).hom ≫ (M.restrict f).val.dual.map g",
+        "goal_after": "typed sorry retained",
+        "result": "partial",
+        "insight": "Stale STATUS NOTE fixed (the directive's explicit fix task). Sorry count 2→2 but both now carry genuine reduction steps / precise diagnoses rather than aspirational sorries."
+      }
+    ],
+    "next_steps": "Closes automatically once sliceDualTransport is concrete (route-2). No independent work needed."
+  }
+]

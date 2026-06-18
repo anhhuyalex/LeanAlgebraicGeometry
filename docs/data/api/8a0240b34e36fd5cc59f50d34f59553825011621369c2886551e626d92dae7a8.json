@@ -1,0 +1,159 @@
+[
+  {
+    "timestamp": "2026-06-02T03:06:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "isIso_pullbackTensorMap_of_isIso_sheafifyDelta"
+    },
+    "session": {
+      "id": "session_245",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "pullbackTensorMap",
+        "sheafificationCompPullback",
+        "sheafifyTensorUnitIso",
+        "pullbackValIso",
+        "IsIso.comp_isIso'",
+        "isIso_sheafify_tensorHom_pullbackValIso"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "unfold pullbackTensorMap; extract_lets; supply sheafified delta from hypothesis h; close whole 4-fold composite with infer_instance",
+        "code_tried": "unfold pullbackTensorMap; extract_lets φ φ' a_Y; haveI hδ := h; infer_instance",
+        "line_number": "1335",
+        "lean_error": "typeclass instance problem is stuck (PresheafOfModules.pullback ...).Oplax  — codomain monoidal-cat metavars; later: failed to synthesize MonoidalCategoryStruct / IsIso of the sheafificationCompPullback factor",
+        "result": "failed",
+        "insight": "infer_instance does NOT chain over the 4-fold composite because the piece-4 ⊗ₘ carrier keys on the def's pinned `_ ⋙ forget₂` form while the forget-mapIso isos key on the defeq Y.ringCatSheaf.obj form — discrimination-tree miss."
+      },
+      {
+        "attempt": 2,
+        "strategy": "pin φ' with an explicit letI type in the hypothesis statement so OplaxMonoidal codomain resolves; chain factors explicitly with IsIso.comp_isIso'",
+        "code_tried": "(h : letI φ' : (X.presheaf ⋙ forget₂ …) ⟶ (Opens.map f.base).op ⋙ (Y.presheaf ⋙ forget₂ …) := f.toRingCatSheafHom.hom; IsIso (a_Y.map (δ (pullback φ') M.val N.val))); ... exact IsIso.comp_isIso' inferInstance (IsIso.comp_isIso' hδ (IsIso.comp_isIso' inferInstance ?_))",
+        "line_number": "1335",
+        "lean_error": "remaining goal: IsIso (a_Y.map (⊗ₘ of the two pullbackValIso)) — could not be closed inline (tensorIso (C := _ ⋙ forget₂) does not elaborate inside tactic block carrying extract_lets locals)",
+        "result": "partial",
+        "insight": "The φ'-pinning letI in the hypothesis type mirrors the def's own `let φ' := φ.hom` and unsticks the OplaxMonoidal codomain. Three of four factors close; only the piece-4 ⊗ₘ resisted inline."
+      },
+      {
+        "attempt": 3,
+        "strategy": "factor piece-4 (the sheafified ⊗ₘ of the two pullbackValIso) into a TOP-LEVEL private lemma built as a Functor.mapIso of a tensorIso, taken .isIso_hom; then close the reduction lemma with the explicit comp_isIso' chain feeding that helper",
+        "code_tried": "private lemma isIso_sheafify_tensorHom_pullbackValIso := ((sheafification …).mapIso (tensorIso (C := _ ⋙ forget₂) (forget.mapIso (pullbackValIso f M)) (forget.mapIso (pullbackValIso f N)))).isIso_hom ; exact IsIso.comp_isIso' inferInstance (IsIso.comp_isIso' hδ (IsIso.comp_isIso' inferInstance (isIso_sheafify_tensorHom_pullbackValIso f M N)))",
+        "line_number": "1312,1335",
+        "lean_error": null,
+        "result": "success",
+        "insight": "tensorIso (C := _ ⋙ forget₂) over forget-mapIso args elaborates cleanly at TOP LEVEL (mirrors proven tensorObjIsoOfIso) but NOT inside a tactic block with extract_lets locals — the (C := …)-coercion of the Y.ringCatSheaf.obj-typed mapIso args spuriously fails MC search there. Building the iso (no IsIso synthesis) sidesteps the discrimination-tree keying miss. Axiom-clean {propext, Classical.choice, Quot.sound}, verified first-hand by review."
+      }
+    ],
+    "next_steps": "Reduction brick is the shared entry for D2'-D4'. Next genuine sub-step is D2': the sheafification-mate bridge IsIso (a_Y.map (η (pullback φ'))) (unit-side analog of the PROVEN pullbackObjUnitToUnit_comp, ~60-120 LOC mate calculus). Then D3' (δ vs open-immersion base-change square), D4' (chart-chase via isIso_of_isIso_restrict), then the 3-line IsInvertible.pullback corollary."
+  },
+  {
+    "timestamp": "2026-06-02T03:02:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "isIso_sheafify_tensorHom_pullbackValIso"
+    },
+    "session": {
+      "id": "session_245",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "MonoidalCategory.tensorIso",
+        "Functor.mapIso",
+        "Iso.isIso_hom",
+        "pullbackValIso",
+        "SheafOfModules.forget"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "inside the reduction lemma's tactic body, close IsIso (a_Y.map (e₁ ⊗ₘ e₂)) by inferInstance / Functor.map_isIso / MonoidalCategory.tensor_isIso",
+        "code_tried": "haveI : IsIso ((forget).map (pullbackValIso f M).hom ⊗ₘ (forget).map (pullbackValIso f N).hom) := inferInstance; ... ; refine Functor.map_isIso a_Y _ ?_; exact tensor_isIso _ _",
+        "line_number": "1335",
+        "lean_error": "failed to synthesize instance IsIso (… ⊗ₘ …); Function expected at Functor.map_isIso a_Y ?m; MonoidalCategoryStruct (_root_.PresheafOfModules …) stuck",
+        "result": "failed",
+        "insight": "Inside the tactic body the ⊗ₘ carrier is the def's pinned `_ ⋙ forget₂` form while the forget-mapIso isos key on the defeq Y.ringCatSheaf.obj form; tensor_isIso / map_isIso instances miss on discrimination-tree keying."
+      },
+      {
+        "attempt": 2,
+        "strategy": "build the iso directly as a top-level lemma: mapIso of tensorIso of the two forget-mapIso, .isIso_hom — no IsIso synthesis at all",
+        "code_tried": "((sheafification (𝟙 Y.ringCatSheaf.val)).mapIso (tensorIso (C := _root_.PresheafOfModules (Y.presheaf ⋙ forget₂ CommRingCat RingCat)) ((forget).mapIso (pullbackValIso f M)) ((forget).mapIso (pullbackValIso f N)))).isIso_hom",
+        "line_number": "1312",
+        "lean_error": null,
+        "result": "success",
+        "insight": "Constructing the Iso and taking .isIso_hom avoids the IsIso typeclass search entirely. Must be top-level (mirrors tensorObjIsoOfIso); does not elaborate with extract_lets locals in scope."
+      }
+    ],
+    "next_steps": "Consumed by isIso_pullbackTensorMap_of_isIso_sheafifyDelta (piece 4). No further work; private helper, complete."
+  },
+  {
+    "timestamp": "2026-06-02T03:04:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "pullbackTensorMap_unit_isIso"
+    },
+    "session": {
+      "id": "session_245",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Reduces (via the new reduction brick + Functor.OplaxMonoidal.left_unitality_hom) to the sheafification-mate bridge IsIso (a_Y.map (η (PresheafOfModules.pullback φ'))) — the unit-side analog of the proven pullbackObjUnitToUnit_comp, NOT yet built (~60-120 LOC mate calculus). Committing it half-built would require a sorry, forbidden by the mathlib-build invariant.",
+      "key_lemmas_used": [
+        "isIso_pullbackTensorMap_of_isIso_sheafifyDelta",
+        "Functor.OplaxMonoidal.left_unitality_hom",
+        "SheafOfModules.unit",
+        "pullbackUnitIso"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "scratch the D2' lemma: apply the reduction brick, leaving IsIso (a_Y.map (δ 𝟙_ 𝟙_)); identify (SheafOfModules.unit _).val = 𝟙_ by rfl; rewrite the unit-pair δ via left_unitality_hom",
+        "code_tried": "lemma pullbackTensorMap_unit_isIso … := by apply isIso_pullbackTensorMap_of_isIso_sheafifyDelta; <goal: IsIso (a_Y.map (δ (pullback φ') 𝟙_ 𝟙_))>; have := Functor.OplaxMonoidal.left_unitality (PresheafOfModules.pullback φ') (SheafOfModules.unit X.ringCatSheaf).val",
+        "line_number": "1358",
+        "lean_error": null,
+        "result": "partial",
+        "insight": "Reduction-to-sub-goal compiles: apply isIso_pullbackTensorMap_of_isIso_sheafifyDelta discharges to exactly IsIso (a_Y.map (δ (pullback φ') 𝟙_ 𝟙_)); left_unitality_hom rewrites it via η, λ_, F.map λ_. The genuine remaining sub-step is IsIso (a_Y.map (η (pullback φ'))) — the η-bridge — which is the unfinished mate calculus."
+      }
+    ],
+    "next_steps": "Removed the scratch lemma (no sorry left in file). Build the η-bridge: a_Y.map (η (pullback φ')) ≅ (reconciliation) ≫ pullbackUnitIso (or its IsIso form), the unit-side analog of pullbackObjUnitToUnit_comp. Blueprint already sketches the unit-coherence route (lem:pullback_tensor_iso_unit) but does not yet name the reduction-brick-first step (checker minor)."
+  },
+  {
+    "timestamp": "2026-06-02T03:05:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "IsInvertible.pullback"
+    },
+    "session": {
+      "id": "session_245",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Depends on D4' pullbackTensorIsoOfLocallyTrivial, which depends on D2' (η-bridge) + D3' (δ vs open-immersion base-change square). None built this iter (the reduction brick was the scoped PRIMARY).",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Not attempted this iter — gated behind D2'/D3'/D4'. The 3-line Stacks corollary (lemma-pullback-invertible) off pullbackTensorIsoOfLocallyTrivial + pullbackUnitIso.",
+        "code_tried": "(none — documented in the in-file D2'-onward handoff block, L1354)",
+        "line_number": "n/a",
+        "lean_error": null,
+        "result": "partial",
+        "insight": "Whole loc-triv stack now funnels through the single reduction brick: every downstream target reduces to IsIso (a_Y.map δ …)."
+      }
+    ],
+    "next_steps": "After D2'/D3'/D4' land: IsInvertible.pullback = 3-line corollary. Blueprint lem:isinvertible_pullback already re-routed off the abandoned general build (no longer \\uses lem:pullback_tensor_iso)."
+  }
+]

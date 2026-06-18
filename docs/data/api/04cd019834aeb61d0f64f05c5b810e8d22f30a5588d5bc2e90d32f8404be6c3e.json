@@ -1,0 +1,119 @@
+[
+  {
+    "timestamp": "2026-06-01T09:55:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/FlatBaseChange.lean",
+      "theorem": "pushforward_spec_tilde_iso"
+    },
+    "session": {
+      "id": "session_239",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "hloc(a) = IsLocalizedModule (powers a) on the pushforward-side restriction Γ(N,⊤)→Γ(N,D a): the R-action on the R'-side sections (needed by LinearMap.restrictScalars R / of_linearEquiv) is Module.compHom _ φ.hom, which a `letI` does NOT get consumed by `LinearMap.restrictScalars R` — it clashes with the modulesSpecToSheaf-supplied R-action. 4th recurrence of the Module-R/smul carrier wall.",
+      "key_lemmas_used": [
+        "gammaPushforwardIso",
+        "tilde.toOpen",
+        "tilde.toOpen_res",
+        "PrimeSpectrum.basicOpen_one",
+        "LinearEquiv.eq_comp_toLinearMap_symm",
+        "IsLocalizedModule.of_linearEquiv_right",
+        "IsLocalizedModule.powers_restrictScalars",
+        "SpecMap_preimage_basicOpen"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Add new blueprint-pinned decl pushforward_spec_tilde_iso reducing (via pushforward_spec_tilde_iso_of_isLocalizedModule φ M) to a per-a obligation hloc(a)",
+        "code_tried": "apply pushforward_spec_tilde_iso_of_isLocalizedModule φ M; intro a; sorry",
+        "line_number": "535",
+        "lean_error": "none (reduction typechecks; goal = IsLocalizedModule (Submonoid.powers a) ((Sheaf.val (modulesSpecToSheaf.obj ((pushforward (Spec.map φ)).obj (tilde M)))).map (homOfLE …).op).hom)",
+        "result": "partial",
+        "insight": "The brick reduction is sound; hloc(a) is the single residual obligation."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Build the R'-side enabling brick tildeRestriction_isLocalizedModule: Γ(M^~,⊤)→Γ(M^~,D b) is IsLocalizedModule (powers b). First show toOpen M ⊤ is a localization at powers 1.",
+        "code_tried": "haveI inst1 : IsLocalizedModule (Submonoid.powers (1:R')) (tilde.toOpen M ⊤).hom := PrimeSpectrum.basicOpen_one ▸ inferInstance",
+        "line_number": "482",
+        "lean_error": "rewrite failed: Did not find pattern ⊤ ; then 'typeclass instance problem is stuck CommSemiring ?m'",
+        "result": "failed",
+        "insight": "▸ and simpa[basicOpen_one] do NOT rewrite basicOpen 1→⊤ inside the dependent tilde.toOpen M (basicOpen 1). Use `have h := inferInstance; rw [basicOpen_one] at h; exact h`."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Transport the powers-b localization tilde.toOpen M (basicOpen b) onto the ⊤→D(b) restriction via the triangle toOpen_res + of_linearEquiv_right",
+        "code_tried": "have htri2 : restriction ∘ₗ le.toLinearMap = (tilde.toOpen M (basicOpen b)).hom := …; have key := (LinearEquiv.eq_comp_toLinearMap_symm _ _).mpr htri2; rw [key]; exact IsLocalizedModule.of_linearEquiv_right (powers b) (tilde.toOpen M (basicOpen b)).hom le.symm",
+        "line_number": "509-525",
+        "lean_error": "none (closed)",
+        "result": "success",
+        "insight": "tildeRestriction_isLocalizedModule axiom-clean. KEY: ∘ₗ won't unify ∘ₛₗ on CommRingCat-coerced ModuleCat.Hom.hom, so rewrite the EQUATION via LinearEquiv.eq_comp_toLinearMap_symm rather than pointwise."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Discharge hloc(a) via of_linearEquiv: identify ρ = e₂.symm ∘ (restrictScalars φ σ) ∘ e₁ using gammaPushforwardIsoAt at ⊤ and D(a), with σ the R'-side restriction, then powers_restrictScalars",
+        "code_tried": "letI : Module R (Γ(M^~,⊤)-section) := Module.compHom _ φ.hom; have hbottom : IsLocalizedModule (powers a) (LinearMap.restrictScalars R σ) := …",
+        "line_number": "550-572",
+        "lean_error": "failed to synthesize instance Module ↑R ↑((Sheaf.val (modulesSpecToSheaf.obj (tilde M))).obj (op ⊤))",
+        "result": "failed",
+        "insight": "letI Module.compHom R-action NOT consumed by LinearMap.restrictScalars R; clashes with modulesSpecToSheaf-supplied R-action (restriction along the global-sections iso). The naturality square e₂∘ρ=(restrictScalars φ σ)∘e₁ also cannot be proved without unfolding gammaPushforwardIsoAt + restrictScalarsComp'App naturality in the module arg (Mathlib-absent, ~30-50 LOC). Left documented typed sorry."
+      }
+    ],
+    "next_steps": "EITHER prove naturality of gammaPushforwardIsoAt in the open argument (a NatTrans lemma; then of_linearEquiv closes hloc), OR pivot to the tower route (peel ρ as restrictScalars gsR ∘ restrictScalars appTop σ₁ + powers_restrictScalars ×2 + of_restrictScalars). If the carrier wall resists a 5th time, pivot to a direct scheme-level IsQuasicoherent-of-affine-pushforward criterion (planner's armed reversing signal)."
+  },
+  {
+    "timestamp": "2026-06-01T09:55:30Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "IsInvertible.pullback"
+    },
+    "session": {
+      "id": "session_239",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "(Sheaf|Presheaf)OfModules.pullback f = (pushforward _).leftAdjoint — an ABSTRACT left adjoint with NO sectionwise and NO stalkwise formula in the pinned Mathlib. The plan-agent recipe ('presheaf pullback is strong-monoidal sectionwise via (extendScalars f).Monoidal; assemble the sectionwise tensorators μ') cannot typecheck: there is no sectionwise (pullback φ).obj to attach the extendScalars tensorator to. pullbackObjUnitToUnit is an iso only under F.Final (open immersions), false for general f.",
+      "key_lemmas_used": [
+        "sheafifyTensorUnitIso",
+        "PresheafOfModules.W_whiskerLeft_of_W",
+        "PresheafOfModules.W_whiskerRight_of_W",
+        "isIso_sheafification_map_of_W",
+        "isIso_of_isIso_restrict",
+        "SheafOfModules.pullbackObjUnitToUnit"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Land the RHS reconciliation brick sheafifyTensorUnitIso: a(P⊗ₚQ) ≅ a((aP).val ⊗ₚ (aQ).val) — whisker the sheafification unit η on each side (both J.W via W_toSheafify), a inverts J.W maps",
+        "code_tried": "have hW2 : (Opens.grothendieckTopology X).W ((toPresheaf _).map ((a.obj P).val ◁ η.app Q)) := W_whiskerLeft_of_W (R := X.presheaf) (a.obj P).val (η.app Q) hηQ; have hi1 := isIso_sheafification_map_of_W …; have hi2 := …; exact asIso hi1 ≪≫ asIso hi2",
+        "line_number": "884",
+        "lean_error": "none (closed axiom-clean {propext, Classical.choice, Quot.sound})",
+        "result": "success",
+        "insight": "STATEMENT must use PresheafOfModules.Monoidal.tensorObj (R := X.presheaf) explicitly (NOT MonoidalCategory.tensorObj) else (aP).val fails MonoidalCategoryStruct synth; left-whisker object must be given EXPLICITLY (a.obj P).val ◁ η.app Q; keep the letI instMS Sheaf.val bridge as in the associator."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Draft pullbackUnitIso via isIso_of_isIso_restrict (the local-chart-finality trick that proves IsLocallyTrivial.pullback for general f)",
+        "code_tried": "refine (isIso_of_isIso_restrict (pullbackObjUnitToUnit f) ?_); intro y; … ; · sorry  -- per-chart goal",
+        "line_number": "937",
+        "lean_error": "probed goal: IsIso ((restrictFunctor ((fun y ↦ _.choose) y).ι).map (SheafOfModules.pullbackObjUnitToUnit (Hom.toRingCatSheafHom f)))",
+        "result": "failed",
+        "insight": "Per-chart goal needs Mathlib-absent naturality of pullbackObjUnitToUnit against pullbackComp / restrictFunctorIsoPullback (so the restricted global map matches pullbackObjUnitToUnit g for the local FINAL map g = f.resLE U V). A small lemma cluster, not one-shot. Draft (with its single probe sorry) was REMOVED to honor the no-sorry invariant."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Free comparison map via Adjunction.leftAdjointOplaxMonoidal from pushforward lax-monoidal",
+        "code_tried": "(analysis only) δ : f^*(A⊗B) ⟶ f^*A ⊗ f^*B from pushforward LaxMonoidal",
+        "line_number": "n/a",
+        "lean_error": "n/a (structural analysis)",
+        "result": "failed",
+        "insight": "δ exists for free but only at the PRESHEAF level (no MonoidalCategory (SheafOfModules …)). Proving IsIso δ still reduces (isIso_of_isIso_app) to identifying the abstract pullback with extendScalars = the same missing sectionwise formula. Invertibility is the genuine content (extend strong, restrict only lax)."
+      }
+    ],
+    "next_steps": "Do NOT re-dispatch the sectionwise-extendScalars recipe (structurally impossible). PIVOT options: (1) local-chart-finality via isIso_of_isIso_restrict + local FINAL map g = f.resLE U V — first build the pullbackObjUnitToUnit/pullbackComp/restrictFunctorIsoPullback naturality cluster (Mathlib-absent, ~handful of lemmas); for pullbackTensorIso transport the presheaf oplax δ to the sheaf level then apply the same trick (sheafifyTensorUnitIso is the RHS bridge). (2) STRATEGIC: the RPF structure maps are FLAT (projection π_T from C/k flat, + base changes) — a FLAT-restricted IsInvertible.pullback may dodge the general build entirely. Recommend strategy-critic / mathlib-analogist pass BEFORE committing prover effort to route (1)."
+  }
+]

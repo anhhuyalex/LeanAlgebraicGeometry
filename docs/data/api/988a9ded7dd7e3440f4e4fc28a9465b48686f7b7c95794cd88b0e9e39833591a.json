@@ -1,0 +1,390 @@
+[
+  {
+    "timestamp": "2026-05-21T11:55:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "morphism_P1_to_grpScheme_const_aux"
+    },
+    "session": {
+      "id": "session_167",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "projGm_locallyOfFiniteType",
+        "projGm_geomIrred",
+        "projGm_isReduced",
+        "projectiveLineBar_isReduced",
+        "iotaGm_isDominant",
+        "ext_of_isDominant_of_isSeparated'",
+        "IsProper.toIsSeparated",
+        "hom_additive_decomp_of_rigidity",
+        "gmScalingP1_collapse_at_zero"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Try `infer_instance` on the 4 product/Proj instances after `change` to `pullback.fst ≫ X.hom`",
+        "code_tried": "change LocallyOfFiniteType ((⊗).hom); infer_instance",
+        "line_number": "957",
+        "lean_error": "succeeds for LocallyOfFiniteType only (Mathlib has the composition+base-change instances); other 3 (GeomIrred / IsReduced product / IsReduced ℙ¹) fail in standalone lean_run_code",
+        "goal_before": "5 inline haveI sorries L944/L949/L953/L1029/L1037 inside the private helper",
+        "result": "partial",
+        "insight": "Lane A's planned exports are exactly the resolver footing needed; wait for Lane A then refactor."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Drop all 5 inline `haveI := by sorry` blocks; let 4 resolve via Lane A's projGm_* + projectiveLineBar_isReduced exports; promote the 5th (dominance) to a named top-level bridge.",
+        "code_tried": "haveI hιDom : IsDominant iotaGm.left := iotaGm_isDominant",
+        "line_number": "L1037-region (now via L931 bridge)",
+        "lean_error": "none — helper body now sorry-free and lake build green",
+        "result": "success",
+        "insight": "The cleanest split is `Lane A owns the 4 product/Proj instances; Lane B owns one file-local dominance bridge because iotaGm's proof needs gmScalingP1's concrete chartwise form'."
+      }
+    ],
+    "next_steps": "Helper is sorry-free; lifts to axiom-clean once iotaGm_isDominant + gmScalingP1 body discharge in iter-168."
+  },
+  {
+    "timestamp": "2026-05-21T11:53:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "iotaGm_isDominant"
+    },
+    "session": {
+      "id": "session_167",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "infer_instance for `IsDominant` from `GeometricallyIrreducible → Surjective → IsDominant` chain works in a standalone lean_run_code smoke test but fails in the file context (synthesis order differs — gmScalingP1 := sorry doesn't reduce). Genuinely gated on Lane A's concrete gmScalingP1 body."
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Direct `infer_instance` on `IsDominant (lift ... ≫ gmScalingP1).left` via priority-low GI→Surjective→IsDominant chain.",
+        "code_tried": "instance := by infer_instance (sketch)",
+        "line_number": "934",
+        "lean_error": "instance synthesis fails (likely backward-defeq quirk where gmScalingP1 := sorry doesn't reduce to an obvious composition)",
+        "result": "failed",
+        "insight": "Bridge needs gmScalingP1's concrete open-immersion form; `Surjective → IsDominant` is priority-100 instance L226 in Mathlib's UnderlyingMap.lean."
+      }
+    ],
+    "next_steps": "iter-168: once Lane A ships gmScalingP1's chartwise body, dominance reduces to `(Gm ↪ ℙ¹).IsOpenImmersion → IsDominant` (standard, ℙ¹ is irreducible)."
+  },
+  {
+    "timestamp": "2026-05-21T11:48:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects.lean",
+      "theorem": "gmRing_isDomain"
+    },
+    "session": {
+      "id": "session_167",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "IsLocalization.isDomain_localization",
+        "powers_le_nonZeroDivisors_of_noZeroDivisors",
+        "MvPolynomial.X_ne_zero"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Chain Localization.Away of a polynomial-ring domain at a non-zero-divisor submonoid via IsLocalization.isDomain_localization.",
+        "code_tried": "unfold GmRing; exact IsLocalization.isDomain_localization (powers_le_nonZeroDivisors_of_noZeroDivisors (MvPolynomial.X_ne_zero _))",
+        "line_number": "395",
+        "result": "success",
+        "insight": "Standard: Submonoid.powers t avoids 0 when t ≠ 0; works in any noZeroDivisors ring."
+      }
+    ],
+    "next_steps": "Direct consumer of `gm_irreducibleSpace` + `gm_geomIrred`."
+  },
+  {
+    "timestamp": "2026-05-21T11:48:30Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects.lean",
+      "theorem": "gm_irreducibleSpace"
+    },
+    "session": {
+      "id": "session_167",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "PrimeSpectrum.irreducibleSpace",
+        "gmRing_isDomain"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "`change IrreducibleSpace (Spec (CommRingCat.of (GmRing kbar)))` then `infer_instance`.",
+        "code_tried": "change IrreducibleSpace (Spec (CommRingCat.of (GmRing kbar))); infer_instance",
+        "line_number": "404",
+        "result": "success",
+        "insight": "`Spec` of a domain is irreducible via PrimeSpectrum.irreducibleSpace; the `change` rewrites Gm.left to its Spec form (rfl)."
+      }
+    ],
+    "next_steps": "Feeds gm_geomIrred (still sorry — alg-closed base-change gap)."
+  },
+  {
+    "timestamp": "2026-05-21T11:50:30Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects.lean",
+      "theorem": "projGm_locallyOfFiniteType"
+    },
+    "session": {
+      "id": "session_167",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "LocallyOfFiniteType.isStableUnderComposition",
+        "LocallyOfFiniteType.isStableUnderBaseChange"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "`change` to `pullback.fst ≫ ProjectiveLineBar.hom` (the rfl-unfold of `(X ⊗ Y).hom` in Cartesian-monoidal `Over`), then `infer_instance` (LOFT stable under composition + base change).",
+        "code_tried": "change LocallyOfFiniteType (pullback.fst ℙ¹.hom Gm.hom ≫ ℙ¹.hom); infer_instance",
+        "line_number": "500",
+        "result": "success",
+        "insight": "`(X ⊗ Y).hom = pullback.fst X.hom Y.hom ≫ X.hom` is rfl in Over S (Cartesian monoidal); LOFT chains via Mathlib's stability instances."
+      }
+    ],
+    "next_steps": "Exported for Lane B's `morphism_P1_to_grpScheme_const_aux` (replaces inline haveI)."
+  },
+  {
+    "timestamp": "2026-05-21T11:54:30Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects.lean",
+      "theorem": "projGm_geomIrred"
+    },
+    "session": {
+      "id": "session_167",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "GeometricallyIrreducible.comp",
+        "gm_geomIrred (scaffold)",
+        "projectiveLineBar_geomIrred (scaffold)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "`change` + naked `infer_instance` on `GeometricallyIrreducible (pullback.fst ≫ ℙ¹.hom)`.",
+        "code_tried": "change GeometricallyIrreducible (pullback.fst ≫ ℙ¹.hom); infer_instance",
+        "line_number": "542",
+        "lean_error": "Resolution didn't find GeometricallyIrreducible.comp automatically.",
+        "result": "failed",
+        "insight": "Explicit call needed."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Use `change` + `exact GeometricallyIrreducible.comp _ _`.",
+        "code_tried": "exact GeometricallyIrreducible.comp _ _",
+        "line_number": "546",
+        "result": "success",
+        "insight": "`UniversallyOpen` discharged automatically by `Smooth → Flat → UniversallyOpen` chain. Propagates `gm_geomIrred` + `projectiveLineBar_geomIrred` sorries."
+      }
+    ],
+    "next_steps": "Sorry propagation only; lifts to axiom-clean once `gm_geomIrred` + `projectiveLineBar_geomIrred` close."
+  },
+  {
+    "timestamp": "2026-05-21T11:51:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects.lean",
+      "theorem": "gmScalingP1"
+    },
+    "session": {
+      "id": "session_167",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "5-step chartwise glue recipe (analogist gm-grpobj-and-friends.md) needs project-side helper `homogeneousLocalizationAwayIso : HomogeneousLocalization.Away (projectiveLineBarGrading kbar) (MvPolynomial.X i) ≃+* MvPolynomial Unit kbar` (~30 LOC) plus chart-side Spec.map of polynomial ring maps + cross-chart agreement via `pullbackSpecIso` + `Scheme.Cover.glueMorphisms` glue. Each sub-step is ~30-50 LOC; full body outside iter-167 budget."
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Survey analogist's 5-step recipe: cover ℙ¹×Gm via `affineOpenCoverOfIrrelevantLESpan` for `![X₀, X₁]` × Gm-base-change; chart-side morphisms `Spec.map` of `k̄[t] → k̄[t,λ,λ⁻¹], t↦λt` and `k̄[u] → k̄[u,λ,λ⁻¹], u↦u/λ`; cross-chart `pullbackSpecIso` calc `t=1/u, λt=1/(u/λ)`; glue.",
+        "code_tried": "(survey only — recipe scoped but not implemented)",
+        "line_number": "459",
+        "result": "failed",
+        "insight": "Sub-build outside iter budget; the missing `homogeneousLocalizationAwayIso` helper is the rate-limiting step."
+      }
+    ],
+    "next_steps": "iter-168+ sub-lane: (i) build `homogeneousLocalizationAwayIso` helper (~30 LOC), (ii) build the 2-chart morphisms, (iii) glue via `Scheme.Cover.glueMorphisms`. Defer body; sorryAx propagates to Lane B's `iotaGm_isDominant` only."
+  },
+  {
+    "timestamp": "2026-05-21T11:51:30Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects.lean",
+      "theorem": "gmScalingP1_collapse_at_zero"
+    },
+    "session": {
+      "id": "session_167",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Gated on `gmScalingP1` body (signature only landed iter-165)."
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Defer: cannot prove a fixed-point property of a morphism whose body is still `sorry`.",
+        "code_tried": "(no attempt — gated)",
+        "line_number": "476",
+        "result": "failed",
+        "insight": "Reduces to elementary chart-level computation `(0, λ) ↦ λ·0 = 0` once the chart-side polynomial map ships."
+      }
+    ],
+    "next_steps": "iter-168+ once gmScalingP1 lands."
+  },
+  {
+    "timestamp": "2026-05-21T11:54:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects.lean",
+      "theorem": "projectiveLineBar_isReduced"
+    },
+    "session": {
+      "id": "session_167",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Mathlib gap: `IsReduced (HomogeneousLocalization.Away 𝒜 f)` for the standard ℕ-grading on `MvPolynomial (Fin 2) k̄` is not shipped. Bridge requires building `HomogeneousLocalization.Away (projectiveLineBarGrading kbar) (MvPolynomial.X i) ≃+* MvPolynomial Unit kbar` (~30 LOC) — same helper as gmScalingP1 needs."
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "`IsReduced.of_openCover` over `Proj.affineOpenCover (projectiveLineBarGrading kbar)`; each chart `Spec (HomogeneousLocalization.Away 𝒜 X_i)`; each chart a domain ⟹ reduced.",
+        "code_tried": "(survey only)",
+        "line_number": "522",
+        "lean_error": "Mathlib doesn't ship `IsDomain (HomogeneousLocalization.Away 𝒜 f)` or `IsReduced (HomogeneousLocalization.Away 𝒜 f)`.",
+        "result": "failed",
+        "insight": "Bridges to `MvPolynomial Unit k̄` (polynomial ring in one var) via degree-0-localization-at-X_i = polynomial-in-X_{1-i}/X_i."
+      }
+    ],
+    "next_steps": "iter-168+ sub-lane: build the `homogeneousLocalizationAwayIso` helper (shared with `gmScalingP1`)."
+  },
+  {
+    "timestamp": "2026-05-21T11:54:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects.lean",
+      "theorem": "gm_geomIrred"
+    },
+    "session": {
+      "id": "session_167",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Mathlib gap: `Localization.Away t ⊗_R S ≃+* Localization.Away (t ⊗ 1)` for alg-closed base + field extension is not shipped; tensor-of-domains-over-a-field-is-domain also missing as a direct instance."
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Use `geometrically_iff_of_commRing` requiring `IrreducibleSpace (pullback Gm.hom (Spec.map (algebraMap kbar K)))` for each field K. By `pullbackSpecIso` this is `Spec(GmRing ⊗_kbar K)`. Need `IsDomain (GmRing ⊗_kbar K)`.",
+        "code_tried": "(survey only — would require new tensor-localization identification + tensor-of-domains lemma)",
+        "line_number": "532",
+        "lean_error": "Mathlib gap.",
+        "result": "failed",
+        "insight": "Substantial Mathlib bridge work; alternative: chartwise IsReduced+IrreducibleSpace transfer once chart bridges exist."
+      }
+    ],
+    "next_steps": "iter-168+ scoped to Mathlib-idiom consult for tensor-localization + tensor-of-domains-over-field."
+  },
+  {
+    "timestamp": "2026-05-21T11:54:30Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects.lean",
+      "theorem": "projGm_isReduced"
+    },
+    "session": {
+      "id": "session_167",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "`change IsReduced (pullback ℙ¹.hom Gm.hom) + infer_instance` LOOKED to succeed via Mathlib's pullback-IsReduced instance (Reduced.lean:121) — but needs the missing `Smooth → GeometricallyReduced` scheme-level bridge. Alt chart-local path needs `HomogeneousLocalization.Away`-is-domain + tensor-of-domains-over-field — both Mathlib gaps."
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "`change IsReduced (pullback ℙ¹.hom Gm.hom)` + `infer_instance` via pullback-IsReduced.",
+        "code_tried": "change IsReduced (pullback ℙ¹.hom Gm.hom); infer_instance",
+        "line_number": "564",
+        "lean_error": "Requires `GeometricallyReduced f` on a factor (Mathlib's pullback-IsReduced shape); the `Smooth → GeometricallyReduced` scheme-level bridge is missing.",
+        "result": "failed",
+        "insight": "Both Mathlib routes (pullback-IsReduced via GeometricallyReduced; chart-local via Proj.affineOpenCover × Gm) blocked by absent bridges."
+      }
+    ],
+    "next_steps": "iter-168+: feeds off either Mathlib `Smooth → GeometricallyReduced` upstream, or the project-side `homogeneousLocalizationAwayIso` helper (shared with `projectiveLineBar_isReduced` + `gmScalingP1`)."
+  },
+  {
+    "timestamp": "2026-05-21T11:52:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects.lean",
+      "theorem": "ga_grpObj"
+    },
+    "session": {
+      "id": "session_167",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Analogist's `2-3 LOC FREE via AffineSpace.homOverEquiv` shortcut not realised: building the `GrpObj.ofRepresentableBy` witness needs (i) an additive functor `(Over (Spec k̄))ᵒᵖ ⥤ AddGrpCat` with `obj T = AddGrpCat.of (Γ(T.left, ⊤))`, (ii) a `(F ⋙ forget _).RepresentableBy (Ga kbar)` derivation from `AffineSpace.homOverEquiv`, (iii) `homEquiv_comp` naturality. Estimated 50-100 LOC, multi-step."
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Attempt the analogist's stated `2-3 LOC FREE` recipe via `AffineSpace.homOverEquiv`.",
+        "code_tried": "(scoped recipe; full GrpObj.ofRepresentableBy witness incomplete)",
+        "line_number": "335",
+        "lean_error": "Witness construction needs the functor F + RepresentableBy + naturality steps not captured by the analogist's shortcut.",
+        "result": "failed",
+        "insight": "Analogist's '2-3 LOC FREE' was wrong; the realistic effort is comparable to `gm_grpObj` modulo the simpler `AffineSpace.homOverEquiv` ingredient."
+      }
+    ],
+    "next_steps": "Off-path OPT-IN; defer until critical-path Lane A residual closes (or pull a dedicated `GrpObj.ofRepresentableBy` analogist consult, see also `gm_grpObj`)."
+  },
+  {
+    "timestamp": "2026-05-21T11:52:30Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects.lean",
+      "theorem": "gm_grpObj"
+    },
+    "session": {
+      "id": "session_167",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Analogist's 3-step recipe via `IsLocalization.Away.lift` deferred — same shape as `ga_grpObj` but harder (no `AffineSpace.homOverEquiv` shortcut). Estimated 80-150 LOC."
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Survey analogist's recipe; defer.",
+        "code_tried": "(survey only)",
+        "line_number": "420",
+        "lean_error": "Out of iter budget.",
+        "result": "failed",
+        "insight": "PROGRESS-CRITIC iter-167 watch item: `GrpObj.ofRepresentableBy` is now the 2-iter-deferred CRITICAL item; if persists into iter-168 reports, escalate to STUCK with Mathlib-idiom corrective."
+      }
+    ],
+    "next_steps": "iter-168 multi-step sub-lane after a `GrpObj.ofRepresentableBy` dedicated consult."
+  }
+]

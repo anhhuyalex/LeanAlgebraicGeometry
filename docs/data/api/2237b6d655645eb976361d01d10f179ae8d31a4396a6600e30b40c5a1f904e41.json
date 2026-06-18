@@ -1,0 +1,92 @@
+[
+  {
+    "timestamp": "2026-05-20T06:51:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Jacobian.lean",
+      "theorem": "AlgebraicGeometry.genusZeroWitness"
+    },
+    "session": {
+      "id": "session_155",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "residual `key : f = toUnit C ≫ η[A]` sorry — the genus-0 rigidity equation, strictly downstream of rigidity_over_kbar (itself an open NAMED GAP) + the k̄→k descent layer + the char-p arm (rigidity_over_kbar carries [CharZero kbar])",
+      "key_lemmas_used": [
+        "Over.toUnit_left",
+        "AlgebraicGeometry.Flat.epi_of_flat_of_surjective",
+        "CategoryTheory.Over.epi_of_epi_left",
+        "cancel_epi",
+        "toUnit_unique",
+        "geometricallyIrreducible_id_Spec"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Replace bare `:= sorry` body with the blueprint terminal-object skeleton: J := 𝟙_ (Over (Spec k)), fill the 6 structural fields from identity-morphism instances",
+        "code_tried": "J := 𝟙_ (Over (Spec (.of k)))\\n  grpObj := inferInstance\\n  proper := inferInstance\\n  smooth := inferInstance\\n  geomIrred := geometricallyIrreducible_id_Spec k\\n  smoothGenus := by rw [h]; infer_instance",
+        "line_number": "209",
+        "lean_error": "failed to synthesize instance of type class IsProper (𝟙_ (Over (Spec (CommRingCat.of k)))).hom",
+        "result": "failed",
+        "insight": "instance search does NOT unfold (𝟙_).hom to 𝟙 (Spec k) (defeq but not reducible); bare inferInstance on the field type fails"
+      },
+      {
+        "attempt": 2,
+        "strategy": "Supply each structural instance as an explicit term annotated at 𝟙 (Spec k) and let term-elaboration close by defeq",
+        "code_tried": "proper := (inferInstance : IsProper (𝟙 (Spec (.of k))))\\n  smooth := (inferInstance : Smooth (𝟙 (Spec (.of k))))\\n  smoothGenus := by rw [h]; exact (inferInstance : SmoothOfRelativeDimension 0 (𝟙 (Spec (.of k))))",
+        "line_number": "217",
+        "lean_error": "none — diagnostics clean except residual sorry warnings (lines 209, 269)",
+        "result": "success",
+        "insight": "explicit-term defeq is the idiom for structural fields on the terminal/unit object; (𝟙_).hom defeq 𝟙 (Spec k) confirmed by rfl probes"
+      },
+      {
+        "attempt": 3,
+        "strategy": "Close the isAlbaneseFor uniqueness clause by cancelling the epimorphism toUnit C",
+        "code_tried": "intro g' hg'\\n      have hcancel : toUnit C ≫ g' = toUnit C ≫ η[A] := by rw [← hg', ← key]\\n      exact (cancel_epi (toUnit C)).mp hcancel",
+        "line_number": "247",
+        "lean_error": "failed to synthesize instance of type class Epi (toUnit C)",
+        "result": "failed",
+        "insight": "Epi (toUnit C) is not auto-inferred; must be built from Epi of the underlying scheme morphism"
+      },
+      {
+        "attempt": 4,
+        "strategy": "Build Epi (toUnit C) explicitly: (toUnit C).left = C.hom (Over.toUnit_left), C.hom is flat+surjective hence epi, lift to the over-category",
+        "code_tried": "have hepiL : Epi (toUnit C).left := by\\n        rw [Over.toUnit_left]; exact Flat.epi_of_flat_of_surjective C.hom\\n      haveI : Epi (toUnit C) := Over.epi_of_epi_left _\\n      exact (cancel_epi (toUnit C)).mp hcancel",
+        "line_number": "249",
+        "lean_error": "none — diagnostics clean; only the residual `key` sorry (line 240) and positiveGenusWitness sorry (line 278) remain",
+        "result": "success",
+        "insight": "Flat C.hom and Surjective C.hom are auto-inferred from the curve's smooth/proper/geom-irred binders; Over.epi_of_epi_left lifts the underlying epi to the over-category. Uniqueness is genuinely closed (no sorry)"
+      }
+    ],
+    "next_steps": "Cannot close `key` until rigidity_over_kbar's body lands AND the k̄→k base-change/descent layer is assembled AND the char-p arm is handled. Strictly gated; do NOT re-dispatch a prover on genusZeroWitness until the df=0 route (a)/(b) is chosen and rigidity_over_kbar closes. When that happens the follow-up is: base-change (C,A,f,P) to k̄, apply rigidity_over_kbar, descend via Flat.epi_of_flat_of_surjective."
+  },
+  {
+    "timestamp": "2026-05-20T06:42:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Cotangent/ChartAlgebra.lean",
+      "theorem": "KaehlerDifferential.mem_range_algebraMap_of_D_eq_zero"
+    },
+    "session": {
+      "id": "session_155",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "NO-OP — file already complete (0 sorries, axiom-clean, compiles). Listed off-limits in PROGRESS.md iter-155.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Inspect file for any remaining work",
+        "code_tried": "Grep sorry|USER: ; lean_diagnostic_messages ; lean_verify mem_range_algebraMap_of_D_eq_zero",
+        "line_number": "n/a",
+        "lean_error": "none — 0 sorries, clean diagnostics, axioms {propext, Classical.choice, Quot.sound}",
+        "result": "success",
+        "insight": "File complete since iter-154 (KDM closed axiom-clean). No work to do; the four `local instance` warnings are the intended TensorProduct.rightAlgebra re-enablement."
+      }
+    ],
+    "next_steps": "No prover action on this file. Critical-path blocker (df=0 production) lives in RigidityKbar.lean/Jacobian.lean, not here."
+  }
+]

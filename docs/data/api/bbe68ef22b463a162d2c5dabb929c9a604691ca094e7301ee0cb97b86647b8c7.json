@@ -1,0 +1,197 @@
+[
+  {
+    "timestamp": "2026-05-15T08:00:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "cechCofaceMap_pi_smul (per-summand hG discharge at L1147, was L988)"
+    },
+    "session": {
+      "id": "session_103",
+      "model": "sonnet"
+    },
+    "findings": {
+      "blocker": "eqToHom-vs-Pi.π transport identification at coordinate j' — Mathlib does not expose eqToHom-Pi.π transport for object-equality eqToHom (only `Pi.π_comp_eqToHom` for index equality). The wrapper `cechCofaceMap_summand_family'` was defined as a direct Pi.lift (not as `named_family ≫ eqToHom`) precisely to escape the discrim-tree blocker, but this defers the per-coordinate equality to the proof of L1147 — the body of L1147 must now bridge `F_at_i ≫ eqToHom_outer` vs `wrapper` at the per-coord level.",
+      "key_lemmas_used": [
+        "ModuleCat.piIsoPi_inv_kernel_ι_apply",
+        "RingHom.toModule_smul",
+        "Limits.Pi.lift_π_apply",
+        "ConcreteCategory.comp_apply",
+        "presheafMap_restrict_collapse",
+        "ModuleCat.hom_zsmul (probed)",
+        "smul_comm (probed)",
+        "map_zsmul (probed)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Define Helper 1 — wrapper def `cechCofaceMap_summand_family'` as a direct `Pi.lift` over Fin (n+1) with `Fin.cast` on inner indices.",
+        "code_tried": "noncomputable def cechCofaceMap_summand_family' ... :=\n  have hRel : (ComplexShape.up ℕ).prev n + 2 = n + 1 := by rcases n with _ | k; · omega; · simp [ComplexShape.prev, ComplexShape.up_Rel]\n  Pi.lift fun j_new => Pi.π (...) ((j_new ∘ Fin.cast hRel) ∘ (SimplexCategory.δ (Fin.cast hRel.symm i)).toOrderHom) ≫ (toModuleKPresheaf C).map (Pi.lift fun x => Pi.π (...) (Fin.cast hRel ((SimplexCategory.δ (Fin.cast hRel.symm i)).toOrderHom x))).op",
+        "line_number": "605-630 (post-edit)",
+        "lean_error": "none — compiles clean",
+        "goal_before": "n/a (definition)",
+        "goal_after": "n/a (definition)",
+        "result": "success",
+        "insight": "Defining the wrapper as a *direct* Pi.lift (rather than `named_family ≫ eqToHom`) sidesteps the discrim-tree blocker for the binder-level R-linearity proof — at the cost of moving the eqToHom-vs-Pi.π transport burden into the L1147 client proof."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Define Helper 2 — `cechCofaceMap_summand_family'_R_linear` (R-linearity transport), mirroring iter-104's binder-level proof of `cechCofaceMap_summand_family_R_linear` with Fin (n+1) outer index and Fin.cast on the inner δ-composition.",
+        "code_tried": "theorem cechCofaceMap_summand_family'_R_linear hU s₀ n hn i := by\n  intro R Z₁ Z₂ e₁ e₂\n  have hRel : ... := by rcases n with _ | k; · omega; · simp [ComplexShape.prev, ComplexShape.up_Rel]\n  letI perI₁ ... letI h_mod_pi₁ ... letI perI₂ ... letI h_mod_pi₂ ...\n  intro r y; funext j_new\n  simp only [Pi.smul_apply]\n  show (Pi.π Z₂ j_new).hom (...) = r • (Pi.π Z₂ j_new).hom (...)\n  unfold cechCofaceMap_summand_family'\n  simp only [Limits.Pi.lift_π_apply, ConcreteCategory.comp_apply]\n  have hSym ... := ModuleCat.piIsoPi_inv_kernel_ι_apply Z₁ _ _\n  rw [hSym, hSym]\n  simp only [Pi.smul_apply, RingHom.toModule_smul]\n  set Pl := Pi.lift fun x => Pi.π _ (Fin.cast hRel (δ x)) with hPl_def\n  exact ((C.left.presheaf.map Pl.op).hom.map_mul _ _).trans\n    (congrArg (· * (C.left.presheaf.map Pl.op).hom (y ((j_new ∘ Fin.cast hRel) ∘ δ.toOrderHom)))\n      (presheafMap_restrict_collapse _ _ _ r))",
+        "line_number": "634-726 (post-edit)",
+        "lean_error": "none — compiles clean",
+        "goal_before": "∀ (r : R) (y : ∀ i, Z₁ i), e₂ ((cechCofaceMap_summand_family' s₀ n hn i).hom (e₁.symm (r • y))) = r • e₂ ((cechCofaceMap_summand_family' s₀ n hn i).hom (e₁.symm y))",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "The wrapper's R-linearity proof reuses the iter-104 binder-level pattern verbatim — RingHom.toModule_smul + piIsoPi_inv_kernel_ι_apply + term-level Eq.trans + congrArg + presheafMap_restrict_collapse. The Fin.cast index translation cleanly factors out and presheafMap_restrict_collapse still fires (the morphism Pl is structurally the same as iter-104's, just with Fin.cast-translated indices)."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Probe close L1147 via `cechCofaceMap_summand_family'_R_linear` + congrFun + `simp only [ModuleCat.hom_zsmul, LinearMap.smul_apply, map_zsmul, smul_comm _ r']`.",
+        "code_tried": "simp only [ModuleCat.hom_zsmul, LinearMap.smul_apply, map_zsmul, smul_comm _ r']; sorry",
+        "line_number": "1147 (probe via multi_attempt)",
+        "lean_error": "did not close — `simp only` with these lemmas had no effect because the LHS pattern `((-1)^↑i • F_at_i).hom z` is hidden under multiple ConcreteCategory.hom layers that the discrim tree can't match against `ModuleCat.hom_zsmul`'s pattern (`(n • f).hom`).",
+        "goal_before": "(post-S5 frame) (Pi.π Z₂ j').hom (eqToHom_hom (((-1)^↑i • F_at_i).hom (e₁.symm (r' • y')))) = r' • (Pi.π Z₂ j').hom (eqToHom_hom (((-1)^↑i • F_at_i).hom (e₁.symm y')))",
+        "goal_after": "unchanged",
+        "result": "failed",
+        "insight": "ModuleCat.hom_zsmul does not fire by simp in the eqToHom-wrapped form, same discrim-tree class as iter-099/100/101 attempts."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Try rcases on n + ComplexShape.prev (m+1) = m simp at *, hoping eqToHom collapses post-simp.",
+        "code_tried": "rcases n with _ | m\n  case zero => exact absurd hn (lt_irrefl 0)\n  case succ => simp only [show (ComplexShape.up ℕ).prev (m + 1) = m from by simp [ComplexShape.prev, ComplexShape.up_Rel]] at *; sorry",
+        "line_number": "1147 (probe via multi_attempt)",
+        "lean_error": "Various: `unexpected token '·'; expected command` in some structural variants; `simp at *` doesn't fully collapse the eqToHom because (prev (m+1)) doesn't auto-rewrite in all term positions (the index appears in `Fin ((prev n) + 2)` which becomes `Fin (m + 2)` but the eqToHom-proof object is still in terms of n).",
+        "goal_before": "same as attempt 3",
+        "goal_after": "case h.h.succ — eqToHom not collapsed; goal essentially unchanged after simp at *",
+        "result": "failed",
+        "insight": "Even after rcases-on-n + simp on prev, eqToHom doesn't auto-collapse: the equation `Fin (m+2) = Fin (m+1)` still drives the eqToHom and the per-coord eq still needs work."
+      },
+      {
+        "attempt": 5,
+        "strategy": "Apply wrapper R-linearity directly + congrFun + `simp only [Pi.smul_apply]` to get h_wrap_pt; then write structured partial proof with `sorry` for the residual eqToHom-vs-Pi.π transport identification.",
+        "code_tried": "have hRel' : (ComplexShape.up ℕ).prev n + 2 = n + 1 := by omega\nhave h_wrap := cechCofaceMap_summand_family'_R_linear hU s₀ n hn (Fin.cast hRel' i)\nhave h_wrap_pt := congrFun (h_wrap r' y') j'\nsimp only [Pi.smul_apply] at h_wrap_pt\nsorry",
+        "line_number": "1130-1147 (post-edit)",
+        "lean_error": "compiles clean with sorry",
+        "goal_before": "(post-S5 frame, same as iter-103 close)",
+        "goal_after": "case h.h with h_wrap_pt : (Pi.π Z₂ j').hom (wrapper.hom (e₁.symm (r' • y'))) = r' • (Pi.π Z₂ j').hom (wrapper.hom (e₁.symm y')) in context",
+        "result": "partial",
+        "insight": "The wrapper R-linearity equation `h_wrap_pt` provides exactly the desired form modulo the eqToHom-vs-Pi.π transport identification: goal LHS has `(Pi.π Z₂ j').hom (eqToHom.hom (((-1)^↑i • F_at_i).hom z))` while h_wrap_pt has `(Pi.π Z₂ j').hom (wrapper.hom z)`. Reducing one to the other requires (a) pulling `(-1)^↑i •` out (smul_comm + map_zsmul), (b) identifying `F_at_i ≫ eqToHom_outer = wrapper at (Fin.cast hRel' i)` per-coord. Step (b) is morphism-level equality on Pi.lifts via Pi.lift_ext + Fin.cast_cast round-trip."
+      },
+      {
+        "attempt": 6,
+        "strategy": "Probe `rw [ModuleCat.piIsoPi_hom_ker_subtype_apply, ModuleCat.piIsoPi_hom_ker_subtype_apply] at h_wrap_pt` to convert h_wrap_pt's `e₂ x j'` form into `(Pi.π Z₂ j').hom x` form, then try further rewriting.",
+        "code_tried": "rw [ModuleCat.piIsoPi_hom_ker_subtype_apply, ModuleCat.piIsoPi_hom_ker_subtype_apply] at h_wrap_pt; sorry",
+        "line_number": "1147 (probe via multi_attempt)",
+        "lean_error": "iter-099's lesson: `piIsoPi_hom_ker_subtype_apply` does NOT fire via rw on `e₂ x j'` (LinearEquiv coercion form). Probe confirmed.",
+        "goal_before": "(with h_wrap_pt assumed in `e₂ _ j'` form)",
+        "goal_after": "h_wrap_pt unchanged",
+        "result": "failed",
+        "insight": "CONFIRMED iter-099's finding: this `rw` doesn't fire on LinearEquiv-coerced LHS. The wrapper's R-linearity equation already has `e₂` (LinearEquiv) form, not `(piIsoPi Z₂).hom` form. Would need a `show` def-eq pivot at h_wrap_pt or restate the wrapper lemma in `(Pi.π Z₂ j').hom` form."
+      },
+      {
+        "attempt": 7,
+        "strategy": "Final-state probe: leave structured partial proof with sorry + explanatory comments documenting the precise residual gap.",
+        "code_tried": "  -- iter-105 wrapper invocation, partial chain at L1126-L1146:\n  -- have hRel' / h_wrap / h_wrap_pt / simp only [Pi.smul_apply] at h_wrap_pt\n  -- followed by explanatory comments + sorry at L1147.",
+        "line_number": "1126-1147 (committed)",
+        "lean_error": "compiles clean",
+        "goal_before": "(post-S5 frame)",
+        "goal_after": "preserved; sorry at L1147",
+        "result": "partial",
+        "insight": "Forward progress committed: wrapper infrastructure (Helper 1 + Helper 2) is in place and proved, fully closing both bodies. The L1147 partial proof documents the precise structural gap (eqToHom-vs-Pi.π transport at per-coord level) and primes iter-104's three concrete routes: morphism-equality lemma via Pi.lift_ext, rcases-on-n collapsing eqToHom, or `convert h_wrap_pt using 3` + per-coord transport sub-goals."
+      }
+    ],
+    "next_steps": "iter-106 plan should commit to one of three concrete routes per the prover's recommendations: (Route 1) add a top-level morphism-equality lemma `cechCofaceMap_summand_family_comp_eqToHom_eq : F_at_i ≫ eqToHom_outer = cechCofaceMap_summand_family' s₀ n hn (Fin.cast hRel' i)`, proved by `Limits.Pi.hom_ext`/`limit_ext` + per-coord `Pi.lift_π_apply` + `Fin.cast_cast`; (Route 2) rcases-on-n + simp [ComplexShape.prev, ComplexShape.up_Rel] BEFORE the wrapper invocation so eqToHom dissolves into refl-identity; (Route 3) `convert h_wrap_pt using 3` to expose the eqToHom-per-coord sub-goals directly. Route 1 is the cleanest morphism-level move; Route 3 is the most direct from the current state. NB: with the wrapper helpers now durably committed and proved, the residual is **morphism-level**, not the discrim-tree class that defeated iter-099/100/101/103."
+  },
+  {
+    "timestamp": "2026-05-15T08:00:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "h_diff_pi_smul_f / substep (a) augmented Čech (L1239, was L1080)"
+    },
+    "session": {
+      "id": "session_103",
+      "model": "sonnet"
+    },
+    "findings": {
+      "blocker": "long-standing Čech infrastructure gap, off-limits this iter",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "deferred — not assigned this iter"
+  },
+  {
+    "timestamp": "2026-05-15T08:00:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "L1563 (was L1404)"
+    },
+    "session": {
+      "id": "session_103",
+      "model": "sonnet"
+    },
+    "findings": {
+      "blocker": "deferred Phase A residual",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "deferred"
+  },
+  {
+    "timestamp": "2026-05-15T08:00:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "L1591 substep (a) extra-degeneracy for s₀ (was L1432)"
+    },
+    "session": {
+      "id": "session_103",
+      "model": "sonnet"
+    },
+    "findings": {
+      "blocker": "augmented Čech extra-degeneracy infrastructure",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "deferred"
+  },
+  {
+    "timestamp": "2026-05-15T08:00:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "L1781 `g_R.map_smul'` (was L1622)"
+    },
+    "session": {
+      "id": "session_103",
+      "model": "sonnet"
+    },
+    "findings": {
+      "blocker": "gated on L1147 close",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "becomes ungated once L1147 closes"
+  },
+  {
+    "timestamp": "2026-05-15T08:00:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "L1810 `h_loc_exact` (was L1651)"
+    },
+    "session": {
+      "id": "session_103",
+      "model": "sonnet"
+    },
+    "findings": {
+      "blocker": "IsLocalizedModule.Away f.1 infrastructure",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "deferred"
+  }
+]

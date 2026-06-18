@@ -1,0 +1,97 @@
+[
+  {
+    "timestamp": "2026-05-20T14:02:38Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "eq_comp_of_isAffine_of_properIntegral"
+    },
+    "session": {
+      "id": "session_161",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "isField_of_universallyClosed",
+        "isIntegral_appTop_of_universallyClosed",
+        "IsAlgClosed.ringHom_bijective_of_isIntegral",
+        "ext_of_isAffine",
+        "cancel_epi"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "NEW reusable helper: deep algebraic core of Step 1 — two k-bar points (sections a,b of structure map wk) of a proper integral l.f.t. k-bar-scheme W into an affine V satisfy a≫g=b≫g. Proof: Γ(W) is a field (isField_of_universallyClosed), wk.appTop integral (isIntegral_appTop_of_universallyClosed), hence bijective (IsAlgClosed.ringHom_bijective_of_isIntegral) so wk.appTop is iso; both sections left-invert it on Γ, giving a.appTop=b.appTop via cancel_epi; ext_of_isAffine pins maps into affine V.",
+        "code_tried": "theorem eq_comp_of_isAffine_of_properIntegral [IsAlgClosed kbar] {W} [IsIntegral W] (wk : W ⟶ Spec(.of kbar)) [UniversallyClosed wk] [LocallyOfFiniteType wk] {V} [IsAffine V] (g : W ⟶ V) (a b) (ha : a≫wk=𝟙) (hb : b≫wk=𝟙) : a≫g=b≫g",
+        "line_number": "153",
+        "result": "success",
+        "insight": "cohomology-free realisation of 'global regular function on proper integral k-bar-variety is constant'. lean_verify: {propext, Classical.choice, Quot.sound} — axiom-clean. Every hypothesis load-bearing (auditor confirmed counterexamples for dropping IsIntegral / UniversallyClosed / IsAffine)."
+      }
+    ],
+    "next_steps": "Reusable; plan/blueprint-writer should add a \\lean{} node + \\uses edge (currently invisible to dep graph)."
+  },
+  {
+    "timestamp": "2026-05-20T14:02:38Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "rigidity_eqAt_closedPoint_of_proper_into_affine"
+    },
+    "session": {
+      "id": "session_161",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "IsIntegral X.left — not auto-derivable; needs a retract argument (X.left a topological+ring-theoretic retract of integral (X⊗Y).left via (s,p₁)). No packaged Mathlib 'retract of integral scheme is integral'.",
+      "key_lemmas_used": [
+        "pointOfClosedPoint",
+        "residueFieldIsoBase",
+        "pointOfClosedPoint_comp",
+        "cancel_epi"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Reduce the residue-field-probe goal at a closed point x to a clean k-bar-point statement. Found Mathlib/AlgebraicGeometry/AlgClosed/Basic.lean (pointOfClosedPoint / residueFieldIsoBase / pointOfClosedPoint_comp) packaging 'closed point of l.f.t. k-bar-scheme ⇔ k-bar-rational point'.",
+        "code_tried": "rw [← cancel_epi (Spec.map (residueFieldIsoBase wU x hxc).hom)]; suffices h : px ≫ U.ι ≫ f.left = px ≫ U.ι ≫ (lift (toUnit ≫ x₀) (snd) ≫ f).left by rw[hpx] at h; simpa [pointOfClosedPoint, Category.assoc] using h; set q := px ≫ U.ι; have hqsec : q ≫ (X⊗Y).hom = 𝟙 := by rw[hq,assoc]; exact pointOfClosedPoint_comp wU x hxc",
+        "line_number": "204",
+        "goal_after": "px ≫ U.ι ≫ f.left = px ≫ U.ι ≫ retract.left ≫ f.left (k-bar-point slice-constancy)",
+        "result": "partial",
+        "insight": "Reduction is sound (auditor confirmed cancel_epi cancels a genuine iso; closing the residual sorry suffices for the stated goal). Statement true-as-stated, sorry honestly disclosed — NOT iter-157 laundering. Residual = geometric slice/section assembly (build ŷ section, IsIntegral X.left via retract, IsOpenImmersion.lift corestriction, two pullback hom_ext identities), then apply eq_comp_of_isAffine_of_properIntegral."
+      }
+    ],
+    "next_steps": "Next named obligation: IsIntegral X.left (retract of integral product) as a ~0.3-0.5-iter sub-lemma; then section/corestriction/point-identity assembly closes Step 1 and the whole chain."
+  },
+  {
+    "timestamp": "2026-05-20T14:02:38Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "rigidity_eqOn_saturated_open_to_affine (JacobsonSpace U instance, lane a)"
+    },
+    "session": {
+      "id": "session_161",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "LocallyOfFiniteType.jacobsonSpace",
+        "JacobsonSpace.of_isOpenEmbedding",
+        "Scheme.Hom.isOpenEmbedding"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Close the in-body JacobsonSpace U sorry: Spec k-bar Jacobson (field is IsArtinianRing ⟹ IsJacobsonRing, auto) → transport across l.f.t. structure map to (X⊗Y).left → inherit onto open subscheme U along U.ι open embedding.",
+        "code_tried": "haveI : JacobsonSpace (X⊗Y).left := LocallyOfFiniteType.jacobsonSpace (X⊗Y).hom; exact JacobsonSpace.of_isOpenEmbedding U.ι.isOpenEmbedding",
+        "line_number": "238",
+        "result": "success",
+        "insight": "JacobsonSpace (Spec k-bar) premise resolves automatically. rigidity_eqOn_saturated_open_to_affine now sorry-free in its own body — delegates only to the still-open Step 1."
+      }
+    ],
+    "next_steps": "Done. Lemma is assembled (Step 2 over per-slice Step 1); transitively carries sorryAx via Step 1 only."
+  }
+]

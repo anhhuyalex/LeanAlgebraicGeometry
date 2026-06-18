@@ -1,0 +1,70 @@
+[
+  {
+    "timestamp": "2026-05-31T10:54:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.isIso_of_isIso_restrict"
+    },
+    "session": {
+      "id": "session_226",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "TopCat.Presheaf.isIso_of_stalkFunctor_map_iso",
+        "Scheme.Modules.restrictStalkNatIso",
+        "CategoryTheory.NatIso.isIso_map_iff",
+        "CategoryTheory.isIso_iff_of_reflects_iso",
+        "Scheme.Hom.mem_opensRange",
+        "Scheme.Opens.opensRange_ι",
+        "Functor.map_isIso"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "stalkwise: reduce IsIso φ to per-stalk iso of the underlying Ab-sheaf map, package M.presheaf/N.presheaf as TopCat.Sheaf Ab.{u}, apply isIso_of_stalkFunctor_map_iso, reflect via toPresheaf",
+        "code_tried": "obtain preimage x' via mem_opensRange.mp; transport across restrictStalkNatIso with NatIso.isIso_map_iff; isIso_of_stalkFunctor_map_iso; isIso_iff_of_reflects_iso",
+        "line_number": "1943",
+        "lean_error": "first cut: 'Unknown constant AlgebraicGeometry.IsOpenImmersion.mem_opensRange.mp' (wrong namespace) and 'failed to synthesize IsIso ((restrictFunctor ⋙ toPresheaf ⋙ stalkFunctor Ab x').map φ)'",
+        "goal_before": "IsIso φ",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "mem_opensRange lives in Scheme.Hom namespace, not IsOpenImmersion; Functor.map_isIso is not an instance through a triple composite — needs `dsimp only [Functor.comp_map]; exact Functor.map_isIso _ _`; Ab needs explicit universe Ab.{u}"
+      }
+    ],
+    "next_steps": "B-connector landed axiom-clean. The two remaining bridges to close exists_tensorObj_inverse (80→79): (A) SheafOfModules morphism descent to glue local trivialising isos; (C) dual_isLocallyTrivial via (dual M).restrict f ≅ dual (M.restrict f). C is a major mirror build of tensorObj_restrict_iso."
+  },
+  {
+    "timestamp": "2026-05-31T10:54:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.exists_tensorObj_inverse"
+    },
+    "session": {
+      "id": "session_226",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Requires two further bridges before the local→global contraction can be assembled: (A) SheafOfModules morphism descent (~30-60 LOC, bounded cocycle check, NOT d.2) and (C) dual_isLocallyTrivial via (dual M).restrict f ≅ dual (M.restrict f), a major mirror build of the closed tensorObj_restrict_iso carrying the bespoke presheaf dual across the open-immersion ring iso. Neither attempted this iter to avoid pinning a new sorry.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Not attempted as a code edit this iter; per plan directive the prover did NOT pin a dual-shaped helper-sorry (iter-214 d.1 anti-pattern). Only refreshed the explanatory comment to describe the d.2-free descent plan and the landed B-connector.",
+        "code_tried": "comment refresh only (lines ~2009-2027)",
+        "line_number": "2027",
+        "lean_error": null,
+        "goal_before": "∃ Linv, IsLocallyTrivial Linv ∧ Nonempty (tensorObj L Linv ≅ unit)",
+        "goal_after": "unchanged (sorry)",
+        "result": "partial",
+        "insight": "Linv := Scheme.Modules.dual L is now nameable (dual object landed iter-225); B-connector closes the final locally-iso⇒iso step; A and C remain. The sheafify-the-presheaf-eval shortcut is a confirmed DEAD END (re-hits the M◁η whiskering = d.2)."
+      }
+    ],
+    "next_steps": "Attempt bridge A (morphism descent via Presheaf.IsSheaf.hom / sheafHomSectionsEquiv + PresheafOfModules.homMk) and bridge C (dual-vs-restriction). Watch for the analogist-flagged reversal signal: if A or C silently re-requires a stalk/filtered-colimit-⊗ statement, the d.2-free verdict was wrong in practice and the route reverts to the d.2-vs-RR-escalation fork."
+  }
+]

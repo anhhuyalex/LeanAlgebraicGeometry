@@ -1,0 +1,287 @@
+[
+  {
+    "timestamp": "2026-05-16T17:36:39Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "AlgebraicGeometry.IsAffineOpen.appLE_isLocalization"
+    },
+    "session": {
+      "id": "session_122",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Steps 1-4 of the 4-step IsLocalization.of_le chain remain unwritten; Step 0 (isUnit_appLE_unitSubmonoid_in_colim) closed this iter (~70 LOC).",
+      "key_lemmas_used": [
+        "Scheme.basicOpen_of_isUnit",
+        "Scheme.basicOpen_appLE",
+        "IsAffineOpen.isLocalization_basicOpen",
+        "IsLocalization.Away.algebraMap_isUnit",
+        "Functor.map_comp",
+        "RingHom.algebraMap_toAlgebra"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Replace inline `letI : Module Γ(X, V) ... := sorry` with `inferInstanceAs` from the underlying ModuleCat",
+        "code_tried": "letI : Module Γ(X, V) ((relativeDifferentialsPresheaf f).presheaf.obj (.op V)) := inferInstanceAs (Module Γ(X, V) (((relativeDifferentialsPresheaf f).obj (.op V)) : Type _))",
+        "line_number": "142",
+        "lean_error": "",
+        "goal_before": "letI Module instance with sorry",
+        "goal_after": "no errors after this edit; 3 sorries remain",
+        "result": "success",
+        "insight": "PresheafOfModules structure provides the module instance on the underlying ModuleCat; direct transport via inferInstanceAs"
+      },
+      {
+        "attempt": 2,
+        "strategy": "Lift inline `letI : Algebra ... := sorry` out of `appLE_isLocalization` into a top-level def via the deep-prover subagent: introduce `appLE_colimRingHom : Γ(S, U) ⟶ A_colim` (cocone leg composition) plus `@[reducible] appLE_colimAlgebra := (appLE_colimRingHom f e).hom.toAlgebra`",
+        "code_tried": "noncomputable def appLE_colimRingHom (f : X ⟶ S) {U V} (e : V ≤ f ⁻¹ᵁ U) := ((adj.unit.app S.presheaf).app (.op U)) ≫ (((pullback _ _).obj S.presheaf).map (homOfLE e).op); @[reducible] noncomputable def appLE_colimAlgebra := (appLE_colimRingHom f e).hom.toAlgebra",
+        "line_number": "97-110",
+        "lean_error": "Definition of class type must be marked with @[reducible] (warning, fixed)",
+        "goal_before": "letI : Algebra Γ(S, U) Acolim := sorry",
+        "goal_after": "L109 sorry eliminated; algebra structure provided by top-level def",
+        "result": "success",
+        "insight": "Top-level Algebra def is a cleaner architecture than inline letI sorry — the consumer doesn't have to re-prove the algebra contents inside its scope"
+      },
+      {
+        "attempt": 3,
+        "strategy": "Write factorisation theorem `appLE_colimRingHom_comp_φV` (`appLE_colimRingHom ≫ φV = Scheme.Hom.appLE f U V e`) via unit triangle + φ'.naturality combo in a 3-step calc block",
+        "code_tried": "set adj := ...; set φ' := (adj.homEquiv ...).symm f.c; have htri := (adj.homEquiv ...).apply_symm_apply f.c; have htriU := congrArg (fun η => NatTrans.app η (.op U)) htri; calc ... = ... by congr 1; _ = ... by rw [← Category.assoc]; _ = ... by rw [htriU]; rfl",
+        "line_number": "116-150",
+        "lean_error": "Tactic `rewrite` failed: Did not find an occurrence of the pattern ((TopCat.Presheaf.pullback CommRingCat f.base).obj S.presheaf).map (homOfLE e).op ≫ φ'.app (Opposite.op V) (~6 attempts via `rw [show ... from ...]` before switching to calc)",
+        "goal_before": "appLE_colimRingHom f e ≫ φV = Scheme.Hom.appLE f U V e",
+        "goal_after": "factorisation theorem proved as 35 LOC",
+        "result": "success",
+        "insight": "rw fails on functor-composition defeq; calc-block sequencing each rewrite into a pointwise = step succeeds"
+      },
+      {
+        "attempt": 4,
+        "strategy": "Close M1.e bridge body via `(kaehler_quotient_localization_iso _).symm` after installing the IsScalarTower instance via the new factorisation theorem",
+        "code_tried": "letI algSU_colim := appLE_colimAlgebra f e; haveI hLoc := appLE_isLocalization f hU hV e; letI algColim_B := φV.hom.toAlgebra; letI algSU_B := (Scheme.Hom.appLE f U V e).hom.toAlgebra; haveI hTower : IsScalarTower Γ(S, U) Acolim Γ(X, V) := IsScalarTower.of_algebraMap_eq' <| by change ...; rw [← CommRingCat.hom_comp, appLE_colimRingHom_comp_φV]; exact (kaehler_quotient_localization_iso _).symm",
+        "line_number": "145",
+        "lean_error": "",
+        "goal_before": "((relativeDifferentialsPresheaf f).presheaf.obj (.op V)) ≃ₗ[Γ(X, V)] CommRingCat.KaehlerDifferential (Scheme.Hom.appLE f U V e)",
+        "goal_after": "bridge body closed modulo appLE_isLocalization (used as black-box hypothesis)",
+        "result": "success",
+        "insight": "Bridge body is structurally complete; will become fully \\leanok-able as soon as appLE_isLocalization closes. Sequencing via the new helpers paid off."
+      },
+      {
+        "attempt": 5,
+        "strategy": "Write the 5-substep Step 0 lemma `isUnit_appLE_unitSubmonoid_in_colim`: (a) hVle via basicOpen_of_isUnit + basicOpen_appLE, (b) cocone leg + restriction, (c) hcompat via Functor.map_comp + unit naturality, (d) IsLocalization.Away.algebraMap_isUnit, (e) push through cleg.hom",
+        "code_tried": "have hVle : V ≤ f ⁻¹ᵁ S.basicOpen g := ...; set cleg ... ; set rstr ... ; have hcompat : appLE_colimRingHom f e = rstr ≫ cleg := by ... erw [hmc] ... exact Category.assoc _ _ _; haveI : IsLocalization.Away g Γ(S, S.basicOpen g) := hU.isLocalization_basicOpen g; have h_unit_rest := IsLocalization.Away.algebraMap_isUnit g; have h_factor : (appLE_colimRingHom f e).hom g = cleg.hom (rstr.hom g) := by rw [hcompat, CommRingCat.hom_comp]; rfl; have h_unit_colim : IsUnit ((appLE_colimRingHom f e).hom g) := by rw [h_factor]; exact h_unit_rest.map cleg.hom; exact h_unit_colim",
+        "line_number": "164-267",
+        "lean_error": "Many intermediate errors during ~15 attempts to land step (c): rw [Functor.map_comp] failed pervasively on ((pullback _ _).obj S.presheaf).map (f ≫ g); workaround pre-prove hmc with `have ... := Functor.map_comp _ _ _` then erw [hmc]. Also: 'change' tactic failed on algebraMap g → cleg.hom (rstr.hom g) pattern; workaround route via h_factor + IsUnit then exact.",
+        "goal_before": "IsUnit ((algebraMap Γ(S, U) Acolim) g)",
+        "goal_after": "Step 0 closed in ~70 LOC at L164-L267; the appLE_isLocalization body still has 1 sorry at L304",
+        "result": "success",
+        "insight": "Five distinct technical lessons: (1) rw [Functor.map_comp] needs erw + pre-proved have on Lan-defined functors; (2) rw [Category.assoc] similarly needs `exact Category.assoc _ _ _`; (3) change/show on algebraMap doesn't unify even with .toAlgebra defeq — route via IsUnit + exact; (4) adj.unit.naturality emits 𝟭-functor terms — use simpa; (5) IsLocalization.Away.algebraMap_isUnit is the right closer for `g is a unit in basic-open localization`."
+      },
+      {
+        "attempt": 6,
+        "strategy": "Steps 1-4 of appLE_isLocalization NOT attempted this iter",
+        "code_tried": "sorry  -- body left at L304",
+        "line_number": "304",
+        "lean_error": "declaration uses `sorry` (warning)",
+        "goal_before": "IsLocalization (appLE_unitSubmonoid f hU hV e) Acolim",
+        "goal_after": "1 sorry remains at L304; PARTIAL outcome as expected by plan",
+        "result": "partial",
+        "insight": "Estimated 100-250 LOC remaining (Steps 1-4: IsLocalization.lift A_M → A_colim using Step 0; A_colim → A_M via colim universal property + basic-open refinements; composite identities via IsLocalization.ringHom_ext + IsColimit.hom_ext; conclude via IsLocalization.of_le or isLocalization_of_algEquiv)"
+      }
+    ],
+    "next_steps": "iter-123 prover lane: write Steps 1-4 of `IsLocalization.of_le` on Differentials.lean:304. Use the newly-closed `isUnit_appLE_unitSubmonoid_in_colim` as the unit-of-image hypothesis for Step 1's `IsLocalization.lift`. The factorisation `appLE_colimRingHom_comp_φV` is reusable for the composite-identity verification in Step 3."
+  },
+  {
+    "timestamp": "2026-05-16T17:36:39Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "AlgebraicGeometry.IsAffineOpen.isUnit_appLE_unitSubmonoid_in_colim"
+    },
+    "session": {
+      "id": "session_122",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "",
+      "key_lemmas_used": [
+        "Scheme.basicOpen_of_isUnit",
+        "Scheme.basicOpen_appLE",
+        "IsAffineOpen.isLocalization_basicOpen",
+        "IsLocalization.Away.algebraMap_isUnit",
+        "Functor.map_comp",
+        "RingHom.algebraMap_toAlgebra"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Five-substep closure of Step 0 of the M1.b chain. (a) Derive V ≤ f ⁻¹ᵁ S.basicOpen g from hg via basicOpen_of_isUnit + basicOpen_appLE; (b) build cocone leg cleg : Γ(S, S.basicOpen g) → Acolim; (c) prove hcompat: appLE_colimRingHom = rstr ≫ cleg via Functor.map_comp + unit naturality; (d) apply IsLocalization.Away.algebraMap_isUnit; (e) ring-hom preservation of units.",
+        "code_tried": "(see attempt 5 in appLE_isLocalization milestone)",
+        "line_number": "164",
+        "lean_error": "(15 intermediate attempts on step (c) — workarounds documented in summary)",
+        "goal_before": "IsUnit ((algebraMap Γ(S, U) Acolim) g)",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Helper lemma is reusable for iter-123's Step 1 (IsLocalization.lift uses it as the unit-of-image hypothesis)"
+      }
+    ],
+    "next_steps": "Use as input to Step 1 of appLE_isLocalization on iter-123."
+  },
+  {
+    "timestamp": "2026-05-16T17:36:39Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "AlgebraicGeometry.IsAffineOpen.appLE_colimRingHom_comp_φV"
+    },
+    "session": {
+      "id": "session_122",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "",
+      "key_lemmas_used": [
+        "Equiv.apply_symm_apply",
+        "NatTrans.naturality",
+        "CommRingCat.Hom.hom"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Triangle identity via (adj.homEquiv _ _).apply_symm_apply f.c specialised at op U, combined with φ'.naturality (homOfLE e).op in a 3-step calc",
+        "code_tried": "set adj := ...; set φ' := (adj.homEquiv ...).symm f.c; have htri : adj.unit.app S.presheaf ≫ (TopCat.Presheaf.pushforward _ f.base).map φ' = f.c := by rw [hφ']; exact (adj.homEquiv _ _).apply_symm_apply f.c; have htriU := congrArg (fun η => NatTrans.app η (.op U)) htri; have hnat := φ'.naturality (homOfLE e).op; calc ... = ... by congr 1; _ = ... by rw [← Category.assoc]; _ = ... by rw [htriU]; rfl",
+        "line_number": "116-150",
+        "lean_error": "Tactic `rewrite` failed: Did not find an occurrence of the pattern; encountered ~6 attempts before switching to calc-block",
+        "goal_before": "appLE_colimRingHom f e ≫ φV = Scheme.Hom.appLE f U V e",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Reusable in iter-123 for the composite-identity step of IsLocalization.of_le verification"
+      }
+    ],
+    "next_steps": "Reuse in Steps 1 + 3 of appLE_isLocalization."
+  },
+  {
+    "timestamp": "2026-05-16T17:36:39Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "AlgebraicGeometry.Scheme.relativeDifferentialsPresheaf_equiv_kaehler_appLE"
+    },
+    "session": {
+      "id": "session_122",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Closure depends transitively on appLE_isLocalization (still sorry at L304); thus sync_leanok will not mark \\leanok on the proof block until M1.b closes",
+      "key_lemmas_used": [
+        "appLE_colimAlgebra",
+        "appLE_isLocalization",
+        "appLE_colimRingHom_comp_φV",
+        "kaehler_quotient_localization_iso",
+        "IsScalarTower.of_algebraMap_eq'"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Assemble M1.e via the new helpers: install algebra layers + tower instance via appLE_colimRingHom_comp_φV, then close with (kaehler_quotient_localization_iso _).symm",
+        "code_tried": "letI algSU_colim := appLE_colimAlgebra f e; haveI hLoc := appLE_isLocalization f hU hV e; letI algColim_B := φV.hom.toAlgebra; letI algSU_B := (Scheme.Hom.appLE f U V e).hom.toAlgebra; haveI hTower := IsScalarTower.of_algebraMap_eq' <| by change ...; rw [← CommRingCat.hom_comp, appLE_colimRingHom_comp_φV]; exact (kaehler_quotient_localization_iso (M := appLE_unitSubmonoid f hU hV e) ...).symm",
+        "line_number": "145",
+        "lean_error": "",
+        "goal_before": "((relativeDifferentialsPresheaf f).presheaf.obj (.op V)) ≃ₗ[Γ(X, V)] CommRingCat.KaehlerDifferential (Scheme.Hom.appLE f U V e)",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Bridge body closed in single Edit after the helper chain (appLE_colimRingHom, appLE_colimAlgebra, appLE_colimRingHom_comp_φV, kaehler_quotient_localization_iso) landed"
+      }
+    ],
+    "next_steps": "Becomes fully \\leanok when M1.b (appLE_isLocalization) closes."
+  },
+  {
+    "timestamp": "2026-05-16T17:36:39Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "AlgebraicGeometry.Scheme.kaehler_localization_subsingleton"
+    },
+    "session": {
+      "id": "session_122",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "",
+      "key_lemmas_used": [
+        "Algebra.FormallyUnramified.of_isLocalization",
+        "Algebra.FormallyUnramified.subsingleton_kaehlerDifferential"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Two-line composition: install FormallyUnramified via of_isLocalization, then the subsingleton instance fires",
+        "code_tried": "letI : Algebra.FormallyUnramified A L := Algebra.FormallyUnramified.of_isLocalization (R := A) (Rₘ := L) M; Algebra.FormallyUnramified.subsingleton_kaehlerDifferential",
+        "line_number": "314",
+        "lean_error": "Initial attempt used (S := A) instead of (R := A); fixed by switching argument name",
+        "goal_before": "Subsingleton (Ω[L⁄A])",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Mathlib supplies this as a 2-line composition; no genuine gap as Knowledge Base from iter-121 noted. Argument naming on of_isLocalization is R/Rₘ, not S/Rₘ."
+      }
+    ],
+    "next_steps": "Stable."
+  },
+  {
+    "timestamp": "2026-05-16T17:36:39Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "AlgebraicGeometry.Scheme.kaehler_quotient_localization_iso"
+    },
+    "session": {
+      "id": "session_122",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "",
+      "key_lemmas_used": [
+        "KaehlerDifferential.exact_mapBaseChange_map",
+        "KaehlerDifferential.map_surjective",
+        "LinearEquiv.ofBijective",
+        "TensorProduct subsingleton trick (induction on tmul/add/zero, use Subsingleton.elim on Ω[L⁄A])"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Use kaehler_localization_subsingleton M to get Subsingleton (Ω[L⁄A]); from exact_mapBaseChange_map, kernel of map is in image of mapBaseChange; the tensor product B ⊗[L] Ω[L⁄A] is subsingleton (induction), so the kernel is 0 ⇒ injective; surjectivity via KaehlerDifferential.map_surjective; LinearEquiv.ofBijective",
+        "code_tried": "haveI : Subsingleton (Ω[L⁄A]) := kaehler_localization_subsingleton M; refine LinearEquiv.ofBijective (KaehlerDifferential.map A L B B) ⟨?_, ?_⟩; · rw [injective_iff_map_eq_zero]; intro x hx; obtain ⟨y, rfl⟩ := (KaehlerDifferential.exact_mapBaseChange_map A L B x).mp hx; haveI : Subsingleton (TensorProduct L B (Ω[L⁄A])) := ⟨fun a b => ?_⟩; have hzero : ∀ z, z = 0 := by intro z; induction z with | zero => rfl | tmul x y => rw [show y = (0 : Ω[L⁄A]) from Subsingleton.elim _ _, TensorProduct.tmul_zero] | add x y hx hy => rw [hx, hy, add_zero]; rw [hzero a, hzero b]; rw [Subsingleton.elim y 0, map_zero]; · exact KaehlerDifferential.map_surjective _ _ _",
+        "line_number": "330",
+        "lean_error": "Initial attempt used .mp on the wrong form of exact_mapBaseChange_map (it's a function ∀ y, map y = 0 ↔ y ∈ Set.range ⇑mapBaseChange, not a wrapped struct); fixed by applying it at x: exact_mapBaseChange_map A L B x).mp hx",
+        "goal_before": "Ω[B⁄A] ≃ₗ[B] Ω[B⁄L]",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "exact_mapBaseChange_map A L B is dependent (∀ y, ...); apply at the specific y instead of .mp on the bare form. TensorProduct subsingleton trick via induction is reusable for similar quotient-localization Kähler manipulations."
+      }
+    ],
+    "next_steps": "Stable. Most extractable Mathlib contribution candidate of M1 (candidate name: KaehlerDifferential.equivOfFormallyUnramified). Catalog in iter-123 if extraction PR is wanted."
+  },
+  {
+    "timestamp": "2026-05-16T17:36:39Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Jacobian.lean",
+      "theorem": "nonempty_jacobianWitness"
+    },
+    "session": {
+      "id": "session_122",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Out of scope for iter-122 per PROGRESS.md (queued behind M2 + M3 per the genus-stratified body restructure plan; M2.a refactor scheduled iter-124+)",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Off-limits to the autonomous loop until M2 (genus-0 arm) + M3 (positive-genus arm) infrastructure lands."
+  }
+]

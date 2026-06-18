@@ -1,0 +1,152 @@
+[
+  {
+    "timestamp": "2026-05-30T18:05:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "restrictScalars_isIso_μ"
+    },
+    "session": {
+      "id": "session_216",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "ConcreteCategory.isIso_iff_bijective",
+        "ModuleCat.restrictScalars_μ_tmul",
+        "restrictScalarsRingIsoTensorEquiv",
+        "TensorProduct.induction_on",
+        "LinearEquiv.bijective"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Show ⇑μ = ⇑(restrictScalarsRingIsoTensorEquiv e M₁ M₂) by tensor induction, then bijective ⇒ IsIso. First zero case via `rw [map_zero, map_zero]`.",
+        "code_tried": "| zero => rw [map_zero, map_zero]",
+        "line_number": "226",
+        "lean_error": "Tactic `rewrite` failed: Did not find an occurrence of the pattern ?f 0 in the target expression 0 = (restrictScalarsRingIsoTensorEquiv e ↑M₁ ↑M₂) 0",
+        "result": "failed",
+        "insight": "After the first map_zero the LHS is already 0; the RHS `equiv 0` is what needs rewriting, not another `?f 0` on the left."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Use `simp only [map_zero]` for the zero case.",
+        "code_tried": "| zero => simp only [map_zero]",
+        "line_number": "226",
+        "lean_error": "unsolved goals ⊢ 0 = (restrictScalarsRingIsoTensorEquiv e ↑M₁ ↑M₂) 0",
+        "result": "failed",
+        "insight": "simp only [map_zero] does not rewrite under the equiv coercion; need an explicit `(map_zero _).symm`."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Explicit symmetric map_zero/map_add; tmul case via erw of the Mathlib μ-on-tmul lemma then the @[simp] characterisation, symmetrised.",
+        "code_tried": "| zero => rw [map_zero]; exact (map_zero _).symm\n| tmul a b => erw [ModuleCat.restrictScalars_μ_tmul]; exact (restrictScalarsRingIsoTensorEquiv_apply_tmul e M₁ M₂ a b).symm\n| add x y hx hy => rw [map_add, hx, hy]; exact (map_add _ x y).symm",
+        "line_number": "226-230",
+        "lean_error": "",
+        "result": "success",
+        "insight": "`erw` (not `rw`) is needed at restrictScalars_μ_tmul due to universe/instance elaboration. The pointwise-equality `hfun : ⇑μ = ⇑equiv` then gives bijectivity from LinearEquiv.bijective and IsIso via ConcreteCategory.isIso_iff_bijective. Verified axiom-clean: {propext, Classical.choice, Quot.sound}."
+      }
+    ],
+    "next_steps": "Lift to presheaf level: build (PresheafOfModules.restrictScalars α).Monoidal app-wise via restrictScalars_isIso_{μ,ε}_of_bijective + a CommRingCat-iso→Bijective bridge + a toPresheaf-reflects-isos step. That is H2 at the presheaf level; then H1 closes restrict_iso."
+  },
+  {
+    "timestamp": "2026-05-30T18:05:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "restrictScalarsMonoidalOfRingEquiv"
+    },
+    "session": {
+      "id": "session_216",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "Functor.Monoidal.ofLaxMonoidal",
+        "restrictScalars_isIso_ε",
+        "restrictScalars_isIso_μ"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Package the strong-monoidal structure: install the two IsIso hypotheses via haveI, then Functor.Monoidal.ofLaxMonoidal.",
+        "code_tried": "noncomputable def restrictScalarsMonoidalOfRingEquiv (e : R ≃+* S) : (ModuleCat.restrictScalars e.toRingHom).Monoidal := by\n  haveI := restrictScalars_isIso_ε e\n  haveI : ∀ M₁ M₂, IsIso (μ ...) := fun M₁ M₂ => restrictScalars_isIso_μ e M₁ M₂\n  exact Functor.Monoidal.ofLaxMonoidal _",
+        "line_number": "253-259",
+        "lean_error": "Definition `restrictScalarsMonoidalOfRingEquiv` of class type must be marked with `@[reducible]` or `@[implicit_reducible]`",
+        "result": "partial",
+        "insight": "A `def` whose type is a class (`.Monoidal`) needs a reducibility attribute for instance inference."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Add @[implicit_reducible] attribute.",
+        "code_tried": "@[implicit_reducible]\nnoncomputable def restrictScalarsMonoidalOfRingEquiv (e : R ≃+* S) : (ModuleCat.restrictScalars e.toRingHom).Monoidal := by ...",
+        "line_number": "252-259",
+        "lean_error": "",
+        "result": "success",
+        "insight": "Compiles clean. This is the reusable strong-monoidal upgrade Mathlib supplies for extendScalars but not restrictScalars — the ModuleCat-level core of H2."
+      }
+    ],
+    "next_steps": "Consume at presheaf level via the bijective-ring-hom forms (restrictScalars_isIso_{μ,ε}_of_bijective) since (α.app X).hom is bijective but not literally (_ : R ≃+* S).toRingHom."
+  },
+  {
+    "timestamp": "2026-05-30T18:05:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "tensorObj_restrict_iso"
+    },
+    "session": {
+      "id": "session_216",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "H1 (presheaf-level pushforward adjunction `pushforwardPushforwardAdj`) is genuinely Mathlib-absent AND on the critical path. The planner's 'free-cover avoids H1' premise is FALSE.",
+      "key_lemmas_used": [
+        "restrictScalars_isIso_μ",
+        "restrictScalarsMonoidalOfRingEquiv"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "MAKE-OR-BREAK check (planner-requested): determine whether the linchpin is consumed only on a free trivialising cover (avoiding H1). Inspected the actual consumer `tensorObj_isLocallyTrivial`.",
+        "code_tried": "-- consumer at lines 1208-1211:\nexact tensorObj_restrict_iso W.ι M N ≪≫\n  tensorObjIsoOfIso (restrictIsoUnitOfLE hWU eM) (restrictIsoUnitOfLE hWU' eN) ≪≫\n  tensorObj_unit_iso",
+        "line_number": "1185, 1208-1211",
+        "lean_error": "",
+        "result": "partial",
+        "insight": "VERDICT: free-cover does NOT avoid H1. `tensorObj_restrict_iso W.ι M N` is applied to ARBITRARY global M N; the `restrict` is commuted past the SHEAFIFIED tensor BEFORE the triviality witnesses eM, eN enter (next ≪≫). So the arbitrary-module statement — and therefore H1 — is on the critical path. The by-hand pivot relocates the gap from route-(e)'s d.2 (varying-ring stalk-⊗, hardest) to H1 (presheaf pushforwardPushforwardAdj, ~100-150 LOC, more mechanical), but does NOT eliminate it."
+      }
+    ],
+    "next_steps": "Build H1: presheaf-level pushforward β ⊣ pushforward φ ⇒ pushforward β ≅ pullback φ via Adjunction.leftAdjointUniq; mirror SheafOfModules.pushforwardPushforwardAdj at the presheaf level (presheaf pushforwardNatTrans + pushforwardCongr; pushforwardId/pushforwardComp exist). Then restrict_iso = H1.symm ≫ H2 ≫ defeq. Do NOT re-attempt a free-cover specialisation."
+  },
+  {
+    "timestamp": "2026-05-30T18:05:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "tensorObj_assoc_iso"
+    },
+    "session": {
+      "id": "session_216",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "The planner-directed direct-gluing re-route still transitively needs the open `tensorObj_restrict_iso` PLUS ~150-250 LOC of overlap-compatibility + amalgamation; it would not yield an honest close and risks breaking the currently-green (route-d, transitively-sorried) decl. Deferred deliberately.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Assess the planner's directive to re-route assoc_iso off whiskering onto direct gluing through restrict_iso, then delete the vestigial whiskering apparatus (-1 sorry). Ran research workflow on gluing infra availability.",
+        "code_tried": "(no edit) research: Sheaf.isLocallyBijective_iff_isIso, presheafHom amalgamation; confirmed all 18 in-file helpers referenced ONLY in this file (safe to delete).",
+        "line_number": "979-1032",
+        "lean_error": "",
+        "result": "partial",
+        "insight": "Gluing infra EXISTS (analogist's 'no gluing primitive' caveat was wrong). But the re-route depends on the still-sorried restrict_iso anyway, so it trades a vestigial whiskering sorry for a restrict_iso-transitive one with no honest-close gain + breakage risk. Prioritised the zero-risk H2 deliverable + make-or-break instead. Deletion is a clean mechanical step once restrict_iso closes and assoc_iso is re-routed."
+      }
+    ],
+    "next_steps": "Defer the re-route + vestigial-deletion until AFTER H1 closes tensorObj_restrict_iso. CRITICAL: the blueprint (rewritten iter-216) describes the not-yet-realized direct-gluing route; the Lean still uses route-(d) whiskering — blueprint-writer correction needed (see lean-vs-blueprint-checker ts216 must-fix)."
+  }
+]

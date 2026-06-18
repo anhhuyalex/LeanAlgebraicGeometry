@@ -1,0 +1,341 @@
+[
+  {
+    "timestamp": "2026-05-28T12:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects/ChartIso.lean",
+      "theorem": "projectiveLineBar_smooth_chart_aux"
+    },
+    "session": {
+      "id": "session_197",
+      "model": "Opus 4.7"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "Algebra.IsStandardSmoothOfRelativeDimension.of_algEquiv",
+        "MvPolynomial.renameEquiv",
+        "homogeneousLocalizationAwayIso",
+        "homogeneousLocalizationAwayIso_algebraMap",
+        "mvPolynomialFin_isStandardSmoothOfRelativeDimension",
+        "RingHom.locally_of",
+        "RingHom.isStandardSmoothOfRelativeDimension_respectsIso",
+        "RingHom.isStandardSmoothOfRelativeDimension_algebraMap",
+        "Proj.awayι_toSpecZero",
+        "HasRingHomProperty.Spec_iff",
+        "Spec.map_comp",
+        "fin_cases"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Helper-lemma factoring via named-X i form + fin_cases bridge",
+        "code_tried": "Introduce private helper `projectiveLineBar_smooth_chart_X kbar i : SmoothOfRelativeDimension 1 (Proj.awayι 𝒜 (X i) _ _ ≫ struct)`. Body re-associates 3-fold composition via `(Category.assoc _ _ _).symm`, applies `Proj.awayι_toSpecZero` to collapse `awayι ≫ Proj.toSpecZero`, applies `Spec.map_comp` backward, `HasRingHomProperty.Spec_iff`, peels Locally via `RingHom.locally_of ...respectsIso`, builds MvPolynomial chain `Fin 1 ≃ Unit kbar ≃ Away` via `MvPolynomial.renameEquiv kbar finOneEquiv` + `AlgEquiv.ofRingEquiv` upgrading `homogeneousLocalizationAwayIso`, then `Algebra.IsStandardSmoothOfRelativeDimension.of_algEquiv` with the BareScheme MvPolynomial substrate. Top-level body: `simp only [...openCover_f, projectiveLineBarAffineCover, Proj.affineOpenCoverOfIrrelevantLESpan]; fin_cases i; exact projectiveLineBar_smooth_chart_X kbar 0 / ... 1`.",
+        "line_number": "406",
+        "result": "success",
+        "insight": "Direct rewrite of `(![X 0, X 1] : Fin 2 → _) i` to `X i` blocked by dependent f_deg membership proofs. Factoring proof into a named-X i helper sidesteps it; fin_cases at cover-level handles the bridge via Matrix.cons definitional reduction. Dead-end: `rw [← Category.assoc]` fails on 3-fold composition with elided proof args (HOU snag on f_deg/hm); use `rw [(Category.assoc _ _ _).symm]` with explicit placement instead. `Proj.awayι_toSpecZero_assoc` is NOT findable by `lean_local_search`."
+      }
+    ],
+    "next_steps": "Cascade landed: `projectiveLineBar_smoothOfRelDim` is now fully axiom-clean. Unlocks BareScheme.lean Lane RCI / Route C smoothness consumers downstream."
+  },
+  {
+    "timestamp": "2026-05-28T12:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "kbarChart1Ring_specMap_fac"
+    },
+    "session": {
+      "id": "session_197",
+      "model": "Opus 4.7"
+    },
+    "findings": {
+      "blocker": "After applying the new helper `Proj.awayι_appIso_top_inv` to the consumer, the residual is a ring-map equation about `onePt.left.app(awayι ''ᵁ ⊤) = onePt.left.app(D₊(X_1))`, requiring reasoning about `Proj.fromOfGlobalSections.app` evaluation. Project-side substrate, ~50-100 LOC.",
+      "key_lemmas_used": [
+        "iotaGm_r_1_fac",
+        "ext_of_isAffine",
+        "Scheme.Hom.appTop",
+        "IsOpenImmersion.lift_app",
+        "Proj.awayι_appIso_top_inv"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Build the missing Proj-side helpers via the iter-195 analogist `lane-e-proj-appiso-pivot` recipe (port of IsAffineOpen.fromSpec_app_self), then apply to consumer #1.",
+        "code_tried": "Helper 1: `Proj.basicOpenIsoSpec_inv_app_top` — `cancel_mono` on `(basicOpenIsoSpec.hom).appTop` (iso ⟹ mono), then 3× `Iso.{hom_inv_id,inv_hom_id}_assoc` reductions. ~15 LOC, axiom-clean. Helper 2: `Proj.awayι_app_basicOpen` — `change` (definitional unfolding) to replace `Proj.awayι` with `(basicOpenIsoSpec).inv ≫ ι`; `Scheme.Hom.comp_app` + `Scheme.Opens.ι_app_self` + `Scheme.Hom.app_eq` + `Proj.basicOpenIsoSpec_inv_app_top` + `aesop_cat` eqToHom cascade. ~10 LOC, axiom-clean. Helper 3: `Proj.awayι_appIso_top_inv` — `Iso.comp_hom_eq_id` + `appIso_hom` + `Scheme.Hom.app_eq` (bridge awayι ''ᵁ ⊤ = basicOpen 𝒜 f) + Helper 2 + `slice_lhs` eqToHom collapse + `hom_inv_id_assoc`. ~22 LOC, axiom-clean. Consumer body: `rw [← iotaGm_r_1_fac]; congr 1; refine ext_of_isAffine ?_; unfold iotaGm_r_1; simp only [Scheme.Hom.appTop]; rw [IsOpenImmersion.lift_app, Proj.awayι_appIso_top_inv]`.",
+        "line_number": "432",
+        "result": "partial",
+        "insight": "Proj.appIso evaluation (iter-188—194 STUCK signal) now FORMALLY RESOLVED via the new helpers. Residual is project-side: `Proj.fromOfGlobalSections.app` evaluation on D₊(X_1). For Lane E this is strictly smaller. Dead-end: `rw [Proj.awayι_eq_specMap_fromSpec]` triggers motive-not-type-correct because `Scheme.Hom.app f V`'s codomain depends on f. `conv_lhs => rw [...]` also fails for same reason. `appLE U V e` also fails since `e` has `f` in its type. Only `change` (definitional) sidesteps the motive issue."
+      }
+    ],
+    "next_steps": "Apply `Proj.fromOfGlobalSections_morphismRestrict` (Mathlib `ProjectiveSpectrum/Basic.lean:493`) or `Proj.fromOfGlobalSections_toSpecZero` (line 512) + project-specific `pointOfVec` evaluation. Estimated ~50-100 LOC of project-side work to build a `Proj.fromOfGlobalSections_app_basicOpen` evaluator on top of `Points.lean`'s `evalIntoGlobal`."
+  },
+  {
+    "timestamp": "2026-05-28T12:30:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "iotaGm_chart1_appIso_eval"
+    },
+    "session": {
+      "id": "session_197",
+      "model": "Opus 4.7"
+    },
+    "findings": {
+      "blocker": "UNTOUCHED iter-197 — same helper-substitution strategy applies but consumer has extra pullbackSpecIso + iso-chain factors above the Proj.appIso step. Skipped due to time budget after consumer #1 advance.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Apply the same helper-substitution recipe used for kbarChart1Ring_specMap_fac; expected to land partial advance plus expose the analogous `Proj.fromOfGlobalSections.app` residual."
+  },
+  {
+    "timestamp": "2026-05-28T12:30:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "genusZero_curve_iso_P1"
+    },
+    "session": {
+      "id": "session_197",
+      "model": "Opus 4.7"
+    },
+    "findings": {
+      "blocker": "Standing deferral (RR bridge gated on RR.4 substrate; RR.4 paused pending USER escalation per STRATEGY.md).",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Not retry without RR.4 unblock or USER input."
+  },
+  {
+    "timestamp": "2026-05-28T12:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/WeilDivisor.lean",
+      "theorem": "isRegularInCodimOneProjectiveLineBar (hy_ne_bot residual)"
+    },
+    "session": {
+      "id": "session_197",
+      "model": "Opus 4.7"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "AlgebraicGeometry.genericPoint_eq_of_isOpenImmersion",
+        "AlgebraicGeometry.genericPoint_eq_bot_of_affine",
+        "Scheme.le_iff_specializes",
+        "Scheme.genericPoint_specializes",
+        "Order.coheight_eq_zero_iff_isMax",
+        "PrimeSpectrum.instIrreducibleSpaceCarrierCarrierCommRingCatSpecOfIsDomain"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Generic-point-contradiction route — bypass the Stacks 02IZ/005X topological-coheight-preservation bridge.",
+        "code_tried": "If `y.asIdeal = ⊥`, then `y` is the generic point of the integral affine chart Spec(R) (via `genericPoint_eq_bot_of_affine`); open immersion `𝒰.f i` sends generic-of-irreducible-source to generic-of-irreducible-target (`AlgebraicGeometry.genericPoint_eq_of_isOpenImmersion`); combined with `(𝒰.f i).base y = Y.point`, forces `Y.point = genericPoint (ProjectiveLineBar kbar).left`; but generic points are `IsMax` in the scheme's specialisation preorder (via `Scheme.le_iff_specializes.mpr` + `genericPoint_specializes`), so `Order.coheight Y.point = 0`, contradicting `Y.coheight = 1`.",
+        "line_number": "916",
+        "result": "success",
+        "insight": "Generic-point + IsMax contradiction is qualitatively cheaper than topological-coheight transfer under open immersion. Dead-ends: `inferInstance` for `IrreducibleSpace ↥(𝒰.X i)` does not auto-unfold through `openCover.X`; need explicit `show`-cast to `Spec R`. `Scheme.le_iff_specializes` takes its endpoints as IMPLICIT args — must use `.mpr` with no explicit args. `AlgebraicGeometry.genericPoint_eq_bot_of_affine R` needs explicit R + `IsDomain ↑R` in scope. `IsIntegral (ProjectiveLineBarScheme kbar)` does NOT auto-cast from `IsIntegral (ProjectiveLineBar kbar).left` — manual `letI`-style bridge required."
+      }
+    ],
+    "next_steps": "`isRegularInCodimOneProjectiveLineBar` is now fully axiom-clean; consumers in RationalCurveIso threading the explicit `[Scheme.IsRegularInCodimensionOne (ProjectiveLineBar kbar).left]` binder get an axiom-clean instance via `haveI := isRegularInCodimOneProjectiveLineBar kbar`."
+  },
+  {
+    "timestamp": "2026-05-28T12:30:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/WeilDivisor.lean",
+      "theorem": "degree_positivePart_principal_eq_finrank"
+    },
+    "session": {
+      "id": "session_197",
+      "model": "Opus 4.7"
+    },
+    "findings": {
+      "blocker": "Substrate-gated on Hartshorne I.6.12 (function-field-determines-curve morphism) + II.6.9 (multiplicativity of degree under finite pullback). Analogist verdict NEEDS_MATHLIB_GAP_FILL.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Survey goal state after `simp_rw [hbridge]` to see if further structural advance possible.",
+        "code_tried": "Surveyed goal after iter-195 carry-over body (already pushes via `degree_positivePart_eq_sum_max` + `Finsupp.sum_max_zero_eq_sum_filter_pos` + `principal_apply` to canonical Hartshorne II.6.9 form).",
+        "line_number": "1108",
+        "result": "failed",
+        "insight": "Remaining content genuinely requires the function-field-determines-curve morphism `φ : C → ℙ¹` (Hartshorne I.6.12, Mathlib gap). Without `φ`, cannot bridge `positive-order-prime-divisors-of-f-on-C` with `preimages-of-Y₀-under-φ`. Directive forbade full closure attempt."
+      }
+    ],
+    "next_steps": "Wait for the function-field correspondence (Mathlib upstream PR or project-side substrate-build). Do NOT retry tactics on this body until that lands."
+  },
+  {
+    "timestamp": "2026-05-28T12:30:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/WeilDivisor.lean",
+      "theorem": "rationalMap_order_finite_support"
+    },
+    "session": {
+      "id": "session_197",
+      "model": "Opus 4.7"
+    },
+    "findings": {
+      "blocker": "Off-critical-path; would require generalising Mathlib's `IsDedekindDomain.HeightOneSpectrum.Support.finite` from Dedekind-specific to the Noetherian-integral-regular-in-codim-1 scheme setting — substantial standalone substrate work.",
+      "key_lemmas_used": [
+        "IsDedekindDomain.HeightOneSpectrum.Support.finite (Dedekind-specific only)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Search Mathlib for a generalisation of `IsDedekindDomain.HeightOneSpectrum.Support.finite`.",
+        "code_tried": "`lean_leansearch` for 'finitely many height one primes divide nonzero rational function'",
+        "line_number": "249",
+        "result": "failed",
+        "insight": "Only the Dedekind-specific version exists. Scheme-level requires affine-chart finite-support argument (Stacks 02RV) — substantial substrate."
+      }
+    ],
+    "next_steps": "Off-critical-path; defer indefinitely or pursue via Stacks 02RV."
+  },
+  {
+    "timestamp": "2026-05-28T12:30:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/WeilDivisor.lean",
+      "theorem": "principal_degree_zero"
+    },
+    "session": {
+      "id": "session_197",
+      "model": "Opus 4.7"
+    },
+    "findings": {
+      "blocker": "Same Hartshorne I.6.12 + II.6.9 gap as `degree_positivePart_principal_eq_finrank`.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Gated on same substrate as L1108."
+  },
+  {
+    "timestamp": "2026-05-28T12:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OCofP.lean",
+      "theorem": "functionField_const_of_complete_curve_of_orderZero"
+    },
+    "session": {
+      "id": "session_197",
+      "model": "Opus 4.7"
+    },
+    "findings": {
+      "blocker": "Global Hartogs gluing step (Stacks 0BCK: Γ(X, 𝒪_X) = ⋂_Q algebraMap (stalk Q) K(X).range) is not in Mathlib. Independently, the Γ=k̄ step needs `Module.Finite kbar Γ(C, 𝒪_C)` (Hartshorne III.5.2 cohomology, also Mathlib gap).",
+      "key_lemmas_used": [
+        "Ring.mker_ordFrac_eq_isUnitSubmonoid",
+        "IsAlgClosed.algebraMap_bijective_of_isIntegral",
+        "Algebra.IsIntegral.of_finite",
+        "WithZero.log_le_log",
+        "instIsFractionRingCarrierStalkCommRingCatPresheafFunctionField",
+        "Scheme.IsRegularInCodimensionOne.instIsDiscreteValuationRingStalk"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Add 3 axiom-clean substrate helpers (full helper budget = 3) and advance parent body to extract per-stalk witnesses.",
+        "code_tried": "(i) `Scheme.lineBundleAtClosedPoint.localLift_of_log_ordFrac_eq_zero` — for `[CommRing R] [IsDomain R] [IsDiscreteValuationRing R]` and `[Field K] [Algebra R K] [IsFractionRing R K]`, `x ≠ 0` plus `WithZero.log (Ring.ordFrac R x) = 0` implies `∃ r : R, IsUnit r ∧ algebraMap R K r = x`. Body via `WithZero.log_le_log` antisymmetric + `Ring.mker_ordFrac_eq_isUnitSubmonoid`. (ii) `Scheme.lineBundleAtClosedPoint.algebraMap_bijective_of_finite_isDomain_isAlgClosed` — re-export of `IsAlgClosed.algebraMap_bijective_of_isIntegral` against `Algebra.IsIntegral.of_finite`. (iii) `Scheme.lineBundleAtClosedPoint.functionField_localUnit_of_orderZero_at_primeDivisor` — scheme-level wrapper; `Scheme.RationalMap.order Q f = WithZero.log (Ring.ordFrac (stalk Q.point) f)`; invoke (i) against the DVR stalk supplied by `[Scheme.IsRegularInCodimensionOne X]`. Parent body now opens with `let stalkLift : ∀ Q, ∃ a, IsUnit a ∧ algebraMap (stalk Q) K(C) a = f := fun Q => functionField_localUnit_of_orderZero_at_primeDivisor ...`, then the (still-typed) sorry on global Hartogs + Γ=k̄.",
+        "line_number": "1492",
+        "result": "partial",
+        "insight": "All 3 helpers axiom-clean ({propext, Classical.choice, Quot.sound}); parent body advanced to extract per-stalk witnesses before the remaining sorry. The two remaining gaps are precisely typed: (i) algebraic Hartogs gluing on integral-locally-Noetherian-RegInCodim1 X; (ii) `Module.Finite kbar Γ(C, 𝒪_C)` on proper geometrically-irreducible C."
+      }
+    ],
+    "next_steps": "Next iter goes to one of: (a) start the algebraic-Hartogs substrate-build via `Scheme.IsNormalScheme.functionField_eq_intersection` (project-side substrate, Stacks 0BCK); or (b) attempt the cohomology side `Module.Finite kbar Γ(C, 𝒪_C)` via Hartshorne III.5.2-style cohomology substrate."
+  },
+  {
+    "timestamp": "2026-05-28T12:30:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OCofP.lean",
+      "theorem": "exists_nonconstant_rational_from_dim_eq_two"
+    },
+    "session": {
+      "id": "session_197",
+      "model": "Opus 4.7"
+    },
+    "findings": {
+      "blocker": "Sub-claim (c) gated on `functionField_const_of_complete_curve_of_orderZero` closure, which is itself gated on the algebraic-Hartogs + Γ=k̄ gaps above.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Cascades from `functionField_const_of_complete_curve_of_orderZero`."
+  },
+  {
+    "timestamp": "2026-05-28T12:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/H1Vanishing.lean",
+      "theorem": "Scheme.skyscraperSheaf_eq_pushforward_const (inner-iso residual)"
+    },
+    "session": {
+      "id": "session_197",
+      "model": "Opus 4.7"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "TopCat.Sheaf.isTerminalOfEqEmpty",
+        "ObjectProperty.FullSubcategory.ext",
+        "skyscraperPresheaf_eq_pushforward",
+        "sheafifyLift",
+        "toSheafify_sheafifyLift",
+        "sheafify_hom_ext",
+        "Opens.eq_bot_or_top (PUnit IndiscreteTopology)",
+        "IsTerminal.from",
+        "eqToHom_trans_assoc"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Route H-2 — build a direct constructive iso `skyscraperSheaf PUnit.unit A ≅ (constantSheaf).obj A`, replacing the iter-196 `sorry` on `hinner_iso`.",
+        "code_tried": "4 new declarations: (1) `alphaConstToSkyPUnit` — pointwise: `PUnit.unit ∈ U` use `eqToHom`; otherwise `IsTerminal.from`. (2) `betaSkyToConstPUnit` — opposite direction via `toSheafify`'s pointwise application + `Opens.eq_bot_or_top` for IndiscreteTopology ⊥ case. (3) `alphaConstToSkyPUnit_comp_betaSkyToConstPUnit_eq_toSheafify` — per-open analysis; `eqToHom_trans_assoc` + `IsTerminal.hom_ext`. (4) `Scheme.skyscraperSheaf_iso_constantSheaf_punit` — iso record with `hom = β`, `inv = sheafifyLift α`; `inv_hom_id` via `sheafify_hom_ext` + composition; `hom_inv_id` via `toSheafify_sheafifyLift` for the unit-in-U branch and `TopCat.Sheaf.isTerminalOfEqEmpty.hom_ext` for the ⊥ branch. Consumer body of `skyscraperSheaf_eq_pushforward_const` replaces the inner sorry with `⟨skyscraperSheaf_iso_constantSheaf_punit kbar A⟩`.",
+        "line_number": "851",
+        "result": "success",
+        "insight": "PUnit's IndiscreteTopology gives `Opens.eq_bot_or_top` — only two open sets (⊥, ⊤); the ⊥ side is always terminal (skyscraper at empty = const at empty = terminal in ModuleCat). Two `change` tactics bridged `↑(of PUnit.{u + 1})` vs `PUnit.{u + 1}` defeq mismatches that `rw` cannot bridge syntactically. The Route A `Full + Faithful (constantSheaf)` Mathlib gap can be sidestepped for the PUnit case via this constructive iso; reverse Route H-1 (the non-empty branch of `IsFlasque.constant_of_irreducible` on arbitrary irreducible spaces) does NOT enable this shortcut."
+      }
+    ],
+    "next_steps": "Lane H Route H-2 HARD BAR MET; cascade: `Scheme.skyscraperSheaf_eq_pushforward_const` is now fully axiom-clean (verified). Remaining file-level sorries: `IsFlasque.constant_of_irreducible` non-empty branch (L138; Route H-1 — try stalk-based iso bridge via `isIso_iff_stalkFunctor_map_iso` per the prover's pivot suggestion) and `IsFlasque.injective_flasque` (L613; j_! gap, standing deferral)."
+  },
+  {
+    "timestamp": "2026-05-28T12:30:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/H1Vanishing.lean",
+      "theorem": "IsFlasque.constant_of_irreducible (non-empty branch)"
+    },
+    "session": {
+      "id": "session_197",
+      "model": "Opus 4.7"
+    },
+    "findings": {
+      "blocker": "Route H-2 was selected and successfully closed this iter; Route H-1 was not attempted. Generalisation of PUnit-specific iso machinery to arbitrary irreducible spaces is substantially harder because irreducible spaces have potentially many opens; PUnit-specific shortcut (Opens.eq_bot_or_top via IndiscreteTopology) does not apply.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "PROVER ROUTE PIVOT: try stalk-based iso bridge via `TopCat.Presheaf.isIso_iff_stalkFunctor_map_iso` — on an irreducible space X with non-empty U, the constant sheaf has stalks A at every point of U; restrictions between non-empty opens induce identity-on-stalks; iso ⟹ surjective. This route AVOIDS the blueprint-described `Full + Faithful constantSheaf` Mathlib gap entirely. Dead-end (do NOT retry): the iter-196 blueprint approach of 'Full+Faithful constantSheaf' — neither `Sheaf.IsConstant` on irreducible spaces nor `stalkFunctor`-based iso bridge for `presheafToSheaf` exist in snapshot `b80f227`."
+  },
+  {
+    "timestamp": "2026-05-28T12:30:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/H1Vanishing.lean",
+      "theorem": "IsFlasque.injective_flasque"
+    },
+    "session": {
+      "id": "session_197",
+      "model": "Opus 4.7"
+    },
+    "findings": {
+      "blocker": "j_! extension-by-zero functor not in Mathlib (~100-150 LOC upstream gap). Standing Tier-3 deferral.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Wait for Mathlib upstream PR. Do NOT retry."
+  }
+]

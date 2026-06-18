@@ -1,0 +1,174 @@
+[
+  {
+    "timestamp": "2026-05-15T19:06:25Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/LineBundle.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Pic.pullback"
+    },
+    "session": {
+      "id": "session_109",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "SheafOfModules.pullback_oneIso",
+        "SheafOfModules.pullback_tensorObj",
+        "Functor.mapSkeleton_obj_toSkeleton",
+        "congr_toSkeleton_of_iso",
+        "fromSkeletonToSkeletonIso",
+        "Units.map",
+        "MonoidalCategory.tensorIso"
+      ],
+      "blocker": null
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Path (i) inline construction: hand-build `MonoidHom (Skeleton Y.Modules) (Skeleton X.Modules)` via anonymous-constructor on MonoidHom's fields, using `Scheme.Modules.pullback f .mapSkeleton.obj` for `toFun`, `pullback_oneIso` (new helper) for `map_one'`, and `pullback_tensorObj` (existing named-gap) plus `fromSkeletonToSkeletonIso` plus `⊗ᵢ` for `map_mul'`. Wrap in `Units.map`. Add new file-local `noncomputable def SheafOfModules.pullback_oneIso` at L96 as the unit-preservation iso (sister gap to pullback_tensorObj).",
+        "code_tried": "noncomputable def Pic.pullback {X Y : Scheme.{u}} (f : X ⟶ Y) : Pic Y →* Pic X := Units.map { toFun := (Scheme.Modules.pullback f).mapSkeleton.obj, map_one' := by change (Scheme.Modules.pullback f).mapSkeleton.obj (toSkeleton (𝟙_ Y.Modules)) = toSkeleton (𝟙_ X.Modules); rw [Functor.mapSkeleton_obj_toSkeleton]; exact congr_toSkeleton_of_iso (SheafOfModules.pullback_oneIso f), map_mul' := fun a b => by change ...; rw [Functor.mapSkeleton_obj_toSkeleton]; refine congr_toSkeleton_of_iso ?_; exact (SheafOfModules.pullback_tensorObj f a.out b.out).trans ((fromSkeletonToSkeletonIso _).symm ⊗ᵢ (fromSkeletonToSkeletonIso _).symm) }",
+        "line_number": "108",
+        "lean_error": null,
+        "goal_before": "Pic Y →* Pic X",
+        "goal_after": null,
+        "result": "success",
+        "insight": "Exploits the definitional unfolding `Skeleton.one_eq` (`1 = ⟦𝟙_ C⟧`), `Skeleton.mul_eq` (`X * Y = ⟦X.out ⊗ Y.out⟧`), and `mapSkeleton.obj = toSkeleton ∘ (·.obj a.out)`: the `change` tactic suffices for all three goal-rewriting sites because the unfoldings are `rfl`. No need for `Quotient.lift` machinery — anonymous-constructor on `MonoidHom` works directly."
+      }
+    ],
+    "next_steps": "Body closed. Body now consumes two named-deferred Mathlib gaps (pullback_tensorObj L82 + pullback_oneIso L96). Both collapse to canonical Mathlib successors when `(SheafOfModules.pullback _).Monoidal` lands."
+  },
+  {
+    "timestamp": "2026-05-15T19:06:25Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/LineBundle.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Pic.pullback_id"
+    },
+    "session": {
+      "id": "session_109",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "Units.ext",
+        "Scheme.Modules.pullbackId",
+        "congr_toSkeleton_of_iso",
+        "Quotient.out_eq"
+      ],
+      "blocker": null
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Use `ext u` then `show ((Pic.pullback (𝟙 X)) u).val = u.val` then `change` + `rw` chain. Route through `Scheme.Modules.pullbackId X` (natural iso pullback (𝟙 X) ≅ Functor.id).",
+        "code_tried": "ext u; show ((Pic.pullback (𝟙 X)) u).val = u.val; change (Scheme.Modules.pullback (𝟙 X)).mapSkeleton.obj u.val = u.val; have iso : (Scheme.Modules.pullback (𝟙 X)).obj u.val.out ≅ u.val.out := (Scheme.Modules.pullbackId X).app u.val.out; rw [show (Scheme.Modules.pullback (𝟙 X)).mapSkeleton.obj u.val = toSkeleton ((Scheme.Modules.pullback (𝟙 X)).obj u.val.out) from rfl, congr_toSkeleton_of_iso iso, toSkeleton_fromSkeleton_obj]",
+        "line_number": "131",
+        "lean_error": "'show' tactic failed, pattern\\n  ↑((pullback (𝟙 X)) u) = ↑u\\nis not definitionally equal to the goal",
+        "goal_before": "Pic.pullback (𝟙 X) = MonoidHom.id (Pic X)",
+        "goal_after": "show pattern not definitionally equal",
+        "result": "failed",
+        "insight": "After `ext u`, the goal is on the MonoidHom-level `Pic.pullback (𝟙 X) u = MonoidHom.id (Pic X) u`, which reduces to a `Units` equality. `show ((Pic.pullback _) u).val = u.val` doesn't match because the inner `Pic.pullback` is `Units.map ⟨⟨_, _⟩, _⟩` so the coercion `.val` of the application is not `rfl`-equal to the goal's syntactic form. Replace `show ... .val = ...` with `apply Units.ext` to project to the underlying skeleton equality cleanly."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Replace `show` with `apply Units.ext` to project both sides through `Units.val`, then continue with `change` + `rw`.",
+        "code_tried": "ext u; apply Units.ext; change (Scheme.Modules.pullback (𝟙 X)).mapSkeleton.obj u.val = u.val; have iso : (Scheme.Modules.pullback (𝟙 X)).obj u.val.out ≅ u.val.out := (Scheme.Modules.pullbackId X).app u.val.out; rw [show (Scheme.Modules.pullback (𝟙 X)).mapSkeleton.obj u.val = toSkeleton ((Scheme.Modules.pullback (𝟙 X)).obj u.val.out) from rfl, congr_toSkeleton_of_iso iso, toSkeleton_fromSkeleton_obj]",
+        "line_number": "131",
+        "lean_error": "Tactic `rewrite` failed: Did not find an occurrence of the pattern in the goal.",
+        "goal_before": "(Scheme.Modules.pullback (𝟙 X)).mapSkeleton.obj u.val = u.val",
+        "goal_after": "rewrite failed on the show ... from rfl identity",
+        "result": "failed",
+        "insight": "The first `rw [show ... from rfl, ...]` doesn't fire because after the prior `change`, the goal already has the `mapSkeleton.obj` term in its unfolded form `toSkeleton ((Scheme.Modules.pullback (𝟙 X)).obj u.val.out)` — the `show ... from rfl` is a no-op the rewriter can't anchor on. Replace the entire `rw` block with a `change` to the unfolded form + the iso rewrite + `Quotient.out_eq`."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Final form: after `change` to the unfolded shape, apply `congr_toSkeleton_of_iso` rewrite then `Quotient.out_eq` to discharge `toSkeleton u.val.out = u.val`.",
+        "code_tried": "ext u; apply Units.ext; change (Scheme.Modules.pullback (𝟙 X)).mapSkeleton.obj u.val = u.val; have iso : (Scheme.Modules.pullback (𝟙 X)).obj u.val.out ≅ u.val.out := (Scheme.Modules.pullbackId X).app u.val.out; change toSkeleton ((Scheme.Modules.pullback (𝟙 X)).obj u.val.out) = u.val; rw [congr_toSkeleton_of_iso iso]; exact Quotient.out_eq _",
+        "line_number": "131",
+        "lean_error": null,
+        "goal_before": "(Scheme.Modules.pullback (𝟙 X)).mapSkeleton.obj u.val = u.val",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Two `change` invocations in sequence — first to unfold `mapSkeleton.obj`, second to expose `toSkeleton` — let `rw [congr_toSkeleton_of_iso iso]` fire, leaving the trivial `Quotient.out_eq`. The double-`change` pattern is the right shape for skeleton-quotient goals where two definitional unfoldings need to be advertised to the rewriter."
+      }
+    ],
+    "next_steps": "Body closed. Gated only on the same two named gaps (transitively via Pic.pullback's body)."
+  },
+  {
+    "timestamp": "2026-05-15T19:06:25Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/LineBundle.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Pic.pullback_comp"
+    },
+    "session": {
+      "id": "session_109",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "Units.ext",
+        "Scheme.Modules.pullbackComp",
+        "congr_toSkeleton_of_iso",
+        "fromSkeletonToSkeletonIso",
+        "Functor.mapIso"
+      ],
+      "blocker": null
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Use `ext u` + `show .val = .val` then `rw` chain through `Scheme.Modules.pullbackComp` natural iso.",
+        "code_tried": "ext u; show ((Pic.pullback (f ≫ g)) u).val = ((Pic.pullback f) ((Pic.pullback g) u)).val; change (Scheme.Modules.pullback (f ≫ g)).mapSkeleton.obj u.val = (Scheme.Modules.pullback f).mapSkeleton.obj ((Scheme.Modules.pullback g).mapSkeleton.obj u.val); rw [show (Scheme.Modules.pullback (f ≫ g)).mapSkeleton.obj u.val = toSkeleton ((Scheme.Modules.pullback (f ≫ g)).obj u.val.out) from rfl, ...]",
+        "line_number": "147",
+        "lean_error": "'show' tactic failed (same pattern as pullback_id attempt 1).",
+        "goal_before": "Pic.pullback (f ≫ g) = (Pic.pullback f).comp (Pic.pullback g)",
+        "goal_after": "show pattern not definitionally equal",
+        "result": "failed",
+        "insight": "Same lesson as pullback_id: `show ... .val = ...` is brittle on `Units.map`-derived MonoidHoms. Use `apply Units.ext`."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Replace `show` with `apply Units.ext`, then `change` to the fully unfolded skeleton-quotient shape and route through `congr_toSkeleton_of_iso` of the two-step iso `(pullbackComp f g).symm.app u.val.out` composed with `(Scheme.Modules.pullback f).mapIso (fromSkeletonToSkeletonIso _).symm`.",
+        "code_tried": "ext u; apply Units.ext; change toSkeleton ((Scheme.Modules.pullback (f ≫ g)).obj u.val.out) = toSkeleton ((Scheme.Modules.pullback f).obj ((toSkeleton ((Scheme.Modules.pullback g).obj u.val.out)).out)); refine congr_toSkeleton_of_iso ?_; refine ((Scheme.Modules.pullbackComp f g).symm.app u.val.out).trans ?_; exact (Scheme.Modules.pullback f).mapIso (fromSkeletonToSkeletonIso ((Scheme.Modules.pullback g).obj u.val.out)).symm",
+        "line_number": "147",
+        "lean_error": null,
+        "goal_before": "(Scheme.Modules.pullback (f ≫ g)).mapSkeleton.obj u.val = (Scheme.Modules.pullback f).mapSkeleton.obj ((Scheme.Modules.pullback g).mapSkeleton.obj u.val)",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "The iso decomposes into two halves: (i) `(pullback g ⋙ pullback f).obj u.val.out ≅ (pullback (f ≫ g)).obj u.val.out` via `(Scheme.Modules.pullbackComp f g).symm.app`, and (ii) `(pullback f).obj (toSkeleton ((pullback g).obj u.val.out)).out ≅ (pullback f).obj ((pullback g).obj u.val.out)` via `(pullback f).mapIso (fromSkeletonToSkeletonIso _).symm`. Composing them yields the desired iso, then `congr_toSkeleton_of_iso` finishes."
+      }
+    ],
+    "next_steps": "Body closed. Gated only on the same two named gaps (transitively via Pic.pullback's body)."
+  },
+  {
+    "timestamp": "2026-05-15T19:06:25Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/LineBundle.lean",
+      "theorem": "AlgebraicGeometry.Scheme.SheafOfModules.pullback_oneIso"
+    },
+    "session": {
+      "id": "session_109",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "key_lemmas_used": [],
+      "blocker": "Same Mathlib gap as SheafOfModules.pullback_tensorObj — namely the absence of a `Functor.Monoidal (Scheme.Modules.pullback f)` instance in Mathlib b80f227. Together (pullback_tensorObj = μIso, pullback_oneIso = εIso) they form the unit-preservation + tensor-preservation isos of that missing instance and collapse together upon a Mathlib refresh."
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Introduce as a sister named-deferred sorry to `SheafOfModules.pullback_tensorObj` (already at L82). Justification: the eventual `Pic.pullback` body must construct a `MonoidHom`, whose `map_one'` field needs an iso `(pullback f).obj 𝟙_ ≅ 𝟙_`. The plan-step spec explicitly anticipated this: 'preserves the monoid unit ... sorry -- delegate to a 1-line lemma or fold into pullback_tensorObj'. Chose the 1-line-lemma route since `pullback_tensorObj`'s signature is protected (cannot be widened to bundle both isos).",
+        "code_tried": "noncomputable def SheafOfModules.pullback_oneIso {X Y : Scheme.{u}} (f : X ⟶ Y) : (Scheme.Modules.pullback f).obj (𝟙_ Y.Modules) ≅ 𝟙_ X.Modules := by sorry",
+        "line_number": "96",
+        "lean_error": null,
+        "goal_before": "(Scheme.Modules.pullback f).obj (𝟙_ Y.Modules) ≅ 𝟙_ X.Modules",
+        "goal_after": "sorry-bodied (named-deferred gap)",
+        "result": "partial",
+        "insight": "Adds 1 to the file's sorry count (4 → 2 net once the 3 transients close: 4 - 3 + 1 = 2). The named-gap roster goes 5 → 6 (or 3 → 4 if counting only Mathlib-gap sorries: instIsMonoidal_W, h_exact, nonempty_jacobianWitness, pullback_tensorObj, pullback_oneIso). Both pullback_tensorObj and pullback_oneIso collapse together upon `(SheafOfModules.pullback _).Monoidal` landing — they are inseparable as the μIso and εIso of one missing instance."
+      }
+    ],
+    "next_steps": "Keep as named-deferred Mathlib gap. Blueprint chapter Picard_LineBundle.tex should be updated to add a `\\thm:SheafOfModules_pullback_oneIso` block analogous to the existing `\\thm:SheafOfModules_pullback_tensorObj` block, and to mention pullback_oneIso as a sister-gap. Plan agent should dispatch a `blueprint-writer linebundle-oneIso` micro-edit in iter-110 (Archon)."
+  }
+]

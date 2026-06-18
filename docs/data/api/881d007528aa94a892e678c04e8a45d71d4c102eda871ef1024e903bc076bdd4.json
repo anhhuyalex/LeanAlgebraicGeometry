@@ -1,0 +1,238 @@
+[
+  {
+    "timestamp": "2026-05-29T02:57:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Albanese/AuslanderBuchsbaum.lean",
+      "theorem": "RingTheory.auslander_buchsbaum_formula_succ_pd"
+    },
+    "session": {
+      "id": "session_202",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "enat_ab_inductive_combine",
+        "projectiveDimension_ker_eq_of_surjection",
+        "Module.depth_ses_ineqs_of_surjection_finite_localRing",
+        "Module.exists_ne_zero_ext_of_depth_eq",
+        "Module.exists_minimalSurjection_finite_localRing",
+        "ext_comp_mk₀_ofHom_eq_zero_of_entries_mem_annihilator",
+        "CategoryTheory.Abelian.Ext.covariant_sequence_exact₁",
+        "Order.add_one_le_of_lt",
+        "free_of_flat_of_isLocalRing"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Add ℕ∞ arithmetic combiner helper enat_ab_inductive_combine for the inductive step (IH j+depth K=depth R, depth_of_short_exact (2)(3), j≥1 ⟹ (j+1)+depth M=depth R)",
+        "code_tried": "casework on WithTop ℕ; min_le_iff; omega",
+        "line_number": "1551",
+        "lean_error": "failed to synthesize IsStrictOrderedRing ℕ∞ (first attempt used add_le_add on ℕ∞)",
+        "result": "partial",
+        "insight": "ℕ∞ lacks IsStrictOrderedRing; must reduce to ℕ disjunctions via Nat.cast and finish with omega, not ordered-ring lemmas"
+      },
+      {
+        "attempt": 2,
+        "strategy": "Reduce parts (2),(3) to ℕ disjunctions in the coe branch then omega",
+        "code_tried": "rw [show ((K:ℕ∞)-1)=((K-1:ℕ):ℕ∞) ...]; push_cast; omega",
+        "line_number": "1579",
+        "lean_error": null,
+        "result": "success",
+        "insight": "ℕ∞ min/sub identities transport to ℕ via Nat.cast_min / Nat.cast_add then omega closes"
+      },
+      {
+        "attempt": 3,
+        "strategy": "Add projectiveDimension_ker_eq_of_surjection (squeeze pd(ker f)=k+1 exactly via projectiveDimension_le_iff upper + projectiveDimension_ge_iff lower)",
+        "code_tried": "projectiveDimension_le_iff + contrapositive of hasProjectiveDimensionLT_succ_of_hasProjectiveDimensionLT_ker",
+        "line_number": "1611",
+        "lean_error": "Unknown constant Module.projectiveDimension_ker_eq_of_surjection (used wrong namespace), then ih arity mismatch",
+        "result": "partial",
+        "insight": "helper lives at _root_ scope not Module; IH after `induction k generalizing M` takes only the pd hypothesis, not the module"
+      },
+      {
+        "attempt": 4,
+        "strategy": "Close _succ_pd body via induction k generalizing M; inductive step uses syzygy descent + ses ineqs + combiner; base case pd=1 via Path B matrix-collapse",
+        "code_tried": "induction k generalizing M; | zero => matrix-collapse base; | succ => projectiveDimension_ker_eq_of_surjection + ih hpdK + depth_ses_ineqs + enat_ab_inductive_combine",
+        "line_number": "1801",
+        "lean_error": "base case: failed to synthesize IsDomain R / Inhabited (Fin n); simp made no progress on ShortComplex zero-comp",
+        "result": "partial",
+        "insight": "free kernel basis via Module.finBasis...equivFun.symm; k≥1 proved by subsingleton contradiction; Nonempty/Inhabited (Fin n) needed explicitly; ShortComplex.mk zero requires rw[←ofHom_comp, show f∘ₗA=0]; rfl not simp"
+      },
+      {
+        "attempt": 5,
+        "strategy": "Finish base case Direction (B) 1+depth M ≤ depth R via nonzero Ext at depth index + matrix-collapse + covariant_sequence_exact₁",
+        "code_tried": "exists_ne_zero_ext_of_depth_eq → α:Ext^D(κ,R^k); postcomp_mk₀_injective_of_mono; case D=0 contradiction; case D=D'+1 covariant_sequence_exact₁ transports to Ext^{D'}(κ,M); Order.add_one_le_of_lt",
+        "line_number": "1866",
+        "lean_error": "gcongr needed in place of add_le_add_right for the ℕ∞ +1 step (type mismatch on add orientation)",
+        "result": "success",
+        "insight": "use `by gcongr` for monotone +1 on ℕ∞; the matrix-collapse helper kills α.comp(mk₀(ofHom A)) since A's entries lie in 𝔪=Ann κ"
+      },
+      {
+        "attempt": 6,
+        "strategy": "Remove `private` from 3 declarations for cross-file (Lane COE) consumption",
+        "code_tried": "private lemma auslander_buchsbaum_formula_succ_pd → lemma ...; same for isDomain_of_regularLocal, regularLocal_quotient_isRegularLocal_of_notMemSq",
+        "line_number": "1801/CohenMacaulay",
+        "lean_error": null,
+        "result": "success",
+        "insight": "two of the promoted decls live in RingTheory.CohenMacaulay namespace (NOT RingTheory) — cross-file consumers must use fully-qualified names; lean_verify confirmed all axiom-clean {propext, Classical.choice, Quot.sound}"
+      }
+    ],
+    "next_steps": "Lane AB COMPLETE. Main RingTheory.auslander_buchsbaum_formula now axiom-clean. iter-203: Lane COE Step A1 consumes the two promoted CohenMacaulay helpers (use fully-qualified names) for the Matsumura regular-sequence witness."
+  },
+  {
+    "timestamp": "2026-05-29T03:07:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Albanese/CodimOneExtension.lean",
+      "theorem": "AlgebraicGeometry.Scheme.isRegularLocalRing_stalk_of_smooth"
+    },
+    "session": {
+      "id": "session_202",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "B.d regular-stalk close gated on (i) fenced Step A1 Matsumura witness (waits for iter-202 AB private→public promotions to be visible cross-file, i.e. iter-203) AND (ii) open Stacks 00OE smooth-algebra Krull-dim formula (~200-300 LOC); closed-point residue-field route provably inapplicable at a general codim-1 point",
+      "key_lemmas_used": [
+        "Algebra.IsStandardSmoothOfRelativeDimension.out",
+        "IsAffineOpen.isLocalization_stalk",
+        "TopCat.Presheaf.algebra_section_stalk",
+        "Scheme.ΓSpecIso",
+        "CategoryTheory.Iso.commRingCatIsoToRingEquiv",
+        "PrimeSpectrum.instUnique"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "B.a: re-export SubmersivePresentation from IsStandardSmoothOfRelativeDimension.out",
+        "code_tried": "obtain ⟨iota, sigma, hσ, hι, ⟨P⟩⟩ := hS.out; exact ⟨P.dimension, P.isStandardSmoothOfRelativeDimension rfl⟩",
+        "line_number": "959",
+        "lean_error": "universe mismatch Exists.{2} vs Exists.{u+1} when stating with Type*/Type u",
+        "result": "success",
+        "insight": ".out fixes ix sx : Type (Type 0); must state with `Type` exactly, not Type*"
+      },
+      {
+        "attempt": 2,
+        "strategy": "B.b: re-export IsAffineOpen.isLocalization_stalk with section-stalk algebra instance",
+        "code_tried": "letI := TopCat.Presheaf.algebra_section_stalk ...; IsAffineOpen.isLocalization_stalk",
+        "line_number": "B.b",
+        "lean_error": null,
+        "result": "success",
+        "insight": "decouples Stage-3 IsLocalization.AtPrime witness from standard-smoothness"
+      },
+      {
+        "attempt": 3,
+        "strategy": "B.c: gammaSpecField_ringEquiv — Spec(.of kbar) subsingleton carrier ⟹ Γ(Spec,⊤)≅kbar",
+        "code_tried": "open_eq_top_of_subsingleton (Subsingleton.elim + Opens.ext); subst U=⊤; Scheme.ΓSpecIso then commRingCatIsoToRingEquiv",
+        "line_number": "B.c",
+        "lean_error": null,
+        "result": "success",
+        "insight": "PrimeSpectrum.instUnique for a field gives Subsingleton (Spec (.of kbar)) automatically"
+      },
+      {
+        "attempt": 4,
+        "strategy": "B.d: close IsRegularLocalRing (stalk z) — NOT ATTEMPTED in code",
+        "code_tried": "(not added — would require a sorried decl, forbidden by no-sorry invariant)",
+        "line_number": "1262",
+        "lean_error": null,
+        "result": "partial",
+        "insight": "Step A1 fenced (AB promotions not yet cross-file visible); closed-point residue route inapplicable at codim-1 z (residue field is transc-deg-1 over kbar, not kbar); Stacks 00OE Krull-dim formula still open"
+      }
+    ],
+    "next_steps": "iter-203: with AB CohenMacaulay-namespace promotions visible cross-file, build Step A1 Matsumura witness matsumura_isRegular_of_linearIndependent_cotangent, then assemble B.d consuming B.a/B.b + iter-200 capstone ringKrullDim_localization_atMaximal_MvPolynomial. Use FULLY-QUALIFIED RingTheory.CohenMacaulay.* names."
+  },
+  {
+    "timestamp": "2026-05-29T02:20:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/WeilDivisor.lean",
+      "theorem": "AlgebraicGeometry.Scheme.PrimeDivisor.order_eq_order_restrict"
+    },
+    "session": {
+      "id": "session_202",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "TopCat.Presheaf.stalk_hom_ext",
+        "TopCat.Presheaf.germ_stalkSpecializes",
+        "TopCat.Presheaf.germ_stalkSpecializes_assoc",
+        "Scheme.Opens.germ_stalkIso_hom_assoc",
+        "Scheme.Opens.functionFieldIso",
+        "Ring.ordFrac_stalkIso_naturality",
+        "CategoryTheory.Iso.commRingCatIsoToRingEquiv"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Prove functionFieldIso_compat (morphism-level naturality of stalkSpecializes to generic point) via germ-chase",
+        "code_tried": "apply TopCat.Presheaf.stalk_hom_ext; intro V hxV; rw [← Category.assoc, germ_stalkSpecializes, functionFieldIso, Iso.trans_hom, ..., show stalkCongr.hom = stalkSpecializes from rfl]",
+        "line_number": "584",
+        "lean_error": "Application type mismatch: functionFieldIso._proof_1 U has type QuasiSober ↥↑U but expected Inseparable",
+        "result": "failed",
+        "insight": "cannot reference the internal _proof_1 directly; need a local hcongr lemma"
+      },
+      {
+        "attempt": 2,
+        "strategy": "Introduce local hcongr : (stalkCongr e).hom = stalkSpecializes e.ge := rfl, then rw germ_stalkSpecializes",
+        "code_tried": "have hcongr ... := by intros; rfl; rw [..., hcongr, germ_stalkSpecializes]",
+        "line_number": "588",
+        "lean_error": "rewrite failed: pattern germ ≫ stalkSpecializes not found in target",
+        "result": "failed",
+        "insight": "plain rw of germ_stalkSpecializes does not match the terminal germ ≫ stalkSpecializes even when syntactically present"
+      },
+      {
+        "attempt": 3,
+        "strategy": "Use simp only with the _assoc variants then close with term-mode",
+        "code_tried": "simp only [stalkIso, functionFieldIso, Iso.trans_hom, restrictToOpen_point, hcongr]; simp only [germ_stalkSpecializes_assoc, germ_stalkIso_hom_assoc]; exact (germ_stalkSpecializes _ _ _).trans (germ_stalkSpecializes _ _ _).symm",
+        "line_number": "584",
+        "lean_error": null,
+        "result": "success",
+        "insight": "term-mode germ_stalkSpecializes _ _ _ unifies via expected type where rw fails; axiom-clean"
+      },
+      {
+        "attempt": 4,
+        "strategy": "Prove order_eq_order_restrict by discharging h_compat pointwise from functionFieldIso_compat, then ordFrac_stalkIso_naturality",
+        "code_tried": "have happ := congrArg (fun φ => (CommRingCat.Hom.hom φ) r) functionFieldIso_compat; simp only [CommRingCat.hom_comp, RingHom.coe_comp, Function.comp_apply] at happ; exact happ",
+        "line_number": "621",
+        "lean_error": null,
+        "result": "success",
+        "insight": "h_compat matches by defeq: commRingCatIsoToRingEquiv x = e.hom.hom x is rfl; algebraMap = stalkSpecializes.hom defeq up to proof-irrelevant ∈univ witnesses; multi_attempt confirmed exact happ closes it"
+      }
+    ],
+    "next_steps": "HARD BAR met (both steps axiom-clean). Plan agent should add \\lean{...}-pinned blocks for functionFieldIso_compat and order_eq_order_restrict (currently prose-only, blocking sync_leanok). Terminal closure of rationalMap_order_finite_support non-zero branch remains USER-blocked on [IsLocallyNoetherian X]→[IsNoetherian X]/[CompactSpace X] signature strengthening — do NOT re-assign without that."
+  },
+  {
+    "timestamp": "2026-05-29T03:12:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.tensorObj"
+    },
+    "session": {
+      "id": "session_202",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "scaffold lane — proofs intentionally NOT attempted (helper budget 0); bodies are iter-203+ work",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Create new file Picard/TensorObjSubstrate.lean with 4 blueprint-pinned typed-sorry stubs + supporting helpers + register import",
+        "code_tried": "noncomputable def tensorObj {X} (M N : X.Modules) : X.Modules := sorry (+ tensorObj_functoriality, monoidalCategory instance, addCommGroup_via_tensorObj def, tensorObj_isLocallyTrivial, exists_tensorObj_inverse; tensorObjOnProduct bodied); import added to AlgebraicJacobian.lean",
+        "line_number": "113",
+        "lean_error": null,
+        "result": "success",
+        "insight": "tensorObj_functoriality is the substantive bifunctoriality content; addCommGroup_via_tensorObj kept as `def` not `instance` to avoid diamond with PicSharp.addCommGroup in RelPicFunctor.lean:235; verified GREEN (only `declaration uses sorry` warnings)"
+      }
+    ],
+    "next_steps": "iter-203+: body of tensorObj via PresheafOfModules.Monoidal.tensorObj + Zariski-site sheafification; monoidalCategory via MonoidalCategoryStruct assembly; addCommGroup_via_tensorObj via QuotientAddGroup descent, then swap into RelPicFunctor.lean:235 (Lane RPF iter-204+). lem:pullback_compatible_with_tensorobj (Piece 3d) still has no stub — deferred."
+  }
+]

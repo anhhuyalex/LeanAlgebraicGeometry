@@ -1,0 +1,319 @@
+[
+  {
+    "timestamp": "2026-06-18T05:17:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "sectionsMul_one_mul"
+    },
+    "session": {
+      "id": "session_2",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "tensorPowAdd_zero",
+        "Iso.trans_hom",
+        "sectionsCast_eqToIso_cancel",
+        "unitor_sectionsMul",
+        "Adjunction.homEquiv_counit",
+        "Adjunction.homEquiv_unit",
+        "ModuleCat.MonoidalCategory.leftUnitor_hom_apply"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "split Γ(f≫g)(x) via positional rw [SheafOfModules.comp_val, PresheafOfModules.comp_app]; rfl",
+        "code_tried": "rw [SheafOfModules.comp_val, PresheafOfModules.comp_app]; rfl",
+        "line_number": "1874",
+        "lean_error": "rewrite failed: Did not find an occurrence of the pattern (?f ≫ ?g).val",
+        "result": "failed",
+        "insight": "positional rw binds ?x at reducible transparency; cannot unify tensorObj/sheafification.obj head — use term-mode rfl for val_app_top_comp"
+      },
+      {
+        "attempt": 2,
+        "strategy": "realign element to unitModule/(1:ring) via rw [show tensorPow L 0 = unitModule X from rfl, ...]",
+        "code_tried": "rw [gMul_def, show tensorPow L 0 = unitModule X from rfl, tensorPowAdd_zero, Iso.trans_hom, val_app_top_comp, sectionsCast_eqToIso_cancel]",
+        "line_number": "1925",
+        "lean_error": "motive is not type correct (L.tensorPowAdd 0 n has type (tensorPow 0).tensorObj … but expected _a.tensorObj …)",
+        "result": "failed",
+        "insight": "rw on the unit index creates an ill-typed motive; must use `show` (default transparency) to split+realign in one step, not positional rw"
+      },
+      {
+        "attempt": 3,
+        "strategy": "outer reduction by `show` (default transparency) splitting composite app + realigning element, then exact unitor_sectionsMul",
+        "code_tried": "rw [gMul_def, tensorPowAdd_zero, Iso.trans_hom]; show sectionsCast L (zero_add n) (((eqToIso …).hom.val.app ⊤).hom (((tensorObjUnitIso (tensorPow L n)).hom.val.app ⊤).hom …)) = a; rw [sectionsCast_eqToIso_cancel]; exact unitor_sectionsMul (tensorPow L n) a",
+        "line_number": "1722",
+        "lean_error": null,
+        "result": "success",
+        "insight": "`show` bridges tensorPow 0 ≡ unitModule and the value-ModuleCat diamond that rw cannot; sectionsCast_eqToIso_cancel cancels reindex by proof-irrelevance; reduces to the section-level core unitor_sectionsMul"
+      }
+    ],
+    "next_steps": "Reuse unitor_sectionsMul template for the remaining 3 coherences AFTER the missing tensorPowAdd-coherence lemmas (braiding/associator/right-unitor) are built."
+  },
+  {
+    "timestamp": "2026-06-18T05:17:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "unitor_sectionsMul"
+    },
+    "session": {
+      "id": "session_2",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "tensorObjUnitIso_hom",
+        "Adjunction.homEquiv_counit",
+        "Adjunction.homEquiv_unit",
+        "PresheafOfModules.sheafificationAdjunction",
+        "ModuleCat.MonoidalCategory.leftUnitor_hom_apply"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "transpose identity htri via (Adjunction.homEquiv_counit).symm with implicit args",
+        "code_tried": "have htri : adj.homEquiv … (adj.counit.app G) = 𝟙 …; (Adjunction.homEquiv_counit).symm",
+        "line_number": "1937",
+        "lean_error": "rewrite failed: Did not find an occurrence of the pattern sheafification.map (λ_ …).hom; homEquiv_counit takes (adj X Y g) explicitly",
+        "result": "failed",
+        "insight": "homEquiv_counit needs explicit (adj _ _ _); the rw [show … from rfl] form fails to match under homEquiv"
+      },
+      {
+        "attempt": 2,
+        "strategy": "use apply_eq_iff_eq_symm_apply.mpr with explicit homEquiv_counit, absorb sheafification/counitIso defeqs in the .mpr's defeq check",
+        "code_tried": "have H := (adj.homEquiv _ _).apply_eq_iff_eq_symm_apply.mpr (Adjunction.homEquiv_counit adj _ _ _).symm; rw [Adjunction.homEquiv_unit] at H; congrArg (fun m => (m.app ⊤).hom (1 ⊗ a)) H; exact Hel.trans Hunit",
+        "line_number": "1900",
+        "lean_error": null,
+        "result": "success",
+        "insight": "ADJUNCTION-TRANSPOSE core: homEquiv.symm form IS the composite λ_p^# ≫ ε_G; .mpr's defeq check absorbs sheafification=adj.left and counitIso=adj.counit; Hunit closes via happ:=rfl (ModuleCat leftUnitor over CommRingCat ring X.sheaf.obj.obj ⊤, NOT RingCat) + erw [leftUnitor_hom_apply, one_smul]"
+      }
+    ],
+    "next_steps": "Generalize to braiding_sectionsMul (no counit/triangle needed) for mul_comm once tensorPowAdd_braiding exists."
+  },
+  {
+    "timestamp": "2026-06-18T05:17:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "sectionsMul_mul_one"
+    },
+    "session": {
+      "id": "session_2",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Needs tensorPowAdd L n 0 = right-unitor reached only by induction on n (m=n is a variable, no iota reduction); missing tensorPowAdd right-unitor coherence lemma.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "analysis only — checked whether one_mul template applies",
+        "code_tried": "(no edit; analyzed tensorPowAdd recursion)",
+        "line_number": "1740",
+        "lean_error": null,
+        "result": "failed",
+        "insight": "one_mul works because tensorPowAdd L 0 n iota-reduces on literal 0 (tensorPowAdd_zero, rfl). mul_one matches m=n (variable), no iota — it is the right unitor, reachable only via induction on n through the (k+1) branch. Left as sorry."
+      }
+    ],
+    "next_steps": "Plan agent: assign prerequisite tensorPowAdd_succ_zero / right-unitor reduction (induction on n), THEN close with unitor_sectionsMul template. Do NOT retry the one_mul tactic shape."
+  },
+  {
+    "timestamp": "2026-06-18T05:17:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "sectionsMul_mul_assoc"
+    },
+    "session": {
+      "id": "session_2",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Needs tensorPowAdd-vs-tensorObjAssoc coherence across index orderings (induction on tensorPowAdd recursion); none in file/Mathlib.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "analysis only",
+        "code_tried": "(no edit)",
+        "line_number": "1747",
+        "lean_error": null,
+        "result": "failed",
+        "insight": "associativity coherence of tensorPowAdd is the genuine obstacle, not the section level. Left as sorry."
+      }
+    ],
+    "next_steps": "Plan agent: assign prerequisite tensorPowAdd_assoc (induction), then section-level core via the transpose template."
+  },
+  {
+    "timestamp": "2026-06-18T05:17:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "sectionsMul_mul_comm"
+    },
+    "session": {
+      "id": "session_2",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Needs tensorPowAdd L na nb = tensorBraiding … ≫ tensorPowAdd L nb na ≫ eqToIso(add_comm) (induction); none in file/Mathlib.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "analysis only",
+        "code_tried": "(no edit)",
+        "line_number": "1757",
+        "lean_error": null,
+        "result": "failed",
+        "insight": "tensorPowAdd-vs-braiding coherence is the obstacle; once it exists, braiding_sectionsMul (unit-naturality of presheaf braiding, no counit/triangle) closes the section level — simpler than unitor case."
+      }
+    ],
+    "next_steps": "Plan agent: assign prerequisite tensorPowAdd_braiding (induction), then braiding_sectionsMul template."
+  },
+  {
+    "timestamp": "2026-06-18T05:17:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/FlatBaseChangeGlobal.lean",
+      "theorem": "baseChange_sheafConditionFork_tensorIso"
+    },
+    "session": {
+      "id": "session_2",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Irreducible module-level base-change content (⇔ baseChangeGammaPullbackEquiv). Needs per-chart pullback_spec_tilde_iso (Stacks 01I9) applied chart-by-chart over a finite cover of non-affine X + tensor-commutes-with-finite-products; multi-hundred-LOC, Mathlib-absent. Same infra affineBaseChange_pushforward_iso is blocked on. No LLM API key in env.",
+      "key_lemmas_used": [
+        "baseChangeGammaEquiv",
+        "gammaTopEquivEqLocus",
+        "transportC"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Create the module-level ≃ₗ[B] decl matching the anonymous sorry's type, wire baseChangeEqLocusToPullbackGamma to it ≪≫ₗ transportC",
+        "code_tried": "exact baseChange_sheafConditionFork_tensorIso F B U hU ≪≫ₗ transportC",
+        "line_number": "358",
+        "lean_error": "Application type mismatch (codomain of eqLocus is a Submodule, not a ModuleCat object); then 'tactic does nothing'",
+        "result": "partial",
+        "insight": "Codomain needed ModuleCat.of wrapper around the eqLocus + explicit groundRing carrier; after fixing, baseChangeEqLocusToPullbackGamma became sorry-free, gap relocated into the named typed lemma"
+      },
+      {
+        "attempt": 2,
+        "strategy": "fix codomain: wrap eqLocus in ModuleCat.of with explicit groundRing carrier",
+        "code_tried": "(ModuleCat.restrictScalars (pullbackGroundRingAlg B)).obj (ModuleCat.of (groundRing (pullback X.toSpecΓ (Spec.map …))) (LinearMap.eqLocus …))",
+        "line_number": "271",
+        "lean_error": "failed to synthesize AddCommMonoid (after ModuleCat.of _ …); then resolved by explicit carrier",
+        "result": "success",
+        "insight": "explicit groundRing carrier in ModuleCat.of resolves the AddCommMonoid synth; the decl now typechecks with an honest typed sorry at the irreducible gap"
+      }
+    ],
+    "next_steps": "Needs a dedicated infra lane (per-chart pullback_spec_tilde_iso restriction-compatibility over a finite cover). Do NOT re-dispatch a prover at this node without that infrastructure first."
+  },
+  {
+    "timestamp": "2026-06-18T05:17:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/FlatBaseChangeGlobal.lean",
+      "theorem": "flatBaseChange_isIso_iff_gammaTensorComparison"
+    },
+    "session": {
+      "id": "session_2",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Reverse direction needs tilde full-faithfulness over affine base + qcqs-pushforward-quasicoherent (verify Mathlib existence).",
+      "key_lemmas_used": [
+        "Scheme.Modules.Hom.isIso_iff_isIso_app"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "forward direction: sections-over-⊤ functor preserves isos",
+        "code_tried": "intro hiso; infer_instance",
+        "line_number": "461",
+        "lean_error": "(initial) instance not fired without the IsIso hyp registered",
+        "result": "partial",
+        "insight": "needed haveI := hiso to register, then infer_instance fires Scheme.Modules.Hom.isIso_iff_isIso_app-derived [IsIso φ]→IsIso(φ.app U) (Sheaf.lean:137)"
+      },
+      {
+        "attempt": 2,
+        "strategy": "forward direction fixed with haveI",
+        "code_tried": "intro hiso; haveI := hiso; infer_instance",
+        "line_number": "461",
+        "lean_error": null,
+        "result": "success",
+        "insight": "forward direction PROVEN; iff non-vacuous. Chose .app ⊤ (top-section) parametrization — consistent with blueprint per fbcg002"
+      }
+    ],
+    "next_steps": "Verify qcqs-pushforward-quasicoherent in Mathlib, then prove reverse (iso on global sections ⇒ iso of QC sheaves over affine)."
+  },
+  {
+    "timestamp": "2026-06-18T05:17:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/FlatBaseChangeGlobal.lean",
+      "theorem": "flatBaseChange_pushforward_isIso_of_isSeparated"
+    },
+    "session": {
+      "id": "session_2",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Needs (1) naturality square identifying .app ⊤ with Modules.baseChangeGammaPullbackEquiv, and (2) the inner gap baseChange_sheafConditionFork_tensorIso. Both unbuilt.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "scaffold at top-section level with [IsAffine S] [IsAffine S'] [Flat g] [QuasiCompact f] [IsSeparated f] [F.IsQuasicoherent]",
+        "code_tried": "(typed sorry body; signature created)",
+        "line_number": "420",
+        "lean_error": null,
+        "result": "partial",
+        "insight": ".app ⊤ IS the concrete comparison Γ(X,F)⊗_A B → Γ(X_B,F_B). Did not invent a bogus body."
+      }
+    ],
+    "next_steps": "Blocked on baseChange_sheafConditionFork_tensorIso + naturality square; defer until inner gap infra lands."
+  },
+  {
+    "timestamp": "2026-06-18T05:17:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/FlatBaseChangeGlobal.lean",
+      "theorem": "flatBaseChange_pushforward_mayerVietoris"
+    },
+    "session": {
+      "id": "session_2",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Scaffold-only per PROGRESS directive. Heaviest leg: MV induction on finite-cover size, base case = the separated lemma.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "create signature (top-section level, [QuasiSeparated f]) with typed sorry per directive",
+        "code_tried": "(typed sorry body; signature created)",
+        "line_number": "440",
+        "lean_error": null,
+        "result": "partial",
+        "insight": "explicitly scaffold-only this iter; depends on the separated lemma as base case"
+      }
+    ],
+    "next_steps": "After separated lemma closes: MV induction on finite-cover size."
+  }
+]

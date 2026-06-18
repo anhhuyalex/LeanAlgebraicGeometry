@@ -1,0 +1,110 @@
+[
+  {
+    "timestamp": "2026-05-11T07:11:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/MayerVietoris.lean",
+      "theorem": "Scheme.basicOpenCover_isCechAcyclicCover_toModuleKSheaf"
+    },
+    "session": {
+      "id": "session_62",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Substep (b)+(c) assembly sorry remains: requires (i) Module Γ(C.left, U) instances on each cochain factor (K.sc n).X i (substep b1) and (ii) IsLocalizedModule.Away f.1 instance exhibiting slice_K.X i as a localisation of (K.sc n).X i (substep b2), before exact_of_isLocalized_span can be applied (substep c). The localisation iso requires resolving Localization.localizationLocalization + product-localisation commutation, plus an infinite-set subtlety (s is Set, not Finset) — sidestepped because exact_of_isLocalized_span consumes spanning hypothesis directly, not Finset-ness.",
+      "key_lemmas_used": [
+        "HomologicalComplex.exactAt_iff",
+        "ShortComplex.ShortExact.moduleCat_exact_iff_function_exact",
+        "Function.Exact"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Land `h_a_fun : ∀ (f : s), Function.Exact …` as a new have-block converting iter-061's `h_a : ∀ (f : s), … ExactAt n` to the Function.Exact form via the inverse of iter-061's mechanical rw chain (← rw [ShortComplex.ShortExact.moduleCat_exact_iff_function_exact, HomologicalComplex.exactAt_iff]; exact h_a f). Also add labelled substep (b1)/(b2)/(c) commentary scaffolding above the substep (b)+(c) sorry.",
+        "code_tried": "have h_a_fun : ∀ (f : s), Function.Exact ⇑(ConcreteCategory.hom (HomologicalComplex.sc (cechCochain C (toModuleKSheaf C) (fun (f' : s) => basicOpenCover (C := C) (U := U) s f' ⊓ C.left.basicOpen (f : Γ(C.left, U)))) n).f) ⇑(ConcreteCategory.hom (HomologicalComplex.sc (cechCochain C (toModuleKSheaf C) (fun (f' : s) => basicOpenCover (C := C) (U := U) s f' ⊓ C.left.basicOpen (f : Γ(C.left, U)))) n).g) := by intro f; rw [← ShortComplex.ShortExact.moduleCat_exact_iff_function_exact, ← HomologicalComplex.exactAt_iff]; exact h_a f",
+        "line_number": "1786-1799",
+        "lean_error": "",
+        "goal_before": "⊢ Function.Exact ⇑(ConcreteCategory.hom (HomologicalComplex.sc (cechCochain C (toModuleKSheaf C) (basicOpenCover s)) n).f) ⇑(ConcreteCategory.hom (HomologicalComplex.sc (cechCochain C (toModuleKSheaf C) (basicOpenCover s)) n).g) [with h_a : ∀ (f : s), HomologicalComplex.ExactAt (cechCochain C (toModuleKSheaf C) fun f' ↦ basicOpenCover s f' ⊓ C.left.basicOpen ↑f) n in scope]",
+        "goal_after": "⊢ Function.Exact ⇑(ConcreteCategory.hom (HomologicalComplex.sc (cechCochain C (toModuleKSheaf C) (basicOpenCover s)) n).f) ⇑(ConcreteCategory.hom (HomologicalComplex.sc (cechCochain C (toModuleKSheaf C) (basicOpenCover s)) n).g) [with both h_a AND h_a_fun in scope]",
+        "result": "success",
+        "insight": "Iter-061's mechanical rw chain (`HomologicalComplex.exactAt_iff` + `ShortComplex.ShortExact.moduleCat_exact_iff_function_exact`) is reversible — applying it in ← rw form transports per-f ExactAt n statements into per-f Function.Exact statements. This makes iter-061's mechanical conversion do double duty: it positions the goal AND makes h_a re-usable in the form IsLocalizedModule.map_exact's output occupies."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Probed `exact h_a_fun ⟨0, by simp⟩` shortcut via lean_multi_attempt to close substep (b)+(c) vacuously.",
+        "code_tried": "exact h_a_fun ⟨(0 : Γ(C.left, U)), by simp⟩",
+        "line_number": "1860",
+        "lean_error": "(tool reported goals=[] but this is a lean_multi_attempt false positive)",
+        "goal_before": "⊢ Function.Exact ⇑(ConcreteCategory.hom (HomologicalComplex.sc (cechCochain C (toModuleKSheaf C) (basicOpenCover s)) n).f) ⇑(ConcreteCategory.hom (HomologicalComplex.sc (cechCochain C (toModuleKSheaf C) (basicOpenCover s)) n).g)",
+        "goal_after": "",
+        "result": "failed",
+        "insight": "lean_multi_attempt false positive — `0 ∈ s` would generally fail and the slice cover at f=0 has D(0)=⊥, giving a different cochain complex whose conclusion type would not unify with the goal. Prover correctly rejected this as a tool-scoping artefact and did not commit."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Considered constructing localised cochain factor as a fresh `noncomputable def localisedCechCochain` to type the substep (b2) identification iso.",
+        "code_tried": "noncomputable def localisedCechCochain {k : Type u} [Field k] (C : Over (Spec (.of k))) (s : Set Γ(C.left, U)) (f : s) (n : ℕ) : ModuleCat k := …",
+        "line_number": "1860 (not committed)",
+        "lean_error": "(not attempted in source)",
+        "goal_before": "(same as Attempt 1's goal_after)",
+        "goal_after": "",
+        "result": "failed",
+        "insight": "Requires resolving Localization.localizationLocalization + product-localisation commutation. The product over Fin (i+1) → s is potentially infinite. Product-localisation commutation in Mathlib (Localization.commute_prod) requires the index set to be finite. The natural in-session resolution is a Finset reduction at the cochain-factor *evaluation* level (each index x : Fin (i+1) → s produces a finite product of (x k).1 values). Deferred to iter-063+ to preserve scope."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Probed direct `apply exact_of_isLocalized_span s hs` to attempt closing the substep (b)+(c) sorry via the local-to-global principle.",
+        "code_tried": "apply exact_of_isLocalized_span s hs",
+        "line_number": "1860 (not committed)",
+        "lean_error": "failed to synthesize Module Γ(C.left, U) ((K.sc n).X i)",
+        "goal_before": "(same as Attempt 1's goal_after)",
+        "goal_after": "(elaboration failure — Module Γ(C.left, U) instance missing on cochain factors)",
+        "result": "failed",
+        "insight": "Requires Module Γ(C.left, U) instances on each cochain factor (K.sc n).X i (substep b1) before elaboration can succeed. Adding the letI instances requires either explicit algebraSection + V ≤ U inclusion plumbing, or Module.compHom on the algebra map. Both are substantive iter-063+ work."
+      },
+      {
+        "attempt": 5,
+        "strategy": "Considered LinearEquiv.conj_exact_iff_exact + LinearEquiv.postcomp_exact_iff_exact chain to transport h_a_fun's Function.Exact across cochain-factor isos.",
+        "code_tried": "LinearEquiv.postcomp_exact_iff_exact (chain), LinearEquiv.conj_exact_iff_exact (chain)",
+        "line_number": "1860 (not committed)",
+        "lean_error": "(not attempted in source — type unification analysis showed circular dependency)",
+        "goal_before": "(same as Attempt 1's goal_after)",
+        "goal_after": "",
+        "result": "failed",
+        "insight": "Each LinearEquiv requires a Module R structure on both sides. The natural source slice_K.X i is ModuleCat k; the natural target (K.sc n).X i [1/f] would need either ModuleCat (Localization.Away f.1) structure or forgetful equivalence to ModuleCat k. Without substep (b2)'s localisation iso, intermediate types do not unify cleanly. Circular dependency."
+      }
+    ],
+    "next_steps": "Iter-063: engage substep (b1)+(b2)+(c) in a single prover session, landing the localised cochain factor as a project-local noncomputable def + IsLocalizedModule.Away instance, applying exact_of_isLocalized_span. Also (independently) substep (a) extra-degeneracy infrastructure via FormalCoproduct.extraDegeneracyCech + ExtraDegeneracy.homotopyEquiv + CochainComplex.opEquivalence. h_a_fun is now the data-bearing payload ready for substep (b2)+(c) consumption via IsLocalizedModule.map_exact."
+  },
+  {
+    "timestamp": "2026-05-11T07:11:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/MayerVietoris.lean",
+      "theorem": "Scheme.basicOpenCover_isCechAcyclicCover_toModuleKSheaf [substep (a) — slice-cover extra-degeneracy]"
+    },
+    "session": {
+      "id": "session_62",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Iter-062 directive prioritised substep (b)+(c) engagement over substep (a). Substep (a) sorry at L1722 (the per-f slice-cover Čech complex ExactAt n claim) is unchanged from iter-061. Substep (a) infrastructure requires FormalCoproduct.extraDegeneracyCech + SimplicialObject.Augmented.ExtraDegeneracy.homotopyEquiv + CochainComplex.opEquivalence op-passage — substantive Mathlib chain not engaged this iteration.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Lemma search for FormalCoproduct.extraDegeneracyCech to confirm Mathlib availability.",
+        "code_tried": "(lean_loogle search for FormalCoproduct.extraDegeneracyCech)",
+        "line_number": "1722",
+        "lean_error": "No results found.",
+        "goal_before": "⊢ HomologicalComplex.ExactAt (cechCochain C (toModuleKSheaf C) fun f' ↦ basicOpenCover s f' ⊓ C.left.basicOpen ↑f) n",
+        "goal_after": "",
+        "result": "failed",
+        "insight": "lean_loogle reports no result — but the lemma exists in Mathlib at Mathlib/CategoryTheory/Limits/FormalCoproducts/ExtraDegeneracy.lean. Likely a loogle indexing or namespacing issue (lemma is FormalCoproduct.extraDegeneracyCech but might be under CategoryTheory.Limits.FormalCoproduct.* in actual Mathlib). For iter-063+, use direct file Grep instead of loogle."
+      }
+    ],
+    "next_steps": "Iter-063+: attack substep (a) sorry via FormalCoproduct.extraDegeneracyCech instance synthesis, ExtraDegeneracy.homotopyEquiv extraction, and CochainComplex.opEquivalence op-passage. Independent of substep (b)+(c); can be parallelised with iter-063's substep (b) work or sequenced after."
+  }
+]

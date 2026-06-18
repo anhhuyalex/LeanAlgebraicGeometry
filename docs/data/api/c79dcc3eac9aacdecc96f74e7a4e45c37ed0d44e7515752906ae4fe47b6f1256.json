@@ -1,0 +1,174 @@
+[
+  {
+    "timestamp": "2026-05-31T21:01:49Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate/StalkTensor.lean",
+      "theorem": "PresheafOfModules.stalkTensorIso"
+    },
+    "session": {
+      "id": "session_233",
+      "model": "claude-opus (mathlib-build)"
+    },
+    "findings": {
+      "blocker": "Pinned ISO stalkTensorIso NOT built; only the FORWARD comparison map stalkTensorDesc landed (axiom-clean). Next wall: stalkTensorDescU_smul blocked by CommRingCat/RingCat carrier duality (~20-40 LOC), then R_x-linear map, then reverse map via nested colimit descent (~150-250 LOC).",
+      "key_lemmas_used": [
+        "TensorProduct.liftAddHom",
+        "colimit.desc",
+        "TopCat.Presheaf.germ",
+        "tensorObj_map_tmul",
+        "germ_res_apply"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Build forward map bottom-up: balanced bilinear AddMonoidHom per neighbourhood -> liftAddHom -> colimit.desc to the stalk.",
+        "code_tried": "noncomputable def stalkTensorDesc := colimit.desc ((OpenNhds.inclusion x).op ⋙ (Monoidal.tensorObj A B).presheaf) ⟨AddCommGrpCat.of Tgt, fun U => stalkTensorDescU ..., naturality⟩",
+        "line_number": "106-124",
+        "result": "success",
+        "insight": "Cocone naturality: bare `ext z` + `induction z using TensorProduct.induction_on`; tmul case closes with `erw [tensorObj_map_tmul, stalkTensorDescU_tmul, stalkTensorDescU_tmul]; erw [germ_res_apply, germ_res_apply]; rfl`. erw essential (R vs R⋙forget₂ defeq-not-syntactic)."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Upgrade stalkTensorDesc to R_x-linear via stalkTensorDescU_smul.",
+        "code_tried": "lemma stalkTensorDescU_smul : stalkTensorDescU (r • w) = germ R r • stalkTensorDescU w (induction on w, tmul via TensorProduct.smul_tmul' + germ_smul)",
+        "line_number": "scratch (lean_run_code)",
+        "result": "failed",
+        "lean_error": "failed to synthesize instance DistribMulAction / SMulCommClass; with RingCat carrier r the smul lemmas fire but germ R r no longer typechecks (carrier mismatch)",
+        "insight": "CommRingCat/RingCat carrier duality blocks the linearity step; needs a RingEquiv/eqToHom bridge between ↑(R.obj (op U)) and ↑((R⋙forget₂).obj (op U)). Left unbuilt (mathlib-build: no sorry pin)."
+      }
+    ],
+    "next_steps": "Build stalkTensorDescU_smul (carrier-duality bridge) -> stalkTensorLinearMap (mirror Vestigial.lean stalkLinearMap ~L391-426) -> reverse map -> bundle stalkTensorIso. Then close isLocallyInjective_whiskerLeft_of_W -> unconditional associator -> thm:pic_commgroup. WIRE the orphan file into the aggregator (free, 0 sorries)."
+  },
+  {
+    "timestamp": "2026-05-31T21:01:49Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/FlatBaseChange.lean",
+      "theorem": "Modules.isIso_iff_isIso_stalkFunctor_map (+ isIso_of_isIso_app_of_isBasis, isIso_iff_isIso_app_affineOpens)"
+    },
+    "session": {
+      "id": "session_233",
+      "model": "claude-opus (mathlib-build)"
+    },
+    "findings": {
+      "blocker": "none for the 3 locality lemmas (all axiom-clean)",
+      "key_lemmas_used": [
+        "TopCat.Presheaf.isIso_of_stalkFunctor_map_iso",
+        "isIso_iff_of_reflects_iso",
+        "stalkFunctor_map_injective_of_isBasis",
+        "germ_exist_of_isBasis",
+        "stalkFunctor_map_germ_apply",
+        "Scheme.isBasis_affineOpens"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Stalk-local iso criterion for Scheme.Modules: forward via Functor.map_isIso; backward package Ab-presheaves as TopCat.Sheaf + isIso_of_stalkFunctor_map_iso + toPresheaf reflects isos.",
+        "code_tried": "exact (CategoryTheory.isIso_iff_of_reflects_iso φ (Scheme.Modules.toPresheaf X)).mp h1",
+        "line_number": "99-116",
+        "result": "success",
+        "insight": "Mirrors Picard/TensorObjSubstrate.lean::isIso_of_isIso_restrict (cannot import). Axiom-clean."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Basis-local: reduce to stalk criterion; bijectivity via stalkFunctor_map_injective_of_isBasis + germ_exist_of_isBasis.",
+        "code_tried": "refine ⟨M.presheaf.germ U x hxU s', ?_⟩; erw [TopCat.Presheaf.stalkFunctor_map_germ_apply]; rw [hs']; rfl",
+        "line_number": "125-153",
+        "result": "success",
+        "insight": "((toPresheaf X).map φ).app (op U) is defeq-not-syntactic to φ.app U; stalkFunctor_map_germ_apply rewrite needs erw + trailing rfl."
+      }
+    ],
+    "next_steps": "affineBaseChange_pushforward_iso's first reduction now uses isIso_iff_isIso_app_affineOpens; remaining = tilde pushforward/pullback dictionary (~350-450 LOC, own file Cohomology/TildeDictionary.lean), then cancelBaseChange closes it. LVB: add a blueprint supplement subsection for the 3 locality lemmas (major, blueprint-side)."
+  },
+  {
+    "timestamp": "2026-05-31T21:01:49Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/FlatBaseChange.lean",
+      "theorem": "affineBaseChange_pushforward_iso / flatBaseChange_pushforward_isIso"
+    },
+    "session": {
+      "id": "session_233",
+      "model": "claude-opus (mathlib-build)"
+    },
+    "findings": {
+      "blocker": "Mathlib-absent tilde pushforward/pullback dictionary (pushforward/pullback of tilde-modules on Spec <-> restrictScalars / extendScalars). For the flat theorem, also Cech-cohomology/affine-cover infra for SheafOfModules.",
+      "key_lemmas_used": [
+        "Modules.isIso_iff_isIso_app_affineOpens",
+        "TensorProduct.AlgebraTensorModule.cancelBaseChange (verified present, axiom-clean)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Reduce to affine opens (where tilde dictionary computes the section map), then per-affine-open iso.",
+        "code_tried": "rw [Modules.isIso_iff_isIso_app_affineOpens]; intro U; sorry",
+        "line_number": "174-198",
+        "result": "partial",
+        "insight": "Locality half DONE; per-affine-open goal IsIso ((pushforwardBaseChangeMap ...).app U) unchanged in difficulty, blocked on the tilde dictionary. Honest sorry."
+      }
+    ],
+    "next_steps": "Do NOT retry TopCat.Sheaf.isIso_iff_isIso_basis (loogle-stale, ABSENT). Build the tilde dictionary as a separate mathlib-build lane."
+  },
+  {
+    "timestamp": "2026-05-31T21:01:49Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/HigherDirectImage.lean",
+      "theorem": "AlgebraicGeometry.higherDirectImage"
+    },
+    "session": {
+      "id": "session_233",
+      "model": "claude-opus (prove)"
+    },
+    "findings": {
+      "blocker": "none for the definition, but it is CONDITIONAL: carries [HasInjectiveResolutions X.Modules]",
+      "key_lemmas_used": [
+        "Functor.rightDerived",
+        "Scheme.Modules.instAbelian"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Define Rⁱf_* as ((pushforward f).rightDerived i).obj F.",
+        "code_tried": "noncomputable def higherDirectImage [HasInjectiveResolutions X.Modules] (f : X ⟶ S) (i : ℕ) (F : X.Modules) : S.Modules := ((pushforward f).rightDerived i).obj F",
+        "line_number": "51-53",
+        "result": "success",
+        "insight": "rightDerived needs HasInjectiveResolutions X.Modules, which needs EnoughInjectives X.Modules. Mathlib has Abelian X.Modules but NOT EnoughInjectives/IsGrothendieckAbelian for SheafOfModules over a sheaf of rings (only for Sheaf J A, fixed value cat). Carried the instance as an honest explicit hypothesis rather than sorrying an EnoughInjectives instance (which would contaminate every consumer)."
+      }
+    ],
+    "next_steps": "A mathlib-build lane proving IsGrothendieckAbelian X.Modules would drop the hypothesis. Decide whether to wire the file (adds 3 sorries) or keep orphan."
+  },
+  {
+    "timestamp": "2026-05-31T21:01:49Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/HigherDirectImage.lean",
+      "theorem": "higherDirectImage_isQuasiCoherent / higherDirectImage_affine_eq_zero / flatBaseChange_higherDirectImage_isIso"
+    },
+    "session": {
+      "id": "session_233",
+      "model": "claude-opus (prove)"
+    },
+    "findings": {
+      "blocker": "Mathlib-absent: explicit description Rⁱf_*F = sheafify(V↦Hⁱ(f⁻¹V,F|)), relative Mayer-Vietoris, affine-cohomology vanishing, Cech-to-cohomology spectral sequence — all for Scheme.Modules.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Abstract derived-functor vanishing for affine f.",
+        "code_tried": "sorry (considered IsZero (rightDerived i) from exactness)",
+        "line_number": "89-99",
+        "result": "failed",
+        "lean_error": "no abstract route: pushforward f is NOT exact on full X.Modules even for affine f (only on quasi-coherent sheaves)",
+        "insight": "Genuine proof needs Stacks 02KG explicit description + affine vanishing, Mathlib-absent. Sorry honestly scoped with hF : F.IsQuasicoherent and 1 ≤ i."
+      }
+    ],
+    "next_steps": "MAJOR (auditor+LVB): flatBaseChange_higherDirectImage_isIso lacks hi : 1 ≤ i (states all i:ℕ) and uses Nonempty (…≅…) weakening — upgrade once the canonical higher base-change map exists; blueprint should record [HasInjectiveResolutions] on the 3 downstream statement blocks."
+  }
+]

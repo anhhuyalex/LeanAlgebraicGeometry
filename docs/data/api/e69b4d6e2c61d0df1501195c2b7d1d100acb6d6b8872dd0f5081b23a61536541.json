@@ -1,0 +1,341 @@
+[
+  {
+    "timestamp": "2026-05-23T18:18:43Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OCofP.lean",
+      "theorem": "Lane 1 FIX-BUILD #2 (namespace variable block)"
+    },
+    "session": {
+      "id": "session_178",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "Scheme.IsRegularInCodimensionOne"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Thread [Scheme.IsRegularInCodimensionOne C.left] instance into the lineBundleAtClosedPoint namespace variable block alongside the iter-177 [IsLocallyNoetherian C.left]",
+        "code_tried": "variable {kbar : Type u} [Field kbar] [IsAlgClosed kbar]\n  {C : Over (Spec (.of kbar))} ... [IsLocallyNoetherian C.left] [Scheme.IsRegularInCodimensionOne C.left]",
+        "line_number": "157",
+        "lean_error": null,
+        "goal_before": "error: failed to synthesize instance of type class C.left.IsRegularInCodimensionOne (L335 call site)",
+        "goal_after": "instance auto-propagates to exists_nonconstant_genusZero; build green",
+        "result": "success",
+        "insight": "1-LOC variable-block addition is the right shape; no per-decl threading needed thanks to TC propagation"
+      }
+    ],
+    "next_steps": "OCofP body lanes (5 sorries) are now build-unblocked for iter-179+; smallest-first ordering per blueprint dependency graph: globalSections_iff (L192) → h1_vanishing_genusZero (L242) → dim_eq_two_of_genusZero (L277) → exists_nonconstant_genusZero (L326) → lineBundleAtClosedPoint def (L140)"
+  },
+  {
+    "timestamp": "2026-05-23T18:18:43Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "iotaGm_isDominant"
+    },
+    "session": {
+      "id": "session_178",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Mathlib has no IsOpenImmersion → IsDominant lemma (general implication is false; needs PreirreducibleSpace target). IrreducibleSpace (ProjectiveLineBar kbar).left is itself a Mathlib gap.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Directive's one-liner via IsOpenImmersion.isDominant",
+        "code_tried": "exact IsOpenImmersion.isDominant _",
+        "line_number": "89",
+        "lean_error": "lemma does not exist (lean_local_search/loogle/leansearch/mathlib grep all empty)",
+        "goal_before": "IsDominant (Over.Hom.left (lift (toUnit (Gm kbar) ≫ ProjectiveLineBar.onePt kbar) (𝟙 (Gm kbar)) ≫ gmScalingP1 kbar))",
+        "goal_after": null,
+        "result": "failed",
+        "insight": "Mathlib only ships the REVERSE direction IsDominant.of_comp_of_isOpenImmersion; directive's one-liner framing is a dead-end recipe"
+      },
+      {
+        "attempt": 2,
+        "strategy": "instIsDominantOfSurjective (priority-100 instance)",
+        "code_tried": "infer_instance via Surjective route",
+        "line_number": "89",
+        "lean_error": "composition is NOT surjective (image is Gm ⊂ ℙ¹, missing 0 and ∞ points)",
+        "goal_before": "IsDominant (... gmScalingP1 ...).left",
+        "goal_after": null,
+        "result": "failed",
+        "insight": "Surjectivity is too strong; dominance is genuinely the right (weaker) notion"
+      },
+      {
+        "attempt": 3,
+        "strategy": "DenseRange.comp factorisation after rw [Over.comp_left]",
+        "code_tried": "rw [Over.comp_left]; apply DenseRange.comp",
+        "line_number": "89",
+        "lean_error": "lift factor (lift _ _).left is a section, hence closed immersion (not dominant); DenseRange.comp requires BOTH factors dense",
+        "goal_before": "DenseRange ((lift _ _).left ≫ gmScalingP1.left)",
+        "goal_after": null,
+        "result": "failed",
+        "insight": "Composition-style splits don't work; dominance comes from the SCALING ACTION gmScalingP1 acting on the section {1} × Gm, not from either factor in isolation"
+      },
+      {
+        "attempt": 4,
+        "strategy": "IrreducibleSpace (ProjectiveLineBar kbar).left + IsOpenMap.denseRange_of_isPreirreducibleSpace",
+        "code_tried": "haveI : IrreducibleSpace (ProjectiveLineBar kbar).left := inferInstance; ...",
+        "line_number": "89",
+        "lean_error": "infer_instance fails; Mathlib does not ship IrreducibleSpace for Proj of polynomial ring",
+        "goal_before": "DenseRange (...)",
+        "goal_after": null,
+        "result": "failed",
+        "insight": "Multi-iter Mathlib gap; out-of-scope for Lane 2"
+      },
+      {
+        "attempt": 5,
+        "strategy": "Convert term-mode sorry to tactic-mode by sorry after reducing IsDominant to DenseRange",
+        "code_tried": "by\n  rw [Over.comp_left]\n  refine ⟨?_⟩  -- reduces IsDominant to DenseRange\n  sorry",
+        "line_number": "89-122",
+        "lean_error": null,
+        "goal_before": "IsDominant (...).left",
+        "goal_after": "DenseRange (composed continuous map)",
+        "result": "partial",
+        "insight": "Documented (i)-(iii) structural decomposition for iter-179+ pickup; gmScalingP1_chart_data_temp axiom propagates through Over.comp_left defeq; no new project axioms"
+      }
+    ],
+    "next_steps": "iter-179+: Wait for gmscaling-cover-bridge consult body lands; then route (a) chart-1 factorisation iotaGm = Spec.map (alg k̄[u] k̄[t,t⁻¹]) ≫ Proj.awayι ; per-factor open-immersion → open-map → dense-range chain. Route (b) IrreducibleSpace Proj is its own multi-iter Mathlib gap."
+  },
+  {
+    "timestamp": "2026-05-23T18:18:43Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/WeilDivisor.lean",
+      "theorem": "principal_degree_zero"
+    },
+    "session": {
+      "id": "session_178",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Non-constant branch requires Pin 1 of Lane 5 (morphismToP1OfGlobalSections) + Hartshorne II.6.9 degree-multiplicativity-under-finite-pullback (Mathlib gap)",
+      "key_lemmas_used": [
+        "Finsupp.ext",
+        "Finsupp.sum_zero_index",
+        "Finsupp.ofSupportFinite_coe (defeq via change)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Case-split on symptom: by_cases hconst : ∀ Y, Scheme.RationalMap.order Y f = 0",
+        "code_tried": "by_cases hconst : ∀ Y, Scheme.RationalMap.order Y f = 0\n  case pos =>\n    have h0 : principal f hf = 0 := by\n      apply Finsupp.ext; intro Y\n      change Scheme.RationalMap.order Y f = 0\n      exact hconst Y\n    rw [h0]; exact Finsupp.sum_zero_index\n  case neg =>\n    sorry  -- non-constant branch (needs Lane 5 Pin 1 + II.6.9)",
+        "line_number": "407-442",
+        "lean_error": null,
+        "goal_before": "Scheme.WeilDivisor.degree (Scheme.WeilDivisor.principal f hf) = 0",
+        "goal_after": null,
+        "result": "partial",
+        "insight": "Direct Algebra kbar C.left.functionField synthesis fails: Spec (.of kbar)'s function-field algebra instance needs [IsDomain kbar] registered and C.hom does NOT propagate algebra towers downstream. Symptom-based case-split is strictly cleaner — avoids the algebra tower entirely. Constant branch closes axiom-clean."
+      }
+    ],
+    "next_steps": "iter-179+: (1) Wait for Lane 5 morphismToP1OfGlobalSections to close (signature mutation needed); (2) Add finiteMorphismOfNonConstantRational construction in RationalCurveIso or sibling; (3) Add Hartshorne II.6.9 degree-multiplicativity (Mathlib gap or project stopgap); (4) Re-attempt non-constant branch via principal f hf = φ^*([0] - [∞]) + degree multiplicativity"
+  },
+  {
+    "timestamp": "2026-05-23T18:18:43Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Albanese/CodimOneExtension.lean",
+      "theorem": "Scheme.RationalMap.extend_iff_order_nonneg"
+    },
+    "session": {
+      "id": "session_178",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "AlgebraicGeometry.Scheme.RationalMap.mem_domain"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Mathlib mem_domain unfolds + reorder of conjuncts via Iff.intro swap-pair",
+        "code_tried": "rw [Scheme.RationalMap.mem_domain]\n  exact ⟨fun ⟨g, hxg, hg⟩ => ⟨g, hg, hxg⟩, fun ⟨g, hg, hxg⟩ => ⟨g, hxg, hg⟩⟩",
+        "line_number": "346",
+        "lean_error": null,
+        "goal_before": "W.point ∈ f.domain ↔ ∃ g, g.toRationalMap = f ∧ W.point ∈ (g.domain : Set X.left)",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Mathlib mem_domain is `x ∈ f.domain ↔ ∃ g, x ∈ g.domain ∧ g.toRationalMap = f`; project signature reorders conjuncts (`g.toRationalMap = f ∧ x ∈ g.domain`). 3 LOC. Axiom-clean."
+      }
+    ],
+    "next_steps": "Closure done; downstream consumers can call directly"
+  },
+  {
+    "timestamp": "2026-05-23T18:18:43Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Albanese/CodimOneExtension.lean",
+      "theorem": "Scheme.localRing_dvr_of_codim_one"
+    },
+    "session": {
+      "id": "session_178",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Mathlib b80f227 lacks bridge: (Smooth → IsRegularLocalRing) on scheme stalks (Stacks 00TT/00TX) AND (coheight = 1 → ringKrullDim 1) on stalk (Stacks 02IZ)",
+      "key_lemmas_used": [
+        "IsDiscreteValuationRing.TFAE (tfae.out 0 4)",
+        "LocallyOfFiniteType.isLocallyNoetherian",
+        "instIsNoetherianRingCarrierStalkCommRingCatPresheafOfIsLocallyNoetherian",
+        "LocallyRingedSpace.instIsLocalRingCarrierStalkCommRingCatPresheaf",
+        "instIsDomainCarrierStalkCommRingCatPresheafOfIsIntegral",
+        "IsLocalRing.isField_iff_maximalIdeal_eq"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "IsDiscreteValuationRing.TFAE entry 0 ↔ 4: reduce DVR to (Submodule.IsPrincipal maximalIdeal R ∧ maximalIdeal R ≠ ⊥). Thread typeclass scaffold; factor the geometric content into one named helper.",
+        "code_tried": "theorem localRing_dvr_of_codim_one ... := by\n  haveI : IsLocallyNoetherian X.left := LocallyOfFiniteType.isLocallyNoetherian X.hom\n  haveI : IsNoetherianRing _ := inferInstance\n  ...\n  have hfield : ¬ IsField _ := ...\n  have tfae := IsDiscreteValuationRing.TFAE _ hfield\n  have h := smooth_codim_one_maximalIdeal_isPrincipal_and_ne_bot X z hz\n  exact (tfae.out 0 4).mpr h",
+        "line_number": "195",
+        "lean_error": null,
+        "goal_before": "IsDiscreteValuationRing (X.left.presheaf.stalk z)",
+        "goal_after": null,
+        "result": "partial",
+        "insight": "Main proof body lands kernel-clean; only the geometric content (smooth + codim 1 ⟹ principal max ideal) is factored into the helper. Helper body becomes ~10 LOC once Mathlib ships Smooth → IsRegularLocalRing."
+      }
+    ],
+    "next_steps": "iter-179+: monitor Mathlib for (a) Algebra.FormallySmooth k̄ R → IsRegularLocalRing R for R a stalk over k̄ (Stacks 00TT analogue) or (b) Algebra.IsSmoothAt + Jacobian criterion → IsRegularLocalRing bridge; once either lands, helper body becomes ~10 LOC via IsRegularLocalRing.iff_finrank_cotangentSpace + IsLocalRing.finrank_CotangentSpace_eq_one_iff"
+  },
+  {
+    "timestamp": "2026-05-23T18:18:43Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/RationalCurveIso.lean",
+      "theorem": "iso_of_degree_one (Part A signature fix)"
+    },
+    "session": {
+      "id": "session_178",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Edit type of _hφ_ff from Nonempty (≅) to Nonempty (≃+*) — fixes auditor must-fix (≅ was meaningless on Type u fields)",
+        "code_tried": "(_hφ_ff : Nonempty (C'.left.functionField ≃+* C.left.functionField))",
+        "line_number": "329-330",
+        "lean_error": null,
+        "goal_before": "(_hφ_ff : Nonempty (C'.left.functionField ≅ C.left.functionField)) -- ≅ is Equiv = set-bijection between Type u fields, substantively trivial by cardinality",
+        "goal_after": "ring iso (RingEquiv) — the intended meaning",
+        "result": "success",
+        "insight": "1 LOC; downstream consumer audit per directive: only genusZero_curve_iso_P1 (AVR L290, currently bare sorry) chains iso_of_degree_one; no current breakage"
+      }
+    ],
+    "next_steps": "Closure done; iter-179+ planner targeting genusZero_curve_iso_P1 body must use the new ≃+* signature"
+  },
+  {
+    "timestamp": "2026-05-23T18:18:43Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/RationalCurveIso.lean",
+      "theorem": "morphismToP1OfGlobalSections (Part B body attempt)"
+    },
+    "session": {
+      "id": "session_178",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Residual section-condition goal is mathematically undischargeable from the current signature; needs a kbar-algebra hypothesis on f",
+      "key_lemmas_used": [
+        "Proj.fromOfGlobalSections",
+        "Proj.fromOfGlobalSections_toSpecZero",
+        "Over.homMk",
+        "Scheme.toSpecΓ_naturality (referenced)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "pointOfVec template (Genus0BaseObjects/Points.lean:86) verbatim: Over.homMk wrapping Proj.fromOfGlobalSections with section condition via change + rw chain through fromOfGlobalSections_toSpecZero + IsScalarTower kbar (𝒜 0) (MvPolynomial ...) + algebraMap_eq",
+        "code_tried": "noncomputable def morphismToP1OfGlobalSections ... :=\n  Over.homMk (Proj.fromOfGlobalSections (projectiveLineBarGrading kbar) f _hf) (by\n    haveI : IsScalarTower kbar ↥(projectiveLineBarGrading kbar 0)\n        (MvPolynomial (Fin 2) kbar) := ...\n    change ... = X.hom\n    rw [← Category.assoc, fromOfGlobalSections_toSpecZero, Category.assoc,\n        ← Spec.map_comp, ← CommRingCat.ofHom_comp, RingHom.comp_assoc,\n        ← IsScalarTower.algebraMap_eq kbar, MvPolynomial.algebraMap_eq]\n    sorry)",
+        "line_number": "184-198",
+        "lean_error": "residual goal: X.left.toSpecΓ ≫ Spec.map (CommRingCat.ofHom (f.comp MvPolynomial.C)) = X.hom — undischargeable from signature (no algebra-compatibility hyp on f)",
+        "goal_before": "X ⟶ ProjectiveLineBar kbar",
+        "goal_after": "X.left.toSpecΓ ≫ Spec.map (CommRingCat.ofHom (f.comp MvPolynomial.C)) = X.hom",
+        "result": "partial",
+        "insight": "Body is CONCRETE (Over.homMk + Proj.fromOfGlobalSections), not a placeholder; only the section-condition closure step is sorry. IsScalarTower haveI requires explicit (R := kbar) (S := ↥(...)) (A := MvPolynomial ...) annotations — Lean defaults to IsScalarTower A A A otherwise. simp [Scheme.toSpecΓ, X.hom] hits max recursion depth on ΓSpec.adjunction_unit_app; Scheme.toSpecΓ_naturality_apply unknown."
+      }
+    ],
+    "next_steps": "iter-179+: signature mutation adding halg : f.comp (algebraMap kbar (MvPolynomial (Fin 2) kbar)) = (X.hom.appTop).comp (Scheme.ΓSpecIso _).inv.hom; under halg, residual goal rewrites via toSpecΓ_SpecMap_ΓSpecIso_inv-style identity"
+  },
+  {
+    "timestamp": "2026-05-23T18:18:43Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/QuotScheme.lean",
+      "theorem": "canonicalBaseChangeMap_isIso"
+    },
+    "session": {
+      "id": "session_178",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Body requires (i) affine-local identification of Scheme.Modules sections of pullback-of-pushforward sheaf with explicit Γ tensor products, (ii) open-cover Mayer-Vietoris on S'.Modules for quasi-separated f — Stacks 02KH(ii)",
+      "key_lemmas_used": [
+        "AlgebraicGeometry.Scheme.Modules.Hom.isIso_iff_isIso_app",
+        "Module.Flat.isBaseChange (referenced)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Section-wise reduction via Scheme.Modules.Hom.isIso_iff_isIso_app + factor section-claim into one named helper",
+        "code_tried": "theorem canonicalBaseChangeMap_isIso ... :\n    IsIso (canonicalBaseChangeMap sq).app ... := by\n  rw [Scheme.Modules.Hom.isIso_iff_isIso_app]\n  intro U\n  exact canonicalBaseChangeMap_app_app_isIso sq F U\n-- new helper at L466:\ntheorem canonicalBaseChangeMap_app_app_isIso ... :\n    IsIso ((canonicalBaseChangeMap sq).app F).app U := sorry",
+        "line_number": "437-466",
+        "lean_error": null,
+        "goal_before": "IsIso (canonicalBaseChangeMap sq).app (under flatness/QC/QS)",
+        "goal_after": "factored to: IsIso ((canonicalBaseChangeMap sq).app F).app U (per-section)",
+        "result": "partial",
+        "insight": "Main theorem body is now a one-liner using Hom.isIso_iff_isIso_app; substantive Stacks 02KH(ii) content factored into named helper canonicalBaseChangeMap_app_app_isIso with substantive IsIso type. Distinguishes from iter-176 RelativeSpec laundering — helper TYPE carries the content, not just a placeholder."
+      }
+    ],
+    "next_steps": "iter-179+: target the helper body's sub-build (i) — affine-local identification of (pullback g).obj ((pushforward f).obj F) sections with Γ(S', g⁻¹V) ⊗_{Γ(S, V)} Γ(X, f⁻¹V, F) for affine V ⊆ S. This is the algebraic content of Module.Flat.isBaseChange (Stacks 00H8 / 02KE)"
+  },
+  {
+    "timestamp": "2026-05-23T18:18:43Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Albanese/AuslanderBuchsbaum.lean",
+      "theorem": "Module.projectiveDimension"
+    },
+    "session": {
+      "id": "session_178",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "CategoryTheory.projectiveDimension"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "One-line re-export of CategoryTheory.projectiveDimension specialised to ModuleCat.of R _M",
+        "code_tried": "noncomputable def projectiveDimension (R : Type u) [Ring R]\n    (_M : Type u) [AddCommGroup _M] [Module R _M] : WithBot ℕ∞ :=\n  CategoryTheory.projectiveDimension (ModuleCat.of R _M)",
+        "line_number": "168",
+        "lean_error": null,
+        "goal_before": ":= sorry",
+        "goal_after": "definition complete, kernel-clean",
+        "result": "success",
+        "insight": "Mathlib's CategoryTheory.projectiveDimension at Mathlib/CategoryTheory/Abelian/Projective/Dimension.lean:265 has signature (X : C) [Abelian C] → WithBot ℕ∞; for C = ModuleCat R the [Abelian _] instance auto-resolves via inferInstance (namespace already opens CategoryTheory). Axioms: {propext, Classical.choice, Quot.sound}."
+      }
+    ],
+    "next_steps": "iter-179+: depth, depth_eq_smallest_ext_index, depth_of_short_exact, auslander_buchsbaum_formula, CohenMacaulay.of_regular — substantive multi-iter algebraic work; all gated on Mathlib upstream Ext-functor + depth infrastructure"
+  }
+]

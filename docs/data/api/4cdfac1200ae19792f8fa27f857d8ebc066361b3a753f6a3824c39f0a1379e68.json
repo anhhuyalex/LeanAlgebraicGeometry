@@ -1,0 +1,163 @@
+[
+  {
+    "timestamp": "2026-06-01T12:09:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.unitToPushforwardObjUnit_comp"
+    },
+    "session": {
+      "id": "session_240",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "SheafOfModules.Hom.ext",
+        "PresheafOfModules.hom_ext",
+        "ModuleCat.hom_ext",
+        "unitToPushforwardObjUnit_val_app_apply"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "sectionwise ext-chain to rfl: the pushforward unit comparison is sectionwise just the structure-sheaf ring map, so composition coherence is definitional after SheafOfModules.Hom.ext -> PresheafOfModules.hom_ext -> ModuleCat.hom_ext -> LinearMap.ext -> rfl",
+        "code_tried": "apply SheafOfModules.Hom.ext; ... ; rw [SheafOfModules.unitToPushforwardObjUnit_val_app_apply]; simp; rfl",
+        "line_number": "882",
+        "lean_error": null,
+        "result": "success",
+        "insight": "Right-adjoint (pushforward) side composition coherence is definitional sectionwise; established as `key` for the harder pullback-side lemma."
+      }
+    ],
+    "next_steps": "Consumed by pullbackObjUnitToUnit_comp."
+  },
+  {
+    "timestamp": "2026-06-01T12:09:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.pullbackObjUnitToUnit_comp"
+    },
+    "session": {
+      "id": "session_240",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "SheafOfModules.pullbackPushforwardAdjunction_homEquiv_pullbackObjUnitToUnit",
+        "unitToPushforwardObjUnit_comp",
+        "Adjunction.homEquiv_unit",
+        "Adjunction.homEquiv_naturality_left",
+        "Adjunction.homEquiv_naturality_right",
+        "Adjunction.comp_unit_app",
+        "NatTrans.naturality"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "adjunction-mate transport (~70 lines): apply (pullbackPushforwardAdjunction (h≫f)).homEquiv.injective, rewrite LHS adjunct via pullbackPushforwardAdjunction_homEquiv_pullbackObjUnitToUnit then unitToPushforwardObjUnit_comp (key); package mate identity (pullbackComp.inv vs pushforwardComp.hom); peel RHS adjunct; collapse composite-adjunction unit via sub-lemmas hinner/hcomp'; slide pushforwardComp.hom past via NatTrans.naturality",
+        "code_tried": "apply (Scheme.Modules.pullbackPushforwardAdjunction (h ≫ f)).homEquiv _ _ |>.injective; rw [hL, key, Adjunction.homEquiv_naturality_right, hi]; erw [Category.assoc, ← (pushforwardComp h f).hom.naturality ...]; erw [← Category.assoc, hcomp']; erw [Category.assoc]",
+        "line_number": "923",
+        "lean_error": "intermediate: 'rw failed: did not find pattern' on plain rw [Category.assoc]/[Functor.map_comp]/[hinner]/[hcomp'] (SheafOfModules compositions defeq-but-not-syntactic)",
+        "result": "success",
+        "insight": "THE genuinely-new ingredient for lem:pullback_unit_iso. CRITICAL recipe: SheafOfModules R compositions appear in defeq-but-not-syntactic forms (Scheme.Modules.pullback f vs SheafOfModules.pullback f.toRingCatSheafHom), so plain rw silently fails to unify -> use erw for every assoc/functoriality/hinner/hcomp' rewrite; bridge homEquiv_unit HO-match with explicit e := Adjunction.homEquiv_unit (adj:=) (X:=) (Y:=) (f:=) then e.symm.trans, never rw [← homEquiv_unit]. Axiom-clean {propext, Classical.choice, Quot.sound}."
+      }
+    ],
+    "next_steps": "Feed into isIso_restrict_pullbackObjUnitToUnit / pullbackUnitIso (blocked on instance synthesis)."
+  },
+  {
+    "timestamp": "2026-06-01T12:07:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "pullbackUnitIso (via isIso_restrict_pullbackObjUnitToUnit)"
+    },
+    "session": {
+      "id": "session_240",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Lean instance-synthesis canonicity quirk (NOT math): inside the per-chart lemma's multi-hypothesis context, infer_instance FAILS to synthesise IsIso (pbu U.ι), IsIso (pbu g), and IsIso ((pullbackComp g U.ι).inv.app _) — all of which synthesise FINE STANDALONE. Cause: SheafOfModules.pullbackObjUnitToUnit φ carries non-canonical implicit instance args ([(pushforward φ).IsRightAdjoint], [F.IsContinuous]); after rw [pullbackObjUnitToUnit_comp] the produced subterms bind those implicits to forms the in-scope (Opens.map _).Final haveIs no longer match.",
+      "key_lemmas_used": [
+        "pullbackObjUnitToUnit_comp",
+        "Scheme.Hom.resLE_comp_ι",
+        "final_of_representablyFlat",
+        "NatIso.isIso_map_iff",
+        "IsIso.of_isIso_comp_left",
+        "isIso_of_isIso_restrict"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "per-chart: g := f.resLE U V, g ≫ U.ι = V.ι ≫ f; three Opens.map _.base Final (final_of_representablyFlat) so pbu g/V.ι/U.ι isos; pbu(V.ι≫f) iso via rw [← hg, pullbackObjUnitToUnit_comp g U.ι]; transport across restrictFunctorIsoPullback; cancel via IsIso.of_isIso_comp_left/right; globalize via exists_isAffineOpen + choose + isIso_of_isIso_restrict",
+        "code_tried": "haveI hVιf : IsIso (pbu (V.ι ≫ f).toRingCatSheafHom) := by rw [← hg, pullbackObjUnitToUnit_comp g U.ι]; refine @IsIso.comp_isIso _ _ _ _ _ _ _ ?_ (@IsIso.comp_isIso _ _ _ _ _ _ _ ?_ ?_) ; · infer_instance ; · exact Functor.map_isIso _ _ ; · infer_instance",
+        "line_number": "1011 (HANDOFF)",
+        "lean_error": "failed to synthesize instance of type class IsIso (SheafOfModules.pullbackObjUnitToUnit (Scheme.Hom.toRingCatSheafHom U.ι))",
+        "goal_before": "IsIso (pbu (V.ι ≫ f).toRingCatSheafHom)",
+        "result": "failed",
+        "insight": "Math/structure COMPLETE and the ▸/of_isIso_comp_*/choose/globalizer parts typecheck; only the IsIso component-synthesis after the comp rewrite fails. Tried set/clear_value/asIso-mapIso/refine @IsIso.comp_isIso — all fail at the same under-determined implicits. Decls removed (no sorry-pin); full recipe + blocker written into HANDOFF comment."
+      }
+    ],
+    "next_steps": "Next-iter fix (ranked): (1) build each component iso as fully type-ascribed named Iso BEFORE the pullbackObjUnitToUnit_comp rewrite, then convert/transport IsIso across the coherence eq; (2) add @[instance] lemma isIso_pullbackObjUnitToUnit_of_final with canonical implicit shape, apply @-explicitly; (3) mathlib-analogist consult on pullbackObjUnitToUnit instance canonicity. Then Phase 2 pullbackTensorIso (pointwise) + Phase 3 IsInvertible.pullback."
+  },
+  {
+    "timestamp": "2026-06-01T12:01:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/FlatBaseChange.lean",
+      "theorem": "pushforward_spec_tilde_iso"
+    },
+    "session": {
+      "id": "session_240",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Residual sorry = hsq, the 'naturality in the open' square of gammaPushforwardIsoAt. Every rewrite mechanism (rw [nat1], reassoc_of%, simp only [..._inv_naturality_assoc], slice_lhs, conv_lhs, set X) FAILS to unify the restrictScalarsComp'App .inv subterm against nat1's LHS despite printing identically and nat1 typechecking — likely representational/universe-level discrepancy between the App baked into gammaPushforwardIsoAt (built in a by-block with sets) and a freshly-applied restrictScalarsComp'App.",
+      "key_lemmas_used": [
+        "algebraize",
+        "IsLocalizedModule.powers_restrictScalars",
+        "IsLocalizedModule.of_linearEquiv",
+        "IsLocalizedModule.of_linearEquiv_right",
+        "Algebra.algebraMapSubmonoid_powers",
+        "tildeRestriction_isLocalizedModule",
+        "ModuleCat.restrictScalarsComp'App_inv_naturality",
+        "Iso.eq_comp_inv"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "algebraize [φ.hom] pivot (the 4th-recurrence carrier-wall fix): installs honest Algebra ↑R ↑R' / IsScalarTower instead of the dead Module.compHom letI; then discharge hloc via @IsLocalizedModule.powers_restrictScalars with EXPLICIT instance args (mTop/mDa = Module R on bare section carriers via inferInstanceAs, tTop/tDa = IsScalarTower)",
+        "code_tried": "algebraize [φ.hom]; haveI hGloc := @IsLocalizedModule.powers_restrictScalars (↑R) (↑R') _ _ _ _ _ _ _ mTop mDa _ _ tTop tDa (Submonoid.powers a) σmor.hom this",
+        "line_number": "572 (old hloc)",
+        "lean_error": null,
+        "result": "success",
+        "insight": "algebraize is the right mechanism (Module.compHom confirmed DEAD). Ordinary TC does NOT auto-pick mTop; @-application with positional instances required. hloc discharged."
+      },
+      {
+        "attempt": 2,
+        "strategy": "structural exposures hρ'/hσ' by rfl (peel modulesSpecToSheaf/pushforward through restrictScalars over preimage opens, SpecMap_preimage_basicOpen rfl) + key transport: ρ.hom = e₂.symm ∘ₗ (Gmor.hom ∘ₗ e₁) via Iso.eq_comp_inv, then of_linearEquiv/of_linearEquiv_right close GIVEN hsq",
+        "code_tried": "have hρ : ρ = (e₁.hom ≫ Gmor) ≫ e₂.inv := (Iso.eq_comp_inv e₂).mpr hsq ; have key : ρ.hom = e₂.toLinearEquiv.symm.toLinearMap ∘ₗ (Gmor.hom ∘ₗ e₁.toLinearEquiv.toLinearMap) := by rw [hρ]; rfl ; rw [key]; <of_linearEquiv>",
+        "line_number": "595",
+        "lean_error": null,
+        "result": "partial",
+        "insight": "Whole tail compiles GIVEN hsq. hρ'/hσ' being rfl confirms the pushforward/modulesSpecToSheaf peeling is definitional — strong de-risking."
+      },
+      {
+        "attempt": 3,
+        "strategy": "close hsq (naturality square) = composite of 3 squares: (1) nat1 inv-naturality of gsR/pushTop restrictScalarsComp'App, (2) eqToHom-naturality for pushTop∘gsR=gsR'∘φ, (3) restrictScalarsComp'App_hom_naturality for φ/gsR'; ~15 distinct rw/simp/slice/conv/reassoc/element-wise forms",
+        "code_tried": "rw [he₁,he₂,hGmor,hρ',hσ']; simp only [gammaPushforwardIsoAt, Iso.trans_hom, Iso.symm_hom]; rw/slice_lhs/conv_lhs/set X ... rw [← Category.assoc X, nat1] / reassoc_of% nat1 / ModuleCat.restrictScalarsComp'App_inv_naturality_assoc",
+        "line_number": "655",
+        "lean_error": "Tactic `rewrite` failed: Did not find an occurrence of the pattern (ModuleCat.restrictScalars _).map (...) ≫ (ModuleCat.restrictScalarsComp'App _ _ _ _ _).inv ≫ _",
+        "goal_before": "ρ ≫ e₂.hom = e₁.hom ≫ Gmor",
+        "result": "failed",
+        "insight": "All ~15 forms fail at the same unification; the App from a tactic-built def won't unify with a fresh application despite printing identically. Left as single sorry. lean_diagnostic over a line RANGE can be STALE — always confirm with lake env lean."
+      }
+    ],
+    "next_steps": "Ranked: (1) repackage gammaPushforwardIsoAt as a genuine NatIso (NatIso.ofComponents) so naturality-in-open is the .naturality field / definitional — sidesteps the App.inv rewrite-matching entirely (it lives in THIS file, refactorable; consumers use only .app U). (2) Mathlib bump #37189 (isIso_fromTildeΓ_pushforward) collapses the def to ~3 lines — the recorded HARD reversing-signal. (3) element-wise via restrictScalarsComp'App_hom_apply/_inv_apply (blocked on an eqToHom-applied-to-element identity lemma). DO NOT retry the same rewrite forms."
+  }
+]

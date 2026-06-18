@@ -1,0 +1,155 @@
+[
+  {
+    "timestamp": "2026-06-04T11:00:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/CechHigherDirectImage.lean",
+      "theorem": "pushPullMap_comp"
+    },
+    "session": {
+      "id": "session_271",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "pushPullMap_comp itself not added (would require a sorry, forbidden). The 5-iter kernel whnf wall is now BYPASSED: erw [pushPull_transport_cancel ...] fires on all three pushPullMap occurrences without kernel blow-up; rw never fires (SheafOfModules comps defeq-not-syntactic). Residual = ~60-100 LOC whiskered-pentagon erw grind in pushPullMap_comp_aux.",
+      "key_lemmas_used": [
+        "pushPull_transport_cancel",
+        "pushPull_unit_mate",
+        "Scheme.Modules.pseudofunctor_associativity",
+        "Scheme.Modules.pushforwardComp (= Iso.refl)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Add free-hypothesis over-triangle transport cancellation lemma pushPull_transport_cancel and prove by subst h; simp",
+        "code_tried": "subst h; simp",
+        "line_number": "377",
+        "lean_error": "none — axiom-clean [propext, Classical.choice, Quot.sound], verified via lean_verify",
+        "result": "success",
+        "insight": "Because h : gl ≫ p₁ = p₂ is a FREE hypothesis (not the specific Over.w g), subst collapses both eqToHom transports to eqToHom rfl = 𝟙 on ABSTRACT objects — kernel-cheap, avoiding the whnf blow-up at concrete pushforward/pullback fibers."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Decisive experiment: apply pushPull_transport_cancel to the real comp goal via erw to see if the kernel blows up",
+        "code_tried": "erw [pushPull_transport_cancel (k≫g).left Y₁.hom Y₃.hom (Over.w (k≫g)) F]",
+        "line_number": "scratch (lean_run_code)",
+        "lean_error": "none with erw; rw fails: 'Did not find an occurrence of the pattern' (defeq-not-syntactic)",
+        "result": "success",
+        "insight": "Option-(b) generalized cancellation SUFFICES; option-(a) (refactoring pushPullMap transport-light) is NOT needed. erw is mandatory."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Try to combine factors under (pushforward p₁).map via rw [← Functor.map_comp]",
+        "code_tried": "rw [← Functor.map_comp]",
+        "line_number": "scratch",
+        "lean_error": "Tactic `rewrite` failed: motive is not type correct (dependent eqToHom(hkg))",
+        "result": "failed",
+        "insight": "Naïve rw [← Functor.map_comp] fails on the dependent eqToHom; must use conv/erw and handle the associativity cell explicitly."
+      }
+    ],
+    "next_steps": "Focused prover pass: prove pushPullMap_comp_aux (subst hg hk; simp only [eqToHom_refl, Category.comp_id] leaves the pure pseudofunctor pentagon, closed by pushPull_unit_mate kl gl₂ + pseudofunctor_associativity (f:=kl,g:=gl₂,h:=p₁) whose four pullbackComp cells match). Then derive pushPullMap_comp via the erw [pushPull_transport_cancel ...] skeleton, assemble pushPullFunctor, close CechNerve."
+  },
+  {
+    "timestamp": "2026-06-04T11:00:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "sheafificationCompPullback_comp_tail"
+    },
+    "session": {
+      "id": "session_271",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "hwr (conjugateEquiv_whiskerRight device) is a CONJUGATE-level identity; the raw goal contains the bare whiskered natTrans applied at P, no conjugate. To consume hwr one must first transpose the whole tail through the (h≫f)-composite adjunction homEquiv.injective. LHS-only re-transpose is CIRCULAR (re-folds R0-peel). 5th consecutive stall on this lane; sorry 18→18.",
+      "key_lemmas_used": [
+        "CategoryTheory.conjugateEquiv_whiskerRight",
+        "Functor.map_comp"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Step (i): distribute the inner forget.map (R1 ≫ R5 ≫ a_Z.map δ_pre) into three factors, RHS-confined",
+        "code_tried": "conv_rhs => rw [Functor.map_comp, Functor.map_comp]",
+        "line_number": "~2598",
+        "lean_error": "none — committed; verified RHS-confined (LHS unit pushforward.map (sheafAdj_Z.unit _) untouched)",
+        "result": "success",
+        "insight": "Genuine proof-body advance (one closed tactic); exposes R1 = (pullback h).map (sheafCompPb f .app P).hom for recovery."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Step (ii): introduce conjugateEquiv_whiskerRight device hwr with the project's exact adjunctions B_f/A_f/adj_h/τ",
+        "code_tried": "have hwr := CategoryTheory.conjugateEquiv_whiskerRight A₁ A₂ adj_h τ",
+        "line_number": "~2667",
+        "lean_error": "none — hwr typechecks at the project's types (namespace CategoryTheory.conjugateEquiv_whiskerRight, NOT CategoryTheory.Adjunction.…)",
+        "result": "partial",
+        "insight": "Device verified to elaborate AND corrects the analogist's recipe: the goal factor is (pullback h).map (g.app P) = (whiskerRight g (pullback h)).app P, so conjugateEquiv_whiskerRight (Mates.lean:536) is correct; conjugateEquiv_whiskerLeft does NOT match. But hwr is currently DEAD CODE — declared, never consumed before the sorry (auditor MAJOR flag)."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Step (iii): consume hwr into the goal",
+        "code_tried": "(not attempted to completion — transposition-setup exceeds fine-grained budget)",
+        "line_number": "~2674",
+        "lean_error": "n/a — sorry retained",
+        "result": "failed",
+        "insight": "Need leftAdjointCompNatTrans_assoc (CompositionIso.lean:155) surjective/injective reduction to land the cocycle on the trivial pushforward side, THEN rw [hwr] + unit_conjugateEquiv (Mates:294) + conjugateEquiv_comp (Mates:338). Est. ~40-60 LOC two-layer cocycle collapse."
+      }
+    ],
+    "next_steps": "Either: (a) one focused prover pass on step (iii) transposition (homEquiv.injective via leftAdjointCompNatTrans_assoc), then rw [hwr]; OR (b) given this is the 5th stall with no sorry reduction, consider a structural-refactor / mathlib-analogist consult on whether the tail's spelling should be pinned differently before more helper rounds. Remove or consume the dead hwr scaffolding next pass."
+  },
+  {
+    "timestamp": "2026-06-04T11:00:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate/DualInverse.lean",
+      "theorem": "sliceDualTransportInv"
+    },
+    "session": {
+      "id": "session_271",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "sliceDualTransportInv.app: dualUnitRingSwapHom f (f⁻¹ᵁ W') lands in 𝟙_ (ModuleCat ↑(X.presheaf.obj (op (f''ᵁf⁻¹ᵁW')))) but the goal target is 𝟙_ (ModuleCat ↑(X.presheaf.obj (op W'))). These differ only by the open-equality he : f''ᵁf⁻¹ᵁW' = W' but live in DISTINCT ModuleCat fibers — a plain eqToHom at ModuleCat level cannot bridge across fibers (subst hW' fails, W' is set-local).",
+      "key_lemmas_used": [
+        "Scheme.Hom.preimage_image_eq",
+        "Scheme.Hom.image_preimage_eq_opensRange_inf",
+        "Scheme.Hom.image_le_opensRange",
+        "dualUnitRingSwapHom",
+        "ModuleCat.restrictScalarsComp'App",
+        "ModuleCat.restrictScalarsId'App"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Extract sliceDualTransportInv as a standalone top-level noncomputable def (the unstick lever), then wire it as invFun",
+        "code_tried": "noncomputable def sliceDualTransportInv ... := refine { app := fun W'' => ?_, naturality := ?_ }",
+        "line_number": "273",
+        "lean_error": "none — TYPECHECKS (iter-265 binder-metavar blocker resolved); per-W'' app goal surfaces cleanly as (restr fV M.val).obj W'' ⟶ (restr fV 𝟙_X).obj W''",
+        "result": "partial",
+        "insight": "Extraction resolves the deferred-metavar-under-binder blocker; the residual is the app MORPHISM, not the def packaging or ≃ₗ-by-hand instances."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Establish down-set facts for the app component (axiom-clean)",
+        "code_tried": "have hPV : f ⁻¹ᵁ W' ≤ unop V := ((Opens.map f.base).monotone hW'fV).trans (le_of_eq (f.preimage_image_eq _)); have he : f ''ᵁ (f ⁻¹ᵁ W') = W' := ...",
+        "line_number": "~287-300",
+        "lean_error": "first attempt: Unknown identifier `image_le_opensRange` (corrected to f.image_le_opensRange)",
+        "result": "success",
+        "insight": "Down-set facts hW'fV, hPV, he all axiom-clean and in place."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Build the app morphism: ψ-reindex composed with dualUnitRingSwapHom, conjugated by eqToHom across he",
+        "code_tried": "refine eqToHom ?_ ≫ ((ModuleCat.restrictScalars (f.appIso (f⁻¹ᵁ W')).hom.hom).map (ψ.app (op (Over.mk (homOfLE hPV)))) ≫ dualUnitRingSwapHom f (f⁻¹ᵁ W')) ≫ eqToHom ?_",
+        "line_number": "~309",
+        "lean_error": "the middle ψ-reindex + dualUnitRingSwapHom type-checks up to he, but eqToHom cannot bridge distinct ModuleCat fibers",
+        "result": "failed",
+        "insight": "Genuine close (~20-40 LOC): conjugate the codomain by a dualUnitRingSwap-style ε-iso along the ring iso X.presheaf.map (eqToHom (op he)) (a restrictScalars-ε swap for the eqToHom ring map), mirror on the M-source leg. invFun wired anyway (sliceDualTransport internal holes 4→3)."
+      }
+    ],
+    "next_steps": "Prove pass on sliceDualTransportInv.app: build the eqToHom-ring-iso ε-conjugation for the codomain (and source M-leg) using the same restrictScalars-ε machinery dualUnitRingSwapHom uses for f.appIso, applied to the open-equality he. Then naturality (Subsingleton.elim + ε-naturality square), then sliceDualTransport's left_inv/right_inv (f.appIso cancellation + he bijection)."
+  }
+]

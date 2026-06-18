@@ -1,0 +1,144 @@
+[
+  {
+    "timestamp": "2026-06-01T13:37:44Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/FlatBaseChange.lean",
+      "theorem": "pushforward_spec_tilde_iso"
+    },
+    "session": {
+      "id": "session_241",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "ModuleCat.restrictScalarsCongr",
+        "ModuleCat.restrictScalarsComp'App",
+        "ModuleCat.restrictScalars.map_apply"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Close the residual hsq naturality square `ρ ≫ e₂.hom = e₁.hom ≫ Gmor` by simp with the restrictScalars apply-lemmas (the iter-237→240 STUCK approach)",
+        "code_tried": "ext x; simp only [ModuleCat.restrictScalarsComp'App_hom_apply, ModuleCat.restrictScalarsComp'App_inv_apply, ModuleCat.restrictScalars.map_apply, eqToHom_app, ModuleCat.eqToHom_apply, ModuleCat.comp_apply]",
+        "line_number": "648",
+        "lean_error": "simp could not close / left residual goal involving the eqToHom cast subterm",
+        "result": "failed",
+        "insight": "The middle eqToIso cast in gammaPushforwardIsoAt breaks defeq; no apply-lemma rewrites the eqToHom subterm to identity."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Refactor gammaPushforwardIsoAt's middle iso to delete the eqToIso, replacing `eqToIso (congrArg (fun h => (restrictScalars h).obj SecN) hcomp)` with `(ModuleCat.restrictScalarsCongr hcomp).app SecN` (identity-on-element NatIso component), then close hsq",
+        "code_tried": "exact (rsc gsRhom ...).symm ≪≫ (ModuleCat.restrictScalarsCongr hcomp).app SecN ≪≫ (rsc φ.hom ...)  -- then  ext x; rfl",
+        "line_number": "629-649",
+        "lean_error": null,
+        "result": "success",
+        "insight": "restrictScalarsCongr (built from AddEquiv.refl) is identity-on-carrier with rfl apply-lemma; once the only non-rfl cast (eqToIso) is removed, both legs of the square send x to the underlying `tForget x` definitionally, so `ext x; rfl` closes it with no rewrite-matching. REUSABLE: delete eqToIso→identity-NatIso-component then ext;rfl for stuck restrictScalars naturality."
+      }
+    ],
+    "next_steps": "pushforward_spec_tilde_iso DONE axiom-clean (4-iter STUCK broken). affineBaseChange_pushforward_iso still needs the Mathlib-absent pullback-of-tilde dictionary + cancelBaseChange recognition (separate engine sub-lane); flatBaseChange_pushforward_isIso out of scope (deep Cech)."
+  },
+  {
+    "timestamp": "2026-06-01T13:37:44Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "pullbackUnitIso"
+    },
+    "session": {
+      "id": "session_241",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "SheafOfModules.pullbackObjUnitToUnit",
+        "SheafOfModules.instIsIsoPullbackObjUnitToUnitOfFinal",
+        "CategoryTheory.final_of_representablyFlat",
+        "asIso"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Close pullbackUnitIso via the planned bundled-asIso idiom over the iter-240 chart-chase linchpin pullbackObjUnitToUnit_comp (the pbu-canon recipe)",
+        "code_tried": "isIso_restrict_pbu via pullbackObjUnitToUnit_comp + isIso_of_isIso_restrict + restrictFunctorIsoPullback; then asIso",
+        "line_number": "1036-1066",
+        "lean_error": "asIso (pbu …) / Functor.map_isIso fail to synthesise IsIso (pbu …) at reducible transparency — buried implicits (F.IsContinuous, (pushforward φ).IsRightAdjoint) defeq-not-syntactic",
+        "result": "partial",
+        "insight": "The full chart-chase WAS built axiom-clean but turned out redundant (see attempt 2). The TC accident is real but only a proof-tactic issue: go through `@asIso _ _ _ _ (pbu g) (witness)` passing the instance explicitly (typecheck is isDefEq at DEFAULT transparency, succeeds where reducible synthesis fails)."
+      },
+      {
+        "attempt": 2,
+        "strategy": "MAJOR FINDING: pullbackObjUnitToUnit f is iso for EVERY morphism f, not just Final-chart ones — (Opens.map f.base).Final holds unconditionally via representable flatness, so the chart-chase is unnecessary",
+        "code_tried": "private lemma isIso_pbu_of_final g [(Opens.map g.base).Final] : IsIso (pbu g) := inferInstance;  def pullbackObjUnitToUnitIso g := @asIso _ _ _ _ (pbu g) (isIso_pbu_of_final g);  def pullbackUnitIso f := pullbackObjUnitToUnitIso f  after  haveI : (Opens.map f.base).Final := final_of_representablyFlat _",
+        "line_number": "1066",
+        "lean_error": null,
+        "result": "success",
+        "insight": "Opens.map f.base preserves finite limits (frame hom) ⇒ representably flat ⇒ Final for ANY f. pullbackUnitIso is a one-liner; the blueprint's affine chart-chase proof of lem:pullback_unit_iso is over-engineered. Verified axiom-clean {propext, Classical.choice, Quot.sound}."
+      }
+    ],
+    "next_steps": "Phase 1 (pullbackUnitIso) DONE. Phase 2 pullbackTensorIso (f^*(M⊗N) ≅ f^*M ⊗ f^*N) is a genuine Mathlib-absent build: no tensor-pullback comparison map and no MonoidalCategory (SheafOfModules) at the pinned commit; the OfFinal unit trick does NOT generalise. Needs pullbackObjTensorToTensor via sheafificationCompPullback + presheaf monoidality (multi-hundred-LOC sub-lane), OR a Mathlib bump. Phase 3 IsInvertible.pullback gated on Phase 2."
+  },
+  {
+    "timestamp": "2026-06-01T13:37:44Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/FlatBaseChange.lean",
+      "theorem": "affineBaseChange_pushforward_iso"
+    },
+    "session": {
+      "id": "session_241",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Needs the Mathlib-absent pullback-of-tilde affine dictionary `pullback (Spec.map φ) (tilde M) ≅ tilde (R' ⊗_R M)` plus recognising the abstract pushforwardBaseChangeMap adjoint-mate as TensorProduct.AlgebraTensorModule.cancelBaseChange — a separate ~hundreds-LOC engine sub-lane.",
+      "key_lemmas_used": [
+        "Modules.isIso_iff_isIso_app_affineOpens",
+        "pushforward_spec_tilde_iso"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Assess reachability after pushforward_spec_tilde_iso landed; the locality reduction (`rw [Modules.isIso_iff_isIso_app_affineOpens]; intro U`) and the pushforward-of-tilde half are present, but the pullback-of-tilde dictionary is missing",
+        "code_tried": "rw [Modules.isIso_iff_isIso_app_affineOpens]; intro U; <documented> sorry",
+        "line_number": "682",
+        "lean_error": null,
+        "result": "partial",
+        "insight": "Not directly reachable from this iter's infra; the blueprint itself (L980-985) calls it a multi-lane engine build, not a single-iter target. Documented partial preserved, no bare sorry."
+      }
+    ],
+    "next_steps": "DO NOT re-dispatch as a single-iter close. Needs the pullback-of-tilde dictionary built as its own sub-lane (or a Mathlib bump adding it), then the cancelBaseChange recognition. Blueprint must scope this sub-lane before a prover round."
+  },
+  {
+    "timestamp": "2026-06-01T13:37:44Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "pullbackTensorIso"
+    },
+    "session": {
+      "id": "session_241",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Genuine Mathlib-absent build: no tensor-pullback comparison map and no MonoidalCategory (SheafOfModules) at the pinned commit. Scheme.Modules.pullback is an abstract left adjoint with no sectionwise value, so there is no canonical map to even state the iso; the OfFinal unit trick does not generalise to tensor.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Filesystem grep of Mathlib for a tensor pullback comparison / monoidal pullback; left absent (no sorry pin) rather than scaffolding around an impossible recipe",
+        "code_tried": "grep PullbackFree.lean / PullbackContinuous.lean / Monoidal.lean — only pullbackObjUnitToUnit (unit) and pullbackObjFreeIso (free) exist, no tensor",
+        "line_number": null,
+        "lean_error": null,
+        "result": "partial",
+        "insight": "Confirmed via grep: only PresheafOfModules/Monoidal.lean exists, no SheafOfModules monoidal. Decomposition handed off: build pullbackObjTensorToTensor via sheafificationCompPullback + presheaf monoidality + landed sheafifyTensorUnitIso, then prove it iso (extension of scalars STRONG monoidal). Multi-hundred-LOC sub-lane."
+      }
+    ],
+    "next_steps": "Build as its own sub-lane OR check a post-2026-05-31 Mathlib bump for a monoidal (Presheaf|Sheaf)OfModules pullback that would collapse it. Do NOT pin a sorry; the comparison map does not yet exist to state the iso."
+  }
+]

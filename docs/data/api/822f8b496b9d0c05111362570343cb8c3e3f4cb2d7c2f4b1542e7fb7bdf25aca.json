@@ -1,0 +1,159 @@
+[
+  {
+    "timestamp": "2026-06-04T04:33:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/CechHigherDirectImage.lean",
+      "theorem": "pushPullMap_comp"
+    },
+    "session": {
+      "id": "session_265",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "KERNEL whnf blow-up on pushPullMap's two eqToHom over-triangle transports (NOT the mate calculus, which is now a one-liner via pushPull_unit_mate). (kernel) deterministic timeout + elaboration whnf timeout even at maxHeartbeats 1000000; respectTransparency=false no help; subst circular; rw[Over.w] motive not type-correct.",
+      "key_lemmas_used": [
+        "unit_conjugateEquiv",
+        "conjugateEquiv_pullbackComp_inv",
+        "Adjunction.comp_unit_app"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Build the mate-calculus core as a reusable lemma pushPull_unit_mate",
+        "code_tried": "unit_conjugateEquiv (adj_p.comp adj_f) adj_{f≫p} (pullbackComp f p).inv N; rw [conjugateEquiv_pullbackComp_inv, Adjunction.comp_unit_app]; simpa only [Category.assoc]",
+        "line_number": "313",
+        "result": "success",
+        "insight": "pushPull_unit_mate LANDED axiom-clean (propext/Classical.choice/Quot.sound). Reusable pentagon mate core."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Warm-up pushPullMap_unit (augmentation naturality) exercising same machinery",
+        "code_tried": "rw [pushPullMap]; erw [reassoc_of% (pushPull_unit_mate (Over.Hom.left k) Y₁.hom F)]; erw [Functor.congr_hom (congrArg Scheme.Modules.pushforward (Over.w k)) ((pullbackComp ..).inv.app F)]; simp [eqToHom_trans, ← Functor.map_comp, Iso.inv_hom_id_app]; erw [← Functor.map_comp_assoc, Iso.inv_hom_id_app]; ...",
+        "line_number": "332",
+        "lean_error": "(kernel) deterministic timeout at line 333; (deterministic) timeout at whnf maxHeartbeats 1000000",
+        "result": "failed",
+        "insight": "All categorical logic reduces cleanly to a `unit ≫ eqToHom = unit` collapse, but the final eqToHom cancellation forces the kernel to check defeq of pushforward/pullback-applied comparison objects → whnf-explodes. Warm-up reverted; pushPullMap_unit not committed."
+      },
+      {
+        "attempt": 3,
+        "strategy": "subst-based free-variable telescope helper pushforward_unit_eqToHom applied by single exact",
+        "code_tried": "private lemma pushforward_unit_eqToHom (e : p = q) : unit ≫ eqToHom = unit := by subst e; simp ... ; then `exact pushforward_unit_eqToHom (Over.w k) F`",
+        "line_number": "343",
+        "lean_error": "(kernel) deterministic timeout",
+        "result": "failed",
+        "insight": "exact unifies but the KERNEL still re-checks the eqToHom defeq → timeout. Helper removed. Wall is intrinsic to the eqToHom-heavy pushPullMap definition; fix requires a transport-light reformulation of pushPullMap."
+      }
+    ],
+    "next_steps": "Refactor pushPullMap to be transport-light (absorb the over-triangle substitution g.left ≫ Y₁.hom = Y₂.hom WITHOUT eqToHom, e.g. via Over.w-aware Functor.mapIso the kernel can reduce, or a kernel-cheap eqToHom-cancellation lemma for the specific shape). THEN re-attempt the pentagon. This is now a STRUCTURAL (refactor) blocker, not a prove blocker."
+  },
+  {
+    "timestamp": "2026-06-04T03:49:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "sheafificationCompPullback_comp_tail"
+    },
+    "session": {
+      "id": "session_265",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "R1/R5 recovery: the raw goal carries forget.map R1 (not A.homEquiv R1), so an intermediate `have` reframing through the f-adjunction homEquiv is needed before leftAdjointUniqUnitEta_app can fire. The composite (sheafify∘pushforward)-adjunction analog of unitToPushforwardObjUnit_comp is NOT rfl (model was) — the genuinely-novel sheafification-laden mate step.",
+      "key_lemmas_used": [
+        "forget_map_pushforward_map",
+        "leftAdjointUniqUnitEta_app",
+        "Functor.map_comp",
+        "restrictScalarsId_map"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Extract the presheaf↔sheaf forget/pushforward compatibility bridge as a named lemma (STEP-1 binding obligation)",
+        "code_tried": "private lemma forget_map_pushforward_map : (SheafOfModules.forget S).map ((SheafOfModules.pushforward φ).map g) = (PresheafOfModules.pushforward φ.hom).map ((SheafOfModules.forget R).map g) := rfl",
+        "line_number": "2511",
+        "result": "success",
+        "insight": "RESOLVED axiom-clean by rfl — SheafOfModules.pushforward is sectionwise from PresheafOfModules.pushforward (pushforward_map_val), forget is .val (forget_map). Definitional."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Wire the bridge into the tail and split the RHS first factor",
+        "code_tried": "rw [restrictScalarsId_map]; conv_rhs => rw [Functor.map_comp]; erw [forget_map_pushforward_map]; rw [Functor.map_comp]",
+        "line_number": "2605",
+        "result": "partial",
+        "insight": "erw [bridge] FIRES (plain rw does not — defeq-not-syntactic SheafOfModules.pushforward/forget composite); rw [Functor.map_comp] (PLAIN) splits forget.map(B'_unit ≫ pushforwardComp.hom) without contaminating LHS (an erw here would unfold the LHS sheafAdj unit into toSheafify ≫ restrictHomEquiv). 2 committed compiling steps. sorry now sits at R1/R5 recovery."
+      }
+    ],
+    "next_steps": "Build the hinner/hcomp' twins as `have`s: reframe forget.map((pullback h).map (sheafCompPb f .app P).hom) through the f-adjunction homEquiv (twin of model hinner L952-973 in pullbackObjUnitToUnit_comp) so leftAdjointUniqUnitEta_app fires; then slide (SheafOfModules.pushforwardComp h f).hom past via .hom.naturality; collapse Adjunction.comp_unit_app + unit_naturality to B_{h≫f}.unit (model L997-1001). If it stalls a 6th time → cross-domain analogist on the composite-adjunction mate. 5th consecutive PARTIAL — escalation clock fired."
+  },
+  {
+    "timestamp": "2026-06-04T03:53:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate/DualInverse.lean",
+      "theorem": "sliceDualTransport"
+    },
+    "session": {
+      "id": "session_265",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "invFun: the deferred app-field metavar lives under a `fun W'' =>` binder, so refine { app := fun W'' => ?_, .. } does not surface its precise goal type. Building it requires a standalone named helper sliceDualTransportInv with the full (instance-delicate) codomain type spelled out + eqToHom-transport assembly + internal naturality (~50-100 LOC). Not safely landable this pass under the RACE-MITIGATION mandate (DualInverse.lean must keep compiling).",
+      "key_lemmas_used": [
+        "dualUnitRingSwapHom",
+        "isIso_ε_restrictScalars_appIso_hom",
+        "dualUnitRingSwapInv",
+        "image_preimage_of_le"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Build the .hom-direction leg-B swap infrastructure the invFun needs (did not exist; only .inv-direction dualUnitRingSwap did)",
+        "code_tried": "dualUnitRingSwapInv := ε (restrictScalars (appIso f W').inv.hom); dualUnitRingSwapHom := inv (ε (restrictScalars (appIso f W').hom.hom)); isIso_ε_restrictScalars_appIso_hom := restrictScalars_isIso_ε_of_bijective (appIso f W').hom.hom (bijective_of_isIso ..); + 2 @[simp] cancellation lemmas",
+        "line_number": "208-256",
+        "result": "success",
+        "insight": "4 axiom-clean reusable declarations LANDED. CORRECTNESS FINDING: blueprint gloss 'ε itself (not inv ε)' is WRONG — invFun reindex maps Y-sections to X-sections so uses restrictScalars (appIso f P).hom.hom (.hom dir); its codomain swap is `inv ε` of THAT = dualUnitRingSwapHom."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Construct invFun as a { app, naturality } PresheafOfModules.Hom over Over fV",
+        "code_tried": "intro ψ; refine { app := fun W'' => ?_, naturality := ?_ } -- app := eqToHom(M.val) ≫ (restrictScalars (appIso f P).hom.hom).map (ψ.app (Over.mk hPV)) ≫ dualUnitRingSwapHom f P",
+        "line_number": "483",
+        "lean_error": "deferred app metavar under `fun W'' =>` binder does not surface goal type (introN failed; case app navigation failed)",
+        "result": "failed",
+        "insight": "The structure IS accepted as an element of the LHS carrier, but the app metavar cannot be filled in-place. Must extract a top-level noncomputable def sliceDualTransportInv with full codomain type written out (mirror homLocalSection's eqToHom conjugation). Recipe recorded in-file at L463+."
+      }
+    ],
+    "next_steps": "Next prove pass: write sliceDualTransportInv as a top-level noncomputable def (full codomain type spelled), then `exact .. ψ` at the invFun refine slot; left_inv/right_inv then collapse via the new @[simp] cancellation lemmas + image_preimage_of_le. naturality (refine_1) is NOT blocked on building restrictScalarsLaxε — that helper EXISTS at PresheafInternalHom.lean:290 (prover's 'absent' claim is wrong); reference it."
+  },
+  {
+    "timestamp": "2026-06-04T03:40:17Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/LineBundleCoherence.lean",
+      "theorem": "IsLocallyTrivial.isFinitePresentation"
+    },
+    "session": {
+      "id": "session_265",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "HELD file — re-verify axiom-clean, make no edits (editing an axiom-clean file risks regression)",
+        "code_tried": "lean_diagnostic_messages (clean) + lean_verify on engine decls",
+        "line_number": "n/a",
+        "result": "success",
+        "insight": "Re-verified axioms = {propext, Classical.choice, Quot.sound}, no sorryAx. DONE, unchanged. Locally sorry-free; chartOverIso redirected to shared root (closed iter-259)."
+      }
+    ],
+    "next_steps": "No action — DONE. Held off-objectives."
+  }
+]

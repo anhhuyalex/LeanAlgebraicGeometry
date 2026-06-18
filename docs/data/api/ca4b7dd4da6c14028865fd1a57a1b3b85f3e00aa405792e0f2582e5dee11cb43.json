@@ -1,0 +1,138 @@
+[
+  {
+    "timestamp": "2026-05-18T03:00:30Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cotangent/GrpObj.lean",
+      "theorem": "AlgebraicGeometry.GrpObj.relativeDifferentialsPresheaf_basechange_along_proj_two"
+    },
+    "session": {
+      "id": "session_137",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "PresheafOfModules.pullback opacity on .obj/.map (left-adjoint definition); the analogist's prescribed 5-step recipe (chart-level Algebra.IsPushout helper -> PresheafOfModules.pullback chart-unfolding helper -> chart-wise derivation D_V -> KaehlerDifferential.lift -> isoMk assembly) requires a ~30-60 LOC pullbackObjEquivTensor helper which itself is significant infrastructure work and was not built within the iter-137 LOC budget.",
+      "key_lemmas_used": [
+        "PresheafOfModules.pullback",
+        "PresheafOfModules.pullbackPushforwardAdjunction",
+        "PresheafOfModules.pushforward",
+        "PresheafOfModules.DifferentialsConstruction.isUniversal'",
+        "PresheafOfModules.Derivation'.mk",
+        "PresheafOfModules.isoMk",
+        "KaehlerDifferential.tensorKaehlerEquiv",
+        "TensorProduct.isPushout",
+        "CommRingCat.isPushout_iff_isPushout",
+        "AlgebraicGeometry.pullbackSpecIso",
+        "Scheme.Hom.toRingCatSheafHom"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Universal-property-at-presheaf-level via the iter-137 mathlib-analogist's prescribed 5-step recipe (chart-level Algebra.IsPushout helper -> PresheafOfModules.pullback chart-unfolding helper -> chart-wise derivation D_V -> KaehlerDifferential.lift -> PresheafOfModules.isoMk assembly).",
+        "code_tried": "(reconnaissance + lean_run_code probes; no Edit landed on the body — analogist-predicted gap caught at recipe Step 2)",
+        "line_number": "500",
+        "lean_error": "Recipe Step 2 (~30-60 LOC PresheafOfModules.pullback chart-unfolding helper) requires definitional unfolding of `((PresheafOfModules.pullback φ).obj M).obj V` as a tensor product, but Mathlib defines `PresheafOfModules.pullback` as `(pushforward φ).leftAdjoint`, which is OPAQUE on `.obj`/`.map`. The chart-unfolding helper would itself need to be built via the `pullbackPushforwardAdjunction` unit/counit — significant infrastructure work, not a body addition.",
+        "goal_before": "noncomputable def relativeDifferentialsPresheaf_basechange_along_proj_two ... : Scheme.relativeDifferentialsPresheaf (fst G G).left ≅ (PresheafOfModules.pullback (Scheme.Hom.toRingCatSheafHom (snd G G).left).hom).obj (Scheme.relativeDifferentialsPresheaf G.hom)",
+        "goal_after": "(no change — recipe Step 2 never produced a directly-editable body)",
+        "result": "failed",
+        "insight": "PresheafOfModules.pullback's .obj is opaque past the leftAdjoint definition. The analogist's 5-step recipe presumed a chart-unfolding helper which itself is non-trivial. PARTIAL escape hatch invoked properly: no fake structural progress shipped; body remains `sorry`."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Inverse-only direction via pullbackPushforwardAdjunction transpose + universal property of relativeDifferentials' + derivation on the (transparent) (pushforward ψ).obj LHS.",
+        "code_tried": "noncomputable def basechange_along_proj_two_inv ... := by\n  let ψ := (Scheme.Hom.toRingCatSheafHom (snd G G).left).hom\n  let LHS := Scheme.relativeDifferentialsPresheaf (fst G G).left\n  let MG := Scheme.relativeDifferentialsPresheaf G.hom\n  let D : ((PresheafOfModules.pushforward ψ).obj LHS).Derivation' φ_G := sorry\n  let univ_step := (DifferentialsConstruction.isUniversal' φ_G).desc D\n  let adj := PresheafOfModules.pullbackPushforwardAdjunction ψ\n  exact (adj.homEquiv MG LHS).symm univ_step",
+        "line_number": "500",
+        "lean_error": "(elaborates cleanly via lean_run_code; body itself reduces to the single concrete sub-goal of constructing the derivation D, which is itself ~100-200 LOC = pointwise pre-composition + Leibniz / d_app verifications)",
+        "goal_before": "(same target as Attempt 1)",
+        "goal_after": "Inverse direction `RHS ⟶ LHS` reduced to a single sub-goal: construct `D : ((pushforward ψ).obj LHS).Derivation' φ_G`. The reduction bypasses pullback's chart-opacity by going through the adjunction transpose + the transparent (pushforward ψ).obj.",
+        "result": "partial",
+        "insight": "VALIDATED-AS-COMPILABLE skeleton but NOT adopted in code — adopting would add +1 sorry to the file's count (the sub-goal `D := sorry`). The recipe is now documented in the docstring at L479-L499 and in task_results/Cotangent_GrpObj.lean.md as the iter-138+ recommended next step. The pushforward functor is transparent on .obj/.map (= pushforward₀ ⋙ restrictScalars, both with @[simps]); the pullback functor is opaque."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Forward direction via universal property of LHS (= relativeDifferentials' φ'_LHS) + construct a derivation on RHS pointwise.",
+        "code_tried": "(sketch; not landed) `(DifferentialsConstruction.isUniversal' φ'_LHS).desc D_RHS` for some `D_RHS : RHS.Derivation' φ'_LHS`.",
+        "line_number": "500",
+        "lean_error": "BLOCKED by the same `PresheafOfModules.pullback` chart-opacity as Attempt 1. Constructing a derivation on `RHS = (pullback ψ).obj M_G` requires knowing `RHS.obj V` concretely at each open V, which is the chart-unfolding helper of Attempt 1's Step 2. Cannot bypass.",
+        "goal_before": "(same target as Attempt 1)",
+        "goal_after": "(no change)",
+        "result": "failed",
+        "insight": "Symmetric obstruction to Attempt 1: forward and reverse direction both blocked by the same chart-opacity. Only the adjunction-transpose route (Attempt 2) escapes the opacity, and only for the inverse direction."
+      }
+    ],
+    "next_steps": "Iter-138+: (Priority 1) build the PresheafOfModules.pullback chart-unfolding helper (`pullbackObjEquivTensor`) as separate infrastructure (~30-60 LOC, plausible host: new file `AlgebraicJacobian/PresheafOfModulesPullback.lean` OR append to `AlgebraicJacobian/Differentials.lean` OR top of `Cotangent/GrpObj.lean`). (Priority 2) Build the chart-level Algebra.IsPushout helper (Step 1 of recipe, ~80-150 LOC). (Priority 3) Apply chart-wise derivation + KaehlerDifferential.lift + PresheafOfModules.isoMk to assemble. Alternative iter-138 fast path: adopt Attempt 2's inverse-only skeleton + prove the inverse is iso (perhaps via PresheafOfModules.epi_iff_locally_surjective-style local checks). The latter is a hedge; feasibility uncertain."
+  },
+  {
+    "timestamp": "2026-05-18T03:00:30Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Cotangent/GrpObj.lean",
+      "theorem": "AlgebraicGeometry.GrpObj.mulRight_globalises_cotangent"
+    },
+    "session": {
+      "id": "session_137",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Off-limits per iter-137 directive; gated on Step 2 closure (which returned PARTIAL this iter). Iter-138+ target (~20-40 LOC composition of Steps 1+2+3).",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Iter-138+: defer until Step 2 closes; then assemble Steps 1+2+3 per the blueprint Compose recipe."
+  },
+  {
+    "timestamp": "2026-05-18T03:00:30Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Jacobian.lean",
+      "theorem": "AlgebraicGeometry.genusZeroWitness"
+    },
+    "session": {
+      "id": "session_137",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "M2.b scaffold; gated on M2.a body close + terminal-object instances. Iter-151+ schedule.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "No prover dispatch this iter; correctly deferred."
+  },
+  {
+    "timestamp": "2026-05-18T03:00:30Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Jacobian.lean",
+      "theorem": "AlgebraicGeometry.positiveGenusWitness"
+    },
+    "session": {
+      "id": "session_137",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "M3 user-escalation-gated; off critical path per `analogies/m3-route-audit.md`.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "No prover dispatch this iter; off critical path."
+  },
+  {
+    "timestamp": "2026-05-18T03:00:30Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/RigidityKbar.lean",
+      "theorem": "AlgebraicGeometry.rigidity_over_kbar"
+    },
+    "session": {
+      "id": "session_137",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Gated on shared cotangent-vanishing pile (i) + (ii) + (iii). Iter-151+ at earliest.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "No prover dispatch this iter; correctly deferred."
+  }
+]

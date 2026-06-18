@@ -1,0 +1,184 @@
+[
+  {
+    "timestamp": "2026-05-15T10:02:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "cechCofaceMap_summand_family_comp_eqToHom_eq_summand_family'"
+    },
+    "session": {
+      "id": "session_104",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "After 'rcases n with _ | n'' and the auxiliary 'hPrev : (ComplexShape.up ℕ).prev (n' + 1) = n'' computation, the residual goal — equating 'cechCofaceMap_summand_family s₀ (n'+1) (Fin.cast _ i) ≫ eqToHom hCod' with 'cechCofaceMap_summand_family' s₀ (n'+1) hn i' — cannot be discharged by 'Pi.hom_ext' + 'Pi.lift_π_apply' because the eqToHom transports two products with different *Fin-indexing types*, not different objects under the same index — and Mathlib only exposes 'Pi.π_comp_eqToHom' for index equality, not object equality.",
+      "key_lemmas_used": [
+        "Limits.Pi.hom_ext",
+        "ComplexShape.prev",
+        "ComplexShape.up_Rel",
+        "eqToHom_refl",
+        "Pi.lift_π"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Add Route 1 lemma signature + induction on n + simp-based hPrev computation",
+        "code_tried": "theorem cechCofaceMap_summand_family_comp_eqToHom_eq_summand_family' (..., hRel, hCod) : ... := by rcases n with _ | n'; · omega; · have hPrev : (ComplexShape.up ℕ).prev (n' + 1) = n' := by simp [ComplexShape.prev, ComplexShape.up_Rel]; sorry",
+        "line_number": "732",
+        "lean_error": "",
+        "goal_before": "⊢ cechCofaceMap_summand_family s₀ n (Fin.cast hRel.symm i) ≫ eqToHom hCod = cechCofaceMap_summand_family' s₀ n hn i",
+        "goal_after": "case succ: ⊢ cechCofaceMap_summand_family s₀ (n'+1) (Fin.cast _ i) ≫ eqToHom hCod = cechCofaceMap_summand_family' s₀ (n'+1) hn i",
+        "result": "partial",
+        "insight": "Signature elaborates cleanly. The zero case is dispatched by omega (vacuous via hn). The succ case has hPrev in context but it does not subst into hCod's indexing types directly."
+      },
+      {
+        "attempt": 2,
+        "strategy": "refine Pi.hom_ext + intro j_new + Category.assoc + unfold + Pi.lift_π",
+        "code_tried": "refine Limits.Pi.hom_ext _ _ (fun j_new => ?_); rw [Category.assoc]; unfold cechCofaceMap_summand_family cechCofaceMap_summand_family'; rw [Limits.Pi.lift_π, Limits.Pi.lift_π]",
+        "line_number": "751",
+        "lean_error": "Pi.lift_π does not fire on LHS because Pi.lift ≫ eqToHom hCod ≫ Pi.π Z₂ j_new has eqToHom in the way",
+        "goal_before": "case succ: cechCofaceMap_summand_family s₀ (n'+1) (Fin.cast _ i) ≫ eqToHom hCod = cechCofaceMap_summand_family' s₀ (n'+1) hn i",
+        "goal_after": "(unchanged on LHS — Pi.lift_π did not fire across eqToHom)",
+        "result": "failed",
+        "insight": "Pi.lift_π fires on RHS (no eqToHom there) but not on LHS where eqToHom sits between Pi.lift and Pi.π. Need eqToHom-vs-Pi.π transport reasoning."
+      },
+      {
+        "attempt": 3,
+        "strategy": "simp only [eqToHom_refl, Category.id_comp] to collapse eqToHom when hCod is reflexive",
+        "code_tried": "simp only [eqToHom_refl, Category.id_comp]",
+        "line_number": "751",
+        "lean_error": "no progress — eqToHom_refl requires literal rfl-syntactic match on the proof, not propositional equality on hCod",
+        "goal_before": "(succ case post-rcases)",
+        "goal_after": "(unchanged)",
+        "result": "failed",
+        "insight": "Even when LHS and RHS of hCod are def-equal under hPrev substitution, eqToHom_refl needs syntactic rfl, not propositional. Need full subst or a non-trivial substitution chain."
+      },
+      {
+        "attempt": 4,
+        "strategy": "have hRfl : hCod = rfl := rfl to coerce hCod's proof to rfl",
+        "code_tried": "have hRfl : hCod = rfl := rfl",
+        "line_number": "751",
+        "lean_error": "type mismatch — LHS and RHS of hCod have different *indexing types* 'Fin ((prev (n'+1)) + 2) → s₀' vs 'Fin (n'+1+1) → s₀' until hPrev substitutes them",
+        "goal_before": "(succ case)",
+        "goal_after": "(unchanged; cannot synthesize 'rfl' at the hCod type)",
+        "result": "failed",
+        "insight": "hCod is between two distinct types until hPrev gets used. Cannot construct rfl-proof object directly."
+      },
+      {
+        "attempt": 5,
+        "strategy": "subst hPrev to convert all (prev (n'+1)) occurrences to n'",
+        "code_tried": "subst hPrev",
+        "line_number": "751",
+        "lean_error": "subst fails — would create infinite recursion on n' (the binder n' appears both in the equation and the goal)",
+        "goal_before": "(succ case)",
+        "goal_after": "(error: subst fails on hPrev)",
+        "result": "failed",
+        "insight": "subst direction needs the variable on one side. hPrev's LHS is computational; cannot subst from def-form."
+      },
+      {
+        "attempt": 6,
+        "strategy": "simp only [hPrev] at hCod / at *",
+        "code_tried": "simp only [hPrev] at hCod; simp only [hPrev]",
+        "line_number": "751",
+        "lean_error": "simp made no progress — hPrev does not fire on type annotations inside hCod (the indexing type appears at a type position the simp set can't reach)",
+        "goal_before": "(succ case)",
+        "goal_after": "(unchanged)",
+        "result": "failed",
+        "insight": "hPrev as a simp lemma cannot rewrite the type-level Fin index appearance because it sits inside the product object's index family argument, not at term level."
+      },
+      {
+        "attempt": 7,
+        "strategy": "aesop_cat for category-theoretic discharge",
+        "code_tried": "aesop_cat",
+        "line_number": "751",
+        "lean_error": "tactic 'aesop' failed, failed to prove the goal after exhaustive search",
+        "goal_before": "(succ case)",
+        "goal_after": "(unchanged)",
+        "result": "failed",
+        "insight": "aesop_cat does not have a rule for eqToHom-vs-Pi.π across object-equality between products with different Fin index types."
+      }
+    ],
+    "next_steps": "Either (a) prove a project-local helper exposing Pi.π through object-equality eqToHom (different from Mathlib's index-equality Pi.π_comp_eqToHom), or (b) abandon the Route 1 lemma and pursue Route 3 (convert h_wrap_pt using N) at the L1179 call site directly. The lemma's value depends on closing L1179; if Route 3 is feasible, the Route 1 lemma should be deleted to clear the transient sorry."
+  },
+  {
+    "timestamp": "2026-05-15T10:02:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "cechCofaceMap_pi_smul (per-summand hG residual at L1179)"
+    },
+    "session": {
+      "id": "session_104",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "After applying h_wrap := cechCofaceMap_summand_family'_R_linear hU s₀ n hn (Fin.cast hRel' i) + congrFun ... j' + simp [Pi.smul_apply] at h_wrap_pt, the residual goal compares '((-1)^↑i • F_at_i).hom z under eqToHom outer composed with Pi.π Z₂ j'' against 'wrapper.hom z under Pi.π Z₂ j'' (post-r' shuffle). Identifying F_at_i ≫ eqToHom_outer with wrapper requires the iter-106 Route 1 lemma; applying it via '← ConcreteCategory.comp_apply (×4) + Preadditive.zsmul_comp' deterministic-whnf-timeouts at maxHeartbeats=1600000.",
+      "key_lemmas_used": [
+        "cechCofaceMap_summand_family'_R_linear",
+        "ModuleCat.piIsoPi_hom_ker_subtype_apply (probe)",
+        "ModuleCat.hom_zsmul (probe, no progress)",
+        "ModuleCat.hom_smul (probe, no progress)",
+        "Preadditive.zsmul_comp (probe, whnf timeout)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "simp only [ModuleCat.piIsoPi_hom_ker_subtype_apply] at h_wrap_pt to convert e₂ x j' to (Pi.π Z₂ j').hom x",
+        "code_tried": "simp only [ModuleCat.piIsoPi_hom_ker_subtype_apply] at h_wrap_pt",
+        "line_number": "1179",
+        "lean_error": "simp made no progress",
+        "goal_before": "post-S5 goal at L1179; h_wrap_pt has form e₂ (wrapper.hom (e₁.symm (r' • y'))) j' = r' • e₂ (wrapper.hom (e₁.symm y')) j'",
+        "goal_after": "(unchanged)",
+        "result": "failed",
+        "insight": "Confirmed iter-099/105 finding: the LinearEquiv coercion e₂ = (piIsoPi Z₂).toLinearEquiv masks the discrim-tree pattern key. piIsoPi_hom_ker_subtype_apply does not fire by simp on the e₂ x j' form in h_wrap_pt."
+      },
+      {
+        "attempt": 2,
+        "strategy": "change goal to expose Pi.π Z₂ j' explicitly via show, then ← ConcreteCategory.comp_apply (×4) to fuse the 4-layer function-application stack",
+        "code_tried": "change (Pi.π Z₂ j').hom (((-1)^↑i • _) ≫ eqToHom _ ≫ Pi.π Z₂ _).hom _ = _; rw [← ConcreteCategory.comp_apply, ← ConcreteCategory.comp_apply, ← ConcreteCategory.comp_apply, ← ConcreteCategory.comp_apply]",
+        "line_number": "1179",
+        "lean_error": "(structural pre-step; the change pivot lands per iter-099 S2 pattern, then the 4-layer ← comp_apply chain fuses)",
+        "goal_before": "post-S5 frame",
+        "goal_after": "single ConcreteCategory.hom application of the fused composition",
+        "result": "partial",
+        "insight": "Iter-099 S1-S3 pattern still works to fuse the 4 layers. But the subsequent Preadditive.zsmul_comp step then whnf-times out — see attempt 3."
+      },
+      {
+        "attempt": 3,
+        "strategy": "After 4-layer ← ConcreteCategory.comp_apply, rewrite with the iter-106 Route 1 lemma to fuse F_at_i ≫ eqToHom into wrapper, then Preadditive.zsmul_comp to pull (-1)^↑i out",
+        "code_tried": "rw [← ConcreteCategory.comp_apply (×4)]; rw [Preadditive.zsmul_comp]",
+        "line_number": "1179",
+        "lean_error": "(deterministic) timeout at `whnf`, maximum number of heartbeats (1600000) has been reached",
+        "goal_before": "single ConcreteCategory.hom application of '((-1)^↑i • F_at_i) ≫ eqToHom_outer ≫ Pi.π Z₂ j''",
+        "goal_after": "(timeout)",
+        "result": "failed",
+        "insight": "Preadditive.zsmul_comp's pattern '(?n • ?f) ≫ ?g' unification through Pi.lift's anonymous-closure codomain '∏ᶜ (fun i_1 ↦ ...)' triggers a whnf cascade that exceeds the 1600000-heartbeat budget. Same root cause class as iter-099/101/103."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Try ModuleCat.hom_zsmul / ModuleCat.hom_smul to push smul through ModuleCat.Hom.hom directly",
+        "code_tried": "rw [ModuleCat.hom_zsmul]  -- and rw [ModuleCat.hom_smul]",
+        "line_number": "1179",
+        "lean_error": "no occurrence of the pattern ModuleCat.Hom.hom ((-1)^↑i • _) found",
+        "goal_before": "single-layer ModuleCat.Hom.hom over '((-1)^↑i • F_at_i) ≫ ...'",
+        "goal_after": "(unchanged)",
+        "result": "failed",
+        "insight": "The smul-Pi.lift instance is elaborated via a different path than the standard ModuleCat.hom_smul; the discrim tree fails to locate the match. Reconfirmed iter-099 finding."
+      },
+      {
+        "attempt": 5,
+        "strategy": "set F_at_i := Pi.lift (...) to give the smul-target an explicit name",
+        "code_tried": "set F_at_i := Pi.lift (fun i_1 : Fin ((ComplexShape.up ℕ).prev n + 2) → ↑s₀ => Pi.π (...) (i_1 ∘ ...) ≫ ...)",
+        "line_number": "1179",
+        "lean_error": "(set folds syntactically but discrim-tree match still fails on subsequent rewrites)",
+        "goal_before": "post-S5 frame",
+        "goal_after": "F_at_i name visible in goal but anonymous-closure codomain still unfolded for typeclass synthesis",
+        "result": "failed",
+        "insight": "Reconfirmed iter-099 finding: 'set' does not hide the Pi.lift anonymous-closure codomain from the discrim tree. The codomain '∏ᶜ (fun i_1 ↦ ...)' is unfolded for type-checking, defeating the set name."
+      }
+    ],
+    "next_steps": "Two viable iter-107 routes: (R1) lift the maxHeartbeats on cechCofaceMap_pi_smul head from 1600000 to 3200000-6400000, then retry the chain in attempt 3 — the whnf cascade is solvable with more budget. (R2) Replace Route 1 lemma's eqToHom approach with a HEq-based or '∀ j_new, (per-coord Z_int = Z₂) lift' to bypass object-equality eqToHom altogether. The wrapper-then-apply infrastructure (iter-104/105 helpers + L1179 partial proof scaffold) is sound; the gap is one whnf-heartbeat or one re-design of Route 1."
+  }
+]

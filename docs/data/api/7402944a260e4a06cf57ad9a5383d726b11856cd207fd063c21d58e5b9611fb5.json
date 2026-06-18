@@ -1,0 +1,154 @@
+[
+  {
+    "timestamp": "2026-06-17T21:31:50Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate/DualInverse/SliceTransport.lean",
+      "theorem": "sliceDualTransport.right_inv"
+    },
+    "session": {
+      "id": "session_15",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "Scheme.Hom.appIso_inv_naturality",
+        "PresheafOfModules.naturality_apply",
+        "eqToHom_op",
+        "eqToHom_map",
+        "Iso.inv_hom_id",
+        "sliceDualTransportInv_app_apply",
+        "dualUnitRingSwap_apply"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Diagnose why baseline (even with right_inv sorry) was RED",
+        "code_tried": "build SliceTransport against HEAD-green TensorObjSubstrate in isolated git worktree",
+        "line_number": "632/919",
+        "lean_error": "(deterministic) timeout at elaborator/whnf",
+        "result": "partial",
+        "insight": "Real blocker was heartbeat overflow of the whole inline ≃ₗ def, NOT the L890 left_inv issue (already fixed in working tree). PROGRESS.md was stale on both."
+      },
+      {
+        "attempt": 2,
+        "strategy": "raise heartbeat budget",
+        "code_tried": "set_option maxHeartbeats 1600000 in (before the def) + linter-reason comment",
+        "line_number": "def L633",
+        "lean_error": null,
+        "result": "success",
+        "insight": "Same value TensorObjSubstrate already uses; the six-field inline ≃ₗ exceeds the 200000 default."
+      },
+      {
+        "attempt": 3,
+        "strategy": "right_inv step (1) ring-identity collapse",
+        "code_tried": "have hcomp from Scheme.Hom.appIso_inv_naturality f (eqToHom (congrArg op hPA)); ConcreteCategory.congr_hom hcomp _; erw [step1]",
+        "line_number": "~995",
+        "lean_error": "rw [← hnat] type mismatch (eqToHom proof-terms differ: congrArg op he vs eqToHom_map output); simp only [eqToHom_map] over-collapses Y.presheaf.map too; (Y≫e.inv)≫e.hom both rw and simp [assoc] report no-progress",
+        "result": "partial",
+        "insight": "Workarounds: show...from hnat.symm (defeq coercion); targeted rw [eqToHom_map (Hom.opensFunctor f).op (congrArg op hPA)]; explicit term-mode (Category.assoc _ _ _).trans ((congrArg (Y≫·) e.inv_hom_id).trans (Category.comp_id _))."
+      },
+      {
+        "attempt": 4,
+        "strategy": "right_inv step (2) ψ-naturality + step (3) Y.presheaf round-trip",
+        "code_tried": "PresheafOfModules.naturality_apply ψ (Over.homMk (eqToHom hPA) (Subsingleton.elim _ _)).op z; erw [hψ]; show ...; rw [eqToHom_op]; hmaps via ←map_comp+eqToHom_trans+map_id; ConcreteCategory.congr_hom hmaps _",
+        "line_number": "~1016",
+        "lean_error": null,
+        "result": "success",
+        "insight": "Exact mirror of the proven left_inv hmaps step (there on X.presheaf). Build: 8322 jobs, file sorry 1→0, axiom-clean."
+      }
+    ],
+    "next_steps": "DUAL route CLOSED. sliceDualTransport is sorry-free + axiom-clean. Two cosmetic show-vs-change linter warnings (L933, L1016) remain — optional cleanup."
+  },
+  {
+    "timestamp": "2026-06-17T21:47:03Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "pullbackTensorMap_restrict"
+    },
+    "session": {
+      "id": "session_15",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "steps (ii)/(iii) need two not-yet-built Mathlib-absent bricks: sheafifyTensorUnitIso_comp (Sq3) and pullbackValIso_comp (Sq4)",
+      "key_lemmas_used": [
+        "comp_cancel_mid",
+        "sheafifyMap_pullbackComp_hom_inv_id",
+        "sheafificationCompPullback_comp",
+        "pullbackComp_δ",
+        "reassoc_of%"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "splice h1 via rw then reassoc",
+        "code_tried": "rw [h1]; simp only [Category.assoc]; reassoc brick",
+        "line_number": "3179",
+        "lean_error": "did not find an occurrence of the pattern ((sheafificationCompPullback ...).app ...).hom — lemma-applied h1 carries a defeq-but-not-syntactic SheafOfModules instance vs goal's S1",
+        "result": "failed",
+        "insight": "Confirmed: rw cannot key-match across the instance gap even though both pretty-print identically."
+      },
+      {
+        "attempt": 2,
+        "strategy": "re-state h1 as h1' with freshly-elaborated type, rw [h1'] then erw [hδ]",
+        "code_tried": "have h1' : <S1 verbatim> = <RHS verbatim> := h1; rw [h1']; erw [hδ]; simp only [Category.assoc]; reassoc_of% sheafifyMap_pullbackComp_hom_inv_id",
+        "line_number": "3201/3206/3211",
+        "lean_error": "rw [hδ] did not find a.map δfh; flatten-then-erw recreates top-level comp with non-canonical instance Category.assoc cannot cross; erw [Category.assoc] whnf-bombs R0 into mateEquiv/TwoSquare guts",
+        "result": "failed",
+        "insight": "h1' restatement makes rw [h1'] fire, but the D≫E boundary still has mixed instances; no rw/simp/erw reassociation crosses it."
+      },
+      {
+        "attempt": 3,
+        "strategy": "isolated single-instance hDE cancellation",
+        "code_tried": "have hDE : D ≫ a.map δfh = a.map δcomp ≫ a.map tcomp := by erw [hδ]; ← Category.assoc; sheafifyMap_pullbackComp_hom_inv_id",
+        "line_number": "3221/3240",
+        "lean_error": "rw failed / unsolved goals — the cancelling pair still buried under the defeq instance boundary",
+        "result": "failed",
+        "insight": "Isolating D≫E as a standalone have does not help while it is stated in the mixed-instance spelling."
+      },
+      {
+        "attempt": 4,
+        "strategy": "generic single-instance skeleton lemma + exact (defeq unification)",
+        "code_tried": "private lemma comp_cancel_mid {C}[Category C]... (hde : d ≫ e = 𝟙) : (r0 ≫ r1 ≫ r5 ≫ d) ≫ e ≫ rest = r0 ≫ r1 ≫ r5 ≫ rest := by simp/assoc;  then  have hmain : S1 ≫ a.map δfh = R0≫R1≫R5≫a.map δcomp≫a.map tcomp := by rw [h1']; erw [hδ]; exact comp_cancel_mid _ _ _ _ _ _ (sheafifyMap_pullbackComp_hom_inv_id ...);  erw [reassoc_of% hmain]",
+        "line_number": "2977/3190",
+        "lean_error": null,
+        "result": "success",
+        "insight": "BREAKTHROUGH: state the reassociation+cancellation as a generic single-instance lemma and discharge the concrete mixed-instance goal by EXACT (defeq unification), NOT rw/erw. exact crosses the very instance gap that defeats rw and whnf-bombs erw. Step (i) — the D≫E wall of iters 012–015 — is CLOSED. Build 8321 jobs."
+      }
+    ],
+    "next_steps": "Steps (ii)/(iii): build sheafifyTensorUnitIso_comp (Sq3; hom-leg via sheafifyTensorUnitIso_hom_eq' L1860) and pullbackValIso_comp (Sq4; pullbackValIso = sheafCompPb.symm ≪≫ pullback.mapIso counit) as new Lean decls FIRST, then split a.map δcomp via Functor.OplaxMonoidal.comp_δ and interleave the four-square merge (mirror D1′ pullbackTensorMap_natural). The comp_cancel_mid + exact device is the general tool for any further instance-boundary cancellation in the merge."
+  },
+  {
+    "timestamp": "2026-06-17T21:47:03Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "exists_tensorObj_inverse"
+    },
+    "session": {
+      "id": "session_15",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "import cycle — closes downstream via the DUAL chain, never by direct assignment in this file",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "not attempted (out of scope, deferred)",
+        "code_tried": "n/a",
+        "line_number": "712",
+        "lean_error": null,
+        "result": "partial",
+        "insight": "Standing import-cycle deferral; do not assign directly."
+      }
+    ],
+    "next_steps": "Leave deferred until the DUAL chain (now closed) and D3′ are complete enough to discharge it downstream."
+  }
+]

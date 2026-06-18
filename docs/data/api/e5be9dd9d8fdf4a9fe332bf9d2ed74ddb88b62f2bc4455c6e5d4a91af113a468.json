@@ -1,0 +1,100 @@
+[
+  {
+    "timestamp": "2026-05-11T04:54:53Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/MayerVietoris.lean",
+      "theorem": "AlgebraicGeometry.Scheme.cechCohomology_subsingleton_of_cechCochain_exactAt"
+    },
+    "session": {
+      "id": "session_60",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "HomologicalComplex.ExactAt.isZero_homology",
+        "ModuleCat.subsingleton_of_isZero"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Two-step Mathlib chain bridging ExactAt n on the Čech cochain complex to Subsingleton on the cohomology carrier. h.isZero_homology lands IsZero of the homology; ModuleCat.subsingleton_of_isZero upgrades IsZero on ModuleCat R to Subsingleton on its carrier type.",
+        "code_tried": "ModuleCat.subsingleton_of_isZero h.isZero_homology",
+        "line_number": 1637,
+        "lean_error": null,
+        "goal_before": "Subsingleton (cechCohomology C F 𝒰 n) with h : (cechCochain C F 𝒰).ExactAt n in context",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Structural reduction from ExactAt n to Subsingleton on the cohomology carrier is universal — does not depend on the cover, the sheaf, or any project-specific machinery. Reusable across every future IsCechAcyclicCover instance proof."
+      }
+    ],
+    "next_steps": "Helper is closed kernel-only. No further action required; it serves as the structural skeleton for every IsCechAcyclicCover instance proof in the project."
+  },
+  {
+    "timestamp": "2026-05-11T04:54:53Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/MayerVietoris.lean",
+      "theorem": "AlgebraicGeometry.Scheme.basicOpenCover_isCechAcyclicCover_toModuleKSheaf"
+    },
+    "session": {
+      "id": "session_60",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Single transient sorry at L1729 covers substeps (a)+(b)+(c): (a) extra-degeneracy at D(f) via FormalCoproduct.extraDegeneracyCech + ExtraDegeneracy.homotopyEquiv + op-passage; (b) localised-Čech identification via iter-057/058/059 chained with IsLocalizedModule.map_exact; (c) local-to-global via exact_of_isLocalized_span. Full assembly estimated at ~150-250 LOC across 2-3 prover sessions (per the analogy report).",
+      "key_lemmas_used": [
+        "cechCohomology_subsingleton_of_cechCochain_exactAt (newly-landed helper, this iteration)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Use the new helper Target 1 to reduce Subsingleton (cechCohomology n) to (cechCochain C F 𝒰).ExactAt n via a single refine; leave the substantive ExactAt n claim as a single transient sorry carrying the (a)+(b)+(c) substep decomposition in docstring + inline comments naming the Mathlib leverage for each substep.",
+        "code_tried": "where\n  subsingleton_cechCohomology n hn := by\n    refine cechCohomology_subsingleton_of_cechCochain_exactAt (n := n) ?_\n    sorry  -- substep (a)+(b)+(c): extra-degeneracy + localised identification +\n           -- local-to-global via `exact_of_isLocalized_span`",
+        "line_number": 1686,
+        "lean_error": null,
+        "goal_before": "IsCechAcyclicCover (toModuleKSheaf C) (basicOpenCover (C := C) (U := U) s) with hU : IsAffineOpen U, s : Set Γ(C.left, U), hs : Ideal.span s = ⊤ in context",
+        "goal_after": "After refine: (cechCochain C (toModuleKSheaf C) (basicOpenCover s)).ExactAt n (closed by sorry, with substep decomposition tracked in source comments)",
+        "result": "partial",
+        "insight": "Structural reduction Subsingleton (cechCohomology n) ← ExactAt n closes kernel-only via the new Target 1 helper. The remaining single sorry is substantive (covers an actual computational step — the augmented-Čech extra-degeneracy + local-to-global lift), not a thin glue lemma. Achieves the directive's 'Acceptable' success mode trending toward 'Good'."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Decompose into two separate sorrys (substep (a)+(b) vs (c)) via a local have hloc : ∀ f : s, …localised exactness…",
+        "code_tried": "have hloc : ∀ f : s, (localised exactness predicate at D(f)) := …; exact exact_of_isLocalized_span s hs hloc",
+        "line_number": null,
+        "lean_error": "stating hloc without the localised Čech cochain definition in scope requires either (i) pre-statements needing helper lemmas, or (ii) a ∀ f, ∃ … shape where the existential's witness is data the substantive proof must supply",
+        "goal_before": "(cechCochain C (toModuleKSheaf C) (basicOpenCover s)).ExactAt n",
+        "goal_after": "(not committed — type-level blocker before goal-state inspection)",
+        "result": "failed",
+        "insight": "Splitting (a)+(b) from (c) requires the localised Čech cochain definition in scope first. The iter-061 prover should build cechCochain_basicOpenCover_localise as the FIRST half of its session, then tackle (a)+(b) with both objects in scope. Do NOT pre-extract this helper to a standalone iteration objective (per the no-pre-proving policy)."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Close via s = ∅ vacuous closure (Ideal.span ∅ = ⊥, so Ideal.span s = ⊤ would force the ring trivial)",
+        "code_tried": "(rejected at design stage — not coded)",
+        "line_number": null,
+        "lean_error": null,
+        "goal_before": "(cechCochain C (toModuleKSheaf C) (basicOpenCover s)).ExactAt n",
+        "goal_after": "(not committed — directive-forbidden)",
+        "result": "failed",
+        "insight": "Rejected by directive: 'Closing … by assuming s = ∅, …, or any other shortcut that bypasses the localization-then-extra-degeneracy argument' is explicitly listed as a forbidden dead end in PROGRESS.md. Vacuous closure bypasses the substantive cohomological content."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Close via n = 1 special case + Mayer-Vietoris induction (n = 1: sheaf-axiom Čech condition; n > 1: Mayer-Vietoris reduction through HasCechToHModuleIso)",
+        "code_tried": "(rejected at design stage — not coded)",
+        "line_number": null,
+        "lean_error": null,
+        "goal_before": "(cechCochain C (toModuleKSheaf C) (basicOpenCover s)).ExactAt n with hn : 0 < n",
+        "goal_after": "(not committed — directive-forbidden)",
+        "result": "failed",
+        "insight": "Rejected: Mayer-Vietoris reduction routes through HasCechToHModuleIso (Branch B of the analogy report) — directive said NOT to attempt in the same iteration as IsCechAcyclicCover. Also n = 1 needs the sheaf-axiom for toModuleKSheaf on basic-open covers, which is non-trivial setup."
+      }
+    ],
+    "next_steps": "Iter-061 should attempt substep (b) — the localised-Čech identification — first, since it's a definition + identification iso (not a theorem). With (b) in scope, substep (a) becomes a Mathlib-chain repackaging (~30-40 LOC) and substep (c) becomes a 1-2 line exact_of_isLocalized_span application. Per the no-pre-proving policy, substep (b)'s definition should be folded into the iter-061 prover session, not pre-extracted as a standalone iter-061 objective. Estimated cohort: 2-3 prover sessions, ~150-250 LOC total."
+  }
+]

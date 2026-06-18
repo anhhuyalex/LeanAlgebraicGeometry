@@ -1,0 +1,70 @@
+[
+  {
+    "timestamp": "2026-05-17T08:02:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "AlgebraicGeometry.IsAffineOpen.appLE_isLocalization"
+    },
+    "session": {
+      "id": "session_124",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Function.Bijective ⇑forwardAlg is the residual single sorry, packaging Steps 2 + 3 of the M1.b 4-step chain together. The bijectivity decomposes via IsLocalization.lift_injective_iff and IsLocalization.lift_surjective_iff into two Mathlib gap pieces: (i) explicit filtered-colim element representation for the lan-defined colim S.presheaf | CostructuredArrow (Opens.map f.base).op (op V) — no off-the-shelf bridge; one must transport IsPointwiseLeftKanExtensionAt → IsColimit (coconeAt _) → isoColimit → CommRingCat.FilteredColimits.colimitCocone; ~80-150 LOC of categorical bookkeeping; and (ii) basic-open cofinality in Opens S — for every W ⊇ fV open in U, exhibit g ∈ M with D(g) ⊆ W; pointwise via IsAffineOpen.exists_basicOpen_le + quasi-compactness of fV + a prime-avoidance combine; ~50-80 LOC. Neither piece is on the Mathlib closing slate for snapshot b80f227.",
+      "key_lemmas_used": [
+        "IsLocalization.lift (iter-123 forward map)",
+        "IsLocalization.lift_comp (iter-123 h_fwd_comp witness)",
+        "IsLocalization.isLocalization_of_algEquiv (iter-123 Step-4 closure)",
+        "AlgEquiv.ofBijective (iter-124 new — reduces AlgEquiv construction to AlgHom + Function.Bijective)",
+        "RingHom.congr_fun (iter-124 new — closes commutes' for forwardAlg via h_fwd_comp at each r)",
+        "isUnit_appLE_unitSubmonoid_in_colim (iter-122 Step-0 helper, untouched this iter)",
+        "appLE_colimRingHom (iter-122 helper, untouched this iter)",
+        "appLE_colimAlgebra (iter-122 helper, untouched this iter — load-bearing for `commutes'` via the definitional identification algebraMap Γ(S,U) A_colim = (appLE_colimRingHom f e).hom)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Promote forward : Localization M →+* A_colim to an explicit AlgHom (forwardAlg) inside the `suffices AE` block, closing the commutes' field in-body via RingHom.congr_fun h_fwd_comp; then reduce the residual AlgEquiv to AlgEquiv.ofBijective forwardAlg sorry. This narrows the residual from `Localization M ≃ₐ[Γ(S,U)] A_colim` (whole-AlgEquiv) to `Function.Bijective ⇑forwardAlg` (named bijectivity claim), without inflating the sorry count.",
+        "code_tried": "let forwardAlg :\n    Localization M →ₐ[Γ(S, U)]\n      (((TopCat.Presheaf.pullback CommRingCat f.base).obj S.presheaf).obj (.op V)) :=\n  { forward with\n    commutes' := by\n      intro r\n      have h := RingHom.congr_fun h_fwd_comp r\n      -- `h : forward (algebraMap r) = (appLE_colimRingHom f e).hom r`.\n      -- The RHS is defeq to `algebraMap r` for the colim-algebra structure.\n      exact h }\n-- ─────────── Steps 2 + 3 residual: bijectivity of `forwardAlg` ───────────\n-- (extensive blocker analysis comment block omitted)\nexact AlgEquiv.ofBijective forwardAlg sorry",
+        "line_number": "L332-L398 (full residual Edit; the sorry is at L398)",
+        "lean_error": "none — `lake env lean AlgebraicJacobian/Differentials.lean` returns only the documented `declaration uses sorry` warning at L282 (the `appLE_isLocalization` declaration banner)",
+        "goal_before": "X S : Scheme\\nf : X ⟶ S\\nU : S.Opens\\nV : X.Opens\\nhU : IsAffineOpen U\\nhV : IsAffineOpen V\\ne : V ≤ f ⁻¹ᵁ U\\nthis : Algebra ↑Γ(S, U) ↑(((TopCat.Presheaf.pullback CommRingCat f.base).obj S.presheaf).obj (Opposite.op V)) :=\\n  appLE_colimAlgebra f e\\nM : Submonoid ↑Γ(S, U) := appLE_unitSubmonoid f hU hV e\\nhM_def : M = appLE_unitSubmonoid f hU hV e\\nh_unit_ring : ∀ (y : ↥M), IsUnit ((CommRingCat.Hom.hom (appLE_colimRingHom f e)) ↑y)\\nforward : Localization M →+* ↑(((TopCat.Presheaf.pullback CommRingCat f.base).obj S.presheaf).obj (Opposite.op V)) :=\\n  IsLocalization.lift h_unit_ring\\nh_fwd_comp : forward.comp (algebraMap (↑Γ(S, U)) (Localization M)) = CommRingCat.Hom.hom (appLE_colimRingHom f e)\\n⊢ Localization M ≃ₐ[↑Γ(S, U)] ↑(((TopCat.Presheaf.pullback CommRingCat f.base).obj S.presheaf).obj (Opposite.op V))",
+        "goal_after": "(after the AlgHom promotion + AlgEquiv.ofBijective reduction) — single remaining goal at the sorry inside `AlgEquiv.ofBijective forwardAlg ?_`:\\n  ⊢ Function.Bijective ⇑forwardAlg\\n  (with forwardAlg : Localization M →ₐ[↑Γ(S, U)] A_colim and the algebra-map compatibility commutes' closed in-body)",
+        "result": "partial",
+        "insight": "The AlgEquiv.ofBijective reduction is structurally cleaner than the previously planned RingEquiv.ofRingHom + AlgEquiv.ofRingEquiv chain (iter-123 attempt-2 comment recipe). Two wins: (i) the commutes' algebra-map compatibility closes via a single `exact RingHom.congr_fun h_fwd_comp r` call (1 LOC of proof), eliminating one third of the iter-123 residual's content; (ii) the remaining work is the named, concrete `Function.Bijective ⇑forwardAlg` claim, decomposable via IsLocalization.lift_{injective,surjective}_iff into two precise Mathlib-gap pieces (filtered-colim element representation + basic-open cofinality). Net per-file sorry change: 1 → 1 (the sorry moved L362 → L398; the structural narrowing is the iter-124 deliverable, not a sorry-count reduction). Both Mathlib gap pieces were verified by lemma searches this iter: IsLocalization.lift_injective_iff, IsLocalization.lift_surjective_iff, CommRingCat.FilteredColimits.colimitCoconeIsColimit, Functor.LeftExtension.IsPointwiseLeftKanExtensionAt + isoColimit, IsAffineOpen.exists_basicOpen_le, IsAffineOpen.isLocalization_basicOpen, AlgEquiv.ofBijective. The negative search results are documented: no `IsLocalization.bijective_lift_iff`; no off-the-shelf `colim_of_localizations` lemma; the `IsLocalization.atUnits` family is for the wrong setup."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Detail the bijectivity blocker analysis in the body's comment block (L332-L397) to document the two Mathlib-gap pieces for any future M1.b prover lane.",
+        "code_tried": "(the L332-L397 comment block, summarising INJECTIVITY decomposition via IsLocalization.lift_injective_iff → cocone-equality-in-Γ(S,W) → basic-open refinement to D(g) → IsLocalization.exists_of_eq; SURJECTIVITY decomposition via IsLocalization.lift_surjective_iff → IsPointwiseLeftKanExtensionAt + filtered-colim element representation → basic-open refinement to D(g) → `Γ(S, D(g)) ≃ (Γ(S, U))_g`; BLOCKER as `(a)` filtered-colim bridge + `(b)` basic-open cofinality)",
+        "line_number": "L332-L397 (comment block surrounding the residual sorry at L398)",
+        "lean_error": "none (comments only; no semantic effect)",
+        "goal_before": "unchanged from attempt 1 (the goal at the sorry is `Function.Bijective ⇑forwardAlg`)",
+        "goal_after": "unchanged from attempt 1",
+        "result": "success",
+        "insight": "Documents the assembly shape for any future M1.b prover lane (which under the iter-125 watch criterion 2 will NOT be iter-125 itself — iter-125 pivots to M2.a unconditionally per the iter-124 strategy-critic sharpened commitment). Should the user un-park M1.b at a later iter, the recipe is on disk in the source (L398 ± 70) and in the task_results report at § Next-step recipe."
+      }
+    ],
+    "next_steps": "Per the iter-124 strategy-critic sharpened commitment + PROGRESS.md watch criterion 2, iter-124 PARTIAL (any flavor) triggers the iter-125 unconditional M2.a pivot: iter-125 plan-phase executes the staged Rigidity refactor (rename `GrpObj.eq_of_eqOnOpen` → `Scheme.Over.ext_of_eqOnOpen`; drop 8 unused hyps; weaken `IsProper Y` to `IsSeparated Y`; ~25 LOC; persistent rationale `analogies/rigidity-refactor.md`); iter-126+ runs the M2.a rigidity-over-`k̄` prover lane. M1.b parks at this state with the bijectivity residual documented in source comments (Differentials.lean L332-L397) and in `task_results/AlgebraicJacobian_Differentials.lean.md` § 'Next-step recipe for any future M1.b prover lane'. Concurrently the iter-125 plan-phase should consider scheduling the M2.c assembly + M2.d-alt + `geomIrred.exists_kalg_pt` phantom-prereq builds per iter-124 PROGRESS.md watch criterion 7. The review-side TO_USER.md is re-authored this iter to surface the strategy-critic-iter124 named-axiom alternative alongside the existing PR-and-wait option."
+  },
+  {
+    "timestamp": "2026-05-17T08:02:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Jacobian.lean",
+      "theorem": "AlgebraicGeometry.AbelJacobi.nonempty_jacobianWitness"
+    },
+    "session": {
+      "id": "session_124",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Off-limits to the autonomous loop this iter (foundational existence hypothesis at the project end-state, queued behind M2 + M3 per the genus-stratified body decomposition in STRATEGY.md). No prover dispatched against this site.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Unchanged. Continues to be queued behind milestones M2 (genus-0 witness via base-change-to-`k̄` + Galois descent — staged for iter-126+ with iter-125 Rigidity refactor as the immediate prerequisite) and M3 (positive-genus witness via Route A Picard or Route B symmetric-powers — multi-month, ≥5000 LOC of Mathlib gap; user-escalation surfaced via TO_USER.md this iter with named-axiom alternative option per strategy-critic-iter124)."
+  }
+]

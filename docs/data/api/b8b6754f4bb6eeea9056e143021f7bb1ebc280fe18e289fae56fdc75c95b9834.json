@@ -1,0 +1,90 @@
+[
+  {
+    "timestamp": "2026-05-30T22:34:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "PresheafOfModules.internalHom"
+    },
+    "session": {
+      "id": "session_219",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Full presheaf assembly not yet built; only the per-object VALUE module was built this iter. Remaining: restriction maps for g:V->U via Over.map, then PresheafOfModules.ofPresheaf assembly, then dual/eval/sheafify.",
+      "key_lemmas_used": [
+        "PresheafOfModules.pushforward0",
+        "Over.mkIdTerminal",
+        "Over.forget",
+        "Preadditive.comp_add",
+        "LinearMap.lsmul"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Build the R(T)-module structure on Hom(M,N) of presheaves of modules over a base with terminal object T (homModule), scalar f acts by post-composition with globalSMul f.",
+        "code_tried": "noncomputable def homModule (M N : PresheafOfModules (R ⋙ forget₂ CommRingCat RingCat)) : Module (R.obj (op T)) (M ⟶ N) where smul f φ := φ ≫ globalSMul hT N f; add_smul ...",
+        "line_number": "1082",
+        "lean_error": "none (axiom-clean: {propext, Classical.choice, Quot.sound})",
+        "result": "success",
+        "insight": "Module axioms reduce to four globalSMul_{one,zero,add,mul} ring-hom facts + Preadditive bilinearity of composition. Built in full generality for any base category C with terminal object."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Specialise homModule to the slice value: M|_U via pushforward0 along Over.forget U; over-category terminal Over.mk(id U) has ring R(U) by rfl.",
+        "code_tried": "noncomputable def internalHomObjModule (U : C) (M N : ...) : Module (R.obj (op U)) (M.restr U ⟶ N.restr U) := homModule (Over.mkIdTerminal U) ...; def restr U := pushforward0 (Over.forget U) ...",
+        "line_number": "1123",
+        "lean_error": "none (axiom-clean)",
+        "result": "success",
+        "insight": "internalHomObjModule realises exactly the per-object VALUE of def:presheaf_internal_hom. NOT the naive contravariant U↦Hom_{R(U)}(M(U),N(U)) — the slice/over-category formula is the blueprint-mandated covariant remedy."
+      },
+      {
+        "attempt": 3,
+        "strategy": "map_add ambiguity fix in globalSMul_add.",
+        "code_tried": "rw [add_app, globalSMul_hom_apply, _root_.map_add, add_smul]; rfl  (was map_add, ambiguous with Functor.map_add under open CategoryTheory)",
+        "line_number": "~1060",
+        "lean_error": "ambiguous map_add (Functor.map_add vs _root_.map_add)",
+        "result": "success",
+        "insight": "Use _root_.map_add in this file due to open CategoryTheory. CommRingCat (R.obj Y) vs RingCat ((R ⋙ forget₂).obj Y) carrier duality forces erw for the Fr R semilinearity bridge."
+      }
+    ],
+    "next_steps": "Build restriction maps (M|_U⟶N|_U)→(M|_V⟶N|_V) over R(g) via Over.map g precomposition; then PresheafOfModules.ofPresheaf assembly; then def:presheaf_dual = internalHom M (unit R), lem:internal_hom_eval, lem:internal_hom_isSheaf (sheafify to Scheme.Modules.dual), lem:dual_isLocallyTrivial; finally exists_tensorObj_inverse via rem:dual_discharges_inverse. Multi-iter (~5-11 more iters per analogist ts219dual)."
+  },
+  {
+    "timestamp": "2026-05-30T22:34:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "exists_tensorObj_inverse"
+    },
+    "session": {
+      "id": "session_219",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "FORBIDDEN this iter (pre-committed). Requires the full internal-hom/dual presheaf, whose first sub-step (value module) was built this iter. Do NOT re-dispatch prove until dual presheaf+eval+sheafify land.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Untouched by design. Unblocks only after the dual infra block (def:presheaf_internal_hom full presheaf → dual → eval → sheaf) completes."
+  },
+  {
+    "timestamp": "2026-05-30T22:34:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "isLocallyInjective_whiskerLeft_of_W"
+    },
+    "session": {
+      "id": "session_219",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Vestigial (superseded by tensorObj_restrict_iso re-route, deferred). Untouched this iter; the assoc re-route + deletion is the deferred SECONDARY, blocked on the same dual/descent infra.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Mooted once tensorObj_assoc_iso is re-routed onto the closed tensorObj_restrict_iso. Deferred until the dual infra resolves."
+  }
+]

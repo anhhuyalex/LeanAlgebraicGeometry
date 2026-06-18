@@ -1,0 +1,251 @@
+[
+  {
+    "timestamp": "2026-05-23T03:08:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects.lean",
+      "theorem": "gmScalingP1_chart_PLB_eq"
+    },
+    "session": {
+      "id": "session_174",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Step C Fin-syntactic-mismatch (post-fin_cases `MvPolynomial.X (0 : Fin 2)` vs `MvPolynomial.X ⟨0, _⟩`)",
+      "key_lemmas_used": [
+        "awayι_comp_PLB_hom",
+        "Spec.map_comp",
+        "CommRingCat.ofHom_comp",
+        "homogeneousLocalizationAwayIso_algebraMap",
+        "MvPolynomial.algebraMap_eq",
+        "MvPolynomial.eval₂Hom_C"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "analogist 10-step recipe via shared helper (Step A `awayι_comp_PLB_hom`; Step B Spec.map / ofHom_comp + new helper `homogeneousLocalizationAwayIso_algebraMap`; Step C `pullbackSpecIso_hom_base` + `pullback.congrHom_hom` + `pullbackRightPullbackFstIso_hom_fst` + `pullbackSymmetry_hom_comp_fst` + `pullback.condition` + `Over.tensorObj_hom`)",
+        "code_tried": "Steps A+B closed; Step C blocked on Fin-mismatch — simp lemmas report `unused`",
+        "result": "partial",
+        "insight": "After `fin_cases i`, the literal `MvPolynomial.X (0 : Fin 2)` (from match-branch reduction) does NOT syntactically unify with the post-`fin_cases`-substituted `MvPolynomial.X ⟨0, _⟩` form — `rw` is syntactic, so the bridge simp lemmas mismatch."
+      }
+    ],
+    "next_steps": "iter-175 options: (1) `change` to unify the `Fin 2` literal forms; (2) `Fin.mk_zero'` after `NeZero 2`; (3) restructure `gmScalingP1_cover_X_iso` to split per-`i` (avoid `match i with`); (4) `simp [Fin.isValue]` or `convert ... using 2`."
+  },
+  {
+    "timestamp": "2026-05-23T03:08:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects.lean",
+      "theorem": "homogeneousLocalizationAwayIso_algebraMap"
+    },
+    "session": {
+      "id": "session_174",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "MvPolynomial.ringHom_ext",
+        "mvPolyToHomogeneousLocalizationAway",
+        "homogeneousLocalizationAwayIso_aux_right",
+        "MvPolynomial.eval₂Hom_C",
+        "HomogeneousLocalization.algebraMap_eq",
+        "SetLike.GradeZero.algebraMap_apply"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "`MvPolynomial.ringHom_ext` + round-trip via `mvPolyToHomogeneousLocalizationAway` + `homogeneousLocalizationAwayIso_aux_right`; the `C r ↦ algebraMap kbar Away r` step is `rfl` after `eval₂Hom_C` unfolding because `algebraKbarAway = Algebra.compHom` chains through `algebraMap (𝒜 0) Away = HomogeneousLocalization.fromZeroRingHom`.",
+        "code_tried": "axiom-clean per task_result",
+        "result": "success",
+        "insight": "The `algebraKbarAway = Algebra.compHom` bridge makes `C r ↦ algebraMap kbar Away r` reduce by `rfl` after `eval₂Hom_C` — this is the cheap lever that unlocks Step B of `chart_PLB_eq`."
+      }
+    ],
+    "next_steps": "Lemma is axiom-clean. Used downstream by `gmScalingP1_chart_PLB_eq` Step B."
+  },
+  {
+    "timestamp": "2026-05-23T03:08:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects.lean",
+      "theorem": "gmScalingP1_over_coherence"
+    },
+    "session": {
+      "id": "session_174",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "Scheme.Cover.hom_ext",
+        "Scheme.Cover.ι_glueMorphisms_assoc",
+        "gmScalingP1_chart_PLB_eq"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "`Scheme.Cover.hom_ext` + `ι_glueMorphisms_assoc` + `chart_PLB_eq` per analogist Decision 3",
+        "code_tried": "refine Scheme.Cover.hom_ext (gmScalingP1_cover kbar) _ _ ?_; intro i; rw [Scheme.Cover.ι_glueMorphisms_assoc]; exact gmScalingP1_chart_PLB_eq kbar i",
+        "result": "success",
+        "insight": "STRUCTURALLY CLOSED with 3 lines; own sorry retired. Sorry-propagates through `chart_PLB_eq` Step C only — once that closes, this becomes axiom-clean."
+      }
+    ],
+    "next_steps": "Becomes axiom-clean once `chart_PLB_eq` Step C closes (iter-175)."
+  },
+  {
+    "timestamp": "2026-05-23T03:08:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects.lean",
+      "theorem": "gmScalingP1_chart_agreement"
+    },
+    "session": {
+      "id": "session_174",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Cross cases `(0,1)` + `(1,0)` need the `λ·u = (1/t)·λ` ring identity in `Localization.Away (X 0 · X 1) ⊗[kbar] GmRing` (substantive algebra)",
+      "key_lemmas_used": [
+        "CategoryTheory.Limits.fst_eq_snd_of_mono_eq"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "analogist Decision 2: diagonal cases via `fst_eq_snd_of_mono_eq` (cover charts are `pullback.fst _ _` of an open immersion → Mono); cross cases deferred to iter-175 per analogist",
+        "code_tried": "change ∀ x y : Fin 2, _; intro x y; fin_cases x <;> fin_cases y; · rw [CategoryTheory.Limits.fst_eq_snd_of_mono_eq]; · sorry; · sorry; · rw [CategoryTheory.Limits.fst_eq_snd_of_mono_eq]",
+        "result": "partial",
+        "insight": "Diagonals (0,0) + (1,1) axiom-clean. The `(gmScalingP1_cover).I₀ = Fin 2` is NOT Fintype-exposed for `fin_cases` directly — `change ∀ x y : Fin 2, _` bridges. Cross cases are substantive content per `analogies/gmscaling-deep.md` Q4 and were deliberately deferred."
+      }
+    ],
+    "next_steps": "iter-175: substantive ring identity in `Localization.Away (X 0 · X 1) ⊗[kbar] GmRing` via `Algebra.TensorProduct.tmul_mul_tmul`. Combined budget with Step C of `chart_PLB_eq` ≈ ~40–60 LOC."
+  },
+  {
+    "timestamp": "2026-05-23T03:08:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/WeilDivisor.lean",
+      "theorem": "Scheme.WeilDivisor.ofClosedPoint"
+    },
+    "session": {
+      "id": "session_174",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "Order.coheight",
+        "Finsupp.single",
+        "Scheme.PrimeDivisor"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "dependent `if Order.coheight P = 1` junk-branch: on-regime emits `Finsupp.single ⟨P, h⟩ 1`, off-regime emits `0`",
+        "code_tried": "if h : Order.coheight P = 1 then Finsupp.single ⟨P, h⟩ 1 else 0 (+ two bridge equation lemmas `ofClosedPoint_eq_single` / `ofClosedPoint_eq_zero`)",
+        "result": "success",
+        "insight": "Blueprint pin allows arbitrary `Scheme.{u}` with only `IsClosed {P}` — the curve-level typeclasses are a call-site invariant, not a precondition. Junk-defined branch is the honest move; the two bridge equation lemmas (~199–217) expose the intended `1·[P]` on the codim-1 regime. lean_verify axioms `[propext, Classical.choice, Quot.sound]`."
+      }
+    ],
+    "next_steps": "iter-175+: `RationalMap.order` (gated on DVR extraction); thereafter `principal`, `principal_hom`, `principal_degree_zero` cascade. Bridge lemmas `ofClosedPoint_eq_single`/`_eq_zero` are reusable by downstream callers wanting the concrete `1·[P]` form."
+  },
+  {
+    "timestamp": "2026-05-23T03:08:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/RelativeSpec.lean",
+      "theorem": "Scheme.QcohAlgebra"
+    },
+    "session": {
+      "id": "session_174",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "TopCat.Sheaf",
+        "CommRingCat",
+        "Scheme.toPresheafedSpace",
+        "Scheme.sheaf"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Encoding I per `analogies/qcohalgebra-structure.md` Decision 1 — sheafified `Under`-object form: 2-field `structure` (`sheaf` + `unit`)",
+        "code_tried": "structure QcohAlgebra (X : Scheme.{u}) where\n  sheaf : TopCat.Sheaf CommRingCat.{u} X.toPresheafedSpace\n  unit : X.sheaf ⟶ sheaf",
+        "result": "success",
+        "insight": "Type-level `:= sorry` retired axiom-clean (`{propext, Classical.choice, Quot.sound}` only). The 5 downstream `RelativeSpec.{...}` sorries now reference a concrete carrier without semantic regression. Universe budget `Type (u+1)` preserved exactly. `isQcoh` overlay deferred to iter-175+ (gated on Mathlib `SheafOfModules.IsQuasicoherent` / sheafified-tensor infra)."
+      }
+    ],
+    "next_steps": "iter-175+ Lane G+1: open body lanes on the 5 downstream sorries (`RelativeSpec` via `Scheme.GlueData`, `structureMorphism` gated on RelSpec body, `UniversalProperty` upgrade to `Functor.RepresentableBy`, `affine_base_iff` to `Spec(Γ(X, 𝒜))`, `base_change` via Yoneda)."
+  },
+  {
+    "timestamp": "2026-05-23T03:08:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/LineBundlePullback.lean",
+      "theorem": "(NEW FILE — 5-pin file-skeleton)"
+    },
+    "session": {
+      "id": "session_174",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Mathlib lacks `IsInvertible` on `Scheme.Modules` (commit b80f227) → Pin 1 is `Type (u+1) := sorry`",
+      "key_lemmas_used": [
+        "Scheme.Modules",
+        "Scheme.Modules.pullback",
+        "Scheme.Modules.pullbackComp",
+        "Scheme.Modules.pullbackId",
+        "CategoryTheory.Limits.pullback.map",
+        "Module.Invertible"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "5 pinned declarations scaffold (`OnProduct`, `pullbackAlongProjection`, `pullback_pullback_eq`, `preimage_subgroup`, `functorial`) per `Picard_LineBundlePullback.tex`. Type signatures designed non-tautologically per substantive-type discipline.",
+        "code_tried": "Type signatures landing with `sorry`-bodies. Pin 1 mirrors iter-173 `QcohAlgebra` `Type (u+1) := sorry` precedent; Pin 3's `Nonempty (iso ...)` body explicitly avoids `True := trivial` / `X = X` tautology; Pin 4 encoded as `Setoid` for `Quotient`-compatibility; Pin 5 typed as `Quotient → Quotient` map (not full functor yet).",
+        "result": "partial",
+        "insight": "File-skeleton COMPLETE; 5 substantive sorries open. Most-load-bearing gap = Pin 1's missing `IsInvertible`-on-`Scheme.Modules` predicate (downstream `OnProduct` body, pin 2/4 bodies all gated). Pin 3's body is closable without new Mathlib (via `Modules.pullbackComp` + `pullback.condition`)."
+      }
+    ],
+    "next_steps": "iter-175+: unpack `OnProduct` as a structure (carrier + invertibility witness) — either Mathlib upstream or project-side `Invertible-on-sheaf-of-modules`. Close pins 2, 3, 5 once `OnProduct` lands; close pin 4 once `⊗`/`⁻¹` on `OnProduct` is wired. Upgrade pin 5 to a full `Functor` with map_id/map_comp."
+  },
+  {
+    "timestamp": "2026-05-23T03:08:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/RRFormula.lean",
+      "theorem": "(NEW FILE — 4-pin file-skeleton + 1 helper)"
+    },
+    "session": {
+      "id": "session_174",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "Module.finrank",
+        "Scheme.HModule",
+        "AlgebraicGeometry.genus",
+        "AlgebraicGeometry.Scheme.WeilDivisor.degree"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "4 chapter-pinned declarations + 1 helper (`sheafOf`). Pins 1+2 concrete; pins 3+4 + helper sorry-bodied with substantive types.",
+        "code_tried": "`eulerCharacteristic := finrank H⁰ − finrank H¹` (concrete one-liner mirroring `genus`); `WeilDivisor.l D := finrank (H⁰ (sheafOf D))` (concrete, uses `sheafOf` placeholder); `eulerCharacteristic_eq_degree_plus_one_minus_genus` typed as integer equality (`sorry`); `l_eq_degree_plus_one_of_genus_zero` typed with explicit `_hH1` H¹-vanishing premise (`sorry`); `sheafOf : WeilDivisor → Sheaf … (ModuleCat k̄)` (`sorry`).",
+        "result": "partial",
+        "insight": "File-skeleton COMPLETE. Pin 2 routes through `sheafOf` placeholder so its computed value is concrete `ℕ` with sorry-propagation only at the carrier level. The explicit `_hH1` premise (deliberate departure from informal statement per chapter `Lean signature scope` paragraph) preserves char-general validity for iter-175+ body."
+      }
+    ],
+    "next_steps": "iter-175+: `sheafOf` body via RR.3 (`RiemannRoch_OcOfD.tex`); pin 3 via Hartshorne IV.1.3 induction (closed-point short exact sequence + additivity of χ — Mathlib `EulerCharacteristic` ships carrier but not `ShortExact.eulerChar_additive` under that name, project-side helper); pin 4 = specialise pin 3 to `g=0`."
+  }
+]

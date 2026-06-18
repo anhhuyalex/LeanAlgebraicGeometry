@@ -1,0 +1,198 @@
+[
+  {
+    "timestamp": "2026-05-18T09:05:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cotangent/GrpObj.lean",
+      "theorem": "AlgebraicGeometry.GrpObj.basechange_along_proj_two_inv_derivation.d_map (sub-sorry of basechange_along_proj_two_inv_derivation at L573)"
+    },
+    "session": {
+      "id": "session_142",
+      "model": "claude-sonnet-4-6"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "NatTrans.naturality_apply",
+        "PresheafOfModules.DifferentialsConstruction.relativeDifferentials'_map_d",
+        "PresheafOfModules.pushforward_obj_map_apply (definitional .map unfold; not invoked by name)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Iter-141 blueprint recipe: explicit `change` of LHS+RHS, then `simp only [PresheafOfModules.pushforward_obj_map_apply']`, then `NatTrans.naturality` for ψ, then `relativeDifferentials'_map_d`.",
+        "code_tried": "change (CommRingCat.KaehlerDifferential.D _).d _ = (((PresheafOfModules.pushforward (Scheme.Hom.toRingCatSheafHom (snd G G).left).hom).obj (Scheme.relativeDifferentialsPresheaf (fst G G).left)).map f).hom ((CommRingCat.KaehlerDifferential.D _).d ((((Scheme.Hom.toRingCatSheafHom (snd G G).left).hom.app X)).hom x))",
+        "line_number": "643",
+        "lean_error": "(deterministic) timeout at `whnf`, maximum number of heartbeats (200000) has been reached",
+        "goal_before": "((fun X ↦ ModuleCat.Derivation.mk (fun b ↦ (CommRingCat.KaehlerDifferential.D _).d ((RingCat.Hom.hom (ψ.app X)) b)) ⋯ ⋯ ⋯) Y).d ((ConcreteCategory.hom (G.left.ringCatSheaf.obj.map f)) x) = (ConcreteCategory.hom (((PresheafOfModules.pushforward ψ.hom).obj LHS).map f)) ((... Y).d ((... X).d (ψ.app X .hom x))) at GrpObj.lean:643",
+        "goal_after": "<error>",
+        "result": "failed",
+        "insight": "Even a fully-explicit `change` involving `pushforward₀`-internal terms on the RHS triggers `whnf` to descend into a definition annotated `set_option backward.isDefEq.respectTransparency false in` (`Pushforward.lean:37, 55`), causing a deterministic 200k-heartbeat timeout. The negative lesson from iter-140 (codified in Knowledge Base) re-fired here on the first `change` attempt — confirming the `change`-avoidance rule applies even when the RHS is spelled out explicitly."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Drop the RHS spelling-out; rely on the explicit LHS-only `change` + `simp only [PresheafOfModules.pushforward_obj_map_apply']` + `rw [NatTrans.naturality_apply]`.",
+        "code_tried": "change (CommRingCat.KaehlerDifferential.D _).d _ = _\nsimp only [PresheafOfModules.pushforward_obj_map_apply']\nrw [NatTrans.naturality_apply (Scheme.Hom.toRingCatSheafHom (snd G G).left).hom f x]",
+        "line_number": "643",
+        "lean_error": "Tactic `rewrite` failed: Did not find an occurrence of the pattern\\n  (ConcreteCategory.hom ((Scheme.Hom.toRingCatSheafHom (Over.Hom.left (snd G G))).hom.app Y))\\n    ((ConcreteCategory.hom (G.left.ringCatSheaf.obj.map f)) x)\\nin the target.",
+        "goal_before": "(KD _).d ((ψ.app Y .hom) ((G.left.presheaf.map f .hom) x)) = ((G ⊗ G).left.presheaf.map ((Opens.map snd.left.base).op.map f) .hom) ((KD _).d (...))",
+        "goal_after": "<error>",
+        "result": "failed",
+        "insight": "The bare `NatTrans.naturality_apply` produces an equation in `ConcreteCategory.hom`-form (the `.hom` field of `RingCat.Hom`), whereas the post-`change` goal carries the `RingCat.Hom.hom`/`CommRingCat.Hom.hom`-form term shapes. The patterns don't unify even though they are definitionally equal — `rw` matches syntactically."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Package the naturality fact via `rw [show <explicit `.hom`-form equality> from NatTrans.naturality_apply ...]` so the rewrite pattern matches the goal's `.hom`-form. Then close with `exact (relativeDifferentials'_map_d _ _ _).symm`.",
+        "code_tried": "change (CommRingCat.KaehlerDifferential.D _).d (((ψ.app Y).hom) ((G.left.presheaf.map f).hom x)) = (((PresheafOfModules.pushforward ψ.hom).obj LHS).map f).hom ((CommRingCat.KaehlerDifferential.D _).d (((ψ.app X).hom) x))\nrw [show ((ψ.app Y).hom) ((G.left.presheaf.map f).hom x) = ((G ⊗ G).left.presheaf.map ((Opens.map snd.left.base).op.map f)).hom (((ψ.app X).hom) x) from NatTrans.naturality_apply (Scheme.Hom.toRingCatSheafHom (snd G G).left).hom f x]\nexact (PresheafOfModules.DifferentialsConstruction.relativeDifferentials'_map_d _ _ _).symm",
+        "line_number": "643",
+        "lean_error": null,
+        "goal_before": "(KD _).d ((ψ.app Y .hom) ((G.left.presheaf.map f .hom) x)) = ((pushforward ψ.hom).obj LHS .map f .hom) ((KD _).d (ψ.app X .hom x))",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Two-line fix: (1) write the `change` fully explicit on BOTH LHS and RHS (avoiding `_` placeholders that would force `whnf` to descend into the opaque `pushforward₀`). (2) Package `NatTrans.naturality_apply` inside a `rw [show ... from ...]` so its rewrite pattern aligns with the `.hom`-form already present in the goal. With ψ-naturality moved, both sides reduce to `KD.d ((G ⊗ G).left.presheaf.map (snd⁻¹.op.map f) (ψ.app X x))` via `relativeDifferentials'_map_d`. Final body ~30 LOC, at the low end of the iter-141 30–50 LOC envelope."
+      }
+    ],
+    "next_steps": "Carry to iter-143+: d_map closure pattern is reusable for any `Derivation'.mk`-internal naturality goal that crosses a Mathlib pushforward functor. Codify the two-fix rule (`change` fully-explicit + `rw [show ... from NatTrans.naturality_apply ...]`) in the Knowledge Base."
+  },
+  {
+    "timestamp": "2026-05-18T09:05:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cotangent/GrpObj.lean",
+      "theorem": "AlgebraicGeometry.GrpObj.basechange_along_proj_two_inv_derivation.d_app (sub-sorry of basechange_along_proj_two_inv_derivation at L573)"
+    },
+    "session": {
+      "id": "session_142",
+      "model": "claude-sonnet-4-6"
+    },
+    "findings": {
+      "blocker": "Categorical factoring-witness `h : ((pullback G.hom.base).obj (Spec k).presheaf).obj X ⟶ ((pullback (fst G G).left.base).obj G.left.presheaf).obj (snd⁻¹X)` such that `(φ_LHS.app (snd⁻¹X)).comp h = (ψ.app X).comp (φ_G.app X)` requires explicit adjunction-transpose chase through `pullbackPushforwardAdjunction.homEquiv.symm`. No Mathlib shortcut exists (per analogies/d-app-d-map-recipe-shape.md Decision 2: NEEDS_MATHLIB_GAP_FILL).",
+      "key_lemmas_used": [
+        "Over.w (planned)",
+        "PresheafedSpace.comp_c_app (planned)",
+        "ModuleCat.Derivation.d_map (planned)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Try Mathlib defaults: `simp`, `aesop`, `cat_disch`, `apply (CommRingCat.KaehlerDifferential.D _).d_map _`.",
+        "code_tried": "exact (CommRingCat.KaehlerDifferential.D _).d_map _; simp; aesop_cat; cat_disch",
+        "line_number": "637",
+        "lean_error": "Various: `simp` made no progress; `aesop_cat` reduced to metavariable-typed sub-goal; `cat_disch` reduced to metavariable-typed sub-goal; `exact ... .d_map _` failed elaboration with placeholder metavariables.",
+        "goal_before": "(CommRingCat.KaehlerDifferential.D ((pullbackPushforwardAdjunction.homEquiv _ _).symm (fst G G).left.c).app (snd⁻¹X)).d ((RingCat.Hom.hom (ψ.app X)) ((ConcreteCategory.hom (((pullbackPushforwardAdjunction.homEquiv _ _).symm G.hom.c).app X)) a)) = 0",
+        "goal_after": "<various>",
+        "result": "failed",
+        "insight": "The goal `KD.d (ψ.app X (φ_G.app X a)) = 0` does NOT structurally match `KD.d (f x) = 0` for the standard algebra-map shape, because `ψ.app X ∘ φ_G.app X` is not literally `φ_LHS.app (snd⁻¹X)`; Mathlib's `d_map` cannot fire without first constructing the factoring witness `h`."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Replace iter-140's `change KD.d _ = 0` placeholder pattern with a fully-explicit `change` spelling out `ψ.app X .hom (φ_G.app X .hom a)`, so the iter-143+ closure recipe lands on a canonical-form goal.",
+        "code_tried": "change (CommRingCat.KaehlerDifferential.D _).d (((Scheme.Hom.toRingCatSheafHom (snd G G).left).hom.app X).hom (((((TopCat.Presheaf.pullbackPushforwardAdjunction CommRingCat G.hom.base).homEquiv _ _).symm G.hom.c).app X).hom a)) = 0\nsorry",
+        "line_number": "623",
+        "lean_error": null,
+        "goal_before": "<as above>",
+        "goal_after": "(KD _).d (ψ.app X .hom (φ_G.app X .hom a)) = 0 (canonical form, no `_` placeholders)",
+        "result": "partial",
+        "insight": "The explicit `change` succeeds (LHS-only `change` on a `_ = 0` goal does NOT trigger the `pushforward₀` `whnf` opacity because the RHS is the literal `0` and `whnf` doesn't descend into the LHS's adjunction-transpose under the `_=0` shape). The remaining 4-step recipe (categorical equality from `Over.w`, lift to c-components via `PresheafedSpace.comp_c_app`, transpose through `pullbackPushforwardAdjunction.homEquiv.symm`, discharge via `ModuleCat.Derivation.d_map`) is iter-143+ work; envelope ~40–80 LOC."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Iter-142 placeholder-`_` short `change` (regression test).",
+        "code_tried": "change (CommRingCat.KaehlerDifferential.D _).d _ = 0; sorry",
+        "line_number": "623",
+        "lean_error": "(deterministic) timeout at `whnf`, maximum number of heartbeats (200000) has been reached",
+        "goal_before": "<as above>",
+        "goal_after": "<error>",
+        "result": "failed",
+        "insight": "Confirms a NEW finding: even the `_=0`-shape `change` with a `_` LHS placeholder triggers the `pushforward₀` `whnf` timeout when the elided LHS carries `pullbackPushforwardAdjunction.homEquiv.symm` — `whnf` is forced to elaborate the `_` and descends. The iter-140 + iter-142 lesson is now strengthened: `change` placeholders are unsafe whenever ANY side of the equation crosses `pushforward₀`-annotated definitions, even on `_=0`-shape goals where iter-140 expected the `whnf` to short-circuit. The safe pattern is fully-explicit `change` blocks (no `_`)."
+      }
+    ],
+    "next_steps": "Iter-143+: the explicit-`change` skeleton at L623–L626 has exposed the goal in canonical form. Build the witness `h` via the 4-step recipe in task_results/Cotangent_GrpObj.lean.md § d_app closure recipe. Mathlib lemmas to consume: `Over.w` (step 1), `PresheafedSpace.comp_c_app` (step 2), `pullbackPushforwardAdjunction.homEquiv.symm` unfolding (step 3), `ModuleCat.Derivation.d_map` (step 4). Envelope ~40–80 LOC. If d_app closes iter-143 → triggers piece (i.b) Step 2 PASS arm → iter-144 fires Main `mulRight_globalises_cotangent`."
+  },
+  {
+    "timestamp": "2026-05-18T09:05:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Cotangent/GrpObj.lean",
+      "theorem": "AlgebraicGeometry.GrpObj.relativeDifferentialsPresheaf_basechange_along_proj_two.IsIso (sub-sorry at L720 inside `isIso_of_app_iso_module ... (fun _ => sorry)`)"
+    },
+    "session": {
+      "id": "session_142",
+      "model": "claude-sonnet-4-6"
+    },
+    "findings": {
+      "blocker": "Per-open `IsIso ((basechange_along_proj_two_inv G).app X)` check via Route (b'2) needs three pieces of infrastructure (items 2–4 of analogies/isiso-basechange-along-proj-two-inv.md): chart-level `Algebra.IsPushout`-from-affine-product helper (~80–150 LOC), `((pullback ψ).obj M).obj X` chart-unfolding helper `pullbackObjEquivTensor` (~30–60 LOC), per-open identification with `tensorKaehlerEquiv.symm` (~80–150 LOC). Total ~195–365 LOC bundled.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Iter-142 prover deprioritized this sub-sorry in favor of the smaller, more tractable d_app + d_map closures (priority order set by analogist Decision 5 LOC envelope).",
+        "code_tried": "(no attempts beyond the iter-140 `isIso_of_app_iso_module ... (fun _ => sorry)` structural narrowing — preserved verbatim)",
+        "line_number": "720",
+        "lean_error": null,
+        "goal_before": "∀ X, IsIso ((basechange_along_proj_two_inv G).app X)",
+        "goal_after": "<unchanged>",
+        "result": "partial",
+        "insight": "Iter-142 PARTIAL arm: 1 of 3 sub-sorries closed (d_map only). The IsIso path retains the iter-140 narrowing structure. Iter-143+ closure path is itemised in task_results/Cotangent_GrpObj.lean.md § IsIso L689."
+      }
+    ],
+    "next_steps": "Iter-143+: under the iter-141/iter-142 pre-committed acceptance matrix, PARTIAL = CHURNING-CONFIRMED. The planner must dispatch a mid-iter strategy-critic with the DIAGNOSTIC question 'which of d_app / d_map / IsIso failed and why — is the failure recipe-level, definition-level, or strategy-level?' (NOT a pre-committed answer). On the IsIso side specifically, items 2–4 of Route (b'2) are LOC-dominant infrastructure (~195–365 LOC bundled) — best deferred until d_app closes."
+  },
+  {
+    "timestamp": "2026-05-18T09:05:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Cotangent/GrpObj.lean",
+      "theorem": "AlgebraicGeometry.GrpObj.mulRight_globalises_cotangent (Main; L833)"
+    },
+    "session": {
+      "id": "session_142",
+      "model": "claude-sonnet-4-6"
+    },
+    "findings": {
+      "blocker": "Gated on piece (i.b) Step 2 sub-sorries closing first (d_app + IsIso). Iter-142 closed 1 of 3; the Main remains scaffold-only.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Iter-143+: not in scope until ≥2 of 3 Step 2 sub-sorries close (PASS arm); under PARTIAL arm fired iter-142, Main stays deferred."
+  },
+  {
+    "timestamp": "2026-05-18T09:05:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Jacobian.lean",
+      "theorem": "AlgebraicGeometry.genusZeroWitness (L193) + AlgebraicGeometry.positiveGenusWitness (L219)"
+    },
+    "session": {
+      "id": "session_142",
+      "model": "claude-sonnet-4-6"
+    },
+    "findings": {
+      "blocker": "Off iter-142 critical path — both are M2.b / M3 scaffolds whose bodies wait on upstream M2-pile / Picard or Symmetric-powers infrastructure.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Out of scope for iter-143 critical path; M2.b body closure target is iter-138+ and M3 is off-critical-path per STRATEGY.md."
+  },
+  {
+    "timestamp": "2026-05-18T09:05:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/RigidityKbar.lean",
+      "theorem": "AlgebraicGeometry.rigidity_over_kbar (L75)"
+    },
+    "session": {
+      "id": "session_142",
+      "model": "claude-sonnet-4-6"
+    },
+    "findings": {
+      "blocker": "Body closure gated on the shared cotangent-vanishing pile (pieces (i)+(ii)+(iii)) completing first.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Out of scope for iter-143; body closure activates after piece (i.b) Step 2 + (i.c) + (ii) + (iii) close. Current iter-142 close: piece (i.b) Step 2 at 1 of 3 sub-sorries closed."
+  }
+]

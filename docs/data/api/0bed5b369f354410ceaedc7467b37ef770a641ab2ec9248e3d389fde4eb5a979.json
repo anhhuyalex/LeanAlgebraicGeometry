@@ -1,0 +1,185 @@
+[
+  {
+    "timestamp": "2026-05-15T21:31:10Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "relativeDifferentialsPresheaf_isSheaf"
+    },
+    "session": {
+      "id": "session_112",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Helper #1 relativeDifferentialsPresheaf_isSheafOpensLeCover_type body still requires Step 2 (affine identification via tilde Ω_{B/A}) + Step 3 (cofinality refinement against affine basis); ~100-200 LOC of new mathematical content, deferred to iter-113+.",
+      "key_lemmas_used": [
+        "CategoryTheory.Presheaf.isSheaf_iff_isSheaf_comp",
+        "TopCat.Presheaf.isSheaf_iff_isSheafOpensLeCover",
+        "TopCat.Presheaf.IsSheafOpensLeCover",
+        "CategoryTheory.forget AddCommGrpCat"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Step 1 forgetful reduction via TopCat-namespaced isSheaf_iff_isSheaf_comp with bare `forget AddCommGrpCat`",
+        "code_tried": "rw [TopCat.Presheaf.isSheaf_iff_isSheaf_comp (forget AddCommGrpCat) _]; sorry",
+        "line_number": 122,
+        "lean_error": "namespace path is wrong; `forget AddCommGrpCat` parses as `AlgebraicGeometry.Scheme.forget` due to `open AlgebraicGeometry`",
+        "goal_before": "Presheaf.IsSheaf (Opens.grothendieckTopology X.toTopCat) ((relativeDifferentialsPresheaf f).presheaf)",
+        "goal_after": "(no progress — rewrite failed at goal-shape match)",
+        "result": "failed",
+        "insight": "Two issues conflated: (a) TopCat-namespaced variant rewrites the alias `TopCat.Presheaf.IsSheaf`, not the raw `Presheaf.IsSheaf` in the goal; (b) bare `forget` is parsed as `AlgebraicGeometry.Scheme.forget` under the file's namespace-open. Fix both."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Same as Attempt 1 with fully-qualified `CategoryTheory.forget AddCommGrpCat`",
+        "code_tried": "rw [TopCat.Presheaf.isSheaf_iff_isSheaf_comp (CategoryTheory.forget AddCommGrpCat) _]; sorry",
+        "line_number": 122,
+        "lean_error": "rewrite still fails — wrong namespace path on the rewrite rule itself",
+        "goal_before": "Presheaf.IsSheaf (Opens.grothendieckTopology X.toTopCat) ((relativeDifferentialsPresheaf f).presheaf)",
+        "goal_after": "(no progress)",
+        "result": "failed",
+        "insight": "The TopCat.Presheaf.* variant of isSheaf_iff_isSheaf_comp is not the right entry point when the goal's Grothendieck topology is `Opens.grothendieckTopology X.toTopCat` (i.e. the raw `CategoryTheory.Presheaf.IsSheaf`)."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Step 1 reduction via bare `CategoryTheory.Presheaf.isSheaf_iff_isSheaf_comp`",
+        "code_tried": "rw [Presheaf.isSheaf_iff_isSheaf_comp _ _ (CategoryTheory.forget AddCommGrpCat)]; sorry",
+        "line_number": 122,
+        "lean_error": "",
+        "goal_before": "Presheaf.IsSheaf (Opens.grothendieckTopology X.toTopCat) ((relativeDifferentialsPresheaf f).presheaf)",
+        "goal_after": "Presheaf.IsSheaf (Opens.grothendieckTopology X.toTopCat) ((relativeDifferentialsPresheaf f).presheaf ⋙ CategoryTheory.forget AddCommGrpCat)",
+        "result": "success",
+        "insight": "The bare `CategoryTheory.Presheaf.isSheaf_iff_isSheaf_comp` (signature: J → A → B → ...) is the right rewrite. The `_ _` fill the two category metavariables; the explicit arg is the forgetful functor. This is the load-bearing Step 1 reduction."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Chain Step 1 + Step 3 inline via combined rw",
+        "code_tried": "rw [Presheaf.isSheaf_iff_isSheaf_comp _ _ (CategoryTheory.forget AddCommGrpCat), TopCat.Presheaf.isSheaf_iff_isSheafOpensLeCover]; sorry",
+        "line_number": 122,
+        "lean_error": "Second rw failed to find pattern (post-Step-1 goal has `Presheaf.IsSheaf`, not `TopCat.Presheaf.IsSheaf` which is what the OpensLeCover lemma rewrites)",
+        "goal_before": "Presheaf.IsSheaf (Opens.grothendieckTopology X.toTopCat) ((relativeDifferentialsPresheaf f).presheaf)",
+        "goal_after": "(rw chain aborted at second rewrite)",
+        "result": "failed",
+        "insight": "Step 2 + Step 3 cannot be performed inline by a second rewrite — they need to be packaged via a helper whose conclusion explicitly states the goal at the OpensLeCover level (i.e. using `TopCat.Presheaf.IsSheafOpensLeCover` in the signature)."
+      },
+      {
+        "attempt": 5,
+        "strategy": "Inline `mpr by intro ι U; sorry` packaging via OpensLeCover characterisation",
+        "code_tried": "rw [Presheaf.isSheaf_iff_isSheaf_comp _ _ (CategoryTheory.forget AddCommGrpCat)]\n  exact (TopCat.Presheaf.isSheaf_iff_isSheafOpensLeCover _).mpr (by intro ι U; sorry)",
+        "line_number": 122,
+        "lean_error": "unsolved goals after `exact`; argument shape mismatch",
+        "goal_before": "Presheaf.IsSheaf (Opens.grothendieckTopology X.toTopCat) ((relativeDifferentialsPresheaf f).presheaf)",
+        "goal_after": "(`exact` term-shape does not match post-rw goal)",
+        "result": "failed",
+        "insight": "Inline packaging is not the right approach — the `isSheafOpensLeCover` characterisation needs to be applied via a separately-named helper whose stated conclusion already exposes `IsSheafOpensLeCover` in qualified form."
+      },
+      {
+        "attempt": 6,
+        "strategy": "v1: two helpers with identical IsSheafOpensLeCover signatures, one delegating",
+        "code_tried": "(top-level: lemma _isSheafOpensLeCover_type_A f := ...; lemma _isSheafOpensLeCover_type_B f := _A f)",
+        "line_number": 159,
+        "lean_error": "compiles but mathematically indistinguishable; pure boilerplate",
+        "goal_before": "(scaffolding probe)",
+        "goal_after": "(scaffolding probe)",
+        "result": "partial",
+        "insight": "Two identical-signature helpers are pure boilerplate; the two helpers must have distinct mathematical content. Rejected; pivoted to v2."
+      },
+      {
+        "attempt": 7,
+        "strategy": "v2: two helpers with distinct signatures (affine-restricted vs global), each with sorry body",
+        "code_tried": "(top-level: lemma _isLimit_on_affine f V hV := sorry; lemma _isLimit_opensLeCover f := sorry)",
+        "line_number": 159,
+        "lean_error": "first probe failed: `Invalid field IsSheafOpensLeCover: The environment does not contain CategoryTheory.Functor.IsSheafOpensLeCover`. After fix to qualified `TopCat.Presheaf.IsSheafOpensLeCover (...)` in signature: compiles, but sorry count rises to 6 (regression).",
+        "goal_before": "(scaffolding probe)",
+        "goal_after": "(scaffolding probe)",
+        "result": "failed",
+        "insight": "Two pitfalls: (a) `(F ⋙ forget _).IsSheafOpensLeCover` is wrong field-access syntax; `IsSheafOpensLeCover` is a standalone declaration under `TopCat.Presheaf`, not a Functor field — must use explicit qualified form. (b) Splitting Step 2 and Step 3 into two sorry-bodied helpers regresses the project sorry count from 16 → 17. Rejected; pivoted to v3."
+      },
+      {
+        "attempt": 8,
+        "strategy": "v3: one load-bearing helper (Step 2 + Step 3 packaged) + one fully-closed derived helper (namespace bridge)",
+        "code_tried": "lemma relativeDifferentialsPresheaf_isSheafOpensLeCover_type (f : X ⟶ S) :\n    TopCat.Presheaf.IsSheafOpensLeCover\n      ((relativeDifferentialsPresheaf f).presheaf ⋙\n        CategoryTheory.forget AddCommGrpCat) := by\n  intro ι U\n  sorry\n\nlemma relativeDifferentialsPresheaf_isSheaf_type (f : X ⟶ S) :\n    Presheaf.IsSheaf (Opens.grothendieckTopology X.toTopCat)\n      ((relativeDifferentialsPresheaf f).presheaf ⋙\n        CategoryTheory.forget AddCommGrpCat) :=\n  (TopCat.Presheaf.isSheaf_iff_isSheafOpensLeCover _).mpr\n    (relativeDifferentialsPresheaf_isSheafOpensLeCover_type f)\n\ntheorem relativeDifferentialsPresheaf_isSheaf (f : X ⟶ S) : ... := by\n  rw [Presheaf.isSheaf_iff_isSheaf_comp _ _ (CategoryTheory.forget AddCommGrpCat)]\n  exact relativeDifferentialsPresheaf_isSheaf_type f",
+        "line_number": 159,
+        "lean_error": "",
+        "goal_before": "Presheaf.IsSheaf (Opens.grothendieckTopology X.toTopCat) ((relativeDifferentialsPresheaf f).presheaf)",
+        "goal_after": "(main theorem fully closed; helper #1 body is `intro ι U; sorry`)",
+        "result": "partial",
+        "insight": "v3 keeps file sorry count flat at 5 (the L122 sorry moves into helper #1's body at L159) while exposing the single residual mathematical content as one named helper. Main theorem and helper #2 are fully closed. Bar B achieved per `PROGRESS.md` § Concrete iter-112 success bar."
+      }
+    ],
+    "next_steps": "Iter-113: dispatch prover lane on helper #1 `relativeDifferentialsPresheaf_isSheafOpensLeCover_type` (L159). Follow the iter-113+ recipe in the prover task result: Sub-lemma A (affine `V = Spec B ⊆ X` over `Spec A ⊆ S`: restriction of (relativeDifferentialsPresheaf f).presheaf to opens contained in V is naturally iso to `AlgebraicGeometry.tilde Ω_{B/A}`'s underlying presheaf; uses `KaehlerDifferential.isLocalizedModule_map` + `IsAffineOpen.isLocalization_basicOpen`; LOC budget ~40-80) + Sub-lemma B (refine an arbitrary `U : ι → Opens X` through `isBasis_affineOpens`; lift the equalizer-products condition back via cofinality in the OpensLeCover category; LOC budget ~50-100). Helper #1 body becomes `intro ι U; exact (sub-lemma B applied to sub-lemma A on each affine restriction) f U`. Total ~100-200 LOC matches the iter-111 plan-agent's revised LOC budget."
+  },
+  {
+    "timestamp": "2026-05-15T21:31:10Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "cotangentExactSeq_structure_h_exact"
+    },
+    "session": {
+      "id": "session_112",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Off-limits this iter (named gap #2, deferred parallel to instIsMonoidal_W)."
+    },
+    "attempts": [],
+    "next_steps": "Off-limits. Re-evaluate when instIsMonoidal_W or Mathlib gap closes."
+  },
+  {
+    "timestamp": "2026-05-15T21:31:10Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "smooth_iff_locally_free_omega"
+    },
+    "session": {
+      "id": "session_112",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Off-limits this iter (Phase B scheduled last). Lean-vs-blueprint-checker flagged a pre-existing signature mismatch: blueprint pins `IsSmoothOfRelativeDimension n f`, Lean uses dimension-free `Smooth f` with a free `n : ℕ` parameter. Must-fix via refactor lane before any prover dispatch.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Refactor lane (not prover) to align Lean signature with blueprint: `Smooth f` → `IsSmoothOfRelativeDimension n f`."
+  },
+  {
+    "timestamp": "2026-05-15T21:31:10Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "cotangent_at_section"
+    },
+    "session": {
+      "id": "session_112",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Off-limits this iter (Phase B, scheduled second). Same signature mismatch as smooth_iff_locally_free_omega.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Refactor lane to align Lean signature with blueprint: `Smooth f` → `IsSmoothOfRelativeDimension n f`."
+  },
+  {
+    "timestamp": "2026-05-15T21:31:10Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "serre_duality_genus"
+    },
+    "session": {
+      "id": "session_112",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Off-limits (named gap #7). Lean-vs-blueprint-checker flagged a pre-existing signature mismatch: Lean writes both sides as `HModule k _ 0` (i.e. H^0 = H^0); blueprint asserts H^0(Ω_{C/k}) = H^1(O_C). Lean equation is mathematically FALSE for genus > 1.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Refactor lane to fix the signature: bump second-index `0` to `1` and pair with the correct sheaf. Until fixed, this declaration cannot receive a proof body."
+  }
+]

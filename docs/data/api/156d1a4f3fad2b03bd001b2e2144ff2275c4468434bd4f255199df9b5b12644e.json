@@ -1,0 +1,210 @@
+[
+  {
+    "timestamp": "2026-06-01T05:32:10Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate/StalkTensor.lean",
+      "theorem": "PresheafOfModules.stalkTensorIso"
+    },
+    "session": {
+      "id": "session_236",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "TensorProduct.liftAddHom",
+        "TensorProduct.induction_on",
+        "TopCat.Presheaf.germ_exist",
+        "TopCat.Presheaf.germ_res_apply",
+        "PresheafOfModules.germ_smul",
+        "PresheafOfModules.Monoidal.tensorObj_map_tmul",
+        "revBihom_balanced",
+        "stalkTensorRev_germ_tmul",
+        "stalkTensorLinearMap_germ_tmul",
+        "germ_tensorObj_map_tmul"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Prove the liftAddHom balancing condition revBihom(r.m)n = revBihom m(r.n) at the W-section level (over CommRingCat carrier R(W), R'=R so smul_tmul synthesises) then transport to the W-inf-W identity via congrArg + erw[tensorObj_map_tmul]; wrap in germ to supply the relative-tensor expected type.",
+        "code_tried": "private lemma revBihom_balanced_germ (W Z : Opens X) (hxZ : x in Z) (j : Z -> W) ... ; private lemma revBihom_balanced (r) : ... rw[<-germ_smul, <-germ_smul, revBihom_germ_tmul ...]; exact revBihom_balanced_germ A B x W (W inf W) <hxW,hxW> (homOfLE inf_le_left) r0' a' b'",
+        "line_number": "403,427",
+        "lean_error": null,
+        "goal_before": "revBihom (r . m) n = revBihom m (r . n)",
+        "goal_after": "closed",
+        "result": "success",
+        "insight": "iter-235 carrier-duality wall avoided: prove the (r0.a)(b)=(a)(r0.b) identity over R(W) (CommRingCat) NOT at W-inf-W over RingCat (where smul_tmul synth fails); a STANDALONE bare-tmul lemma fails Module synth (A.presheaf.obj vs A.obj) -> MUST germ-wrap for the expected module type."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Build the reverse map by descending revBihom through TensorProduct.liftAddHom; characterise on germ generators.",
+        "code_tried": "noncomputable def stalkTensorRev := TensorProduct.liftAddHom (ConcreteCategory.hom (revBihom A B x)) (revBihom_balanced A B x); lemma stalkTensorRev_germ_tmul ... rw[stalkTensorRev, TensorProduct.liftAddHom_tmul]; exact revBihom_germ_tmul ...",
+        "line_number": "459,465",
+        "lean_error": null,
+        "goal_before": "stalkTensorRev(germ a tmul germ b) = germ_{UinfV}((a|) tmul (b|))",
+        "goal_after": "closed",
+        "result": "success",
+        "insight": "germ characterisation of the reverse needs germ_tensorObj_map_tmul (germ of a restricted simple tensor over a single restriction map j)."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Bundle forward (stalkTensorLinearMap) and reverse (stalkTensorRev) into a LinearEquiv; prove left_inv/right_inv by TensorProduct.induction_on after germ_exist, tmul cases via the germ-characterisation lemmas.",
+        "code_tried": "noncomputable def stalkTensorIso : (stalk (tensorObj A B).presheaf x) ~=l[R.stalk x] Tgt where toFun := stalkTensorLinearMap; invFun := stalkTensorRev; left_inv := by intro s; obtain <U,hxU,w,rfl> := germ_exist ...; induction w using TensorProduct.induction_on with | tmul a b => erw[stalkTensorLinearMap_germ_tmul, stalkTensorRev_germ_tmul]; exact germ_tensorObj_map_tmul ...",
+        "line_number": "505",
+        "lean_error": null,
+        "goal_before": "left_inv/right_inv of the comparison maps on germ generators",
+        "goal_after": "closed; #print axioms = {propext, Classical.choice, Quot.sound}",
+        "result": "success",
+        "insight": "TensorProduct.induction_on yields tmuls over the RingCat carrier (R-comp-forget2) while germ-char lemmas use R.obj (CommRingCat) -> bridge with erw (defeq) NOT rw; zero/add cases need erw[map_zero...]/erw[map_add...] (simp only makes no progress on ConcreteCategory.hom-applied terms)."
+      }
+    ],
+    "next_steps": "Wire stalkTensorIso into the associator consumer isLocallyInjective_whiskerLeft_of_W in TensorObjSubstrate.lean (still sorry-bearing) -> unconditional associator -> close thm:pic_commgroup. The d.2 INGREDIENT is built; the consumer wiring is the next critical-path unit."
+  },
+  {
+    "timestamp": "2026-06-01T05:32:10Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/FlatBaseChange.lean",
+      "theorem": "AlgebraicGeometry.gammaPushforwardIso"
+    },
+    "session": {
+      "id": "session_236",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "ModuleCat.restrictScalarsComp'App",
+        "AlgebraicGeometry.Scheme.ΓSpecIso_inv_naturality",
+        "StructureSheaf.globalSectionsIso",
+        "RingHom.ext",
+        "eqToIso"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Route (a): build a LinearEquiv.toModuleIso with AddEquiv.refl carrier and discharge map_smul' at the element level.",
+        "code_tried": "LinearEquiv with toFun := AddEquiv.refl, map_smul' := by rw[RingHom.id_apply]; erw[ModuleCat.restrictScalars.smul_def x4]; ... congr 1 / congrArg (.smul m) / change _.smul (m:reduced) = _",
+        "line_number": "(scratch)",
+        "lean_error": "failed to synthesize HSMul (alias) (carrier); congr 1 -> whnf timeout; congr 2 -> RingHom-type + HEq goals",
+        "goal_before": "A.smul m = B.smul m with A,B : Gamma(Spec R',top) equal by naturality",
+        "goal_after": "stuck",
+        "result": "failed",
+        "insight": "Route (a) is DEAD: the LinearEquiv typechecks once annotated ~=l[(R:Type u)] (no respectTransparency, supersedes iter-234), and map_smul' reduces exactly to A.m=B.m, but EVERY element-level finisher hits the alias-vs-reduced-type HSMul-synth wall. Do NOT retry any section-level finisher."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Route (b) element-free: peel both sides by rfl to nested restrictScalars towers over the common global-section module SecN, reconcile via restrictScalarsComp'App x2 + eqToIso of the ring equation.",
+        "code_tried": "theorem globalSectionsIso_hom_comp_specMap_appTop : (globalSectionsIso R).hom >> (Spec.map φ).appTop = φ >> (globalSectionsIso R').hom := by rw[hR,hR']; exact (ΓSpecIso_inv_naturality φ).symm.  def gammaPushforwardIso := (restrictScalarsComp'App gsRhom pushTop _ rfl SecN).symm <=> eqToIso (congrArg _ hcomp) <=> (restrictScalarsComp'App φ.hom gsR'hom _ rfl SecN)",
+        "line_number": "265,285",
+        "lean_error": null,
+        "goal_before": "Gamma((Spec φ)_* N) ~= restrictScalars φ (Gamma N)",
+        "goal_after": "closed; #print axioms = {propext, Classical.choice, Quot.sound}",
+        "result": "success",
+        "insight": "Element-free route avoids the carrier wall entirely: construction stays at the ModuleCat object/functor level, no element-level smul touched. hcomp : pushTop.comp gsRhom = gsR'hom.comp φ.hom from globalSectionsIso_hom_comp_specMap_appTop via RingHom.ext + congr($_.hom x). globalSectionsIso S .hom = (ΓSpecIso S).inv by rfl."
+      }
+    ],
+    "next_steps": "Object iso pushforward_spec_tilde_iso needs quasi-coherence of (Spec φ)_*(tilde M) (Mathlib-absent, circular with counit route). Three independent QC routes documented (Presentation / IsQuasicoherent.of_coversTop / direct isIso_of_isIso_app_of_isBasis via IsLocalizedModule on basic opens -- route (iii) yields object iso AND QC simultaneously)."
+  },
+  {
+    "timestamp": "2026-06-01T05:32:10Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/FlatBaseChange.lean",
+      "theorem": "AlgebraicGeometry.gammaPushforwardTildeIso"
+    },
+    "session": {
+      "id": "session_236",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "gammaPushforwardIso",
+        "tilde.toTildeΓNatIso",
+        "Functor.mapIso",
+        "ModuleCat.restrictScalars"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Specialise gammaPushforwardIso to N = tilde M, then compose with the tilde-adjunction unit iso Gamma(M^~,top) ~= M.",
+        "code_tried": "noncomputable def gammaPushforwardTildeIso := gammaPushforwardIso φ (tilde M) <=> (restrictScalars φ.hom).mapIso (tilde.toTildeΓNatIso.app M).symm",
+        "line_number": "310",
+        "lean_error": null,
+        "goal_before": "Gamma((Spec φ)_*(tilde M)) ~= restrictScalars φ M",
+        "goal_after": "closed; axiom-clean",
+        "result": "success",
+        "insight": "The affine-theorem-consumable form; uses tilde unit iso (Gamma(M^~) ~= M), the iso, NOT the counit."
+      }
+    ],
+    "next_steps": "Consumed by affineBaseChange_pushforward_iso once QC of the pushforward closes pushforward_spec_tilde_iso."
+  },
+  {
+    "timestamp": "2026-06-01T05:32:10Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/FlatBaseChange.lean",
+      "theorem": "AlgebraicGeometry.pushforward_spec_tilde_iso"
+    },
+    "session": {
+      "id": "session_236",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Object iso reduced to a single named obligation: quasi-coherence of (Spec φ)_*(tilde M). Mathlib-absent and circular with the obvious counit route (moduleSpecΓFunctor reflects isos only between QC objects; the tilde-adjunction UNIT is the iso, not the counit, so Γ(fromTildeΓ Y) is always iso but does not lift to fromTildeΓ Y).",
+      "key_lemmas_used": [
+        "gammaPushforwardTildeIso",
+        "fromTildeΓ"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Factor the object iso as pushforward(tilde M) <-[fromTildeΓ] tilde(Γ(pushforward(tilde M))) ->[tilde.map gammaPushforwardTildeIso.hom] tilde(restrictScalars φ M); the second map is an iso (tilde of an iso); fromTildeΓ is an iso iff the pushforward is QC.",
+        "code_tried": "NOT ADDED (decl absent) -- reduction documented in file + blueprint 4-movement sketch",
+        "line_number": "(none)",
+        "lean_error": null,
+        "goal_before": "pushforward (Spec φ)_* (tilde M) ~= tilde (restrictScalars φ M)",
+        "goal_after": "reduced to QC-of-pushforward",
+        "result": "partial",
+        "insight": "Object iso is NOT added; reduced to QC of the pushforward with three concrete attack routes. Route (iii) (direct isIso_of_isIso_app_of_isBasis via IsLocalizedModule on basic opens) yields object iso AND QC simultaneously -- the recommended next attempt."
+      }
+    ],
+    "next_steps": "Next prover: attempt QC of (Spec φ)_*(tilde M) via route (iii) -- direct basic-open isIso_of_isIso_app_of_isBasis (already in this file) + IsLocalizedModule ((restrictScalars φ M) localised at a = M localised at φ a)."
+  },
+  {
+    "timestamp": "2026-06-01T05:32:10Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/FlatBaseChange.lean",
+      "theorem": "AlgebraicGeometry.flatBaseChange_pushforward_isIso"
+    },
+    "session": {
+      "id": "session_236",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Deep Čech + flatness theorem; SheafOfModules-level Čech cohomology Mathlib-absent. Documented sorry per PROGRESS.md; do NOT attempt.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Not attempted this iter (out of scope per PROGRESS.md; reduces to affineBaseChange_pushforward_iso which is itself open).",
+        "code_tried": "sorry (pre-existing, unchanged)",
+        "line_number": "370",
+        "lean_error": null,
+        "goal_before": "IsIso (pushforwardBaseChangeMap ...) under flat g, qcqs f, QC F",
+        "goal_after": "sorry",
+        "result": "partial",
+        "insight": "Honestly-scoped deep sorry; comment matches blueprint Čech sketch."
+      }
+    ],
+    "next_steps": "Gated on affineBaseChange_pushforward_iso (gated on pushforward_spec_tilde_iso -> QC of pushforward) + SheafOfModules Čech infra."
+  }
+]

@@ -1,0 +1,101 @@
+[
+  {
+    "timestamp": "2026-05-30T02:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "tensorObj_restrict_iso"
+    },
+    "session": {
+      "id": "session_208",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Presheaf residual `(PresheafOfModules.pullback φ.hom).obj (M.val ⊗ₚ N.val) ≅ (M.restrict f).val ⊗ₚ (N.restrict f).val` is NOT a bounded sectionwise unfolding: `PresheafOfModules.pullback` is the opaque abstract left adjoint of pushforward with no sectionwise formula. Genuine route needs 2 Mathlib-absent ingredients (H1 presheaf-level `pushforward β ≅ pullback φ` via leftAdjointUniq; H2 strong-monoidal restrictScalars along ring iso), ~200-300 LOC mathlib-build across 4 absent Mathlib lemmas. The iter-208 plan's Route-A `30-60 LOC` premise wrong by ~5x; armed reversal pre-commitment FIRED.",
+      "key_lemmas_used": [
+        "PresheafOfModules.sheafification.mapIso",
+        "Scheme.Modules.restrictFunctorIsoPullback",
+        "SheafOfModules.sheafificationCompPullback"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Route A audit per analogies/tsroute208.md: keep the two existing reduction steps, then discharge the presheaf residual via 'sectionwise unfolding of PresheafOfModules.pullback along open immersion'. Added a third genuine reduction step: strip the outer sheafification with `(PresheafOfModules.sheafification (𝟙 Y.ringCatSheaf.obj)).mapIso ?_`.",
+        "code_tried": "refine (PresheafOfModules.sheafification (R := Y.ringCatSheaf) (𝟙 Y.ringCatSheaf.obj)).mapIso ?_",
+        "line_number": "356",
+        "lean_error": "none — compiles GREEN; goal reduced to presheaf-level residual with no sheafification (verified via lean_goal at L367)",
+        "goal_before": "(PresheafOfModules.pullback (Hom.toRingCatSheafHom f).hom ⋙ PresheafOfModules.sheafification (𝟙 Y.ringCatSheaf.obj)).obj (PresheafOfModules.Monoidal.tensorObj M.val N.val) ≅ (M.restrict f).tensorObj (N.restrict f)",
+        "goal_after": "(PresheafOfModules.pullback φ.hom).obj (M.val ⊗ₚ N.val) ≅ (M.restrict f).val ⊗ₚ (N.restrict f).val",
+        "result": "partial",
+        "insight": "Step succeeds and is verified, but reveals the recipe is wrong: the residual is the opaque-pullback base-change iso, NOT a sectionwise unfolding. `restrict_obj` is rfl because `M.restrict f = SheafOfModules.pushforward β` (concrete pushforward), NOT a pullback — the recipe conflated opaque `pullback` with concrete `pushforward`."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Trace the strong-monoidal upgrade route concretely to pin the bottom gap: `pushforward = pushforward₀ ⋙ restrictScalars`; `pushforward₀OfCommRingCat` is Monoidal; upgrade lax `restrictScalarsLaxMonoidal` to strong via `Functor.Monoidal.ofLaxMonoidal` (needs IsIso ε easy, IsIso μ).",
+        "code_tried": "(not added to file — traced via lean_declaration_file / loogle on PresheafOfModules.pushforward, Functor.Monoidal.ofLaxMonoidal, ModuleCat.restrictScalars Monoidal)",
+        "line_number": "n/a",
+        "lean_error": "n/a (search-only; would not compile without H1 wiring + absent ingredient 4)",
+        "result": "failed",
+        "insight": "IsIso μ bottoms out in the absent Mathlib lemma 'ModuleCat.restrictScalars along a ring iso is strong monoidal' (extendScalars is Monoidal; restrictScalars only LaxMonoidal). Did not add as code: unwired without H1, risked breaking GREEN for no closed sorry. Decomposition recorded in informal/tensorObj_restrict_iso.md."
+      }
+    ],
+    "next_steps": "NOT closable in `prove` mode. The plan's reversal pre-commitment fired. Next plan agent: (a) commit a dedicated mathlib-build lane on ingredients (1)-(4) [presheaf pushforwardNatTrans, presheaf pushforwardCongr, presheaf-level pushforwardPushforwardAdj, strong-monoidal restrictScalars along ring iso — build (4) first, self-contained ~30-50 LOC], OR (b) pause TS and pivot per the pre-commitment. Blueprint Step 3 + 3 secondary sections must be rewritten to the H1/H2 route first (lvb must-fix)."
+  },
+  {
+    "timestamp": "2026-05-30T02:30:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "exists_tensorObj_inverse"
+    },
+    "session": {
+      "id": "session_208",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Strictly downstream of tensorObj_restrict_iso (cascade). Not attemptable until the blocker lands.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Not attempted — body remains `:= sorry` (L442). Blocked on upstream tensorObj_restrict_iso.",
+        "code_tried": "sorry",
+        "line_number": "442",
+        "lean_error": "n/a",
+        "result": "failed",
+        "insight": "Cascade-blocked; do not re-assign until tensorObj_restrict_iso closes."
+      }
+    ],
+    "next_steps": "Hold until tensorObj_restrict_iso lands."
+  },
+  {
+    "timestamp": "2026-05-30T02:30:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "addCommGroup_via_tensorObj"
+    },
+    "session": {
+      "id": "session_208",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Strictly downstream of the four iso lemmas, themselves downstream of tensorObj_restrict_iso (cascade).",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Not attempted — body remains `:= sorry` (L481). Blocked on upstream iso lemmas.",
+        "code_tried": "sorry",
+        "line_number": "481",
+        "lean_error": "n/a",
+        "result": "failed",
+        "insight": "Cascade-blocked; do not re-assign until the four iso lemmas land."
+      }
+    ],
+    "next_steps": "Hold until the four iso lemmas (assoc/unit/comm/inverse) land."
+  }
+]

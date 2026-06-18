@@ -1,0 +1,222 @@
+[
+  {
+    "timestamp": "2026-05-22T07:00:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects.lean",
+      "theorem": "mvPolyToHomogeneousLocalizationAway_surjective"
+    },
+    "session": {
+      "id": "session_172",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "HomogeneousLocalization.Away.adjoin_mk_prod_pow_eq_top",
+        "HomogeneousLocalization.val_pow",
+        "HomogeneousLocalization.val_injective",
+        "Localization.mk_eq_mk_iff",
+        "Localization.r_iff_exists",
+        "SubmonoidClass.coe_pow",
+        "SetLike.GradeZero.algebraMap_apply",
+        "MvPolynomial.induction_on",
+        "Subalgebra.algebraMap_mem",
+        "Subalgebra.add_mem",
+        "Subalgebra.mul_mem",
+        "MvPolynomial.homogeneousComponent_zero",
+        "Fin.sum_univ_two"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Algebra.adjoin_induction over (𝒜 0) using Mathlib's HomogeneousLocalization.Away.adjoin_mk_prod_pow_eq_top specialised to d=1, v=![X 0, X 1], dv=![1, 1]; chain MvPolynomial.induction_on for the algebra-of-degree-0 generation step (auxiliary 'Algebra.adjoin (𝒜 0) (Set.range v) = ⊤'); gen_eq_pow helper reducing Away.mk hf a (∏ v j^ai j) _ to (isLocalizationElem hfi hgi)^(ai (otherFin i)) via val-injective + Localization.mk_eq_mk_iff + r_iff_exists + ring identity (X 0^a₀ * X 1^a₁) * X i^k = X (otherFin i)^k * X i^a",
+        "code_tried": "private lemma mvPolyToHomogeneousLocalizationAway_surjective (kbar) [Field] (i : Fin 2) : Function.Surjective (mvPolyToHomogeneousLocalizationAway kbar i) := by classical; have hfi : (MvPolynomial.X i : MvPolynomial (Fin 2) kbar) ∈ projectiveLineBarGrading kbar 1 := MvPolynomial.isHomogeneous_X kbar i; ... (~140 LOC body)",
+        "line_number": "AlgebraicJacobian/Genus0BaseObjects.lean:379",
+        "lean_error": "(none — closed)",
+        "goal_before": "Function.Surjective (mvPolyToHomogeneousLocalizationAway kbar i)",
+        "goal_after": "(closed)",
+        "result": "success",
+        "insight": "Closure axiom-clean {propext, Classical.choice, Quot.sound}; downstream homogeneousLocalizationAwayIso_aux_left + homogeneousLocalizationAwayIso both now propagate axiom-clean from this single helper landing. iter-167 'cheapest-lever' KB pattern realized."
+      }
+    ],
+    "next_steps": "Closure of this PRIMARY 1 lifts the gating on downstream `gmScalingP1_chart` (PRIMARY 3 of iter-172, NOT attempted). iter-173 should test the chart-i scheme-morphism construction now that `homogeneousLocalizationAwayIso` is axiom-clean. Specifically: build the structural lemma `(gmScalingP1_cover kbar).X i ≅ Spec((Away 𝒜 (X i)) ⊗[kbar] (GmRing kbar))` over `Over (Spec kbar)`, then compose with `Spec.map gmScalingP1_chart_i_ringMap` + `Spec.map homogeneousLocalizationAwayIso.symm` + `Proj.awayι`."
+  },
+  {
+    "timestamp": "2026-05-22T07:00:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects.lean",
+      "theorem": "gmScalingP1_over_coherence"
+    },
+    "session": {
+      "id": "session_172",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "gated on PRIMARY 3 (`gmScalingP1_chart` body) — the goal `(cover.glueMorphisms gmScalingP1_chart _) ≫ PLB.hom = (PLB ⊗ Gm).hom` reduces (via Scheme.Cover.hom_ext + ι_glueMorphisms) to `∀ i, gmScalingP1_chart kbar i ≫ PLB.hom = cover.f i ≫ (PLB ⊗ Gm).hom`, which references the sorry-body chart and cannot be discharged.",
+      "key_lemmas_used": [
+        "Scheme.Cover.hom_ext",
+        "ι_glueMorphisms"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Scheme.Cover.hom_ext over gmScalingP1_cover to reduce to per-chart equations.",
+        "code_tried": "(strategy explored mentally; not committed as edit)",
+        "line_number": "AlgebraicJacobian/Genus0BaseObjects.lean:877",
+        "lean_error": "(no edit; goal-side analysis only)",
+        "result": "failed",
+        "insight": "Plan's hint that PRIMARY 2 can land independently of PRIMARY 3 was MISLEADING. Because the goal `(glueMorphisms gmScalingP1_chart _) ≫ PLB.hom = (PLB ⊗ Gm).hom` references the chart through `glueMorphisms`, the chart's body MUST be concrete for the equation to be discharged. Recorded as a planner-side discrepancy for iter-173."
+      }
+    ],
+    "next_steps": "Defer to iter-173 after PRIMARY 3 lands. Recipe: `Scheme.Cover.hom_ext`; for each chart `i`, factor the composite through `Spec.map (algebraMap kbar _)` via the Algebra.compHom chain built into the chart ring map."
+  },
+  {
+    "timestamp": "2026-05-22T07:00:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects.lean",
+      "theorem": "gmScalingP1_chart"
+    },
+    "session": {
+      "id": "session_172",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "source type `(gmScalingP1_cover kbar).X i = pullback (pullback.fst PLB.hom Gm.hom) (Proj.awayι _ (X i) _)` is an abstract pullback over `Proj 𝒜 = PLB.left`, while `pullbackSpecIso` operates on pullbacks of `Spec.map (algebraMap kbar _)` morphisms; bridging needs a structural lemma `(gmScalingP1_cover kbar).X i ≅ Spec((Away 𝒜 (X i)) ⊗[kbar] (GmRing kbar))` over `Over (Spec kbar)`.",
+      "key_lemmas_used": [
+        "Limits.pullback.congrHom",
+        "pullbackSpecIso",
+        "Spec.map",
+        "Proj.awayι"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Compose pullbackSpecIso ≫ Spec.map gmScalingP1_chart_i_ringMap ≫ Spec.map homogeneousLocalizationAwayIso.symm ≫ Proj.awayι per analogies/gmscaling-deep.md Q3.",
+        "code_tried": "(not attempted — out of prover budget after PRIMARY 1 closure)",
+        "line_number": "AlgebraicJacobian/Genus0BaseObjects.lean:847",
+        "result": "failed",
+        "insight": "PRIMARY 3 is now ATTEMPTABLE post-PRIMARY-1 (homogeneousLocalizationAwayIso axiom-clean), but the structural pullback-bridge `(cover).X i ≅ Spec(Away ⊗ GmRing)` needs to be built first. ~30-60 LOC per chart + 1-2 helper iso lemmas. Reserved for iter-173 first prover lane."
+      }
+    ],
+    "next_steps": "iter-173 PRIMARY 1 target — build the structural pullback-bridge iso, then the chart-i morphism composition."
+  },
+  {
+    "timestamp": "2026-05-22T07:00:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects.lean",
+      "theorem": "gmScalingP1_chart_agreement"
+    },
+    "session": {
+      "id": "session_172",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "gated on PRIMARY 3 — the cocycle is stated on intersections of chart morphisms; the morphisms must be concrete before the agreement can be checked",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Gluing cocycle on overlap D₊(X 0 · X 1); ring identity λ · u = (1/t) · λ in Localization.Away t ⊗ GmRing per analogies/gmscaling-deep.md Q4.",
+        "code_tried": "(not attempted — gated)",
+        "line_number": "AlgebraicJacobian/Genus0BaseObjects.lean:861",
+        "result": "failed",
+        "insight": "Defer to iter-173 after PRIMARY 3 lands. The substantive (0,1)/(1,0) cases reduce to a ring-level identity; the (0,0)/(1,1) cases collapse by pullback.lift_diag / pullback.diag_isPullback."
+      }
+    ],
+    "next_steps": "iter-173 SECONDARY — fires after PRIMARY 3 closes."
+  },
+  {
+    "timestamp": "2026-05-22T07:00:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/WeilDivisor.lean",
+      "theorem": "(file skeleton — 9 \\lean{...}-pinned declarations + 1 helper struct)"
+    },
+    "session": {
+      "id": "session_172",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "Finsupp",
+        "Finsupp.sum",
+        "AlgebraicGeometry.Scheme.functionField",
+        "AlgebraicGeometry.instFieldCarrierFunctionField",
+        "IsDiscreteValuationRing.addVal",
+        "Multiplicative"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Scaffold 9 \\lean{...}-pinned declarations from blueprint/src/chapters/RiemannRoch_WeilDivisor.tex; signatures match chapter pins; bodies as sorry for body-bearing decls and direct Finsupp/Finsupp-derived bodies for the 3 sorry-free decls (WeilDivisor, degree, LinearEquivalence); auxiliary `Scheme.PrimeDivisor` structure with placeholder `isCodim1AndIntegral : True := trivial` flagged in task result as honest scaffolding awaiting iter-173+ refinement.",
+        "code_tried": "Whole file: ~13 KB, 9 \\lean{...}-pinned decls + 1 helper struct + 2 trivial instances on Scheme.WeilDivisor (AddCommGroup, Inhabited); imports = `import Mathlib` + `import AlgebraicJacobian.Genus`.",
+        "line_number": "AlgebraicJacobian/RiemannRoch/WeilDivisor.lean (NEW file)",
+        "lean_error": "(none — file builds green; 6 sorry warnings on 6 body-bearing decls per task result)",
+        "result": "success",
+        "insight": "Three decls land sorry-free: Scheme.WeilDivisor (= PrimeDivisor →₀ ℤ); Scheme.WeilDivisor.degree (= D.sum (fun _ n => n)); Scheme.WeilDivisor.LinearEquivalence (= ∃ f hf, D - D' = principal f hf). Six remain sorry-bodied: order, ofClosedPoint, degree_hom, principal, principal_hom, principal_degree_zero. PrimeDivisor placeholder field `isCodim1AndIntegral : True := trivial` is documented as iter-173+ refinement target; downstream consumers still unfold to a meaningful free abelian group on points-of-X."
+      }
+    ],
+    "next_steps": "iter-173+: (a) close degree_hom (pure Finsupp lemma, no scheme content); (b) wait on RR.2 chapter writer for RR.2 / RR.3 / RR.4 bodies; (c) plan refinement of PrimeDivisor's placeholder once codim-1 witness type is decided."
+  },
+  {
+    "timestamp": "2026-05-22T07:00:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/RelativeSpec.lean",
+      "theorem": "(file skeleton — Lane B NEVER LANDED)"
+    },
+    "session": {
+      "id": "session_172",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "External API failure (`API Error: 529 Overloaded`) after 4.5 minutes / 13 turns; 0 file edits; prover lane died before scaffolding the chapter's 6 declarations. The HARD GATE for the underlying `Picard_RelativeSpec.tex` chapter was CLEARED iter-172 by the scoped fast-path blueprint-reviewer (`picard-scoped172` PASS); the chapter is on disk and prover-ready. The failure mode is exclusively external."
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Scaffold 6 declarations (QcohAlgebra, RelativeSpec, RelativeSpec.UniversalProperty, RelativeSpec.affine_base_iff, RelativeSpec.base_change, RelativeSpec.functor) from the chapter; bodies as sorry; ~100-200 LOC of stubs; update umbrella import.",
+        "code_tried": "(prover ran `mkdir AlgebraicJacobian/Picard`; 0 file edits before API 529 terminated the session)",
+        "line_number": "AlgebraicJacobian/Picard/RelativeSpec.lean (NOT CREATED)",
+        "lean_error": "API Error: 529 Overloaded",
+        "result": "failed",
+        "insight": "This is the SECOND consecutive iter (after iter-170 Lane A's API 500) that an external API outage killed a prover lane mid-run. The iter-170 reviewer pattern — 'reversal trigger does not fire when external API is the failure mode' — applies here too. iter-173 should RE-DISPATCH Lane B verbatim. Picard chapter remains on disk + HARD GATE cleared, so the re-dispatch is direct."
+      }
+    ],
+    "next_steps": "iter-173: RE-DISPATCH Lane B verbatim. The chapter is on disk; the HARD GATE is clear; the lane is mechanical (file-skeleton, no body filling). Re-attempt should succeed in <2K LOC of prover output."
+  },
+  {
+    "timestamp": "2026-05-22T07:00:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian.lean",
+      "theorem": "(umbrella)"
+    },
+    "session": {
+      "id": "session_172",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "NO-OP: the umbrella was already in its correct iter-172 state on entry; appended `import AlgebraicJacobian.RiemannRoch.WeilDivisor` was already present (added pre-iter-172 by an earlier lane or sync).",
+        "code_tried": "(no edits)",
+        "line_number": "AlgebraicJacobian.lean",
+        "result": "success",
+        "insight": "Lane B never landed (API 529), so its planned umbrella append `import AlgebraicJacobian.Picard.RelativeSpec` did not happen. Build green; no action needed this iter."
+      }
+    ],
+    "next_steps": "iter-173: Lane B re-attempt will add the missing umbrella import."
+  }
+]

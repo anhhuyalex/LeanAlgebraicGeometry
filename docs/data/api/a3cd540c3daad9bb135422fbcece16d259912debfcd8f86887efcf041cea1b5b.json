@@ -1,0 +1,178 @@
+[
+  {
+    "timestamp": "2026-05-30T15:45:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "restrictScalarsRingIsoTensorEquiv"
+    },
+    "session": {
+      "id": "session_215",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "none — landed axiom-clean ([propext, Quot.sound], no sorryAx)",
+      "key_lemmas_used": [
+        "TensorProduct.lift",
+        "TensorProduct.liftAddHom",
+        "LinearEquiv.ofLinear",
+        "TensorProduct.induction_on",
+        "TensorProduct.ext'",
+        "Module.compHom",
+        "RingEquiv.apply_symm_apply",
+        "TensorProduct.smul_tmul'",
+        "TensorProduct.smul_tmul",
+        "TensorProduct.tmul_smul"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Forward map a ⊗ₜ[R] b ↦ a ⊗ₜ[S] b via TensorProduct.lift; inverse via S-linear TensorProduct.lift into an e.symm-base-changed R-tensor",
+        "code_tried": "letI _iTR : Module S (TensorProduct R A B) := Module.compHom _ e.symm.toRingHom; refine LinearEquiv.ofLinear (TensorProduct.lift ...) ...",
+        "line_number": "115-193",
+        "lean_error": "failed to synthesize instance of type class SMulCommClass R S A (then CompatibleSMul R S A B)",
+        "result": "failed",
+        "insight": "Building the inverse as an S-linear lift into a doubly-base-changed module triggers unsatisfiable SMulCommClass/CompatibleSMul synthesis. Dead end — recorded in task result."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Build inverse as an AddHom via TensorProduct.liftAddHom, then promote to R-linear by induction_on; map_smul' on fwd via `show`",
+        "code_tried": "let bwdAdd := TensorProduct.liftAddHom {...} (fun s a b => by ... rw [hsa, hsb, TensorProduct.smul_tmul'])",
+        "line_number": "144-159",
+        "lean_error": "Tactic `rewrite` failed: Did not find an occurrence of the pattern ?r • ?m ⊗ₜ ?n in ... (e.symm s • a) ⊗ₜ[R] b = a ⊗ₜ[R] (e.symm s • b)",
+        "result": "partial",
+        "insight": "smul_tmul' is the wrong direction; the scalar-swap goal needs TensorProduct.smul_tmul (move S-scalar across the tensor via e.symm)."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Fix scalar-swap with `exact TensorProduct.smul_tmul _ _ _`; right-inverse via TensorProduct.ext'",
+        "code_tried": "rw [hsa, hsb]; exact TensorProduct.smul_tmul _ _ _; ... refine LinearEquiv.ofLinear fwd bwd ?_ ?_ · refine TensorProduct.ext' fun a b => ?_ ...",
+        "line_number": "159-193",
+        "lean_error": "Tactic `rewrite` failed: Did not find an occurrence of the pattern fwd (bwd x) / fwd (?x + ?y) (in the induction add-case for the right inverse)",
+        "result": "partial",
+        "insight": "Right inverse fwd∘bwd is R-linear over the S-tensor, so TensorProduct.ext' (expecting S-linearity) type-mismatches; must use LinearMap.ext + TensorProduct.induction_on, and the add case needs `rw [map_add bwd, map_add fwd, hx, hy]` (both maps' additivity)."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Right inverse via LinearMap.ext + induction_on with explicit map_add on both maps; replace `show` with `change` for compHom-defeq scalar goals; add trailing `rfl` to the bwd R-linearity tmul case",
+        "code_tried": "refine LinearMap.ext fun x => ?_; induction x using TensorProduct.induction_on with | tmul a b => change fwd (a ⊗ₜ[R] b) = a ⊗ₜ[S] b; simp only [fwd, TensorProduct.lift.tmul, ...] | add x y hx hy => rw [map_add bwd, map_add fwd, hx, hy]; ... | tmul a b => rw [TensorProduct.smul_tmul']; change (e r • a) ⊗ₜ[R] b = r • (a ⊗ₜ[R] b); rw [TensorProduct.smul_tmul']; rfl",
+        "line_number": "160-193",
+        "lean_error": "none — clean compile",
+        "result": "success",
+        "insight": "GREEN. lean_verify: axioms = [propext, Quot.sound], no sorryAx. The AddHom-inverse + induction_on round-trips + change-over-show are the working pattern; full recipe in PROJECT_STATUS KB."
+      }
+    ],
+    "next_steps": "Helper landed and is reusable. It does NOT close any top-level sorry. Next is H1 (presheaf-level pushforwardPushforwardAdj) + a ~20-LOC packaging wrapper to finish tensorObj_restrict_iso. Blueprint should pin restrictScalarsRingIsoTensorEquiv (writer)."
+  },
+  {
+    "timestamp": "2026-05-30T15:45:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "isLocallyInjective_whiskerLeft_of_W"
+    },
+    "session": {
+      "id": "session_215",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Assigned FINAL gate target. Every route bottoms out in a confirmed multi-iter Mathlib-absent ingredient: PRIMARY (locally-trivial) is not statable at the current general-site presheaf signature without a large refactor AND still needs tensorObj_restrict_iso (itself a sorry); FALLBACK (stalkwise) needs d.2 (varying-ring stalk-⊗, ~150–250 LOC absent). Pre-committed escalation branch is therefore the correct outcome.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Re-verify (loogle/leansearch) whether the PRIMARY locally-trivial route can be stated/closed at the lemma's general-site signature, or whether the FALLBACK stalkwise d.2 ingredient exists in Mathlib",
+        "code_tried": "lean_leansearch 'restrict scalars equivalence of categories along ring isomorphism'; lean_loogle 'PresheafOfModules.pushforwardPushforwardAdj'; lean_loogle 'ModuleCat.restrictScalars, RingEquiv'",
+        "line_number": "546",
+        "lean_error": "n/a (search, not compile)",
+        "result": "failed",
+        "insight": "PRIMARY proof is sheaf-level (Scheme.Modules / Opens X) and uses tensorObj_restrict_iso + left unitor on a trivialising cover; LineBundle.IsLocallyTrivial cannot even be STATED for a general-site presheaf F, so specialising means re-signing the lemma + its consumers down to Scheme.Modules — a large refactor risking the green tensorObj_assoc_iso, AND still gated on the open tensorObj_restrict_iso. FALLBACK d.2 confirmed Mathlib-absent. So no route can decrease the count this iter."
+      }
+    ],
+    "next_steps": "Do NOT re-dispatch this sorry on the same routes. It is gated on either (a) closing tensorObj_restrict_iso (→ H1 presheaf pushforward adjunction) for the PRIMARY route, or (b) the d.2 varying-ring stalk-⊗ port for the FALLBACK. Plan agent: decide escalate-to-USER vs. fund the bounded H1 build (see recommendations)."
+  },
+  {
+    "timestamp": "2026-05-30T15:45:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "tensorObj_restrict_iso"
+    },
+    "session": {
+      "id": "session_215",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Linchpin. Was 'two absent ingredients (H1+H2)'; H2 closed this iter (restrictScalarsRingIsoTensorEquiv). Now H1 alone: presheaf-level pushforward β ≅ pullback φ via Adjunction.leftAdjointUniq, needing a presheaf-level pushforwardPushforwardAdj (only the SHEAF version exists; re-confirmed absent via loogle). ~100–150 LOC + a ~20-LOC packaging step.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Attack the single most self-contained reusable piece of the linchpin — the H2 strong-monoidal-upgrade bottom gap — rather than the whole lemma",
+        "code_tried": "see restrictScalarsRingIsoTensorEquiv milestone above",
+        "line_number": "1082",
+        "lean_error": "n/a — H2 helper closed; the lemma body itself remains a typed sorry (H1 still open)",
+        "result": "partial",
+        "insight": "H2 is now project-side; the lemma's residual is precisely H1 (presheaf pushforward adjunction) + the ~20-LOC μ-IsIso → ofLaxMonoidal packaging. The body was not changed (still typed sorry)."
+      }
+    ],
+    "next_steps": "Build H1: presheaf-level pushforwardPushforwardAdj + pushforwardNatTrans/pushforwardCongr, then Adjunction.leftAdjointUniq. Then add restrictScalars_μ_isIso wrapper (μ's underlying map = restrictScalarsRingIsoTensorEquiv via restrictScalars_μ_tmul + TensorProduct.ext → IsIso) and upgrade restrictScalarsLaxMonoidal to Monoidal via Functor.Monoidal.ofLaxMonoidal."
+  },
+  {
+    "timestamp": "2026-05-30T15:45:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "exists_tensorObj_inverse"
+    },
+    "session": {
+      "id": "session_215",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Depends on tensorObj_restrict_iso (→ H1). Not attempted this iter (out of gate scope).",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Not attempted — gate scope was isLocallyInjective_whiskerLeft_of_W; this sorry transitively depends on the same H1 residual via tensorObj_restrict_iso",
+        "code_tried": "(none)",
+        "line_number": "1125",
+        "result": "failed",
+        "insight": "Genuine typed sorry confirmed by lean-auditor ts215; gated on the same linchpin."
+      }
+    ],
+    "next_steps": "Unblocks once tensorObj_restrict_iso closes (H1)."
+  },
+  {
+    "timestamp": "2026-05-30T15:45:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "addCommGroup_via_tensorObj"
+    },
+    "session": {
+      "id": "session_215",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Final consumer (closes RelPicFunctor L235). Depends on the unformalized group-law engine tensorObjIsoclassCommMonoid (pinned in blueprint, absent from Lean), which itself rests on the now-assembled tensorObj_assoc_iso + the open isLocallyInjective_whiskerLeft_of_W. Not attempted this iter.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Not attempted — downstream of the whole engine",
+        "code_tried": "(none)",
+        "line_number": "1164",
+        "result": "failed",
+        "insight": "Genuine typed sorry; tensorObjIsoclassCommMonoid does not yet exist in Lean (lean-vs-blueprint-checker ts215 major #3)."
+      }
+    ],
+    "next_steps": "Blocked until tensorObjIsoclassCommMonoid is created (consumes only Nonempty of the associator/unitor/braiding isos), which in turn needs isLocallyInjective_whiskerLeft_of_W closed."
+  }
+]

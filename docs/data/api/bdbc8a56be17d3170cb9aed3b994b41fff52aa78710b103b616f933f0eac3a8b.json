@@ -1,0 +1,108 @@
+[
+  {
+    "timestamp": "2026-06-17T23:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "pullbackTensorMap_restrict"
+    },
+    "session": {
+      "id": "session_16",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "step (iii) interleaved four-square merge: Sq3/Sq4 entangled via pullbackValIso bridge (sheaf-pullback .val vs presheaf-pullback Fp_f M.val) — a new boundary class beyond comp_cancel_mid; the proven hslide slide cannot be erw-spliced (goal does not present R5 ≫ a_Z.map(Fp_h.map δ_f) in hslide's LHS spelling)",
+      "key_lemmas_used": [
+        "Functor.OplaxMonoidal.comp (definitional δ of composite)",
+        "Functor.map_comp",
+        "SheafOfModules.sheafificationCompPullback.hom.naturality"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Build step (ii) comp_δ split helper as a standalone lemma, then splice",
+        "code_tried": "private lemma sheafifyMap_δcomp_split … := by rw [← Functor.map_comp]; congr 1  (the `exact comp_δ` line was redundant — `No goals` — and removed)",
+        "line_number": "2993",
+        "lean_error": "none (compiles, axiom-clean)",
+        "goal_before": "a_Z.map (δ (Fp_f ⋙ Fp_h) M N) = a_Z.map (Fp_h.map (δ Fp_f M N)) ≫ a_Z.map (δ Fp_h …)",
+        "goal_after": "closed",
+        "result": "success",
+        "insight": "δ(F⋙G) is DEFINITIONALLY G.map(δ F) ≫ δ G via the Functor.OplaxMonoidal.comp instance; `← map_comp` then `congr 1` closes by rfl. ⚠ never `erw [Functor.map_comp]` on an oplax δ — it unfolds the mate."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Splice the step-(ii) brick into pullbackTensorMap_restrict after the step-(i) `erw [reassoc_of% hmain]`",
+        "code_tried": "erw [sheafifyMap_δcomp_split h f M N]",
+        "line_number": "3300",
+        "lean_error": "none — fires; verified the post-split goal by forcing `exact (rfl : (0:Nat)=0)` to read the type mismatch",
+        "goal_before": "post-step-(i) cancelled goal",
+        "goal_after": "R0 ≫ R1 ≫ R5 ≫ aZ.map(Fp_h.map δ_f) ≫ aZ.map δ_h ≫ aZ.map tcomp ≫ S3 ≫ S4 = RHS (recorded verbatim in-file)",
+        "result": "success",
+        "insight": "`erw` unfolds the δcomp let-fvar to match the brick's unfolded LHS; advances proof past step (ii)."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Step (iii) first slide via direct naturality reassoc of sheafCompPb h at δ_f",
+        "code_tried": "simp only [Category.assoc]; erw [← reassoc_of% ((SheafOfModules.sheafificationCompPullback (Hom.toRingCatSheafHom h)).hom.naturality (δ (pullback φ'_f) M.val N.val))]",
+        "line_number": "3351",
+        "lean_error": "Tactic `rewrite` failed: Did not find an occurrence of the pattern (benign mismatch, NOT a whnf-bomb)",
+        "goal_before": "post-step-(ii) goal",
+        "goal_after": "unchanged",
+        "result": "failed",
+        "insight": "naturality RHS uses `.hom.app`/`(F⋙G).map` spelling; goal carries `((sheafCompPb h).app P).hom` and `Functor.comp_map`-unfolded `G.map(F.map δ_f)`."
+      },
+      {
+        "attempt": 4,
+        "strategy": "State the slide as a bespoke `hslide` in the goal's exact .app/.hom spelling, prove by `.symm` of naturality",
+        "code_tried": "have hslide : ((sheafCompPb h).app …).hom ≫ a_Z.map (Fp_h.map δ_f) = (pullback h).map (a_Y.map δ_f) ≫ ((sheafCompPb h).app …).hom := ((sheafCompPb h).hom.naturality (δ Fp_f M.val N.val)).symm",
+        "line_number": "3365",
+        "lean_error": "none — hslide TYPECHECKS (proof term has the stated goal-spelling type by defeq)",
+        "goal_before": "—",
+        "goal_after": "hslide proven, in proof body",
+        "result": "partial",
+        "insight": "the slide equation is genuinely proven; spelling-aligned via defeq."
+      },
+      {
+        "attempt": 5,
+        "strategy": "Splice the proven hslide via reassoc_of%",
+        "code_tried": "rw / erw [reassoc_of% hslide]  (also tried with `simp only [Category.assoc]` first)",
+        "line_number": "3394",
+        "lean_error": "Tactic `rewrite` failed: Did not find an occurrence of the pattern",
+        "goal_before": "post-step-(ii) goal",
+        "goal_after": "unchanged — terminal sorry retained at L3399",
+        "result": "failed",
+        "insight": "the post-split goal does not present `R5 ≫ a_Z.map(Fp_h.map δ_f)` in hslide's LHS spelling; needs ONE more forced-type-mismatch extraction of the POST-split goal to copy the verbatim LHS. Ran out of build budget (~12 full builds, ~4 min each)."
+      }
+    ],
+    "next_steps": "Re-extract the post-split goal (forced type-mismatch before the sorry), copy `R5 ≫ a_Z.map(Fp_h.map δ_f)` verbatim into hslide's LHS so `erw [reassoc_of% hslide]` keys. THEN attempt the Sq3/Sq4 interleave as ONE chase (D1'-style merge: fold `a.map δ ≫ S3 ≫ S4` into a single `a.map Ψ`, reduce to a presheaf equation closable by δ_natural + sheafifyTensorUnitIso_hom_eq' + pullbackValIso substitution). Do NOT attempt Sq3/Sq4 as separate bricks — they are pullbackValIso-entangled."
+  },
+  {
+    "timestamp": "2026-06-17T23:30:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "exists_tensorObj_inverse"
+    },
+    "session": {
+      "id": "session_16",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "import-cycle: closes downstream via the DUAL chain (now CLOSED iter-015), never by direct assignment in this file",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Untouched — deferred per standing instruction (ARCHON_MEMORY: never finish exists_tensorObj_inverse in TensorObjSubstrate.lean)",
+        "code_tried": "n/a",
+        "line_number": "712",
+        "lean_error": "n/a",
+        "result": "partial",
+        "insight": "Deferred sorry, not a live target."
+      }
+    ],
+    "next_steps": "Leave deferred; the import-cycle resolution is a separate phase."
+  }
+]

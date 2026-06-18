@@ -1,0 +1,43 @@
+[
+  {
+    "timestamp": "2026-05-08T04:54:55Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/StructureSheafModuleK.lean",
+      "theorem": "AlgebraicGeometry.Scheme.HModule'_toBiprod_fromBiprod"
+    },
+    "session": {
+      "id": "session_28",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "biprod.lift_desc",
+        "Preadditive.comp_neg",
+        "sub_eq_add_neg",
+        "sub_eq_zero",
+        "Functor.map_comp",
+        "op_comp",
+        "MayerVietorisSquare.toSquare",
+        "PullbackSquare.fac",
+        "HModule'_toBiprod",
+        "HModule'_fromBiprod"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Adopt iter-018 plan-agent's probe-confirmed proof verbatim — a single `simp only` block with seven rewrites, exact mirror of Mathlib `GrothendieckTopology.MayerVietorisSquare.toBiprod_fromBiprod` (`MayerVietoris.lean` L72–75). Insert as `@[reassoc (attr := simp)]`-attributed `lemma` at L379–L389, immediately after `HModule'_fromBiprod` (L345–L355) and before `end AlgebraicGeometry.Scheme` (L391). The refactor sub-phase's intended `:= by sorry` scaffold and the prover's closure body landed in a single `Edit` (`old_text` → `new_text`), continuing the iter-015/016/017 collapse pattern (now four-consecutive — sessions 25, 26, 27, 28).",
+        "code_tried": "@[reassoc (attr := simp)]\nlemma HModule'_toBiprod_fromBiprod\n    (k : Type u) [Field k]\n    {C : Type v} [Category.{u, v} C] {J : GrothendieckTopology C}\n    [HasWeakSheafify J (Type u)] [HasSheafify J (ModuleCat.{u} k)]\n    [HasExt (Sheaf J (ModuleCat.{u} k))]\n    (S : J.MayerVietorisSquare) (F : Sheaf J (ModuleCat.{u} k)) (n : ℕ) :\n    HModule'_toBiprod k S F n ≫ HModule'_fromBiprod k S F n = 0 := by\n  simp only [HModule'_toBiprod, HModule'_fromBiprod, biprod.lift_desc,\n    Preadditive.comp_neg, ← sub_eq_add_neg, sub_eq_zero,\n    ← Functor.map_comp, ← op_comp, S.toSquare.fac]",
+        "line_number": "379-389",
+        "lean_error": null,
+        "goal_before": "⊢ HModule'_toBiprod k S F n ≫ HModule'_fromBiprod k S F n = 0",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "The `simp only` set is a verbatim transfer from Mathlib's L74–75 proof. Every rewrite step is value-category-agnostic: (1) `biprod.lift_desc` holds in any preadditive category with biproducts; (2) `Preadditive.comp_neg` holds in any preadditive category; (3) `sub_eq_add_neg`/`sub_eq_zero` are elementary `AddCommGroup` arithmetic; (4) `Functor.map_comp`/`op_comp` are categorical functoriality on `Cᵒᵖ`; (5) `S.toSquare.fac` (which expresses `S.f₁₂ ≫ S.f₂₄ = S.f₁₃ ≫ S.f₃₄`) is independent of the value category entirely. The unqualified short names `HModule'_toBiprod`/`HModule'_fromBiprod` resolve via `namespace AlgebraicGeometry.Scheme`; `biprod.lift_desc` resolves via file-level `open Limits`; the rest are standard Mathlib spellings. The `@[reassoc (attr := simp)]` attribute simultaneously generates the post-composition variant and registers the lemma as a `simp`-set member — both required for downstream LES exactness arguments."
+      }
+    ],
+    "next_steps": "Iter-019+ should attack the connecting hom `δ` and the LES sequence. Per the iter-018 plan-agent's deferral rationale (PROGRESS.md, blueprint remark `Why δ is iter-019+ and not iter-018`), this requires a `Sheaf J (ModuleCat k)`-flavored `MayerVietorisSquare.shortComplex_shortExact` analog of Mathlib's `AddCommGrpCat`-flavored construction (Mathlib uses `AddCommGrpCat.free`-yoneda; the `ModuleCat k` flavour requires `ModuleCat.free k`-yoneda + an `isPushoutModuleCatFreeSheaf`-analog). Estimated 15–25 LOC of new infrastructure plus 5–10 LOC of glue — substantive multi-iteration work. The iter-018 closure unblocks this work by providing the composition-is-zero relation that `δ` must respect. The 8 remaining protected sorries (`Jacobian.lean` ×5, `AbelJacobi.lean` ×3) plus the 1 deferred (`PicardFunctor.representable`) remain gated behind multi-iteration upstream Mathlib work and should NOT be assigned as direct prover objectives."
+  }
+]

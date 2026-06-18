@@ -1,0 +1,115 @@
+[
+  {
+    "timestamp": "2026-05-20T13:00:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "rigidity_eqOn_saturated_open_to_affine"
+    },
+    "session": {
+      "id": "session_160",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "SIGNATURE GAP: route-B globalisation needs closed points of U dense, i.e. U Jacobson, i.e. (X⊗Y) locally of finite type over k̄ — a hypothesis the frozen chain signature does not carry. Lemma not provable as literally typed; in-body `JacobsonSpace U := sorry` at L237 is undischargeable until the chain signature gains [LocallyOfFiniteType (X⊗Y).hom]. This is a plan-agent-authorized signature+blueprint edit, NOT a prover task.",
+      "key_lemmas_used": [
+        "morphism_eq_of_eqAt_closedPoints",
+        "Scheme.isSeparated_iff",
+        "terminal.hom_ext"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Derive absolute target separatedness Z.left.IsSeparated from [IsSeparated Z.hom] over affine base Spec k̄",
+        "code_tried": "haveI : Z.left.IsSeparated := by rw [Scheme.isSeparated_iff]; rw [show terminal.from Z.left = Z.hom ≫ terminal.from (Spec k̄) from terminal.hom_ext _ _]; infer_instance",
+        "line_number": "222",
+        "result": "success",
+        "insight": "Composite of separated maps (Z.hom separated, Spec k̄ affine hence separated terminal) gives absolute separatedness via Scheme.isSeparated_iff."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Wire the body as Step2 over Step1: morphism_eq_of_eqAt_closedPoints applied to the per-closed-point obligation",
+        "code_tried": "exact morphism_eq_of_eqAt_closedPoints fun x hx => rigidity_eqAt_closedPoint_of_proper_into_affine f x₀ U Vset _hUV U₀ _hU₀ _hfU x hx",
+        "line_number": "241",
+        "result": "partial",
+        "insight": "Body assembles end-to-end, but morphism_eq_of_eqAt_closedPoints needs [JacobsonSpace W]; W=U has no such instance from the chain hypotheses. Probed [JacobsonSpace U] ✗, [LocallyOfFiniteType (X⊗Y).hom] ✗ in-context. Surfaced the signature gap."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Discharge the JacobsonSpace instance — could not from current hypotheses; isolate as documented in-body sorry",
+        "code_tried": "haveI : JacobsonSpace ((U : (X ⊗ Y).left.Opens).toScheme) := sorry",
+        "line_number": "237",
+        "result": "partial",
+        "insight": "Documented signature gap (L227-236). Undischargeable as typed; lands must-fix per both auditors. Fix is [LocallyOfFiniteType (X⊗Y).hom] across the chain, free downstream."
+      }
+    ],
+    "next_steps": "Plan agent must AUTHORIZE adding [LocallyOfFiniteType (X⊗Y).hom] (or [JacobsonSpace (X⊗Y).left]) to rigidity_eqOn_saturated_open_to_affine, rigidity_eqOn_dense_open, rigidity_core, rigidity_lemma — a refactor + blueprint hypothesis edit (these are off-limits-to-prover chain lemmas). Then the L237 sorry vanishes and the prover can attack Step 1."
+  },
+  {
+    "timestamp": "2026-05-20T13:00:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "morphism_eq_of_eqAt_closedPoints"
+    },
+    "session": {
+      "id": "session_160",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "Sigma.desc",
+        "ext_of_isDominant",
+        "closure_closedPoints",
+        "Scheme.range_fromSpecResidueField",
+        "Sigma.hom_ext",
+        "Sigma.ι_desc",
+        "Dense.mono"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Step 2 of bridge-2 route B (the iter-159 analogist-flagged 'dense-closed-points ⟹ hom-ext' connective Mathlib does not package). Build a dominant probe = coproduct of residue-field Specs over the closed points, feed to ext_of_isDominant.",
+        "code_tried": "let probe : (∐ F) ⟶ W := Sigma.desc fun x => W.fromSpecResidueField x.1; haveI : IsDominant probe := ⟨(dense_iff_closure_eq.mpr (closure_closedPoints)).mono ...⟩; refine ext_of_isDominant probe (Sigma.hom_ext _ _ fun x => ?_); rw [← Category.assoc, ← Category.assoc, Sigma.ι_desc]; exact h x.1 x.2",
+        "line_number": "107",
+        "result": "success",
+        "insight": "IsDominant f ↔ DenseRange f.base; Scheme.range_fromSpecResidueField x = {x}; closure_closedPoints needs [JacobsonSpace X]; Type-u-indexed scheme coproducts exist (HasCoproduct synthesizes). lean_verify axioms = {propext, Classical.choice, Quot.sound} — NO sorryAx. Reusable infrastructure, context-independent."
+      }
+    ],
+    "next_steps": "Durable reusable lemma. Should get its own \\lean{} block + \\uses edge in AbelianVarietyRigidity.tex (blueprint-writer task — currently missing, flagged major by lean-vs-blueprint-checker)."
+  },
+  {
+    "timestamp": "2026-05-20T13:00:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "rigidity_eqAt_closedPoint_of_proper_into_affine"
+    },
+    "session": {
+      "id": "session_160",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Newly-extracted Step-1 deep residual (per-closed-slice constancy). sorry body. Same signature gap as the main lemma: its own proof-sketch requires κ(y)=k̄ from finite type, but the signature carries no finite-type hypothesis. Likely not provable as literally typed until [LocallyOfFiniteType] is added to the chain. Do NOT assign a prover until the signature change lands.",
+      "key_lemmas_used": [
+        "isField_of_universallyClosed",
+        "finite_appTop_of_universallyClosed",
+        "ext_of_isAffine"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Extracted from the monolithic bridge-2 sorry as a named top-level obligation with full geometric hypotheses + a fixed closed point x of U; concluding residue-field-probe agreement of f and retract≫f at x.",
+        "code_tried": "theorem rigidity_eqAt_closedPoint_of_proper_into_affine ... (x : U.toScheme) (_hx : x ∈ closedPoints U.toScheme) : U.fromSpecResidueField x ≫ (U.ι ≫ f.left) = U.fromSpecResidueField x ≫ (U.ι ≫ (lift (toUnit (X⊗Y) ≫ x₀) (snd X Y) ≫ f).left) := sorry",
+        "line_number": "151",
+        "result": "partial",
+        "insight": "Cohomology-free route B per analogies/rigidity-affineconst.md: identify slice fibre X_y over y=p₂(x) (κ(y)=k̄ needs finite type), show X_y proper integral mapping to affine U₀, Γ(X_y)=k̄ via the three verified Mathlib lemmas, ext_of_isAffine pins f|X_y to a single point. The three ingredients exist in Mathlib but finite_appTop_of_universallyClosed needs [LocallyOfFiniteType f] — the missing chain hypothesis."
+      }
+    ],
+    "next_steps": "BLOCKED on the [LocallyOfFiniteType] signature change. After the plan agent authorizes it, prove via the route-B slice construction (pullback of (X⊗Y).left over residue field of y; reuse the IsPullback-pasting idiom from hfib)."
+  }
+]

@@ -1,0 +1,295 @@
+[
+  {
+    "timestamp": "2026-05-25T05:00:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "iotaGm_onePt_chart1_factor"
+    },
+    "session": {
+      "id": "session_184",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "IsOpenImmersion.lift",
+        "IsOpenImmersion.lift_fac",
+        "Scheme.Hom.coe_opensRange",
+        "Proj.opensRange_awayι",
+        "Scheme.Hom.mem_preimage",
+        "Proj.fromOfGlobalSections_preimage_basicOpen",
+        "Scheme.basicOpen_of_isUnit",
+        "MvPolynomial.eval_X"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Use IsOpenImmersion.lift_fac + opensRange chain + fromOfGlobalSections_preimage_basicOpen + basicOpen_of_isUnit",
+        "code_tried": "rw [← Scheme.Hom.coe_opensRange (Proj.awayι _ _ _ _), Proj.opensRange_awayι]; rintro _ ⟨x, rfl⟩; rw [SetLike.mem_coe, ← Scheme.Hom.mem_preimage]; change x ∈ Proj.fromOfGlobalSections _ _ _ ⁻¹ᵁ Proj.basicOpen 𝒜 (![X 0, X 1] 1); rw [Proj.fromOfGlobalSections_preimage_basicOpen _ _ _ (projectiveLineBarAffineCover_hm 1) (projectiveLineBarAffineCover_fDeg kbar 1)]; refine (Scheme.basicOpen_of_isUnit _ ?_).symm ▸ TopologicalSpace.Opens.mem_top x; change IsUnit ((ΓSpecIso _).inv.hom ((eval (fun _ => (1:kbar))) (X 1))); simp",
+        "line_number": "AbelianVarietyRigidity.lean:105",
+        "result": "success",
+        "insight": "Privacy is no barrier for kernel defeq: ProjectiveLineBar.pointOfVec/evalIntoGlobal/irrelevant_map_eq_top are private but `change` with metavar placeholders unifies through Over.homMk + pointOfVec.unfold. `basicOpen_of_isUnit` sidesteps the need to rewrite argument-to-1 propositionally. `show` triggered style linter; replaced with `change`."
+      }
+    ],
+    "next_steps": "Sub-task (f) `iotaGm_chart1_composition_isOpenImmersion` (L225) iter-185+ via 3-step canonical-inclusion chase."
+  },
+  {
+    "timestamp": "2026-05-25T05:00:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Albanese/AuslanderBuchsbaum.lean",
+      "theorem": "depth_eq_smallest_ext_index"
+    },
+    "session": {
+      "id": "session_184",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "ext_smul_eq_zero_of_mem_annihilator",
+        "IsSMulRegular.smulShortComplex_shortExact",
+        "Submodule.top_ne_ideal_smul_of_le_jacobson_annihilator",
+        "IsLocalRing.maximalIdeal_le_jacobson",
+        "RingTheory.Sequence.isRegular_cons_iff",
+        "nontrivial_quotSMulTop_of_mem_maximalIdeal",
+        "CategoryTheory.Abelian.Ext.covariant_sequence_exact₁",
+        "CategoryTheory.Abelian.Ext.covariant_sequence_exact₃",
+        "CategoryTheory.Abelian.Ext.postcomp_mk₀_injective_of_mono",
+        "CategoryTheory.Abelian.Ext.smul_eq_comp_mk₀",
+        "CategoryTheory.Abelian.Ext.zero_comp"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "(⇐) backward Step 3 — derive ∀ j < n, Ext^j(κ, MxM) = 0 via LES on SES `0 → M →[x] M → MxM → 0`; apply ih on MxM at n; sSup extract truncated regular sequence on MxM; cons x to form (x :: rs_n) of length n+1; le_sSup.",
+        "code_tried": "let S := ModuleCat.smulShortComplex (ModuleCat.of R M) x; have hS := hxReg.smulShortComplex_shortExact; ... apply hinj; change _e.comp (mk₀ S.f) (add_zero 0) = (0:Ext…).comp (mk₀ S.f) (add_zero 0); rw [Ext.zero_comp]; exact hSf_kill",
+        "line_number": "AuslanderBuchsbaum.lean:431",
+        "result": "success",
+        "insight": "`set κ := ModuleCat.of R (ResidueField R)` renames a pre-existing Ext-typed binder `_e` to `_e✝` — workaround: skip the set, inline the term at all use sites. `map_zero`/`AddMonoidHom.map_zero` doesn't fire under `Ext.postcomp` abbreviation; explicit `change` to typed-zero form + `Ext.zero_comp` rewrite works."
+      },
+      {
+        "attempt": 2,
+        "strategy": "(⇒) forward — Nakayama via top_ne_ideal_smul_of_le_jacobson_annihilator + maximalIdeal_le_jacobson; sSup extract regular sequence > n; cons-decompose; ih on MxM at n; LES chase via covariant_sequence_exact₁ + postcomp_mk₀_injective_of_mono.",
+        "code_tried": "have hne_M : (maximalIdeal R) • (⊤ : Submodule R M) ≠ ⊤ := Submodule.top_ne_ideal_smul_of_le_jacobson_annihilator …; rw [hdepth_M_unfold] at _hdepth; rcases lt_sSup_iff.mp hlt with ⟨k, hk_mem, hk_lt⟩; rcases hk_mem with ⟨rs, hrs_len, hrs_mem, hrs_reg⟩; cases rs with | nil => omega | cons x rs_tail => …",
+        "line_number": "AuslanderBuchsbaum.lean:295",
+        "result": "success",
+        "insight": "`change (rs'.take n).length = n` (not `show`) avoids style linter warning when refolding `let`-bound `rs_n`. Truncation regularity via `isWeaklyRegular_append_iff` ∘ `IsLocalRing.isRegular_iff_isWeaklyRegular_of_subset_maximalIdeal`. The whole forward proof totals ~95 LOC (sSup extraction + truncation regularity = bulk; LES chase only ~15 LOC)."
+      }
+    ],
+    "next_steps": "auslander_buchsbaum_formula (L835) requires substantive Mathlib substrate (minimal-finite-free-resolution + 'what is exact' + snake-lemma + depth-drops-by-one — none in Mathlib b80f227). Recommend iter-185 audit whether A.4.a's downstream truly needs AB or only CohenMacaulay.of_regular; if only the latter, switch Lane G target to exists_isRegular_of_regularLocal."
+  },
+  {
+    "timestamp": "2026-05-25T05:00:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Albanese/CodimOneExtension.lean",
+      "theorem": "smooth_codim_one_maximalIdeal_isPrincipal_and_ne_bot.hreg_dim"
+    },
+    "session": {
+      "id": "session_184",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "Scheme.ringKrullDim_stalk_eq_coheight",
+        "exact_mod_cast"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Replace bare `have hreg_dim := sorry` with structured `refine ⟨?_, ?_⟩`; close Krull-dim half via Scheme.ringKrullDim_stalk_eq_coheight + exact_mod_cast _hz; leave IsRegularLocalRing half as typed sorry (Stacks 00TT gap).",
+        "code_tried": "have hreg_dim : IsRegularLocalRing (X.left.presheaf.stalk z) ∧ ringKrullDim (X.left.presheaf.stalk z) = 1 := by refine ⟨?_, ?_⟩\n  · -- IsRegularLocalRing half: Stacks 00TT Jacobian-criterion gap; iter-185+ blueprint expansion\n    sorry\n  · -- Krull-dim half: closes axiom-clean via the iter-183 CoheightBridge\n    rw [Scheme.ringKrullDim_stalk_eq_coheight]\n    exact_mod_cast _hz",
+        "line_number": "CodimOneExtension.lean:242",
+        "result": "partial",
+        "insight": "Required adding `import AlgebraicJacobian.Albanese.CoheightBridge` (first import of the iter-183 new file). `exact_mod_cast` bridges `Order.coheight z : ℕ∞` to `ringKrullDim _ : WithBot ℕ∞` via `(1 : ℕ∞) ↦ (1 : WithBot ℕ∞)`. File sorry count unchanged (3 → 3) — conjunction split adds one sorry while closing one — but matches the directive's expected structural-split outcome."
+      }
+    ],
+    "next_steps": "IsRegularLocalRing half is Stacks 00TT (smoothness over k̄ ⟹ regular at stalk) — Mathlib gap. iter-185+ work paths: (a) blueprint expansion of Albanese_CodimOneExtension.tex; (b) project-side wrapper around Module.FormallyEtale/Algebra.FormallySmooth; (c) Mathlib upstream contribution."
+  },
+  {
+    "timestamp": "2026-05-25T05:00:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects/GmScaling.lean",
+      "theorem": "pullback_map_fst_proj"
+    },
+    "session": {
+      "id": "session_184",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Prover session TERMINATED by user weekly API limit (resets 2026-05-28T07:00:00Z) after landing Recipe 1 of 3; Recipe 2 (named projection lemmas) and Recipe 3 (cocycle body closure) were NOT attempted.",
+      "key_lemmas_used": [
+        "Limits.pullback.lift_fst",
+        "Limits.pullback.lift_snd"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Recipe 1 from analogist `gmscaling-projection-idiom`: add 2 `@[reassoc (attr := simp)]` helpers `pullback_map_fst_proj` / `pullback_map_snd_proj` near the top of the file, closing the Mathlib `pullback.lift_fst` not-@[simp] gap.",
+        "code_tried": "@[reassoc (attr := simp)]\nlemma pullback_map_fst_proj {C : Type*} [Category C] {W X Y Z S T : C}\n    (f₁ : W ⟶ S) (f₂ : X ⟶ S) [Limits.HasPullback f₁ f₂] (g₁ : Y ⟶ T)\n    (g₂ : Z ⟶ T) [Limits.HasPullback g₁ g₂] (i₁ : W ⟶ Y) (i₂ : X ⟶ Z) (i₃ : S ⟶ T)\n    (eq₁ : f₁ ≫ i₃ = i₁ ≫ g₁) (eq₂ : f₂ ≫ i₃ = i₂ ≫ g₂) :\n    Limits.pullback.map f₁ f₂ g₁ g₂ i₁ i₂ i₃ eq₁ eq₂ ≫ Limits.pullback.fst g₁ g₂ =\n      Limits.pullback.fst f₁ f₂ ≫ i₁ :=\n  Limits.pullback.lift_fst _ _ _\n(mirror lemma `pullback_map_snd_proj` similarly)",
+        "line_number": "GmScaling.lean:51-69",
+        "result": "partial",
+        "insight": "Two simp lemmas added Tier-1 axiom-clean ({propext, Classical.choice, Quot.sound}). Globally active via @[simp]. Helper budget 2/4 used; Recipe 2 (~30-45 LOC each named lemma) + Recipe 3 (~10-20 LOC cocycle closure) deferred to iter-185 (or whenever weekly limit clears). Sorry count unchanged (4 → 4)."
+      }
+    ],
+    "next_steps": "iter-185 Lane B re-fire: Recipes 2 + 3 from `analogies/gmscaling-projection-idiom.md`. Recipe 1's two new helpers are now in scope (verified globally active simp lemmas). If iter-185 STILL misses the decrement gate, iter-186 opens genus-0 separated-locus alternative for chart-bridge cross-case (per iter-184 plan's Lane B 6-iter mandatory pivot trigger)."
+  },
+  {
+    "timestamp": "2026-05-25T05:00:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OCofP.lean",
+      "theorem": "dim_eq_two_of_genusZero / globalSections_iff_mp / globalSections_iff_mpr / carrierSet→Submodule upgrade (Lane A)"
+    },
+    "session": {
+      "id": "session_184",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Prover session terminated at first turn by user weekly API limit (resets 2026-05-28T07:00:00Z). Zero edits committed; no task_result file produced."
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Plan dispatch",
+        "code_tried": "(session never started turns; rate-limit text after session_meta)",
+        "line_number": "N/A",
+        "result": "failed",
+        "insight": "Six of ten iter-184 lanes (A, D, F, H, I, K) failed identically. The weekly-limit reset is 2026-05-28T07:00:00Z. iter-185 will run with the same 6 lanes still open."
+      }
+    ],
+    "next_steps": "iter-185 re-dispatch Lane A unchanged. Carry the iter-184 directive forward verbatim (HARD BAR: close ≥1 existing body sorry, no new typed sorries unless closure-enabling)."
+  },
+  {
+    "timestamp": "2026-05-25T05:00:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/RelativeSpec.lean",
+      "theorem": "pullback_cocone naturality / pullback_iso_desc_isIso (Lane D)"
+    },
+    "session": {
+      "id": "session_184",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Prover session terminated at first turn by user weekly API limit (resets 2026-05-28T07:00:00Z). Zero edits committed; no task_result file produced."
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Plan dispatch",
+        "code_tried": "(session never started turns; rate-limit text after session_meta)",
+        "line_number": "N/A",
+        "result": "failed",
+        "insight": "Lane D HARD BAR (CHURNING + OVER_BUDGET corrective) deferred to iter-185 by external rate-limit, NOT by directive failure. The 13-elapsed-vs-6-10-budget over-run continues; the directive itself remains the right corrective."
+      }
+    ],
+    "next_steps": "iter-185 re-dispatch Lane D unchanged. The 15-iter trigger (iter-185 = iter-170 + 15) escalation territory now arrives without iter-184 progress."
+  },
+  {
+    "timestamp": "2026-05-25T05:00:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/QuotScheme.lean",
+      "theorem": "Scheme.Modules.pullback_app_isoTensor body (Lane F)"
+    },
+    "session": {
+      "id": "session_184",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Prover session terminated at first turn by user weekly API limit (resets 2026-05-28T07:00:00Z). Zero edits committed; no task_result file produced."
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Plan dispatch",
+        "code_tried": "(session never started turns)",
+        "line_number": "N/A",
+        "result": "failed"
+      }
+    ],
+    "next_steps": "iter-185 re-dispatch Lane F unchanged."
+  },
+  {
+    "timestamp": "2026-05-25T05:00:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+      "theorem": "sheafOf_zero body (Lane K)"
+    },
+    "session": {
+      "id": "session_184",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Prover session terminated at first turn by user weekly API limit (resets 2026-05-28T07:00:00Z). Zero edits committed; no task_result file produced."
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Plan dispatch",
+        "code_tried": "(session never started turns)",
+        "line_number": "N/A",
+        "result": "failed"
+      }
+    ],
+    "next_steps": "iter-185 re-dispatch Lane K unchanged."
+  },
+  {
+    "timestamp": "2026-05-25T05:00:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/RRFormula.lean",
+      "theorem": "finrank_H0_toModuleKSheaf_eq_one / eulerCharacteristic_sheafOf_succ (Lane H)"
+    },
+    "session": {
+      "id": "session_184",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Prover session terminated at first turn by user weekly API limit (resets 2026-05-28T07:00:00Z). Zero edits committed; no task_result file produced."
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Plan dispatch",
+        "code_tried": "(session never started turns)",
+        "line_number": "N/A",
+        "result": "failed"
+      }
+    ],
+    "next_steps": "iter-185 re-dispatch Lane H unchanged."
+  },
+  {
+    "timestamp": "2026-05-25T05:00:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/RationalCurveIso.lean",
+      "theorem": "Hom.poleDivisor_degree_eq_finrank body (Lane I)"
+    },
+    "session": {
+      "id": "session_184",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Prover session terminated at first turn by user weekly API limit (resets 2026-05-28T07:00:00Z). Zero edits committed; no task_result file produced."
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Plan dispatch",
+        "code_tried": "(session never started turns)",
+        "line_number": "N/A",
+        "result": "failed",
+        "insight": "Lane I `is the breakthrough real?` iter (iter-184 was designated as confirmation iter after iter-183 broke the 5-consec-sig-only streak). Failure to land iter-184 due to rate limit (NOT directive miss) means the iter-184 plan's `Route 2d ESCALATION TRIGGER` should NOT fire — the breakthrough wasn't retracted, just delayed."
+      }
+    ],
+    "next_steps": "iter-185 re-dispatch Lane I unchanged. Do NOT trigger Route 2d escalation; the rate-limit miss is not a CHURNING signal."
+  }
+]

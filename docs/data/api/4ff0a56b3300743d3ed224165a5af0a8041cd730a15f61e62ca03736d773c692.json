@@ -1,0 +1,273 @@
+[
+  {
+    "timestamp": "2026-06-02T07:36:19Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.compHomEquivFactor"
+    },
+    "session": {
+      "id": "session_248",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "Adjunction.homEquiv_unit",
+        "Adjunction.comp_unit_app",
+        "Functor.comp_map",
+        "Functor.map_comp",
+        "Category.assoc"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "★ step 3 — composite-adjunction homEquiv factorisation; first tried closing the residual `(f≫g)≫h` shape with a trailing `Category.assoc` inside the simp set",
+        "code_tried": "simp only [Adjunction.homEquiv_unit, Adjunction.comp_unit_app, Functor.comp_map, Functor.map_comp, Category.assoc]",
+        "line_number": "~1430",
+        "lean_error": "unsolved goals (assoc inside simp set did not fully normalise)",
+        "result": "failed",
+        "insight": "Adjunction.comp_homEquiv does NOT exist in Mathlib; the factorisation must be derived from homEquiv = unit ≫ R.map plus comp_unit_app"
+      },
+      {
+        "attempt": 2,
+        "strategy": "drop assoc from simp set, finish with explicit rw [Category.assoc]",
+        "code_tried": "simp only [Adjunction.homEquiv_unit, Adjunction.comp_unit_app, Functor.comp_map, Functor.map_comp]; rw [Category.assoc]",
+        "line_number": "~1430",
+        "lean_error": "Tactic `rewrite` failed: Did not find an occurrence of the pattern (?f ≫ ?g) ≫ ?h",
+        "result": "failed",
+        "insight": "the residual is already in the right associativity up to defeq; rw can't find the literal (f≫g)≫h pattern"
+      },
+      {
+        "attempt": 3,
+        "strategy": "close with exact Category.assoc instead of rw",
+        "code_tried": "simp only [Adjunction.homEquiv_unit, Adjunction.comp_unit_app, Functor.comp_map, Functor.map_comp]; exact Category.assoc _ _ _",
+        "line_number": "~1430",
+        "lean_error": null,
+        "result": "success",
+        "insight": "RESOLVED axiom-clean {propext, Classical.choice, Quot.sound}. The prover-flagged uncertainty ('verify comp_homEquiv form') is settled: no such lemma exists; the unit-based proof closes"
+      }
+    ],
+    "next_steps": "Reusable; consumed by leftAdjointUniqUnitEta (step 4) and the assembly (∗∗) telescope."
+  },
+  {
+    "timestamp": "2026-06-02T07:40:17Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.sheafificationCompPullback_eq_leftAdjointUniq"
+    },
+    "session": {
+      "id": "session_248",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "rfl",
+        "Adjunction.leftAdjointUniq"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "LINCHPIN — probe whether `A.leftAdjointUniq B` typechecks for the unit-square composite adjunctions and equals `sheafificationCompPullback φ`. A = (sheafificationAdjunction 𝟙_X).comp (SheafOfModules.pullbackPushforwardAdjunction φ); B = (PresheafOfModules.pullbackPushforwardAdjunction φ').comp (sheafificationAdjunction 𝟙_Y)",
+        "code_tried": "have : SheafOfModules.sheafificationCompPullback φ = A.leftAdjointUniq B := by rfl",
+        "line_number": "~1573",
+        "lean_error": null,
+        "result": "success",
+        "insight": "KEY UNBLOCK. The feared '3-layer adjunction defeq wall' (suspected blocker for 5 iters, 245-247) holds DEFINITIONALLY by rfl. (i) A.leftAdjointUniq B typechecks (A,B have defeq-equal right adjoints: pushforward φ ⋙ forget_X ≡ forget_Y ⋙ pushforward φ'); (ii) the comparison is rfl-equal to sheafificationCompPullback φ. With this every homEquiv_leftAdjointUniq mate identity fires."
+      }
+    ],
+    "next_steps": "Prover recommends planner add a blueprint block; it is load-bearing and reusable, and is what makes step 4 mechanical."
+  },
+  {
+    "timestamp": "2026-06-02T07:43:06Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.leftAdjointUniqUnitEta"
+    },
+    "session": {
+      "id": "session_248",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "sheafificationCompPullback_eq_leftAdjointUniq (rfl)",
+        "Adjunction.homEquiv_leftAdjointUniq_hom_app",
+        "Adjunction.comp_unit_app"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "★ step 4 — rewrite the comparison head by the linchpin, then a direct rw of homEquiv_leftAdjointUniq_hom_app",
+        "code_tried": "rw [hg, Adjunction.homEquiv_leftAdjointUniq_hom_app A B, hB, Adjunction.comp_unit_app]",
+        "line_number": "~1600",
+        "lean_error": "error (1) — direct rw blocked by a .obj/.val carrier mismatch in the head",
+        "result": "failed",
+        "insight": "the .obj vs .val coercion mismatch prevents a literal rw of homEquiv_leftAdjointUniq_hom_app"
+      },
+      {
+        "attempt": 2,
+        "strategy": "use refine Eq.trans (...) ?_ so the lemma application defeq-unifies the .obj/.val mismatch, then finish",
+        "code_tried": "rw [hg]; refine Eq.trans (Adjunction.homEquiv_leftAdjointUniq_hom_app A B (𝟙_ ...)) ?_; rw [hB, Adjunction.comp_unit_app]",
+        "line_number": "~1600",
+        "lean_error": "error (1) — residual after comp_unit_app",
+        "result": "partial",
+        "insight": "Eq.trans absorbs the carrier mismatch; one defeq residual remains"
+      },
+      {
+        "attempt": 3,
+        "strategy": "discharge the residual with rfl",
+        "code_tried": "refine Eq.trans (Adjunction.homEquiv_leftAdjointUniq_hom_app A B (𝟙_ ...)) ?_; rw [hB, Adjunction.comp_unit_app]; rfl",
+        "line_number": "~1600",
+        "lean_error": null,
+        "result": "success",
+        "insight": "RESOLVED axiom-clean. The two abstract adjunction mate lemmas (steps 3,4) are now fully discharged."
+      }
+    ],
+    "next_steps": "Consumed by the assembly (∗∗) telescope to reach the presheaf head presheafAdj.unit ≫ (pushforward φ').map (η F)."
+  },
+  {
+    "timestamp": "2026-06-02T07:48:13Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.pullbackEtaUnitSquare"
+    },
+    "session": {
+      "id": "session_248",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "one scoped (∗∗) residual: distribute (pushforward φ).map over m, pull pullbackValIso.inv past the unit via Adjunction.unit_naturality, then the step-7 presheaf↔sheaf .val reconciliation (epsilonPresheafToSheafUnit) which is mis-typed in the blueprint (no sheaf LaxMonoidal ε)",
+      "key_lemmas_used": [
+        "pullbackPushforwardAdjunction.homEquiv.injective",
+        "SheafOfModules.pullbackPushforwardAdjunction_homEquiv_pullbackObjUnitToUnit",
+        "Adjunction.homEquiv_unit"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "transpose the unit square across the SHEAF pullback-pushforward adjunction and rewrite the RHS by the Mathlib mate identity, then expand homEquiv to reach the canonical (∗∗) form",
+        "code_tried": "apply ((pullbackPushforwardAdjunction φ).homEquiv 𝒪_X 𝒪_Y).injective; rw [SheafOfModules.pullbackPushforwardAdjunction_homEquiv_pullbackObjUnitToUnit]; rw [Adjunction.homEquiv_unit]",
+        "line_number": "1646",
+        "lean_error": null,
+        "result": "partial",
+        "insight": "transposition + step 1 land; goal becomes sheafAdj.unit.app 𝒪_X ≫ (pushforward φ).map m = unitToPushforwardObjUnit φ, m = pullbackValIso.inv ≫ a_Y.map (η F) ≫ sheafifyUnitIso.hom"
+      },
+      {
+        "attempt": 2,
+        "strategy": "probe the (∗∗) goal with rw [Adjunction.homEquiv_unit] via lean_multi_attempt to confirm the canonical form",
+        "code_tried": "lean_multi_attempt [\"rw [Adjunction.homEquiv_unit]\"]",
+        "line_number": "1660",
+        "lean_error": null,
+        "result": "partial",
+        "insight": "confirms the goal shape; the remaining work is (pushforward φ).map distribution + step-2/5 naturality bookkeeping + the step-7 retype, all reusing the now-closed step lemmas"
+      },
+      {
+        "attempt": 3,
+        "strategy": "leave a single scoped sorry at the (∗∗) core with an in-code handoff naming every remaining lemma; record the step-7 blueprint mistype in task_results",
+        "code_tried": "sorry  -- (∗∗): step-7 must be re-stated as a presheaf↔sheaf .val-level identity (no sheaf Functor.LaxMonoidal.ε)",
+        "line_number": "1672",
+        "lean_error": null,
+        "result": "partial",
+        "insight": "file sorry 1→2; the entire D2′ critical path now bottoms out in this ONE concrete residual"
+      }
+    ],
+    "next_steps": "Plan: (1) retype lem:epsilon_presheaf_to_sheaf_unit to a .val-level identity (writer), then (2) one `prove` pass closing the (∗∗) residual using compHomEquivFactor + leftAdjointUniqUnitEta + presheafUnit_comp_map_eta (all closed)."
+  },
+  {
+    "timestamp": "2026-06-02T07:45:20Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.pullbackTensorMap_unit_isIso"
+    },
+    "session": {
+      "id": "session_248",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "depends transitively on the single (∗∗) sorry in pullbackEtaUnitSquare; lean_verify shows sorryAx",
+      "key_lemmas_used": [
+        "isIso_pullbackTensorMap_unitPair_of_isIso_sheafifyEta",
+        "isIso_sheafifyEta_of_unitSquare",
+        "pullbackEtaUnitSquare"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "D2′ closer — wire the whole IsIso (pullbackTensorMap f 𝒪 𝒪) obligation to the assembly square via the two pre-existing plumbing lemmas",
+        "code_tried": "isIso_pullbackTensorMap_unitPair_of_isIso_sheafifyEta f (isIso_sheafifyEta_of_unitSquare f (pullbackEtaUnitSquare f))",
+        "line_number": "~1500",
+        "lean_error": null,
+        "result": "partial",
+        "insight": "decl did NOT exist before this iter; compiles; lean_verify → {propext, sorryAx, Classical.choice, Quot.sound}. Entire D2′ obligation now reduced to the one (∗∗) residual"
+      }
+    ],
+    "next_steps": "Becomes axiom-clean automatically once pullbackEtaUnitSquare's (∗∗) sorry closes."
+  },
+  {
+    "timestamp": "2026-06-02T07:41:32Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.epsilonPresheafToSheafUnit"
+    },
+    "session": {
+      "id": "session_248",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "blueprint statement does not typecheck: Mathlib at the pin has NO Functor.LaxMonoidal instance on the SHEAF pushforward SheafOfModules.pushforward φ (only presheaf presheafPushforwardLaxMonoidal), so Functor.LaxMonoidal.ε (pushforward φ) is ill-typed",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "★ step 7 — attempt to state ε(pushforward φ) = unitToPushforwardObjUnit φ at the sheaf level as the blueprint asks",
+        "code_tried": "(loogle confirmed only presheafPushforwardLaxMonoidal exists; sheaf-level ε ill-typed) — decl NOT created",
+        "line_number": null,
+        "lean_error": "Functor.LaxMonoidal.ε (SheafOfModules.pushforward φ) is ill-typed (no instance)",
+        "result": "failed",
+        "insight": "the genuine content is a presheaf↔sheaf .val-level identity reconciling presheaf ε(pushforward φ') with sheaf unitToPushforwardObjUnit φ; must be re-stated at the .val level. NOT a Mathlib gap but a blueprint mistype"
+      }
+    ],
+    "next_steps": "PLAN ACTION: dispatch a blueprint-writer to restate lem:epsilon_presheaf_to_sheaf_unit as a .val/sheafification identity (NOT a sheaf-monoidal ε); review added a % NOTE on the block this iter."
+  },
+  {
+    "timestamp": "2026-06-02T07:49:15Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/RelPicFunctor.lean",
+      "theorem": "module-status + 6 docstrings (documentation-hygiene pass)"
+    },
+    "session": {
+      "id": "session_248",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Lane RPF bounded must-fix doc-hygiene: rewrite 2 must-fix + 5 stale/false docstrings that asserted a non-existent 'file-local addCommGroup sorry gated on a Mathlib Scheme.Modules monoidal upgrade' and a false 'etSheaf body is a typed sorry'",
+        "code_tried": "7 Edit calls replacing stale module-status / PicSharp / addCommGroup / functorial / etSheaf / etSheaf_group_structure docstrings with accurate state (real sorry-free addCommGroup; single upstream exists_tensorObj_inverse cone sorry; PicSharp/functorial deliberate stubs gated on Lane TS D4′)",
+        "line_number": "21-702",
+        "lean_error": null,
+        "result": "success",
+        "insight": "file already had 0 local sorry; doc-only lane. lean_diagnostic_messages clean; lake build green (5.8s). No proof bodies touched. PicSharp/functorial real bodies correctly NOT attempted (cross-file gated on D4′)"
+      }
+    ],
+    "next_steps": "No reachable proof work in this file until Lane TS D4′ (pullback_tensor_iso_loctriv → IsInvertible.pullback) lands upstream. Do NOT re-dispatch a prover here before D4′."
+  }
+]

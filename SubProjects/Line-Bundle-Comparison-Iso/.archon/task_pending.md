@@ -2,21 +2,20 @@
 <!-- Current open-task set, last-known state only. Per-attempt detail → iter sidecars. -->
 
 ## Seed 1 — `pullbackTensorIsoOfLocallyTrivial` (D4′ chart-chase) — `TensorObjSubstrate.lean` — ACTIVE
-STATE: body CLOSED iter-020 (decl L4238, chart-chase sorry-free). Residual = ONE brick **K1**
-`pullbackTensorMap_isIso_of_isOpenImmersion` (L4139, sole open `sorry` L4172, transitive sorryAx to
-seed-1). The chart-chase (cover `{f⁻¹W}` + `isIso_of_isIso_restrict` + two `pullbackTensorMap_restrict`
-splits + K2 `pullbackTensorMap_isIso_of_base_unit`) is fully assembled; it reduces D4′ to K1 at the two
-open immersions `(f⁻¹W).ι`, `W.ι`.
-- **K1** = `IsIso (pullbackTensorMap f M N)` for `[IsOpenImmersion f]`, ARBITRARY M,N. iter-020 tried
-  `Functor.Monoidal.transport` (functor-level) → FAILED on the monoidal-carrier diamond
-  (`MonoidalCategory (PresheafOfModules X.ringCatSheaf.obj)` not synthesizable). REDIRECT (this iter):
-  go through the designed entry `isIso_pullbackTensorMap_of_isIso_sheafifyDelta` → reduce to presheaf
-  `IsIso (δ (pullback φ') M.val N.val)`, closed IN-PROOF mirroring the CLOSED `tensorObj_restrict_iso`
-  (H1 = `pushforward β ≅ pullback φ` via `leftAdjointUniq`; H2 = `restrictScalarsMonoidalOfBijective`)
-  + the adjunction-mate compatibility (`Adjunction.IsMonoidal`, cf. `presheafUnit_comp_map_eta` which
-  uses `Adjunction.unit_app_unit_comp_map_η`). Do NOT retry functor-level transport.
-- Pin: `AlgebraicGeometry.Scheme.Modules.pullbackTensorIsoOfLocallyTrivial`. Blueprint K1 node added
-  this iter (`lem:pullback_tensor_map_isiso_open_immersion`).
+STATE: body CLOSED iter-020 (decl L4238, chart-chase sorry-free). K1 SCAFFOLDED iter-021 (Steps A+B +
+the `hcompat` transposition all in place). Residual = the SINGLE in-proof `hcompat` sorry (L4219, inside
+`pullbackTensorMap_isIso_of_isOpenImmersion` L4139, transitive sorryAx to seed-1).
+- **K1** = `IsIso (pullbackTensorMap f M N)` for `[IsOpenImmersion f]`, ARBITRARY M,N. Entry
+  `isIso_pullbackTensorMap_of_isIso_sheafifyDelta` → presheaf `IsIso (δ (pullback φ'))`; Step B builds the
+  strong-monoidal witness mirroring `tensorObj_restrict_iso` (H1 `leftAdjointUniq`, μIsoβ
+  `restrictScalarsMonoidalOfBijective`). `hcompat` = `leftAdjointOplaxMonoidal hadj .δ = μIsoβ.inv`.
+- **De-risked iter-022 (recon022):** `hcompat` ⟺ `hadj.IsMonoidal` (Mathlib carrier `Adjunction.IsMonoidal`;
+  NO Mathlib gap). Close = build the project-side instance sectionwise (`homEquiv.injective`+`tensor_ext`,
+  ⚠ likely multi-line simp not rfl per sc022), then `laxMonoidalEquivOplaxMonoidal.right_inv` +
+  `Functor.Monoidal.μIso`. Mode `prove`. Full recipe: PROGRESS objective + `analogies/recon022.md`. Do NOT
+  retry functor-level transport / a fresh hand-built `e`.
+- Pin: `AlgebraicGeometry.Scheme.Modules.pullbackTensorIsoOfLocallyTrivial`. Blueprint K1 node
+  `lem:pullback_tensor_map_isiso_open_immersion` (gate-cleared bpr021).
 - Reference: Stacks `lemma-tensor-product-pullback` (pullback strong-monoidal) — `references/stacks-modules.tex`.
 
 ## Deferred terminal — `exists_tensorObj_inverse` (`lem:tensorobj_inverse_invertible`)

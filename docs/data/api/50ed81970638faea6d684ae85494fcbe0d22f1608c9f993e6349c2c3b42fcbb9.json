@@ -1,0 +1,198 @@
+[
+  {
+    "timestamp": "2026-06-03T02:22:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "sheafifyTensorUnitIso_hom_natural"
+    },
+    "session": {
+      "id": "session_254",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "MonoidalCategory.tensorHom_def",
+        "MonoidalCategory.tensorHom_comp_tensorHom",
+        "Functor.map_comp",
+        "restrictScalarsId_map"
+      ],
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Recast onto single-sided δ/μ naturality (planner/analogist-prescribed tscmp254 reformulation)",
+        "code_tried": "rw [← MonoidalCategory.tensorHom_def, ...]",
+        "line_number": "1939",
+        "lean_error": "did not apply: sheafifyTensorUnitIso is a.map (η_P ⊗ η_Q) of the sheafification UNIT, not a δ/μ of a monoidal functor; no δ_natural slot",
+        "result": "failed",
+        "insight": "The literal δ/μ recast does not transfer; but the same PRINCIPLE (keep everything in one monoidal instance) does."
+      },
+      {
+        "attempt": 2,
+        "strategy": "New private helper sheafifyTensorUnitIso_hom_eq' stating .hom as ONE a.map (tensorHom η_P η_Q) with explicit (C := X.presheaf ⋙ forget₂ CommRingCat RingCat)",
+        "code_tried": "rw [sheafifyTensorUnitIso_hom_eq, ← Functor.map_comp]; congr 1; exact (MonoidalCategory.tensorHom_def (C := _root_.PresheafOfModules (X.presheaf ⋙ forget₂ CommRingCat RingCat)) _ _).symm",
+        "line_number": "1914",
+        "lean_error": null,
+        "result": "success",
+        "insight": "Explicit (C := …) is REQUIRED — the `_ _` form leaves MonoidalCategory ?C a stuck metavariable. `exact` (defeq) absorbs the restrictScalars (𝟙) wrapper on η's codomain that blocks a syntactic ← tensorHom_def."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Naturality via the hom_eq' pin: merge whisker pairs, reduce to presheaf bifunctoriality, close with the unit squares hp/hq + tensorHom_comp_tensorHom as a defeq-matched TERM",
+        "code_tried": "rw [hom_eq', hom_eq']; erw [← Functor.map_comp, ← Functor.map_comp]; congr 1; ... refine (MonoidalCategory.tensorHom_comp_tensorHom (C := …) _ _ _ _).trans ?_; rw [hp, hq]; exact (… (C := …) _ _ _ _).symm",
+        "line_number": "1939",
+        "lean_error": null,
+        "result": "success",
+        "insight": "rw/erw of every monoidal lemma FAIL on the non-canonical instance baked into the goal (pattern-not-found even for terms clearly present); only TERM-application with explicit (C := …) works. The merge needs erw (defeq-but-not-syntactic connecting object). MonoidalCategory.tensor_comp does NOT exist (Unknown constant); the name is tensorHom_comp_tensorHom."
+      }
+    ],
+    "next_steps": "STEP A retired. The (C := …) term-level device is now the reusable idiom for the remaining D1′ squares (Sq4 already closed via pullbackValIso_hom_natural)."
+  },
+  {
+    "timestamp": "2026-06-03T02:19:13Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "pullbackTensorMap_natural"
+    },
+    "session": {
+      "id": "session_254",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Functor.OplaxMonoidal.δ_natural (F := pullback φ') fails: `failed to synthesize MonoidalCategory (PresheafOfModules X.ringCatSheaf.obj)` — the instance is registered ONLY on the canonical `X.presheaf ⋙ forget₂ CommRingCat RingCat` spelling, not on `X.ringCatSheaf.obj`; defeq but instance synthesis is syntactic. The STEP-A (C := …) term-bridge does NOT transfer (no slot to inject the instance into δ_natural's domain ring). Needs the spelling-pin structural restatement of pullbackTensorMap — a PLANNER decision.",
+      "key_lemmas_used": [
+        "Functor.map_comp_assoc",
+        "Functor.OplaxMonoidal.δ_natural"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Square-2 merge via ← Functor.map_comp (iter-253's diagnosed blocker)",
+        "code_tried": "erw [← Functor.map_comp, ← Functor.OplaxMonoidal.δ_natural, Functor.map_comp]",
+        "line_number": "2034",
+        "lean_error": "merge fails — the two a_Y.maps are right-associated (a.map A ≫ (a.map B ≫ rest)), so A,B are not direct operands of one ≫",
+        "result": "failed",
+        "insight": "iter-253 BLOCKER was misdiagnosed; needs the reassoc form."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Square-2 merge via the reassoc form ← Functor.map_comp_assoc",
+        "code_tried": "erw [← Functor.map_comp_assoc]",
+        "line_number": "2034",
+        "lean_error": null,
+        "result": "partial",
+        "insight": "SOLVED the merge: a.map(Fp.map(a.val⊗b.val)) ≫ a.map(δ) ≫ rest → a.map(Fp.map(a.val⊗b.val) ≫ δ) ≫ rest. Now in the proof body; the proof advances strictly further before the sorry."
+      },
+      {
+        "attempt": 3,
+        "strategy": "δ commutation under the merged a.map: apply δ_natural (F := Fp)",
+        "code_tried": "have hδ := (Functor.OplaxMonoidal.δ_natural (F := PresheafOfModules.pullback (Hom.toRingCatSheafHom f).hom) a.val b.val).symm; rw [hδ]",
+        "line_number": "2044",
+        "lean_error": "failed to synthesize MonoidalCategory (PresheafOfModules X.ringCatSheaf.obj)",
+        "result": "failed",
+        "insight": "Named structural blocker → spelling-pin refactor (planner). Documented in-file at L2004."
+      }
+    ],
+    "next_steps": "PLANNER decision: spelling-pin restatement of pullbackTensorMap + helper isos with Fp's domain ring on the canonical ⋙ forget₂ spelling so δ_natural synthesizes by construction; must keep D2′ pullbackTensorMap_unit_isIso GREEN. After the pin: Sq2 = ← δ_natural, Sq3 = sheafifyTensorUnitIso_hom_natural (CLOSED), Sq4 = pullbackValIso_hom_natural (CLOSED) + tensorHom_comp_tensorHom, all via the STEP-A term-level device."
+  },
+  {
+    "timestamp": "2026-06-03T02:20:35Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate/DualInverse.lean",
+      "theorem": "homOfLocalCompat"
+    },
+    "session": {
+      "id": "session_254",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "SOLE residual = open-immersion ring-bridge / carrier-duality (L636): the inner leg ((toPresheaf _).map (f i).val).app (op P) is Ab-additive only; its (U i).ringCatSheaf(P)-linearity must be reinterpreted at the (U i) ModuleCat level via the structure-ring iso ((U i).ι.appIso P) and restrictScalars. Everything around it (separatedness, naturality, gluing transport hconn, decomposition, M-leg map_smul) is proved.",
+      "key_lemmas_used": [
+        "TopCat.Presheaf.IsSheaf.section_ext",
+        "NatTrans.naturality_apply",
+        "PresheafOfModules.map_smul",
+        "ConcreteCategory.comp_apply",
+        "topSectionToHom_app",
+        "presheafHom_map_app",
+        "Subsingleton.elim"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Re-sign hf from HEq form to sectionwise-equation form (homOfLocalCompat is NOT protected, has no compiling caller); add helper image_preimage_of_le",
+        "code_tried": "hf : ∀ (i j) (V) (hVi hVj), M.val.presheaf.map (eqToHom …) ≫ ((toPresheaf _).map (f i).val).app (op ((U i).ι ⁻¹ᵁ V)) ≫ N.val.presheaf.map (eqToHom …) = … (j) …",
+        "line_number": "512",
+        "lean_error": null,
+        "result": "success",
+        "insight": "HEq form was unsatisfiable (pullback-images only isomorphic, not prop-equal). Sectionwise form makes sub-step (a) direct."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Sub-step (a) IsCompatible — close via the re-signed hf",
+        "code_tried": "exact hf i j W.left (W.hom.le.trans inf_le_left) (W.hom.le.trans inf_le_right)",
+        "line_number": "565",
+        "lean_error": null,
+        "result": "success",
+        "insight": "Closes by DEFINITIONAL proof irrelevance / defeq (the eqToHom-conjugations and (Over.mk …).left ≡ W.left match) — NO Subsingleton.elim needed for the section maps."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Sub-step (c) 𝒪_X-linearity: separatedness reduction + naturality/map_smul + connection lemma hconn",
+        "code_tried": "refine N.isSheaf.section_ext ?_; intro x hx; ... erw [← NatTrans.naturality_apply g …, map_smul M.val …, map_smul N.val …, ← NatTrans.naturality_apply g …]; rw [hconn i W inf_le_right]",
+        "line_number": "580-618",
+        "lean_error": null,
+        "result": "partial",
+        "insight": "hconn (the hard transport+gluing piece) fully proved: g.app(op W') = homLocalSection component, via topSectionToHom_app + htr subst transport + Subsingleton.elim on the slice morphisms + presheafHom_map_app ×2. rw/simp comp_apply do NOT fire on AddCommGrpCat.Hom.hom → use erw."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Sub-step (c) composite decomposition + M-leg map_smul, isolating the ring-bridge",
+        "code_tried": "simp only [homLocalSection]; erw [ConcreteCategory.comp_apply ×4, PresheafOfModules.map_smul]",
+        "line_number": "627-636",
+        "lean_error": "residual sorry: inner-leg (U i)-linearity over the defeq carrier",
+        "result": "partial",
+        "insight": "Standalone homLocalSection_app_smul helper FAILS instance synthesis (Module (↑X.ringCatSheaf(W)) (↑M.val(W)) not found standalone) → keep linearity proof INLINE. The ring-bridge is now maximally isolated."
+      }
+    ],
+    "next_steps": "At L636: prove r₂ •_X z₂ = (appIso.hom r₂) •_{Ui} z₂ (likely rfl modulo appIso.inv_hom_apply via PresheafOfModules.pushforward_obj_obj + restrictScalars-smul-rfl), then erw map_smul on (f i).val.app (op P) at the (U i) level, then N-leg map_smul, then reconcile the eqToHom-transported scalars (e₂ = e₁.symm compose to id). This is the historically-hard d.2/restrictScalars carrier-duality wall, now fully isolated."
+  },
+  {
+    "timestamp": "2026-06-03T02:20:35Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate/DualInverse.lean",
+      "theorem": "dual_restrict_iso"
+    },
+    "session": {
+      "id": "session_254",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Step-4 pushforward-commutes-with-dual presheaf residual (L256), untouched this iter per the Route-2 reversing signal (do not split focus onto the equally-hard dual-pushforward build when STEP A surfaced a new obstacle).",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Not entered — correctly gated by the Route-2 reversing signal",
+        "code_tried": "",
+        "line_number": "256",
+        "lean_error": null,
+        "result": "partial",
+        "insight": "Budget consumed by homOfLocalCompat (c). Pre-existing Step-4 sorry left untouched."
+      }
+    ],
+    "next_steps": "Defer until homOfLocalCompat fully closes; then resume the dual-pushforward Step-4."
+  }
+]

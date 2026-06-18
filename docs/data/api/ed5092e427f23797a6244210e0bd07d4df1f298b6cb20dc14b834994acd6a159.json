@@ -1,0 +1,123 @@
+[
+  {
+    "timestamp": "2026-06-17T19:30:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "pullbackTensorMap_restrict"
+    },
+    "session": {
+      "id": "session_14",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "STEP (i) D ≫ E = 𝟙 cancellation: the ≫ joining sheafificationCompPullback/pullbackComp .app-components is a non-canonical CategoryStruct.comp; rw/simp [Category.assoc] cannot key-match it, erw [Category.assoc] crosses only by whnf-unfolding R0 into mateEquiv/TwoSquare guts which bombs (3.2M heartbeats) after ~4 crossings. NOT the Scheme.Modules-vs-SheafOfModules instance clash (that was fixed by the iter-014 refactor, verified in goal trace). ESCALATION condition MET.",
+      "key_lemmas_used": [
+        "sheafifyMap_pullbackComp_hom_inv_id",
+        "sheafificationCompPullback_comp (h1)",
+        "pullbackComp_δ (hδ)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "splice h1 via rw",
+        "code_tried": "rw [h1]; simp only [Category.assoc]; rw [reassoc_of% (sheafifyMap_pullbackComp_hom_inv_id h f ...), Category.id_comp]",
+        "line_number": "3186",
+        "lean_error": "rewrite failed: Did not find an occurrence of the pattern (sheafificationCompPullback ...).app ....hom (pattern pretty-prints byte-identically to goal S1 but differs by a hidden defeq instance)",
+        "result": "failed",
+        "insight": "plain rw [h1] (and rw [reassoc_of% h1]) do NOT splice S1; corrects the false iter-013 premise. Only erw [h1] splices."
+      },
+      {
+        "attempt": 2,
+        "strategy": "erw [h1] then flatten + cancel brick",
+        "code_tried": "erw [hδ]; simp only [Category.assoc]; erw [h1]; (then rw/simp/erw [Category.assoc]; erw [sheafifyMap_pullbackComp_hom_inv_id])",
+        "line_number": "3189",
+        "lean_error": "rw [Category.assoc] -> did not find (?f≫?g)≫?h; simp only [Category.assoc] -> made no progress; erw [Category.assoc] crosses by whnf but 4th/5th crossing or erw [brick] -> deterministic timeout at whnf (3200000 heartbeats)",
+        "result": "failed",
+        "insight": "erw [h1] SUCCEEDS (real unblock vs iter-013). Goal = (R0≫R1≫R5≫D)≫(E≫a.map δcomp≫a.map tcomp)≫S3≫S4. The D|E boundary is a non-canonical comp."
+      },
+      {
+        "attempt": 3,
+        "strategy": "fused brick hmain in a fresh have-context (iter-013 plan)",
+        "code_tried": "have hmain : S1 ≫ a.map δfh = R0≫R1≫R5≫a.map δcomp≫a.map tcomp := by erw [hδ, h1]; simp only [Category.assoc, reassoc_of% brick, id_comp]; ... erw [reassoc_of% hmain]",
+        "line_number": "3206",
+        "lean_error": "the splice erw [reassoc_of% hmain] WORKS, but proving hmain hits the SAME wall: erw [hδ,h1] then simp only [Category.assoc] -> unsolved goals (D≫E never cancelled); rw [hδ,h1] -> did not find pattern δfh",
+        "result": "failed",
+        "insight": "helper does not avoid the wall — wall is intrinsic to composing the mate .app-components. A standalone hDE : D ≫ a.map δfh = a.map δcomp ≫ a.map tcomp IS provable in isolation (erw [hδ, ←Category.assoc, brick, id_comp]) because there D/E are bare a.map (one instance), but cannot be assembled into the goal/hmain across the non-canonical boundary."
+      },
+      {
+        "attempt": 4,
+        "strategy": "hDE sub-cancellation stated purely in aZ.map terms",
+        "code_tried": "have hDE : (sheafification 𝟙).map δfh ... stated in SheafOfModules Z only; ← Category.assoc + brick",
+        "line_number": "3203",
+        "lean_error": "deterministic timeout at whnf (3200000 heartbeats) at L3203 and L2970",
+        "result": "failed",
+        "insight": "single-instance restatement also whnf-bombs once forced to relate to the goal's mate-spelled factors."
+      }
+    ],
+    "next_steps": "PIVOT (not prover helper work): re-derive the S1 composition coherence at the NatTrans level using the existing sheafificationCompPullback_comp_natTrans (L2469) so R0/R1/R5/D/E compose without per-.app mate-whnf; OR expose a SheafOfModules.instCategory-canonical reassociation of the mateEquiv components. Dispatch the refactor subagent. Once D≫E is adjacent: rw [Category.assoc, sheafifyMap_pullbackComp_hom_inv_id, Category.comp_id] closes (i); then (ii) Functor.OplaxMonoidal.comp_δ split, (iii) Sq3/Sq4 interleave."
+  },
+  {
+    "timestamp": "2026-06-17T19:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate/DualInverse/SliceTransport.lean",
+      "theorem": "sliceDualTransport.left_inv"
+    },
+    "session": {
+      "id": "session_14",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "hφ (φ-naturality square, via erw defeq)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "delete the spurious restrictScalars-strip rewrite (the L890 bug) and let erw [hφ] see through the wrapper by defeq",
+        "code_tried": "DELETED: rw [ModuleCat.restrictScalars.map_apply]  (kept only: erw [hφ])",
+        "line_number": "890",
+        "lean_error": null,
+        "result": "success",
+        "insight": "erw sees through (restrictScalars g).map h |>.hom x = h.hom x by defeq; the explicit rw [...map_apply] was both unnecessary and pattern-fragile (did not find pattern (ConcreteCategory.hom ((restrictScalars ?f).map ?g)) ?x). VERIFIED green in the build taken while the dependency was still green."
+      }
+    ],
+    "next_steps": "Closed. (NOTE: currently un-rebuildable because the sibling right_inv edit broke the file — see right_inv milestone.)"
+  },
+  {
+    "timestamp": "2026-06-17T19:30:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate/DualInverse/SliceTransport.lean",
+      "theorem": "sliceDualTransport.right_inv"
+    },
+    "session": {
+      "id": "session_14",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Import-race + commit-blind regression: file imports TensorObjSubstrate.lean which the concurrent D3′ lane left RED (whnf timeout) for the whole session, so Lean emitted no .olean and right_inv could not be compiled. The prover committed the right_inv toFun-peel + app-exposure as LIVE tactic code anyway (unverified); after the dep recovered, those exposing steps elaborator-timeout (L919, 200000 heartbeats) and whnf-timeout (L632), leaving the FILE RED.",
+      "key_lemmas_used": [
+        "sliceDualTransportInv_app_apply",
+        "dualUnitRingSwap_apply",
+        "appIso_inv_naturality (planned)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "mirror left_inv: peel forward toFun via show + defeq, expose invFun app, then cancel",
+        "code_tried": "intro ψ; PresheafOfModules.hom_ext; intro W; ModuleCat.hom_ext; LinearMap.ext z; have hβc (β-compat, inline); set W''; hPV; he; show (dualUnitRingSwap f ...).hom (...app W'' z) = (ψ.app W).hom z; rw [sliceDualTransportInv_app_apply ...]; simp only [ConcreteCategory.comp_apply, dualUnitRingSwapHom_apply, unitRelabelSwap_apply]; erw [dualUnitRingSwap_apply]; sorry",
+        "line_number": "919",
+        "lean_error": "(deterministic) timeout at elaborator, maximum number of heartbeats (200000) reached at L919; also whnf timeout at L632. (Could not be observed during the session — dependency was RED — so committed blind.)",
+        "result": "partial",
+        "insight": "right_inv is NOT a literal mirror of left_inv: the cancelling hom/inv legs sit at DIFFERENT opens (A=(unop W).left vs P=f⁻¹ᵁ(f''ᵁ A)) separated by an X.presheaf relabel, so a genuine ring-naturality step is required (Iso.hom_inv_id_apply alone is insufficient). The committed exposing block is too heavy for the elaborator as written."
+      }
+    ],
+    "next_steps": "FIRST restore SliceTransport GREEN (the dependency is now green, so the next prover gets live feedback). Either lighten the exposing steps so they elaborate, or revert right_inv to a bare sorry, THEN drop in the fully-derived 3-step cancellation captured in task_results (ring identity via appIso_inv_naturality → ψ-naturality hψ → Y.presheaf round-trip hmaps). Each step is a structural copy of an already-closed block in this file. No new infrastructure; no Mathlib gap."
+  }
+]

@@ -1,0 +1,233 @@
+[
+  {
+    "timestamp": "2026-05-17T19:46:48Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cotangent/GrpObj.lean",
+      "theorem": "AlgebraicGeometry.GrpObj.mulRight_globalises_cotangent"
+    },
+    "session": {
+      "id": "session_134",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Iter-134 lane shipped Step 1 substantively (`shearMulRight` + two `@[simps]` companions `shearMulRight_hom_fst/snd` + helper `schemeHomRingCompatibility`) but landed Steps 2 + 3 + the main composition as named placeholders with body `⟨Iso.refl _⟩` typed `Nonempty (Scheme.relativeDifferentialsPresheaf G.hom ≅ Scheme.relativeDifferentialsPresheaf G.hom)` instead of the intended sheaf-level RHS using `PresheafOfModules.pullback`. The Lean signature is a structural-tautology stand-in for the blueprint's claimed iso (`Ω_{(G ⊗ G)/G} ≅ pr₂^* Ω_{G/k}` for Step 2; `s^*(pr₂^*Ω_{G/k}) ≅ π_G^*(η_G^*Ω_{G/k})` for Step 3; `Ω_{G/k} ≅ π_G^*(η_G^*Ω_{G/k})` for main). Both review-phase audits (`lean-auditor-review134`, `lean-vs-blueprint-checker-cotangent-grpobj-review134`) classified these as `must-fix-this-iter` under the strict rubric — weakened-wrong-definition + signature mismatch + excuse-comment pattern on a load-bearing declaration. The placeholder pattern was explicitly pre-committed by the iter-134 plan agent and the blueprint blocks correctly carry `\\notready`, but the body type signals zero downstream incompleteness (the `Nonempty (X ≅ X)` type is trivially inhabited without `sorry`).",
+      "key_lemmas_used": [
+        "CategoryTheory.MonObj.lift_lift_assoc",
+        "CategoryTheory.MonObj.lift_comp_one_left",
+        "CategoryTheory.GrpObj.lift_comp_inv_left",
+        "CategoryTheory.GrpObj.lift_comp_inv_right",
+        "CartesianMonoidalCategory.lift_fst_snd",
+        "CartesianMonoidalCategory.lift_fst",
+        "CartesianMonoidalCategory.lift_snd",
+        "CartesianMonoidalCategory.comp_lift",
+        "CartesianMonoidalCategory.hom_ext",
+        "TopCat.Presheaf.pullbackPushforwardAdjunction"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Direct `simp [comp_lift_assoc, lift_lift_assoc, ← comp_lift]` close on `shearMulRight.hom_inv_id` second (snd) coordinate, modelled on `CategoryTheory.GrpObj.mulRight`'s proof template.",
+        "code_tried": "simp only [comp_lift_assoc, lift_lift_assoc, ← comp_lift, lift_comp_inv_left, lift_comp_one_left]",
+        "line_number": "357 (initial Edit replacing end-marker; goal h_snd after `CartesianMonoidalCategory.hom_ext`)",
+        "lean_error": "Unknown identifier `lift_comp_inv_left`; the binary-product shear has 2 free inputs vs `mulRight`'s 1, so `comp_lift_assoc` was mis-applied: residual `lift (lift (fst G G) (lift (fst G G) (snd G G) ≫ μ) ≫ fst G G ≫ ι) (lift (fst G G) (snd G G) ≫ μ) ≫ μ` retained.",
+        "goal_before": "case h_snd ⊢ (lift (fst G G) μ ≫ lift (fst G G) (lift (fst G G ≫ ι) (snd G G) ≫ μ)) ≫ snd G G = 𝟙 (G ⊗ G) ≫ snd G G",
+        "goal_after": "stuck on `lift (lift (fst G G) μ ≫ fst G G ≫ ι) μ ≫ μ = snd G G` (post-partial simp)",
+        "result": "failed",
+        "insight": "The `mulRight` template's bulk-`simp_only` chain doesn't transfer to the binary-product shear: with 2 free inputs (`fst`, `snd`), `comp_lift_assoc` matches more eagerly and the goal structure stays out of `lift_fst_snd`-reducible form. Manual rewrites must expose `lift_fst_assoc` before any `lift_lift_assoc` step."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Manual rewrite chain on h_snd: `Category.id_comp` + `Category.assoc` + `lift_snd` + `← Category.assoc` + `comp_lift` + `lift_fst` + `lift_snd`, then a `show`-based rewrite to expand `μ ↦ lift (fst G G) (snd G G) ≫ μ`, followed by `← MonObj.lift_lift_assoc` + `GrpObj.lift_comp_inv_left` + `MonObj.lift_comp_one_left`.",
+        "code_tried": "rw [show (μ : G ⊗ G ⟶ G) = lift (fst G G) (snd G G) ≫ μ from by rw [lift_fst_snd, Category.id_comp], lift_fst, ← Category.assoc, ← CategoryTheory.MonObj.lift_lift_assoc, CategoryTheory.GrpObj.lift_comp_inv_left, CategoryTheory.MonObj.lift_comp_one_left, lift_fst_snd]",
+        "line_number": "365 (in `hom_inv_id` proof of `shearMulRight`)",
+        "lean_error": "Tactic `rewrite` failed: Did not find an occurrence of the pattern `lift ?f (lift ?g ?h ≫ μ) ≫ μ` in the target expression `lift (fst G G ≫ ι) (lift (fst G G) (snd G G) ≫ μ) ≫ lift (fst G G) (snd G G) ≫ μ`.",
+        "goal_before": "lift (fst G G ≫ ι) μ ≫ μ = lift (fst G G ≫ ι) (lift (fst G G) (snd G G) ≫ μ) ≫ μ",
+        "goal_after": "(rewrite failed; no progress)",
+        "result": "failed",
+        "insight": "The `conv_lhs` / show-based rewrite of `μ ↦ lift (fst G G) (snd G G) ≫ μ` was matching BOTH `μ` occurrences (LHS and the `lift (fst G G ≫ ι) μ ≫ μ` inner one), pushing the goal past the `lift_lift_assoc`-rewritable form."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Final shape: manual `rw` chain ending in a single `show`-equation establishing the `lift_lift_assoc`-compatible form, then close via `GrpObj.lift_comp_inv_{left/right}` + `MonObj.lift_comp_one_left`.",
+        "code_tried": "apply CartesianMonoidalCategory.hom_ext; · simp; · rw [Category.id_comp, Category.assoc, lift_snd]; rw [← Category.assoc, comp_lift]; rw [← Category.assoc, lift_fst, lift_snd]; rw [show (lift (fst G G ≫ ι) μ ≫ μ : G ⊗ G ⟶ G) = lift (lift (fst G G ≫ ι) (fst G G) ≫ μ) (snd G G) ≫ μ from by rw [MonObj.lift_lift_assoc, lift_fst_snd, Category.id_comp], CategoryTheory.GrpObj.lift_comp_inv_left, MonObj.lift_comp_one_left]",
+        "line_number": "352–368 (`shearMulRight.hom_inv_id` snd-coord)",
+        "lean_error": "(none — clean)",
+        "goal_before": "(post-`hom_ext`/`simp`): lift (fst G G ≫ ι) μ ≫ μ = snd G G",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "For the binary-product shear, the `lift_lift_assoc` rewrite must come AFTER the structural `lift_fst`/`comp_lift` chain, and the inner `μ` must be expanded to `lift (fst G G) (snd G G) ≫ μ` at the right pattern position via a single `show`-equation rather than `conv_lhs`. The symmetric `inv_hom_id` closes by the same recipe with `lift_comp_inv_right` in place of `lift_comp_inv_left` (lines 374–383)."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Land `schemeHomRingCompatibility` as the adjunction transpose `((adj).homEquiv _ _).symm f.c` of the structure-sheaf comorphism; package once so the placeholder helpers below can refer to a uniform compatibility-morphism API.",
+        "code_tried": "noncomputable def schemeHomRingCompatibility {Y Z : Scheme.{u}} (f : Y ⟶ Z) : (TopCat.Presheaf.pullback (C := CommRingCat) f.base).obj Z.presheaf ⟶ Y.presheaf := ((TopCat.Presheaf.pullbackPushforwardAdjunction CommRingCat f.base).homEquiv _ _).symm f.c",
+        "line_number": "417–419",
+        "lean_error": "(initially failed due to unscoped `relativeDifferentialsPresheaf` identifier; later resolved by qualifying as `Scheme.relativeDifferentialsPresheaf` in the placeholder statements)",
+        "goal_before": "(definition; type-elaboration only)",
+        "goal_after": "(elaborates clean)",
+        "result": "success",
+        "insight": "The structure-sheaf comorphism `f.c : Y.presheaf ⟶ f.base _* Z.presheaf` has the inverse direction expected by `PresheafOfModules.pullback (φ : S ⟶ F.op ⋙ R)`, but the `pullbackPushforwardAdjunction` provides the transpose. Pre-packaging this saves the iter-135+ helpers from reconstructing the same adjunction step on each consumer."
+      },
+      {
+        "attempt": 5,
+        "strategy": "Land 3 placeholder theorems (`relativeDifferentialsPresheaf_basechange_along_proj_two`, `relativeDifferentialsPresheaf_restrict_along_identity_section`, `mulRight_globalises_cotangent`) with body `⟨Iso.refl _⟩` typed `Nonempty (Scheme.relativeDifferentialsPresheaf G.hom ≅ Scheme.relativeDifferentialsPresheaf G.hom)`, with intended-type docstrings documenting the sheaf-level RHS each is meant to deliver.",
+        "code_tried": "theorem mulRight_globalises_cotangent (G : Over (Spec (.of k))) [CategoryTheory.GrpObj G] {n : ℕ} [SmoothOfRelativeDimension n G.hom] [IsProper G.hom] [GeometricallyIrreducible G.hom] : Nonempty (Scheme.relativeDifferentialsPresheaf G.hom ≅ Scheme.relativeDifferentialsPresheaf G.hom) := ⟨Iso.refl _⟩",
+        "line_number": "566–572 (+ 476–482 for basechange + 508–514 for restrict)",
+        "lean_error": "Unknown identifier `relativeDifferentialsPresheaf` (autoImplicit off); fixed by qualifying as `Scheme.relativeDifferentialsPresheaf`.",
+        "goal_before": "(definition; elaborate)",
+        "goal_after": "(elaborates clean; `lean_diagnostic_messages` returns 0 items at iter-134 close)",
+        "result": "partial",
+        "insight": "The signature shipped is structurally a tautology — `Nonempty (X ≅ X)` for `X = relativeDifferentialsPresheaf G.hom`. The intended sheaf-level RHS using `PresheafOfModules.pullback (φ_str G)` / `PresheafOfModules.pullback (φ_η G)` is documented only in the docstring, not in the signature. Both review-phase audits flagged this as must-fix-this-iter under the strict rubric (weakened-wrong-definition + signature mismatch + excuse-comment pattern). The placeholder convention is `\\notready`-disclosed in the blueprint and explicitly pre-committed by the iter-134 plan agent, so this is a project-convention question for the plan agent, but the type currently emits zero machine-readable incompleteness signal (`sorry_analyzer` cannot distinguish a placeholder iso from a real one)."
+      }
+    ],
+    "next_steps": "Iter-135 (a) PRIMARY DECISION: Plan agent must rule on the placeholder convention question raised by both review-phase audits — either (i) tighten the rubric to exempt `\\notready` + docstring-intended-type placeholders for multi-iter Mathlib-gap work, OR (ii) refactor the three placeholder theorems to carry the INTENDED sheaf-level signatures with `sorry` bodies (mirroring the iter-134 `positiveGenusWitness` honest-scaffold pattern). Option (ii) is the auditor's recommended fix and emits a downstream-visible incompleteness signal. (b) HELPER: dispatch a blueprint-writer on `RigidityKbar.tex` § Piece (i.b) to (1) add a new `\\begin{lemma}\\label{lem:GrpObj_shearMulRight}\\lean{AlgebraicGeometry.GrpObj.shearMulRight}` block isolating the substantive Step 1 close (~30 LOC; NEEDS_MATHLIB_GAP_FILL contribution candidate) and (2) pin the home file for the four `φ_*` compatibility morphisms (`φ_str`, `φ_η`, `φ_pr_two`, `φ_section`). (c) STAGE iter-135+ prover work on Step 2 body (the load-bearing ~150–300 LOC piece chaining `KaehlerDifferential.tensorKaehlerEquiv` with `PresheafOfModules.pullback`) plus Step 3 body (~30–80 LOC chaining `pullbackComp` + `pullbackId`)."
+  },
+  {
+    "timestamp": "2026-05-17T19:46:48Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cotangent/GrpObj.lean",
+      "theorem": "AlgebraicGeometry.GrpObj.shearMulRight"
+    },
+    "session": {
+      "id": "session_134",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "(none — closed substantively this iter)",
+      "key_lemmas_used": [
+        "CategoryTheory.MonObj.lift_lift_assoc",
+        "CategoryTheory.GrpObj.lift_comp_inv_left",
+        "CategoryTheory.GrpObj.lift_comp_inv_right",
+        "CategoryTheory.MonObj.lift_comp_one_left",
+        "CartesianMonoidalCategory.lift_fst",
+        "CartesianMonoidalCategory.lift_snd",
+        "CartesianMonoidalCategory.lift_fst_snd",
+        "CartesianMonoidalCategory.comp_lift",
+        "CartesianMonoidalCategory.hom_ext"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Construct binary-product shear iso `σ : G ⊗ G ≅ G ⊗ G` in any Cartesian monoidal category `C` from `GrpObj G` data; hom = `lift (fst G G) μ`, inv = `lift (fst G G) (lift (fst G G ≫ ι) (snd G G) ≫ μ)`. Use `@[simps]` to spawn companion lemmas `shearMulRight_hom_fst` and `shearMulRight_hom_snd`.",
+        "code_tried": "@[simps]\ndef shearMulRight (G : C) [GrpObj G] : G ⊗ G ≅ G ⊗ G where\n  hom := lift (fst G G) μ\n  inv := lift (fst G G) (lift (fst G G ≫ ι) (snd G G) ≫ μ)\n  hom_inv_id := by\n    apply CartesianMonoidalCategory.hom_ext\n    · simp\n    · rw [Category.id_comp, Category.assoc, lift_snd]\n      rw [← Category.assoc, comp_lift]\n      rw [← Category.assoc, lift_fst, lift_snd]\n      rw [show (lift (fst G G ≫ ι) μ ≫ μ : G ⊗ G ⟶ G) =\n          lift (lift (fst G G ≫ ι) (fst G G) ≫ μ) (snd G G) ≫ μ from by\n            rw [MonObj.lift_lift_assoc, lift_fst_snd, Category.id_comp],\n        CategoryTheory.GrpObj.lift_comp_inv_left, MonObj.lift_comp_one_left]\n  inv_hom_id := by ⟨symmetric closure via lift_comp_inv_right⟩",
+        "line_number": "348–393",
+        "lean_error": "(none — clean)",
+        "goal_before": "construct `G ⊗ G ≅ G ⊗ G`; prove `hom ≫ inv = 𝟙` and `inv ≫ hom = 𝟙`",
+        "goal_after": "no goals (both `hom_inv_id` and `inv_hom_id` closed)",
+        "result": "success",
+        "insight": "Standard `lift_lift_assoc` + `lift_comp_inv_left`/`right` + `lift_comp_one_left` chain modelled on `CategoryTheory.GrpObj.mulRight` (Mathlib `Monoidal/Grp_.lean:277-281`), generalised to take both factors of `G ⊗ G` as free inputs. The proof structure is delicate: structural rewrites must precede `lift_lift_assoc`, and the inner `μ` expansion to `lift (fst G G) (snd G G) ≫ μ` must happen at the right pattern position via a `show`-equation. ~30 LOC, NEEDS_MATHLIB_GAP_FILL contribution candidate (binary-product shear iso has no packaged form in Mathlib)."
+      }
+    ],
+    "next_steps": "Independently consumable as Step 1 of `mulRight_globalises_cotangent`. Blueprint should add a dedicated `\\begin{lemma}\\label{lem:GrpObj_shearMulRight}\\lean{...}` block in `RigidityKbar.tex` next iter (currently `shearMulRight` is described inline in the proof of `lem:GrpObj_mulRight_globalises` but has no top-level lemma block of its own)."
+  },
+  {
+    "timestamp": "2026-05-17T19:46:48Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cotangent/GrpObj.lean",
+      "theorem": "AlgebraicGeometry.GrpObj.schemeHomRingCompatibility"
+    },
+    "session": {
+      "id": "session_134",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "(none — closed substantively this iter)",
+      "key_lemmas_used": [
+        "TopCat.Presheaf.pullbackPushforwardAdjunction",
+        "Equiv.symm",
+        "Adjunction.homEquiv"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Package the adjunction transpose `((pullback ⊣ pushforward).homEquiv _ _).symm f.c` once so the iter-135+ placeholder helpers can refer to a uniform compatibility-morphism API for `PresheafOfModules.pullback`-flavored statements.",
+        "code_tried": "noncomputable def schemeHomRingCompatibility {Y Z : Scheme.{u}} (f : Y ⟶ Z) :\n    (TopCat.Presheaf.pullback (C := CommRingCat) f.base).obj Z.presheaf ⟶ Y.presheaf :=\n  ((TopCat.Presheaf.pullbackPushforwardAdjunction CommRingCat f.base).homEquiv _ _).symm f.c",
+        "line_number": "417–419",
+        "lean_error": "(none — clean)",
+        "goal_before": "construct `(TopCat.Presheaf.pullback f.base).obj Z.presheaf ⟶ Y.presheaf` from `f.c : Z.presheaf ⟶ f.base _* Y.presheaf`",
+        "goal_after": "(definition elaborates)",
+        "result": "success",
+        "insight": "Mirrors the `φ' = ((adj).homEquiv _ _).symm f.c` shape already used by `Scheme.relativeDifferentialsPresheaf` (`AlgebraicJacobian/Differentials.lean:52`). Genuinely structural helper — no mathematical content, packaging only. Currently unreferenced from the main `RigidityKbar.tex` chapter (minor blueprint-coverage gap)."
+      }
+    ],
+    "next_steps": "Consumed iter-135+ when the four `φ_str` / `φ_η` / `φ_pr_two` / `φ_section` compatibility morphisms are constructed. Minor: add a one-line mention to `blueprint/src/chapters/AlgebraicJacobian_Cotangent_GrpObj.tex` (the auxiliary pointer chapter currently omits this helper)."
+  },
+  {
+    "timestamp": "2026-05-17T19:46:48Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Jacobian.lean",
+      "theorem": "AlgebraicGeometry.genusZeroWitness"
+    },
+    "session": {
+      "id": "session_134",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Off-limits this iter (iter-127 scaffold sorry at L192; body closure scheduled iter-153+ per STRATEGY.md sequencing, gated on the cotangent-vanishing pile closing). Not attempted by the iter-134 prover.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Body closure scheduled iter-153+ after pieces (i.b)+(i.c)+(ii)+(iii) of the cotangent-vanishing pile land. No iter-135 action."
+  },
+  {
+    "timestamp": "2026-05-17T19:46:48Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Jacobian.lean",
+      "theorem": "AlgebraicGeometry.positiveGenusWitness"
+    },
+    "session": {
+      "id": "session_134",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "NEW iter-134 scaffold landed via plan-phase `refactor-positiveGenusWitness-scaffold-iter134` Wave-2 dispatch (NOT by the iter-134 prover lane). Stub at `Jacobian.lean:194–215`, ~21 LOC, sorry body. M3 off-critical-path (user-escalation-pending per `analogies/m3-route-audit.md`). Honest scaffold per the `lean-auditor-review134` audit: intended-type signature, no excuse-comments, correct M3 attribution.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Body closure is M3 work; off iter-by-iter critical path until M2 closes. Iter-135 plan agent should add `\\lean{positiveGenusWitness}` hint to `Jacobian.tex` blueprint chapter (currently the new scaffold has no blueprint coverage)."
+  },
+  {
+    "timestamp": "2026-05-17T19:46:48Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Jacobian.lean",
+      "theorem": "AlgebraicGeometry.nonempty_jacobianWitness"
+    },
+    "session": {
+      "id": "session_134",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Phase-C OFF-LIMITS per STRATEGY.md; gated on M2 close (genusZeroWitness + positiveGenusWitness bodies) AND on the terminal-object cluster on `Spec k`. Iter-157+ work earliest. No iter-134 attempt.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "OFF-LIMITS until M2+M3 land and the genus-stratified body restructure is staged."
+  },
+  {
+    "timestamp": "2026-05-17T19:46:48Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/RigidityKbar.lean",
+      "theorem": "AlgebraicGeometry.rigidity_over_kbar"
+    },
+    "session": {
+      "id": "session_134",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "M2.a scaffold (iter-126); gated on cotangent-vanishing pile pieces (i.a)→(i.b)→(i.c)→(ii)→(iii); iter-151+ at earliest. Piece (i.a) DONE iter-132; piece (i.b) PARTIAL iter-134 (Step 1 closed, Steps 2+3+Compose are placeholders).",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Defer until pieces (i.b)+(i.c)+(ii)+(iii) of the pile close. Iter-135+ resumes piece (i.b) body work — replace tautological placeholders with intended-type sheaf-level signatures, then close Steps 2+3 + composition."
+  }
+]

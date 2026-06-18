@@ -1,0 +1,123 @@
+[
+  {
+    "timestamp": "2026-06-02T05:10:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "LocTrivPullbackTensor.isIso_pullbackTensorMap_unitPair_of_isIso_sheafifyEta (D2' delta-wrapping + assembly)"
+    },
+    "session": {
+      "id": "session_246",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "the eta-bridge IsIso (a_Y.map (eta (pullback phi'))) remains; reduced (not just described) to a precise transposed pushforward-side mate identity, NOT a new Mathlib-absent gap",
+      "key_lemmas_used": [
+        "isIso_pullbackTensorMap_of_isIso_sheafifyDelta",
+        "Functor.OplaxMonoidal.left_unitality_hom",
+        "W_of_isIso_sheafification",
+        "W_whiskerRight_of_W",
+        "isIso_sheafification_map_of_W",
+        "inverseImage_W_toPresheaf_eq_inverseImage_isomorphisms"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "build the converse of isIso_sheafification_map_of_W (sheafified iso lies in J.W)",
+        "code_tried": "private lemma W_of_isIso_sheafification ... := read inverseImage_W_toPresheaf_eq_inverseImage_isomorphisms backwards",
+        "line_number": "1370",
+        "result": "success",
+        "insight": "the morphism-property equality (sheafification IS the localization at J.W.inverseImage toPresheaf) reads both directions; this is the converse needed to feed W_whiskerRight_of_W"
+      },
+      {
+        "attempt": 2,
+        "strategy": "delta-wrapping: use left_unitality_hom F 1_ to reduce sheafified delta on the unit pair to the whiskered eta factor, cancel unitor + F.map(lambda) iso factors",
+        "code_tried": "left_unitality_hom F (1_); sheafify; whiskered eta iso via W_of_isIso_sheafification -> W_whiskerRight_of_W -> isIso_sheafification_map_of_W",
+        "line_number": "1396",
+        "lean_error": "early: parser fails on identifier hIsoλ (token λ); whnf timeout when MonoidalCategoryStruct instance not pinned",
+        "result": "success",
+        "insight": "must letI phi' with explicit (X.presheaf ⋙ forget₂ …) ⟶ … type to pin keyed monoidal instances; use `change` not `show` (linter); rename hIsoλ->hIsoLam; state conclusion with (unit X).val (= 1_ by rfl) to match reduction-brick hypothesis form"
+      },
+      {
+        "attempt": 3,
+        "strategy": "assembly: chain delta-wrapping into the reduction brick",
+        "code_tried": "apply isIso_pullbackTensorMap_of_isIso_sheafifyDelta; exact isIso_sheafifyDelta_unitPair_of_isIso_sheafifyEta f h",
+        "line_number": "1445",
+        "result": "success",
+        "insight": "D2' now fully reduces IsIso (pullbackTensorMap f 𝒪 𝒪) to the single eta-bridge hypothesis"
+      },
+      {
+        "attempt": 4,
+        "strategy": "build sheafifyUnitIso (counit iso a_Y.obj 1_ ≅ 𝒪_Y), the right vertical of the eta-bridge square",
+        "code_tried": "asIso (sheafificationAdjunction ... ).counit.app (unit Y) via (unit Y).val = 1_ rfl",
+        "line_number": "1495",
+        "result": "success",
+        "insight": "unit Y is already a sheaf so the sheafification counit at it is iso; reusable building block"
+      },
+      {
+        "attempt": 5,
+        "strategy": "prove the eta-bridge itself by transposing across the adjunction",
+        "code_tried": "compose pullbackValIso.inv; apply (pullbackPushforwardAdjunction phi).homEquiv.injective; rw [pullbackPushforwardAdjunction_homEquiv_pullbackObjUnitToUnit, Adjunction.homEquiv_unit, Adjunction.leftAdjointOplaxMonoidal_η, Adjunction.homEquiv_counit]; simp with leftAdjointUniq glue",
+        "line_number": "1465",
+        "lean_error": "no error (typechecks to a concrete residual goal); full automation simp does NOT close (the two-level leftAdjointUniq chase of sheafificationCompPullback)",
+        "result": "partial",
+        "insight": "reduced to ONE concrete sheafification-mate identity: sheafAdj.unit.app 𝒪_X ≫ (pushforward phi).map(...) = unitToPushforwardObjUnit phi; a ~60-120 LOC manual mate chase, unit-side analog of the proven pullbackObjUnitToUnit_comp crossing the presheaf↔sheaf boundary; glue lemmas (Adjunction.*_leftAdjointUniq_hom_app*) all confirmed present; out of session budget"
+      }
+    ],
+    "next_steps": "Finish the eta-bridge manual mate chase (glue identified) -> D2' unconditional -> then D3' (pullbackTensorMap_restrict, has proven unit analog pullbackObjUnitToUnit_comp) -> D4' (pullbackTensorIsoOfLocallyTrivial) -> IsInvertible.pullback. Add a \\lean{} pin for isIso_pullbackTensorMap_unitPair_of_isIso_sheafifyEta (plan-agent hint job)."
+  },
+  {
+    "timestamp": "2026-06-02T05:10:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/RelPicFunctor.lean",
+      "theorem": "PicSharp.addCommGroup"
+    },
+    "session": {
+      "id": "session_246",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "ARCHITECTURAL: the iter-246 objectives told this lane to build addCommGroup by citing tensorObjOnProduct / exists_tensorObj_inverse / unitors-braiding-associator from Picard/TensorObjSubstrate.lean, but TensorObjSubstrate.lean:9 imports RelPicFunctor -> the tensor substrate is strictly downstream and citing it is an import cycle. The objectives' recipe is infeasible as written.",
+      "key_lemmas_used": [
+        "Quotient.sound",
+        "Quotient.ind",
+        "Classical.choose",
+        "Classical.choose_spec",
+        "nsmulRec",
+        "zsmulRec",
+        "local private copies pTensor/pTensorIso/pLeftUnitor/pRightUnitor/pBraiding/pUnitIso/pInverseUnique"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "replace opaque `exact sorry` with a real AddCommGroup built from a LOCAL pure-Mathlib substrate (downstream originals unreachable)",
+        "code_tried": "private pTensor/pTensorIso/pLeftUnitor/pRightUnitor/pBraiding/pUnitIso/pInverseUnique/relTensorObj/relAdd/relNeg; instance addCommGroup where add:=relAdd; zero:=Quotient.mk (unit, isLocallyTrivial_unit); neg:=relNeg; nsmul:=nsmulRec; zsmul:=zsmulRec; add_comm/zero_add/add_zero via Quotient.sound; add_assoc via pAssoc; neg_add_cancel via exists_pTensor_inverse+pInverseUnique",
+        "line_number": "428",
+        "lean_error": "Fields missing: nsmul, zsmul (then) could not synthesize default value for nsmul_zero — AddMonoid.nsmul has no field default (Group/Defs.lean:641)",
+        "result": "partial",
+        "insight": "must supply nsmul:=nsmulRec / zsmul:=zsmulRec explicitly via a letI Zero/Add/Neg block so the recursors elaborate mid-structure"
+      },
+      {
+        "attempt": 2,
+        "strategy": "prove isLocallyTrivial_unit (structure sheaf locally trivial) directly via the Mathlib [F.Final] : IsIso (pullbackObjUnitToUnit phi) instance",
+        "code_tried": "intro x; obtain affine W; refine ⟨W,...⟩; exact ⟨restrictFunctorIsoPullback W.ι |>.app _ ≪≫ asIso (pullbackObjUnitToUnit W.ι.toRingCatSheafHom)⟩ (with haveI Final / IsRightAdjoint / HasSheafCompose all inferInstance)",
+        "line_number": "316",
+        "lean_error": "failed to synthesize IsIso (SheafOfModules.pullbackObjUnitToUnit (Hom.toRingCatSheafHom W.ι)) — also Unknown constant SheafOfModules.instIsIsoPullbackObjUnitToUnit; Final/IsRightAdjoint/HasSheafCompose each resolve individually but the IsIso instance refuses",
+        "result": "failed",
+        "insight": "the IDENTICAL asIso (pullbackObjUnitToUnit g.toRingCatSheafHom) compiles inside the proven IsLocallyTrivial.pullback (LineBundlePullback.lean:192); undiagnosed instance-resolution quirk; pinning .{u} and naming the instance both failed; reverted to a typed sorry with the intended proof in the docstring"
+      },
+      {
+        "attempt": 3,
+        "strategy": "well-definedness of relNeg via pInverseUnique on the two inverse witnesses",
+        "code_tried": "rintro L M ⟨e⟩; refine Quotient.sound ?_; have h1 := (choose_spec (exists_pTensor_inverse L.isLocallyTrivial)).2.some; have h2 := pTensorIso e (Iso.refl _) ≪≫ (choose_spec (exists_pTensor_inverse M.isLocallyTrivial)).2.some; exact pInverseUnique h1 h2",
+        "line_number": "97",
+        "result": "success",
+        "insight": "relNeg well-defined sorry-free modulo the inverse-existence bridge; pInverseUnique is the associator-based uniqueness argument (mirror of group inverse uniqueness)"
+      }
+    ],
+    "next_steps": "DO NOT re-dispatch RPF to extend the local-duplicate substrate (the prover itself flags it as fragile ~200 LOC duplication, the wrong fix). Plan agent must FIRST resolve the architecture via a refactor subagent: (a) move tensor substrate (tensorObj, unitors, braiding, tensorObj_assoc_iso, tensorObj_isLocallyTrivial, tensorObjOnProduct, exists_tensorObj_inverse) to a file UPSTREAM of RelPicFunctor; or (b) relocate PicSharp.addCommGroup downstream into TensorObjSubstrate next to addCommGroup_via_tensorObj. Option (a) preferred (keeps the blueprint pin in this chapter). Then the 4 local bridges collapse to citations and only exists_tensorObj_inverse remains."
+  }
+]

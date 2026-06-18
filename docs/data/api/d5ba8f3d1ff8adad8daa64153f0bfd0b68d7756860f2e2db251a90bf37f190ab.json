@@ -1,0 +1,113 @@
+[
+  {
+    "timestamp": "2026-05-31T04:00:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "PresheafOfModules.internalHomEval"
+    },
+    "session": {
+      "id": "session_222",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "whnf heartbeat bomb (>3.2M heartbeats, exponential cost) at the concrete unit-𝟙_ instantiation of restr_map_homMk / the closing `exact key.symm`; NOT a math gap and NOT a budget issue — the iter-221 Over.map coherence obstacle is SOLVED (restr_map_homMk + dual_map_app_terminal axiom-clean in pieces). Aggravated by a persistent LSP/Bash tooling-output lag this session.",
+      "key_lemmas_used": [
+        "ModuleCat.MonoidalCategory.tensor_ext",
+        "internalHomEvalApp_tmul",
+        "restr_map_homMk",
+        "PresheafOfModules.naturality_apply",
+        "dual_map_app_terminal"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Assemble internalHomEval := Hom.mk (internalHomEvalApp M ·) naturality; reduce naturality via tensor_ext to the per-section contraction goal G",
+        "code_tried": "PresheafOfModules.Hom.mk (fun X => internalHomEvalApp M X) (by intro X Y f; refine ModuleCat.MonoidalCategory.tensor_ext (fun s φ => ?_); change (internalHomEvalApp M Y).hom ((Monoidal.tensorObj M (dual M)).map f (s ⊗ₜ φ)) = ...; erw [Monoidal.tensorObj_map_tmul]; rw [internalHomEvalApp_tmul, internalHomEvalApp_tmul])",
+        "line_number": "1449-1455",
+        "lean_error": "(deterministic) timeout at whnf — even at maxHeartbeats 3200000",
+        "goal_before": "(Monoidal.tensorObj M M.dual).map f ≫ (restrictScalars ...).map (internalHomEvalApp M Y) = internalHomEvalApp M X ≫ (𝟙_ ...).map f",
+        "goal_after": "G: evalLin M Y ((dual M).map f φ) (M.map f s) = ((𝟙_).map f).hom (evalLin M X φ s)",
+        "result": "partial",
+        "insight": "tensor_ext reduction to G is defeq-valid and verified; internalHomEvalApp_tmul (rfl) fires; the square reduces cleanly."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Discharge G with PresheafOfModules.naturality_apply of the dual section φ along (Over.homMk f.unop).op, transported across Over.map coherence by restr_map_homMk on both M and the unit 𝟙_",
+        "code_tried": "key := PresheafOfModules.naturality_apply (φ : restr X.unop M ⟶ restr X.unop (𝟙_)) (Over.homMk f.unop).op s; rw [restr_map_homMk M f, restr_map_homMk (𝟙_ ...) f] at key; exact key.symm",
+        "line_number": "1453-1455",
+        "lean_error": "(deterministic) timeout at whnf at the unit-𝟙_ instantiation of restr_map_homMk and the closing exact; restr_map_homMk M f (M abstract) is cheap, the explosion is specific to the concrete unit whose whnf normal form is enormous",
+        "goal_before": "G (see above)",
+        "goal_after": null,
+        "result": "failed",
+        "insight": "The blocker is purely elaboration cost localized to whnf-ing the unit 𝟙_ (nested ofPresheaf∘pushforward₀∘Over.map∘restrictScalars∘tensorObj∘unit). maxHeartbeats {1.6M, 3.2M} all time out → cost is ~exponential, not budget-bound. Three whnf-free fixes recorded: (1) generalize the unit before naturality_apply/exact; (2) use Mathlib pushforward_obj_map_apply' so matching is syntactic; (3) close G elementwise without `exact key.symm`."
+      }
+    ],
+    "next_steps": "Re-dispatch SAME mathlib-build lane to close the naturality sorry via one of the 3 whnf-free routes (the reduction is done). Project sorry should return 81→80. If iter-223 still cannot tame the whnf bomb, that is a genuine churn signal → mathlib-analogist (cross-domain) consult on the unit-whnf explosion or restate the unit object to avoid the nested-defeq form."
+  },
+  {
+    "timestamp": "2026-05-31T04:00:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "PresheafOfModules.internalHomEvalApp_tmul"
+    },
+    "session": {
+      "id": "session_222",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "rfl"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "@[simp] lemma giving the value of internalHomEvalApp on a simple tensor s ⊗ φ ↦ evalLin M X φ s, eval value kept at its NATURAL over-ring type R₀.obj X (not ascribed to the unit value)",
+        "code_tried": "@[simp] lemma internalHomEvalApp_tmul ... := rfl",
+        "line_number": "1421",
+        "lean_error": null,
+        "goal_before": null,
+        "goal_after": null,
+        "result": "success",
+        "insight": "Axiom-clean (#print axioms = {propext, Classical.choice, Quot.sound}). Keeping eval at the natural over-ring type (per [[ts-assoc-flatness-gap]] diamond-bridge trick) makes the simp lemma rfl-provable."
+      }
+    ],
+    "next_steps": "Consumed by the internalHomEval naturality reduction; complete."
+  },
+  {
+    "timestamp": "2026-05-31T04:00:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "PresheafOfModules.restr_map_homMk"
+    },
+    "session": {
+      "id": "session_222",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "rfl"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "private lemma: (restr X.unop N).map (Over.homMk f.unop).op = N.map f, isolating the heavy Over.map/pushforward₀ whnf defeq into its own heartbeat budget so it runs once",
+        "code_tried": "private lemma restr_map_homMk ... (restr X.unop N).map (Over.homMk f.unop : Over.mk f.unop ⟶ Over.mk (𝟙 X.unop)).op = N.map f := rfl",
+        "line_number": "1434",
+        "lean_error": null,
+        "goal_before": null,
+        "goal_after": null,
+        "result": "success",
+        "insight": "Axiom-clean for N ABSTRACT (cheap). rfl relies on deep whnf defeq between (restr=pushforward₀ (Over.forget X.unop)).map (Over.homMk f.unop).op and N.map f — fragile to changes in pushforward₀/Over.forget unfolding, but isolated by `private`. The SAME rfl-bridge instantiated at the concrete unit 𝟙_ is what triggers the heartbeat bomb in internalHomEval."
+      }
+    ],
+    "next_steps": "Reusable bridge for any pushforward₀ (Over.map -) restriction identity; consumed by internalHomEval."
+  }
+]

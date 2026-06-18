@@ -1,0 +1,215 @@
+[
+  {
+    "timestamp": "2026-05-22T03:01:32Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects.lean",
+      "theorem": "gmScalingP1"
+    },
+    "session": {
+      "id": "session_169",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Three independent routes to a 'genuinely bivariate' morphism ℙ¹×𝔾_m ⟶ ℙ¹ each hit a Mathlib infrastructure gap. The headline body is now 5-iter-deferred and the iter-169 plan's armed escalation trigger has fired.",
+      "key_lemmas_used": [
+        "AlgebraicGeometry.Proj.map",
+        "AlgebraicGeometry.Proj.fromOfGlobalSections",
+        "AlgebraicGeometry.Proj.fromOfGlobalSections_morphismRestrict",
+        "AlgebraicGeometry.Scheme.Cover.glueMorphisms",
+        "AlgebraicGeometry.pullbackSpecIso",
+        "AlgebraicGeometry.Proj.affineOpenCoverOfIrrelevantLESpan"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Direct Proj.fromOfGlobalSections from the whole pullback (single global ring map, no chart-glue).",
+        "code_tried": "Build φ : MvPolynomial (Fin 2) kbar →+* Γ((ProjectiveLineBar ⊗ Gm).left, ⊤) sending X 0 ↦ t, X 1 ↦ 1 and apply Proj.fromOfGlobalSections.",
+        "line_number": "685",
+        "lean_error": "Not a Lean-error per se — semantic dead-end. Γ(ℙ¹ × 𝔾_m, ⊤) = k̄[t, t⁻¹] (Γ(ℙ¹, ⊤) = k̄ by properness; tensor with GmRing); any morphism produced via this route factors through Spec(GmRing) = 𝔾_m, giving (x, λ) ↦ [λ : 1] = λ — the EMBEDDING 𝔾_m ↪ ℙ¹, NOT the scaling action (x, λ) ↦ λ·x.",
+        "goal_before": "ProjectiveLineBar kbar ⊗ Gm kbar ⟶ ProjectiveLineBar kbar (over Spec (.of kbar)).",
+        "goal_after": "Unchanged — route abandoned semantically before Lean-error.",
+        "result": "failed",
+        "insight": "The single-fromOfGlobalSections route from a non-affine source cannot encode a non-trivially-bivariate morphism. Global sections of a non-affine source LOSE the ℙ¹ factor."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Chart-glue (Option B per iter-169 plan): two chart-side ring maps φ_i : MvPolynomial (Fin 2) kbar →+* TensorProduct kbar (HomogeneousLocalization.Away 𝒜 (X i)) (GmRing kbar), Proj.fromOfGlobalSections per chart, glue via Scheme.Cover.glueMorphisms over pullback cover.",
+        "code_tried": "Scaffold construction of φ_i for i ∈ Fin 2 sending the chart-i unit-coord X i ↦ (unit lift) ⊗ 1 and the other coord X (otherFin i) ↦ (affine coord) ⊗ λ^±1; cocycle on D₊(X 0 · X 1).",
+        "line_number": "685",
+        "lean_error": "Did not reach Lean — bailout on LOC budget. ~200 LOC of TensorProduct + HomogeneousLocalization.Away ring-instance plumbing with no in-tree precedent + ~50 LOC cocycle. Specific blockers: (a) `TensorProduct kbar (HomogeneousLocalization.Away 𝒜 _) (GmRing kbar)` has no `CommRing`/`Algebra` instance shipped by Mathlib under `inferInstance`; (b) cocycle on `D₊(X 0 · X 1)` needs `Proj.basicOpen`-cover-restriction lemmas not specialised to `affineOpenCoverOfIrrelevantLESpan`.",
+        "goal_before": "Same as Attempt 1.",
+        "goal_after": "Unchanged.",
+        "result": "failed",
+        "insight": "Option B is not closeable within an iter budget. The plan's '<200 LOC' estimate was optimistic. The decisive Mathlib gap is the missing CommRing/Algebra instance on `TensorProduct (HomogeneousLocalization.Away _ _) _` — Mathlib does not expose this canonical product ring as `inferInstance`-resolvable."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Functoriality-of-Proj route (NEW, not in the iter-169 plan): use `Proj.map : (𝒜 →+*ᵍ ℬ) → (Proj ℬ ⟶ Proj 𝒜)` from `ProjectiveSpectrum/Functor.lean:144` with 𝒜 = MvPolynomial (Fin 2) kbar, ℬ = MvPolynomial (Fin 2) (GmRing kbar), and the graded ring map X 0 ↦ t · X 0, X 1 ↦ X 1.",
+        "code_tried": "Identify `Proj ℬ ≅ ProjectiveLineBar ⊗ Gm` via a base-change iso (relative Proj). The morphism would then be Proj.map (φ) composed with that iso.",
+        "line_number": "685",
+        "lean_error": "Mathlib gap — `Proj.iso_pullback_Spec` / `ProjPolynomial.base_change_iso` / `relativeProj` declarations all VERIFIED ABSENT (via Glob + Grep across the entire Mathlib `AlgebraicGeometry/` tree). The relative-Proj base-change iso `Proj(MvPoly (Fin n) R) ≅ Proj(MvPoly (Fin n) k) ×_{Spec k} Spec R` does not exist.",
+        "goal_before": "Same as Attempt 1.",
+        "goal_after": "Unchanged.",
+        "result": "failed",
+        "insight": "Route is mathematically the CLEANEST but gated on a missing upstream Mathlib infrastructure (relative-Proj base-change). Would be a multi-iter Mathlib PR (~5-iter detour). Reusable evidence that the relative-Proj formalism is the real bottleneck here — recording it for the iter-170 user escalation."
+      }
+    ],
+    "next_steps": "iter-170 opens with USER ESCALATION per iter-169 plan's armed-trigger commitment. The escalation surfaces three options to the user: (a) commit to upstream Mathlib sub-build PR for `HomogeneousLocalization.AwayTensor` + `Proj.base_change_iso` (~5-iter detour, unblocks BOTH the iso `aux_left` and `gmScalingP1` body); (b) accept `[CharZero]` as a temporary hypothesis and use `rigidity_over_kbar` (RigidityKbar L75/L88) as the char-0-only genus-0 artifact (fallback (a)); (c) build chart-glue inline at scale (~200-300 LOC dedicated to this single body across 2-3 iters). NO more helper-supports rounds permitted. The planner picks an option and proceeds; the user can override via USER_HINTS."
+  },
+  {
+    "timestamp": "2026-05-22T03:01:32Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects.lean",
+      "theorem": "gmScalingP1_collapse_at_zero"
+    },
+    "session": {
+      "id": "session_169",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Strictly downstream of `gmScalingP1` body (uses the scaling morphism's chart-1 factorization at the fixed point [0:1]). Cannot land before the gmScalingP1 body lands.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "No attempt — gated.",
+        "code_tried": "",
+        "line_number": "709",
+        "lean_error": "",
+        "goal_before": "(toUnit (Gm kbar) ≫ ProjectiveLineBar.zeroPt kbar) = lift (toUnit (Gm kbar) ≫ ProjectiveLineBar.zeroPt kbar) (𝟙 _) ≫ gmScalingP1 kbar (or equivalent).",
+        "goal_after": "Unchanged.",
+        "result": "failed",
+        "insight": "Cannot attempt — depends on `gmScalingP1` body. Docstring refreshed to record the dependency chain explicitly."
+      }
+    ],
+    "next_steps": "Lands as a chart-1 direct computation (~15 LOC via `Proj.fromOfGlobalSections_morphismRestrict`) ONCE `gmScalingP1` body lands. Tracking with the escalation decision."
+  },
+  {
+    "timestamp": "2026-05-22T03:01:32Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects.lean",
+      "theorem": "ga_grpObj (deleted as SECONDARY-4 hygiene)"
+    },
+    "session": {
+      "id": "session_169",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "N/A — off-path declaration (no live consumer in `AbelianVarietyRigidity.lean` or `Jacobian.lean`). Lean-auditor `iter168` flagged the kept sorried instance as a major.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Delete `ga_grpObj` instance (L526-540) and the `ga_smooth` instance (~L555) that consumed it. Verify with grep that no other file references `ga_grpObj` / `Ga _ : GrpObj` outside `Genus0BaseObjects.lean`.",
+        "code_tried": "Edit removed both instances. `grep -rn 'ga_grpObj' AlgebraicJacobian/` empty post-edit.",
+        "line_number": "526-555",
+        "lean_error": "None — `lake build AlgebraicJacobian.Genus0BaseObjects` exit 0 with warning count -1.",
+        "goal_before": "`GrpObj (Ga kbar)` (sorry-bodied since iter-165 scaffold).",
+        "goal_after": "Declarations removed.",
+        "result": "success",
+        "insight": "Genus-0 strategy pivoted iter-164 to the `𝔾_m`-scaling shortcut, fully demoting the `𝔾_a`-additive route. The orphan `ga_grpObj` lingered ~5 iters until the auditor flagged it. **Reusable pattern**: when a route is demoted off-critical-path, delete its sorried public instances within 1-2 iters, not 5. The blueprint pin `\\lean{AlgebraicGeometry.ga_grpObj}` at AVR.tex L1023 is now ORPHANED — flag in iter-170 plan."
+      }
+    ],
+    "next_steps": "Plan-agent in iter-170 deletes the blueprint pin `\\lean{ga_grpObj}` (and the `def:ga_grpObj` block if it carries no further `\\uses{}` connections in the chapter). Blueprint-doctor will auto-flag the orphan in the iter-170 plan prompt."
+  },
+  {
+    "timestamp": "2026-05-22T03:01:32Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects.lean",
+      "theorem": "Docstring refresh — homogeneousLocalizationAwayIso_aux_left (SECONDARY-1)"
+    },
+    "session": {
+      "id": "session_169",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Stale docstring — lean-auditor `iter168` must-fix #3 flagged it as misrepresenting iter-168 progress (claimed 'structural setup via ext, Away.mk_surjective, val_injective' landed; body was bare `sorry`).",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Replace prior misleading prose with an honest 'TODO — no body landed; deferred infrastructure not on the genus-0 critical path (iter-169 pivoted to Option B for gmScalingP1, sidestepping the iso)' message.",
+        "code_tried": "Edit at L350-367 — docstring-only.",
+        "line_number": "350-367",
+        "lean_error": "None.",
+        "goal_before": "(docstring)",
+        "goal_after": "Honest docstring; body unchanged (`sorry`).",
+        "result": "success",
+        "insight": "Per iter-168 KB pattern 'Stale-Mathlib-gap-docstring detection': the prior docstring exemplified the laundering anti-pattern — claiming progress that did not exist."
+      }
+    ],
+    "next_steps": "None — closed."
+  },
+  {
+    "timestamp": "2026-05-22T03:01:32Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects.lean",
+      "theorem": "Docstring refresh — projectiveLineBar_isReduced (SECONDARY-2)"
+    },
+    "session": {
+      "id": "session_169",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Stale docstring — body was closed axiom-clean iter-168 via `IsReduced.of_openCover` + `val_injective` bridge, but the docstring still claimed a 'Mathlib gap'. Auditor `iter168` must-fix #9.",
+      "key_lemmas_used": [
+        "IsReduced.of_openCover",
+        "Function.Injective.isDomain",
+        "HomogeneousLocalization.val_injective"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Rewrite the docstring at L708-718 to honestly describe the iter-168 closure: chart-cover + algebraMap-into-Localization-Away injection + Function.Injective.isDomain.",
+        "code_tried": "Edit at L708-718 — docstring-only.",
+        "line_number": "708-718",
+        "lean_error": "None.",
+        "goal_before": "(docstring)",
+        "goal_after": "Honest docstring; body unchanged.",
+        "result": "success",
+        "insight": "Closes the iter-168 'Stale-Mathlib-gap-docstring detection' lesson — the docstring is now consistent with the proven axiom-clean body. KB pattern reinforced."
+      }
+    ],
+    "next_steps": "None — closed."
+  },
+  {
+    "timestamp": "2026-05-22T03:01:32Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects.lean",
+      "theorem": "Section-(E) header refresh (SECONDARY-3)"
+    },
+    "session": {
+      "id": "session_169",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Stale section header listed `ℙ¹ is reduced` under the 'Mathlib gap' bullets even though the instance is axiom-clean since iter-168.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Drop the 'ℙ¹ is reduced — scaffold (Mathlib gap…)' bullet; replace with the axiom-clean iter-168 description.",
+        "code_tried": "Edit at L680-696 — comment-only.",
+        "line_number": "680-696",
+        "lean_error": "None.",
+        "goal_before": "(comment)",
+        "goal_after": "Bullet aligned with iter-168 reality.",
+        "result": "success",
+        "insight": "Reinforces the KB anti-pattern: stale 'Mathlib gap' framing on a closed body. Now consistent."
+      }
+    ],
+    "next_steps": "None — closed."
+  }
+]

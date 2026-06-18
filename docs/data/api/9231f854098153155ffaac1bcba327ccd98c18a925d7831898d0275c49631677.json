@@ -1,0 +1,383 @@
+[
+  {
+    "timestamp": "2026-05-24T11:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OCofP.lean",
+      "theorem": "Scheme.lineBundleAtClosedPoint.globalSections_iff"
+    },
+    "session": {
+      "id": "session_181",
+      "model": "claude-opus-4"
+    },
+    "findings": {
+      "blocker": "Body for both directions consumes lineBundleAtClosedPoint and toFunctionField sorry-bodies (Sheaf-internal-Hom + ModuleCat-forget Mathlib gap, iter-180 Lane D analysis); GATE RISK clause in Lane A directive predicted this PARTIAL shape.",
+      "key_lemmas_used": [
+        "lineBundleAtClosedPoint.toFunctionField (new sorry def, plan-phase refactor)",
+        "globalSections_iff_mp (new private helper, sorry)",
+        "globalSections_iff_mpr (new private helper, sorry)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Plan-phase refactor: replace iff RHS Nonempty { s // s ≠ 0 } (vacuous-in-f) with ∃ s, lineBundleAtClosedPoint.toFunctionField P hP s = f (binds s to f). Insert new noncomputable def toFunctionField with body sorry.",
+        "code_tried": "Refactor inserted toFunctionField def at L150-162; replaced globalSections_iff RHS to bind s to f via ∃; replaced two-direction refine skeleton with single sorry.",
+        "line_number": "150, 206",
+        "lean_error": "",
+        "goal_before": "(prior iff signature was vacuous-in-f; iter-180 review flagged as CRITICAL)",
+        "goal_after": "globalSections_iff has new signature with s binding; compiles GREEN with 1 new sorry on toFunctionField + 1 sorry on globalSections_iff body",
+        "result": "success",
+        "insight": "Signature refactor isolates the substantive content into toFunctionField def. Prover lane can then attempt iff body via two directional helpers."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Lane A prover: split iff into ⟨mp, mpr⟩ combinator + 2 private directional helpers globalSections_iff_mp (Hartshorne II.7.7(b)) and globalSections_iff_mpr (Hartshorne II.7.7(a)).",
+        "code_tried": "Added private lemmas globalSections_iff_mp and globalSections_iff_mpr at L206 and L249, each body := sorry with detailed comments. globalSections_iff body becomes ⟨mp _ _ _ _ _, mpr _ _ _ _ _⟩.",
+        "line_number": "206, 249",
+        "lean_error": "",
+        "goal_before": "globalSections_iff body sorry after refactor",
+        "goal_after": "globalSections_iff combinator kernel-clean modulo upstream helpers; 2 named directional sorries; lean_verify on combinator returns sorryAx (via mp/mpr).",
+        "result": "partial",
+        "insight": "Body of both directions requires unfolding toFunctionField, which is itself sorry. The directive's GATE RISK clause predicted this PARTIAL shape. File sorry 5 → 7 (refactor +1 + split +1)."
+      }
+    ],
+    "next_steps": "iter-182+: attack lineBundleAtClosedPoint or toFunctionField body via mathlib-analogist consult on Sheaf-internal-Hom + ModuleCat-forget, or open IdealSheafDual.lean lane bottom-up. Either direction unblocks both helpers."
+  },
+  {
+    "timestamp": "2026-05-24T11:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects/Points.lean",
+      "theorem": "gmHomEquiv_left_inv and gmHomEquiv_right_inv (closes gm_grpObj kernel-clean transitively)"
+    },
+    "session": {
+      "id": "session_181",
+      "model": "claude-opus-4"
+    },
+    "findings": {
+      "blocker": "RESOLVED — broke 11-iter gm_grpObj STUCK pattern fully (iter-180 partial decomposition + iter-181 round-trip closure).",
+      "key_lemmas_used": [
+        "Units.ext",
+        "ΓSpecIso_inv_naturality_assoc",
+        "Scheme.Hom.comp_appTop",
+        "Scheme.toSpecΓ_appTop",
+        "Iso.inv_hom_id",
+        "IsLocalization.Away.lift_eq",
+        "MvPolynomial.eval₂Hom_X'",
+        "Over.OverMorphism.ext",
+        "AlgebraicGeometry.ext_to_Spec",
+        "IsLocalization.lift_unique",
+        "MvPolynomial.ringHom_ext",
+        "set_option backward.isDefEq.respectTransparency false in (chart-bridge recipe reused)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "gmHomEquiv_right_inv: Reduce both sides to ring-map equality at CommRingCat level via Units.ext + change, then unfold via ΓSpecIso_inv_naturality_assoc.",
+        "code_tried": "apply Units.ext; (existing change to CommRingCat-level equality); unfold gmHomEquiv_invFun; change to expose Spec.map (CommRingCat.ofHom _); rw [Scheme.Hom.comp_appTop, ← Scheme.ΓSpecIso_inv_naturality_assoc, Scheme.toSpecΓ_appTop, Iso.inv_hom_id, Category.comp_id]; simp [IsLocalization.Away.lift_eq, MvPolynomial.eval₂Hom_X'].",
+        "line_number": "468",
+        "lean_error": "(prior iter-180 BLOCKER on ← Scheme.ΓSpecIso_inv_naturality_assoc failing to find pattern was resolved by added unfold + change exposing Spec.map (CommRingCat.ofHom _))",
+        "goal_before": "(invFun ∘ toFun) u = u",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "iter-180 BLOCKER sealed: rewrite pattern needs Spec.map (CommRingCat.ofHom _) literally exposed; pre-rewrite unfold + change fix this. lean_verify: {propext, Classical.choice, Quot.sound} — kernel-only baseline."
+      },
+      {
+        "attempt": 2,
+        "strategy": "gmHomEquiv_left_inv: Over.OverMorphism.ext + AlgebraicGeometry.ext_to_Spec to reduce to RingHom equality GmRing →+* Γ(T.left, ⊤); then IsLocalization.lift_unique + MvPolynomial.ringHom_ext on C and X generators.",
+        "code_tried": "apply Over.OverMorphism.ext; apply AlgebraicGeometry.ext_to_Spec; apply IsLocalization.lift_unique; ring_hom_ext on C r case (scalar-tower factorisation + hw applied at r) and X i case (obtain ⟨⟩ := i; simp [gmHomEquiv_toFun]).",
+        "line_number": "382",
+        "lean_error": "",
+        "goal_before": "(toFun ∘ invFun) f = f",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "lean_verify: {propext, Classical.choice, Quot.sound} — kernel-only. gm_grpObj now kernel-clean transitively (the iter-180 5 helpers were already axiom-clean). 11-iter STUCK fully resolved via structural decomposition + this iter's round-trip closure."
+      }
+    ],
+    "next_steps": "None — file is now in STABLE state (2 closed Lane C deliverables; 0 remaining sorries). Add \\leanok if needed by sync_leanok (deterministic). Downstream consumers (gm_smooth, iotaGm_isDominant substrate, morphism_P1_to_grpScheme_const) inherit a kernel-clean GrpObj Gm."
+  },
+  {
+    "timestamp": "2026-05-24T11:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "iotaGm_isDominant"
+    },
+    "session": {
+      "id": "session_181",
+      "model": "claude-opus-4"
+    },
+    "findings": {
+      "blocker": "Helper iotaGm_range_isOpen body needs chart-1 section extraction of gmScalingP1_cover, same gap as Lane B's gmScalingP1_chart_agreement cross case.",
+      "key_lemmas_used": [
+        "GeometricallyIrreducible.irreducibleSpace_of_subsingleton",
+        "IsOpen.dense",
+        "Set.range_nonempty",
+        "PrimeSpectrum.instUnique",
+        "IrreducibleSpace extends PreirreducibleSpace"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Structural decomposition: reduce IsDominant → DenseRange, derive density from (a) IrreducibleSpace PLB.left via GeometricallyIrreducible.irreducibleSpace_of_subsingleton, (b) Nonempty Gm.left, (c) IsOpen (range iotaGm.left) via IsOpen.dense.",
+        "code_tried": "rw [Over.comp_left]; refine ⟨?_⟩; haveI : Subsingleton ↥(Spec _) := inferInstance; haveI hirr : IrreducibleSpace (ProjectiveLineBar kbar).left := GeometricallyIrreducible.irreducibleSpace_of_subsingleton (f := PLB.hom); exact (iotaGm_range_isOpen.dense (Set.range_nonempty _)).",
+        "line_number": "119",
+        "lean_error": "(no errors at body level; rests on helper sorry)",
+        "goal_before": "IsDominant iotaGm",
+        "goal_after": "(closed; reduces to helper sorry on isOpen of range)",
+        "result": "partial",
+        "insight": "Body is kernel-clean (this body) modulo upstream iotaGm_range_isOpen. Disclosure tier improved one level from iter-180. lean_verify on iotaGm_isDominant: {propext, sorryAx, Classical.choice, Quot.sound} — sorryAx inherited via iotaGm_range_isOpen."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Helper iotaGm_range_isOpen — claim IsOpen (Set.range (lift _ _).left ≫ gmScalingP1.left). Body left as honest direct sorry with chart-1 factorisation strategy in comment.",
+        "code_tried": "private lemma iotaGm_range_isOpen : IsOpen (Set.range _) := sorry  -- chart-1 section + ι_glueMorphisms + IsOpenImmersion.isOpen_range",
+        "line_number": "98",
+        "lean_error": "",
+        "goal_before": "IsOpen (Set.range ...)",
+        "goal_after": "(sorry)",
+        "result": "partial",
+        "insight": "Helper signature precisely captures the substantive Mathlib gap. Same chart-1 unfold work as Lane B cross case + Lane B iter-181 collapse-at-zero — three sorries blocked on the same chart-1 factorisation."
+      }
+    ],
+    "next_steps": "iter-182: extract chart-1 section s of gmScalingP1_cover from (lift _).left, identify s ≫ gmScalingP1_chart 1 with Spec(Away (X 1)) ↪ ℙ¹ open immersion. Coordinated with Lane B cross case + collapse-at-zero (same Mathlib gap)."
+  },
+  {
+    "timestamp": "2026-05-24T11:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects/GmScaling.lean",
+      "theorem": "gmScalingP1_chart_agreement (cross case via cross01 helper)"
+    },
+    "session": {
+      "id": "session_181",
+      "model": "claude-opus-4"
+    },
+    "findings": {
+      "blocker": "Cross case requires ring identity in Localization.Away t ⊗_{k̄} GmRing — different idiom from PRIMARY recipe; needs Away_X0_X1_iso project bridge.",
+      "key_lemmas_used": [
+        "fst_eq_snd_of_mono_eq (diagonal)",
+        "pullbackSymmetry (cross (1,0)-from-(0,1))",
+        "pullbackSymmetry_hom_comp_fst",
+        "pullbackSymmetry_hom_comp_snd",
+        "fin_cases",
+        "Fin.isValue, Fin.zero_eta, Fin.mk_one (pre-rewrite cleanup)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Restructure: fin_cases x <;> fin_cases y → 4 explicit branches. Diagonals via fst_eq_snd_of_mono_eq (axiom-clean); (1,0) cross derived from (0,1) cross via pullbackSymmetry epi argument (axiom-clean); (0,1) cross delegated to NEW helper gmScalingP1_chart_agreement_cross01 (the substantive ring identity).",
+        "code_tried": "fin_cases x <;> fin_cases y; (3 diagonals + 1 cross-swap closed via simp+rw); cross (0,1) → exact gmScalingP1_chart_agreement_cross01.",
+        "line_number": "323 (wrapper), 295 (helper)",
+        "lean_error": "fin_cases produces (fun i ↦ i) ⟨0, _⟩ not canonical Fin 2 — pullbackSymmetry didn't match. Fixed via simp only [Fin.isValue, Fin.zero_eta, Fin.mk_one] before rw chain.",
+        "goal_before": "gmScalingP1_chart_PLB x ≫ X i = gmScalingP1_chart_PLB y ≫ X j with cross (x ≠ y)",
+        "goal_after": "(diagonals: no goals; cross (1,0): no goals; cross (0,1): reduced to helper)",
+        "result": "partial",
+        "insight": "Wrapper now kernel-clean modulo upstream cross01 helper (axioms: {propext, sorryAx, Classical.choice, Quot.sound} via cross01). Same Fin.isValue trap as iter-180 Lane A respectTransparency recipe."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Dead-end: cancel_mono on (ProjectiveLineBar kbar).hom to push equation upstream past PLB.hom.",
+        "code_tried": "apply CategoryTheory.Mono.right_cancellation (f := (ProjectiveLineBar kbar).hom)",
+        "line_number": "295 (cross01 helper)",
+        "lean_error": "failed to synthesize Mono (ProjectiveLineBar kbar).hom",
+        "goal_before": "(cocycle ring identity)",
+        "goal_after": "(same)",
+        "result": "failed",
+        "insight": "PLB.hom is the structure map ℙ¹ → Spec k̄ which has positive-dimensional fibre over the closed point — cannot be mono. Confirms iter-180 over_coherence recipe does NOT generalise to the cocycle."
+      },
+      {
+        "attempt": 3,
+        "strategy": "unfold gmScalingP1_chart + unfold gmScalingP1_cover_X_iso + simp chain mirroring iter-180 Lane A respectTransparency recipe Stage 3.",
+        "code_tried": "set_option ... false in unfold gmScalingP1_chart; unfold gmScalingP1_cover_X_iso; simp only [Iso.trans_hom, Category.assoc, pullbackSpecIso_hom_base, ...]",
+        "line_number": "295",
+        "lean_error": "(stalls on Algebra.compHom-driven instance resolution similar to but NOT identical to PRIMARY's blocker; the cross-case sits in TensorProduct of Localization.Away with GmRing, different family of Algebra.compHom chains)",
+        "goal_before": "(after unfolds)",
+        "goal_after": "(stalls)",
+        "result": "failed",
+        "insight": "Different family of blockers from PRIMARY chart_PLB_eq. Cross case needs Away_X0_X1_iso project-side bridge in ChartIso.lean (~25-40 LOC); iter-181 helper budget (= 1) exhausted closing diagonals + cross-swap."
+      }
+    ],
+    "next_steps": "iter-182+: 3-step recipe in cross01 docstring — (1) add Away_X0_X1_iso : Away 𝒜 (X 0 · X 1) ≃+* Localization.Away (chart-1 coord) (~25-40 LOC) in ChartIso.lean; (2) build pullback (cover.f 0) (cover.f 1) ≅ Spec (Away ⊗[kbar] GmRing) (~30-50 LOC); (3) close cross01 via congrArg Spec.map on ring identity λ·u = (1/t)·λ. Total ~70-115 LOC."
+  },
+  {
+    "timestamp": "2026-05-24T11:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/RelativeSpec.lean",
+      "theorem": "RelativeSpec.pullback_iso"
+    },
+    "session": {
+      "id": "session_181",
+      "model": "claude-opus-4"
+    },
+    "findings": {
+      "blocker": "pullback_iso_construction body needs cocone + colimit universal property of Cover.RelativeGluingData.glued; ~150-250 LOC over 2-3 helpers.",
+      "key_lemmas_used": [
+        "IsAffineOpen.preimage",
+        "IsAffineOpen.isoSpec",
+        "pullback_fst_isAffineHom (iter-180 helper)",
+        "Scheme.Modules.pushforward_obj_obj (defeq unfold)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Structural decomposition into 2 helpers: pullback_iso_affine_piece (per-affine-open iso) + pullback_iso_construction (global iso via colimit transfer). Main pullback_iso becomes ⟨pullback_iso_construction g 𝒜⟩.",
+        "code_tried": "noncomputable def pullback_iso_affine_piece := haveI : IsAffineHom _ := QcohAlgebra.pullback_fst_isAffineHom; (U.2.preimage _).isoSpec;  noncomputable def pullback_iso_construction := by haveI; sorry",
+        "line_number": "(post-edit)",
+        "lean_error": "",
+        "goal_before": "pullback g (RelativeSpec.structureMorphism 𝒜) ≅ T.RelativeSpec (QcohAlgebra.pullback g 𝒜)",
+        "goal_after": "(helper 1 closed kernel-clean; helper 2 sorry)",
+        "result": "partial",
+        "insight": "Helper 1 (pullback_iso_affine_piece) lean_verify: {propext, Classical.choice, Quot.sound} kernel-clean baseline. Key insight: pushforward sheaf unfolds DEFINITIONALLY so IsAffineOpen.isoSpec on U.2.preimage q IS the desired iso — no glue code needed. Helper 2 is the actual global cocone work."
+      }
+    ],
+    "next_steps": "iter-182: Helper 3 hoist (pullback_iso_functor abbrev exposing HasColimit synthesis); Helpers 4-5 forward/backward maps via glueMorphismsOfLocallyDirected + colimit.desc; Helpers 6-8 assemble + inverse laws. Alternative shortcut: IsColimit.coconePointUniqueUpToIso with natural iso between indexing categories (may collapse 2-3 helpers into 1)."
+  },
+  {
+    "timestamp": "2026-05-24T11:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/QuotScheme.lean",
+      "theorem": "canonicalBaseChangeMap_app_app_isIso_of_isAffineOpen"
+    },
+    "session": {
+      "id": "session_181",
+      "model": "claude-opus-4"
+    },
+    "findings": {
+      "blocker": "Two Mathlib gaps: (a) affine-open section formula for Scheme.Modules.pullback (~50-100 LOC); (b) base-side Mayer-Vietoris affine-cover descent (~30-50 LOC).",
+      "key_lemmas_used": [
+        "IsBaseChange.tensorEquiv",
+        "Module.Flat.isBaseChange",
+        "Flat.flat_appLE",
+        "Scheme.Modules.pushforward_obj_obj (rfl unfold)",
+        "isAffineOpen_top",
+        "exists_isAffineOpen_mem_and_subset"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Decompose body into bridge helpers: (1) pushforward_pullback_section_eq_pullback_section (RHS bridge, trivial rfl); (2) canonicalBaseChangeMap_app_app_isIso_of_isAffineOpen_of_isAffineBase (substantive [IsAffine S] specialization carrying Stacks 02KE Module.Flat.isBaseChange content). Main body rewritten with docstring spelling out general-S → affine-base reduction via Mayer-Vietoris descent.",
+        "code_tried": "private lemma pushforward_pullback_section_eq_pullback_section := rfl; private lemma canonicalBaseChangeMap_app_app_isIso_of_isAffineOpen_of_isAffineBase := sorry (substantive type via Module.Flat.isBaseChange); main body docstring + comment + sorry for the MV reduction step.",
+        "line_number": "(post-edit; helpers added above existing _of_isAffineOpen)",
+        "lean_error": "",
+        "goal_before": "canonicalBaseChangeMap_app_app is iso on every affine open",
+        "goal_after": "(structurally decomposed; one rfl-bridge axiom-clean; one substantive helper sorry; main body sorry for MV reduction)",
+        "result": "partial",
+        "insight": "Rfl-bridge documents the trivial section identification so substantive body isn't interleaved with it. Substantive helper captures the Stacks 02KE Module.Flat.isBaseChange invocation in a typed signature. File 7 → 8 sorry but headline isolation."
+      }
+    ],
+    "next_steps": "iter-182+: (1) project-side helper for affine-open section formula of Scheme.Modules.pullback (~50-100 LOC, depends on PresheafOfModules.pullback machinery + sheafification + affine-open localization); (2) private helper for base-side affine-cover descent (~30-50 LOC, Mayer-Vietoris glue on quasi-separated f); (3) once both land, canonicalBaseChangeMap_isIso becomes kernel-clean (transitively)."
+  },
+  {
+    "timestamp": "2026-05-24T11:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Albanese/AuslanderBuchsbaum.lean",
+      "theorem": "CohenMacaulay.of_regular"
+    },
+    "session": {
+      "id": "session_181",
+      "model": "claude-opus-4"
+    },
+    "findings": {
+      "blocker": "Need IsRegularLocalRing R ⟹ IsDomain R (Stacks 00NQ — Krull intersection + minimal-primes) + regular-quotient inductive structure. Both Mathlib gaps at pinned commit b80f227.",
+      "key_lemmas_used": [
+        "ringKrullDim_add_length_eq_ringKrullDim_of_isRegular (Mathlib Krull dim regular sequence)",
+        "IsRegularLocalRing.spanFinrank_maximalIdeal",
+        "le_sSup",
+        "exact_mod_cast"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Decompose into Stacks 00OD halves: (1) upper bound depth ≤ d closed kernel-clean via ringKrullDim_add_length + IsRegular.top_ne_smul → packaged as length_le_ringKrullDim_of_isRegular; (2) lower bound d ≤ depth needs explicit R-regular sequence of length d ⊂ 𝔪 → packaged as substantive helper exists_isRegular_of_regularLocal (sorry); (3) assemble of_regular inline: simplify Module.depth via if_neg + rewrite ringKrullDim via spanFinrank → sSup = (spanFinrank : ℕ) by le_antisymm.",
+        "code_tried": "private lemma length_le_ringKrullDim_of_isRegular := (axiom-clean body via ringKrullDim_add_length + nontriv); private lemma exists_isRegular_of_regularLocal := sorry (substantive signature); instance of_regular.depth_eq_krullDim := ((simp [if_neg, spanFinrank_maximalIdeal]; le_antisymm of helpers; rfl coercions)).",
+        "line_number": "527 (of_regular); 435 (substantive helper)",
+        "lean_error": "",
+        "goal_before": "depth (maximalIdeal R) R = ringKrullDim R for IsRegularLocalRing R",
+        "goal_after": "(assembly closed; remaining sorry is in the named existence helper)",
+        "result": "partial",
+        "insight": "Structural assembly of of_regular is now sorry-free; the substantive gap is named and isolated in exists_isRegular_of_regularLocal. File 4 → 4 sorries (one of_regular sorry replaced by one helper sorry); downstream consumers can still construct CohenMacaulay instances modulo the helper."
+      }
+    ],
+    "next_steps": "iter-182: (Primary) mathlib-analogist consult on IsRegularLocalRing → IsDomain (Stacks 00NQ) — port or scaffold 1-iter direct proof using Mathlib.RingTheory.Ideal.MinimalPrime + KrullIntersection. (Secondary) With (1) closed, regular-quotient induction (R/x₁R regular of dim d-1) — Ideal.height_le_one_of_principal already present. Assemble exists_isRegular_of_regularLocal in ~50-80 LOC. (Alternative) pivot to auslander_buchsbaum_formula or depth_eq_smallest_ext_index."
+  },
+  {
+    "timestamp": "2026-05-24T11:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/RRFormula.lean",
+      "theorem": "eulerCharacteristic_eq_degree_plus_one_minus_genus"
+    },
+    "session": {
+      "id": "session_181",
+      "model": "claude-opus-4"
+    },
+    "findings": {
+      "blocker": "Mathlib gap: no CategoryTheory.ShortExact.eulerChar_additive; depends on RR.3 supplying sheafOf 0 = toModuleKSheaf C + closed-point SES.",
+      "key_lemmas_used": [
+        "Finsupp.induction (Mathlib.Algebra.Group.Finsupp)",
+        "Finsupp.sum_add_index",
+        "Finsupp.sum_single_index",
+        "Submodule.finrank_quotient_add_finrank (input for future helper)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Honest induction on Finsupp structure of D via Finsupp.induction. Two named substantive helpers absorbing the substantive content: eulerCharacteristic_sheafOf_zero (base case χ(sheafOf 0) = 1 - g) and eulerCharacteristic_sheafOf_single_add (inductive step closed-point SES iterated |n| times).",
+        "code_tried": "by induction D using Finsupp.induction with | h0 => exact eulerCharacteristic_sheafOf_zero ... | hadd Y n f hY hn ih => rw [eulerCharacteristic_sheafOf_single_add ...]; ... ; ring",
+        "line_number": "224",
+        "lean_error": "",
+        "goal_before": "χ(sheafOf D) = deg D + 1 - g(C) for all D : WeilDivisor",
+        "goal_after": "(induction body assembled; helpers carry the substantive content)",
+        "result": "partial",
+        "insight": "Helpers are honest tier-3 named-sorry helpers (substantive types encoding nontrivial claims about sheafOf, gated on RR.3 milestone). Main theorem kernel-clean modulo two helpers + pre-existing sheafOf placeholder. File 2 → 3 sorries net +1; substantive content moved out of the headline."
+      }
+    ],
+    "next_steps": "iter-182+: (1) Resolve sheafOf body in RR.3 (RiemannRoch/OcOfD.lean) — locally-principal ideal-sheaf glue per Hartshorne II §6 Prop 6.13. Once landed, both helpers become provable directly. (2) Project-side SES additivity helper chi_additive_of_ses via long exact sequence of H^* + finrank_quotient_add_finrank. (3) Once both helpers close, delete the file's 2 private helper-sorries; retire transitive sorryAx on l_eq_degree_plus_one_of_genus_zero (iter-180 auditor MAJOR target)."
+  },
+  {
+    "timestamp": "2026-05-24T11:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/RationalCurveIso.lean",
+      "theorem": "iso_of_degree_one (signature-only mutation as scoped)"
+    },
+    "session": {
+      "id": "session_181",
+      "model": "claude-opus-4"
+    },
+    "findings": {
+      "blocker": "Body deferred to iter-182+ per directive; signature mutation is the resolved deliverable.",
+      "key_lemmas_used": [
+        "Module.finrank (typeclass via Algebra → Module)",
+        "Algebra (canonical call-site instance from φ-induced function-field map)",
+        "Scheme.Hom.instIsIsoToNormalizationOfIsIntegralHom (named for iter-182 body)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Per analogist recipe analogies/ratcurveiso-pin3.md Decision 2 (DIVERGE_INTENTIONALLY), refine Pin 3 hypothesis from Nonempty existence-wrapper to substantive degree-1-induced-by-φ hypothesis. Selected analogist option (a): add typeclass binder [Algebra C'.functionField C.functionField] + _hφ_deg : Module.finrank C'.functionField C.functionField = 1.",
+        "code_tried": "lemma iso_of_degree_one (φ : C ⟶ C') (_hφ_non_const : ...) [Algebra C'.left.functionField C.left.functionField] (_hφ_deg : Module.finrank C'.left.functionField C.left.functionField = 1) : IsIso φ := by sorry",
+        "line_number": "386 (was 356)",
+        "lean_error": "(pre-flight: lean_run_code on signature standalone type-checked clean)",
+        "goal_before": "(prior file-skeleton signature with existence-wrapper Nonempty hypothesis — auditor 178A MUST-FIX)",
+        "goal_after": "(new substantive signature; body still sorry but type now substantively encodes the lemma's content)",
+        "result": "success",
+        "insight": "Signature mutation only — body deferred to iter-182+ per directive. Auditor 178A finding RESOLVED structurally. Pre-flight lean_run_code verification + post-edit lake env lean GREEN. Helper budget = 0 honoured."
+      }
+    ],
+    "next_steps": "iter-182: (1) Plan-phase prose tightening of chapter §3 to reflect new signature. (2) Body lane via 4-step normalisation route in docstring (instIsIsoToNormalizationOfIsIntegralHom + non-constant ⟹ finite + normalisation φ = C' under smoothness). Estimated ~80-150 LOC, gated on Hartshorne II.6.8 (non-constant smooth-curve morphism is finite) bridge."
+  }
+]

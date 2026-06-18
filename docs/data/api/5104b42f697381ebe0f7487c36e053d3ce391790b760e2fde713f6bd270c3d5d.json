@@ -1,0 +1,170 @@
+[
+  {
+    "timestamp": "2026-06-04T02:22:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/CechHigherDirectImage.lean",
+      "theorem": "pushPullMap_id"
+    },
+    "session": {
+      "id": "session_264",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "none — LANDED axiom-clean; sibling pushPullMap_comp (pentagon) deferred",
+      "key_lemmas_used": [
+        "unit_conjugateEquiv",
+        "Adjunction.id",
+        "conjugateEquiv_pullbackId_hom",
+        "pseudofunctor_right_unitality",
+        "pushforwardComp_hom_app_app",
+        "pushforwardId_hom_app_app",
+        "Iso.inv_hom_id_app"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "naive simp on pushPullMap with coherence lemmas",
+        "code_tried": "simp only [pushPullMap, Over.id_left, pushforwardComp_hom_app_app, eqToHom_app, ...]; sorry",
+        "line_number": "219",
+        "lean_error": "no progress to close; eqToHom transport residue",
+        "result": "failed",
+        "insight": "plain simp cannot collapse the coercion+transport; needs explicit mate calculus"
+      },
+      {
+        "attempt": 2,
+        "strategy": "adjunction-mate calculus: build star (identity-adjunction unit triangle), hru (right-unitality), hpf (pushforward coercion collapse), hzig (unit zig-zag), then assemble",
+        "code_tried": "have star := unit_conjugateEquiv (Adjunction.id) (pullbackPushforwardAdjunction (𝟙 Y.left)) (pullbackId Y.left).hom _; rw [conjugateEquiv_pullbackId_hom] at star; ...; have hpf := (apply hom_ext; intro U; rfl); erw [reassoc_of% hpf, hib, ← Functor.map_comp]; erw [hzig, Functor.map_id]; rfl",
+        "line_number": "216-270",
+        "lean_error": "(resolved through iterative erw fixes — reassoc_of% star needed for the (𝟭).obj defeq wall, Category.id_comp must be omitted from star simp)",
+        "result": "success",
+        "insight": "Mate recipe: unit_conjugateEquiv(Adjunction.id)+conjugateEquiv_pullbackId_hom (star); pseudofunctor_right_unitality (hru); pushforward coercion collapse via hom_ext;intro U;rfl (hpf); erw+reassoc_of% for the (𝟭).obj defeq wall. lean_verify = {propext,Classical.choice,Quot.sound}"
+      }
+    ],
+    "next_steps": "Build pushPullMap_comp (pentagon, ~150-LOC) via pseudofunctor_associativity + comp_unit_app + unit_naturality, then assemble pushPullFunctor. Engine de-coupled from D3′."
+  },
+  {
+    "timestamp": "2026-06-04T02:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate/DualInverse.lean",
+      "theorem": "sliceDualTransport"
+    },
+    "session": {
+      "id": "session_264",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "decl still open: 4 of 6 ≃ₗ fields remain (naturality, invFun, left_inv, right_inv). map_smul' CLOSED this iter (holes 5→4)",
+      "key_lemmas_used": [
+        "ModuleCat.Hom.hom",
+        "dualUnitRingSwap",
+        "LinearMap.map_smul",
+        "termRingMap",
+        "appIso_inv_naturality"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "close map_smul' field: sectionwise crux d.hom (s•u) = c•(g≫d).hom z",
+        "code_tried": "conv_rhs => arg 2; change … (reduce (g≫d).hom z to d.hom u through compHom/restrictScalars projections)",
+        "line_number": "~320",
+        "lean_error": "rw/smul_def/smul_def' all fail — restrictScalars action is the compHom instance, not ModuleCat.restrictScalars.obj; defeq-but-not-syntactic projections block keyed matching",
+        "result": "success",
+        "insight": "conv_rhs => arg 2; change is the projection-tolerant move; smul_def/' both fail because the action is compHom not restrictScalars.obj"
+      },
+      {
+        "attempt": 2,
+        "strategy": "pull codomain scalar through d.hom linearity, then reconcile ring maps",
+        "code_tried": "refine (congrArg (ModuleCat.Hom.hom (dualUnitRingSwap f W')) ?_).trans ((dualUnitRingSwap f W').hom.map_smul _ _); congr 1; simp only [termRingMap, Functor.comp_map, ...]; exact (ConcreteCategory.congr_hom (appIso_inv_naturality f ((unop W).hom.op)) m).symm",
+        "line_number": "~330",
+        "lean_error": "bare rw[←map_smul] mis-resolves to the PresheafOfModules overload — must use d.hom.map_smul as a term",
+        "result": "success",
+        "insight": "use d.hom.map_smul as TERM (not rw[←map_smul]); ring reconcile via appIso_inv_naturality applied with ConcreteCategory.congr_hom; full close axiom-clean"
+      }
+    ],
+    "next_steps": "Close invFun (the linchpin — mirror of toFun with f.appIso.hom not .inv), then left_inv/right_inv collapse via Iso.inv_hom_id / hom_inv_id of f.appIso. Closing all 4 closes sliceDualTransport → dual_restrict_iso Step-4 → the whole dual inverse chain. CONVERGING (mechanical mirrors), NOT stuck — decl-count flat only because the ≃ₗ packaging is monolithic."
+  },
+  {
+    "timestamp": "2026-06-04T02:35:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "sheafificationCompPullback_comp_tail"
+    },
+    "session": {
+      "id": "session_264",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Steps 2–5 hinner/hcomp' mate-calculus assembly still sorry (~50-80 LOC); 4th consecutive PARTIAL on D3′ Sq1",
+      "key_lemmas_used": [
+        "leftAdjointUniqUnitEta_app",
+        "restrictScalarsId_map",
+        "Functor.map_comp",
+        "Adjunction.homEquiv_leftAdjointUniq_hom_app",
+        "Adjunction.comp_unit_app"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Step 1: extract P-general recovery brick leftAdjointUniqUnitEta_app (R1/R5 = composite-adjunction units B_f/B_h)",
+        "code_tried": "lemma leftAdjointUniqUnitEta_app: A_f.homEquiv P _ ((sheafCompPb f).hom.app P) = B_f.unit.app P := by set A; set B; have hg : … := rfl; rw [Adjunction.homEquiv_leftAdjointUniq_hom_app]; rw [hB, Adjunction.comp_unit_app]; rfl",
+        "line_number": "~1668",
+        "lean_error": "none",
+        "result": "success",
+        "insight": "P-general copy of the 𝟙_-specialized leftAdjointUniqUnitEta; nothing used 𝟙_ so generalization immediate. lean_verify axiom-clean"
+      },
+      {
+        "attempt": 2,
+        "strategy": "Step 0: strip outer restrictScalars wrapper + expose R1/R5 via conv_rhs Functor.map_comp",
+        "code_tried": "rw [restrictScalarsId_map]; conv_rhs => rw [Functor.map_comp]",
+        "line_number": "~2790",
+        "lean_error": "whole-goal rw/erw [Functor.map_comp] contaminates LHS sheafAdj_Z.unit (unfolds to toSheafify ≫ restrictHomEquiv) — must be conv_rhs-confined",
+        "result": "partial",
+        "insight": "conv_rhs confinement is load-bearing; tail now has sorry AFTER these steps, not a bare sorry"
+      },
+      {
+        "attempt": 3,
+        "strategy": "Steps 2–5: recover R1/R5 as B_f/B_h units, slide pushforwardComp.hom past via naturality, collapse to B_{h≫f}.unit",
+        "code_tried": "(not committed — the hinner/hcomp' twin of pullbackObjUnitToUnit_comp L952-1001 one sheafification layer up)",
+        "line_number": "~2806",
+        "lean_error": "open — genuine residual",
+        "result": "partial",
+        "insight": "route fully specified (mirror pullbackObjUnitToUnit_comp one composite-adjunction level up), ingredients (recovery brick) now in hand; ~50-80 LOC across X↔Y and Y↔Z layers"
+      }
+    ],
+    "next_steps": "4th consecutive PARTIAL → pc263 STUCK escalation trigger FIRED. Either (a) ONE focused round consuming leftAdjointUniqUnitEta_app for the hinner/hcomp' assembly (brick just landed, route specified), or (b) cross-domain mathlib-analogist on the bicategorical mate-calculus cocycle shape. Do NOT re-open the monolith inline a 5th time."
+  },
+  {
+    "timestamp": "2026-06-04T02:40:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/LineBundleCoherence.lean",
+      "theorem": "IsLocallyTrivial.isFinitePresentation"
+    },
+    "session": {
+      "id": "session_264",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "none — HELD, re-verified axiom-clean",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "held file, no edits; re-verified transitively axiom-clean",
+        "code_tried": "(no edits)",
+        "line_number": "n/a",
+        "lean_error": "none",
+        "result": "success",
+        "insight": "engine A.2.c stays DONE; locally sorry-free, redirected to shared root SheafOverEquivalence"
+      }
+    ],
+    "next_steps": "none — DONE."
+  }
+]

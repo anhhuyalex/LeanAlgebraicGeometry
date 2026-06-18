@@ -1,0 +1,186 @@
+[
+  {
+    "timestamp": "2026-06-02T20:18:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "sheafifyTensorUnitIso_hom_natural"
+    },
+    "session": {
+      "id": "session_253",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "STEP A (D1' square-3 helper). The armed REVERSING SIGNAL fired: the in-file verified whisker route does NOT compile. After `rw [sheafifyTensorUnitIso_hom_eq]; rw/erw [← Functor.map_comp ×4]; congr 1` the goal IS the presheaf identity (p ⊗ₘ q) ≫ (η_{P'}▷Q' ≫ (aP').val◁η_{Q'}) = (η_P▷Q ≫ (aP).val◁η_Q) ≫ ((a.map p).val ⊗ₘ (a.map q).val), but it carries two defeq-but-distinct monoidal ≫ instances (monoidalCategoryStruct from sheafifyTensorUnitIso_hom_eq's whiskers vs monoidalCategory.toMonoidalCategoryStruct from tensorHom_def). Plain rw[Category.assoc]/whisker_exchange FAIL (pattern not found); erw BRIDGES the instances but triggers the iter-250 catastrophic restrictScalars(𝟙)-over-sheafification whnf — deterministic timeout even at maxHeartbeats 6400000. Extracting a uniform-instance helper FAILS at the statement level (4× synthInstanceFailed: the ring-functor spelling lacks MonoidalCategoryStruct).",
+      "key_lemmas_used": [
+        "sheafifyTensorUnitIso_hom_eq",
+        "MonoidalCategory.tensorHom_def",
+        "MonoidalCategory.whisker_exchange",
+        "restrictScalarsId_map"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Element-descent: TensorProduct.induction_on after ModuleCat.hom_ext; ext x (the iter-252 pivot route, blueprint-armed roadmap bw253b)",
+        "code_tried": "apply ModuleCat.hom_ext; ext x; induction x using TensorProduct.induction_on with | zero => sorry | tmul m n => erw [ModuleCat.comp_apply ×6, ModuleCat.MonoidalCategory.tensorHom_tmul ×6]; sorry | add ...",
+        "line_number": "1962",
+        "lean_error": "tmul case reduces to an explicit instance-free TensorProduct element identity, but closing it required the sectionwise η-naturality which itself re-introduces the instance split; LSP showed clean, real build did not close",
+        "result": "failed",
+        "insight": "LSP lean_diagnostic_messages + lean_multi_attempt returned STALE/CACHED clean results on this heavy lemma; only `lake env lean` was reliable."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Whisker calculus on the presheaf identity via tensorHom_def + whisker_exchange + unit naturality hp/hq, driven by erw to bridge the ≫-instance split",
+        "code_tried": "rw [tensorHom_def p q, tensorHom_def]; simp only [Category.assoc]; erw [Category.assoc, whisker_exchange, ← comp_whiskerRight_assoc, ← whiskerLeft_comp, hp, hq, comp_whiskerRight_assoc, whiskerLeft_comp, ← whisker_exchange]",
+        "line_number": "1962",
+        "lean_error": "(deterministic) timeout at `whnf`, maximum number of heartbeats (6400000) reached — at L1911",
+        "result": "failed",
+        "insight": "erw's keyed-defeq does whnf on restrictScalars(𝟙)(aP').val over sheafification → non-terminating. Mathematically the hand-derivation is complete; the obstacle is pure Lean tactic friction (the iter-250 whnf hazard, now hit via the erw ≫-instance bridge)."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Lift the presheaf identity to a uniform-instance helper `sheafifyUnitWhiskerPaste` so whisker_exchange runs by plain rw (no erw, no whnf)",
+        "code_tried": "lemma sheafifyUnitWhiskerPaste ... (uniform PresheafOfModules X.ringCatSheaf.obj spelling)",
+        "line_number": "1911",
+        "lean_error": "failed to synthesize MonoidalCategoryStruct (PresheafOfModules X.ringCatSheaf.obj) — 4× synthInstanceFailed (the ring-functor spelling lacks the monoidal instance; only the defeq-massaged in-context term has it)",
+        "result": "failed",
+        "insight": "The uniform-instance restatement is not even typeable; reverted to the in-file sorry with the verified route documented."
+      }
+    ],
+    "next_steps": "Per the plan's armed reversing signal, NEXT IS NOT a 4th approach pivot. Execute the pc253b SECONDARY: a mathlib-analogist (api-alignment OR cross-domain) consult for a restrictScalars(𝟙)-stripped sheafification-unit naturality device so the whisker objects align WITHOUT erw, OR a non-erw bridge for the monoidalCategoryStruct vs .toStruct ≫ split. Given 3 iters of the same root (restrictScalars(𝟙)-over-sheafification whnf), strongly consider whether the carrier shape itself (sheafification-unit codomain wrapped in restrictScalars 𝟙) is the bottleneck — a cross-domain-inspiration consult, not another targeted retry. DEAD (do not retry): whisker252 letI (iter-252), element-descent close (iter-253), uniform-instance helper extraction (iter-253)."
+  },
+  {
+    "timestamp": "2026-06-02T20:18:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "pullbackTensorMap_natural"
+    },
+    "session": {
+      "id": "session_253",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "STEP B / D1'. Square 1 CLOSED + setup compiling; blocked at the Square-2 merge: the Sheaf.val/.obj functor-spelling split. Functor.comp_map (from Square 1's sheafificationCompPullback codomain) spells the first a_Y as sheafification (𝟙 Y.ringCatSheaf.obj), while the δ-factor (from pullbackTensorMap's own a_Y) reads sheafification (𝟙 (Sheaf.val Y.ringCatSheaf)). SAME functor (Sheaf.val = .obj), but ← Functor.map_comp will not merge them; rw[show Sheaf.val = .obj from rfl] → 'motive is not type correct' (functor in dependent position); dsimp only [Sheaf.val] runs but leaves the two normal forms distinct (S3 also cites the OPEN STEP A).",
+      "key_lemmas_used": [
+        "SheafOfModules.sheafificationCompPullback (naturality_assoc)",
+        "Functor.OplaxMonoidal.δ_natural",
+        "sheafifyTensorUnitIso_hom_natural (OPEN)",
+        "pullbackValIso_hom_natural (CLOSED)",
+        "MonoidalCategory.tensorHom_comp_tensorHom"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "4-square diagram chase: S1 sheafificationCompPullback naturality, S2 δ_natural, S3 STEP A, S4 pullbackValIso_hom_natural",
+        "code_tried": "simp only [pullbackTensorMap, tensorObj_functoriality]; erw [(sheafificationCompPullback (Hom.toRingCatSheafHom f)).hom.naturality_assoc]; rw [Functor.comp_map]; (then S2: erw [← Functor.map_comp, ← δ_natural, Functor.map_comp])",
+        "line_number": "2027",
+        "lean_error": "S1 closes; S2 ← Functor.map_comp: 'Did not find an occurrence of the pattern Functor.map ?self ?f ≫ Functor.map ?self ?g' — the two a_Y functors print identically but carry the Sheaf.val vs .obj spelling and do not unify",
+        "result": "partial",
+        "insight": "Square 1 is a genuine compiling advance over the prior bare `simp; sorry`. The full S2–S4 chain is authored in the in-file comment; only the S2 spelling-merge blocks it (and S3 cites OPEN STEP A)."
+      }
+    ],
+    "next_steps": "Provide a Sheaf.val→.obj normalisation that survives dependent positions (a @[simp] Sheaf.val-normalisation lemma) OR state Square-1 / pullbackTensorMap on a single ring-functor spelling so Functor.comp_map yields the same a_Y the rest uses. Then S2–S4 close D1' MODULO STEP A. D1' is fundamentally gated on STEP A (its S3) — do not re-dispatch D1' until STEP A closes."
+  },
+  {
+    "timestamp": "2026-06-02T20:18:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate/DualInverse.lean",
+      "theorem": "homOfLocalCompat"
+    },
+    "session": {
+      "id": "session_253",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Sub-step (a) IsCompatible/cocycle (L565) is blocked on the hypothesis `hf`. `hf i j` is an HEq between gi := (pullback (resLE (𝟙 X)(U i)(U i⊓U j))).map (f i) and gj := the analogous j-image. Consuming an HEq of morphisms into an Eq needs the source/target OBJECT equalities, but each object is a SHEAFIFICATION of a pullback presheaf and they are only ISOMORPHIC, not propositionally equal: rfl fails, exact? fails, congr 1 exposes the false residual goal (↑U i).Modules = (↑U j).Modules (different source categories), and no SheafOfModules/PresheafOfModules HEq-extensionality exists (leansearch returns only the homogeneous Hom.ext). Subsingleton.elim only collapses the thin Opens route-difference, not the non-subsingleton Ab hom-set agreement of f i vs f j. `hf` (as phrased) is the only link and is not consumable — arguably not even satisfiable by a caller, who would hit the same object-equality wall. NOTE: `homOfLocalCompat` is NOT in archon-protected.yaml; the prover treated it as frozen but re-signing hf is a planner/blueprint/refactor decision, not a user-only block.",
+      "key_lemmas_used": [
+        "TopCat.Sheaf.existsUnique_gluing",
+        "homLocalSection (CLOSED iter-252)",
+        "topSectionToHom (NEW, closed)",
+        "presheafHom_map_app",
+        "TopCat.Presheaf.IsCompatible/IsGluing"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Sub-step (b): glue the compatible family and convert the op ⊤ section to a global morphism via a new helper topSectionToHom",
+        "code_tried": "noncomputable def topSectionToHom {X : TopCat} {F G : (Opens X)ᵒᵖ ⥤ Ab} (s : (presheafHom F G).obj (op ⊤)) : F ⟶ G := ⟨fun W => (presheafHom F G).map (homOfLE le_top).op s, by intro W W' e; dsimp only; rw [← Functor.map_comp_apply]; congr 1⟩ ; (+ topSectionToHom_app); then refine homMk (topSectionToHom (hsup ▸ (hglue hcompat).choose)) ?_",
+        "line_number": "411-510",
+        "lean_error": "none — compiles clean",
+        "result": "success",
+        "insight": "Sub-step (b) is CLOSED: topSectionToHom + topSectionToHom_app are new compiling helpers (∃! is a Prop so the glued section is extracted via .choose; hsup ▸ transports op (iSup U) → op ⊤). This closed the single iter-252 scaffold sorry's (b) portion."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Sub-step (a): reduce IsCompatible to the sectionwise core equation, then derive it from hf",
+        "code_tried": "have hcompat : IsCompatible (presheafHom M.val.presheaf N.val.presheaf) U (homLocalSection U f) := by intro i j; refine NatTrans.ext (funext fun Z => ?_); obtain ⟨W⟩ := Z; erw [presheafHom_map_app W.hom (infLELeft ..) _ rfl, presheafHom_map_app W.hom (infLERight ..) _ rfl]; (simp only [homLocalSection]) → explicit sectionwise core eqn; sorry",
+        "line_number": "565",
+        "lean_error": "goal advances to the explicit sectionwise equation M.map(eqToHom) ≫ (f i).val.app ≫ N.map(eqToHom) = M.map(eqToHom) ≫ (f j).val.app ≫ N.map(eqToHom); the agreement of the two conjugated section maps must come from hf, which is unconsumable (see blocker)",
+        "result": "blocked",
+        "insight": "The reduction to the sectionwise core is verified in-context; the residual is exactly the cocycle bridge that hf cannot supply as phrased. Recommend re-phrasing hf (1) sectionwise [exactly the core eqn the goal reduces to — bridge becomes rfl/direct], or (2) via restrictFunctor + restrictFunctorComp/eqToHom transport of f i, f j into the common object M.restrict (U i ⊓ U j).ι (restrict_obj/restrict_map are rfl)."
+      }
+    ],
+    "next_steps": "This is a SIGNATURE-RESTRUCTURE need, not a proof-filling task — do NOT re-dispatch homOfLocalCompat against the current `hf` (HEq-of-pullback-images) phrasing; the prover would hit the same object-equality wall. Planner action: (a) decide the re-phrasing of hf (sectionwise OR restrictFunctor/eqToHom transport into the common object), (b) update the blueprint `lem:sheofmodules_hom_of_local_compat` to match, (c) re-pin the signature, then re-dispatch. Sub-step (c) linearity (L581) is transitively gated on (a) but is writable once (a)/the signature lands (sectionwise via the IsGluing datum + N.val-separatedness)."
+  },
+  {
+    "timestamp": "2026-06-02T20:18:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate/DualInverse.lean",
+      "theorem": "dual_restrict_iso"
+    },
+    "session": {
+      "id": "session_253",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Step-4 sorry (L256) NOT attempted in code this iter: the imported sibling TensorObjSubstrate.lean was non-compiling for the entire session (TS-cmp lane race — hard error at L1995/L1911 mid-edit, no parent .olean on disk), so DualInverse reported failed_dependencies and the prover could not lake build / get LSP diagnostics on its own file. Injecting elaborate unverifiable carrier-heavy code was judged too risky (would leave the file non-compiling once the sibling is fixed). Route already scoped in analogies/dual252.md: leg (A) sliceDualTransport (non-sectionwise slice-site Hom transport) ∘ leg (B) restrictScalarsRingIsoDualEquiv.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Deferred — not attempted (can't-verify environment; budget consumed by STEP A/(a))",
+        "code_tried": "(none — only a stale L322-323 note corrected: dual_unit_iso is CLOSED axiom-clean, not 'a small sorry if needed')",
+        "line_number": "256",
+        "lean_error": "n/a (environment: failed_dependencies on the broken sibling)",
+        "result": "partial",
+        "insight": "Honesty cleanup only. The Step-4 build is a genuine NEW construction (sectionwise slice-site iso), not a friction wall — keep the single sorry, build the iso, don't brute-force (per iter-251 KB)."
+      }
+    ],
+    "next_steps": "Requires a non-broken sibling TensorObjSubstrate.lean to integration-test. Build leg (A) sliceDualTransport + leg (B) restrictScalarsRingIsoDualEquiv per analogies/dual252.md. Independent of STEP A — could be a separate prover lane once the sibling is stable."
+  },
+  {
+    "timestamp": "2026-06-02T20:18:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "exists_tensorObj_inverse"
+    },
+    "session": {
+      "id": "session_253",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Guardrailed pre-existing sorry at L708 (the separate ⊗-inverse lane); untouched this iter, out of scope.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Not touched (out of scope)",
+        "code_tried": "n/a",
+        "line_number": "708",
+        "lean_error": "n/a",
+        "result": "partial",
+        "insight": "Tracked separate lane; the dual-inverse chain (DualInverse.lean) is the intended route to discharge it."
+      }
+    ],
+    "next_steps": "Out of scope until the dual-inverse chain (dual_restrict_iso → dual_isLocallyTrivial → homOfLocalCompat) lands."
+  }
+]

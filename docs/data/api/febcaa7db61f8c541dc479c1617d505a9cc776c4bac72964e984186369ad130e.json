@@ -1,0 +1,235 @@
+[
+  {
+    "timestamp": "2026-05-19T09:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cotangent/ChartAlgebra.lean",
+      "theorem": "AlgebraicGeometry.KaehlerDifferential.mem_range_algebraMap_of_D_eq_zero"
+    },
+    "session": {
+      "id": "session_149",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "(BR.5) joint-kernel collapse: Mathlib's Differential.ContainConstants typeclass packages the property for a SINGLE derivation b' : B → B, but the kernel of a single coordinate derivation is strictly larger than range (algebraMap k B) (e.g. ker ∂_1 = k[x_2] ⊋ k in B = k[x_1, x_2]); the joint-kernel collapse requires a coordinate induction on the standard-smooth presentation (~40-80 LOC iter-150+ Mathlib-PR-grade work).",
+      "key_lemmas_used": [
+        "Algebra.IsStandardSmoothOfRelativeDimension.isStandardSmooth",
+        "Algebra.IsStandardSmooth.free_kaehlerDifferential",
+        "Module.Free.chooseBasis",
+        "Derivation.coe_comp",
+        "LinearMap.compDer",
+        "Derivation.map_algebraMap"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Signature inflation per planner (BR.1) — add [CharZero k] + (n : ℕ) + [Algebra.IsStandardSmoothOfRelativeDimension n k B]. Body builds (BR.2)–(BR.4) scaffolding: extract IsStandardSmooth via .isStandardSmooth n; get Module.Free B Ω[B⁄k] via free_kaehlerDifferential; pick basis via Module.Free.chooseBasis; extract coordinate derivations via LinearMap.compDer + KaehlerDifferential.D; prove _hCoordVanish via simp [Derivation.coe_comp, hDb].",
+        "code_tried": "theorem KaehlerDifferential.mem_range_algebraMap_of_D_eq_zero {k : Type u} [Field k] [CharZero k] {B : Type u} [CommRing B] [Algebra k B] [Algebra.FiniteType k B] {n : ℕ} [Algebra.IsStandardSmoothOfRelativeDimension n k B] {b : B} (hDb : KaehlerDifferential.D k B b = 0) : b ∈ (algebraMap k B).range := by haveI _hStdSm := Algebra.IsStandardSmoothOfRelativeDimension.isStandardSmooth n; haveI _hFree : Module.Free B (Ω[B⁄k]) := Algebra.IsStandardSmooth.free_kaehlerDifferential; let _basis := Module.Free.chooseBasis B (Ω[B⁄k]); have _hCoordVanish : ∀ i, ((_basis.coord i).compDer (KaehlerDifferential.D k B)) b = 0 := fun i => by simp [Derivation.coe_comp, hDb]; sorry",
+        "line_number": "123-194",
+        "lean_error": "(initial signature edit produced) typeclass instance problem is stuck: Algebra.IsStandardSmoothOfRelativeDimension ?m.56 k B — Lean will not try to resolve this typeclass instance problem because the first type argument to Algebra.IsStandardSmoothOfRelative... was a metavariable",
+        "goal_before": "b ∈ (algebraMap k B).range",
+        "goal_after": "structured sorry at L194 with (BR.5) closure path documented inline",
+        "result": "partial",
+        "insight": "Adding `{n : ℕ}` as explicit binder and propagating `(n := n)` at the consumer call site resolved the metavariable issue; final compile passes with 2 sorry warnings only."
+      }
+    ],
+    "next_steps": "Iter-150+: implement coordinate induction on standard-smooth presentation B ≅ k[x_1, …, x_n, y_1, …, y_m] / (f_1, …, f_m) with invertible Jacobian; suggested helper name `KaehlerDifferential.coordinateDeriv_jointKernel_collapse_of_charZero`. Stacks Tag 07F4."
+  },
+  {
+    "timestamp": "2026-05-19T09:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cotangent/ChartAlgebra.lean",
+      "theorem": "AlgebraicGeometry.GrpObj.df_zero_factors_through_constant_on_chart"
+    },
+    "session": {
+      "id": "session_149",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "AlgebraicGeometry.KaehlerDifferential.mem_range_algebraMap_of_D_eq_zero"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Propagate KDM signature inflation to consumer; the consumer's body remains a one-line delegate to KDM helper. Add [CharZero k] + (n : ℕ) + [Algebra.IsStandardSmoothOfRelativeDimension n k B] hypotheses on B; pass (n := n) explicitly to KDM.",
+        "code_tried": "theorem df_zero_factors_through_constant_on_chart {k : Type u} [Field k] [CharZero k] {C : Scheme.{u}} [C.Over (Spec (CommRingCat.of k))] [IsProper ..] [Smooth ..] [IsReduced C] [GeometricallyIrreducible ..] {B : Type u} [CommRing B] [Algebra k B] [Algebra.FiniteType k B] {n : ℕ} [Algebra.IsStandardSmoothOfRelativeDimension n k B] {b : B} (hDb : KaehlerDifferential.D k B b = 0) : b ∈ (algebraMap k B).range := AlgebraicGeometry.KaehlerDifferential.mem_range_algebraMap_of_D_eq_zero (n := n) hDb",
+        "line_number": "222-240",
+        "result": "success",
+        "insight": "Signature inflation propagated cleanly; the four scheme-level chart-of-proper-curve typeclasses on C remain as decorative-but-future-active premises for char-p reactivation. Body is sorry-free."
+      }
+    ],
+    "next_steps": "Iter-150+ char-p reactivation: when KDM (p1) Cartier-chain alternative is committed, the C-level typeclasses on the consumer become substantive."
+  },
+  {
+    "timestamp": "2026-05-19T09:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cotangent/ChartAlgebra.lean",
+      "theorem": "AlgebraicGeometry.constants_integral_over_base_field"
+    },
+    "session": {
+      "id": "session_149",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "(b.2) hPI branch — base-change-to-\\bar k chain: (i) GeometricallyIrreducible propagates to IrreducibleSpace X_{\\bar k} via .irreducibleSpace_of_subsingleton; (ii) Smoothness propagates to IsReduced X_{\\bar k}; (iii) combine to IsIntegral X_{\\bar k} ⇒ Γ_{\\bar k} domain; (iv) apply (S3.pi.1) Gamma_baseChange_iso_tensor_of_proper to identify Γ ⊗_k \\bar k ≅ Γ(X_{\\bar k}); (v) apply (S3.pi.2) of_unique_minPrime_baseChange. Significant scheme-level setup ~80-150 LOC; iter-150+ closure.",
+      "key_lemmas_used": [
+        "GeometricallyIrreducible.irreducibleSpace_of_subsingleton",
+        "isIntegral_of_irreducibleSpace_of_isReduced",
+        "isField_of_universallyClosed",
+        "finite_appTop_of_universallyClosed",
+        "RingHom.range_eq_top",
+        "Scheme.ΓSpecIso",
+        "RingHom.toAlgebra",
+        "Iso.commRingCatIsoToRingEquiv",
+        "RingEquiv.finite",
+        "RingHom.Finite.comp",
+        "RingHom.finite_algebraMap",
+        "AlgebraicGeometry.isGeometricallyReduced_Gamma_of_smooth",
+        "Algebra.IsSeparable.of_isGeometricallyReduced_of_finite",
+        "IsPurelyInseparable.surjective_algebraMap_of_isSeparable"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Split consolidated ⟨hPI, hSep⟩ sorry via `refine ⟨?_, ?_⟩` into two branches. Close hSep branch project-internally via Lane 1's (S3.sep.*) lemmas; leave hPI branch as structured sorry with closure chain documented.",
+        "code_tried": "have ⟨hPI, hSep⟩ : IsPurelyInseparable k Γ ∧ Algebra.IsSeparable k Γ := by refine ⟨?_, ?_⟩; · sorry  -- hPI; · haveI _hGR : Algebra.IsGeometricallyReduced k Γ := AlgebraicGeometry.isGeometricallyReduced_Gamma_of_smooth; have hαFinite : (CommRingCat.Hom.hom α).Finite := by have hiso : ((Scheme.ΓSpecIso (CommRingCat.of k)).inv.hom).Finite := (CategoryTheory.Iso.commRingCatIsoToRingEquiv (Scheme.ΓSpecIso (CommRingCat.of k))).symm.finite; have hαeq : ... := by simp [hαdef, CommRingCat.hom_comp]; rw [hαeq]; exact _hAppTopFinite.comp hiso; haveI : Module.Finite k Γ := RingHom.finite_algebraMap.mp hαFinite; exact Algebra.IsSeparable.of_isGeometricallyReduced_of_finite k _; haveI := hPI; haveI := hSep; exact IsPurelyInseparable.surjective_algebraMap_of_isSeparable k Γ",
+        "line_number": "337-461",
+        "lean_error": "(after initial refine ⟨?_, ?_⟩) Invalid `⟨...⟩` notation: The expected type ∀ (b : ↑(X.presheaf.obj (Opposite.op ⊤))), ∃ a, (algebraMap k ↑(X.presheaf.obj (Opposite.op ⊤))) a = b — the conjunction destructure shape was wrong vs Function.Surjective goal",
+        "goal_before": "Function.Surjective (algebraMap k ↥(X.presheaf.obj (Opposite.op ⊤)))",
+        "goal_after": "structured sorry at L423 for hPI branch with 5-step base-change closure chain documented inline",
+        "result": "partial",
+        "insight": "Used `have ⟨hPI, hSep⟩ : ... := by ...` to first prove the conjunction in a separate `by` block, then consumed via `haveI` for the surjectivity goal — avoids the initial top-level refine destructure mismatch. The hSep branch's FiniteDimensional k Γ bridge via `Iso.commRingCatIsoToRingEquiv` + `RingEquiv.finite` + `RingHom.Finite.comp` + `RingHom.finite_algebraMap.mp` is reusable for the hPI branch (Step (v) (S3.pi.2) also needs FiniteDimensional k Γ)."
+      }
+    ],
+    "next_steps": "Iter-150+: implement the (b.2) hPI 5-step chain. Bridge from `_hAppTopFinite` to FiniteDimensional k Γ via the iter-149 hSep precedent is directly reusable. Substantive scheme-level setup: base-change X to Spec \\bar k via pullback, propagate GeometricallyIrreducible ⇒ IrreducibleSpace, derive IsReduced (Mathlib gap: Smooth ⇒ IsReduced over perfect base + base-change stability), combine to IsIntegral X_{\\bar k}, transport via (S3.pi.1), apply (S3.pi.2). ~80-150 LOC."
+  },
+  {
+    "timestamp": "2026-05-19T09:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cotangent/ChartAlgebraS3.lean",
+      "theorem": "AlgebraicGeometry.isGeometricallyReduced_Gamma_of_smooth"
+    },
+    "session": {
+      "id": "session_149",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Mathlib b80f227 has no `Smooth ⇒ GeometricallyReduced (scheme morphism class)` instance; verified by full grep across Mathlib.AlgebraicGeometry.Morphisms.Smooth, .SmoothFiber, .Geometrically.Reduced. Stacks Tag 04QM is the upstream anchor. Either an in-tree wrapper (~80-150 LOC) or a Mathlib PR is required.",
+      "key_lemmas_used": [
+        "AlgebraicGeometry.GeometricallyReduced",
+        "Algebra.IsGeometricallyReduced.mk"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Scaffold signature matching blueprint `lem:S3_sep_1_smooth_geometrically_reduced_Gamma` with `\\lean{AlgebraicGeometry.isGeometricallyReduced_Gamma_of_smooth}`. Body documents the 4-step closure path: (1) Smooth ⇒ GeometricallyReduced morphism class (Mathlib gap), (2) for each K/k the pullback X_K is reduced, (3) identify Γ(X_K) ≅ Γ ⊗_k K via (S3.pi.1), (4) specialise K = AlgebraicClosure k.",
+        "code_tried": "theorem isGeometricallyReduced_Gamma_of_smooth {k : Type u} [Field k] {X : Scheme.{u}} [X.Over (Spec (CommRingCat.of k))] [IsProper ..] [Smooth ..] : letI := gammaAlgebra k X; Algebra.IsGeometricallyReduced k ↥(X.presheaf.obj (Opposite.op ⊤)) := by sorry  -- 4-step path documented inline",
+        "line_number": "124-166",
+        "result": "partial",
+        "insight": "(S3.sep.1) is the bottleneck for path (b)'s separability strand: it consumes both the Mathlib-PR-grade `Smooth ⇒ GeometricallyReduced` bridge AND (S3.pi.1). The iter-150+ alternative is to short-circuit by proving Algebra.IsGeometricallyReduced k Γ directly via the (S3.pi.1)-produced Γ ⊗_k K ≅ Γ(X_K) chain without routing through the morphism class."
+      }
+    ],
+    "next_steps": "Iter-150+: either (a) build the morphism-class Smooth ⇒ GeometricallyReduced bridge in-tree (Stacks 04QM, Mathlib-PR grade), or (b) short-circuit via direct Algebra.IsGeometricallyReduced + (S3.pi.1) chain."
+  },
+  {
+    "timestamp": "2026-05-19T09:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cotangent/ChartAlgebraS3.lean",
+      "theorem": "Algebra.IsSeparable.of_isGeometricallyReduced_of_finite"
+    },
+    "session": {
+      "id": "session_149",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Artinian-product decomposition chase is ~100+ LOC of careful Mathlib infrastructure work; deferred to iter-150+. Mathlib b80f227 has no direct `IsGeometricallyReduced + FiniteDimensional ⇒ IsSeparable` lemma (Stacks Tag 0BJF infrastructure missing).",
+      "key_lemmas_used": [
+        "Field.finSepDegree_eq_finrank_iff",
+        "IsArtinianRing.isSemisimpleRing_of_isReduced",
+        "IsArtinianRing.isField_of_isReduced_of_isLocalRing",
+        "Module.Finite.base_change"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Scaffold signature matching blueprint `lem:S3_sep_2_geom_reduced_finite_field_ext_is_separable`. Body documents 6-step closure path via Artinian product decomposition: promote IsGeometricallyReduced to IsReduced (AlgebraicClosure k ⊗ F), use Module.Finite.base_change for finite-dim over \\bar k, decompose via IsArtinianRing.isSemisimpleRing_of_isReduced to product of fields, count embeddings, apply Field.finSepDegree_eq_finrank_iff.",
+        "code_tried": "theorem _root_.Algebra.IsSeparable.of_isGeometricallyReduced_of_finite (k F : Type u) [Field k] [Field F] [Algebra k F] [Algebra.IsGeometricallyReduced k F] [FiniteDimensional k F] : Algebra.IsSeparable k F := by sorry  -- 6-step Artinian chase documented inline",
+        "line_number": "199-269",
+        "result": "partial",
+        "insight": "(S3.sep.2) and (S3.pi.2) are the more tractable closers — each has a clean Mathlib bridge; the substantive content is the Artinian-product-decomposition argument. ~50-80 LOC of disciplined Mathlib chase per body."
+      }
+    ],
+    "next_steps": "Iter-150+: chase Artinian-product decomposition via IsArtinianRing.isSemisimpleRing_of_isReduced; combine with Module.Finite.base_change + embedding count + Field.finSepDegree_eq_finrank_iff."
+  },
+  {
+    "timestamp": "2026-05-19T09:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cotangent/ChartAlgebraS3.lean",
+      "theorem": "AlgebraicGeometry.Gamma_baseChange_iso_tensor_of_proper"
+    },
+    "session": {
+      "id": "session_149",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "7-step Čech reassembly is the load-bearing Mathlib gap of path (b). PARTIAL explicitly authorised by plan agent as iter-149 medium-priority deep target. Mathlib b80f227 has no direct `Γ(X) ⊗ K ≅ Γ(X_K)` iso for proper morphisms (Stacks 02KH H^0 = Γ row missing).",
+      "key_lemmas_used": [
+        "pullback.snd"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Scaffold signature: state as Nonempty (TensorProduct k Γ K ≃ₐ[K] Γ(XK)) where XK := pullback (X ↘ Spec k) (Spec.map (algebraMap k K)). Document 5-step closure path: cover X by affines (qcompact from properness), Čech equalizer computes Γ(X), tensor with K preserves equalizer (flatness), affine chart-by-chart via Stacks 00DS, reassemble.",
+        "code_tried": "theorem Gamma_baseChange_iso_tensor_of_proper {k K : Type u} [Field k] [Field K] [Algebra k K] {X : Scheme.{u}} [X.Over (Spec (CommRingCat.of k))] [IsProper ..] : letI := gammaAlgebra k X; let XK := pullback (X ↘ Spec (CommRingCat.of k)) (Spec.map (CommRingCat.ofHom (algebraMap k K))); haveI : XK.Over (Spec (CommRingCat.of K)) := ⟨pullback.snd _ _⟩; letI := gammaAlgebra K XK; Nonempty (TensorProduct k ↥(X.presheaf.obj (Opposite.op ⊤)) K ≃ₐ[K] ↥(XK.presheaf.obj (Opposite.op ⊤))) := by sorry",
+        "line_number": "167-227",
+        "result": "partial",
+        "insight": "Statement choice rationale: `Nonempty (TensorProduct ≃ₐ[K] ...)` is the natural Mathlib idiom matching the blueprint's `isomorphism of K-algebras`. The `XK.Over Spec K` instance is supplied inline via `pullback.snd`. (S3.pi.1) is the deepest sub-claim (~150-250 LOC); iter-150+ scope."
+      }
+    ],
+    "next_steps": "Iter-150+: implement 7-step Čech-reassembly chain. Substantive Mathlib gap that may warrant upstream PR (Stacks 02KH H^0 row)."
+  },
+  {
+    "timestamp": "2026-05-19T09:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cotangent/ChartAlgebraS3.lean",
+      "theorem": "Algebra.IsPurelyInseparable.of_unique_minPrime_baseChange"
+    },
+    "session": {
+      "id": "session_149",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Bijection construction F →ₐ[k] AlgebraicClosure k ≃ (F ⊗_k \\bar k) →ₐ[\\bar k] \\bar k requires Artinian-residue-field chase; iter-150+ closure scope.",
+      "key_lemmas_used": [
+        "isPurelyInseparable_of_finSepDegree_eq_one",
+        "IsArtinianRing.isPrime_iff_isMaximal",
+        "Module.Finite.base_change",
+        "Field.Emb.cardinal_eq"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Scaffold signature: use Mathlib's `isPurelyInseparable_of_finSepDegree_eq_one` after showing Field.finSepDegree k F = 1. The latter reduces via tensor-hom adjunction to `F ⊗ \\bar k has a unique \\bar k-algebra map to \\bar k`, which follows from local + residue-field-\\bar k via the unique-minimal-prime hypothesis + Artinian + IsArtinianRing.isMaximal_of_isPrime.",
+        "code_tried": "theorem _root_.Algebra.IsPurelyInseparable.of_unique_minPrime_baseChange (k F : Type u) [Field k] [Field F] [Algebra k F] [FiniteDimensional k F] (h : (minimalPrimes (TensorProduct k (AlgebraicClosure k) F)).Subsingleton) : IsPurelyInseparable k F := by sorry  -- 5-step chase documented inline",
+        "line_number": "269-320",
+        "result": "partial",
+        "insight": "Path goes through `isPurelyInseparable_of_finSepDegree_eq_one` (which exists in Mathlib) + an embedding-count chase. Cleaner than building directly from Stacks 05DH."
+      }
+    ],
+    "next_steps": "Iter-150+: build the embedding-count bijection. Roughly ~50-100 LOC of disciplined Mathlib chase."
+  }
+]

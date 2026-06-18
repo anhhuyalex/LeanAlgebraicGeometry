@@ -1,0 +1,129 @@
+[
+  {
+    "timestamp": "2026-06-18T04:24:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "pullbackTensorMap_restrict"
+    },
+    "session": {
+      "id": "session_18",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "none — proof body now sorry-free; sole residual delegated to the isolated brick pullbackValIso_comp_leg",
+      "key_lemmas_used": [
+        "sheafifyTensorUnitIso_hom_eq'",
+        "map_comp4_eq_comp5",
+        "Functor.OplaxMonoidal.δ_natural",
+        "tensorHom_collapse_3_4",
+        "pullbackValIso_comp_leg"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Close the long-standing in-proof residual hcore2 (D3′ step iii.b.3, the merged Sq3/Sq4 presheaf core) via a D1′-mirror reduction, in-place (trace_state + fast ~1m40s builds as a poor-man's LSP).",
+        "code_tried": "rw [sheafifyTensorUnitIso_hom_eq', sheafifyTensorUnitIso_hom_eq']; simp only [Functor.mapIso_hom, MonoidalCategory.tensorIso_hom]; refine map_comp4_eq_comp5 _ … ?_; <concrete have hδnat := δ_natural F u v>; erw [← reassoc_of% hδnat]; congr 1; refine tensorHom_collapse_3_4 (C := PoM (Z.presheaf ⋙ forget₂ …)) _ … ?_ ?_; exact pullbackValIso_comp_leg h f M/N",
+        "line_number": "3239-3313",
+        "lean_error": "intermediate: 'simp made no progress' (instance wall) on rw [← Functor.map_comp]/tensorHom_comp_tensorHom; 'rewrite did not find pattern' on reassoc_of% δ_natural with metavars; '(deterministic) timeout at isDefEq 3.2M heartbeats' on erw [reassoc_of% δ_natural] — all bypassed by the generic-lemma+refine device and the concrete-have form",
+        "goal_before": "hcore2: a_Z.map(δ …)≫…≫(η⊗η)≫(forget pVI⊗forget pVI) = a_Z.map gg ≫ … (4-vs-5 a_Z.map fold over Z)",
+        "goal_after": "reduced to two per-leg presheaf identities, each = pullbackValIso_comp_leg",
+        "result": "success",
+        "insight": "The instance walls (SheafOfModules-vs-Scheme.Modules defeq; non-canonical MonoidalCategoryStruct) are crossed by GENERIC single-instance lemmas applied with `refine`/`exact` (assignment-only unification), NOT rw/simp/erw. δ-naturality must be a CONCRETE fully-applied `have` (instance pinned once via `show … from`/F-pin) then spliced by `← reassoc_of%`; the metavar form whnf-bombs."
+      }
+    ],
+    "next_steps": "pullbackTensorMap_restrict is sorry-free modulo pullbackValIso_comp_leg. Close that brick next iter to finish the whole D3′ cone."
+  },
+  {
+    "timestamp": "2026-06-18T04:24:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "pullbackValIso_comp_leg"
+    },
+    "session": {
+      "id": "session_18",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "real math content — the Sq1-inverse (sheafificationCompPullback_comp, inverted) + counit-pseudofunctoriality-across-pullbackComp reassembly; a ~50-line erw coherence chase on the Sheaf.val Z carrier. NOT an instance-boundary the devices fail to cross.",
+      "key_lemmas_used": [
+        "pullbackValIso (def unfold)",
+        "sheafificationCompPullback_comp"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Unfold the pullbackValIso factorisation on all three legs and split forget-images into atomic forget.map factors to expose the sheafCompPb⁻¹ and pulled-back-counit parts for reassembly.",
+        "code_tried": "simp only [pullbackValIso, Iso.trans_hom, Iso.symm_hom, Functor.mapIso_hom, asIso_hom]; simp only [Functor.map_comp, Category.assoc]",
+        "line_number": "3176-3215",
+        "lean_error": "none (partial — body splices then `sorry`)",
+        "goal_before": "pVI (h≫f) W expressed via (sheafCompPb (h≫f))⁻¹ ; pullback(h≫f).map counit, vs the h-leg/f-leg transported composite",
+        "goal_after": "fully atomic forget Z/forget Y maps of single morphisms (verbatim post-split goal documented in-proof)",
+        "result": "partial",
+        "insight": "Partial progress spliced; remaining reassembly is genuine coherence content (Sq1-inverse + counit pseudofunctoriality), explicitly NOT to be blind-erw'd (pre-rejected churn pattern). Recipe + post-split goal documented in the docstring and in-proof."
+      }
+    ],
+    "next_steps": "Dedicated focused pass: rw [← sheafificationCompPullback_comp] (taking inverses) for the sheafCompPb⁻¹ parts; counit naturality across pullbackComp h f for the counit parts; splice by erw owing to the Sheaf.val Z carrier mismatch. If it stalls, effort-breaker the chase into Sq1-inverse and counit sub-steps."
+  },
+  {
+    "timestamp": "2026-06-18T04:14:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "pullbackTensorMap_restrict_core"
+    },
+    "session": {
+      "id": "session_18",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "carrier-instance: the tcomp/gg/δ tensors live in the PresheafOfModules Z.ringCatSheaf.obj carrier whose MonoidalCategoryStruct / MonoidalCategory instances are not globally synthesizable (only the … ⋙ forget₂ spelling is). The in-place proof bridges these with local `letI := inferInstance`, which cannot live in a top-level lemma signature.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Per the planner must-fix, extract hcore2 to a standalone top-level lemma pullbackTensorMap_restrict_core (blueprint-pinned) with the verbatim statement + working reduction proof.",
+        "code_tried": "lemma pullbackTensorMap_restrict_core {X Y Z} (h) (f) (M N) : <hcore2 statement> := by <the working reduction>",
+        "line_number": "3215 (deleted at 3201-3314)",
+        "lean_error": "failed to synthesize instance of type class MonoidalCategoryStruct (_root_.PresheafOfModules Z.ringCatSheaf.obj); MonoidalCategory (PoM (Sheaf.val Z.ringCatSheaf)); Application type mismatch",
+        "goal_before": "standalone statement of the merged Sq3/Sq4 core",
+        "goal_after": "n/a (signature does not elaborate)",
+        "result": "failed",
+        "insight": "The merged core CANNOT be stated as a top-level lemma without in-signature letI carrier bridges. Reverted (sed -d) to keep the file GREEN; the math is realized in-place inside pullbackTensorMap_restrict. The blueprint \\lean{} pin was therefore dropped (review fix)."
+      }
+    ],
+    "next_steps": "Either repoint lem:pullback_tensor_basechange_presheaf_core to a thin mathematician-written wrapper with the carrier instances in a `variable [MonoidalCategoryStruct …]` block, or drop the node and fold its \\uses into lem:pullback_tensor_map_basechange. NOT a prover task."
+  },
+  {
+    "timestamp": "2026-06-18T04:24:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "exists_tensorObj_inverse"
+    },
+    "session": {
+      "id": "session_18",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "import-cycle gated — closes via the dual chain in DualInverse.lean; per standing instruction it is never finished in TensorObjSubstrate.lean",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Untouched this iter (deferred per ARCHON_MEMORY standing instruction).",
+        "code_tried": "n/a",
+        "line_number": "723",
+        "lean_error": "n/a",
+        "result": "partial",
+        "insight": "Remains the second of the two tracked file sorries; not in scope for the D3′ lane."
+      }
+    ],
+    "next_steps": "Deferred to the cross-file dual-chain phase; do not re-assign in TensorObjSubstrate.lean."
+  }
+]

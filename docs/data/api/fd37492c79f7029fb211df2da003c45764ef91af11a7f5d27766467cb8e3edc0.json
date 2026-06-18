@@ -1,0 +1,151 @@
+[
+  {
+    "timestamp": "2026-05-15T02:41:14Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "alternating_zsmul_pi_smul_aux_sum_comp"
+    },
+    "session": {
+      "id": "session_101",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "Preadditive.sum_comp",
+        "Preadditive.zsmul_comp",
+        "alternating_sum_pi_smul_aux",
+        "map_zsmul",
+        "smul_comm",
+        "ModuleCat.hom_zsmul (rfl)",
+        "LinearMap.smul_apply (rfl)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Path B inert-lemma body per plan sketch (binder-level Preadditive.sum_comp + simp_rw zsmul_comp + reduction to alternating_sum_pi_smul_aux on family fun i => σ i • (G i ≫ E)). Per-summand hF: show def-eq via ModuleCat.hom_zsmul + LinearMap.smul_apply (both rfl at binder level), then map_zsmul on e₂ twice and apply hG with smul_comm.",
+        "code_tried": "intro r y\nrw [Preadditive.sum_comp s (fun i ↦ σ i • G i) E]\nsimp_rw [Preadditive.zsmul_comp]\nexact alternating_sum_pi_smul_aux Z₁ Z₂ s (fun i ↦ σ i • (G i ≫ E)) e₁ e₂\n  (fun i hi r y => by\n    show e₂ (σ i • (G i ≫ E).hom (e₁.symm (r • y))) =\n      r • e₂ (σ i • (G i ≫ E).hom (e₁.symm y))\n    rw [map_zsmul e₂ (σ i), map_zsmul e₂ (σ i),\n        hG i hi r y, smul_comm (σ i) r])\n  r y",
+        "line_number": "590 (lemma body)",
+        "lean_error": "First draft used (e₂ : _ →ₗ[k] _).map_zsmul (σ i) _ which failed: 'Invalid field map_zsmul: The environment does not contain LinearMap.map_zsmul'. Fixed by switching to free-standing map_zsmul (Mathlib.Algebra.Group.Hom.Defs) which fires through e₂'s AddMonoidHomClass instance.",
+        "goal_before": "∀ (r : R) (y : ∀ i, Z₁ i), e₂ (((∑ i ∈ s, σ i • G i) ≫ E).hom (e₁.symm (r • y))) = r • e₂ (((∑ i ∈ s, σ i • G i) ≫ E).hom (e₁.symm y))",
+        "goal_after": "no goals (after map_zsmul fix)",
+        "result": "success",
+        "insight": "At the BINDER level (G, E, σ universally quantified, no anonymous closure), all scalar-extraction rewrites that fail in the call site DO fire under the discrimination tree. Preadditive.zsmul_comp matches (?n • G i) ≫ E cleanly because G i is a typed-variable application (no Pi.lift nested closure). Use free-standing `map_zsmul` (Mathlib.Algebra.Group.Hom.Defs) for AddMonoidHomClass.map_zsmul through a LinearEquiv — the dot-projected `(e₂ : _ →ₗ[k] _).map_zsmul` form fails because LinearMap.map_zsmul doesn't exist as a projectable field."
+      }
+    ],
+    "next_steps": "Lemma is closed and ready to consume. However, applying it at the L772 call site (the original goal) still times out at whnf (12800000 heartbeats) per iter-102 record — the call-site σ-Miller-unification through Pi.lift's anonymous-closure codomain remains the durable blocker. Next iter should attempt Path C (top-level R-linear composite helper bundling Pi.lift + eqToHom + Pi.π) or the named-T helper (cechCofaceMap_pi_smul_summand_via_named) per session_99 § Priority 1."
+  },
+  {
+    "timestamp": "2026-05-15T02:41:14Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "cechCofaceMap_pi_smul"
+    },
+    "session": {
+      "id": "session_101",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Path A scalar-extraction (S4 onward) fails — `(-1)^↑i •` cannot be extracted from `((-1)^↑i • Pi.lift_thing).hom z` in the post-S5 goal frame. Discrimination tree refuses to descend into Pi.lift's anonymous-closure codomain whether the smul is at morphism level, ConcreteCategory level, body-local rfl-helper level, or after LinearMap.comp decomposition. `show`-pivot triggers whnf heartbeat timeout (1600000) due to def-eq across Pi.lift fun closure. `change` with `_` placeholders fails because eqToHom's source ambiguous without unfolding Z_int.",
+      "key_lemmas_used": [
+        "ModuleCat.hom_comp",
+        "LinearMap.comp_apply",
+        "ConcreteCategory.hom = ModuleCat.Hom.hom (rfl)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "S4 pivot ConcreteCategory.hom → ModuleCat.Hom.hom (constant-level rfl rewrite).",
+        "code_tried": "rw [show (ConcreteCategory.hom : _ → _) = ModuleCat.Hom.hom from rfl]",
+        "line_number": "823",
+        "lean_error": "none — landed; multi-attempt + diagnostic clean.",
+        "goal_before": "(ConcreteCategory.hom (((-1)^↑i • Pi.lift_thing) ≫ eqToHom ⋯ ≫ Pi.π Z₂ j')) (e₁.symm (r' • y')) = r' • (ConcreteCategory.hom (...)) (e₁.symm y')",
+        "goal_after": "ModuleCat.Hom.hom variant of same goal",
+        "result": "success",
+        "insight": "Constant-level rfl rewrite always lands; no Pi.lift closure in the rewrite head."
+      },
+      {
+        "attempt": 2,
+        "strategy": "S5 decompose categorical composition via ModuleCat.hom_comp + LinearMap.comp_apply.",
+        "code_tried": "simp only [ModuleCat.hom_comp, LinearMap.comp_apply]",
+        "line_number": "826",
+        "lean_error": "none — committed clean.",
+        "goal_before": "ModuleCat.Hom.hom (((-1)^↑i • Pi.lift_thing) ≫ eqToHom ≫ Pi.π Z₂ j') (e₁.symm _) = r' • (same) (e₁.symm _)",
+        "goal_after": "(Pi.π Z₂ j').hom ((eqToHom).hom (((-1)^↑i • Pi.lift_thing).hom (e₁.symm _))) = r' • (Pi.π Z₂ j').hom ((eqToHom).hom (((-1)^↑i • Pi.lift_thing).hom (e₁.symm _)))",
+        "result": "success",
+        "insight": "Decomposes ≫ into nested LinearMap applications, bringing (-1)^↑i • onto innermost single-morphism Pi.lift_thing — the cleanest possible form for subsequent extraction. But the discrimination tree blocker persists at the innermost layer."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Path A primary — `simp only [ModuleCat.hom_zsmul, LinearMap.smul_apply]` to extract (-1)^↑i from the innermost (n • Pi.lift_thing).hom application.",
+        "code_tried": "simp only [ModuleCat.hom_zsmul, LinearMap.smul_apply]",
+        "line_number": "827 probe",
+        "lean_error": "simp made no progress",
+        "goal_before": "(post-S5 nested-hom goal)",
+        "goal_after": "(unchanged)",
+        "result": "failed",
+        "insight": "Confirms the iter-099/100/101 documented discrimination-tree blocker: pattern `ModuleCat.Hom.hom ((-1)^↑i • Pi.lift fun i_1 ↦ ...)` cannot be unified because Lean's discrimination tree refuses to descend into Pi.lift's anonymous-closure codomain. ModuleCat.hom_zsmul IS rfl-applicable in vacuum (verified via lean_run_code) but does not match in-context."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Body-local rfl-helper for hom_zsmul-apply equation, then rw/simp only with it.",
+        "code_tried": "have h_zsmul_apply : ∀ {M N : ModuleCat.{u} k} (m : M ⟶ N) (z : M), (ModuleCat.Hom.hom ((-1 : ℤ)^(↑i : ℕ) • m)) z = (-1 : ℤ)^(↑i : ℕ) • (ModuleCat.Hom.hom m) z := fun _ _ => rfl\nrw [h_zsmul_apply, h_zsmul_apply]",
+        "line_number": "827 probe",
+        "lean_error": "rw did not find an occurrence of the pattern / no progress.",
+        "goal_before": "(post-S5 nested-hom goal)",
+        "goal_after": "(unchanged)",
+        "result": "failed",
+        "insight": "Body-local rfl-helper TYPECHECKS (the equation is def-eq) but rw/simp only [h_zsmul_apply] fail because the discrimination tree's pattern match runs BEFORE rfl-evaluation. Same root cause as Mathlib ModuleCat.hom_zsmul. Confirms the E1 escape route is dead (already documented in PROJECT_STATUS Known Blockers, re-validated here)."
+      },
+      {
+        "attempt": 5,
+        "strategy": "`show` with explicit Pi.lift body (full literal) — pivot to extract (-1)^↑i • from `((-1)^↑i • Pi.lift_thing).hom z` to `(-1)^↑i • Pi.lift_thing.hom z` by def-eq.",
+        "code_tried": "change (((-1 : ℤ)^(↑i : ℕ) • Pi.lift (fun i_1 ↦ Pi.π ... ≫ (toModuleKPresheaf C).map ...)) ≫ eqToHom ...).hom ... = r' • (...)",
+        "line_number": "827 probe",
+        "lean_error": "(deterministic) timeout at `whnf`, maximum number of heartbeats (1600000) has been reached",
+        "goal_before": "(post-S5 nested-hom goal)",
+        "goal_after": "(timeout)",
+        "result": "failed",
+        "insight": "The whnf cost of reverifying def-eq across the Pi.lift fun closure is prohibitive even at 1600000 heartbeats. The same heartbeat timeout pattern that hit iter-102's call-site σ-rewrite. Bumping to higher budget would likely also fail (iter-102 record: 12800000 also failed)."
+      },
+      {
+        "attempt": 6,
+        "strategy": "`change` with `_` placeholders for Pi.lift body — let elaboration fill metavariables.",
+        "code_tried": "change ... (eqToHom _) ... ((-1 : ℤ)^(↑i : ℕ) • (ModuleCat.Hom.hom _)) ...",
+        "line_number": "827 probe",
+        "lean_error": "Application type mismatch: ModuleCat.Hom ?m.1410 (∏ᶜ Z₂) ambiguous; metavariable elaboration cannot pin down source object without unfolding Z_int_for_i = ∏ᶜ (basicOpenCover s₀ ∘ ·).",
+        "goal_before": "(post-S5 nested-hom goal)",
+        "goal_after": "(elaboration failure)",
+        "result": "failed",
+        "insight": "eqToHom's `_` placeholder for source ambiguous. Same Pi.lift codomain identification problem as iter-100's failed `set f' := Pi.lift fun (i_1 : Fin (n+1) → ↑s₀) ↦ ...` route."
+      },
+      {
+        "attempt": 7,
+        "strategy": "Re-fuse outer LinearMaps via `← LinearMap.comp_apply` + `← ModuleCat.hom_comp` (partial inverse of S5).",
+        "code_tried": "rw [← LinearMap.comp_apply, ← LinearMap.comp_apply, ← LinearMap.comp_apply, ← ModuleCat.hom_comp, ← ModuleCat.hom_comp]",
+        "line_number": "827 probe",
+        "lean_error": "PARTIAL — first 3 comp_apply + 2 hom_comp inversions succeed, re-fusing (Pi.π Z₂ j').hom ∘ₗ (eqToHom).hom; adding a 3rd hom_comp to fuse with ((-1)^↑i • Pi.lift_thing).hom fails with discrimination-tree mismatch (g.hom ∘ₗ f.hom doesn't match when f has smul prefix).",
+        "goal_before": "(post-S5 nested-hom goal)",
+        "goal_after": "(partial re-fuse, then smul-prefix discrimination block)",
+        "result": "partial",
+        "insight": "Re-fusion works UNTIL the layer where (-1)^↑i • appears — same discrimination-tree class. Confirms the blocker is structural and persists across both forward (rw, simp) and reverse (re-fuse) directions."
+      },
+      {
+        "attempt": 8,
+        "strategy": "Path B at call site (referenced but not directly attempted at L827 — iter-102 record).",
+        "code_tried": "(not attempted at L827; iter-102 attempted at the L772 _sum_comp call site using the new alternating_zsmul_pi_smul_aux_sum_comp lemma — reported deterministic whnf timeout at 12800000 heartbeats; reverted).",
+        "line_number": "L772 (not L827)",
+        "lean_error": "(historical) (deterministic) timeout at whnf, maximum number of heartbeats (12800000) has been reached.",
+        "goal_before": "(call-site σ-form, see iter-102 record)",
+        "goal_after": "(timeout)",
+        "result": "failed",
+        "insight": "Path B's structural infrastructure (new lemma body, closed this iter) is ready, but the call-site σ-Miller-unification through Pi.lift's anonymous-closure codomain remains heartbeat-prohibitive. Path B's call-site replacement is the right durable approach BUT requires call-site restructuring (manual unfolding of σ := fun i ↦ (-1)^↑i, partial inlining) to skirt the Miller-unification cost. Defer to Path C in iter-104."
+      }
+    ],
+    "next_steps": "ESCALATE TO PATH C (top-level R-linear composite helper bundling Pi.lift + eqToHom + Pi.π into a single sign-free declared morphism). All 5 attempted Path A in-place tactic chains exhausted. The discrimination-tree blocker for `Pi.lift fun i_1 ↦ ...` is definitively confirmed as resistant to both rw-style discrimination AND show-style def-eq checking. Path B infrastructure ready but call-site whnf-prohibitive. Path C must factor through the named-T helper (session_99 § Priority 1: `cechCofaceMap_pi_smul_summand_via_named` with T : ∀ j, Z₁ (h j) ⟶ Z₂ j). Streak escalation now at 4 consecutive substantive prover lanes on this slot — refactor lane MANDATORY for iter-104."
+  }
+]

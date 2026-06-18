@@ -1,0 +1,98 @@
+[
+  {
+    "timestamp": "2026-05-17T20:44:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cotangent/GrpObj.lean",
+      "theorem": "AlgebraicGeometry.GrpObj.lieAlgebra"
+    },
+    "session": {
+      "id": "session_128",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "CategoryTheory.MonObj.one (η[G])",
+        "CategoryTheory.CommaMorphism.left",
+        "AlgebraicGeometry.Scheme.Hom.appTop",
+        "AlgebraicGeometry.Scheme.ΓSpecIso",
+        "AlgebraicGeometry.Scheme.relativeDifferentialsPresheaf",
+        "ModuleCat.extendScalars",
+        "CartesianMonoidalCategory.instCartesianMonoidalCategoryOverScheme"
+      ],
+      "post_close_must_fix_iter_129": [
+        "signature [SmoothOfRelativeDimension 1 G.hom] hardcoded — chapter prose is dimension-agnostic; downstream rigidity_over_kbar needs arbitrary relative dimension. Relax to Smooth G.hom or {n : ℕ} [SmoothOfRelativeDimension n G.hom]",
+        "opening docstring (lines 58-60) says result is the k-linear dual (Lie algebra 𝔤), but Status docstring and body return the cotangent space (𝔤^∨ = η_G^* Ω_{G/k}). Align name + docstrings."
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "pullback-along-section bridge: extract η_G as a scheme morphism Spec k ⟶ G.left via definitional reduction of the terminal of Over (Spec k); take Γ on the top open; compose with Scheme.ΓSpecIso to land a ring map ψ : Γ(G.left, ⊤) ⟶ k; evaluate relativeDifferentialsPresheaf G.hom at op ⊤; extend scalars along ψ",
+        "code_tried": "noncomputable def lieAlgebra (G : Over (Spec (.of k))) [CategoryTheory.GrpObj G] [SmoothOfRelativeDimension 1 G.hom] [IsProper G.hom] [GeometricallyIrreducible G.hom] : ModuleCat k := let ηleft : Spec (.of k) ⟶ G.left := CategoryTheory.CommaMorphism.left η[G]; let ψ : Γ(G.left, ⊤) ⟶ CommRingCat.of k := ηleft.appTop ≫ (Scheme.ΓSpecIso (.of k)).hom; let M := Scheme.relativeDifferentialsPresheaf G.hom; (ModuleCat.extendScalars ψ.hom).obj (M.obj (op ⊤))",
+        "line_number": "87",
+        "lean_error": "none (body replaced `sorry` cleanly; lean_diagnostic_messages returned errors: [], warnings: [], clean: true)",
+        "goal_before": ": ModuleCat k",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Lean definitionally identifies (𝟙_ (Over (Spec (.of k)))).left = Spec (.of k); CommaMorphism.left η[G] typechecks as Spec (.of k) ⟶ G.left with zero explicit coercion. Combined with Scheme.ΓSpecIso, this supplies the entire 'evaluate-at-identity' plumbing without engaging the PresheafOfModules.pullback functor (whose (pushforward φ).IsRightAdjoint instance is non-trivial in the scheme setting)."
+      }
+    ],
+    "next_steps": "Iter-129 must-fix: (a) signature relaxation [SmoothOfRelativeDimension 1] → [Smooth] or free n binder; (b) docstring/name alignment with cotangent (𝔤^∨) convention OR wrap body in dualisation to match Lie-algebra (𝔤) name. Then iter-129+ scaffold + prover on lieAlgebra_finrank_eq_dim (will require either translation-invariance theorem bridge for the evaluate-first construction OR re-routing the Lean construction through the IsRegularLocalRing.cotangentSpace stalk-side path the chapter sketched)."
+  },
+  {
+    "timestamp": "2026-05-17T20:44:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Jacobian.lean",
+      "theorem": "AlgebraicGeometry.genusZeroWitness"
+    },
+    "session": {
+      "id": "session_128",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Body closure gated on AlgebraicGeometry.rigidity_over_kbar body (RigidityKbar.lean:87, iter-126 scaffold), which is itself gated on the shared cotangent-vanishing pile pieces (i)+(ii)+(iii) per STRATEGY.md § Sequencing.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "No iter-128 prover attempt (off this iter's lane scope). Iter-138+ per STRATEGY.md § Sequencing. Iter-129 lean-auditor flagged the file-level header at Jacobian.lean:14-19 as stale ('single remaining mathematical sorry') — should be updated to reflect the two-sorry state."
+  },
+  {
+    "timestamp": "2026-05-17T20:44:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Jacobian.lean",
+      "theorem": "AlgebraicGeometry.nonempty_jacobianWitness"
+    },
+    "session": {
+      "id": "session_128",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "OFF-LIMITS to autonomous loop per project policy; Phase-C foundational scaffolding. Queued behind genusZeroWitness body (iter-138+) and positiveGenusWitness body (M3, iter-150+).",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "No iter-128 prover attempt (off-limits). Closure plan: M2 closes first (genus-zero arm via genusZeroWitness; positive-genus arm via M3 positiveGenusWitness), then nonempty_jacobianWitness packages both via by_cases on genus."
+  },
+  {
+    "timestamp": "2026-05-17T20:44:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/RigidityKbar.lean",
+      "theorem": "AlgebraicGeometry.rigidity_over_kbar"
+    },
+    "session": {
+      "id": "session_128",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Body closure gated on shared cotangent-vanishing pile pieces (i)+(ii)+(iii); iter-128 closed the FIRST sub-piece (i.a) of piece (i). Pieces (i.b)+(i.c)+(ii)+(iii) remain (iter-129+ to iter-143+ per STRATEGY.md).",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "No iter-128 prover attempt (off this iter's lane scope; would have been mis-scoped — piece (i.a) was the realistic single-iter target). Iter-129+ work per STRATEGY.md § Sequencing. With piece (i.a) Lean side now landed, the next prover-ready sub-piece is either piece (i.b) (functorial shear iso lem:GrpObj_mulRight_globalises) or the rank lemma lem:GrpObj_lieAlgebra_finrank — gated on the iter-129 signature-relaxation fix-up to lieAlgebra plus blueprint pinning for the n-parameter."
+  }
+]

@@ -1,0 +1,111 @@
+[
+  {
+    "timestamp": "2026-06-18T02:35:59Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "pullbackTensorMap_restrict"
+    },
+    "session": {
+      "id": "session_17",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "hcore2 — the folded Sq3/Sq4 presheaf core (D1'-level chase: fold both sides to one a_Z.map Ψ, close by δ-naturality + sheafifyTensorUnitIso_hom_eq' + pullbackValIso factorisation); blind-iterable only via ~10-min builds (LSP MCP unwired)",
+      "key_lemmas_used": [
+        "comp_slide_nested",
+        "comp_cancel_three_lr",
+        "comp_slide_three",
+        "map_comp_slide",
+        "sheafificationCompPullback.hom.naturality",
+        "sheafifyTensorUnitIso_hom_eq'",
+        "Functor.map_comp"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "RED→GREEN repair: file failed to build on entry (whnf timeout from a stray erw [...naturality_assoc] + forced-mismatch probe left by prior lane); removed bombing erw, restored compiling sorry",
+        "code_tried": "removed `erw [(SheafOfModules.sheafificationCompPullback (Hom.toRingCatSheafHom h)).hom.naturality_assoc]`",
+        "line_number": "~3037",
+        "lean_error": "(deterministic) timeout at `whnf`, maximum number of heartbeats (3200000)",
+        "result": "success",
+        "insight": "PROGRESS-claimed GREEN was stale; the stray erw bombs the post-step-(ii) SheafOfModules-instance boundary just like every other keyed tactic"
+      },
+      {
+        "attempt": 2,
+        "strategy": "splice the S1^h slide (step iii-a) via reassoc_of% hslide",
+        "code_tried": "simp only [Category.assoc]; rw/erw [reassoc_of% hslide]",
+        "line_number": "~3399",
+        "lean_error": "whnf timeout / Did not find an occurrence of the pattern",
+        "result": "failed",
+        "insight": "every keyed-matching tactic (simp only [Category.assoc], rw/erw [reassoc_of% hslide]) whnf-bombs on the post-step-(ii) goal — confirms the iter-016 spelling trap + the instance-boundary wall"
+      },
+      {
+        "attempt": 3,
+        "strategy": "splice the slide via a generic nested-slide lemma applied by refine (assignment-only unification)",
+        "code_tried": "private lemma comp_slide_nested ... ; refine comp_slide_nested _ _ _ _ _ _ _ _ _ _ _ hslide ?_",
+        "line_number": "3000 / ~3490",
+        "lean_error": "none (after re-spelling hslide's intermediate object via `show ... from (Hom.toRingCatSheafHom h).hom`)",
+        "result": "success",
+        "insight": "refine/exact with a generic single-[Category C] lemma whose conclusion mirrors the goal nesting CROSSES the boundary that bombs simp/rw/erw — the comp_cancel_mid device generalised to a slide (step iii-a SPLICED)"
+      },
+      {
+        "attempt": 4,
+        "strategy": "step iii-b.1: cancel the R0≫R1≫U prefix (defeq to R0'≫m1≫m2) via generic L/R-cancellation, three rfl leaf defeqs",
+        "code_tried": "private lemma comp_cancel_three_lr ... (hr0 hr1 hu : ...=...) (hcore: ...); refine comp_cancel_three_lr ... rfl rfl rfl ?_",
+        "line_number": "3017",
+        "lean_error": "none",
+        "result": "success",
+        "insight": "leaf defeqs (small terms) discharge by rfl without big-composite whnf; reduces goal to the merged hcore"
+      },
+      {
+        "attempt": 5,
+        "strategy": "step iii-b.2: slide of V (S1_h presheaf-args → S1_h'' sheaf-args) via comp_slide_three + map_comp_slide; hcomb closed by naturality of sheafificationCompPullback h at gg, hg: a_Y.map gg = S3_f≫S4_f",
+        "code_tried": "private lemma comp_slide_three ...; private lemma map_comp_slide (G) ...; refine comp_slide_three ... vtail ?_ ?_ ; · exact map_comp_slide (pullback h) ... hg (sheafificationCompPullback h).hom.naturality gg ; hg by exact a_Y.map_comp _ _ ; congr 1; exact (sheafifyTensorUnitIso_hom_eq' _ _).symm",
+        "line_number": "3042 / 3059 / ~3550",
+        "lean_error": "iterated: 'failed to synthesize', 'Did not find pattern' (on rw [Functor.map_comp]), 'don't know how to synthesize vtail' — fixed by pinning (C := PresheafOfModules ...) on the ⊗ₘ in gg, using defeq `exact a_Y.map_comp` not `rw [Functor.map_comp]`, supplying vtail explicitly",
+        "result": "success",
+        "insight": "the slide is the naturality of the connecting iso at gg = tensorHom(η⊗η)≫tensorHom(forget pVI.hom); merge/reassoc must run on clean abstract vars (map_comp_slide) — never on the concrete goal; ⊗ₘ needs explicit (C := ...) since the Sheaf.val carrier can't synthesize the monoidal instance"
+      },
+      {
+        "attempt": 6,
+        "strategy": "step iii-b.3: close the folded presheaf core hcore2 directly (fold both sides to one a_Z.map Ψ)",
+        "code_tried": "erw [(...).hom.naturality_assoc] / exact (rfl : (0:Nat)=0) probes",
+        "line_number": "~3626",
+        "lean_error": "whnf timeout / Type mismatch (forced-probe goal extraction)",
+        "result": "partial",
+        "insight": "hcore2 is a genuine D1'-level presheaf chase; left as a single typed sorry with the verbatim extracted goal + 3-tool recipe documented in-proof. Iterating it blind (no LSP, ~10-min builds) not completable this session"
+      }
+    ],
+    "next_steps": "Close hcore2: fold each side into one a_Z.map Ψ (sheafifyTensorUnitIso_hom_eq' turns S3 into a_Z.map(η⊗η); Tfinal = a_Z.map(tensorHom forget pbComp.app); merge by ← Functor.map_comp as a defeq exact / generic merge lemma, NOT rw), congr 1 → presheaf identity Ψ_L=Ψ_R over Z, close by δ-naturality (presheaf_pullback_oplaxmonoidal) + tensorHom bifunctoriality + pullbackValIso factorisation. Do NOT build sheafifyTensorUnitIso_comp / pullbackValIso_comp standalone (orphaned blueprint targets — merged approach absorbs them)."
+  },
+  {
+    "timestamp": "2026-06-18T02:35:59Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "exists_tensorObj_inverse"
+    },
+    "session": {
+      "id": "session_17",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "import-cycle: closes downstream via the DUAL chain in DualInverse.lean, never by direct assignment in this file",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "untouched — deferred per standing instructions",
+        "code_tried": "(none)",
+        "line_number": "719",
+        "lean_error": "(n/a)",
+        "result": "partial",
+        "insight": "import-cycle-gated; do not assign a prover to this in TensorObjSubstrate.lean"
+      }
+    ],
+    "next_steps": "Leave deferred; close via the DUAL chain at the integration phase."
+  }
+]

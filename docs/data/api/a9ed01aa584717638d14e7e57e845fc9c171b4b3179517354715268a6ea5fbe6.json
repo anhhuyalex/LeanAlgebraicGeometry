@@ -1,0 +1,76 @@
+[
+  {
+    "timestamp": "2026-06-01T03:45:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate/StalkTensor.lean",
+      "theorem": "PresheafOfModules.stalkTensorRev (stage iv reverse map of lem:stalk_tensor_commutation)"
+    },
+    "session": {
+      "id": "session_235",
+      "model": "claude-opus (mathlib-build)"
+    },
+    "findings": {
+      "blocker": "revBihom_balanced: the R.stalk x-balancing revBihom (r•a) b = revBihom a (r•b) reduces (germ_smul + revBihom_germ_tmul) to a section-level tensor identity over W⊓W, then hits a restrictScalars/CommRingCat-vs-RingCat carrier-duality wall: PresheafOfModules.map_smul yields a smul over the RingCat carrier on a restrictScalars-module, while the section tensor is annotated over the CommRingCat carrier on the plain module, so TensorProduct.smul_tmul cannot synthesize a DistribMulAction defeq to ModuleCat.instModuleCarrierObjRestrictScalars.",
+      "key_lemmas_used": [
+        "colimit.desc",
+        "colimit.ι_desc",
+        "TopCat.Presheaf.germ_res_apply",
+        "PresheafOfModules.Monoidal.tensorObj_map_tmul",
+        "PresheafOfModules.presheaf_map_apply_coe",
+        "CategoryTheory.ConcreteCategory.id_apply",
+        "TopCat.Presheaf.germ_exist",
+        "TensorProduct.add_tmul",
+        "TensorProduct.mk"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Build inner cocone leg revInnerLeg : B(V) → (A⊗ᵖB).stalk x sending b to germ_{U⊓V}((a|)⊗(b|)) for fixed A-section a over U.",
+        "code_tried": "private noncomputable def revInnerLeg ... := TensorProduct.mk ... ; first attempt annotated tensor over R(U⊓V) carrier with A.obj/B.obj sections",
+        "line_number": "232",
+        "lean_error": "failed to synthesize Module ↑(R.obj (op (U ⊓ V))) ↑((ModuleCat.restrictScalars ...).obj (A.obj (op (U ⊓ V)))) — then Module ↑(R.obj (op (U⊓V))) ↑(A.presheaf.obj (op (U⊓V)))",
+        "result": "partial",
+        "insight": "Carrier annotation must use ↑(A.obj (op (U⊓V))) (plain module) with explicit type ascriptions on both tensor factors; A.presheaf.map applied then coerced. Fixed by explicit TensorProduct.mk carrier args + ascriptions."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Descend revInnerLeg through the B-stalk colimit via colimit.desc; discharge cocone naturality.",
+        "code_tried": "private noncomputable def revInner ... := colimit.desc ((OpenNhds.inclusion x).op ⋙ B.presheaf) ⟨...⟩ with naturality: apply AddCommGrpCat.hom_ext; ext b; simp; rw[revInnerLeg_apply]...",
+        "line_number": "257",
+        "lean_error": "rewrite failed: pattern (ConcreteCategory.hom (revInnerLeg ...)) not found / (deterministic) timeout at whnf 200000 heartbeats on simp [revInnerLeg, ...] / rewrite ?f ≫ 𝟙 not found",
+        "result": "partial",
+        "insight": "The identity wrapper ((const).obj _).map f = 𝟙 survives rw[Category.comp_id]/simp; must be killed at element level by erw[CategoryTheory.ConcreteCategory.id_apply]. revInnerLeg_apply needed B.presheaf.obj (not B.obj) in its statement to match. simp-unfolding revInnerLeg times out in whnf; use erw[revInnerLeg_apply] instead."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Close the cocone section-equality residual via presheaf functoriality + poset thinness after germ_res_apply.",
+        "code_tried": "congr 1; erw[presheaf_map_apply_coe, tensorObj_map_tmul]; congr 1; · rw[← presheaf_map_apply_coe,...]; erw[← ConcreteCategory.comp_apply, ← Functor.map_comp]; congr 1; · rw[Functor.comp_map]; erw[...]; congr 1",
+        "line_number": "263",
+        "lean_error": "(resolved) — multi_attempt converged on the recipe",
+        "result": "success",
+        "insight": "comp_apply merges ANY two composable AddCommGrpCat morphisms regardless of producing functor; after Functor.comp_map can merge ((incl).op⋙M.presheaf).map f with M.presheaf.map _, then congr 1 discharges morphism equality by thinness (proof irrelevance on ≤-proofs of homOfLE)."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Build outer leg revOuterLeg : A(U) →+ (B_x →+ St) (additivity in a on germ generators) and descend via second colimit.desc to revBihom; characterise on germ generators.",
+        "code_tried": "private noncomputable def revOuterLeg ... with map_add'/map_zero' via germ_exist + erw[_root_.map_add, TensorProduct.add_tmul, _root_.map_add]; revBihom := colimit.desc ((OpenNhds.inclusion x).op ⋙ A.presheaf) ⟨...⟩; revBihom_germ_tmul via germ_revBihom + revOuterLeg_apply + revInner_germ",
+        "line_number": "312-395",
+        "lean_error": "rewrite ?f 0 not found (rw map_add); resolved via erw[_root_.map_add,...] (plain rw/simp fail AddMonoidHomClass synth during matching)",
+        "result": "success",
+        "insight": "10 axiom-clean decls landed: revInnerLeg/_apply, revInner, germ_revInner, revInner_germ, revOuterLeg/_apply, revBihom, germ_revBihom, revBihom_germ_tmul. lean_verify = {propext, Classical.choice, Quot.sound}. The whole double-colimit reverse descent built; revBihom_germ_tmul gives revBihom(germ a)(germ b) = germ_{U⊓V}(a|⊗b|)."
+      },
+      {
+        "attempt": 5,
+        "strategy": "Prove revBihom_balanced (section-level smul identity) to feed TensorProduct.liftAddHom and define stalkTensorRev.",
+        "code_tried": "rw[hrW, haW, hbW, ← germ_smul A, ← germ_smul B, revBihom_germ_tmul, revBihom_germ_tmul]; congr 1; then smul_tmul / smul_tmul (R:=...) / haveI := ModuleCat.isModule ...; smul_tmul / rw smul_tmul'",
+        "line_number": "397 (documented as comment, NOT added)",
+        "lean_error": "TensorProduct.smul_tmul fails to synthesize DistribMulAction defeq to inferred ModuleCat.instModuleCarrierObjRestrictScalars (synthesized A.obj.isModule vs inferred restrictScalars instance)",
+        "result": "failed",
+        "insight": "Same RingCat-vs-CommRingCat wall as stalkTensorDescU_smul, but with an EXTRA restrictScalars wrapper from map_smul that breaks the stage-(iii) recipe's direct transfer. Recommended route 2: prove balancing at the STALK level revBihom (r•a) b = r • revBihom a b via T-presheaf germ_smul (St carries R_x-action from ModuleCat.Stalk), avoiding the section-level smul entirely. Gap left as in-file comment, NOT a sorry — file remains 0 sorries."
+      }
+    ],
+    "next_steps": "Land revBihom_balanced via stalk-level route 2 (germ_smul, R_x-action on St), then stalkTensorRev := TensorProduct.liftAddHom (ConcreteCategory.hom (revBihom A B x)) revBihom_balanced; then stage (v) stalkTensorIso: fwd=stalkTensorLinearMap, rev=stalkTensorRev, fwd∘rev=id on germ a⊗germ b via stalkTensorLinearMap_germ_tmul + TensorProduct.induction_on, rev∘fwd=id on germ(a⊗b) via revBihom_germ_tmul + stalk_hom_ext + induction_on."
+  }
+]

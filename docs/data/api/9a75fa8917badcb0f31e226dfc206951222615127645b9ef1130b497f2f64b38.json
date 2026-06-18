@@ -1,0 +1,102 @@
+[
+  {
+    "timestamp": "2026-06-18T07:45:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "pullbackValIso_comp_leg"
+    },
+    "session": {
+      "id": "session_19",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "comp_forget_cocycle",
+        "inv_telescope",
+        "cocycle_assemble",
+        "sheafificationCompPullback_comp_inv",
+        "adj_unit_map_counit",
+        "Adjunction.homEquiv",
+        "sheafificationCompPullback_comp"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Reduce goal (G) via unit naturality of eta^Z, fold leading eta, then chained rw [reassoc_of% hUZ1]/erw to a sheaf-level cocycle hH",
+        "code_tried": "rw [reassoc_of% hUZ1, ← Functor.map_comp, reassoc_of% hUZ2, ...]; erw [...]",
+        "line_number": "3334",
+        "lean_error": "Tactic rewrite failed: Did not find an occurrence of the pattern (trailing-metavar / cross-equation ← Category.assoc ambiguity, then carrier whnf)",
+        "result": "failed",
+        "insight": "rw/erw/reassoc_of% all whnf-bomb on the SheafOfModules carrier (Sheaf.val↔ObjectProperty.obj deprecated-alias defeq boundary)"
+      },
+      {
+        "attempt": 2,
+        "strategy": "Use slice_lhs/slice_rhs to fold the units then close generic",
+        "code_tried": "slice_lhs 1 2 => rw [hUZ1]; slice_lhs 2 3 => erw [← Functor.map_comp]; slice_rhs ...; rw [hH]",
+        "line_number": "3335",
+        "lean_error": "Tactic rewrite failed: Did not find an occurrence of the pattern (← Functor.map_comp on forget.map merge hits deprecated-alias boundary)",
+        "result": "failed",
+        "insight": "Even ← Functor.map_comp to merge forget.map _ ≫ forget.map _ fails at the deprecated-alias defeq boundary"
+      },
+      {
+        "attempt": 3,
+        "strategy": "Introduce generic instance-agnostic helper comp_forget_cocycle (forget-image of sheaf cocycle, prefixed by eta, reassembles), apply by exact after slice folds",
+        "code_tried": "slice_lhs 1 2 => rw [hUZ1]; slice_rhs 1 2 => rw [hUZ2]; exact comp_forget_cocycle (SheafOfModules.forget Z.ringCatSheaf) _ _ _ _ _ _ hH",
+        "line_number": "3268",
+        "lean_error": "typeclass instance problem is stuck (until forget explicitly supplied)",
+        "result": "success",
+        "insight": "Generic single-[Category C] lemma applied by exact crosses the carrier boundary; must pass forget explicitly, not via _"
+      },
+      {
+        "attempt": 4,
+        "strategy": "Prove sheaf-level cocycle hH via Sq4a inverse: state sheafificationCompPullback_comp_inv, telescope via inv_telescope after Iso.comp_inv_eq + sheafificationCompPullback_comp",
+        "code_tried": "rw [Iso.comp_inv_eq, sheafificationCompPullback_comp h f P]; simp / simp only [Category.assoc, Iso.hom_inv_id_app_assoc] ...",
+        "line_number": "3205",
+        "lean_error": "simp made no progress / unsolved goals on carrier",
+        "result": "failed",
+        "insight": "simp telescope fails on carrier; replaced by generic inv_telescope applied by exact"
+      },
+      {
+        "attempt": 5,
+        "strategy": "(T) adjunction triangle h4 via generic adj_unit_map_counit (L.map(eta ≫ R k) ≫ eps = k), proved by (adj.homEquiv P M).left_inv k",
+        "code_tried": "(adj.homEquiv P M).left_inv k  -- after failed rw [adj.counit_naturality, adj.left_triangle_components_assoc] and rw [← adj.homEquiv_unit, ← adj.homEquiv_counit, Equiv.symm_apply_apply]",
+        "line_number": "3122",
+        "lean_error": "earlier: unsolved goals / rewrite pattern not found; FINAL term-mode succeeded",
+        "result": "success",
+        "insight": "Adjunction triangle cleanest as Equiv.left_inv of homEquiv, not via left_triangle_components rewriting; h4 needed maxHeartbeats 1600000"
+      }
+    ],
+    "next_steps": "D3' cone fully sorry-free. No further work on this target. Register 5 new helpers in blueprint (scpb pinned; counit in-proof; 3 generic helpers need nodes or exempt). Prune stale .lean header/in-proof comments (planner/next prover)."
+  },
+  {
+    "timestamp": "2026-06-18T07:45:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "exists_tensorObj_inverse"
+    },
+    "session": {
+      "id": "session_19",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Import-cycle deferred; architecturally cannot be finished in this file — closes via the dual chain / consumer. Untouched this iter.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Not attempted — out of scope (cross-file gated)",
+        "code_tried": "n/a",
+        "line_number": "708",
+        "lean_error": null,
+        "result": "partial",
+        "insight": "Per ARCHON_MEMORY: import-cycle gated; never finish in TensorObjSubstrate.lean"
+      }
+    ],
+    "next_steps": "Leave deferred. Closes via dual chain / downstream consumer, not in this file."
+  }
+]

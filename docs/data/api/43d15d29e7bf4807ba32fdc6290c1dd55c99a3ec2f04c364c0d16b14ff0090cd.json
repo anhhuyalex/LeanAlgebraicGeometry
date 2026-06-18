@@ -1,0 +1,73 @@
+[
+  {
+    "timestamp": "2026-05-10T16:41:08Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/MayerVietoris.lean",
+      "theorem": "AlgebraicGeometry.Scheme.basicOpenCover_finset_inf'_eq_basicOpen_prod"
+    },
+    "session": {
+      "id": "session_57",
+      "model": "iter-057-prover"
+    },
+    "findings": {
+      "blocker": "",
+      "key_lemmas_used": [
+        "Finset.cons_induction",
+        "Finset.not_nonempty_empty",
+        "Finset.eq_empty_or_nonempty",
+        "Finset.inf'_cons",
+        "Finset.prod_cons",
+        "AlgebraicGeometry.Scheme.basicOpen_mul",
+        "AlgebraicGeometry.Scheme.basicOpenCover"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Verbatim probe-confirmed body from PROGRESS.md — single combined Edit appending both iter-057 declarations between iter-056's basicOpenCover_inter_isAffineOpen (ending L1473) and end CoverTotality. Body uses classical opener + Finset.cons_induction; empty case impossible by t.Nonempty (closed via Finset.not_nonempty_empty); cons case splits via t.eq_empty_or_nonempty: empty residual closed via simp [basicOpenCover]; non-empty residual decomposes via Finset.inf'_cons hne, Finset.prod_cons, applies the IH ih hne, then change C.left.basicOpen (a.1 : Γ(C.left, U)) ⊓ _ = _ followed by rw [← Scheme.basicOpen_mul] to consolidate.",
+        "code_tried": "theorem basicOpenCover_finset_inf'_eq_basicOpen_prod {k : Type u} [Field k] {C : Over (Spec (.of k))} {U : TopologicalSpace.Opens C.left.toTopCat} (s : Set Γ(C.left, U)) (t : Finset s) (h : t.Nonempty) : t.inf' h (basicOpenCover (C := C) (U := U) s) = C.left.basicOpen (∏ i ∈ t, (i.1 : Γ(C.left, U))) := by classical; induction t using Finset.cons_induction with | empty => exact absurd h Finset.not_nonempty_empty | cons a t ha ih => rcases t.eq_empty_or_nonempty with rfl | hne; · simp [basicOpenCover]; · rw [Finset.inf'_cons hne, Finset.prod_cons, ih hne]; change C.left.basicOpen (a.1 : Γ(C.left, U)) ⊓ _ = _; rw [← Scheme.basicOpen_mul]",
+        "line_number": "1500-1514",
+        "lean_error": "",
+        "goal_before": "t.inf' h (basicOpenCover (C := C) (U := U) s) = C.left.basicOpen (∏ i ∈ t, (i.1 : Γ(C.left, U)))",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "The change tactic step normalises basicOpenCover s a (which Lean displays as (fun f ↦ C.left.basicOpen ↑f) a) to the canonical C.left.basicOpen a.1 form so the subsequent rw [← Scheme.basicOpen_mul] can apply. Finset.cons_induction is the canonical n-ary Finset-with-non-empty inductive shape (vs Finset.induction_on which lacks the cleaner cons-form decomposition for inf')."
+      }
+    ],
+    "next_steps": "Iter-058+ Čech-evaluation arguments at arbitrary degree n will use this lemma to identify the (n+1)-fold intersection of basic-open cover members with the basic open of the finite product. Combined with Mathlib's IsAffineOpen.isLocalization_of_eq_basicOpen, each Čech cochain factor lands as Localization.Away (∏ i, (x i).1) of Γ(C.left, U)."
+  },
+  {
+    "timestamp": "2026-05-10T16:41:08Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/MayerVietoris.lean",
+      "theorem": "AlgebraicGeometry.Scheme.basicOpenCover_finset_inf'_isAffineOpen"
+    },
+    "session": {
+      "id": "session_57",
+      "model": "iter-057-prover"
+    },
+    "findings": {
+      "blocker": "",
+      "key_lemmas_used": [
+        "AlgebraicGeometry.Scheme.basicOpenCover_finset_inf'_eq_basicOpen_prod",
+        "AlgebraicGeometry.IsAffineOpen.basicOpen"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Verbatim probe-confirmed body from PROGRESS.md — same combined Edit as Target 1. Term-mode body: chains Target 1's identification via the ▸ (Eq.mpr) rewrite operator with Mathlib's IsAffineOpen.basicOpen. Single-term body: basicOpenCover_finset_inf'_eq_basicOpen_prod s t h ▸ hU.basicOpen _.",
+        "code_tried": "theorem basicOpenCover_finset_inf'_isAffineOpen {k : Type u} [Field k] {C : Over (Spec (.of k))} {U : TopologicalSpace.Opens C.left.toTopCat} (hU : IsAffineOpen U) (s : Set Γ(C.left, U)) (t : Finset s) (h : t.Nonempty) : IsAffineOpen (t.inf' h (basicOpenCover (C := C) (U := U) s)) := basicOpenCover_finset_inf'_eq_basicOpen_prod s t h ▸ hU.basicOpen _",
+        "line_number": "1539-1544",
+        "lean_error": "",
+        "goal_before": "IsAffineOpen (t.inf' h (basicOpenCover (C := C) (U := U) s))",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Term-mode ▸ rather than tactic-mode rw is mandatory because the implicit Subtype.val coercions on elements of Finset s cause motive-occurrence issues for the rewriter (Did not find an occurrence of the pattern). Plan-agent flagged this as a known dead end in PROGRESS.md. The ▸-rewrite resolves these directly via Eq.mpr without invoking the rewriter's pattern-matching."
+      }
+    ],
+    "next_steps": "Iter-058+ Koszul acyclicity step uses this lemma as the affine-membership inductive step: each finite intersection of basic opens of an affine open is itself affine, which is required to apply IsAffineOpen.isLocalization_of_eq_basicOpen at every degree of the Čech complex."
+  }
+]

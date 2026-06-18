@@ -1,0 +1,384 @@
+[
+  {
+    "timestamp": "2026-05-14T08:15:46Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "cechCofaceMap_pi_smul"
+    },
+    "session": {
+      "id": "session_93",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "S6 step (b) → step (c) bridge: `LinearMap.comp_apply` (and `LinearMap.coe_comp`, `Function.comp_apply`, raw `rw [LinearMap.comp_apply]`) all report `simp made no progress` / `pattern not found `(?g ∘ₗ ?h) ?x`` on the post-(a) goal. Root cause (per `set_option pp.notation false in show True` diagnosis): the goal contains `((ModuleCat.Hom.hom (eqToHom ⋯)).comp (ModuleCat.Hom.hom (Finset.univ.sum fun i ↦ ...)))` where the `eqToHom`'s source ModuleCat is metavariable-driven (from `dif_pos hRel` at L535) and is NOT syntactically `∏ᶜ Z₂` — it's a def-equal unfolding like `ModuleCat.of k ((i : Fin (n+1) → ↥s₀) → ↑(Z₂ i))`. Therefore the `LinearMap.comp` discrimination-tree pattern `(?f ∘ₗ ?g) ?x` cannot unify its implicit ModuleCat-types with the goal's syntactic shape. The HOU blocker has shifted DOWN one structural layer (from step (b) sum-distribution to step (b→c) `∘ₗ`-unfolding) but is not yet resolved.",
+      "key_lemmas_used": [
+        "ModuleCat.hom_sum (Mathlib `Algebra/Category/ModuleCat/Basic.lean` L359)",
+        "LinearMap.sum_apply (Mathlib `Algebra/Module/Submodule/LinearMap.lean` L259)",
+        "Preadditive.sum_comp / Preadditive.comp_sum (Mathlib `CategoryTheory/Preadditive/Basic.lean` L180–186, verified — reserved for Route F)",
+        "ModuleCat.hom_add, ModuleCat.hom_zero (Mathlib `Algebra/Category/ModuleCat/Basic.lean`, verified for route-B AddMonoidHom build)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Route (A) — `simp_rw [hom_sum_dist]` / `simp_rw [ModuleCat.hom_sum]` (HOU-tolerant rewrite).",
+        "code_tried": "simp_rw [hom_sum_dist]    -- and: simp_rw [ModuleCat.hom_sum]",
+        "line_number": 570,
+        "lean_error": "simp made no progress",
+        "goal_before": "(ConcreteCategory.hom (Pi.π Z₂ j)) ((ModuleCat.Hom.hom (eqToHom ⋯) ∘ₗ ModuleCat.Hom.hom (∑ i, (-1)^↑i • Pi.lift ...)) (e₁.symm (r • y))) = r • (...similar with e₁.symm y)",
+        "goal_after": "(unchanged)",
+        "result": "failed",
+        "insight": "`simp_rw` does NOT help for this goal — its HOU is no better than `simp only` here. `simp_rw`'s elaboration-time unification still fails on the same summand-closure-with-bound-`i`-at-two-depths pattern. Route (A) eliminated."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Route (B) — Build explicit `AddMonoidHom` `(M ⟶ N) →+ (M →ₗ[k] N)` then `map_sum`. Multi-attempt probe at L570 to test the build before committing.",
+        "code_tried": "have homAH : ((∏ᶜ Z₁ : ModuleCat k) ⟶ (∏ᶜ Z₂ : ModuleCat k)) →+ ((∏ᶜ Z₁ : ModuleCat k) →ₗ[k] (∏ᶜ Z₂ : ModuleCat k)) := { toFun := ModuleCat.Hom.hom, map_zero' := ModuleCat.hom_zero, map_add' := ModuleCat.hom_add }",
+        "line_number": 570,
+        "lean_error": "(not committed — `lean_multi_attempt` probe alone; superseded by attempt 3 specialised-form which is cleaner)",
+        "goal_before": "same as attempt 1",
+        "goal_after": "(probe — not committed)",
+        "result": "partial",
+        "insight": "The `homAH` build itself typechecks (`ModuleCat.hom_zero` and `ModuleCat.hom_add` exist and have the expected signatures). Switched to attempt-3 `have key₁` route because it avoids the auxiliary AddMonoidHom and binds directly via `ModuleCat.hom_sum`."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Specialise `ModuleCat.hom_sum` to the concrete index type `Fin (n+1)` and concrete source/target ModuleCats via `have key₁`, then `rw [key₁]`.",
+        "code_tried": "have key₁ : ∀ (F : Fin (n+1) → ((∏ᶜ Z₁ : ModuleCat k) ⟶ (∏ᶜ Z₂ : ModuleCat k))), ((∑ i, F i) : ...).hom = ∑ i, (F i).hom := by intro F; exact ModuleCat.hom_sum F Finset.univ ; rw [key₁]",
+        "line_number": 570,
+        "lean_error": "rw [key₁] — `Did not find an occurrence of the pattern `ModuleCat.Hom.hom (∑ i, ?F i)` in the target expression`",
+        "goal_before": "same as attempt 1",
+        "goal_after": "(unchanged after `rw`; `have key₁` itself elaborates and is in scope)",
+        "result": "partial",
+        "insight": "**Key insight 1**: `key₁` itself is mathematically correct and proves cleanly via `exact ModuleCat.hom_sum F Finset.univ`. Specialising the bound type / index in the helper still produces the same discrimination-tree LHS shape. The HOU isn't about index polymorphism — it's about `rw`'s pattern matcher refusing to abstract a closure that captures the summation index when wrapped inside `∘ₗ`."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Switch to per-application form: `key₁ : ∀ F z, (∑F).hom z = ∑ (F i).hom z`. This eliminates per-rewrite ambiguity by 2-argument keying on both `F` and `z`.",
+        "code_tried": "have key₁ : ∀ (F : ...) (z : ↑(∏ᶜ Z₁ : ModuleCat k)), ((∑ i, F i) : ...).hom z = ∑ i, (F i).hom z := by intro F z; rw [ModuleCat.hom_sum F Finset.univ]; exact LinearMap.sum_apply Finset.univ (fun i => (F i).hom) z",
+        "line_number": 570,
+        "lean_error": "(none — `have key₁` builds; file compiles, empty diagnostics)",
+        "goal_before": "same as attempt 1",
+        "goal_after": "`key₁` in scope with per-application LHS `(∑F).hom z = ∑ (F i).hom z`. Outer goal still has `(eqToHom_hom ∘ₗ (∑F).hom) z` — sum is wrapped inside `LinearMap.comp`.",
+        "result": "success",
+        "insight": "**Key insight 2**: `key₁` proves with `ModuleCat.hom_sum` + `LinearMap.sum_apply` chained. **The blocker is structural**: the sum is wrapped inside `LinearMap.comp` (`∘ₗ`), so to match `key₁`'s LHS, `rw` would need to first unfold `∘ₗ`-application. This is a NEW failure mode — sub-layer of iter-092's step-(b) HOU. Committed as iter-093's substantive progress."
+      },
+      {
+        "attempt": 5,
+        "strategy": "Unfold `∘ₗ`-application via `simp only [LinearMap.comp_apply]` to expose `(∑F).hom z` directly.",
+        "code_tried": "simp only [LinearMap.comp_apply]    -- and: simp only [LinearMap.coe_comp, Function.comp_apply] ; rw [LinearMap.comp_apply] ; rw [show (?g ∘ₗ ?h) ?x = g (h x) from fun _ _ _ => rfl]",
+        "line_number": 566,
+        "lean_error": "simp made no progress / pattern not found `(?g ∘ₗ ?h) ?x`",
+        "goal_before": "after `have key₁` block: goal contains `((Pi.π Z₂ j).hom (((ModuleCat.Hom.hom (eqToHom _)).comp (ModuleCat.Hom.hom (Finset.univ.sum fun i ↦ ...))) ((piIsoPi Z₁).toLinearEquiv.symm (r • y)))) = ...`",
+        "goal_after": "(unchanged)",
+        "result": "failed",
+        "insight": "**Key insight 3**: `LinearMap.comp_apply` (rfl-lemma) does NOT unfold `(eqToHom_hom ∘ₗ (∑F).hom) z`. Diagnosis via `set_option pp.notation false in show True`: the `eqToHom`'s source ModuleCat is metavariable-driven (from `dif_pos hRel` rewrite at L535) and is NOT syntactically `∏ᶜ Z₂` — it's some def-equal but distinct unfolding (likely `ModuleCat.of k ((i : Fin (n+1) → ↥s₀) → ↑(Z₂ i))` from the `piIsoPi`-related context). The discrimination-tree LHS pattern `(?f ∘ₗ ?g) ?x` cannot bind `?g`'s codomain to the goal's syntactic eqToHom-source."
+      },
+      {
+        "attempt": 6,
+        "strategy": "Force the goal into a syntactic form where the eqToHom source is named, then unfold (`show` / `change` with explicit source).",
+        "code_tried": "show ... where the eqToHom's source ModuleCat is the syntactic ∏ᶜ Z₂",
+        "line_number": 566,
+        "lean_error": "Application type mismatch: argument has type ?m ⟶ ?m' but is expected to have type ModuleCat.Hom ?m'' (∏ᶜ Z₂)",
+        "goal_before": "same as attempt 5",
+        "goal_after": "(unchanged)",
+        "result": "failed",
+        "insight": "The eqToHom term cannot be reconstructed from local `Z₁, Z₂` data alone — its source ModuleCat lives in a metavariable context fed by `dif_pos hRel` at L535. `show` / `change` cannot force the syntactic form because Lean has no way to fill the metavariable from the user-supplied skeleton."
+      },
+      {
+        "attempt": 7,
+        "strategy": "Categorical-level `Preadditive.sum_comp` (NOT REACHED — would require restructuring iter-088 simp prefix BEFORE the dsimp at L526–L535).",
+        "code_tried": "-- (deferred — out of iter-093 scope)",
+        "line_number": null,
+        "lean_error": "(not attempted in this iteration)",
+        "goal_before": "would require pre-dsimp goal at categorical level",
+        "goal_after": "(not reached)",
+        "result": "not_started",
+        "insight": "Route (F) escalation: switch from LinearMap-level distribution to categorical-level `(∑F) ≫ Pi.π Z₂ j = ∑ (F i ≫ Pi.π Z₂ j)` via `Preadditive.sum_comp` (verified to exist at L185 of Preadditive/Basic.lean). Then `.hom`-apply once and use `LinearMap.sum_apply`. Out of scope for iter-093 — requires reordering iter-088's simp prefix."
+      },
+      {
+        "attempt": 8,
+        "strategy": "Commit `have key₁` block + trailing `sorry` at L578. Verify file compiles.",
+        "code_tried": "(Final iter-093 commit: 14-line `--` doc comment + 8-line `have key₁` block + trailing `sorry` at L578)",
+        "line_number": 578,
+        "lean_error": "(none — `lean_diagnostic_messages` severity=error returns `[]`)",
+        "goal_before": "post-iter-092 trailing sorry at L570 (file compiles with placeholder)",
+        "goal_after": "post-iter-093: `key₁` in scope; trailing sorry at L578; file compiles with 6 sorries (no regression)",
+        "result": "success",
+        "insight": "Compile-verified delivery of iter-093 sub-step. The per-application key₁ unifies what would be the post-(b) and pre-(c) goal shapes into a single body-local helper. Locks in a `rw [key₁]` rewrite target for iter-094, contingent on resolving the `∘ₗ`-unfolding sub-blocker."
+      }
+    ],
+    "next_steps": "Iter-094 must resolve the `∘ₗ`-unfolding blocker before `rw [key₁]` can fire. Three concrete routes documented in task_results: (D) `LinearMap.ext` to peel `(Pi.π Z₂ j).hom` outside and reduce to a LinearMap equality, then per-summand collapse Pi.π ≫ Pi.lift via Pi.lift_π; (E) reverse-engineer the simp at L526–535 to bypass `dif_pos hRel` with an explicit `Eq.mpr`-cast so the resulting goal uses syntactic `∏ᶜ Z₂` directly on both sides of `∘ₗ` — then `LinearMap.comp_apply` should fire; (F) Pre-dsimp `Preadditive.sum_comp` — reorder the iter-088 simp prefix so step (b) operates at categorical level (push `Pi.π Z₂ j` inside the sum BEFORE applying `dif_pos hRel`), avoiding the `(∑F).hom`-distribution dance entirely. Route (D) is the most direct continuation of `key₁`; routes (E) and (F) require restructuring the iter-088 simp prefix and are more invasive."
+  },
+  {
+    "timestamp": "2026-05-14T08:15:46Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "basicOpenCover_isCechAcyclicCover_toModuleKSheaf (substep a — L670)"
+    },
+    "session": {
+      "id": "session_93",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Multi-iter blocker: requires augmented Čech simplicial object + `FormalCoproduct.extraDegeneracyCech` + `ExtraDegeneracy.homotopyEquiv` + op-passage `CochainComplex.opEquivalence`. Not assigned this iter (off-limits per PROGRESS.md).",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "not assigned in iter-093",
+        "code_tried": "",
+        "line_number": 670,
+        "lean_error": "",
+        "goal_before": "",
+        "goal_after": "",
+        "result": "not_started",
+        "insight": "Deferred — outside iter-093 scope. Gated on cechCofaceMap_pi_smul closing."
+      }
+    ],
+    "next_steps": "Continue to defer until BasicOpenCech.lean cechCofaceMap_pi_smul step (b→c) resolves."
+  },
+  {
+    "timestamp": "2026-05-14T08:15:46Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "(substep continuation — L994)"
+    },
+    "session": {
+      "id": "session_93",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Same multi-iter Čech-infrastructure blocker as L670. Not assigned this iter.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "not assigned in iter-093",
+        "code_tried": "",
+        "line_number": 994,
+        "lean_error": "",
+        "goal_before": "",
+        "goal_after": "",
+        "result": "not_started",
+        "insight": "Deferred — outside iter-093 scope."
+      }
+    ],
+    "next_steps": "Same as L670."
+  },
+  {
+    "timestamp": "2026-05-14T08:15:46Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "basicOpenCover_isCechAcyclicCover_toModuleKSheaf (substep a for s₀ — L1022)"
+    },
+    "session": {
+      "id": "session_93",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Extra-degeneracy on `s₀`-indexed slice cover. Same multi-iter Čech-infrastructure blocker.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "not assigned in iter-093",
+        "code_tried": "",
+        "line_number": 1022,
+        "lean_error": "",
+        "goal_before": "",
+        "goal_after": "",
+        "result": "not_started",
+        "insight": "Deferred — outside iter-093 scope."
+      }
+    ],
+    "next_steps": "Same as L670 / L994."
+  },
+  {
+    "timestamp": "2026-05-14T08:15:46Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "g_R.map_smul' (L1212)"
+    },
+    "session": {
+      "id": "session_93",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Gated on cechCofaceMap_pi_smul body becoming sorry-free. Not assignable until step (b→c) resolves.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "not assigned in iter-093",
+        "code_tried": "",
+        "line_number": 1212,
+        "lean_error": "",
+        "goal_before": "",
+        "goal_after": "",
+        "result": "not_started",
+        "insight": "Deferred — gated dependency on cechCofaceMap_pi_smul."
+      }
+    ],
+    "next_steps": "Re-assign once cechCofaceMap_pi_smul lands."
+  },
+  {
+    "timestamp": "2026-05-14T08:15:46Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "h_loc_exact (L1241)"
+    },
+    "session": {
+      "id": "session_93",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Requires `IsLocalizedModule.Away f.1` infrastructure; multi-iter Mathlib gap.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "not assigned in iter-093",
+        "code_tried": "",
+        "line_number": 1241,
+        "lean_error": "",
+        "goal_before": "",
+        "goal_after": "",
+        "result": "not_started",
+        "insight": "Deferred — outside iter-093 scope."
+      }
+    ],
+    "next_steps": "Defer until Mathlib infrastructure or upstream contributions resolve `IsLocalizedModule.Away`."
+  },
+  {
+    "timestamp": "2026-05-14T08:15:46Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "cotangentExactSeq_structure (case h_exact, L636)"
+    },
+    "session": {
+      "id": "session_93",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Deferred parallel to instIsMonoidal_W pending upstream Mathlib developments (per PROGRESS.md off-limits list).",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "not assigned in iter-093 (off-limits)",
+        "code_tried": "",
+        "line_number": 636,
+        "lean_error": "",
+        "goal_before": "",
+        "goal_after": "",
+        "result": "not_started",
+        "insight": "Off-limits this iteration."
+      }
+    ],
+    "next_steps": "Off-limits — Route A/B decision still pending after Mathlib SheafOfModules-of-presheaf-exactness reflection lemma matures."
+  },
+  {
+    "timestamp": "2026-05-14T08:15:46Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Modules/Monoidal.lean",
+      "theorem": "instIsMonoidal_W (L173)"
+    },
+    "session": {
+      "id": "session_93",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Mathlib upstream gap. Off-limits since iter-081.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "not assigned in iter-093 (off-limits)",
+        "code_tried": "",
+        "line_number": 173,
+        "lean_error": "",
+        "goal_before": "",
+        "goal_after": "",
+        "result": "not_started",
+        "insight": "Off-limits."
+      }
+    ],
+    "next_steps": "Off-limits."
+  },
+  {
+    "timestamp": "2026-05-14T08:15:46Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Jacobian.lean",
+      "theorem": "nonempty_jacobianWitness (L179)"
+    },
+    "session": {
+      "id": "session_93",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Phase C/E packaging; deferred to iter-100+.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "not assigned in iter-093 (off-limits)",
+        "code_tried": "",
+        "line_number": 179,
+        "lean_error": "",
+        "goal_before": "",
+        "goal_after": "",
+        "result": "not_started",
+        "insight": "Off-limits."
+      }
+    ],
+    "next_steps": "Off-limits."
+  },
+  {
+    "timestamp": "2026-05-14T08:15:46Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/Functor.lean",
+      "theorem": "PicardFunctor.representable (L190)"
+    },
+    "session": {
+      "id": "session_93",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Gated on Phase C C0–C3 (Jacobian.nonempty_jacobianWitness etc.).",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "not assigned in iter-093 (off-limits)",
+        "code_tried": "",
+        "line_number": 190,
+        "lean_error": "",
+        "goal_before": "",
+        "goal_after": "",
+        "result": "not_started",
+        "insight": "Off-limits."
+      }
+    ],
+    "next_steps": "Off-limits."
+  }
+]

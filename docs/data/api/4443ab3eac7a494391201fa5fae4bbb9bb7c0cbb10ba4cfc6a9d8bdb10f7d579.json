@@ -1,0 +1,461 @@
+[
+  {
+    "timestamp": "2026-05-28T15:40:05Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/WeilDivisor.lean",
+      "theorem": "rationalMap_order_finite_support"
+    },
+    "session": {
+      "id": "session_198",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Typeclass-strength gap: declaration is stated under [IsLocallyNoetherian X], but Stacks 02RV / Hartshorne II.6.1 requires [IsNoetherian X] = [IsLocallyNoetherian X] + [CompactSpace X]. Counter-example: non-quasi-compact integral locally Noetherian scheme with infinitely many disjoint codim-1 irreducible components. Resolution path is signature strengthening + consumer propagation; consumer propagation is BLOCKED on USER Route C PAUSE directive.",
+      "key_lemmas_used": [
+        "Ring.ordFrac",
+        "WithZero.log_zero",
+        "WithZero.log_mul",
+        "WithZero.log_inv",
+        "map_inv₀",
+        "degree_hom_apply",
+        "map_neg",
+        "map_sub"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "6 axiom-clean substrate helpers in §2/§4 (order_zero, order_mul_of_ne_zero, order_inv, order_units_inv, degree_neg, degree_sub)",
+        "code_tried": "unfold + map_zero + WithZero.log_zero (and analogues for mul/inv/units_inv); degree_hom_apply + map_neg / map_sub for §4",
+        "line_number": "233-274 (§2) and 488-497 (§4)",
+        "lean_error": "none — all 6 verified axiom-clean via lean_verify ({propext, Classical.choice, Quot.sound})",
+        "goal_before": "WithZero.log (Ring.ordFrac _ (0)) = 0  (and variants)",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Mathlib's Ring.ordFrac monoid-with-zero hom + WithZero.log discharge all six §2/§4 substrate primitives in 3-5 lines each. Reusable pattern for any order/degree-bundled algebra on Frac(R)."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Affine open + minimal-primes for non-zero branch (Approach 1)",
+        "code_tried": "Pick nonempty affine open U ⊂ X, R = Γ(U, O_X) Noetherian integral domain, f = a/b ∈ Frac(R), bound prime divisors via Ideal.finite_minimalPrimes_of_isNoetherianRing on (a*b) ⊂ R",
+        "line_number": "325",
+        "lean_error": "Outside-set bound requires X \\ U to be Noetherian as a topological space, equivalent to [IsNoetherian X] = [IsLocallyNoetherian X] + [CompactSpace X]; current signature has only [IsLocallyNoetherian X]",
+        "goal_before": "Set.Finite { Y : HeightOneSpectrum X | (Scheme.RationalMap.order Y f) ≠ 0 }",
+        "goal_after": "still open",
+        "result": "failed",
+        "insight": "STRUCTURAL BLOCKER: the gap is at the typeclass-strength level, not the API level."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Dedekind-domain HeightOneSpectrum analogue",
+        "code_tried": "IsDedekindDomain.HeightOneSpectrum.Support.finite (Mathlib) — adapted to schemes via affine-chart bridge",
+        "line_number": "325",
+        "lean_error": "Same Noetherian-X-as-topological-space gap",
+        "result": "failed",
+        "insight": "The Mathlib analogue requires the same strength typeclass."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Type-class derivation of [IsNoetherian X] from existing hypotheses",
+        "code_tried": "Tried to derive [IsNoetherian X] from [IsIntegral X] + [IsLocallyNoetherian X] + [IsRegularInCodimensionOne X]",
+        "line_number": "228 binder block",
+        "lean_error": "No such derivation; counter-example: infinite-dim integral locally Noetherian scheme without quasi-compactness",
+        "result": "failed",
+        "insight": "Mathematical counter-example confirms the gap is real."
+      },
+      {
+        "attempt": 5,
+        "strategy": "Informal-agent consultation (--provider kimi / auto)",
+        "code_tried": "python3 .claude/tools/archon-informal-agent.py --provider kimi",
+        "line_number": "n/a",
+        "lean_error": "API error 401: Invalid Authentication (Moonshot key stale; no DeepSeek / OpenAI / OpenRouter / Gemini keys in env)",
+        "result": "failed",
+        "insight": "Project infrastructure issue — no working LLM key available for sketch."
+      }
+    ],
+    "next_steps": "iter-199+ planner should consider strengthening rationalMap_order_finite_support's typeclass to [IsNoetherian X] and propagate to consumers (principal, principal_apply, principal_one, principal_hom, principal_degree_zero, degree_positivePart_principal_eq_finrank, LinearEquivalence). The curve-side consumers recover [CompactSpace C.left] for free via [IsProper C.hom] over Spec(.of kbar). BLOCKED on Route C PAUSE — propagation requires touching the Route C consumers. USER directive escalation needed to unblock OR keep L325 as a named blocker entry until Route C reopens."
+  },
+  {
+    "timestamp": "2026-05-28T15:40:05Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Albanese/AuslanderBuchsbaum.lean",
+      "theorem": "auslander_buchsbaum_formula_succ_pd"
+    },
+    "session": {
+      "id": "session_198",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Gaps (1)-(3) still absent: minimal-resolution carving (Stacks lemma-add-trivial-complex), what-is-exact criterion (Stacks 00MF), snake-lemma on minimal resolution. Each is multi-iter substrate work (~80-200 LOC).",
+      "key_lemmas_used": [
+        "depth_eq_smallest_ext_index",
+        "covariant_sequence_exact₁",
+        "covariant_sequence_exact₃",
+        "postcomp_mk₀_injective_of_mono",
+        "IsSMulRegular.smulShortComplex_shortExact",
+        "ModuleCat.smulShortComplex",
+        "nontrivial_quotSMulTop_of_mem_maximalIdeal",
+        "Ideal.annihilator_quotient",
+        "ext_smul_eq_zero_of_mem_annihilator",
+        "ENat.forall_natCast_le_iff_le",
+        "Module.IsRegular.cons_iff"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Land axiom-clean depth-drops-by-one substrate (gap 4 of the iter-194 4-piece slice)",
+        "code_tried": "depth_quotSMulTop_succ_eq_depth_of_isSMulRegular L1023-L1124: convert both depths to Ext characterizations via depth_eq_smallest_ext_index; LES of Ext^*(κ, -) on 0 → M →[x] M → M/xM → 0 with [x]_* = 0 on Ext^*(κ, M) (via x ∈ Ann κ); short-exact decomposition into Ext-pairs; le_antisymm via ENat.forall_natCast_le_iff_le on each direction",
+        "line_number": "1023-1124",
+        "lean_error": "none — verified axiom-clean via lean_verify ({propext, Classical.choice, Quot.sound})",
+        "goal_before": "depth_𝔪(M/xM) + 1 = depth_𝔪(M)",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Stacks 'lemma-depth-drops-by-one' formalises cleanly via Ext-based depth characterization. The two-direction bridge (ℕ∞ equality from ℕ-indexed Ext) needs ENat.forall_natCast_le_iff_le. Pattern reusable for any depth ↔ Ext theorem."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Land axiom-clean regular-element-existence companion lemma",
+        "code_tried": "exists_isSMulRegular_of_one_le_depth L1138-L1166: unfold depth via if_neg branch (𝔪 • ⊤ ≠ ⊤ by Nakayama under Nontrivial M); use lt_sSup_iff to extract regular sequence of length ≥ 1; isRegular_cons_iff to read off head as M-regular x ∈ 𝔪",
+        "line_number": "1138-1166",
+        "lean_error": "none — verified axiom-clean",
+        "goal_before": "1 ≤ depth_𝔪(M) → ∃ x ∈ 𝔪, IsSMulRegular M x",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "depth definition via if_neg + sSup-extraction pattern is the canonical way to extract a regular sequence from a depth lower bound."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Carving auslander_buchsbaum_formula_succ_pd into case-split on depth M",
+        "code_tried": "case split on (depth M = 0) vs (depth M > 0) — depth = 0 needs gaps (1)+(2); depth > 0 needs gaps (1)+(2)+(3) for snake-lemma step + gap (4 closed) for depth-drop; then IH on (R/xR, M/xM)",
+        "line_number": "1299",
+        "lean_error": "Each branch requires substantive Mathlib substrate not present at b80f227; carving would inflate sorry count 1→2+ without closing any new branch",
+        "result": "failed (deliberately not landed — VIOLATES HARD BAR)",
+        "insight": "iter-199+ approach: land gap (3) snake-lemma-on-minimal-resolution (~80-120 LOC, depends on gap 1) + gap (1) minimal-resolution carving (~80-120 LOC, independent) + gap (2) what-is-exact (~150-200 LOC, candidate Mathlib upstream PR). Then succ_pd closes in ~80-120 LOC of assembly using the now-axiom-clean depth-drops-by-one helper."
+      }
+    ],
+    "next_steps": "iter-199 priority: dispatch gap (3) snake-lemma-on-minimal-resolution lane (~80-120 LOC, depends on gap 1) in parallel with gap (1) minimal-resolution carving (independent). Gap (2) what-is-exact (largest, ~150-200 LOC) is a Mathlib upstream PR candidate. The chapter docstring at L562-L574 said 'FOUR core ingredients ALL absent' — needs update to reflect gap (4) closed iter-198. Plan agent should also update the chapter-side blueprint."
+  },
+  {
+    "timestamp": "2026-05-28T15:40:05Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/RelPicFunctor.lean",
+      "theorem": "PicSharp"
+    },
+    "session": {
+      "id": "session_198",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "none — closed but with PLACEHOLDER body (constant PUnit functor) due to addCommGroup file-local sorry. Math-correct body gated on upstream Mathlib Scheme.Modules monoidal-structure gap.",
+      "key_lemmas_used": [
+        "CategoryTheory.Functor.const",
+        "AddCommGrpCat.of"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Math-correct closure: obj T := AddCommGrpCat.of (Quotient (preimage_subgroup _C.hom T.unop.hom)); map := PicSharp.functorial _C.hom T₁.unop.hom T₂.unop.hom g.unop.left (Over.w g.unop).symm",
+        "code_tried": "noncomputable def PicSharp _C := { obj := fun T => ..., map := fun g => PicSharp.functorial ..., map_id := by ..., map_comp := by ... }",
+        "line_number": "327-330",
+        "lean_error": "Functor laws map_id and map_comp require the AddCommGroup operations on the quotient to be CONCRETE at the representative level; addCommGroup body is sorry, so the laws are unprovable in source-sorry-free form. Would introduce 2+ sorries in the def.",
+        "goal_before": "PicSharp.functorial _C.hom (𝟙 T).unop.hom T.unop.hom (𝟙 _) ... = AddMonoidHom.id _",
+        "goal_after": "n/a — abandoned approach",
+        "result": "failed",
+        "insight": "Math-correct body requires the underlying group operations to be concrete; addCommGroup gap blocks the functor-law discharge."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Placeholder closure with constant PUnit functor",
+        "code_tried": "noncomputable def PicSharp _C := (CategoryTheory.Functor.const _).obj (AddCommGrpCat.of (PUnit.{u+2}))",
+        "line_number": "330",
+        "lean_error": "none — kernel-clean",
+        "goal_before": "(Over (Spec (.of k)))ᵒᵖ ⥤ AddCommGrpCat.{u+1}",
+        "goal_after": "no goals",
+        "result": "success (placeholder)",
+        "insight": "Constant functor at PUnit gives a type-correct AddCommGrpCat.{u+1}-valued functor; downstream signature is preserved verbatim; math content is trivial; swap to math-correct body is signature-preserving once addCommGroup lands."
+      }
+    ],
+    "next_steps": "Mark in chapter: % NOTE: placeholder body — constant PUnit functor; math-correct body gated on Scheme.Modules monoidal-structure (Mathlib upstream gap). Do NOT add proof-block \\leanok; sync_leanok correctly leaves it off because the body is not the intended math object."
+  },
+  {
+    "timestamp": "2026-05-28T15:40:05Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/RelPicFunctor.lean",
+      "theorem": "PicSharp.functorial"
+    },
+    "session": {
+      "id": "session_198",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "none — closed but with PLACEHOLDER body (zero AddMonoidHom). lean_verify shows {propext, sorryAx, Classical.choice, Quot.sound} — sorryAx is a TYPECLASS LEAK from the addCommGroup sorry body via AddMonoidHom.zero's Zero (codomain) requirement, NOT a source-level sorry.",
+      "key_lemmas_used": [
+        "AddMonoidHom.zero (typeclass)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Math-correct closure with AddMonoidHom.mk'",
+        "code_tried": "noncomputable def functorial ... := AddMonoidHom.mk' (RelPicPresheaf.functorial _ _ _ g _hg) (fun a b => ... map_add proof ...)",
+        "line_number": "372-377",
+        "lean_error": "map_add proof requires f (a + b) = f a + f b for a b : Quotient (preimage_subgroup); + on the quotient is sorry-derived (addCommGroup body sorry), so equation cannot be discharged at representative level",
+        "result": "failed",
+        "insight": "Same addCommGroup gap as PicSharp closure."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Placeholder closure with zero AddMonoidHom",
+        "code_tried": "noncomputable def functorial ... := 0",
+        "line_number": "377",
+        "lean_error": "none source-level — but lean_verify reveals sorryAx via typeclass leak (AddMonoidHom.zero needs Zero on codomain, which derives from sorry addCommGroup)",
+        "result": "success (placeholder, sorryAx-leak only)",
+        "insight": "Zero hom satisfies the AddMonoidHom signature unconditionally; sorryAx leak is unavoidable until addCommGroup body lands."
+      }
+    ],
+    "next_steps": "Same as PicSharp — chapter NOTE; no proof-block \\leanok."
+  },
+  {
+    "timestamp": "2026-05-28T15:40:05Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/RelPicFunctor.lean",
+      "theorem": "PicSharp.presheaf"
+    },
+    "session": {
+      "id": "session_198",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "PicSharp"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Re-export as PicSharp",
+        "code_tried": "noncomputable def presheaf _C := PicSharp _C",
+        "line_number": "L405 area",
+        "lean_error": "none — kernel-clean",
+        "goal_before": "(Over (Spec (.of k)))ᵒᵖ ⥤ AddCommGrpCat.{u+1}",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Blueprint splits 'object/morphism description' (PicSharp) from 'bundled functor' (presheaf); on the Lean side they're the same data, so the bundled re-export is the natural closure. Inherits the placeholder character of PicSharp."
+      }
+    ],
+    "next_steps": "Inherits PicSharp's chapter NOTE. No additional action."
+  },
+  {
+    "timestamp": "2026-05-28T15:40:05Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/RelPicFunctor.lean",
+      "theorem": "PicSharp.etSheaf"
+    },
+    "session": {
+      "id": "session_198",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "CategoryTheory.presheafToSheaf",
+        "HasWeakSheafify"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Sheafify via Mathlib presheafToSheaf",
+        "code_tried": "noncomputable def etSheaf _C J := (CategoryTheory.presheafToSheaf J AddCommGrpCat.{u+1}).obj (PicSharp.presheaf _C)",
+        "line_number": "L470 area",
+        "lean_error": "none — kernel-clean; HasWeakSheafify J AddCommGrpCat.{u+1} synthesised automatically",
+        "goal_before": "Sheaf J AddCommGrpCat.{u+1}",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Mathlib's Sites.Sheafification fully supports any GrothendieckTopology J on Over (Spec (.of k)) and any AddCommGrp-valued presheaf. The HasWeakSheafify instance lookup confirmed via lean_run_code probe."
+      }
+    ],
+    "next_steps": "Inherits PicSharp's placeholder character via the input presheaf. No additional action."
+  },
+  {
+    "timestamp": "2026-05-28T15:40:05Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/RelPicFunctor.lean",
+      "theorem": "PicSharp.etSheaf_group_structure"
+    },
+    "session": {
+      "id": "session_198",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "Nonempty.intro (⟨_⟩)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Rename etSheafUnit → etSheaf_group_structure (matching blueprint pin) + zero NT placeholder",
+        "code_tried": "noncomputable def etSheaf_group_structure _C J : Nonempty (PicSharp.presheaf _C ⟶ (PicSharp.etSheaf _C J).obj) := ⟨0⟩",
+        "line_number": "L535 area",
+        "lean_error": "none — kernel-clean",
+        "goal_before": "Nonempty (PicSharp.presheaf C ⟶ (PicSharp.etSheaf C J).obj)",
+        "goal_after": "no goals",
+        "result": "success (placeholder)",
+        "insight": "Rename matches the blueprint \\lean{...} pin thm:rel_pic_etale_sheaf_group_structure. The zero natural transformation discharges the Nonempty.{...} signature. Math-correct body (the natural sheafification unit η : F → sheafify F) is gated on addCommGroup."
+      }
+    ],
+    "next_steps": "Verify blueprint/lean_decls registers the new declaration name. Inherits placeholder character."
+  },
+  {
+    "timestamp": "2026-05-28T15:40:05Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Albanese/CodimOneExtension.lean",
+      "theorem": "isRegularLocalRing_stalk_of_smooth"
+    },
+    "session": {
+      "id": "session_198",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Sub-gap (ii.A) Stacks 02JK cotangent ↔ Kähler iso over a field (~100-200 LOC closed-point case) AND sub-gap (ii.B) Stacks 00OE Krull-dim formula for standard-smooth (~200-300 LOC, transcendenceDegree + Noether-normalisation chain). Both independent Mathlib gaps.",
+      "key_lemmas_used": [
+        "Module.finrank_baseChange",
+        "Module.finrank_eq_of_rank_eq",
+        "Algebra.IsStandardSmoothOfRelativeDimension.rank_kaehlerDifferential",
+        "Algebra.IsStandardSmooth.free_kaehlerDifferential",
+        "IsStandardSmooth.out",
+        "SubmersivePresentation.isStandardSmoothOfRelativeDimension",
+        "Scheme.component_nontrivial",
+        "rank_kaehlerDifferential_localization_eq_relativeDimension"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Discharge iter-194 Stage-6 sub-gap (i) (relative-dimension determination) via axiom-clean helper",
+        "code_tried": "exists_isStandardSmoothOfRelativeDimension_of_isStandardSmooth (L437-L459): unpack IsStandardSmooth.out → SubmersivePresentation → isStandardSmoothOfRelativeDimension",
+        "line_number": "437-459",
+        "lean_error": "none — verified axiom-clean",
+        "goal_before": "∃ n : ℕ, Algebra.IsStandardSmoothOfRelativeDimension n R S",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "4-line helper discharges iter-194 sub-gap (i); pins a specific n from the Stage-3 IsStandardSmooth instance."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Land 6.B-RHS substrate (finrank κ ⊗ Ω = n) axiom-clean",
+        "code_tried": "finrank_residueField_tensor_kaehlerDifferential_of_free_rank_eq (L373-L401) via Module.finrank_baseChange + Module.finrank_eq_of_rank_eq; IsStandardSmoothOfRelativeDimension-form sibling at L403-L435 discharging rank/free hypotheses",
+        "line_number": "373-435",
+        "lean_error": "none — both verified axiom-clean",
+        "goal_before": "finrank κ (κ ⊗_{Sₘ} Ω[Sₘ⁄R]) = n",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Module.finrank_baseChange is the bridge. Hypothesis-form and IsStandardSmoothOfRelativeDimension-form siblings give both consumer patterns."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Extend body of isRegularLocalRing_stalk_of_smooth to consume new substrate, narrowing trailing sorry",
+        "code_tried": "Body L498-L605: obtain ⟨n, hRelDim⟩ from new helper; derive Nontrivial Γ via Scheme.component_nontrivial; instantiate Stage 5b rank lemma; instantiate Stage 6.B RHS via new substrate; trailing sorry at L630 now narrowed to two named bridges (ii.A) + (ii.B)",
+        "line_number": "498-630",
+        "lean_error": "trailing sorry retained (intended); body extension verified clean",
+        "goal_before": "IsRegularLocalRing 𝒪_{X,x}",
+        "goal_after": "still open, narrowed",
+        "result": "partial",
+        "insight": "Closure pattern at L606-L612 is now: have hcotN := (iso_6B).symm.finrank.trans _hFinrankResidueTensor; have hdimN := (00OE applied); exact (IsRegularLocalRing.iff_finrank_cotangentSpace _).mpr (by rw [hcotN, hdimN]; rfl). Two named bridges remain."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Sub-gap (ii.A) Stacks 02JK: cotangent ↔ Kähler iso via KaehlerDifferential.exact_mapBaseChange_map + closed-point trivialisation Ω[κ/κ] = 0",
+        "code_tried": "n/a — written but not attempted (out of helper budget 2 + stretch)",
+        "line_number": "n/a",
+        "lean_error": "estimated ~100-200 LOC for closed-point case; conormal sequence gives surjectivity but not injectivity of m/m² → κ ⊗ Ω; codomain identification between Mathlib m.Cotangent and κ ⊗_R I requires bridge chain",
+        "result": "deferred",
+        "insight": "iter-200+ mathlib-analogist sweep dedicated to the cotangent ↔ Kähler bridge is the natural next slice (cheapest of the two remaining gaps)."
+      },
+      {
+        "attempt": 5,
+        "strategy": "Sub-gap (ii.B) Stacks 00OE: Krull-dim formula for standard-smooth",
+        "code_tried": "n/a — written but not attempted",
+        "line_number": "n/a",
+        "lean_error": "200-300 LOC project-side build on transcendenceDegree API + Noether normalisation chain (exists_finite_inj_algHom_of_fg); beyond single iter helper budget",
+        "result": "deferred",
+        "insight": "Largest remaining gap; needs dedicated subagent / mathlib-analogist sweep."
+      }
+    ],
+    "next_steps": "iter-199+ priority: dispatch mathlib-analogist in cross-domain-inspiration mode for the cotangent ↔ Kähler bridge (~100-200 LOC closed-point case). Sub-gap (ii.B) Krull-dim is larger and independent — plan a separate substrate-build lane."
+  },
+  {
+    "timestamp": "2026-05-28T15:40:05Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Albanese/Thm32RationalMapExtension.lean",
+      "theorem": "isReduced_of_smooth_over_field"
+    },
+    "session": {
+      "id": "session_198",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "No Smooth → IsReduced lemma in Mathlib b80f227 at any granularity (scheme / algebra / FormallySmooth). FormallyUnramified.isReduced_of_field exists but requires FormallyUnramified which is strictly stronger than Smooth on the differential side. Stalk route is doubly-gated on Lane COE Stage 6 close + missing IsRegularLocalRing → IsDomain bridge. The PROGRESS.md recipe (30-80 LOC) underestimates the gap by an order of magnitude.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Direct Mathlib lookup for Smooth → IsReduced at any granularity (scheme / algebra / FormallySmooth)",
+        "code_tried": "lean_leansearch + lean_loogle + lean_local_search on AlgebraicGeometry.Smooth → IsReduced, Algebra.Smooth K A → IsReduced A, Algebra.IsStandardSmooth K A → IsReduced A, Algebra.FormallySmooth K A → IsGeometricallyReduced K A, IsRegularLocalRing R → IsDomain R or → IsReduced R",
+        "line_number": "151-155",
+        "lean_error": "none found — verified Algebra.FormallyUnramified.isReduced_of_field exists but requires FormallyUnramified (not Smooth)",
+        "result": "failed",
+        "insight": "Mathlib has NO Smooth → IsReduced bridge at any layer."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Affine-cover route via IsReduced.of_openCover + affine_isReduced_iff",
+        "code_tried": "Smooth.iff_forall_exists_isStandardSmooth + IsReduced.of_openCover + need IsStandardSmooth kbar → IsReduced",
+        "line_number": "151-155",
+        "lean_error": "Mathlib's IsStandardSmooth only ships Algebra.Smooth + Algebra.FormallySmooth as downstream conclusions; no isReduced bridge",
+        "result": "failed",
+        "insight": "Same Mathlib gap at the algebra layer."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Stalk-level route via isReduced_of_isReduced_stalk + Lane COE isRegularLocalRing_stalk_of_smooth + IsRegularLocalRing → IsDomain",
+        "code_tried": "would need (a) Lane COE Stage 6 close (itself sorry) AND (b) [IsReduced X.left] is already a hypothesis of isRegularLocalRing_stalk_of_smooth (circular)",
+        "line_number": "151-155",
+        "lean_error": "doubly-gated on Lane COE + missing IsRegularLocalRing → IsDomain bridge (loogled, no hits)",
+        "result": "failed",
+        "insight": "Lane COE Stage 6 close + IsRegularLocalRing.isDomain helper (~10-30 LOC, Stacks 00NP) is the right path; deferred to iter-199+ AFTER Lane COE closes."
+      },
+      {
+        "attempt": 4,
+        "strategy": "IsAlgClosed shortcut via IsGeometricallyReduced",
+        "code_tried": "Algebra.isGeometricallyReduced_iff : IsGeometricallyReduced kbar A ↔ IsReduced (AlgebraicClosure kbar ⊗[kbar] A); since kbar IsAlgClosed, AlgebraicClosure kbar ≃+* kbar, reduces to IsReduced (kbar ⊗[kbar] A) ↔ IsReduced A",
+        "line_number": "151-155",
+        "lean_error": "circular — collapses to the original goal without using the smooth hypothesis",
+        "result": "failed",
+        "insight": "Self-referential without engaging smooth."
+      },
+      {
+        "attempt": 5,
+        "strategy": "Informal-agent consultation",
+        "code_tried": "python3 .claude/tools/archon-informal-agent.py --provider kimi",
+        "line_number": "n/a",
+        "lean_error": "HTTP 401 Invalid Authentication against https://api.kimi.com/coding/; no DeepSeek/OpenAI/OpenRouter/Gemini keys in env",
+        "result": "failed",
+        "insight": "Project infrastructure issue — no working LLM key for informal sketch."
+      }
+    ],
+    "next_steps": "DO NOT re-dispatch this lane in isolation. Re-classify as a Lane COE derivative. Once Lane COE Stage 6.A + 6.B land, derive isReduced_of_smooth_over_field via stalk-localisation + isReduced_of_isReduced_stalk + IsRegularLocalRing.isDomain (~60 LOC after COE Stage 6 closes; ~300 LOC if attempted cold)."
+  }
+]

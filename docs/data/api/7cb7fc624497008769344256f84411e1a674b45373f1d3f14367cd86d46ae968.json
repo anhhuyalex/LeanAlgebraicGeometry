@@ -1,0 +1,123 @@
+[
+  {
+    "timestamp": "2026-05-29T10:38:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "PresheafOfModules.restrictScalarsLaxMonoidal"
+    },
+    "session": {
+      "id": "session_207",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "ModuleCat.instLaxMonoidalRestrictScalars",
+        "Functor.LaxMonoidal.ε",
+        "Functor.LaxMonoidal.μ",
+        "Functor.LaxMonoidal.μ_natural_left",
+        "Functor.LaxMonoidal.μ_natural_right",
+        "Functor.LaxMonoidal.associativity",
+        "Functor.LaxMonoidal.left_unitality",
+        "Functor.LaxMonoidal.right_unitality",
+        "PresheafOfModules.Monoidal.tensorObj_map_tmul",
+        "ModuleCat.restrictScalars_μ_tmul",
+        "ModuleCat.restrictScalars_η",
+        "PresheafOfModules.unit_map_one",
+        "ModuleCat.MonoidalCategory.tensor_ext"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "ε naturality field — direct ext + simp",
+        "code_tried": "naturality {X Y} f := by ext r; simp",
+        "line_number": "120",
+        "lean_error": "`ext` did not consume the patterns `r`; `simp` made no progress",
+        "result": "failed",
+        "insight": "simp does not unfold restrictScalars unit; needs erw with the specific rewrite lemmas"
+      },
+      {
+        "attempt": 2,
+        "strategy": "ε naturality via erw with restrictScalars_η + unit_map_one (found via lean_multi_attempt sweep)",
+        "code_tried": "ext r; dsimp; erw [PresheafOfModules.unit_map_one, ModuleCat.restrictScalars_η, ModuleCat.restrictScalars_η]; simp only [map_one]; erw [PresheafOfModules.unit_map_one]",
+        "line_number": "120",
+        "lean_error": null,
+        "result": "success",
+        "insight": "erw is required because the rewrites are under definitional unfolding; sequencing matters (unit_map_one first, then restrictScalars_η twice)"
+      },
+      {
+        "attempt": 3,
+        "strategy": "μ naturality — tensor_ext then symm of tensorObj_map_tmul",
+        "code_tried": "naturality {X Y} f := ModuleCat.MonoidalCategory.tensor_ext (fun m₁ m₂ ↦ by simp; exact (PresheafOfModules.Monoidal.tensorObj_map_tmul f m₁ m₂).symm)",
+        "line_number": "131",
+        "lean_error": "Type mismatch: Eq.symm (Monoidal.tensorObj_map_tmul f m₁ m₂) has type ... but is expected to have type ...",
+        "result": "failed",
+        "insight": "the symm direction and the bare tensorObj_map_tmul do not align; need to rewrite both sides explicitly with restrictScalars_μ_tmul in between"
+      },
+      {
+        "attempt": 4,
+        "strategy": "μ naturality — explicit four-step erw chain ending in rfl",
+        "code_tried": "refine ModuleCat.MonoidalCategory.tensor_ext (fun m₁ m₂ ↦ ?_); dsimp; erw [PresheafOfModules.Monoidal.tensorObj_map_tmul, ModuleCat.restrictScalars_μ_tmul, ModuleCat.restrictScalars_μ_tmul, PresheafOfModules.Monoidal.tensorObj_map_tmul]; rfl",
+        "line_number": "131",
+        "lean_error": null,
+        "result": "success",
+        "insight": "rewriting tensorObj_map_tmul on both sides with restrictScalars_μ_tmul in the middle reduces to rfl"
+      },
+      {
+        "attempt": 5,
+        "strategy": "coherence fields (μ_natural_left/right, associativity, left/right_unitality) — reduce sectionwise to the ModuleCat-level law",
+        "code_tried": "intro ...; ext1 Z; exact Functor.LaxMonoidal.<law> (F := ModuleCat.restrictScalars (α.app Z).hom) ...",
+        "line_number": "137-176",
+        "lean_error": null,
+        "result": "success",
+        "insight": "every presheaf-level coherence law is the sectionwise ModuleCat-level law under ext1 Z; needs set_option backward.isDefEq.respectTransparency false (mirrors Mathlib's PresheafOfModules.Monoidal setup)"
+      }
+    ],
+    "next_steps": "Instance is permanent reusable infrastructure (blueprint lem:restrictscalars_laxmonoidal). But it does NOT unblock tensorObj_restrict_iso (see that milestone). Add \\lean pin (done by review) and let sync_leanok mark it next iter."
+  },
+  {
+    "timestamp": "2026-05-29T10:37:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.tensorObj_restrict_iso"
+    },
+    "session": {
+      "id": "session_207",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "The iter-207 plan premise — that the sectionwise restrictScalars lax instance is the SOLE remaining project-side ingredient — was DISPROVEN. Two structural blockers: (1) the scheme module ring presheaf is RingCat-valued (no monoidal structure there), and the δ-route residual lands at that layer via Scheme.Hom.toRingCatSheafHom, whereas tensorObj uses the CommRingCat-valued X.presheaf — the δ-route and tensorObj live at different ring layers; (2) at the CommRingCat level, pushforward φ (codomain F.op ⋙ ?R) and restrictScalarsLaxMonoidal (?S ⋙ forget₂) cannot be composed by instance resolution — a ⋙-vs-forget₂ associativity mismatch.",
+      "key_lemmas_used": [
+        "PresheafOfModules.pullbackPushforwardAdjunction",
+        "CategoryTheory.Adjunction.leftAdjointOplaxMonoidal",
+        "Scheme.Modules.restrictFunctorIsoPullback",
+        "SheafOfModules.sheafificationCompPullback",
+        "Scheme.Hom.toRingCatSheafHom"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "δ-route: comparison map = δ of (pullbackPushforwardAdjunction φ).leftAdjointOplaxMonoidal, with hypothesis (pushforward φ).LaxMonoidal",
+        "code_tried": "have inst := (PresheafOfModules.pullbackPushforwardAdjunction f.toRingCatSheafHom.hom).leftAdjointOplaxMonoidal; exact Iso.refl _",
+        "line_number": "304",
+        "lean_error": "inferInstance for MonoidalCategory (PresheafOfModules ((sheafToPresheaf _).obj Y.ringCatSheaf)) FAILS — no monoidal structure on RingCat-valued PresheafOfModules",
+        "result": "failed",
+        "insight": "BLOCKER 1: f.toRingCatSheafHom.hom is RingCat-valued; the residual after restrictFunctorIsoPullback + sheafificationCompPullback lands at PresheafOfModules.pullback f.toRingCatSheafHom.hom (RingCat level), where (pushforward φ).LaxMonoidal cannot even be STATED"
+      },
+      {
+        "attempt": 2,
+        "strategy": "build a CommRingCat-level pushforwardLaxMonoidal instance composing pushforward₀ Monoidal with restrictScalarsLaxMonoidal via Functor.LaxMonoidal.comp",
+        "code_tried": "instance pushforwardLaxMonoidal ... := ... (composition of pushforward₀OfCommRingCat monoidal with restrictScalars lax)",
+        "line_number": "~290 (added then removed)",
+        "lean_error": "Application type mismatch: argument φ has type Sc ⋙ forget₂ CommRingCat RingCat ⟶ (F.op ⋙ Rc) ⋙ forget₂ CommRingCat RingCat but is expected to have type ?m ⟶ Functor.op ?m ⋙ ?m",
+        "result": "failed",
+        "insight": "BLOCKER 2: pushforward φ wants F.op outermost; restrictScalarsLaxMonoidal wants forget₂ outermost; associativity of ⋙ vs forget₂ gives no syntactic match. Instance removed — no dead code, no new sorry."
+      }
+    ],
+    "next_steps": "DO NOT re-dispatch as 'one instance away'. Structural re-route required (planner decision): (a) restructure Steps 1-2 to stay at the X.presheaf CommRingCat layer, then bridge to sheafification at the end; (b) add line-bundle hypotheses (hM hN) to tensorObj_restrict_iso (NOT protected; consumer tensorObj_isLocallyTrivial has them in scope) and prove sectionwise via Scheme.Modules.Hom.isIso_iff_isIso_app with free-rank-one trivialisations; (c) build a CommRingCat-level (pullback φ).Monoidal then take its μ/δ iso — still needs the RingCat↔CommRingCat bridge of (a)."
+  }
+]

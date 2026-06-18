@@ -1,0 +1,124 @@
+[
+  {
+    "timestamp": "2026-06-02T06:20:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "pullbackTensorMap_unit_isIso (D2' η-bridge)"
+    },
+    "session": {
+      "id": "session_247",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "The unit-comparison square equation hsq (transposed to the concrete pushforward-side identity (**)) is a long ordered defeq-friction mate-telescope across three nested adjunction layers; could not be reliably encoded within budget, and mathlib-build mode forbids pinning a sorry, so it was left unpinned.",
+      "key_lemmas_used": [
+        "Adjunction.unit_app_unit_comp_map_η",
+        "Adjunction.unit_naturality",
+        "Adjunction.homEquiv_leftAdjointUniq_hom_app",
+        "Adjunction.comp_unit_app",
+        "Iso.inv_comp_eq",
+        "Iso.eq_comp_inv",
+        "IsIso.comp_isIso'",
+        "isIso_pbu_of_final",
+        "sheafificationCompPullback"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Build a dev lemma isIso_sheafifyEta_DEV proving IsIso (a_Y.map (η (pullback φ'))) directly, via a commuting square hsq and Iso rearrangement.",
+        "code_tried": "have key : a_Y.map (η F) = (pullbackValIso ...).hom ≫ (pullbackObjUnitToUnit φ ≫ sheafifyUnitIso.inv) := by rw [← hsq]; rw [← Category.assoc, ...]; rw [key]; infer_instance",
+        "line_number": "~1490",
+        "lean_error": "infer_instance failed to synthesize IsIso of the composite (carrier-form mismatch)",
+        "result": "failed",
+        "insight": "Whole-composite infer_instance misses; must chain factors explicitly with IsIso.comp_isIso'."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Rearrange the square via Iso.inv_comp_eq / Iso.eq_comp_inv and chain three iso factors explicitly.",
+        "code_tried": "have key := (Iso.inv_comp_eq _).mp hsq; rw [(Iso.eq_comp_inv sheafifyUnitIso).mpr key]; exact IsIso.comp_isIso' (IsIso.comp_isIso' inferInstance hpbu) inferInstance",
+        "line_number": "~1530",
+        "lean_error": "none — compiles",
+        "result": "success",
+        "insight": "Factoring the IsIso conclusion into isIso_sheafifyEta_of_unitSquare (taking hsq as a hypothesis) is clean and axiom-clean; isolates the SOLE remaining content as the square equation hsq."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Prove the square hsq by transposing across pullbackPushforwardAdjunction.homEquiv.injective, then telescoping the composite-adjunction homEquiv.",
+        "code_tried": "apply (pullbackPushforwardAdjunction f.toRingCatSheafHom).homEquiv _ _ |>.injective; rw [pullbackPushforwardAdjunction_homEquiv_pullbackObjUnitToUnit, Adjunction.homEquiv_unit]; simp only [pullbackValIso, sheafifyUnitIso, ...]; sorry",
+        "line_number": "~1502",
+        "lean_error": "unsolved goals (concrete pushforward-side identity (**) remains)",
+        "result": "partial",
+        "insight": "Captured the exact transposed goal (**): sheafAdj.unit.app 𝒪_X ≫ pushforward.map(...) = unitToPushforwardObjUnit φ. simp/aesop_cat/targeted simp only with the glue lemmas make no progress — preconditions need prior ordered massaging (confirmed via lean_multi_attempt)."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Extract the presheaf-side mate identity as a standalone axiom-clean driver: Adjunction.unit_app_unit_comp_map_η instantiated at the PresheafOfModules pullback-pushforward adjunction.",
+        "code_tried": "lemma presheafUnit_comp_map_eta ... := by letI φ' := ...; haveI : (pushforward φ').IsRightAdjoint := (pullbackPushforwardAdjunction φ').isRightAdjoint; exact Adjunction.unit_app_unit_comp_map_η (pullbackPushforwardAdjunction φ')",
+        "line_number": "1495",
+        "lean_error": "first attempt: failed to synthesize (pullback φ').OplaxMonoidal — fixed by adding the IsRightAdjoint haveI",
+        "result": "success",
+        "insight": "presheaf-side mate driver lands axiom-clean {propext, Classical.choice, Quot.sound}; it is the unit-side analog of pullbackObjUnitToUnit_comp at the presheaf level — step #6 of the 7-step telescope."
+      }
+    ],
+    "next_steps": "Add standalone lemma unitSquare : hsq via the documented 7-step telescope (transpose with homEquiv.injective, then steps 1–7 using unit_naturality, homEquiv_leftAdjointUniq_hom_app, comp_unit_app, presheafUnit_comp_map_eta). Hardest sub-step is #3 (composite-adjunction homEquiv factorisation — verify exact form of (adj1.comp adj2).homEquiv first). Then close η-bridge as isIso_sheafifyEta_of_unitSquare f unitSquare and feed isIso_pullbackTensorMap_unitPair_of_isIso_sheafifyEta to finish D2'. NOTE: iter-247 plan armed a reversing signal — if D2' returns ANOTHER named-residual PARTIAL with no goal closure, iter-248 must classify STUCK and escalate to user (do NOT pivot a 4th time)."
+  },
+  {
+    "timestamp": "2026-06-02T06:04:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/RelPicFunctor.lean",
+      "theorem": "PicSharp.addCommGroup + 4 local bridges (rewire to upstream substrate)"
+    },
+    "session": {
+      "id": "session_247",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "none (local) — the only remaining cone sorry is the upstream project-deferred Modules.exists_tensorObj_inverse (TensorObjSubstrate.lean:670)",
+      "key_lemmas_used": [
+        "Modules.tensorObj_isLocallyTrivial",
+        "Modules.tensorObj_assoc_iso",
+        "Modules.tensorObjOnProduct",
+        "Modules.exists_tensorObj_inverse",
+        "Modules.tensorObj_left_unitor",
+        "Modules.tensorObj_right_unitor",
+        "Modules.tensorObj_braiding",
+        "Modules.tensorObjIsoOfIso",
+        "Modules.pullbackUnitIso",
+        "Scheme.Modules.restrictFunctorIsoPullback"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Rewire pTensor_isLocallyTrivial and pAssoc to upstream (now reachable after the iter-247 import-cycle refactor).",
+        "code_tried": "pTensor_isLocallyTrivial := Modules.tensorObj_isLocallyTrivial hM hN ; pAssoc := Modules.tensorObj_assoc_iso",
+        "line_number": "~310, ~319",
+        "lean_error": "none",
+        "result": "success",
+        "insight": "pTensor is defeq Modules.tensorObj, so upstream decls discharge directly; the 4-bridge stopgap from iter-246 collapses to citations."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Close isLocallyTrivial_unit with a real proof (no direct upstream equivalent), sidestepping the iter-246 IsIso (pullbackObjUnitToUnit φ) synthesis quirk by routing through pullbackUnitIso.",
+        "code_tried": "on an affine chart W ∋ x: (Scheme.Modules.restrictFunctorIsoPullback W.ι).app _ ≪≫ Modules.pullbackUnitIso W.ι trivialises (𝒪_X)|_W ≅ 𝒪_W",
+        "line_number": "~285",
+        "lean_error": "none",
+        "result": "success",
+        "insight": "Routing through the proven pullbackUnitIso avoids the undiagnosed Final-instance synthesis quirk; verified axiom-FREE ([] axioms)."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Delete exists_pTensor_inverse bridge + 5 local pure-Mathlib substrate copies (pTensor, pTensorIso, pLeftUnitor, pRightUnitor, pBraiding); retarget ~10 use sites (relTensorObj, relAdd, relNeg, addCommGroup axioms) to upstream Modules.* citations.",
+        "code_tried": "relTensorObj := Modules.tensorObjOnProduct πC πT L L' ; relNeg via Modules.exists_tensorObj_inverse ×3 ; add_assoc := Quotient.sound ⟨Modules.tensorObj_assoc_iso ...⟩",
+        "line_number": "various",
+        "lean_error": "none — file compiles with zero diagnostics",
+        "result": "success",
+        "insight": "All group axioms (add_comm/zero_add/add_zero/add_assoc) sorry-free; only neg_add_cancel routes through the single upstream exists_tensorObj_inverse. addCommGroup verified {propext, sorryAx, Classical.choice, Quot.sound} — sorryAx solely upstream."
+      }
+    ],
+    "next_steps": "RPF local scope is DONE (sorry 4→0). The functor layer above remains: PicSharp (=const PUnit placeholder), functorial (=0), presheaf/etSheaf cascade — all PRE-EXISTING placeholders gated on Lane TS D4' (pullback_tensor_iso_loctriv). Their .lean docstrings now cite the now-resolved addCommGroup sorry as the gate (lean-auditor 2 must-fix + 3 major; lvb-rpf 4 must-fix) — a prover must refresh those docstrings on next RPF touch. Do NOT upgrade functorial until D4' lands. exists_tensorObj_inverse (upstream) is the single remaining substrate sorry on this carrier."
+  }
+]

@@ -1,0 +1,127 @@
+[
+  {
+    "timestamp": "2026-06-03T04:20:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "pullbackTensorMap_natural"
+    },
+    "session": {
+      "id": "session_255",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "Functor.OplaxMonoidal.δ_natural",
+        "MonoidalCategory.tensorHom_comp_tensorHom",
+        "sheafifyTensorUnitIso_hom_natural",
+        "pullbackValIso_hom_natural",
+        "Functor.map_comp",
+        "Iso.cancel_iso_hom_left"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Square 2 (δ-commutation) via the planner mapin255 LIGHT recipe: re-present F's ring-hom at the canonical forget₂ spelling inside a show…from ascription so the registered MonoidalCategory instance synthesizes; erw bridges the cosmetic have-wrapper.",
+        "code_tried": "erw [← Functor.OplaxMonoidal.δ_natural (F := PresheafOfModules.pullback (show (X.presheaf ⋙ forget₂ CommRingCat RingCat) ⟶ (Opens.map f.base).op ⋙ (Y.presheaf ⋙ forget₂ CommRingCat RingCat) from (Hom.toRingCatSheafHom f).hom)) a.val b.val]; dsimp only []",
+        "line_number": "2064",
+        "lean_error": null,
+        "goal_before": "(SheafOfModules.sheafificationCompPullback ...).hom.app (tensorObj M.val N.val) ≫ ... = ...",
+        "goal_after": "Square 3+4 chain",
+        "result": "success",
+        "insight": "mapin255 prediction held exactly in the real file (not just the lean_multi_attempt probe); the F:= show…from ascription is the instance-injection point the iter-254 prover wrongly believed did not exist. NO structural spelling-pin refactor needed; D2' untouched."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Square 3+4 assembly — the genuinely new work. Split a_Y.map(δ≫φ) via Functor.map_comp + right-associate; peel S1 and a_Y.map δ legs; reassoc sheafifyTensorUnitIso_hom_natural for S3; merge the two a_Y.map's across the pullbackValIso .val-vs-.obj connecting-object boundary; per-leg pullbackValIso naturality + bifunctoriality for S4.",
+        "code_tried": "erw [Functor.map_comp]; simp only [Category.assoc]; refine congr_arg₂ (·≫·) rfl ?_ (×2); erw [reassoc_of% (sheafifyTensorUnitIso_hom_natural ...)]; refine ((Functor.map_comp _ _ _).symm.trans ?_).trans (Functor.map_comp _ _ _); congr 1; have hleg ...; refine (MonoidalCategory.tensorHom_comp_tensorHom (C:=…⋙forget₂…) _ _ _ _).trans ?_; erw [hleg a, hleg b]; exact (MonoidalCategory.tensorHom_comp_tensorHom (C:=…⋙forget₂…) _ _ _ _).symm",
+        "line_number": "1999-2112",
+        "lean_error": null,
+        "goal_before": "merged a_Y.map composite across .val/.obj boundary",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "pullbackValIso's TYPE carries Y.ringCatSheaf.val while the helper normalises to .obj → a defeq-but-not-syntactic boundary in the connecting object that blocks ALL kabstract tactics (rw assoc, Iso.cancel_iso_hom_left, ←map_comp, congr_arg₂). Recipe: erw[Category.assoc] right-assocs across the gap; erw[Iso.cancel_iso_hom_left] peels the iso prefix; a refine-chain of Functor.map_comp TERMS merges BOTH a_Y.map's via isDefEq (erw FAILS this merge); congr 1 → presheaf eq; tensorHom_comp_tensorHom as (C:=…)-pinned TERM closes S4."
+      }
+    ],
+    "next_steps": "D1' done. The pullback monoidality lane's remaining open is exists_tensorObj_inverse (L712, out of scope, DEAD-END d.2 route per docstring). D3'/D4' (associator/pentagon-coherence of pullbackTensorMap) not yet authored — next pullback-monoidality target if/when needed."
+  },
+  {
+    "timestamp": "2026-06-03T04:18:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate/DualInverse.lean",
+      "theorem": "homOfLocalCompat"
+    },
+    "session": {
+      "id": "session_255",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "f-leg native (Module Γ(X,image)) action vs restrictScalars-𝟙 action ((M.restrict (U i).ι).val.obj) — propositionally equal (via (U i).ι.appIso = Iso.refl ⇒ restrict ring map = 𝟙) but NOT defeq; the := defeq check rejects the smul-instance mismatch even under backward.isDefEq.respectTransparency false.",
+      "key_lemmas_used": [
+        "Scheme.Modules.map_smul",
+        "AlgebraicGeometry.Scheme.Opens.ι_appIso",
+        "PresheafOfModules.toPresheaf_map_app_apply",
+        "ModuleCat.restrictScalars.smul_def",
+        "ModuleCat.restrictScalarsId'App"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Planner inline recipe literally: M-leg via PresheafOfModules.map_smul, then f-leg via (f i).val.app P |>.hom.map_smul, N-leg via PresheafOfModules.map_smul N.val, scalar reconciliation.",
+        "code_tried": "erw [ConcreteCategory.comp_apply ×4, PresheafOfModules.map_smul]; (f i).val.app P |>.hom.map_smul; ...",
+        "line_number": "~645",
+        "lean_error": "smul-instance mismatch: PresheafOfModules.map_smul M.val e₁ produces a smul over the semilinear codomain (ModuleCat.restrictScalars (X.ringCatSheaf.map e₁)).obj (M.val.obj (op image)) — an X(W)-module; f-leg map_smul is over restrictScalars 𝟙 — an X(image)-module; different base rings, NOT defeq; rejected even under respectTransparency false.",
+        "goal_before": "linearity of homOfLocalCompat sub-step (c)",
+        "goal_after": "f-leg rejected",
+        "result": "failed",
+        "insight": "DEAD END: PresheafOfModules.map_smul for the M-leg bakes in the WRONG restrictScalars e₁ instance (e₁ the eqToHom op W → op image). Mis-decomposition inherited from the iter-254 framing."
+      },
+      {
+        "attempt": 2,
+        "strategy": "KEY FIX: use the Γ-level Scheme.Modules.map_smul M (native Γ-module, NO restrictScalars artifact) for the M/N legs instead of PresheafOfModules.map_smul.",
+        "code_tried": "erw [Scheme.Modules.map_smul M]",
+        "line_number": "~645",
+        "lean_error": null,
+        "goal_before": "M-leg semilinearity over wrong restrictScalars e₁",
+        "goal_after": "M-leg native action; f-leg residual = native vs restrictScalars 𝟙",
+        "result": "partial",
+        "insight": "M-leg CLOSED cleanly. Obstacle NARROWED from restrictScalars-e₁ (different base ring) to restrictScalars-𝟙 (same base ring, identity ring map). Now the cleanest possible mismatch; the bridge is restrictScalars.smul_def with the restrict ring map = 𝟙 (from Scheme.Opens.ι_appIso = Iso.refl). All ingredient lemmas named + verified to exist; bounded next-iter build."
+      }
+    ],
+    "next_steps": "Build a small helper: bridge native action into restrictScalars-𝟙 via ModuleCat.restrictScalars.smul_def / restrictScalarsId'App + ι_appIso = Iso.refl, then erw[hfl]; erw[Scheme.Modules.map_smul N]; congr 1; rw[← ConcreteCategory.comp_apply, ← Functor.map_comp]; simp (e₁ ≫ e₂ = 𝟙 since (U i).ι ''ᵁ ((U i).ι ⁻¹ᵁ W) = W). Recipe left in-file at the closing sorry."
+  },
+  {
+    "timestamp": "2026-06-03T04:20:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate/DualInverse.lean",
+      "theorem": "dual_restrict_iso"
+    },
+    "session": {
+      "id": "session_255",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Out of scope this iter — gated on homOfLocalCompat by the reversing-signal guardrail (homOfLocalCompat did not close, so Step-4 was not entered). Step-4 residual (L256) = presheaf-level (pushforward β).obj (dual M.val) ≅ dual ((pushforward β).obj M.val).",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Not attempted — fenced off by the planner directive guardrail (gated on homOfLocalCompat closing first).",
+        "code_tried": null,
+        "line_number": "256",
+        "lean_error": null,
+        "goal_before": "(pushforward β).obj (dual M.val) ≅ dual ((pushforward β).obj M.val)",
+        "goal_after": null,
+        "result": "failed",
+        "insight": "lvb-dualinv255 flagged a blueprint-vs-Lean structure mismatch: blueprint frames Step-4 as Leg(A) Beck-Chevalley + Leg(B) ring-iso transport, but the Lean uses H1 (adjunction uniqueness via pushforwardPushforwardAdj∘leftAdjointUniq) leaving a DIFFERENT residual. A prover following the blueprint legs will hit a structure mismatch — blueprint needs alignment before dispatch."
+      }
+    ],
+    "next_steps": "Do not dispatch until homOfLocalCompat closes AND the blueprint Step-4 description is aligned to the actual H1 route (lvb-dualinv255 major gap 2)."
+  }
+]

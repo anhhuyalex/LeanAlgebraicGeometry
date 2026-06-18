@@ -1,0 +1,224 @@
+[
+  {
+    "timestamp": "2026-06-03T12:10:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SheafOverEquivalence.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.unitOverIso"
+    },
+    "session": {
+      "id": "session_259",
+      "model": "opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "SheafOfModules.unitToPushforwardObjUnit",
+        "NatTrans.isIso_iff_isIso_app",
+        "forget₂ RingCat AddCommGrpCat",
+        "unitToPushforwardObjUnit_val_app_apply"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Reflection chain (forget→toPresheaf→NatTrans.isIso_iff_isIso_app) was in place; close the sectionwise leaf IsIso ((toPresheaf.map (forget.map (unitToPushforwardObjUnit (phiOver U)))).app W)",
+        "code_tried": "intro W; haveI hval : IsIso (phiOver U).hom := by rw [NatTrans.isIso_iff_isIso_app]; intro V; exact inferInstanceAs (IsIso (X.ringCatSheaf.obj.map (eqToHom _).op)); haveI happ : IsIso ((phiOver U).hom.app W) := inferInstance; change IsIso ((forget₂ RingCat AddCommGrpCat).map ((phiOver U).hom.app W)); infer_instance",
+        "line_number": "276",
+        "result": "success",
+        "insight": "IsIso ((phiOver U).hom.app W) / IsIso (phiOver U).hom are NOT inferInstance-able directly; must derive app-wise from the eqToHom-image structure. The goal map is DEFINITIONALLY forget₂.map ((phiOver U).hom.app W), so change + infer_instance closes it."
+      }
+    ],
+    "next_steps": "Done. chartOverIso now transitively axiom-clean."
+  },
+  {
+    "timestamp": "2026-06-03T12:07:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SheafOverEquivalence.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.restrictOverIso"
+    },
+    "session": {
+      "id": "session_259",
+      "model": "opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "SheafOfModules.pushforwardComp",
+        "SheafOfModules.pushforwardNatIso",
+        "SheafOfModules.pushforwardCongr",
+        "Functor.isContinuous_comp",
+        "ConcreteCategory.id_apply"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Verbatim mirror of restrictFunctorAdjCounitIso: 3-step composite pushforwardComp ≫ pushforwardNatIso ≫ pushforwardCongr, applied at M; reconstruct psiRestrict so restrictFunctor U.ι = pushforward (psiRestrict U) by rfl",
+        "code_tried": "refine (pushforwardComp (phiOver U) (psiRestrict U)).app M ≪≫ (pushforwardNatIso _ (overForgetNatIso U)).app M ≪≫ (pushforwardCongr ?heq).app M; ext V x; simp [phiOver, psiRestrict, overForgetNatIso]; erw [ConcreteCategory.id_apply, ← ConcreteCategory.comp_apply, ← Functor.map_comp]; simp",
+        "line_number": "245",
+        "result": "success",
+        "insight": "Continuity discrim-tree wall: opensFunctor.IsContinuous keys at scheme-carrier ↥↑U for direct inferInstance but NOT nested search. FIX: set_option backward.isDefEq.respectTransparency false on the def + supply hF1/hF2/hcomp continuity via @Functor.isContinuous_comp. pushforwardComp with a metavariable ψ → whnf heartbeat timeout; must supply psiRestrict explicitly. γ'=𝟙 proved sectionwise; erw (not rw) needed over ConcreteCategory.id_apply/comp_apply."
+      }
+    ],
+    "next_steps": "Done. File sorry-free; SheafOverEquivalence.lean fully axiom-clean."
+  },
+  {
+    "timestamp": "2026-06-03T12:12:15Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.pullbackComp_δ"
+    },
+    "session": {
+      "id": "session_259",
+      "model": "opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "Adjunction.unit_app_tensor_comp_map_δ",
+        "conjugateEquiv",
+        "unit_conjugateEquiv",
+        "Adjunction.conjugateEquiv_leftAdjointCompIso_inv",
+        "PresheafOfModules.pushforwardComp",
+        "Functor.LaxMonoidal.μ_natural",
+        "MonoidalCategory.tensorHom_comp_tensorHom",
+        "pushforwardComp_lax_μ"
+      ],
+      "blocker": "Reduced (not blocked) — proof complete modulo the genuine residual pushforwardComp_lax_μ"
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "η→δ mirror of the proven pullbackObjUnitToUnit_comp via mate calculus: transpose under (pullbackPushforwardAdjunction χ).homEquiv.injective, then chase δ via unit_app_tensor_comp_map_δ, MATE (conjugate of pullbackComp.inv = pushforwardComp.hom = 𝟙), μ-COH, μ-NAT, TRI, tensorHom merge",
+        "code_tried": "apply (pullbackPushforwardAdjunction (F:=F⋙G) (R:=T₀⋙forget₂) (φ ≫ F.op.whiskerLeft ψ)).homEquiv _ _ |>.injective; erw [Adjunction.unit_app_tensor_comp_map_δ ...]; have hconj : conjugateEquiv (...) (pullbackComp φ ψ).inv = 𝟙 _ := ...; ... rw [pushforwardComp_lax_μ φ ψ]; erw [← Functor.LaxMonoidal.μ_natural]; conv_lhs => rw [← htri M, ← htri N]; erw [← MonoidalCategory.tensorHom_comp_tensorHom (C := _root_.PresheafOfModules ...)]; exact Category.assoc _ _ _",
+        "line_number": "2143",
+        "result": "partial",
+        "insight": "Full ~90-line mate calculus compiles; lean_verify shows {propext, sorryAx, Classical.choice, Quot.sound} (sorryAx ONLY via pushforwardComp_lax_μ). Recipes: pin pullback (F:=F⋙G)(R:=T₀⋙forget₂); δ/μ rewrites need erw (defeq-not-syntactic); conjugateEquiv/unit_conjugateEquiv are BARE; generic Iso.inv_hom_id_app/tensorHom_comp_tensorHom/Category.assoc fail rw (dup monoidal-vs-base Cat instance) → erw + pin (C:=…) + exact Category.assoc _ _ _; CategoryTheory.Functor.map_id (not bare)."
+      }
+    ],
+    "next_steps": "Becomes fully axiom-clean once pushforwardComp_lax_μ lands. Ready Sq2 ingredient for the pullbackTensorMap_restrict 4-square assembly."
+  },
+  {
+    "timestamp": "2026-06-03T12:14:20Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.pushforwardComp_lax_μ"
+    },
+    "session": {
+      "id": "session_259",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Genuine Mathlib-absent ModuleCat base-change coherence (~150 LOC); informal agent unavailable (MOONSHOT 401). Empirically refuted the bw258-d3 'rfl/short ext' prediction.",
+      "key_lemmas_used": [
+        "ModuleCat.restrictScalarsComp",
+        "ModuleCat.homEquiv_extendScalarsComp",
+        "ModuleCat.extendScalarsComp"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Test whether the residual μ-equality is rfl or simp-closable",
+        "code_tried": "rfl  /  ext W x; rfl  /  ext W x; simp  /  dsimp [...]; rfl",
+        "line_number": "2162",
+        "result": "failed",
+        "insight": "All fail. μ(pushforward ψ ⋙ pushforward φ) X Y = μ(pushforward (φ ≫ F.op ◁ ψ)) X Y is the 'pushforwardComp is monoidal' theorem. The η-twin (unitToPushforwardObjUnit_comp) was rfl because η only touches ε; the μ-version is the full tensorator interchange. NOT rfl."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Advance the body to the sectionwise ModuleCat leaf",
+        "code_tried": "ext W x  (leaving the extendScalars/restrictScalars base-change associativity coherence as typed sorry)",
+        "line_number": "2162",
+        "result": "partial",
+        "insight": "Leaf reduced to a ModuleCat.extendScalars/restrictScalars base-change associativity coherence for the composite ring hom (ψ∘φ); ~150-LOC ModuleCat change-of-rings build remains."
+      }
+    ],
+    "next_steps": "Close in mathlib-build/fine-grained mode (the ext W x leaf is in place). NOT a quick rfl — do not re-dispatch with the disproven 'short ext' recipe."
+  },
+  {
+    "timestamp": "2026-06-03T12:15:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.pullbackTensorMap_restrict"
+    },
+    "session": {
+      "id": "session_259",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "4-square assembly (Sq1/Sq3/Sq4) not done; Sq2 ingredient pullbackComp_δ now ready (modulo pushforwardComp_lax_μ)"
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Not directly attempted this iter; the Sq2/Sq2b ingredient pullbackComp_δ was built as prerequisite",
+        "code_tried": "(none — gated on Sq2b)",
+        "line_number": "2392",
+        "result": "partial",
+        "insight": "Sq2 of the 4-square (pullbackComp_δ) is now formalized and proven modulo pushforwardComp_lax_μ. Remaining: Sq1 (sheafificationCompPullback-comp), Sq3 (sheafifyTensorUnitIso), Sq4 (pullbackValIso-comp + toRingCatSheafHom_comp_hom_reconcile, already rfl-closed)."
+      }
+    ],
+    "next_steps": "After pushforwardComp_lax_μ lands, assemble the 4 squares."
+  },
+  {
+    "timestamp": "2026-06-03T11:42:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate/DualInverse.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.sliceDualTransport"
+    },
+    "session": {
+      "id": "session_259",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "HELD (sanctioned): consumer route gated on the shared root SheafOverEquivalence.{restrictOverIso,unitOverIso} which were being edited concurrently (cross-lane compile race). Both now green ⇒ closes next iter as a one-liner.",
+      "key_lemmas_used": [
+        "LinearEquiv.toModuleIso",
+        "Module.compHom",
+        "restrictScalarsRingIsoDualEquiv",
+        "overEquivalence"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Diagnostic: verify the reduced ≃ₗ and probe LinearEquiv.toModuleIso + PresheafOfModules.Hom.mk' skeleton",
+        "code_tried": "refine LinearEquiv.toModuleIso ?_   (residual goal inspected via lean_goal)",
+        "line_number": "184",
+        "result": "partial",
+        "insight": "Residual ≃ₗ confirmed = per-V localization of overEquivalence: ((pushforward₀ f.opensFunctor X.ringCatSheaf.obj).obj (dual M.val)).obj V ≃ₗ[𝒪_Y(V)] (internalHomPresheaf ((pushforward β).obj M.val) 𝟙_Y).obj V. LHS Module 𝒪_Y(V) instance NOT auto-synthesized — must letI via Module.compHom (β.app V), as restrictScalarsRingIsoDualEquiv does. Do NOT route through overSliceSheafEquiv (fixed value cat, cannot carry varying ring)."
+      }
+    ],
+    "next_steps": "Route-(1) consumer one-liner next iter: add import SheafOverEquivalence (now safe — shared root green+stable), bridge f ≅ (f.opensRange).ι, localize restrictOverIso/unitOverIso to V."
+  },
+  {
+    "timestamp": "2026-06-03T11:42:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate/DualInverse.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.dual_restrict_iso"
+    },
+    "session": {
+      "id": "session_259",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Strictly downstream of sliceDualTransport; isoMk naturality cannot reduce while the sliceDualTransport family is opaque"
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Check whether the isoMk naturality square is independently closable",
+        "code_tried": "(inspect isoMk (fun V => sliceDualTransport f M V) ?_ naturality)",
+        "line_number": "328",
+        "result": "failed",
+        "insight": "isoMk's default cat_disch cannot reduce the opaque sliceDualTransport family. Closes for free (cat_disch / Subsingleton.elim) once that family is concrete."
+      }
+    ],
+    "next_steps": "Closes automatically once sliceDualTransport lands."
+  }
+]

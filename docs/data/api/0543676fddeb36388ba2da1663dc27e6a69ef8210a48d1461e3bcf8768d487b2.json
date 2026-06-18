@@ -1,0 +1,130 @@
+[
+  {
+    "timestamp": "2026-05-15T22:55:23Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "relativeDifferentialsPresheaf_isSheafOpensLeCover_type"
+    },
+    "session": {
+      "id": "session_113",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Sub-lemma A / Sub-lemma B decomposition (planned by iter-113 plan agent for Bar A closure via affine-restriction + cofinality refinement) was NOT executed. Prover instead pivoted to a unique-gluing reformulation: helper #1's body is now closed by routing through `TopCat.Presheaf.isSheaf_of_isSheafUniqueGluing_types` + `IsSheaf.isSheafOpensLeCover` (both Mathlib framework lemmas, pure namespace bridge), and the residual mathematical content is migrated into a new top-level helper `relativeDifferentialsPresheaf_isSheafUniqueGluing_type` (L168) with sorry body. File sorry count 5 → 5; structural advance (helper #1 closes, sorry relocates to a strictly mathematically-equivalent claim in a cleaner form). Bar A NOT met. Per the prover's own honest assessment, this is a *reformulation* not a substantive new closure of Sub-lemma A or Sub-lemma B; the same mathematical content sits at a different syntactic site.",
+      "key_lemmas_used": [
+        "TopCat.Presheaf.IsSheafUniqueGluing",
+        "TopCat.Presheaf.isSheaf_of_isSheafUniqueGluing_types",
+        "TopCat.Presheaf.IsSheaf.isSheafOpensLeCover",
+        "AlgebraicGeometry.Scheme.isBasis_affineOpens"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Direct inline scaffolding of Sub-lemma A + Sub-lemma B decomposition. Enrich helper #1's body with named bindings (`𝒸`, `F`, `h_basis : TopologicalSpace.Opens.IsBasis (Set.range (fun V : X.affineOpens => (V : X.Opens)))`) and detailed inline comments laying out the affine-restriction + basis-descent recipe.",
+        "code_tried": "intro ι U\n-- (i) the wrapped type-valued presheaf as `F`, named so the Mathlib\n-- chain `isSheaf_iff_isSheafOpensLeCover` reads cleanly downstream.\nlet F := (relativeDifferentialsPresheaf f).presheaf ⋙\n    CategoryTheory.forget AddCommGrpCat\n-- (ii) the OpensLeCover cocone for the given family, named so the\n-- limit-of-mapCone shape that `IsSheafOpensLeCover` unfolds to is\n-- referenceable in the iter-114 prover's response.\nlet 𝒸 := (TopCat.Presheaf.SheafCondition.opensLeCoverCocone U).op\n-- (iii) the affine basis of `X.toTopCat`...\nhave h_basis : TopologicalSpace.Opens.IsBasis\n    (Set.range (fun V : X.affineOpens => (V : X.Opens))) := by\n  convert Scheme.isBasis_affineOpens X using 2\n  rfl\nsorry",
+        "line_number": 209,
+        "lean_error": "Type mismatch\\n  rfl\\nhas type\\n  ?m.166 = ?m.166\\nbut is expected to have type\\n  (Set.range fun V ↦ ↑V) = X.affineOpens",
+        "goal_before": "X S : Scheme\\nf : X ⟶ S\\nι : Type u\\nU : ι → TopologicalSpace.Opens ↥X\\n⊢ Nonempty (IsLimit ((PresheafOfModules.presheaf (relativeDifferentialsPresheaf f) ⋙ CategoryTheory.forget AddCommGrpCat).mapCone (TopCat.Presheaf.SheafCondition.opensLeCoverCocone U).op))",
+        "goal_after": "(error at h_basis convert+rfl bridge)",
+        "result": "failed",
+        "insight": "`X.affineOpens` is itself a `Set X.Opens` (not a type that needs the `Set.range` coercion). The right form is `Scheme.isBasis_affineOpens X` directly with target `Opens.IsBasis (X.affineOpens)`, no `Set.range`-style projection wrapping. Fixed in Attempt 1.b."
+      },
+      {
+        "attempt": "1.b",
+        "strategy": "Same scaffolding, but use the direct form of the basis hypothesis.",
+        "code_tried": "have h_basis : TopologicalSpace.Opens.IsBasis (X.affineOpens) :=\n  Scheme.isBasis_affineOpens X",
+        "line_number": 209,
+        "lean_error": "",
+        "goal_before": "(same as Attempt 1 mid-tactic)",
+        "goal_after": "(file compiles clean; sorry count flat at 5)",
+        "result": "success",
+        "insight": "`X.affineOpens : Set X.Opens` matches `Opens.IsBasis` directly. But the body still ends in `sorry` — this is structural scaffolding only, not closure of Sub-lemma A / Sub-lemma B. Prover assessed as 'exposure of structure' and pivoted to Attempt 2."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Unique-gluing reformulation pivot. Introduce a new top-level helper `relativeDifferentialsPresheaf_isSheafUniqueGluing_type` carrying the mathematical content in the unique-gluing form. Close helper #1's body via the Mathlib chain `isSheaf_of_isSheafUniqueGluing_types` + `IsSheaf.isSheafOpensLeCover`.",
+        "code_tried": "-- New top-level helper at L168:\nlemma relativeDifferentialsPresheaf_isSheafUniqueGluing_type (f : X ⟶ S) :\n    TopCat.Presheaf.IsSheafUniqueGluing\n      ((relativeDifferentialsPresheaf f).presheaf ⋙\n        CategoryTheory.forget AddCommGrpCat) := by\n  sorry  -- iter-114+ recipe documented in docstring (universal property of KaehlerDifferential + structure-sheaf gluing + span_range_derivation)\n\n-- Helper #1 body at L209-L234:\nlemma relativeDifferentialsPresheaf_isSheafOpensLeCover_type (f : X ⟶ S) :\n    TopCat.Presheaf.IsSheafOpensLeCover\n      ((relativeDifferentialsPresheaf f).presheaf ⋙\n        CategoryTheory.forget AddCommGrpCat) := by\n  intro ι U\n  exact (TopCat.Presheaf.isSheaf_of_isSheafUniqueGluing_types _\n    (relativeDifferentialsPresheaf_isSheafUniqueGluing_type f)).isSheafOpensLeCover U",
+        "line_number": 209,
+        "lean_error": "",
+        "goal_before": "X S : Scheme\\nf : X ⟶ S\\n⊢ TopCat.Presheaf.IsSheafUniqueGluing (PresheafOfModules.presheaf (relativeDifferentialsPresheaf f) ⋙ CategoryTheory.forget AddCommGrpCat)",
+        "goal_after": "(file compiles clean; sorry count 5 → 5; helper #1 fully closed)",
+        "result": "partial",
+        "insight": "The unique-gluing form is Mathlib-equivalent to the OpensLeCover form (the two arrows are framework lemmas: `isSheaf_of_isSheafUniqueGluing_types` and `IsSheaf.isSheafOpensLeCover`, both already in Mathlib with no project-side adapters). This pivot routes around — does NOT close — the basis-to-opens descent gap (still documented at chapter L51 `[gap]`). The next prover iter still has to prove the substantive content (compatibility ⇒ gluing on the structure-sheaf side via the universal `KaehlerDifferential` construction + `span_range_derivation` uniqueness). The Bar A/B/C taxonomy the plan agent specified is binary on 'did Sub-lemma A or Sub-lemma B close?'; this iter answers neither (Bar C by strict reading) but also does not exhibit the helper-explosion failure mode (only ONE new top-level helper, not two). Net classification: between Bar B and Bar C — better than helper-explosion, worse than substantive sub-lemma closure."
+      }
+    ],
+    "next_steps": "Iter-114 prover lane on `relativeDifferentialsPresheaf_isSheafUniqueGluing_type` (L168 of Differentials.lean). The unique-gluing goal after `intro ι U sf cpt` is `∃! s : F.obj (op (iSup U)), IsGluing F U sf s`. Three-step recipe documented in the new helper's docstring (L148–L165): (1) compatibility ⇒ gluing on the structure-sheaf side via the universal derivation `d : O_X → Ω_{X/S}` + `X.ringCatSheaf.existsUnique_gluing`; (2) lift back via `CommRingCat.KaehlerDifferential.D` + `ModuleCat.Derivation.desc`; (3) uniqueness via `KaehlerDifferential.span_range_derivation` + `eq_of_locally_eq`. LOC budget for closure ~80–120 (per prover task report). If iter-114 returns ANOTHER reformulation or a new sorry-bodied sub-helper without substantive closure, the route flips to CHURNING with corrective = `mathlib-analogist` consult on the universal-derivation + structure-sheaf gluing recipe (whether Mathlib has a packaged version that the project should align with rather than building from primitives)."
+  },
+  {
+    "timestamp": "2026-05-15T22:55:23Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "cotangentExactSeq_structure_h_exact"
+    },
+    "session": {
+      "id": "session_113",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Off-limits this iter (named gap #2, deferred parallel to instIsMonoidal_W)."
+    },
+    "attempts": [],
+    "next_steps": "Off-limits. Re-evaluate when instIsMonoidal_W or Mathlib gap closes."
+  },
+  {
+    "timestamp": "2026-05-15T22:55:23Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "smooth_iff_locally_free_omega"
+    },
+    "session": {
+      "id": "session_113",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Off-limits this iter (Phase B scheduled last). Signature mismatch flagged by iter-112's lean-vs-blueprint-checker was RESOLVED THIS ITER via the iter-113 plan-phase refactor lane (`refactor-differentials-signatures-iter113`): L873 now reads `AlgebraicGeometry.IsSmoothOfRelativeDimension n f ↔ ...` instead of `Smooth f ↔ ...`. Two cosmetic deprecation warnings remain (the `Is` prefix is deprecated for `SmoothOfRelativeDimension`); these will be cleaned up in a future iter alongside a blueprint-writer prose update.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Iter-115+ prover lane (after the iter-114 helper closure). Signature is now correct; Lean body remains `sorry`. Estimated 2–4 iters for closure per iter-111 LOC budget."
+  },
+  {
+    "timestamp": "2026-05-15T22:55:23Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "cotangent_at_section"
+    },
+    "session": {
+      "id": "session_113",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Off-limits this iter. Signature mismatch RESOLVED THIS ITER via the refactor lane: hypothesis `hsmooth` now reads `AlgebraicGeometry.IsSmoothOfRelativeDimension n f` instead of `Smooth f`. Cosmetic deprecation warning carries over from L835.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Scheduled second-to-last in Phase B; corollary of `smooth_iff_locally_free_omega`. ~1–2 iters once that closes."
+  },
+  {
+    "timestamp": "2026-05-15T22:55:23Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "serre_duality_genus"
+    },
+    "session": {
+      "id": "session_113",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Off-limits (named gap #7). Signature mismatch RESOLVED THIS ITER via the refactor lane: L1036–L1038 now reads `Module.rank k (HModule k (moduleKSheafOfModules C (relativeDifferentials C.hom)) 0) = Module.rank k (HModule k (toModuleKSheaf C) 1)` — i.e. `dim H^0(Ω_{C/k}) = dim H^1(O_C)` per blueprint (was `H^0 = H^0`, mathematically false for genus > 1).",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Remains a named-deferred Mathlib gap (#7). No prover dispatch planned; gates on Mathlib upstream of Serre duality machinery. The `geometrically-irreducible` upgrade noted in the iter-113 plan-agent verification (`AlgebraicGeometry.IsGeometricallyIntegral` does NOT exist in Mathlib b80f227) is a future-compatibility deferral; the current `[IsIntegral C.left]` plus `[IsProper C.hom]` plus `Smooth C.hom` hypotheses are kept."
+  }
+]

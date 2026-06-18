@@ -1,0 +1,84 @@
+[
+  {
+    "timestamp": "2026-05-09T11:00:25Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/MayerVietoris.lean",
+      "theorem": "CategoryTheory.Abelian.Ext.chgUnivLinearEquiv"
+    },
+    "session": {
+      "id": "session_34",
+      "model": "archon-prover"
+    },
+    "findings": {
+      "blocker": "",
+      "key_lemmas_used": [
+        "Abelian.Ext.add_hom",
+        "Abelian.Ext.smul_hom",
+        "Abelian.Ext.homEquiv_chgUniv",
+        "Abelian.Ext.homAddEquiv_apply",
+        "Abelian.Ext.ext",
+        "HasDerivedCategory.standard"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Append the verbatim probe-confirmed body of Abelian.Ext.chgUnivLinearEquiv (with two private helpers chgUniv_add / chgUniv_smul) plus a multi-paragraph docstring section header, between the open CategoryTheory line and namespace AlgebraicGeometry.Scheme. Simultaneously extend the universe binders u v to u v w w'.",
+        "code_tried": "noncomputable def Abelian.Ext.chgUnivLinearEquiv {R : Type*} [Ring R] {C : Type _} [Category C] [Abelian C] [Linear R C] [HasExt.{w} C] [HasExt.{w'} C] (X Y : C) (n : ℕ) : Abelian.Ext.{w} X Y n ≃ₗ[R] Abelian.Ext.{w'} X Y n where toFun := Abelian.Ext.chgUniv (w := w) (w' := w') ; invFun := Abelian.Ext.chgUniv (w := w') (w' := w) ; map_add' := Abelian.Ext.chgUniv_add ; map_smul' := Abelian.Ext.chgUniv_smul ; left_inv := ... ; right_inv := ... -- with private helpers using letI := HasDerivedCategory.standard C; ext; rw [add_hom/smul_hom, ← homAddEquiv_apply ...]; change ...; rw [homEquiv_chgUniv, ...]; rw [← add_hom/smul_hom]",
+        "line_number": 112,
+        "lean_error": "",
+        "goal_before": "Top-of-file structure: set_option ... / universe u v / open ... / namespace AlgebraicGeometry.Scheme. Need to inject the universe-bump LinearEquiv gap-fill before the namespace.",
+        "goal_after": "File now has new section 'Iter-034 Mathlib gap-fill' between L43 open ... and L131 namespace AlgebraicGeometry.Scheme. Universe binders extended to u v w w'. Both private helper lemmas and the bundled LinearEquiv definition typecheck.",
+        "result": "success",
+        "insight": "The Mathlib gap-fill's load-bearing intermediate is Abelian.Ext.homEquiv_chgUniv (Basic.lean L543) which says the underlying derived-category morphism is preserved by chgUniv. Combined with add_hom (L364) and smul_hom (Linear.lean L52), the underlying-morphism preservation forces additivity and R-linearity. The letI := HasDerivedCategory.standard C is required because add_hom / smul_hom are stated against the standard derived-category instance."
+      }
+    ],
+    "next_steps": "Mathlib upstream PR is plausible (off-Archon): the body uses only Mathlib API and could be contributed back as a single PR. Project-side: the helper is now available for any future R-linear universe bumps on Ext."
+  },
+  {
+    "timestamp": "2026-05-09T11:01:19Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/MayerVietoris.lean",
+      "theorem": "AlgebraicGeometry.Scheme.HModule'_eq_HModule_linearEquiv"
+    },
+    "session": {
+      "id": "session_34",
+      "model": "archon-prover"
+    },
+    "findings": {
+      "blocker": "",
+      "key_lemmas_used": [
+        "LinearEquiv.trans",
+        "HModule'_top_linearEquiv",
+        "Abelian.Ext.chgUnivLinearEquiv"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Append the verbatim probe-confirmed one-liner inside section CoverTotality, replacing the end CoverTotality boundary with the new declaration's docstring, body, and a fresh end CoverTotality. Both [HasExt.{u}] and [HasExt.{u + 1}] listed as explicit hypotheses (per plan-agent HasExt resolution probe).",
+        "code_tried": "noncomputable def HModule'_eq_HModule_linearEquiv (k : Type u) [Field k] {C : Type v} [Category.{u, v} C] {J : GrothendieckTopology C} [HasWeakSheafify J (Type u)] [HasSheafify J (ModuleCat.{u} k)] [HasExt.{u} (Sheaf J (ModuleCat.{u} k))] [HasExt.{u+1} (Sheaf J (ModuleCat.{u} k))] (F : Sheaf J (ModuleCat.{u} k)) (n : ℕ) {T : C} (hT : IsTerminal T) : HModule' k F n T ≃ₗ[k] HModule k F n := (HModule'_top_linearEquiv k F n hT).trans Abelian.Ext.chgUnivLinearEquiv",
+        "line_number": 903,
+        "lean_error": "Whitespace-linter warning only: 'missing space in the source: [HasExt.{u+1} (Sheaf should be written as [HasExt.{u + 1}'. Zero errors at the type-checking level.",
+        "goal_before": "Post-iter-033 file with section CoverTotality containing iter-031's HModule'_top_sourceIso, iter-032's HModule_top_linearEquiv, iter-033's HModule'_top_linearEquiv, and end CoverTotality.",
+        "goal_after": "File now has the new HModule'_eq_HModule_linearEquiv declaration inside section CoverTotality, after iter-033's HModule'_top_linearEquiv. Type-checks; one whitespace-linter warning.",
+        "result": "partial",
+        "insight": "The whitespace linter triggers only on type-class binder syntax [HasExt.{u+1} ...], not on expression-position Ext.{u+1} uses. The iter-032 declaration HModule_top_linearEquiv uses Ext.{u+1} in expression position and was not flagged. Triggers iter-033 → iter-034 process drift insight: align type-class binders with explicit spaces."
+      },
+      {
+        "attempt": 2,
+        "strategy": "One-character whitespace fix on the HasExt.{u+1} binder, replacing it with HasExt.{u + 1} to satisfy the linter.",
+        "code_tried": "[HasExt.{u+1} (Sheaf J (ModuleCat.{u} k))] → [HasExt.{u + 1} (Sheaf J (ModuleCat.{u} k))]",
+        "line_number": 909,
+        "lean_error": "",
+        "goal_before": "Type-checks but with one whitespace-linter warning on the HasExt.{u+1} binder.",
+        "goal_after": "All-clean: errors=0, warnings=0.",
+        "result": "success",
+        "insight": "The whitespace linter accepts u + 1 (with spaces) in type-class binder position. Pattern locked in for future iter-035+ closures using HasExt.{u+1}."
+      }
+    ],
+    "next_steps": "Iter-035: specialise this bridge to the curve case via iter-029's toMayerVietorisSquare_toSquare_X₄ simp lemma + the canonical IsTerminal witness on ⊤ : (Opens X)ᵒᵖ. Plausibly single-iteration ~10-20 LOC append."
+  }
+]

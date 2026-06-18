@@ -1,0 +1,121 @@
+[
+  {
+    "timestamp": "2026-05-15T16:15:39Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "h_loc_exact (inside basicOpenCover_isCechAcyclicCover_toModuleKSheaf)"
+    },
+    "session": {
+      "id": "session_107",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Step 1c of the analogist Q1 ALIGN_WITH_MATHLIB recipe closed inline (~40 LOC) by inserting h_pi_eq_inf' (∏ᶜ → Finset.inf' image-Finset bridge) + h_V_affine (IsAffineOpen of the slice cover) + h_isLoc (per-coord IsLocalization.Away ((presheafMap _).hom f.1) Γ(V_x ⊓ D(f.1))) at L1796–L1834. Steps 2-4 (algebra adapter + IsLocalizedModule.pi + IsLocalizedModule.iso + Function.Exact.iff_of_ladder_linearEquiv) deferred — 2 attempts (A: letI ... in <goal-type> propagation; B: explicit @-form on IsLocalizedModule) failed at structural blockers (letI in goal-type elaborates eagerly leaving no binders; explicit @-form has brittle argument order and RingHom.toLinearMap doesn't exist on bare RingHom). The trailing sorry remains at L1846 (was L1802; +44 LOC of Step 1c scaffolding).",
+      "key_lemmas_used": [
+        "Limits.Pi.π",
+        "le_iInf",
+        "Limits.Pi.lift",
+        "homOfLE",
+        "iInf_le",
+        "Finset.inf_univ_eq_iInf",
+        "Finset.inf'_eq_inf",
+        "Finset.inf'_image",
+        "Finset.image_nonempty",
+        "basicOpenCover_finset_inf'_isAffineOpen",
+        "IsAffineOpen.isLocalization_of_eq_basicOpen",
+        "Scheme.basicOpen_res (preserved from iter-108)",
+        "ConcreteCategory.hom",
+        "RingHom.toAlgebra",
+        "Submonoid.powers"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Step 1c bridge — rewrite ∏ᶜ to Finset.inf' over Finset.image x Finset.univ so the project's basicOpenCover_finset_inf'_isAffineOpen helper applies. Sidesteps the universe mismatch on Mathlib's CompleteLattice.finite_product_eq_finset_inf (which requires α, ι : Type u same-universe; Fin (n+1) : Type 0 ≠ Opens : Type u).",
+        "code_tried": "classical\nhave h_pi_eq_inf' (x : Fin (n + 1) → ↑s₀) :\n    (∏ᶜ fun a => basicOpenCover (C := C) (U := U) ↑s₀ (x a)) =\n      (Finset.image x Finset.univ).inf'\n        (Finset.image_nonempty.mpr Finset.univ_nonempty)\n        (basicOpenCover (C := C) (U := U) (↑s₀ : Set Γ(C.left, U))) := by\n  rw [show (∏ᶜ fun a => basicOpenCover (C := C) (U := U) ↑s₀ (x a)) =\n      ⨅ a, basicOpenCover (C := C) (U := U) ↑s₀ (x a) from\n    le_antisymm (le_iInf fun a => leOfHom (Pi.π _ a))\n      (leOfHom (Pi.lift fun a => homOfLE (iInf_le _ a)))]\n  rw [← Finset.inf_univ_eq_iInf, ← Finset.inf'_eq_inf]\n  exact (Finset.inf'_image\n      (s := (Finset.univ : Finset (Fin (n+1)))) (f := x)\n      (hs := Finset.image_nonempty.mpr Finset.univ_nonempty)\n      (g := basicOpenCover (C := C) (U := U) (↑s₀ : Set Γ(C.left, U)))).symm",
+        "line_number": "1799-1812 (BasicOpenCech.lean, inline in h_loc_exact body)",
+        "lean_error": "(no error — h_pi_eq_inf' elaborates clean and the file compiles end-to-end)",
+        "goal_before": "trailing sorry at L1802 of h_loc_exact body, with h_V_le_U and h_slice_eq from iter-108 in scope.",
+        "goal_after": "h_pi_eq_inf' x : (∏ᶜ ...) = (Finset.image x univ).inf' ... basicOpenCover ↑s₀ — in scope. Unblocks h_V_affine via h_pi_eq_inf' x ▸ basicOpenCover_finset_inf'_isAffineOpen hU ↑s₀ (Finset.image x univ) _.",
+        "result": "success",
+        "insight": "Direct rw on Mathlib's CompleteLattice.finite_product_eq_finset_inf fails for universe-mismatch reasons (Fin (n+1) : Type 0 vs Opens : Type u); the workaround is a 3-step bridge: (i) ∏ᶜ → ⨅ via Pi.π/Pi.lift le_antisymm, (ii) ⨅ → Finset.univ.inf via Finset.inf_univ_eq_iInf, (iii) Finset.univ.inf' (g ∘ x) → (Finset.image x univ).inf' g via reversed Finset.inf'_image. This is reusable for any future Fin-indexed ∏ᶜ → image-Finset.inf' bridging inside a Čech proof."
+      },
+      {
+        "attempt": 2,
+        "strategy": "h_V_affine — derive IsAffineOpen of the slice cover by transport along h_pi_eq_inf' and applying the project's basicOpenCover_finset_inf'_isAffineOpen helper (iter-057 vintage).",
+        "code_tried": "have h_V_affine (x : Fin (n + 1) → ↑s₀) :\n    IsAffineOpen (∏ᶜ fun a => basicOpenCover (C := C) (U := U) ↑s₀ (x a)) :=\n  h_pi_eq_inf' x ▸ basicOpenCover_finset_inf'_isAffineOpen hU\n    (↑s₀ : Set Γ(C.left, U)) (Finset.image x Finset.univ)\n    (Finset.image_nonempty.mpr Finset.univ_nonempty)",
+        "line_number": "1814-1818 (BasicOpenCech.lean)",
+        "lean_error": "(no error)",
+        "goal_before": "(after h_pi_eq_inf' in scope) IsAffineOpen lemma needed for hU.isLocalization_of_eq_basicOpen.",
+        "goal_after": "h_V_affine x : IsAffineOpen (∏ᶜ ...) in scope.",
+        "result": "success",
+        "insight": "Single-line term-mode proof reusing iter-057's basicOpenCover_finset_inf'_isAffineOpen helper. The image-Finset bridge is exactly what the helper expects (Finset (↑s₀), not Fin (n+1) → ↑s₀)."
+      },
+      {
+        "attempt": 3,
+        "strategy": "h_isLoc — per-coord IsLocalization.Away via (h_V_affine x).isLocalization_of_eq_basicOpen + the iter-108 h_slice_eq. Explicit @-form threads the algebra ((presheafMap inf_le_left).hom).toAlgebra on the conclusion type to match Mathlib's signature exactly.",
+        "code_tried": "have h_isLoc (x : Fin (n + 1) → ↑s₀) :\n    @IsLocalization.Away _ _\n        ((ConcreteCategory.hom\n            (C.left.presheaf.map (homOfLE (h_V_le_U x)).op)) (f.1 : Γ(C.left, U)))\n        (C.left.presheaf.obj (Opposite.op (\n          (∏ᶜ fun a => basicOpenCover (C := C) (U := U) ↑s₀ (x a))\n            ⊓ C.left.basicOpen f.1)))\n        _\n        ((C.left.presheaf.map (homOfLE inf_le_left).op).hom.toAlgebra) :=\n  (h_V_affine x).isLocalization_of_eq_basicOpen\n    ((ConcreteCategory.hom\n        (C.left.presheaf.map (homOfLE (h_V_le_U x)).op)) (f.1 : Γ(C.left, U)))\n    (homOfLE inf_le_left) (h_slice_eq x)",
+        "line_number": "1822-1834 (BasicOpenCech.lean)",
+        "lean_error": "(no error)",
+        "goal_before": "Per-coord IsLocalization.Away needed at coord f, with the per-x algebra threaded explicitly.",
+        "goal_after": "h_isLoc x : @IsLocalization.Away R _ <restricted-f.1> Γ(V_x ⊓ D(f.1)) _ <restriction-algebra> in scope. Step 1c complete; recipe Steps 2-4 remain.",
+        "result": "success",
+        "insight": "Modeled on the project's existing basicOpenCover_finset_inf'_isLocalization at L330. The explicit @-form sidesteps the per-x algebra-instance threading problem at this micro-step by inlining the algebra term on the conclusion type. This DOES NOT solve the global per-x algebra issue downstream — see Step 2 attempts below."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Step 2 — install per-x Algebra R Γ(V_x) + Algebra R Γ(V_x ⊓ D(f.1)) + IsScalarTower bookkeeping via letI in goal-type form; rely on infer_instance from the body.",
+        "code_tried": "have h_IsLocMod (x : Fin (n + 1) → ↑s₀) :\n  letI alg1 : Algebra R Γ(V_x) := ((presheafMap (homOfLE (h_V_le_U x)).op).hom).toAlgebra\n  letI alg2 : Algebra Γ(V_x) Γ(V_x ⊓ D(f.1)) := ((presheafMap (homOfLE inf_le_left).op).hom).toAlgebra\n  letI alg3 : Algebra R Γ(V_x ⊓ D(f.1)) := ((presheafMap _ ).hom).toAlgebra\n  letI scTower : IsScalarTower R Γ(V_x) Γ(V_x ⊓ D(f.1)) := IsScalarTower.of_algebraMap_eq (by ...)\n  IsLocalizedModule (powers f.1) <linear-map>\n:= by intro alg1 alg2 alg3 scTower; ...",
+        "line_number": "lean_multi_attempt — not committed",
+        "lean_error": "intro fails: 'No additional binders to introduce' — letI in goal type elaborates eagerly during type-checking; the body sees the goal without binders.",
+        "goal_before": "Set up per-x algebra instances for the instIsLocalizedModuleToLinearMapToAlgHomOfIsLocalizationAlgebraMapSubmonoid adapter.",
+        "goal_after": "Failed — binders not introduced; typeclass inference cannot recover the algebras from the type signature.",
+        "result": "failed",
+        "insight": "letI ... in <goal> form does NOT propagate to the proof body's typeclass inference under Lean 4's elaboration model. The letI elaborates immediately during goal type-checking, so the body has no `intro` targets and the local typeclass instances are not visible to `infer_instance`. This is a recurring trap; documented for the Knowledge Base."
+      },
+      {
+        "attempt": 5,
+        "strategy": "Step 2 — explicit @-form on IsLocalizedModule, threading R, S, M, M', LinearMap manually.",
+        "code_tried": "have h_IsLocMod (x : Fin (n + 1) → ↑s₀) :\n  @IsLocalizedModule (↑R) _\n    (Submonoid.powers (f.1 : R))\n    (↑Γ(V_x))\n    _ _\n    (↑Γ(V_x ⊓ D(f.1)))\n    _\n    <module-instance>\n    <linear-map-via-RingHom.toLinearMap>\n:= by ...",
+        "line_number": "lean_multi_attempt — not committed",
+        "lean_error": "argument-position 2 misparsed as Submonoid instead of CommSemiring R; RingHom.toLinearMap not found on bare RingHom (needs algebra structure first).",
+        "goal_before": "Same as Attempt 4 — install per-x IsLocalizedModule (powers f.1).",
+        "goal_after": "Failed — explicit-argument order brittle; would require ~60 additional LOC of explicit-argument bookkeeping.",
+        "result": "failed",
+        "insight": "Explicit @-form on IsLocalizedModule does not scale beyond the IsLocalization.Away conclusion shape; the argument order is unstable across Lean versions / Mathlib refactors, and RingHom→LinearMap requires the algebra structure to be installed first. Confirms Step 2 needs a different decomposition — either term-mode IsLocalizedModule.mk construction or moving the algebra setup to outer scope (not per-x). Iter-110 prover should attempt term-mode mk or pivot per the escape-valve menu."
+      },
+      {
+        "attempt": 6,
+        "strategy": "Step 2 stretch (L1120 cechCofaceMap_pi_smul) — NOT attempted; correctly gated per iter-107 plan's exit criterion (Step 1 partial → Step 2 skipped; L1120 stays PAUSED).",
+        "code_tried": "(not attempted)",
+        "line_number": "1120 (BasicOpenCech.lean)",
+        "lean_error": "n/a",
+        "goal_before": "n/a",
+        "goal_after": "n/a",
+        "result": "skipped",
+        "insight": "iter-107 plan's gating rule correctly fires: Step 1 closed Step 1c only (PARTIAL), so the Step 2 stretch on L1120 is skipped per PROGRESS.md. L1120 streak (7 consecutive PARTIAL through iter-105 Archon) remains FROZEN at 7 — iter-107 did not extend it."
+      }
+    ],
+    "next_steps": "Per iter-107 strategy-critic exit criterion, this is the second consecutive PARTIAL on L1846. Iter-108 (Archon) plan agent MUST fire the escape-valve menu: (1) DEFAULT — defer L1846 as a named Mathlib-gap sorry (cheapest; preserves iter-107 Step 1c progress); (2) ALTERNATE — fire C1 promotion (LineBundle architectural refactor, orthogonal to L1846); (3) RE-CONSULT — dispatch mathlib-analogist on a Step 2-only design that avoids the letI-in-goal-type propagation issue (e.g. term-mode IsLocalizedModule.mk, or outer-scope per-x algebra setup via a top-level helper — but the iter-107 plan explicitly forbids 'No new top-level helpers', so a re-design route would require explicit plan-agent authorisation). Recommendation: defer-as-gap default, with C1 promotion queued as the strategic move."
+  },
+  {
+    "timestamp": "2026-05-15T16:15:39Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "cechCofaceMap_pi_smul trailing sorry (L1120, PAUSED through iter-107)"
+    },
+    "session": {
+      "id": "session_107",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "PAUSED per strategy-critic-iter106 + progress-critic-iter106 STUCK verdicts; ratified by progress-critic-iter107 (STUCK re-affirmed). 7 consecutive PARTIAL iters on this slot (iter-099/100/101/103/105/106/107 narrative). 6 recurring blocker phrases at ≥3-iter persistence. iter-107 partial-proof scaffold (hRel' + h_iter104 := cechCofaceMap_summand_family_R_linear hU s₀ n hn i r' y') preserved byte-for-byte at L1115-L1119 on disk as load-bearing infrastructure for a future re-attempt. Reopening requires either: (i) mathlib-analogist Q2 Path B (tactical set F + change pivot, ~30-50 LOC, structurally new); (ii) C1 promotion (LineBundle refactor, orthogonal but per user-iter107 hint authorised); or (iii) defer-as-Mathlib-gap. The iter-107 plan's gating rule explicitly did NOT touch L1120 this iter.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "L1120 reopening depends on iter-108 (Archon) plan-agent's escape-valve choice. If iter-107 PARTIAL on L1846 fires the escape-valve menu and option (3) re-consult is chosen, the analogist's Q2 Path B is the natural sibling to revisit on L1120. Otherwise L1120 stays PAUSED through iter-108 / iter-109; if C1 promotion fires in iter-108, L1120 becomes irrelevant once the LineBundle refactor lands the correct definitions and the cechCofaceMap_pi_smul becomes a downstream consumer of new infrastructure."
+  }
+]

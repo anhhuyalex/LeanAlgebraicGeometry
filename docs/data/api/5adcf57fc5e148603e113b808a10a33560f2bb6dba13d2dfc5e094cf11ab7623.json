@@ -1,0 +1,125 @@
+[
+  {
+    "timestamp": "2026-05-29T09:28:01Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "tensorObj_restrict_iso"
+    },
+    "session": {
+      "id": "session_206",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "PresheafOfModules.pullback φ is an abstract left adjoint with no sectionwise formula; the base-change comparison MAP itself is absent from Mathlib (it is the oplax-monoidal structure / mate of the strong-monoidal pushforward). Flatness only upgrades an already-existing map to an iso — it does NOT construct it, so re-scoping to line bundles does NOT unblock. Multi-file mathlib-build gap.",
+      "key_lemmas_used": [
+        "Scheme.Modules.restrictFunctorIsoPullback",
+        "SheafOfModules.sheafificationCompPullback"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Reduce restrict to pullback, move pullback inside sheafification, then reduce to a presheaf-level base-change iso",
+        "code_tried": "refine (Scheme.Modules.restrictFunctorIsoPullback f).app (tensorObj M N) ≪≫ ?_  -- then sheafificationCompPullback f.toRingCatSheafHom; residual sorry",
+        "line_number": "244-281",
+        "lean_error": "none (compiles GREEN with residual typed sorry)",
+        "goal_before": "(tensorObj M N).restrict f ≅ tensorObj (M.restrict f) (N.restrict f)",
+        "goal_after": "sheafify ((PresheafOfModules.pullback φ.hom).obj (M.val ⊗ N.val)) ≅ (M.restrict f).tensorObj (N.restrict f)",
+        "result": "partial",
+        "insight": "sheafificationCompPullback IS in Mathlib (corrects the old docstring claiming sheafification-commutes-with-pullback was absent). Two genuine reduction steps land; the residual is the presheaf base-change iso, requiring an oplax-monoidal instance on PresheafOfModules.pullback. ModuleCat.extendScalars is Monoidal sectionwise — the gap is the lift through the partial-left-adjoint construction, not an invention."
+      }
+    ],
+    "next_steps": "Do NOT retry as a single prove lane. Fork: (a) open a mathlib-build lane to construct PresheafOfModules.pullbackMonoidalComparison by lifting ModuleCat.extendScalars.Monoidal; (b) pause TS as COE was paused; (c) pivot strategic focus to a route not gated on absent Mathlib monoidal infrastructure (Albanese-UP / RR-free A.2.c excision)."
+  },
+  {
+    "timestamp": "2026-05-29T09:28:01Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "monoidalCategory_instance_removal"
+    },
+    "session": {
+      "id": "session_206",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Remove the dead `monoidalCategory := sorry` instance and the two off-path MonoidalClosed-route transport supplements, replacing §2 with an off-critical-path remark",
+        "code_tried": "head -n 343 ... | removed `MathlibSupplementMonoidalSheafification` section (isMonoidal_W_of_whiskerLeft, monoidalCategoryOfIsMonoidalW); §2 rewritten as a doc remark matching rem:scheme_modules_monoidal_off_path",
+        "line_number": "135-160",
+        "lean_error": "none (GREEN; grep-confirmed no external consumers)",
+        "goal_before": "N/A (declaration removal)",
+        "goal_after": "N/A",
+        "result": "success",
+        "insight": "Closes the iter-203/204/205 contamination guard (the sorry-bearing `instance` that flowed sorryAx to consumers). Net −1 sorry. The full MonoidalCategory on all modules is genuinely off the relative-Picard critical path (the group law on iso-classes consumes no coherence data)."
+      }
+    ],
+    "next_steps": "Removal is permanent; the blueprint rem:scheme_modules_monoidal_off_path records the rationale."
+  },
+  {
+    "timestamp": "2026-05-29T09:28:01Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "exists_tensorObj_inverse"
+    },
+    "session": {
+      "id": "session_206",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Gated on tensorObj_restrict_iso (the global associator/braiding/dual contraction need it glued on a common trivialising cover). Retargeted to the explicit unit SheafOfModules.unit X.ringCatSheaf (the 𝟙_ unit object disappeared with the removed MonoidalCategory instance).",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Not attempted as a proof; only the signature was retargeted to the explicit unit object after the MonoidalCategory instance was removed",
+        "code_tried": "exists_tensorObj_inverse ... Nonempty (tensorObj L Linv ≅ SheafOfModules.unit X.ringCatSheaf)",
+        "line_number": "320-324",
+        "lean_error": "none (typed sorry body)",
+        "goal_before": "N/A",
+        "goal_after": "N/A",
+        "result": "partial",
+        "insight": "Adding a body now would only introduce bare sorries; correctly withheld. Entirely downstream of tensorObj_restrict_iso."
+      }
+    ],
+    "next_steps": "Do not assign until tensorObj_restrict_iso closes."
+  },
+  {
+    "timestamp": "2026-05-29T09:28:01Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "addCommGroup_via_tensorObj"
+    },
+    "session": {
+      "id": "session_206",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Consumer instance gated on the four existence-of-iso lemmas, all of which consume tensorObj_restrict_iso. Marked @[implicit_reducible] noncomputable def (not instance) to avoid a diamond with RelPicFunctor.lean's addCommGroup.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Added @[implicit_reducible] attribute to clear a class-type lint; body left as typed sorry",
+        "code_tried": "@[implicit_reducible]\nnoncomputable def addCommGroup_via_tensorObj ... := sorry",
+        "line_number": "360-363",
+        "lean_error": "none (typed sorry body)",
+        "goal_before": "N/A",
+        "goal_after": "N/A",
+        "result": "partial",
+        "insight": "Terminal consumer of the whole TS cone; cannot close until tensorObj_restrict_iso and the four iso lemmas land."
+      }
+    ],
+    "next_steps": "Terminal; gated on the entire upstream cone."
+  }
+]

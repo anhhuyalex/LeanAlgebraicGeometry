@@ -1,0 +1,40 @@
+[
+  {
+    "timestamp": "2026-05-09T07:03:08Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/MayerVietoris.lean",
+      "theorem": "AlgebraicGeometry.Scheme.HModule_top_linearEquiv"
+    },
+    "session": {
+      "id": "session_46",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "Abelian.Ext.precompOfLinear",
+        "Abelian.Ext.mk₀",
+        "Abelian.Ext.mk₀_comp_mk₀",
+        "Abelian.Ext.comp_assoc_of_second_deg_zero",
+        "Abelian.Ext.mk₀_id_comp",
+        "LinearEquiv.ofLinear",
+        "AlgebraicGeometry.Scheme.HModule'_top_sourceIso"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Single-Edit append of plan-agent's probe-confirmed term-mode body inside existing `section CoverTotality` after `HModule'_top_sourceIso`. Verbatim copy — body had been validated end-to-end with `lean_run_code` at plan-agent time and required no exploratory probing.",
+        "code_tried": "noncomputable def HModule_top_linearEquiv\n    (k : Type u) [Field k]\n    {C : Type v} [Category.{u, v} C] {J : GrothendieckTopology C}\n    [HasWeakSheafify J (Type u)] [HasSheafify J (ModuleCat.{u} k)]\n    [HasExt (Sheaf J (ModuleCat.{u} k))]\n    (F : Sheaf J (ModuleCat.{u} k)) (n : ℕ) {T : C} (hT : IsTerminal T) :\n    Abelian.Ext.{u+1}\n        ((presheafToSheaf J (ModuleCat.{u} k)).obj\n          ((yoneda ⋙ (Functor.whiskeringRight _ _ _).obj (ModuleCat.free k)).obj T)) F n\n      ≃ₗ[k] HModule k F n :=\n  let α := HModule'_top_sourceIso k hT\n  LinearEquiv.ofLinear\n    ((Abelian.Ext.mk₀ α.inv).precompOfLinear k F (zero_add n))\n    ((Abelian.Ext.mk₀ α.hom).precompOfLinear k F (zero_add n))\n    (by ext x; change (Abelian.Ext.mk₀ α.inv).comp ((Abelian.Ext.mk₀ α.hom).comp x (zero_add n)) (zero_add n) = x; rw [← Abelian.Ext.comp_assoc_of_second_deg_zero, Abelian.Ext.mk₀_comp_mk₀, α.inv_hom_id, Abelian.Ext.mk₀_id_comp])\n    (by ext y; change (Abelian.Ext.mk₀ α.hom).comp ((Abelian.Ext.mk₀ α.inv).comp y (zero_add n)) (zero_add n) = y; rw [← Abelian.Ext.comp_assoc_of_second_deg_zero, Abelian.Ext.mk₀_comp_mk₀, α.hom_inv_id, Abelian.Ext.mk₀_id_comp])",
+        "line_number": "739",
+        "lean_error": null,
+        "goal_before": "Abelian.Ext.{u+1} ((presheafToSheaf J (ModuleCat.{u} k)).obj ((yoneda ⋙ (Functor.whiskeringRight _ _ _).obj (ModuleCat.free k)).obj T)) F n ≃ₗ[k] HModule k F n",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Single-Edit closure of the probe-confirmed body. Load-bearing details preserved verbatim: (a) `noncomputable` modifier (precompOfLinear and the iter-031 source iso are noncomputable); (b) `Abelian.Ext.{u+1}` universe annotation pins the LHS to `Type (u+1)` matching `HModule k F n` (without it Lean defaults to `Ext.{u}` and breaks typecheck); (c) round-trip direction matters — `α.inv_hom_id` for the HModule-side round-trip (mk₀ α.hom then mk₀ α.inv) and `α.hom_inv_id` for the LHS-side round-trip; (d) the four-step rewrite chain `← comp_assoc_of_second_deg_zero` + `mk₀_comp_mk₀` + iso identity + `mk₀_id_comp` closes both round-trips uniformly; (e) all Mathlib names fully qualified with `Abelian.Ext.` prefix (file does not `open Abelian`); (f) same `zero_add n` proof reused at all four occurrences. Fifteenth consecutive substantive single-Edit closure of a probe-confirmed body."
+      }
+    ],
+    "next_steps": "Iter-033+: build the universe bridge from `HModule' k F n T : Type u` to `Abelian.Ext.{u+1} ((presheafToSheaf J _).obj ((yoneda ⋙ ModuleCat.free k).obj T)) F n : Type (u+1)`. Two routes: (a) refactor iter-014 `HModule'` to drop its `Type u` ascription (risky — 156 downstream usages) — recommended single-iteration refactor task; (b) `ULift.{u+1}` wrapper (awkward downstream because `Module.Finite k (HModule k F i)` operates on the unwrapped form). After the bridge: specialise to `AffineCoverMVSquare`, then attack affine-vanishing extraction `H^{>0}(Spec A, F) = 0`, eventually reaching Serre-finiteness `Module.Finite k (HModule k F i)`."
+  }
+]

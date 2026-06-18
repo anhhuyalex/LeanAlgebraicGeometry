@@ -1,0 +1,156 @@
+[
+  {
+    "timestamp": "2026-05-15T05:11:30Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "cechCofaceMap_summand_family_R_linear"
+    },
+    "session": {
+      "id": "session_102",
+      "model": "sonnet"
+    },
+    "findings": {
+      "blocker": "",
+      "key_lemmas_used": [
+        "ModuleCat.piIsoPi_inv_kernel_ι_apply",
+        "Limits.Pi.lift_π_apply",
+        "ConcreteCategory.comp_apply",
+        "RingHom.toModule_smul",
+        "presheafMap_restrict_collapse",
+        "RingHom.map_mul"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Probe goal shape post-intro + funext",
+        "code_tried": "intro R Z₁ Z_int e₁ e_int r y\nfunext j'\nsorry",
+        "line_number": 536,
+        "lean_error": "",
+        "goal_before": "∀ (r : R) (y : ∀ i, Z₁ i), e_int ((cechCofaceMap_summand_family s₀ n i).hom (e₁.symm (r • y))) = r • e_int ((cechCofaceMap_summand_family s₀ n i).hom (e₁.symm y))",
+        "goal_after": "case h ... ⊢ e_int (... (e₁.symm (r • y))) j' = (r • e_int (... (e₁.symm y))) j'",
+        "result": "partial",
+        "insight": "funext j' lands cleanly post-intro; no LinearMap.ext detour needed."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Distribute outer r • via Pi.smul_apply",
+        "code_tried": "intro R Z₁ Z_int e₁ e_int r y\nfunext j'\nsimp only [Pi.smul_apply]\nsorry",
+        "line_number": 536,
+        "lean_error": "",
+        "goal_before": "(r • e_int (... (e₁.symm y))) j'",
+        "goal_after": "r • e_int (... (e₁.symm y)) j'",
+        "result": "partial",
+        "insight": "Pi.smul_apply distributes r • on the RHS into per-coord. Trivial first move."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Pivot e_int x j' via piIsoPi_hom_ker_subtype_apply rw",
+        "code_tried": "rw [← ModuleCat.piIsoPi_hom_ker_subtype_apply Z_int j', ← ModuleCat.piIsoPi_hom_ker_subtype_apply Z_int j']",
+        "line_number": 536,
+        "lean_error": "did not find an occurrence of the pattern",
+        "goal_before": "e_int (... (e₁.symm (r • y))) j' = r • e_int (... (e₁.symm y)) j'",
+        "goal_after": "(unchanged)",
+        "result": "failed",
+        "insight": "Same iter-099/103 blocker: LinearEquiv coercion in e_int = (piIsoPi).toLinearEquiv masks the discrim key. Pivot via `show` to put Pi.π Z_int j' explicitly in head."
+      },
+      {
+        "attempt": 4,
+        "strategy": "show pivot to (Pi.π Z_int j').hom (...)",
+        "code_tried": "show (Pi.π Z_int j').hom ((cechCofaceMap_summand_family s₀ n i).hom (e₁.symm (r • y))) = r • (Pi.π Z_int j').hom ((cechCofaceMap_summand_family s₀ n i).hom (e₁.symm y))",
+        "line_number": 536,
+        "lean_error": "",
+        "goal_before": "e_int (... (e₁.symm (r • y))) j' = r • e_int (... (e₁.symm y)) j'",
+        "goal_after": "(Pi.π Z_int j').hom (... (e₁.symm (r • y))) = r • (Pi.π Z_int j').hom (... (e₁.symm y))",
+        "result": "partial",
+        "insight": "show def-eq pivot succeeds where rw fails. e_int = (piIsoPi).toLinearEquiv is rfl-equal to the (Pi.π).hom ∘ … form."
+      },
+      {
+        "attempt": 5,
+        "strategy": "Unfold named family then Pi.lift_π_apply",
+        "code_tried": "unfold cechCofaceMap_summand_family\nsimp only [Limits.Pi.lift_π_apply, ConcreteCategory.comp_apply]",
+        "line_number": 536,
+        "lean_error": "",
+        "goal_before": "(Pi.π Z_int j').hom ((cechCofaceMap_summand_family s₀ n i).hom (...))",
+        "goal_after": "(Pi.π Z_int j').hom ((Pi.lift fun i_1 ↦ ...).hom (...)) — body of named family substituted; Pi.lift_π fires",
+        "result": "partial",
+        "insight": "Named constant unfolds; Pi.lift_π_apply fires cleanly because head is a constant (not anonymous closure). VINDICATES iter-102 refactor."
+      },
+      {
+        "attempt": 6,
+        "strategy": "Pi.π Z₁ a (e₁.symm Z) = Z a via piIsoPi_inv_kernel_ι_apply",
+        "code_tried": "have hSym : ∀ (Z : ...) (a : ...), (Pi.π Z₁ a).hom (e₁.symm Z) = Z a := by intro Z a; exact ModuleCat.piIsoPi_inv_kernel_ι_apply Z₁ a Z\nrw [hSym, hSym]",
+        "line_number": 536,
+        "lean_error": "",
+        "goal_before": "(Pi.π Z_int j').hom (... (e₁.symm Z) ...)",
+        "goal_after": "(presheaf.map _).hom (Z (j' ∘ δ i)) form",
+        "result": "partial",
+        "insight": "Use inv form of piIsoPi (NOT hom form) for e₁.symm direction. piIsoPi_inv_kernel_ι_apply is the correct Mathlib lemma."
+      },
+      {
+        "attempt": 7,
+        "strategy": "RingHom.toModule_smul for r • _ expansion",
+        "code_tried": "simp only [Pi.smul_apply, RingHom.toModule_smul]",
+        "line_number": 536,
+        "lean_error": "",
+        "goal_before": "r • _ form on both Z₁ and Z_int Pi codomains",
+        "goal_after": "f(r) * _ multiplication on both sides — exposes underlying ring structure",
+        "result": "partial",
+        "insight": "RingHom.toModule_smul is rfl. Use as simp lemma to convert r • to f(r) * for downstream map_mul reasoning."
+      },
+      {
+        "attempt": 8,
+        "strategy": "Tactic-level rw [(...).hom.map_mul] (multiple variants)",
+        "code_tried": "rw [(C.left.presheaf.map Pl.op).hom.map_mul]",
+        "line_number": 536,
+        "lean_error": "failed to synthesize HMul instance / multiple variants of change/generalize_proofs/set/show all blocked",
+        "goal_before": "(f.hom) (g₁(r) * y_val) = g₂(r) * (f.hom) (y_val)",
+        "goal_after": "(unchanged or other failure)",
+        "result": "failed",
+        "insight": "HMul-synth issue on W₂ output ring (despite W₁ HMul resolving fine). Tactic-level approaches all blocked."
+      },
+      {
+        "attempt": 9,
+        "strategy": "Term-level Eq.trans + congrArg finisher",
+        "code_tried": "set Pl : ... := Pi.lift fun x => Pi.π _ ((SimplexCategory.δ i).toOrderHom x) with hPl_def\nexact ((C.left.presheaf.map Pl.op).hom.map_mul _ _).trans\n  (congrArg (· * (C.left.presheaf.map Pl.op).hom (y (j' ∘ (SimplexCategory.δ i).toOrderHom))) (presheafMap_restrict_collapse _ _ _ r))",
+        "line_number": 536,
+        "lean_error": "",
+        "goal_before": "f(r) * y_val on output ring W₂ side",
+        "goal_after": "(no goals)",
+        "result": "success",
+        "insight": "Term-level Eq.trans + congrArg bypasses HMul-synth issues. set Pl is required to give the implicit-arg metas a target type."
+      },
+      {
+        "attempt": 10,
+        "strategy": "Add letI reconstruction inside body",
+        "code_tried": "letI perI₁ : ∀ i, Module R (Z₁ i) := fun i => by apply RingHom.toModule; ...\nletI h_mod_pi₁ : Module R (∀ i, Z₁ i) := Pi.module _ _ _\nletI perI_int : ...\nletI h_mod_pi_int : ...",
+        "line_number": 536,
+        "lean_error": "",
+        "goal_before": "r • y in goal not synthesising against signature's letI bindings",
+        "goal_after": "HSMul synthesises against body-local letI",
+        "result": "success",
+        "insight": "Signature's letI bindings don't survive intro into the goal frame in a way that r • y HSMul re-synthesises. Body-local reconstruction is mandatory. Mirrors iter-092 pattern at cechCofaceMap_pi_smul L781-L805."
+      }
+    ],
+    "next_steps": "L988 (was L929) cechCofaceMap_pi_smul trailing sorry remains. Infrastructure now in place (named family + R-linearity proved). Iter-105 should attempt Route B (wrapper def cechCofaceMap_summand_family' : Fin (n+1) → ... via Fin.cast + eqToHom) per the iter-102 refactor agent's explicit recommendation. Route A (Fin transport via Finset.sum_equiv) is the alternative."
+  },
+  {
+    "timestamp": "2026-05-15T05:11:30Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "cechCofaceMap_pi_smul"
+    },
+    "session": {
+      "id": "session_102",
+      "model": "sonnet"
+    },
+    "findings": {
+      "blocker": "Fin-index mismatch between Fin (n+1) call site and Fin ((prev n) + 2) named family — not addressed this iter. Plan's escalation rule fired (Step 1 took >3 attempts) and Step 2 was correctly skipped.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Iter-105: attempt Route B wrapper def cechCofaceMap_summand_family' : Fin (n+1) → ... (Fin.cast + eqToHom) per iter-102 refactor agent recommendation. Apply alternating_zsmul_pi_smul_aux_sum_comp with G := cechCofaceMap_summand_family' and σ := fun i ↦ (-1)^↑i."
+  }
+]

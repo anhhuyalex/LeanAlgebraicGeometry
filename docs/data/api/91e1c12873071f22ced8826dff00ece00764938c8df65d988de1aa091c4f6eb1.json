@@ -1,0 +1,379 @@
+[
+  {
+    "timestamp": "2026-05-23T14:30:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects/GmScaling.lean",
+      "theorem": "gmScalingP1_chart_PLB_eq"
+    },
+    "session": {
+      "id": "session_176",
+      "model": "claude"
+    },
+    "findings": {
+      "blocker": "After Fin-normalization (analogist option (a) AS WRITTEN), bridge simp chain still fails because cover-side '(projectiveLineBarAffineCover kbar).openCover.f 0' and pullback-map-side 'Proj.awayι _ (MvPolynomial.X 0) _ Nat.one_pos' are defeq but syntactically distinct; rw fails with 'motive is not type correct'; change blows whnf heartbeat budget. HARD STOP trigger ARMED for iter-177.",
+      "key_lemmas_used": [
+        "Scheme.AffineOpenCover.openCover_f",
+        "pullback.congrHom",
+        "pullbackSpecIso_hom_base",
+        "pullbackRightPullbackFstIso_hom_fst"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "analogist option (a) AS WRITTEN: insert 'simp only [Fin.isValue, Fin.zero_eta]' (case 0) and 'simp only [Fin.isValue, Fin.mk_one]' (case 1) immediately after the existing unfold and before the bridge simp chain",
+        "code_tried": "simp only [Fin.isValue, Fin.zero_eta]",
+        "line_number": "309",
+        "lean_error": "no error per se; Fin normalization fires but 10 of 14 downstream simp args ('pullback.lift_fst', 'pullbackRightPullbackFstIso_hom_fst_assoc', etc.) flagged 'unused' — they do not unify against post-Fin-normalized LHS",
+        "goal_before": "(post-unfold) chart-map pullback equation with MvPolynomial.X ⟨0, _⟩ literals",
+        "goal_after": "Fin literals reduce to MvPolynomial.X 0 but cover-side .openCover.f 0 still doesn't unify with pullback-map-side Proj.awayι",
+        "result": "partial",
+        "insight": "Fin normalization fixed one half of the mismatch but exposed a second cover-vs-Proj.awayι syntactic mismatch"
+      },
+      {
+        "attempt": 2,
+        "strategy": "add Matrix.cons_val_zero + Scheme.AffineOpenCover.openCover_f to the Fin-normalization simp call to reduce .openCover.f and fold ![X 0, X 1] 0",
+        "code_tried": "simp only [Fin.isValue, Fin.zero_eta, Matrix.cons_val_zero, Scheme.AffineOpenCover.openCover_f]",
+        "line_number": "309",
+        "lean_error": "LHS reduces to (cover).f 0 but RHS keeps .openCover.f 0; two sides now disagree at NEW level (.openCover projection asymmetry); no downstream lemma fires",
+        "result": "failed",
+        "insight": "asymmetric simp reduction worsens the mismatch"
+      },
+      {
+        "attempt": 3,
+        "strategy": "rewrite the cover-map literal via rfl-show to the explicit Proj.awayι form",
+        "code_tried": "rw [show (projectiveLineBarAffineCover kbar).f (0 : Fin 2) = Proj.awayι _ (MvPolynomial.X 0) _ Nat.one_pos from rfl]",
+        "line_number": "309",
+        "lean_error": "motive is not type correct (HasPullback instance for pullback.map depends on the (cover).f 0 form, so abstracted motive cannot be type-checked)",
+        "result": "failed",
+        "insight": "rw cannot abstract the instance-bearing chart-map literal"
+      },
+      {
+        "attempt": 4,
+        "strategy": "use change to force the explicit Proj.awayι shape on whole goal",
+        "code_tried": "change ...",
+        "line_number": "309",
+        "lean_error": "(deterministic) timeout at whnf, maximum number of heartbeats (200000) has been reached",
+        "result": "failed",
+        "insight": "unification cost prohibitive without targeted hints"
+      },
+      {
+        "attempt": 5,
+        "strategy": "rewrite-via-pullback-condition after the chain",
+        "code_tried": "rw [pullback.condition_assoc, awayι_comp_PLB_hom]",
+        "line_number": "309",
+        "lean_error": "chain did not reduce LHS to pullback.fst _ _ ≫ pullback.fst _ _ ≫ PLB.hom form that pullback.condition_assoc expects; closer needs the chain to fire FIRST",
+        "result": "failed",
+        "insight": "closers downstream of the chain need the chain to fire first; the chain doesn't fire here"
+      }
+    ],
+    "next_steps": "Per iter-176 plan-phase commitment: iter-177 fires HARD STOP — TO_USER.md escalation surfacing temporary-axiom option AND concurrent prover lane on 'temporary axiom gmScalingP1_constant'. NO 6th option-(a) retry. Two forward-path alternatives documented in task_result (augment bridge chain with cover_f_eq_awayι helper, or Fin.cases structural pivot per analogist option (b))."
+  },
+  {
+    "timestamp": "2026-05-23T14:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/RelativeSpec.lean",
+      "theorem": "RelativeSpec.UniversalProperty"
+    },
+    "session": {
+      "id": "session_176",
+      "model": "claude"
+    },
+    "findings": {
+      "blocker": "none structural — closed; concern is that proof discharges against placeholder body RelativeSpec _𝒜 := X",
+      "key_lemmas_used": [
+        "AlgebraicGeometry.Morphisms.Affine instance [IsIso f] → IsAffineHom f",
+        "inferInstance with explicit type ascription"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "unfold structureMorphism then infer_instance",
+        "code_tried": "unfold RelativeSpec.structureMorphism; infer_instance",
+        "line_number": "206",
+        "lean_error": "failed to synthesize IsAffineHom (𝟙 X) despite priority-900 [IsIso f] → IsAffineHom f instance being in scope",
+        "result": "failed",
+        "insight": "bare infer_instance does not pin the metavariable before instance search"
+      },
+      {
+        "attempt": 2,
+        "strategy": "explicit type ascription pins the metavariable for instance search",
+        "code_tried": "unfold RelativeSpec.structureMorphism; exact (inferInstance : IsAffineHom (𝟙 X))",
+        "line_number": "206",
+        "lean_error": null,
+        "result": "success",
+        "insight": "type-ascription form unblocks instance synthesis when 'failed to synthesize' is the error"
+      }
+    ],
+    "next_steps": "Body of RelativeSpec / structureMorphism remain placeholders (X / 𝟙 X). When the quasi-coherent-algebra glue construction lands (Scheme.GlueData over Spec(𝒜(U))), both bodies upgrade and all three UniversalProperty/affine_base_iff/base_change proofs MUST be re-derived from HasAffineProperty (Stacks 01LR) + Yoneda for base_change (Stacks 01LS). Blueprint chapter Picard_RelativeSpec.tex already carries iter-173 % NOTE: flags warning of the gap; iter-176 review added explicit % NOTE: comments to the three proof blocks documenting the placeholder discharge."
+  },
+  {
+    "timestamp": "2026-05-23T14:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/RelativeSpec.lean",
+      "theorem": "RelativeSpec.affine_base_iff"
+    },
+    "session": {
+      "id": "session_176",
+      "model": "claude"
+    },
+    "findings": {
+      "blocker": "same as UniversalProperty — closed against placeholder body",
+      "key_lemmas_used": [
+        "AlgebraicGeometry.isAffine_Spec"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "show IsAffine (Spec R) then infer_instance",
+        "code_tried": "show IsAffine (Spec R); infer_instance",
+        "line_number": "230",
+        "lean_error": "style linter flags show because it changes the goal even up to defeq",
+        "result": "partial",
+        "insight": "use change instead of show for placeholder-body unfold-style proofs"
+      },
+      {
+        "attempt": 2,
+        "strategy": "change to genuine affine goal",
+        "code_tried": "change IsAffine (Spec R); infer_instance",
+        "line_number": "230",
+        "lean_error": null,
+        "result": "success",
+        "insight": null
+      }
+    ],
+    "next_steps": "see UniversalProperty next_steps — same upgrade trigger"
+  },
+  {
+    "timestamp": "2026-05-23T14:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/RelativeSpec.lean",
+      "theorem": "RelativeSpec.base_change"
+    },
+    "session": {
+      "id": "session_176",
+      "model": "claude"
+    },
+    "findings": {
+      "blocker": "closed against placeholder body",
+      "key_lemmas_used": [
+        "pullback_fst_iso_of_right_iso",
+        "asIso (pullback.fst _ _)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "witness the existential with trivial pullback algebra; produce iso via asIso (pullback.fst g (𝟙 X))",
+        "code_tried": "refine ⟨⟨T.sheaf, 𝟙 _⟩, ⟨?_⟩⟩; change pullback g (𝟙 X) ≅ T; exact asIso (pullback.fst g (𝟙 X))",
+        "line_number": "260",
+        "lean_error": null,
+        "result": "success",
+        "insight": "pullback.fst f g is iso when the SECOND argument g is iso (Mathlib instance pullback_fst_iso_of_right_iso)"
+      }
+    ],
+    "next_steps": "see UniversalProperty next_steps"
+  },
+  {
+    "timestamp": "2026-05-23T14:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/WeilDivisor.lean",
+      "theorem": "Scheme.RationalMap.order"
+    },
+    "session": {
+      "id": "session_176",
+      "model": "claude"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "Ring.ordFrac",
+        "WithZero.log",
+        "WithZero.log_zero"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "analogist dvr-rationalmap-order recipe AS WRITTEN — thread [IsLocallyNoetherian X] and [Ring.KrullDimLE 1 (X.presheaf.stalk Y.point)] instance args; body is WithZero.log (Ring.ordFrac (X.presheaf.stalk Y.point) f)",
+        "code_tried": "noncomputable def order {X : Scheme.{u}} [IsIntegral X] [IsLocallyNoetherian X] (Y : X.PrimeDivisor) [Ring.KrullDimLE 1 (X.presheaf.stalk Y.point)] (f : X.functionField) : ℤ := WithZero.log (Ring.ordFrac (X.presheaf.stalk Y.point) f)",
+        "line_number": "154",
+        "lean_error": null,
+        "result": "success",
+        "insight": "Ring.ordFrac auto-derives Nontrivial / IsFractionRing / IsNoetherianRing from [IsIntegral X] + [IsLocallyNoetherian X]; the KrullDimLE 1 instance must be threaded explicitly because the topological-coheight-to-Krull-dim bridge is a Mathlib gap"
+      }
+    ],
+    "next_steps": "iter-177+: principal via Finsupp.onFinset with Hartshorne 6.1 supplying finite support; principal_hom via WithZero.log_mul / WithZero.log_one coordinate-wise; principal_degree_zero via WithZero.log_one + finsum collapse. ALSO IMMEDIATELY: the signature change broke Lane K's OCofP.lean — see Lane K milestone for fix options."
+  },
+  {
+    "timestamp": "2026-05-23T14:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/FlatteningStratification.lean",
+      "theorem": "file-skeleton"
+    },
+    "session": {
+      "id": "session_176",
+      "model": "claude"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "Module.Flat",
+        "Module.compHom",
+        "AlgebraicGeometry.Scheme.Modules.pullback",
+        "IsImmersion (NOT IsLocallyClosedImmersion as blueprint guessed)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "scaffold 4 pinned + 3 sub-lemmas + 1 ofCurve corollary; substantive types matching blueprint Mathlib-status; sorry bodies",
+        "code_tried": "(see file-skeleton bodies — CoherentSheafFlat as def with non-sorry body using Module.compHom for restriction of scalars; genericFlatness, flatLocusStratification, flatLocusReduction, flatLocusAssembly, flatteningStratification, flatteningStratification_universal, flatteningStratification.ofCurve all sorry)",
+        "line_number": "208/252/280/310/358/399/438",
+        "lean_error": null,
+        "result": "success",
+        "insight": "IsImmersion is the Mathlib-existing name for the locally-closed-immersion predicate; blueprint's 'IsLocallyClosedImmersion' guess was wrong"
+      }
+    ],
+    "next_steps": "iter-177+ body lanes in suggested order: (1) flatteningStratification.ofCurve (smallest, downstream); (2) flatteningStratification_universal (Yoneda); (3) flatteningStratification assembly; (4) flatLocusReduction (Noetherian induction); (5) genericFlatness (Nitsure §4 deep); (6) flatLocusAssembly (needs Castelnuovo–Mumford, Mathlib gap)"
+  },
+  {
+    "timestamp": "2026-05-23T14:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/RelPicFunctor.lean",
+      "theorem": "file-skeleton"
+    },
+    "session": {
+      "id": "session_176",
+      "model": "claude"
+    },
+    "findings": {
+      "blocker": "Mathlib does not ship the étale Grothendieck topology on schemes at the pinned commit; only the morphism property AlgebraicGeometry.Etale exists. Workaround: parameterise by J : GrothendieckTopology",
+      "key_lemmas_used": [
+        "AddCommGrpCat (Type (u+1))",
+        "CategoryTheory.Sheaf",
+        "CategoryTheory.presheafToSheaf",
+        "CategoryTheory.GrothendieckTopology"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "scaffold 5 pinned + 1 unpinned auxiliary; substantive types (AddCommGroup instance on Quotient (preimage_subgroup ...), PicSharp as functor (Over (Spec k))ᵒᵖ ⥤ AddCommGrpCat.{u+1}, etc.)",
+        "code_tried": "(see file-skeleton — PicSharp.addCommGroup, PicSharp def, PicSharp.functorial, PicSharp.presheaf, PicSharp.etSheaf, PicSharp.etSheafUnit)",
+        "line_number": "205/257/296/343/402/451",
+        "lean_error": null,
+        "result": "success",
+        "insight": "Universe note: AddCommGrpCat.{u+1} because LineBundle.OnProduct is Type (u+1). Naming conflict surfaced: blueprint pins etale-sheafification at PicScheme but FGA already uses that name for the representing scheme. Renamed to PicSharp.etSheaf and flagged blueprint correction this review."
+      }
+    ],
+    "next_steps": "iter-177+: addCommGroup via QuotientAddGroup once LineBundle.OnProduct carrier is unpacked in A.1.b; PicSharp / functorial via map_zero+map_add from pullback preserving structure sheaf + tensor (Stacks 01HG); etSheaf via CategoryTheory.presheafToSheaf once an étale GrothendieckTopology J is available (Mathlib gap)"
+  },
+  {
+    "timestamp": "2026-05-23T14:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/QuotScheme.lean",
+      "theorem": "file-skeleton"
+    },
+    "session": {
+      "id": "session_176",
+      "model": "claude"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "Scheme.Modules.pullback",
+        "Scheme.Modules.pushforward",
+        "CategoryTheory.Functor.RepresentableBy"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "scaffold 6 pinned: hilbertPolynomial (S → Polynomial ℚ), QuotFunctor / Grassmannian as (Over S)ᵒᵖ ⥤ Type u, Grassmannian.representable / QuotScheme via ∃ Y, Nonempty (Functor.RepresentableBy ...), flatBaseChangeCohomology as i=0 form of Stacks 02KH",
+        "code_tried": "(see file-skeleton)",
+        "line_number": "170/208/245/272/326/384",
+        "lean_error": null,
+        "result": "success",
+        "insight": "Mathlib provides Scheme.Modules.{pullback, pushforward} bifunctors but NO Grassmannian scheme / Quot scheme / R^i higher direct images / Castelnuovo–Mumford regularity / Snapper's Lemma"
+      }
+    ],
+    "next_steps": "iter-177+: Snapper's Lemma + graded Euler-characteristic → hilbertPolynomial; Quot functor object/morphism action → QuotFunctor; Grassmannian gluing (Nitsure §1) → Grassmannian + representable; QuotScheme four-step Kleiman §4 proof; flat base change i=0 → flatBaseChangeCohomology"
+  },
+  {
+    "timestamp": "2026-05-23T14:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/FGAPicRepresentability.lean",
+      "theorem": "file-skeleton"
+    },
+    "session": {
+      "id": "session_176",
+      "model": "claude"
+    },
+    "findings": {
+      "blocker": "RepresentableBy is Type-valued not Prop-valued — caught at first compile",
+      "key_lemmas_used": [
+        "CategoryTheory.Functor.RepresentableBy",
+        "CategoryTheory.Functor.IsRepresentable (Prop-wrapper)",
+        "GeometricallyIntegral",
+        "GrpObj"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "scaffold 5 pinned + 2 cross-file functor placeholders (picSharp / divFunctor). Encoded representability via ∃, group structure via GrpObj instance",
+        "code_tried": "(see file-skeleton — PicScheme, PicScheme.abelMap, PicScheme.smoothProperQuotient, PicScheme.representable (changed from theorem to noncomputable def), PicScheme.groupSchemeStructure)",
+        "line_number": "187/226/278/324/363 (+ 132/147 placeholders)",
+        "lean_error": "representable was authored as theorem; corrected to noncomputable def because RepresentableBy is Type-valued (Yoneda data carrying a bijection)",
+        "result": "success",
+        "insight": "RepresentableBy carries the bijection data; IsRepresentable is the Prop-wrapper. The 2 cross-file placeholders (picSharp / divFunctor) avoid weakening pinned types; once sibling files land they collapse to one-line re-exports."
+      }
+    ],
+    "next_steps": "iter-177+ ordering: replace picSharp/divFunctor placeholders with re-exports once siblings land; abelMap (~6 LOC); smoothProperQuotient (~30-50 LOC); PicScheme + representable assembled via four-step Kleiman §4 proof; groupSchemeStructure via Yoneda transport"
+  },
+  {
+    "timestamp": "2026-05-23T14:30:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OCofP.lean",
+      "theorem": "file-skeleton"
+    },
+    "session": {
+      "id": "session_176",
+      "model": "claude"
+    },
+    "findings": {
+      "blocker": "Lane K committed at 13:51:54Z; Lane D committed signature change to Scheme.RationalMap.order (added [IsLocallyNoetherian X] and [Ring.KrullDimLE 1 (X.presheaf.stalk Y.point)] instances) at 13:56:23Z (4 minutes later). OCofP.lean uses RationalMap.order at L194, L195, L327, L328 without the new instances; build fails with 'failed to synthesize IsLocallyNoetherian C.left' at all 4 sites. Lane K's task_result claims 'build green' — true at Lane K's commit time, FALSE at iter end.",
+      "key_lemmas_used": [
+        "Sheaf (Opens.grothendieckTopology) (ModuleCat kbar)",
+        "Scheme.HModule kbar F n",
+        "Scheme.PrimeDivisor",
+        "Scheme.RationalMap.order"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "scaffold 5 pinned with substantive types: lineBundleAtClosedPoint as ModuleCat-kbar-valued sheaf; globalSections_iff as iff between order conditions and non-zero section; h1_vanishing_genusZero as Module.finrank = 0; dim_eq_two_of_genusZero as Module.finrank = 2; exists_nonconstant_genusZero with four conjunct conditions on the witness function",
+        "code_tried": "(see file-skeleton)",
+        "line_number": "140/190/237/272/321",
+        "lean_error": "compiles individually at Lane K commit time; FAILS in merged tree after Lane D's RationalMap.order signature change (4 errors on L194/195/327/328)",
+        "result": "success",
+        "insight": "Parallel-lane signature-change race: when one lane authors a new file using API X and another lane in the same dispatch edits X's signature, the second lane's commit silently breaks the first. No integration check ran after Lane D's commit. RECURRENCE-PREVENTION: post-merge lake build in the loop, or serialize signature-changing lanes."
+      }
+    ],
+    "next_steps": "iter-177 MUST-FIX: restore build by either (a) threading [IsLocallyNoetherian C.left] in globalSections_iff + exists_nonconstant_genusZero (1-2 LOC each), OR (b) reverting Lane D's signature to no instance binders and conjuring them only inside the body (deeper). Option (a) is preferred — matches the iter-175 blueprint pin shape and is consistent with Lane D's intent. Then iter-177+ body lanes per the prover's recommended ordering: dim_eq_two_of_genusZero (smallest); exists_nonconstant_genusZero (pure assembly after dim_eq_two); h1_vanishing_genusZero (LES collapse); globalSections_iff; lineBundleAtClosedPoint (deepest, needs ideal-sheaf-of-point + Hom-dual)."
+  }
+]

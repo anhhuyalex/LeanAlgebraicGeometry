@@ -1,0 +1,108 @@
+[
+  {
+    "timestamp": "2026-05-18T01:41:51Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cotangent/GrpObj.lean",
+      "theorem": "AlgebraicGeometry.GrpObj.relativeDifferentialsPresheaf_restrict_along_identity_section"
+    },
+    "session": {
+      "id": "session_136",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "PresheafOfModules.pullbackComp",
+        "Scheme.Hom.toRingCatSheafHom",
+        "Over.comp_left",
+        "lift_snd",
+        "Over.toUnit_left",
+        "LocallyRingedSpace.comp_c (via rfl-unfolding)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Insert a helper lemma `section_snd_eq_identity_struct` (the categorical identity `s.left ≫ pr_2.left = G.hom ≫ η[G].left` in Over (Spec k)) and try a 3-step body chaining two `pullbackComp` applications.",
+        "code_tried": "private lemma section_snd_eq_identity_struct ... := by rw [← Over.comp_left, lift_snd, Over.comp_left, Over.toUnit_left]\n-- body skeleton with `iso1.trans sorry`",
+        "line_number": "452 (helper), 508 (body)",
+        "lean_error": "unexpected token '/--'; expected 'lemma' — caused by the helper being inserted before a `/--` docstring without a blank-line separator, plus a residual unsolved goal `G.hom ≫ Over.Hom.left η = G.hom ≫ η.left` from the helper (needed a final `rfl` to bridge `CommaMorphism.left η[G]` vs `η.left`).",
+        "goal_before": "(PresheafOfModules.pullback (toRingCatSheafHom snd.left).hom).obj ((PresheafOfModules.pullback (toRingCatSheafHom lift.left).hom).obj Ω) ≅ ... π_G^* ... η_G^* ...",
+        "goal_after": null,
+        "result": "failed",
+        "insight": "Helper needs a trailing `rfl` because the docstring uses `CommaMorphism.left η[G]` (the displayed RHS) while the auto-elaboration produces `η.left`; these are equal but not syntactically identical to `rw`."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Move the helper to a stable location (after `schemeHomRingCompatibility`) and fix the docstring fence. Then attempt the main body with two `pullbackComp.app` constructions plus `iso1.trans (?_.trans iso2.symm)` skeleton.",
+        "code_tried": "have iso1 := (PresheafOfModules.pullbackComp ...).app Ω\nhave iso2 := (PresheafOfModules.pullbackComp ...).app Ω\nexact iso1.trans (sorry.trans iso2.symm)",
+        "line_number": "508",
+        "lean_error": "Unknown identifier `«sorry».trans` (the literal `sorry` token cannot be used as a term inside an `.trans` chain in this slot).",
+        "goal_before": "Step 1 + Step 2 elaboration: build the `pullbackComp` natural isos on both sides.",
+        "goal_after": "iso1 and iso2 hypothesized; middle iso still missing.",
+        "result": "partial",
+        "insight": "Lean refuses to parse `sorry.trans` in some contexts. Switch to `≪≫` notation: `refine iso1 ≪≫ ?_ ≪≫ iso2.symm` produces a clean intermediate goal."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Use `refine iso1 ≪≫ ?_ ≪≫ iso2.symm` and discharge the middle iso via `eqToIso` + `congr` + `Opens.map_comp_eq` rewriting.",
+        "code_tried": "refine iso1 ≪≫ ?_ ≪≫ iso2.symm\nrefine eqToIso ?_\ncongr 2\n· simp only [← Opens.map_comp_eq, ← Scheme.Hom.comp_base, section_snd_eq_identity_struct]\n· sorry",
+        "line_number": "540",
+        "lean_error": "Tactic `rewrite` failed: Did not find an occurrence of the pattern `Opens.map ?g ⋙ Opens.map ?f` in the target expression `Opens.map ((Over.Hom.left ...).base)` — the Opens.map composition was not yet syntactically present (the `pullback` and `whiskerLeft` already collapse it).",
+        "goal_before": "After `congr 2`: two subgoals — functor equality `Opens.map ... = Opens.map ...` and an `HEq` on the φ-natural transformations.",
+        "goal_after": "Functor-equality subgoal remained unresolvable via `Opens.map_comp_eq` rewriting because the term already has the combined form.",
+        "result": "failed",
+        "insight": "`Opens.map_comp_eq` is the wrong lever — the `pullbackComp` natural iso already commutes everything; reshape via `change` to a single-pullback form is cleaner than `congr` rewriting."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Drop the `congr` chain entirely. After `refine iso1 ≪≫ ?_ ≪≫ iso2.symm` and `refine eqToIso ?_`, use a `change` tactic to reshape both sides into `(PresheafOfModules.pullback (toRingCatSheafHom <single composite>).hom).obj Ω` form (the c-composition rule + `whiskerLeft`/`whiskerRight` commutation make this *definitional*, so `change` accepts). Then `rw [section_snd_eq_identity_struct]` identifies the two composites.",
+        "code_tried": "refine iso1 ≪≫ ?_ ≪≫ iso2.symm\nrefine eqToIso ?_\nchange (PresheafOfModules.pullback (Scheme.Hom.toRingCatSheafHom ((lift (𝟙 G) (toUnit G ≫ η[G])).left ≫ (snd G G).left)).hom).obj (Scheme.relativeDifferentialsPresheaf G.hom) =\n  (PresheafOfModules.pullback (Scheme.Hom.toRingCatSheafHom (G.hom ≫ (CategoryTheory.CommaMorphism.left η[G]))).hom).obj (Scheme.relativeDifferentialsPresheaf G.hom)\nrw [section_snd_eq_identity_struct]",
+        "line_number": "508",
+        "lean_error": null,
+        "goal_before": "After `refine eqToIso ?_`: equality between two `pullback (toRingCatSheafHom snd.left).hom ≫ whiskerLeft _ (toRingCatSheafHom lift.left).hom` shaped functors applied to Ω vs the dual on the RHS.",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "The combined compatibility morphism `(toRingCatSheafHom snd.left).hom ≫ whiskerLeft (Opens.map snd.left.base).op (toRingCatSheafHom lift.left).hom` is **definitionally equal** to `(toRingCatSheafHom (lift.left ≫ snd.left)).hom` (by `Scheme.Hom.c` of a composition + `whiskerRight` distributing over `whiskerLeft`). `change` accepts this reshape without any `rw`, so the proof reduces to a pure scheme-morphism equality closed by `section_snd_eq_identity_struct`. Prefer `change` over `show` when the new form differs syntactically — the Lean linter warns on `show` for genuine shape changes."
+      }
+    ],
+    "next_steps": "Iter-137 prover lane on `relativeDifferentialsPresheaf_basechange_along_proj_two` (L480, Step 2 of piece (i.b), ~150–300 LOC NEEDS_MATHLIB_GAP_FILL via `KaehlerDifferential.tensorKaehlerEquiv` + presheaf-side promotion). Iter-138+ on `mulRight_globalises_cotangent` (L599, Main lemma; ~20–40 LOC composition of Steps 2+3 once both are closed)."
+  },
+  {
+    "timestamp": "2026-05-18T01:41:51Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Cotangent/GrpObj.lean",
+      "theorem": "AlgebraicGeometry.GrpObj.relativeDifferentialsPresheaf_basechange_along_proj_two"
+    },
+    "session": {
+      "id": "session_136",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Iter-136 prover-lane scope explicitly excluded this Step 2 target (progress-critic-iter136 endorsed Step 3 only, citing risk of repeating iter-134 placeholder pattern if Step 2+3 were bundled).",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Iter-137 prover dispatch. Per analogies/mulright-globalises-cotangent.md Decision 2: chain `KaehlerDifferential.tensorKaehlerEquiv` (algebra-side, Mathlib.RingTheory.Kaehler.TensorProduct) with the sheaf-side `PresheafOfModules.pullback` + project-side `relativeDifferentialsPresheaf_obj_kaehler`. NEEDS_MATHLIB_GAP_FILL; ~150–300 LOC."
+  },
+  {
+    "timestamp": "2026-05-18T01:41:51Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Cotangent/GrpObj.lean",
+      "theorem": "AlgebraicGeometry.GrpObj.mulRight_globalises_cotangent"
+    },
+    "session": {
+      "id": "session_136",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Iter-136 prover-lane scope explicitly excluded this Main target (depends on Step 2 closure iter-137).",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Iter-138+ prover dispatch after Step 2 closes. Body composes the 3 pieces along the proof outline in the docstring (shearMulRight + basechange_along_proj_two + restrict_along_identity_section)."
+  }
+]

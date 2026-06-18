@@ -1,0 +1,179 @@
+[
+  {
+    "timestamp": "2026-05-12T18:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Jacobian.lean",
+      "theorem": "Jacobian + instGrpObj + smoothOfRelativeDimension_genus + instIsProper + instGeometricallyIrreducible (5 protected, genus>0 branches)"
+    },
+    "session": {
+      "id": "session_71",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Five protected sorries consolidated into ONE single mathematical existence claim (nonempty_jacobianWitness). The remaining sorry encodes the classical Albanese-variety existence theorem for smooth proper geometrically irreducible curves and is genuinely deferred under current Mathlib infrastructure (no symmetric powers / quotients by finite group actions / FGA representability).",
+      "key_lemmas_used": [
+        "Classical.choice",
+        "JacobianWitness (new structure)",
+        "IsAlbanese",
+        "geometricallyIrreducible_id_Spec"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Introduce JacobianWitness bundle structure with J, grpObj, proper, smooth, geomIrred, smoothGenus, P, isAlbanese fields",
+        "code_tried": "structure JacobianWitness ... where J : Over (Spec (.of k)); grpObj : GrpObj J; proper : IsProper J.hom; smooth : Smooth J.hom; geomIrred : GeometricallyIrreducible J.hom; smoothGenus : SmoothOfRelativeDimension (genus C) J.hom; P : 𝟙_ _ ⟶ C; isAlbanese : @IsAlbanese k _ C P J grpObj proper smooth geomIrred",
+        "line_number": "113-145",
+        "lean_error": "",
+        "goal_before": "5 separate bare sorries in genus>0 branches of Jacobian, instGrpObj, smoothOfRelativeDimension_genus, instIsProper, instGeometricallyIrreducible",
+        "goal_after": "1 sorry: theorem nonempty_jacobianWitness ... : Nonempty (JacobianWitness C) := sorry",
+        "result": "success",
+        "insight": "Bundling all five protected outputs into a single witness structure plus a Nonempty existence theorem reduces 5 sorries to 1. Sub-goal B from PROGRESS.md targeted 5 → 2; the prover reached 5 → 1 by including smoothGenus in the witness."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Wire each protected instance to project the corresponding witness field on the genus>0 branch",
+        "code_tried": "instance instGrpObj : GrpObj (Jacobian C) := by unfold Jacobian; split_ifs; · infer_instance; · exact (jacobianWitness C).grpObj",
+        "line_number": "196-223",
+        "lean_error": "",
+        "goal_before": "Each instance had a bare `sorry` for the genus>0 case",
+        "goal_after": "Each genus>0 branch closes via `(jacobianWitness C).<field>`",
+        "result": "success",
+        "insight": "Protected signatures preserved verbatim. The genus=0 branches are unchanged (infer_instance / rw [h]; infer_instance / geometricallyIrreducible_id_Spec k). No new axioms introduced (sorry + Classical.choice already in scope)."
+      }
+    ],
+    "next_steps": "Treat `nonempty_jacobianWitness` as deferred indefinitely under current Mathlib infrastructure (lacks symmetric powers, quotients by finite group actions, FGA representability). Plan agent may add a blueprint sub-block in Jacobian.tex documenting the JacobianWitness consolidation. AbelJacobi.lean (3 sorries) is now unblocked at the type-checking level and may be assigned to a prover in iter-072."
+  },
+  {
+    "timestamp": "2026-05-12T18:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "basicOpenCover_isCechAcyclicCover_toModuleKSheaf (Cluster b: f_R/g_R/hf_eq/hg_eq + Cluster c: h_loc_X_i)"
+    },
+    "session": {
+      "id": "session_71",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Cluster (b) `map_smul'` obligations remain: closing them requires unfolding `alternatingCofaceMapComplex.d` to expose the componentwise R-action. The iter-069 `convert h` transport in `h_mod_X_i` produces an opaque module structure that obstructs direct rewriting. `h_loc_exact` (L1012) is now blocked on the slice-cover ↔ LocalizedModule iso (needs `IsLocalizedModule.pi` for finite indexing).",
+      "key_lemmas_used": [
+        "ConcreteCategory.hom",
+        "map_add",
+        "localizedModuleIsLocalizedModule",
+        "LocalizedModule.mkLinearMap",
+        "Submonoid.powers"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Discharge Cluster (c) — three `IsLocalizedModule.Away (f.1 : R) (LocalizedModule.mkLinearMap _ scK₀.X_i)` obligations via the canonical Mathlib instance `localizedModuleIsLocalizedModule`.",
+        "code_tried": "have h_loc_X₁ (f : ↑s₀) : IsLocalizedModule.Away (f.1 : R) (LocalizedModule.mkLinearMap (Submonoid.powers (f.1 : R)) scK₀.X₁) := localizedModuleIsLocalizedModule _ -- analogous for h_loc_X₂, h_loc_X₃",
+        "line_number": "996-1004",
+        "lean_error": "",
+        "goal_before": "3 sorries (one per i ∈ {1,2,3}) for `IsLocalizedModule.Away` instances at L959–L963 of the iter-070 file",
+        "goal_after": "no goals (all three discharged)",
+        "result": "success",
+        "insight": "The discharge is kernel-only (verified standalone via lean_run_code). The plan envisaged identifying the slice-cover cochain factor as a localization (requiring product-localisation commutation); the simpler discharge via `localizedModuleIsLocalizedModule` shifts that semantic content into `h_loc_exact` (L1012), where the slice-cover identification is genuinely needed to transport `h_a₀_fun f` (slice-cover exactness)."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Cluster (b): repackage `scK₀.f` as an `R`-linear map by direct LinearMap construction with `toFun := ⇑(ConcreteCategory.hom scK₀.f)` and `map_add' := map_add ...`, making `hf_eq := rfl` definitional.",
+        "code_tried": "let f_R : scK₀.X₁ →ₗ[R] scK₀.X₂ := { toFun := ⇑(ConcreteCategory.hom scK₀.f), map_add' := map_add (ConcreteCategory.hom scK₀.f), map_smul' := by intro r x; sorry } ; -- similarly g_R ; have hf_eq : ⇑f_R = ⇑(ConcreteCategory.hom scK₀.f) := rfl ; have hg_eq : ⇑g_R = ⇑(ConcreteCategory.hom scK₀.g) := rfl",
+        "line_number": "957-985",
+        "lean_error": "",
+        "goal_before": "4 sorries at L949–L952: `f_R`, `g_R` (LinearMap construction) + `hf_eq`, `hg_eq` (pointwise equality lemmas).",
+        "goal_after": "2 sorries: `map_smul'` for `f_R` (L974) and `g_R` (L983) — R-linearity of the alternating-coface Čech differential.",
+        "result": "partial",
+        "insight": "With `have h_mod_X_i : Module R scK₀.X_i` in scope (iter-069 convert-from-piIsoPi transport), the R-linear-map type already typechecks. The remaining obligation is precisely `map_smul'`. Wrapping `toFun := ⇑(ConcreteCategory.hom scK₀.f)` makes `hf_eq := rfl` definitional — 2 of 4 cluster-(b) sorries collapse for free."
+      }
+    ],
+    "next_steps": "Close `map_smul'` for `f_R`/`g_R` (L974/L983): requires exposing the componentwise R-action on the cochain factors. Likely path: refactor `h_mod_X_i` from `convert h` transport to a direct `e.toAddEquiv.module R`-style definition with `e := (ModuleCat.piIsoPi Z).toLinearEquiv` retained as a named term. Then R-linearity of the differential reduces (via `e.comap_linearMap`) to R-linearity on the explicit product, which follows from each restriction map being an R-algebra-hom. For `h_loc_exact` (L1012), needs `IsLocalizedModule.pi` for finite indexing + per-factor `isLocalization_of_eq_basicOpen`. `h_π_split` (L819) and the two Cluster (a) sorries (L495, L847) remain in the same blocked state as iter-070."
+  },
+  {
+    "timestamp": "2026-05-12T18:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "cotangentExactSeqAlpha + cotangentExactSeq_structure"
+    },
+    "session": {
+      "id": "session_71",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "`cotangentExactSeqAlpha` skeleton compiles but the inner `Derivation' φ_g'` of the pushed-forward target remains a sorry; closing it requires the adjunction-coherence identity across the composition `f ≫ g`. `cotangentExactSeq_structure`'s three sub-claims `h_zero`/`h_exact` are blocked behind Alpha's closure; `h_epi` is independent and needs a `SheafOfModules` 'Epi locally on affines ⇒ Epi' lemma.",
+      "key_lemmas_used": [
+        "Scheme.Modules.pullbackPushforwardAdjunction",
+        "PresheafOfModules.DifferentialsConstruction.isUniversal'",
+        "PresheafOfModules.DifferentialsConstruction.derivation'",
+        "PresheafOfModules.pushforward",
+        "Scheme.Hom.toRingCatSheafHom",
+        "TopCat.Presheaf.pullbackPushforwardAdjunction (homEquiv variant)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Mirror iter-069's `cotangentExactSeqBeta` adjunction-then-universal-property construction for the cross-space pullback target. Apply `(pullbackPushforwardAdjunction f).homEquiv.symm` to convert the goal to a Y.Modules hom, then build the underlying presheaf-of-modules morphism via `isUniversal' φ_g'`.",
+        "code_tried": "refine ((Scheme.Modules.pullbackPushforwardAdjunction f).homEquiv _ _).symm ?_ ; let φ_g' := ((TopCat.Presheaf.pullbackPushforwardAdjunction CommRingCat g.base).homEquiv S.presheaf Y.presheaf).symm g.c ; let φ_fg' := ... ; let presheafHom : relativeDifferentialsPresheaf g ⟶ (PresheafOfModules.pushforward f.toRingCatSheafHom.hom).obj (relativeDifferentialsPresheaf (f ≫ g)) := (PresheafOfModules.DifferentialsConstruction.isUniversal' φ_g').desc sorry ; exact ⟨presheafHom⟩",
+        "line_number": "199-243",
+        "lean_error": "",
+        "goal_before": "bare `noncomputable def cotangentExactSeqAlpha (f : X ⟶ Y) (g : Y ⟶ S) : (Scheme.Modules.pullback f).obj (relativeDifferentials g) ⟶ relativeDifferentials (f ≫ g) := sorry`",
+        "goal_after": "Same definition, now built via adjunction.homEquiv.symm + isUniversal'.desc, with 1 inner sorry at L242 for the `Derivation' φ_g'` of the pushed-forward target.",
+        "result": "partial",
+        "insight": "Confirmed Mathlib leverage names for the construction. Remaining content: build d_target : M_pushed.Derivation' φ_g' where d_target.d at U := D_X.d ∘ (f.c.app U).hom. Four sub-axioms split as: d_add (mechanical), d_mul (Leibniz, mechanical), d_map (naturality, mechanical), d_app (adjunction coherence across f ≫ g, substantive)."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Decompose `cotangentExactSeq_structure`'s bundled existential into three named sub-claims via `refine ⟨?_, ?_, ?_⟩`.",
+        "code_tried": "refine ⟨?_, ?_, ?_⟩ ; · sorry -- h_zero ; · sorry -- h_exact ; · sorry -- h_epi",
+        "line_number": "344-368",
+        "lean_error": "",
+        "goal_before": "bundled `:= sorry` for ∃ (h : α ≫ β = 0), ShortComplex.Exact ∧ Epi β",
+        "goal_after": "Three named subgoals: `h_zero : α ≫ β = 0`, `h_exact : ShortComplex.Exact ...`, `h_epi : Epi β`. Each annotated with its ring-level Mathlib input.",
+        "result": "partial",
+        "insight": "h_zero and h_exact both need `KaehlerDifferential.exact_mapBaseChange_map` (range ⊂ ker / range = ker) and are blocked behind Alpha's closure. h_epi needs `KaehlerDifferential.map_surjective` + a `SheafOfModules` 'Epi-from-affine' passage (status TBD in Mathlib); h_epi is independent of Alpha and can be attempted in isolation."
+      }
+    ],
+    "next_steps": "Iter-072 priorities: (1) Continue `cotangentExactSeqAlpha` by constructing the `Derivation' φ_g'` of the pushed-forward target with explicit `d := fun U b => D_X.d ((f.c.app U).hom b)` and four named sub-axioms. Only `d_app` is non-mechanical. (2) Attempt `cotangentExactSeq_structure.h_epi` in isolation: search for `Sheaf.Epi.of_affine` or equivalent in Mathlib's SheafOfModules namespace. (3) `relativeDifferentialsPresheaf_isSheaf` (L122) remains untouched and is still recommended as a fallback target if Alpha stalls."
+  },
+  {
+    "timestamp": "2026-05-12T18:30:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/AbelJacobi.lean",
+      "theorem": "ofCurve + comp_ofCurve + exists_unique_ofCurve_comp"
+    },
+    "session": {
+      "id": "session_71",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Off-limits per PROGRESS.md iter-071; now unblocked at the type-checking level because Jacobian C is well-typed for both genus branches and (jacobianWitness C).isAlbanese provides the universal-property data.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Eligible for iter-072 dispatch. The three sorries reduce mechanically: `ofCurve P := (jacobianWitness C).isAlbanese.ofCurve` (subject to verifying the marked-point matching); `comp_ofCurve` projects `(jacobianWitness C).isAlbanese.comp_ofCurve`; `exists_unique_ofCurve_comp` projects `(jacobianWitness C).isAlbanese.exists_unique_ofCurve_comp`. A small bridge may be needed because `AbelJacobi.ofCurve` takes `P` as a parameter whereas `JacobianWitness.P` is internal — the prover may need to express the relation between the two `P`'s or rework the signature."
+  },
+  {
+    "timestamp": "2026-05-12T18:30:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/Functor.lean",
+      "theorem": "PicardFunctor.representable"
+    },
+    "session": {
+      "id": "session_71",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Intentionally deferred per directive. Closing via the global-sections-approximate LineBundle would silently assert representability of the wrong functor. Requires `LineBundle` refinement + `MonoidalCategory X.Modules` (absent in Mathlib).",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Do not assign. Same status as iter-070."
+  }
+]

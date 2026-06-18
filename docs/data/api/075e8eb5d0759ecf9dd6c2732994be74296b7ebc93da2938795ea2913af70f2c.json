@@ -1,0 +1,125 @@
+[
+  {
+    "timestamp": "2026-05-28T21:41:49Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/WeilDivisor.lean",
+      "theorem": "Scheme.PrimeDivisor open-immersion descent substrate (Lane WD-A4a Sub-build 1)"
+    },
+    "session": {
+      "id": "session_200",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Lane WD-A4a parent L535 sorry NOT touched (SCOPE FENCE); closure depends on iter-201+ Sub-build 2 (Ring.ordFrac transport) + Sub-build 3 (Scheme.RationalMap.order naturality across stalkIso)",
+      "key_lemmas_used": [
+        "Scheme.Opens.stalkIso",
+        "Order.coheight_eq_of_isOpenEmbedding",
+        "IsDiscreteValuationRing.RingEquivClass.isDiscreteValuationRing",
+        "Pi.basisFun.constr"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Follow mathlib-analogist wd-stacks02iz recipe verbatim: 8 axiom-clean substrate decls (PrimeDivisor.ext, restrictToOpen, ofOpen, restrictToOpen_point, ofOpen_point, equivOpen, stalkIso, IsRegularInCodimensionOne.instOpen)",
+        "code_tried": "Wrapper around Mathlib's Scheme.Opens.stalkIso + cases Y; cases Y'; congr for ext; thin layer over iter-183 coheight bridge for restrictToOpen/ofOpen",
+        "line_number": "L153-L305",
+        "lean_error": "(none — all axiom-clean on first try; only friction was noncomputable on stalkIso)",
+        "goal_before": "build the open-immersion stalk-bridge substrate",
+        "goal_after": "8 axiom-clean substrate decls landed; SCOPE FENCE preserved trailing L535/L843/L1413 sorries",
+        "result": "success",
+        "insight": "Analogist recipe followed cleanly; +120 LOC realized (analogist had estimated 150-250 LOC); IsLocallyNoetherian U.toScheme is automatic but IsIntegral is not — threaded explicitly in instOpen"
+      }
+    ],
+    "next_steps": "Sub-build 2 (Ring.ordFrac transport across stalk iso ~30-50 LOC, Mathlib gap candidate); Sub-build 3 (Scheme.RationalMap.order naturality conditional on Sub-build 2); then close L535 parent sorry"
+  },
+  {
+    "timestamp": "2026-05-28T21:41:49Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Albanese/AuslanderBuchsbaum.lean",
+      "theorem": "RingTheory.Module.auslander_buchsbaum_formula_succ_pd (Lane AB-gap1-HasPdLT)"
+    },
+    "session": {
+      "id": "session_200",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Closure requires Stacks 00MF base case substrate (pd M > 0 ⟹ depth M < depth R, ~150-200 LOC, Mathlib gap candidate) + ℕ∞ arithmetic that itself depends on AB formula being proven",
+      "key_lemmas_used": [
+        "CategoryTheory.projectiveDimension_lt_iff",
+        "LinearMap.shortExact_shortComplexKer",
+        "ModuleCat.projective_of_free",
+        "ShortComplex.ShortExact.hasProjectiveDimensionLT_X₁",
+        "ShortComplex.ShortExact.hasProjectiveDimensionLT_X₃",
+        "depth_of_short_exact",
+        "depth_pi_const_eq_depth_of_nonempty"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "ALIGN_WITH_MATHLIB pivot per mathlib-analogist ab-natrecursive Path A: HasProjectiveDimensionLT SES descent via X₁ / X₃ pair, 4 axiom-clean substrate helpers in RingTheory.Module",
+        "code_tried": "hasProjectiveDimensionLT_succ_of_projectiveDimension_eq (L1290 5 LOC) + hasProjectiveDimensionLT_ker_of_surjection (L1311 10 LOC) + hasProjectiveDimensionLT_succ_of_hasProjectiveDimensionLT_ker (L1340 10 LOC) + depth_ker_ge_min_of_surjection_finite_localRing (L1376 22 LOC)",
+        "line_number": "L1290-L1404",
+        "lean_error": "(none on the 4 helpers — all axiom-clean)",
+        "goal_before": "implement SES-descent path Steps (i)+(ii)+(iii)",
+        "goal_after": "Steps (i)+(ii) axiom-clean (~45 LOC delivered, analogist budget 25-40 LOC); Step (iii) inductive assembly blocked at trailing sorry",
+        "result": "partial",
+        "insight": "Analogist Step (i) 15-LOC estimate reduced to 3 LOC inline use of LinearMap.shortExact_shortComplexKer (no wrapping helper needed). Step (iii) needs depth M + 1 ≤ depth R from depth_of_short_exact (3), which case-splits on depth M < depth R — exactly the gap that needs Stacks 00MF"
+      },
+      {
+        "attempt": 2,
+        "strategy": "Set up the SES-descent scaffold in the body of auslander_buchsbaum_formula_succ_pd using the 4 new helpers, ending in trailing sorry",
+        "code_tried": "have hM_lt : HasProjectiveDimensionLT (ModuleCat.of R M) (k + 2) := ...; obtain ⟨n, f, hf_surj, _hn_eq, _hf_min⟩ := exists_minimalSurjection_finite_localRing R M; have hK_lt : HasProjectiveDimensionLT (ModuleCat.of R (LinearMap.ker f)) (k + 1) := ...; sorry",
+        "line_number": "L1574-area",
+        "lean_error": "(compiles axiom-clean above the trailing sorry)",
+        "goal_before": "close auslander_buchsbaum_formula_succ_pd body",
+        "goal_after": "scaffolding lands; closure assembly trailing sorry",
+        "result": "partial",
+        "insight": "The inductive case (k ≥ 1) needs depth R ≥ k+2 derivable, which requires 00MF or the AB formula itself. Approach 3 (induct on depth M, Stacks 090V) explicitly rejected per directive"
+      }
+    ],
+    "next_steps": "Iter-201+: dispatch mathlib-build lane for Stacks 00MF (~150-200 LOC, candidate Mathlib upstream PR). Alternative: LES analysis to prove depth K ≤ depth M + 1 directly via Ext connecting-map injectivity, which would obviate 00MF for the AB use case"
+  },
+  {
+    "timestamp": "2026-05-28T21:41:49Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Albanese/CodimOneExtension.lean",
+      "theorem": "AlgebraicGeometry.Scheme.isRegularLocalRing_stalk_of_smooth (Lane COE-stage6-iiB Stacks 00OE substrate)"
+    },
+    "session": {
+      "id": "session_200",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "L1061 body closure NOT attempted: requires Jacobian-regular-sequence witness (Stacks 00SW / 00OW; iter-201+ Lane COE main effort, ~30-60 LOC project-side) + scheme-to-algebra bridge (extract SubmersivePresentation from Algebra.IsStandardSmooth Γ chain + identify max ideal at z)",
+      "key_lemmas_used": [
+        "IsLocalization.AtPrime.ringKrullDim_eq_height",
+        "Polynomial.height_eq_height_add_one",
+        "Polynomial.isMaximal_comap_C_of_isJacobsonRing",
+        "MvPolynomial.finSuccEquiv",
+        "MvPolynomial.renameEquiv",
+        "RingEquiv.height_map",
+        "Ideal.map_isMaximal_of_equiv",
+        "ringKrullDim_add_length_eq_ringKrullDim_of_isRegular"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Follow mathlib-analogist coe-stacks00oe top suggestion: 3-step Krull-dim formula for smooth algebras — Step 1 (loc-at-prime height bridge), Step 2 (MvPolynomial max-ideal height = n via Polynomial.height_eq_height_add_one iterated), Step 3 (regular-sequence dim drop)",
+        "code_tried": "7 private theorems: ringKrullDim_localization_eq_height_atPrime (Step 1, L688); MvPolynomial.maximalIdeal_height_ge_card_of_field (Step 2 lower bound, L696; induction on Fin n via finSuccEquiv + Jacobson contraction); MvPolynomial.maximalIdeal_height_le_natCard_of_field (Step 2 upper, L717); MvPolynomial.maximalIdeal_height_eq_card (combined Fin n, L727); MvPolynomial.maximalIdeal_height_eq_natCard (combined general via renameEquiv, L738); ringKrullDim_localization_atMaximal_MvPolynomial (capstone, L767); ringKrullDim_quotient_add_eq_of_regular_sequence (Step 3 additive, L790)",
+        "line_number": "L688-L790",
+        "lean_error": "Step 3 subtraction form attempted but rejected: WithBot ℕ∞ has no HSub instance — additive form is the natural API",
+        "goal_before": "build Step 1+2 axiom-clean + Step 3 partial substrate",
+        "goal_after": "7 axiom-clean substrate decls landed (~165 LOC); ringKrullDim_localization_atMaximal_MvPolynomial collapses Steps 1+2 into a single capstone consumer call",
+        "result": "success",
+        "insight": "Step 2 substantive proof was via induction on Fin n using finSuccEquiv + Polynomial.height_eq_height_add_one + Jacobson contraction (Polynomial.isMaximal_comap_C_of_isJacobsonRing). Critical: do NOT rephrase Step 3 in subtraction form (no HSub on WithBot ℕ∞); do NOT retry MvPolynomial.height_eq_height_add_one directly — induct on Fin n"
+      }
+    ],
+    "next_steps": "Iter-201+ Lane COE main effort: (1) Jacobian-regular-sequence witness Algebra.SubmersivePresentation.relations_isRegular_in_localization via jacobian_isUnit + IsLocalRing.isRegular_iff_isWeaklyRegular_of_subset_maximalIdeal (~30-60 LOC project-side); (2) scheme-to-algebra bridge for L1061 body inline closure; (3) cascade Lane T32 re-engagement (binding trigger: COE Stage 6.B Krull-dim formula closed)"
+  }
+]

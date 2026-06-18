@@ -1,0 +1,136 @@
+[
+  {
+    "timestamp": "2026-05-10T06:46:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/MayerVietoris.lean",
+      "theorem": "AlgebraicGeometry.Scheme.HasCechToHModuleIso"
+    },
+    "session": {
+      "id": "session_50",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "Nonempty",
+        "cechCohomology",
+        "HModule'",
+        "LinearEquiv"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Verbatim probe-confirmed body from PROGRESS.md template; single combined Edit appending all four iter-050 declarations between iter-049's _curve (L1062) and end CoverTotality. The class wraps the comparison iso as a Nonempty-wrapped Prop field — required because Prop-valued classes cannot have Type-valued fields and the comparison iso is data via LinearEquiv.",
+        "code_tried": "class HasCechToHModuleIso {k : Type u} [Field k] {C : Over (Spec (.of k))} (F : Sheaf (Opens.grothendieckTopology C.left.toTopCat) (ModuleCat.{u} k)) {ι : Type u} (𝒰 : ι → TopologicalSpace.Opens C.left.toTopCat) [HasExt.{u} (Sheaf (Opens.grothendieckTopology C.left.toTopCat) (ModuleCat.{u} k))] : Prop where\n  nonempty_compIso : Nonempty (∀ (n : ℕ), cechCohomology C F 𝒰 n ≃ₗ[k] HModule' k F n (⨆ i, 𝒰 i))",
+        "line_number": 1094,
+        "lean_error": null,
+        "goal_before": "(class declaration — no proof goal)",
+        "goal_after": "(class declaration accepted — no proof goal)",
+        "result": "success",
+        "insight": "Mirrors the iter-040 / iter-043 / iter-048 carrier-class pattern: a Prop-valued class with a single field. The Nonempty wrapper is the load-bearing trick: a Prop-valued class cannot carry Type-valued data directly, but Nonempty wraps it. Class is parameterised over (F, 𝒰) to mirror the iter-048 IsCechAcyclicCover signature, so downstream consumers chain through both class instances simultaneously."
+      }
+    ],
+    "next_steps": "Used as instance argument by Targets 2/3/4 below. iter-051+ producer chain will register HasCechToHModuleIso instances via ⟨⟨the_iso⟩⟩ once the substantive comparison theorem (iter-051+) lands."
+  },
+  {
+    "timestamp": "2026-05-10T06:46:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/MayerVietoris.lean",
+      "theorem": "AlgebraicGeometry.Scheme.cechToHModuleIso"
+    },
+    "session": {
+      "id": "session_50",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "Classical.choice",
+        "HasCechToHModuleIso.nonempty_compIso"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Verbatim probe-confirmed body. noncomputable def with Classical.choice as the body, taking only [HasCechToHModuleIso F 𝒰] as an instance argument so the extractor fires automatically wherever the class instance is in scope.",
+        "code_tried": "noncomputable def cechToHModuleIso {k : Type u} [Field k] {C : Over (Spec (.of k))} {F : Sheaf (Opens.grothendieckTopology C.left.toTopCat) (ModuleCat.{u} k)} {ι : Type u} {𝒰 : ι → TopologicalSpace.Opens C.left.toTopCat} [HasExt.{u} (Sheaf (Opens.grothendieckTopology C.left.toTopCat) (ModuleCat.{u} k))] [HasCechToHModuleIso F 𝒰] : ∀ (n : ℕ), cechCohomology C F 𝒰 n ≃ₗ[k] HModule' k F n (⨆ i, 𝒰 i) :=\n  Classical.choice HasCechToHModuleIso.nonempty_compIso",
+        "line_number": 1110,
+        "lean_error": null,
+        "goal_before": "⊢ ∀ (n : ℕ), cechCohomology C F 𝒰 n ≃ₗ[k] HModule' k F n (⨆ i, 𝒰 i)",
+        "goal_after": "(no goals)",
+        "result": "success",
+        "insight": "Classical.choice was already in the project's kernel-only axiom set [propext, Classical.choice, Quot.sound] since iter-048; no new axiom introduced by iter-050. The noncomputable modifier is mandatory because Classical.choice is non-constructive. The extractor fires automatically on the [HasCechToHModuleIso F 𝒰] instance argument; downstream consumers consume it transparently via typeclass synthesis. Verified kernel-only via lean_verify."
+      }
+    ],
+    "next_steps": "Consumed by Targets 3/4 below to deliver the comparison iso to iter-049's explicit-compIso consumer."
+  },
+  {
+    "timestamp": "2026-05-10T06:46:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/MayerVietoris.lean",
+      "theorem": "AlgebraicGeometry.Scheme.subsingleton_HModule_of_hasCechToHModuleIso_top"
+    },
+    "session": {
+      "id": "session_50",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "subsingleton_HModule_of_isCechAcyclicCover_top",
+        "cechToHModuleIso"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Verbatim probe-confirmed body. Direct application of iter-049's subsingleton_HModule_of_isCechAcyclicCover_top, with the explicit compIso argument supplied via the iter-050 extractor cechToHModuleIso (which fires automatically on the [HasCechToHModuleIso F 𝒰] instance argument).",
+        "code_tried": "theorem subsingleton_HModule_of_hasCechToHModuleIso_top\n    {k : Type u} [Field k] {C : Over (Spec (.of k))}\n    {F : Sheaf (Opens.grothendieckTopology C.left.toTopCat) (ModuleCat.{u} k)}\n    {ι : Type u} {𝒰 : ι → TopologicalSpace.Opens C.left.toTopCat}\n    [HasExt.{u} (Sheaf (Opens.grothendieckTopology C.left.toTopCat) (ModuleCat.{u} k))]\n    [HasExt.{u + 1} (Sheaf (Opens.grothendieckTopology C.left.toTopCat) (ModuleCat.{u} k))]\n    [IsCechAcyclicCover F 𝒰] [HasCechToHModuleIso F 𝒰]\n    (h : ⨆ i, 𝒰 i = ⊤) (n : ℕ) (hn : 0 < n) :\n    Subsingleton (HModule k F n) :=\n  subsingleton_HModule_of_isCechAcyclicCover_top h cechToHModuleIso n hn",
+        "line_number": 1134,
+        "lean_error": null,
+        "goal_before": "⊢ Subsingleton (HModule k F n)",
+        "goal_after": "(no goals)",
+        "result": "success",
+        "insight": "The whole iter-050 design replicates the iter-046 instance-driven IsHModuleHomFinite pattern: register the data behind a class, write a noncomputable def extractor, write the consumer to take only the class instance (not the data). At iter-052+ producer call sites, no explicit comparison iso needs to be passed. Theorem (not instance) because typeclass synthesis cannot supply the explicit h / hn arguments. Verified kernel-only via lean_verify."
+      }
+    ],
+    "next_steps": "Used by iter-053+ genus carrier producer Module.Finite k (HModule k (toModuleKSheaf C) 1) via the _curve specialisation."
+  },
+  {
+    "timestamp": "2026-05-10T06:46:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/MayerVietoris.lean",
+      "theorem": "AlgebraicGeometry.Scheme.subsingleton_HModule_of_hasCechToHModuleIso_top_curve"
+    },
+    "session": {
+      "id": "session_50",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "subsingleton_HModule_of_hasCechToHModuleIso_top",
+        "toModuleKSheaf"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Verbatim probe-confirmed body. Direct term-mode forwarding to Target 3 with F := toModuleKSheaf C, named-argument syntax (𝒰 := 𝒰) to lock in the cover so Lean's elaborator does not re-derive it from the [IsCechAcyclicCover (toModuleKSheaf C) 𝒰] / [HasCechToHModuleIso (toModuleKSheaf C) 𝒰] instance arguments.",
+        "code_tried": "theorem subsingleton_HModule_of_hasCechToHModuleIso_top_curve\n    {k : Type u} [Field k] (C : Over (Spec (.of k)))\n    {ι : Type u} {𝒰 : ι → TopologicalSpace.Opens C.left.toTopCat}\n    [HasExt.{u} (Sheaf (Opens.grothendieckTopology C.left.toTopCat) (ModuleCat.{u} k))]\n    [HasExt.{u + 1} (Sheaf (Opens.grothendieckTopology C.left.toTopCat) (ModuleCat.{u} k))]\n    [IsCechAcyclicCover (toModuleKSheaf C) 𝒰]\n    [HasCechToHModuleIso (toModuleKSheaf C) 𝒰]\n    (h : ⨆ i, 𝒰 i = ⊤) (n : ℕ) (hn : 0 < n) :\n    Subsingleton (HModule k (toModuleKSheaf C) n) :=\n  subsingleton_HModule_of_hasCechToHModuleIso_top (𝒰 := 𝒰) h n hn",
+        "line_number": 1152,
+        "lean_error": null,
+        "goal_before": "⊢ Subsingleton (HModule k (toModuleKSheaf C) n)",
+        "goal_after": "(no goals)",
+        "result": "success",
+        "insight": "Mirrors the iter-039 / iter-042 / iter-043 / iter-048 / iter-049 _curve pattern. The named-argument (𝒰 := 𝒰) is load-bearing — Lean's elaborator otherwise re-derives 𝒰 from the [IsCechAcyclicCover (toModuleKSheaf C) 𝒰] / [HasCechToHModuleIso (toModuleKSheaf C) 𝒰] instance arguments, which can match the wrong cover when multiple are in scope. Verified kernel-only via lean_verify."
+      }
+    ],
+    "next_steps": "Direct call site for the iter-053+ genus carrier producer Module.Finite k (HModule k (toModuleKSheaf C) 1)."
+  }
+]

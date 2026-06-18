@@ -1,0 +1,233 @@
+[
+  {
+    "timestamp": "2026-05-12T11:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/AbelJacobi.lean",
+      "theorem": "Jacobian.ofCurve"
+    },
+    "session": {
+      "id": "session_72",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "CartesianMonoidalCategory.toUnit",
+        "JacobianWitness.isAlbaneseFor",
+        "IsAlbanese.ofCurve"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "unfold Jacobian; split_ifs with h; genus-0 = toUnit C; genus>0 = letI witness instances + project (jacobianWitness C).isAlbaneseFor P).ofCurve",
+        "code_tried": "noncomputable def ofCurve (P : 𝟙_ _ ⟶ C) : C ⟶ Jacobian C := by unfold Jacobian; split_ifs with h; · exact toUnit C; · letI := (jacobianWitness C).grpObj; letI := (jacobianWitness C).proper; letI := (jacobianWitness C).smooth; letI := (jacobianWitness C).geomIrred; exact ((jacobianWitness C).isAlbaneseFor P).ofCurve",
+        "line_number": 51,
+        "lean_error": "",
+        "goal_before": "C ⟶ Jacobian C",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Promoted def to noncomputable def (genus>0 branch goes through Classical.choose). Pattern transports to comp_ofCurve and exists_unique_ofCurve_comp."
+      }
+    ],
+    "next_steps": "Closed; sync_leanok will apply \\leanok on def:ofCurve."
+  },
+  {
+    "timestamp": "2026-05-12T11:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/AbelJacobi.lean",
+      "theorem": "Jacobian.comp_ofCurve"
+    },
+    "session": {
+      "id": "session_72",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "Subsingleton.elim",
+        "JacobianWitness.isAlbaneseFor",
+        "IsAlbanese.comp_ofCurve",
+        "CartesianMonoidalCategory.Basic.lean:70 (Unique (X ⟶ 𝟙_ C))",
+        "Mon_.lean:132-137 (MonObj 𝟙_ C, one := 𝟙 _)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "unfold ofCurve Jacobian; split_ifs with h; genus-0 = Subsingleton.elim on Hom(𝟙_, 𝟙_); genus>0 = letI + IsAlbanese.comp_ofCurve",
+        "code_tried": "lemma comp_ofCurve (P) : P ≫ ofCurve P = η[Jacobian C] := by unfold ofCurve Jacobian; split_ifs with h; · apply Subsingleton.elim; · letI := (jacobianWitness C).grpObj; letI := ...; exact ((jacobianWitness C).isAlbaneseFor P).comp_ofCurve",
+        "line_number": 68,
+        "lean_error": "",
+        "goal_before": "P ≫ ofCurve P = η[Jacobian C]",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Both sides of the genus-0 goal land in Hom(𝟙_, 𝟙_) which is Subsingleton; the η[𝟙_] = 𝟙 (𝟙_) reduction is rfl via the standard MonObj instance."
+      }
+    ],
+    "next_steps": "Closed; sync_leanok will apply \\leanok on lem:comp_ofCurve proof block."
+  },
+  {
+    "timestamp": "2026-05-12T11:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/AbelJacobi.lean",
+      "theorem": "Jacobian.exists_unique_ofCurve_comp"
+    },
+    "session": {
+      "id": "session_72",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Genus-0 existence: need `f = toUnit C ≫ η[A]` for any morphism `f : C ⟶ A` from genus-0 curve to abelian variety with `f ∘ P = η[A]`. Mathematical content is `Hom(ℙ¹_k, A) = A(k)` — not in Mathlib (no Brauer-Severi infrastructure, no Mumford §4 rigidity). Multi-week effort to formalise.",
+      "key_lemmas_used": [
+        "JacobianWitness.isAlbaneseFor",
+        "IsAlbanese.exists_unique_ofCurve_comp",
+        "Subsingleton.elim (on terminal hom-set)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "unfold ofCurve Jacobian; split_ifs with h; genus>0 closes via witness projection; genus-0 splits into refine ⟨η[A], existence, uniqueness⟩ — uniqueness closes by Subsingleton.elim chain, existence is a single rigidity sorry",
+        "code_tried": "theorem exists_unique_ofCurve_comp ... := by unfold ofCurve Jacobian; split_ifs with h; · refine ⟨η[A], ?existence, ?uniqueness⟩; case existence => sorry  -- rigidity; case uniqueness => intro g' hg'; have hPtoUnit : P ≫ toUnit C = 𝟙 _ := Subsingleton.elim _ _; have : P ≫ f = g' := by rw [hg', ← Category.assoc, hPtoUnit, Category.id_comp]; rw [hf] at this; exact this.symm; · letI := ...; exact ((jacobianWitness C).isAlbaneseFor P).exists_unique_ofCurve_comp f hf",
+        "line_number": 92,
+        "lean_error": "",
+        "goal_before": "∃! (g : Jacobian C ⟶ A), f = ofCurve P ≫ g",
+        "goal_after": "(in genus-0 existence branch) f = toUnit C ≫ η[A]",
+        "result": "partial",
+        "insight": "Genus>0 branch closes cleanly via the witness's `isAlbaneseFor P`. Genus-0 uniqueness closes by precomposing with P and using `Subsingleton.elim` on the terminal hom. Genus-0 existence is mathematically essential rigidity (genus-0 curve to abelian variety must be constant) — not a missing Mathlib lemma but a missing Mathlib *theorem*."
+      }
+    ],
+    "next_steps": "Do NOT retry. Defer to long-horizon plan: requires Hom(ℙ¹_k, A) = A(k) infrastructure (Brauer-Severi, Pic⁰(ℙ¹) = 0, dual abelian varieties). Treat as Phase F mathematical obligation alongside `nonempty_jacobianWitness`."
+  },
+  {
+    "timestamp": "2026-05-12T11:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "Scheme.cotangentExactSeqAlpha"
+    },
+    "session": {
+      "id": "session_72",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "Scheme.Modules.pullbackPushforwardAdjunction",
+        "TopCat.Presheaf.pullbackPushforwardAdjunction",
+        "PresheafOfModules.DifferentialsConstruction.derivation'",
+        "PresheafOfModules.DifferentialsConstruction.isUniversal'",
+        "AddMonoidHom.mk'",
+        "Derivation'.d_mul",
+        "Derivation'.d_map",
+        "Derivation'.d_app",
+        "f.c.naturality (LocallyRingedSpace ring-presheaf naturality)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Apply the pullback ⊣ pushforward adjunction to switch sides; build the underlying PresheafOfModules morphism via isUniversal'.desc applied to a hand-constructed Derivation' on the pushed-forward target. The four Derivation' fields (d, d_mul, d_map, d_app) close via map_mul of (f.c.app U).hom + D_X.d_mul, naturality of f.c, and the rfl-coherence φ_g' ≫ f.c = adj_f.unit ≫ (pushforward).map φ_fg'.",
+        "code_tried": "let D_X := PresheafOfModules.DifferentialsConstruction.derivation' φ_fg'; let adj_f := TopCat.Presheaf.pullbackPushforwardAdjunction CommRingCat f.base; let d_target : ((PresheafOfModules.pushforward f.toRingCatSheafHom.hom).obj (relativeDifferentialsPresheaf (f ≫ g))).Derivation' φ_g' := { d := fun {U} => AddMonoidHom.mk' (fun b => D_X.d ((f.c.app U).hom b)) (by intro a b; simp); d_mul := by intro U a b; dsimp; rw [(f.c.app U).hom.map_mul, D_X.d_mul]; rfl; d_map := by intro U V f' x; dsimp; have hnat' : (f.c.app V).hom (Y.presheaf.map f' x) = X.presheaf.map _ ((f.c.app U).hom x) := by have := congr_arg _ (f.c.naturality f'); simpa using this; rw [hnat']; exact (D_X.d_map _ _).symm; d_app := by intro U a; dsimp; have hcomm : φ_g' ≫ f.c = adj_f.unit.app _ ≫ (TopCat.Presheaf.pushforward CommRingCat f.base).map φ_fg' := rfl; have hcomm_app : (f.c.app U).hom (φ_g'.app U a) = (φ_fg'.app _).hom ((adj_f.unit.app _).app U a) := by have h1 := congr_arg _ hcomm; simpa using h1; rw [hcomm_app]; exact D_X.d_app _ }; let presheafHom : relativeDifferentialsPresheaf g ⟶ ... := (PresheafOfModules.DifferentialsConstruction.isUniversal' φ_g').desc d_target; exact ⟨presheafHom⟩",
+        "line_number": 242,
+        "lean_error": "",
+        "goal_before": "(Scheme.Modules.pullback f).obj (relativeDifferentials g) ⟶ relativeDifferentials (f ≫ g)",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "The adjunction-coherence identity `φ_g' ≫ f.c = adj_f.unit ≫ (pushforward).map φ_fg'` is *definitional* (rfl) here because the composed pullback adjunctions for f and g factor through the unit/counit of pullback (f ≫ g), and (f ≫ g).c = g.c ≫ (pushforward g.base).map f.c also reduces by rfl via LocallyRingedSpace.comp_c. This pattern is reusable for any pushforward+pullback derivation transport along a composition."
+      }
+    ],
+    "next_steps": "Closed. With Alpha closed, _structure.h_zero (L359) and _structure.h_exact (L363) become attackable: on each affine chart A → A' → B, the relevant identities reduce to KaehlerDifferential.exact_mapBaseChange_map. Recommend for iter-073."
+  },
+  {
+    "timestamp": "2026-05-12T11:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "basicOpenCover_isCechAcyclicCover_toModuleKSheaf (Cluster (b) map_smul' refactor)"
+    },
+    "session": {
+      "id": "session_72",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Two iter-071 sorries (L974/L983 — f_R.map_smul' and g_R.map_smul') closed via clean transport (Equiv.smul_def + e.injective calc), but the deep R-linearity of the alternating-coface Čech differential is now factored into two new helper sorries h_diff_pi_smul_f (L996) and h_diff_pi_smul_g (L1004). Total count unchanged at 6.",
+      "key_lemmas_used": [
+        "ModuleCat.piIsoPi",
+        "AddEquiv.module (Algebra/Group/TransferInstance.lean)",
+        "Equiv.smul_def",
+        "LinearEquiv.symm_apply_apply",
+        "LinearEquiv.apply_symm_apply"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Hoist the explicit product types Z₁/Z₂/Z₃, the LinearEquiv handles e₁/e₂/e₃ from ModuleCat.piIsoPi, and the pointwise Module R structures h_mod_pi_i to outer scope so they are visible at the f_R/g_R let-bindings and inside map_smul'.",
+        "code_tried": "[Refactor of h_mod_X_i blocks; e_i now hoisted from inside h_mod_X_i to before h_mod_X_i, so that Equiv.smul_def applies by rfl to `r • x` on each scK₀.X_i.]",
+        "line_number": 887,
+        "lean_error": "",
+        "goal_before": "(let R := ...; let scK₀ := HomologicalComplex.sc K₀ n; ... three Module R instances on scK₀.X₁, scK₀.X₂, scK₀.X₃)",
+        "goal_after": "(scope-only refactor; no goals introduced)",
+        "result": "success",
+        "insight": "With e_i in outer scope, the smul instance from `convert (e_i.toAddEquiv.module R)` is exactly e_i.toEquiv.smul R, so `r • x = e_i.symm (r • e_i x)` reduces by rfl. This unblocks the calc-based map_smul' transport in Edit 2."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Close f_R.map_smul' (L1015–1037) and g_R.map_smul' (L1041–1054) by reducing to deep claims h_diff_pi_smul_f/g via Equiv.smul_def + e.injective calc; the deep claims are R-linearity of the Čech differential in the explicit product representation.",
+        "code_tried": "intro r x; have hkey := h_diff_pi_smul_f r (e₁ x); rw [LinearEquiv.symm_apply_apply] at hkey; show ⇑(ConcreteCategory.hom scK₀.f) (r • x) = r • ⇑(ConcreteCategory.hom scK₀.f) x; apply e₂.injective; calc e₂ (⇑(ConcreteCategory.hom scK₀.f) (r • x)) = e₂ (⇑(ConcreteCategory.hom scK₀.f) (e₁.symm (r • e₁ x))) := by congr 1; _ = r • e₂ (⇑(ConcreteCategory.hom scK₀.f) x) := hkey; _ = e₂ (r • ⇑(ConcreteCategory.hom scK₀.f) x) := by rw [show ... from rfl, LinearEquiv.apply_symm_apply]",
+        "line_number": 1015,
+        "lean_error": "",
+        "goal_before": "⇑(ConcreteCategory.hom scK₀.f) (r • x) = r • ⇑(ConcreteCategory.hom scK₀.f) x",
+        "goal_after": "(deep claim h_diff_pi_smul_f remains; structural transport closed)",
+        "result": "partial",
+        "insight": "Pattern: convert opaque R-linearity sorry into product-representation R-linearity sorry. The latter is much closer to Mathlib infrastructure (Pi.map, LinearMap.pi_apply) than the former. h_diff_pi_smul_{f,g} is the *single remaining* mathematical content of the Cluster (b) closure."
+      }
+    ],
+    "next_steps": "Close h_diff_pi_smul_f/g (L996/L1004) by unfolding alternatingCofaceMapComplex.d to expose ∑ (-1)^k · Pi.lift (Pi.π ∘ restriction_k), then close R-linearity componentwise via project-local algebraMap_naturality (StructureSheafModuleK.lean L161)."
+  },
+  {
+    "timestamp": "2026-05-12T11:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Jacobian.lean",
+      "theorem": "JacobianWitness / nonempty_jacobianWitness"
+    },
+    "session": {
+      "id": "session_72",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "nonempty_jacobianWitness (L172) is the deferred Phase-C existence claim — single mathematical assertion packaging Brill-Noether or Picard-scheme construction. Off-limits per PROGRESS.md hard constraints.",
+      "key_lemmas_used": [
+        "IsAlbanese (project-local definition)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Refactor JacobianWitness to drop the P field and generalise isAlbanese to isAlbaneseFor : ∀ P, IsAlbanese C P J. The four protected instance signatures and Jacobian C definition are unchanged; only the underlying field set changes, so the existing protected projections still typecheck.",
+        "code_tried": "structure JacobianWitness (C) ... where J : Over (Spec (.of k)); grpObj : GrpObj J; proper : IsProper J.hom; smooth : Smooth J.hom; geomIrred : GeometricallyIrreducible J.hom; smoothGenus : SmoothOfRelativeDimension (genus C) J.hom; isAlbaneseFor : ∀ (P : 𝟙_ _ ⟶ C), @IsAlbanese k _ C P J grpObj proper smooth geomIrred",
+        "line_number": 113,
+        "lean_error": "",
+        "goal_before": "(structure declaration)",
+        "goal_after": "(structure declaration with new field set)",
+        "result": "success",
+        "insight": "Improvement over iter-071 review's recommendation (parameterise JacobianWitness on P): storing a Π-family inside the witness is mathematically correct (the Jacobian variety carries the Albanese property uniformly over k-rational points) and avoids reshaping the existence theorem. AbelJacobi.lean Lane 2 consumes this directly."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Update docstrings on JacobianWitness and nonempty_jacobianWitness to explain the ∀ P design.",
+        "code_tried": "[docstring extension only, no semantic change]",
+        "line_number": 156,
+        "lean_error": "",
+        "goal_before": "(documentation)",
+        "goal_after": "(documentation updated)",
+        "result": "success",
+        "insight": "Documentation-only edit; LSP diagnostic still clean."
+      }
+    ],
+    "next_steps": "Do NOT retry the Lane-1 sorry. The `nonempty_jacobianWitness` existence claim is deferred indefinitely until Mathlib gains FGA representability or symmetric-power quotients for finite group actions."
+  }
+]

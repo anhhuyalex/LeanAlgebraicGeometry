@@ -1,0 +1,114 @@
+[
+  {
+    "timestamp": "2026-05-31T11:55:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.homOfLocalCompat"
+    },
+    "session": {
+      "id": "session_227",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "The A-bridge gluing engine (step i: glue compatible local ab-presheaf morphisms over an open cover to a global morphism) is a ~120-190 LOC category-theory build, NOT the ~30-60 LOC the plan estimated. The load-bearing risk is the `naturality` field of `localSection` (commuting eqToHom-conjugated f_i components across Over (U i) morphisms via Over.map/Over.forget coherence). NOT blocked by d.2 (no tensor stalk is invoked). No sorry pinned (FORBIDDEN this iter).",
+      "key_lemmas_used": [
+        "PresheafOfModules.homMk",
+        "Presheaf.IsSheaf.hom",
+        "TopCat.Sheaf.existsUnique_gluing",
+        "AlgebraicGeometry.Scheme.restrictFunctorIsoPullback"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Land step (ii) of homOfLocalCompat: wrap PresheafOfModules.homMk at the Scheme.Modules level (promote an O_X-linear Ab-presheaf morphism g to a module morphism M ⟶ N).",
+        "code_tried": "noncomputable def homMk {X : Scheme.{u}} {M N : X.Modules} (g : M.val.presheaf ⟶ N.val.presheaf) (hg : ∀ V r m, (g.app V).hom (r • m) = r • (g.app V).hom m) : M ⟶ N := ⟨PresheafOfModules.homMk (M₁ := M.val) (M₂ := N.val) g hg⟩",
+        "line_number": "2034",
+        "lean_error": null,
+        "result": "success",
+        "insight": "Linearity hyp must be stated over X.ringCatSheaf.obj.obj V / M.val.obj V carriers; the Scheme.Modules.presheaf def does NOT unfold for instance synthesis, so M.val.presheaf must be used syntactically. Step (ii) lands axiom-clean {propext, Classical.choice, Quot.sound}."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Add the defining-property simp lemma toPresheaf_map_homMk.",
+        "code_tried": "@[simp] lemma toPresheaf_map_homMk ... : (Scheme.Modules.toPresheaf X).map (homMk g hg) = g := rfl",
+        "line_number": "2042",
+        "lean_error": null,
+        "result": "success",
+        "insight": "Section-level form `((homMk g hg).val.app V).hom = (g.app V).hom` is FALSE-typed (PresheafOfModules .app is a LinearMap, g.app V an AddMonoidHom); use the Ab-level toPresheaf identity instead. rfl-clean."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Build the C-bridge H2' core: restrictScalars along a ring iso commutes with the linear dual (Hom-analogue of restrictScalarsRingIsoTensorEquiv).",
+        "code_tried": "noncomputable def restrictScalarsRingIsoDualEquiv (e : R ≃+* S) (M) [AddCommGroup M] [Module S M] : (M →ₗ[S] S) ≃ₗ[R] (M →ₗ[R] R) := { toFun := fun φ => { toFun := fun m => e.symm (φ m), ... }, invFun := fun ψ => { toFun := fun m => e (ψ m), ... }, ... }",
+        "line_number": "306",
+        "lean_error": "intermediate: 'change' tactic failed (e.symm (e r * φ m) not defeq target e.symm (e r • φ m)); rfl failed on map_add' LinearMap eta; resolved by hsmulM : r • m = e r • m (rfl) + map_smul/map_mul/e.symm_apply_apply",
+        "result": "success",
+        "insight": "Module R-structures via Module.compHom · e.toRingHom placed in the SIGNATURE via letI (mirroring restrictScalarsRingIsoTensorEquiv). Forward φ ↦ e.symm∘φ, inverse ψ ↦ e∘ψ. Axiom-clean {propext, Quot.sound} (cleaner — no Classical.choice). This is the d.2-free H2' ingredient feeding ModuleCat.restrictScalarsEquivalenceOfRingEquiv."
+      }
+    ],
+    "next_steps": "Build sub-piece (1) `localSection` (with its `naturality` field) FIRST as its own axiom-clean lemma — it is the only step with real coherence risk; (2) IsCompatible cocycle, (3) glue+convert via existsUnique_gluing, (4) linearity + restriction-recovery follow mechanically. Do NOT re-estimate at 30-60 LOC. Do NOT pin a sorry. The route is d.2-free on both A and C fronts — the live decision is whether the bounded ~120-190 LOC engineering is worth it vs lifting the RR-pause for the divisor Pic⁰ route (escalated to USER this iter via the tripwire)."
+  },
+  {
+    "timestamp": "2026-05-31T11:45:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.homMk"
+    },
+    "session": {
+      "id": "session_227",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "PresheafOfModules.homMk"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Wrap PresheafOfModules.homMk in the SheafOfModules.Hom constructor at the Scheme.Modules level.",
+        "code_tried": "⟨PresheafOfModules.homMk (M₁ := M.val) (M₂ := N.val) g hg⟩",
+        "line_number": "2034",
+        "result": "success",
+        "insight": "A-bridge step (ii) — axiom-clean {propext, Classical.choice, Quot.sound}, verified first-hand via lean_verify."
+      }
+    ],
+    "next_steps": "Feed the glued morphism g (from the not-yet-built step i) to homMk."
+  },
+  {
+    "timestamp": "2026-05-31T11:42:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "restrictScalarsRingIsoDualEquiv"
+    },
+    "session": {
+      "id": "session_227",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "Module.compHom",
+        "RingEquiv.symm_apply_apply",
+        "RingEquiv.apply_symm_apply",
+        "LinearMap.ext"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Explicit LinearEquiv, forward φ ↦ e.symm∘φ, inverse ψ ↦ e∘ψ; Module R-structures via Module.compHom in signature; linearity via hsmulM : r•m = e r•m (rfl).",
+        "code_tried": "see homOfLocalCompat milestone attempt 3",
+        "line_number": "306",
+        "result": "success",
+        "insight": "C-build H2' core. Axiom-clean {propext, Quot.sound}. The Hom/dual analogue of restrictScalarsRingIsoTensorEquiv; the concrete LinearEquiv feeding ModuleCat.restrictScalarsEquivalenceOfRingEquiv. Decisive datapoint that the C-bridge is d.2-free."
+      }
+    ],
+    "next_steps": "Lift through restrictScalarsEquivalenceOfRingEquiv to assemble the C-bridge (dual M).restrict f ≅ dual (M.restrict f), mirroring tensorObj_restrict_iso H1∘H2."
+  }
+]

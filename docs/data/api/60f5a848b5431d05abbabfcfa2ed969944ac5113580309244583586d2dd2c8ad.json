@@ -1,0 +1,197 @@
+[
+  {
+    "timestamp": "2026-06-03T19:00:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "pullbackTensorMap_restrict"
+    },
+    "session": {
+      "id": "session_261",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "interleaved 4-square paste blocked on unbuilt Sq1 (sheafificationCompPullback_comp) + Sq4 (pullbackValIso composition coherence)",
+      "key_lemmas_used": [
+        "pullbackTensorMap",
+        "tensorObjIsoOfIso",
+        "Functor.map_comp",
+        "Category.assoc",
+        "pullbackComp_δ"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Open the monolithic D3' sorry to paste-ready form",
+        "code_tried": "simp only [pullbackTensorMap, tensorObjIsoOfIso]; rw [Functor.map_comp, Functor.map_comp, Functor.map_comp]; simp only [Category.assoc]",
+        "line_number": "2503",
+        "lean_error": "none (compiles); residual is the explicit 4-vs-10 factor identity",
+        "goal_before": "pullbackTensorMap (h≫f) M N = (pullbackComp h f).inv.app (M.tensorObj N) ≫ (pullback h).map (pullbackTensorMap f M N) ≫ pullbackTensorMap h _ _ ≫ (tensorObjIsoOfIso _ _).hom",
+        "goal_after": "explicit S1≫a.map δ≫S3≫S4 = R0≫(pullback h).map(S1_f≫…)≫… interleaved identity",
+        "result": "partial",
+        "insight": "The four squares INTERLEAVE: S1_h on the RHS acts on tensorObj((pullback f).obj M).val(...), NOT on PrPb_f(M⊗N). Paste cannot group S1's directly; factors must slide past each other via δ_natural (the D1' merge of a.map δ≫S3≫S4 into one a.map Ψ)."
+      }
+    ],
+    "next_steps": "Finish Sq1 (sheafificationCompPullback_comp) unit reassembly, build Sq4, then the interleaved square-sliding paste. Multiple ~40-120 LOC mate-calculus work items."
+  },
+  {
+    "timestamp": "2026-06-03T19:00:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "sheafificationCompPullback_comp"
+    },
+    "session": {
+      "id": "session_261",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "RHS unit reassembly: transport the two pullbackComp factors across the adjunctions to re-express R0/R1/R5/δ_pre as the f- and h-unit factors, then collapse via comp_unit_app + unit_naturality",
+      "key_lemmas_used": [
+        "sheafificationCompPullback_eq_leftAdjointUniq",
+        "Adjunction.homEquiv_leftAdjointUniq_hom_app",
+        "Adjunction.homEquiv_unit",
+        "Adjunction.comp_unit_app"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Transpose the identity under the composite adjunction A_{h≫f} and evaluate LHS by the leftAdjointUniq mate identity",
+        "code_tried": "apply (A_{h≫f}).homEquiv _ _ |>.injective; rw [sheafificationCompPullback_eq_leftAdjointUniq]; erw [Adjunction.homEquiv_leftAdjointUniq_hom_app]; rw [Adjunction.homEquiv_unit, Adjunction.comp_unit_app, Adjunction.comp_unit_app]",
+        "line_number": "2439",
+        "lean_error": "none (compiles); residual is the concrete unit identity",
+        "goal_before": "sheafificationCompPullback (h≫f) .app P factored through f, h comparisons conjugated by pullbackComp",
+        "goal_after": "(PrPbPushAdj φ'_{h≫f}).unit P ≫ (pushforward φ'_{h≫f}).map (sheafAdj_Z.unit ...) = (sheafAdj_X.unit P ≫ ...) ≫ (pushforward(h≫f)⋙...).map (R0≫R1≫R5≫a_Z.map δ_pre)",
+        "result": "partial",
+        "insight": "erw REQUIRED for homEquiv_leftAdjointUniq_hom_app: composite left adjoint of B.comp is spelled `pullback φ'⋙sheafification`, not syntactically F'.obj P. leftAdjointUniq_trans_app does NOT apply (the three sheafCompPb isos have DIFFERENT right adjoints). This is the δ-free twin of the proved pullbackObjUnitToUnit_comp mate calculus."
+      }
+    ],
+    "next_steps": "Finish RHS unit reassembly via conjugateEquiv_pullbackComp_inv/unit_conjugateEquiv (pushforwardComp=Iso.refl) + sheafified presheaf pullbackComp, ~60-100 LOC. Then build Sq4."
+  },
+  {
+    "timestamp": "2026-06-03T19:00:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate/DualInverse.lean",
+      "theorem": "sliceDualTransport"
+    },
+    "session": {
+      "id": "session_261",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "codomainMap (leg-B unit ring-iso swap) blocked on (a) CommRing-instance loss on forget₂'d rings for restrictScalars_isIso_ε_of_bijective, (b) 𝟙_-vs-restr-section defeq for `exact inv (ε ...)`",
+      "key_lemmas_used": [
+        "LinearEquiv.toModuleIso",
+        "InternalHom.internalHomObjModule",
+        "ModuleCat.restrictScalars",
+        "ConcreteCategory.bijective_of_isIso"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Enter the ≃ₗ structure after resolving the Module 𝒪_Y(V) instance wall",
+        "code_tried": "set β := Functor.whiskerRight {app := fun U => (Hom.appIso f U.unop).inv} (forget₂ CommRingCat RingCat) with hβ; letI lhsMod := inferInstance; letI rhsMod := InternalHom.internalHomObjModule (R := Y.presheaf) V.unop ((pushforward β).obj M.val) (𝟙_ _); refine LinearEquiv.toModuleIso (m₁ := lhsMod) (m₂ := rhsMod) ?_",
+        "line_number": "184",
+        "lean_error": "initially: failed to synthesize Module 𝒪_Y(V) (pushforward₀-reduced carrier) — fixed by `set β` + explicit m₁/m₂",
+        "goal_before": "((pushforward β).obj (dual M.val)).obj V ≅ (dual ((pushforward β).obj M.val)).obj V",
+        "goal_after": "≃ₗ structure entered, 7 typed sub-goals (toFun/codomainMap/naturality/invFun/map_add'/map_smul'/left_inv/right_inv)",
+        "result": "partial",
+        "insight": "The structure literal re-synthesizes Module on the pushforward₀-REDUCED carrier and fails; m₁/m₂ MUST be passed explicitly (otherwise deferred metavars re-synth+fail at the struct literal). rhsMod is NOT inferInstance — it is internalHomObjModule."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Build toFun leg-A (slice reindex across f.opensFunctor)",
+        "code_tried": "toFun := fun φ => { app := fun W => (ModuleCat.restrictScalars (β.app (op W.unop.left)).hom).map (φ.app (op (Over.mk (f.opensFunctor.map W.unop.hom)))) ≫ ?codomainMap, naturality := ?_ }",
+        "line_number": "274",
+        "lean_error": "none for leg-A (compiles); codomainMap left as hole",
+        "goal_before": "toFun : L → Rr",
+        "goal_after": "codomainMap : restrictScalars β_W (𝟙_X(fW')) ⟶ 𝟙_Y(W')",
+        "result": "partial",
+        "insight": "leg-A must be built CATEGORICALLY via .map — raw ModuleCat.ofHom {toFun:=…} reduces the carrier and loses the restrictScalars/pushforward₀ module instance (verified: ofHom variant fails on Module … (((pushforward β).obj M.val).obj …))."
+      },
+      {
+        "attempt": 3,
+        "strategy": "codomainMap = inv (ε (restrictScalars β_W)) via restrictScalars_isIso_ε_of_bijective",
+        "code_tried": "haveI hisoβ : IsIso (β.app (op W.unop.left)) := by rw [hβ]; exact inferInstance; haveI hbij := ConcreteCategory.bijective_of_isIso _; haveI : IsIso (Functor.LaxMonoidal.ε (ModuleCat.restrictScalars (β.app (op W.unop.left)).hom)) := restrictScalars_isIso_ε_of_bijective _ hbij; exact CategoryTheory.inv (Functor.LaxMonoidal.ε ...)",
+        "line_number": "305",
+        "lean_error": "failed to synthesize CommRing ↑(Y.ringCatSheaf.obj.obj (op W'.left)) — restrictScalars_isIso_ε_of_bijective needs [CommRing R][CommRing S] but section rings are forget₂'d RingCat images",
+        "goal_before": "restrictScalars β_W (𝟙_X(fW')) ⟶ 𝟙_Y(W')",
+        "goal_after": "blocked, reverted to typed sorry with 2 documented frictions",
+        "result": "failed",
+        "insight": "Two frictions: (a) CommRing-instance loss on forget₂'d rings; (b) ε's type carries 𝟙_(ModuleCat) but goal carries defeq-but-not-syntactic (restr V 𝟙_Y).obj W unit-section forms — needs change/eqToHom bridge."
+      }
+    ],
+    "next_steps": "(a) recover CommRing on forget₂'d rings (via presheaf.obj CommRing + defeq change) or add a CommRing-free ε-iso lemma; (b) bridge 𝟙_ vs restr-section with change/eqToHom; then naturality via Subsingleton.elim, invFun mirror, four ≃ₗ laws. DO NOT pivot to stalk Plan-B — route-2 is sanctioned and progressing."
+  },
+  {
+    "timestamp": "2026-06-03T19:00:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/CechHigherDirectImage.lean",
+      "theorem": "CechHigherDirectImage (6-decl scaffold)"
+    },
+    "session": {
+      "id": "session_261",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "none — scaffold only; bodies deferred (CechNerve/CechComplex are ground-up builds, no Mathlib Scheme.Modules Čech machinery)",
+      "key_lemmas_used": [
+        "Scheme.Modules.instAbelian",
+        "CochainComplex.homology",
+        "Scheme.precoverage IsOpenImmersion ZeroHypercover"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Scaffold new file with honest signatures for six blueprint \\lean{...} decls",
+        "code_tried": "def CechNerve, def CechComplex, theorem CechAcyclic.affine, theorem cech_computes_higherDirectImage, def cechHigherDirectImage := (CechComplex f 𝒰 F).homology i, theorem cech_flatBaseChange",
+        "line_number": "1",
+        "lean_error": "none — builds clean (lake build success, 5 sorry warnings + 1 real def)",
+        "goal_before": "file did not exist",
+        "goal_after": "6 decls, 5 typed sorry, cechHigherDirectImage is a REAL body",
+        "result": "partial",
+        "insight": "Mathlib OpenCover is now (Scheme.precoverage IsOpenImmersion).ZeroHypercover X: index 𝒰.I₀, scheme 𝒰.X j, map 𝒰.f j, finiteness [Finite 𝒰.I₀] (old 𝒰.J/𝒰.obj/𝒰.map GONE). Scheme.Modules is Abelian → CochainComplex S.Modules ℕ has .homology i : S.Modules. File NOT imported in AlgebraicJacobian.lean (matches HigherDirectImage convention)."
+      }
+    ],
+    "next_steps": "Engine lane now dispatchable: build CechNerve+CechComplex (hard core, ground-up), then CechAcyclic.affine (contracting homotopy), cech_computes_higherDirectImage (Čech-to-cohomology + Leray SS, heaviest), cech_flatBaseChange. Plan agent: consider adding the import to AlgebraicJacobian.lean."
+  },
+  {
+    "timestamp": "2026-06-03T19:00:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/LineBundleCoherence.lean",
+      "theorem": "IsLocallyTrivial.isFinitePresentation"
+    },
+    "session": {
+      "id": "session_261",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "none — HELD lane, verified DONE",
+      "key_lemmas_used": [
+        "SheafOfModules.overEquivalence",
+        "chartOverIso"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Verify the held engine deliverable is axiom-clean (no edits)",
+        "code_tried": "lean_verify on isFinitePresentation/isFiniteType/chart_free_rank_one; grep sorry",
+        "line_number": "250",
+        "lean_error": "none",
+        "goal_before": "n/a",
+        "goal_after": "n/a",
+        "result": "success",
+        "insight": "All three main theorems return {propext, Classical.choice, Quot.sound} (kernel-only). 4 grep 'sorry' matches are all in docstrings. File compiles clean, no edits made."
+      }
+    ],
+    "next_steps": "None — A.2.c engine loc-triv coherence deliverable COMPLETE."
+  }
+]

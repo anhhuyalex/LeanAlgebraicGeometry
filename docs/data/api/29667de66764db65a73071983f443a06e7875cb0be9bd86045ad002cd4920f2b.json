@@ -1,0 +1,275 @@
+[
+  {
+    "timestamp": "2026-05-29T00:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/WeilDivisor.lean",
+      "theorem": "AlgebraicGeometry.Scheme.rationalMap_order_finite_support"
+    },
+    "session": {
+      "id": "session_201",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "IsLocalization.mk'_eq_iff_eq_mul",
+        "IsLocalization.surj",
+        "Ring.ordFrac_eq_div",
+        "MulEquivClass.map_nonZeroDivisors",
+        "Module.length_eq_of_surjective",
+        "Ideal.quotientEquiv",
+        "genericPoint_eq_of_isOpenImmersion",
+        "X.presheaf.stalkCongr"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Build Ring.ord_ringEquiv: R-linear equivalence R/(x) ≃ₗ[R] S/(e x) + LinearEquiv.length_eq + Module.length_eq_of_surjective.",
+        "code_tried": "Ideal.quotientEquiv (Ideal.span {x}) (Ideal.span {e x}) e _; promote to R-linear via Quotient.inductionOn for map_smul'; chain length lemmas.",
+        "line_number": "247",
+        "lean_error": null,
+        "goal_before": "Ring.ord R x = Ring.ord S (e x)",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "R-side equivalence-of-quotients lifts to length equality; surjective algebra-map closes the R-vs-S length bridge."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Build Ring.nonZeroDivisors_ringEquiv via MulEquivClass.map_nonZeroDivisors + injectivity chase.",
+        "code_tried": "e.map_nonZeroDivisors; chase Submonoid.map via e.injective.",
+        "line_number": "273",
+        "lean_error": null,
+        "goal_before": "r ∈ nonZeroDivisors R ↔ e r ∈ nonZeroDivisors S",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Mathlib's MulEquivClass.map_nonZeroDivisors collapses both directions in one step."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Build Ring.ordMonoidWithZeroHom_ringEquiv by unfolding ordMonoidWithZeroHom and by_cases on r ∈ nzd R.",
+        "code_tried": "unfold Ring.ordMonoidWithZeroHom; by_cases hr : r ∈ nonZeroDivisors R; rewrite via nonZeroDivisors_ringEquiv + ord_ringEquiv in each branch.",
+        "line_number": "285",
+        "lean_error": null,
+        "goal_before": "ordMonoidWithZeroHom S (e r) = ordMonoidWithZeroHom R r",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Direct case-split on nzd membership; both branches reduce to ord_ringEquiv after the equiv-image rewrite."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Build Ring.ordFrac_ringEquiv (HARD BAR) via by_cases x = 0 + IsLocalization.surj + Ring.ordFrac_eq_div on both sides.",
+        "code_tried": "by_cases hx : x = 0; non-zero branch: obtain (a,b) from IsLocalization.surj; deduce a ≠ 0; lift a ∈ nzd via mem_nonZeroDivisors_of_ne_zero [IsDomain R]; express x = mk' K_R a ⟨b,_⟩ via IsLocalization.mk'_eq_iff_eq_mul; chase h_compat through mk'_eq_iff_eq_mul.mpr; apply Ring.ordFrac_eq_div on both sides; close via ordMonoidWithZeroHom_ringEquiv on numerator and denominator.",
+        "line_number": "311",
+        "lean_error": null,
+        "goal_before": "Ring.ordFrac S (e_K x) = Ring.ordFrac R x",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Ring.ordFrac_eq_div is the key reduction; once both sides become quotients of ordMonoidWithZeroHom, the equiv-image lemma trio collapses the comparison. HARD BAR met."
+      },
+      {
+        "attempt": 5,
+        "strategy": "PUSH-BEYOND step (2a): Build Scheme.Opens.functionFieldIso by composing Scheme.Opens.stalkIso at the generic point with X.presheaf.stalkCongr along genericPoint_eq_of_isOpenImmersion.",
+        "code_tried": "stalkIso U (genericPoint U.toScheme) ≪≫ X.presheaf.stalkCongr (genericPoint_eq_of_isOpenImmersion U.ι).symm.subst Inseparable.refl; require noncomputable.",
+        "line_number": "380",
+        "lean_error": null,
+        "goal_before": "U.toScheme.functionField ≅ X.functionField",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Inseparable witness collapses to refl after the genericPoint-equality rewrite; noncomputable is forced by stalkIso/stalkCongr."
+      },
+      {
+        "attempt": 6,
+        "strategy": "PUSH-BEYOND step (2b): Build Scheme.PrimeDivisor.ordFrac_stalkIso_naturality as the scheme-side packaging of Ring.ordFrac_ringEquiv parameterised on (e_K, h_compat).",
+        "code_tried": "Apply Ring.ordFrac_ringEquiv with e := (Scheme.PrimeDivisor.stalkIso U Y hYU).commRingCatIsoToRingEquiv; thread typeclasses via iter-200 IsRegularInCodimensionOne.instOpen + instKrullDimLEStalk.",
+        "line_number": "519",
+        "lean_error": null,
+        "goal_before": "Ring.ordFrac _ (e_K x) = Ring.ordFrac _ x for scheme-derived stalk iso",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Clean parameterised wrapper; h_compat hypothesis remains taken as a parameter rather than discharged — that is the iter-202 Sub-build 3 work."
+      }
+    ],
+    "next_steps": "Iter-202 Sub-build 3: discharge h_compat via stalkSpecializes naturality w.r.t. Scheme.Opens.stalkIso. Then iter-203+ terminal closure of L535 non-zero branch (Stacks 02RV — requires [IsNoetherian X] strengthening; USER-blocked under ROUTE C PAUSE until consumers can recover [CompactSpace] from [IsProper C.hom])."
+  },
+  {
+    "timestamp": "2026-05-29T00:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Albanese/AuslanderBuchsbaum.lean",
+      "theorem": "RingTheory.auslander_buchsbaum_formula_succ_pd"
+    },
+    "session": {
+      "id": "session_201",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "body of auslander_buchsbaum_formula_succ_pd remains open (L1696 sorry); matrix-collapse substrate landed but ~80-120 LOC of LES bookkeeping + Nat-induction restructuring remain",
+      "key_lemmas_used": [
+        "CategoryTheory.Abelian.Ext.mk₀_sum",
+        "CategoryTheory.Abelian.Ext.comp_sum",
+        "CategoryTheory.Abelian.Ext.mk₀_smul",
+        "CategoryTheory.Abelian.Ext.comp_smul",
+        "ModuleCat.hom_sum",
+        "ModuleCat.ofHom_add",
+        "LinearMap.toSpanSingleton",
+        "Finset.sum_product_right",
+        "Pi.single_eq_same",
+        "Pi.single_eq_of_ne",
+        "ext_smul_eq_zero_of_mem_annihilator"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Probe Mathlib API for Ext.add_comp / Ext.smul_comp / ModuleCat.ofHom_add / ofHom_smul to identify which composition primitives exist.",
+        "code_tried": "lean_loogle Abelian.Ext.add_comp; lean_loogle ModuleCat.ofHom_smul; grep Mathlib for ofHom_smul.",
+        "line_number": null,
+        "lean_error": "Ext.smul_comp / Ext.mk₀_smul / ModuleCat.ofHom_smul empty; ModuleCat.ofHom_add exists; Ext.comp_smul / mk₀_smul / comp_sum / mk₀_sum exist.",
+        "goal_before": null,
+        "goal_after": null,
+        "result": "partial",
+        "insight": "The bilinear Ext API exposes mk₀_sum, comp_sum, mk₀_smul, comp_smul as the load-bearing primitives; ofHom_smul is missing but can be sidestepped by absorbing the scalar into the basis-vector image."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Build Module.elemMap n m i j := toSpanSingleton R (Pi.single i 1) ∘ₗ LinearMap.proj j as the 'elementary matrix' linear map.",
+        "code_tried": "private def elemMap ... := (toSpanSingleton R (Fin n → R) (Pi.single i 1)) ∘ₗ (LinearMap.proj j)",
+        "line_number": "~1418",
+        "lean_error": null,
+        "goal_before": null,
+        "goal_after": null,
+        "result": "success",
+        "insight": "Elementary-matrix linear map: sends Pi.single j 1 ↦ Pi.single i 1 and other basis vectors to 0; thin composition of Mathlib primitives, axiom-clean."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Build Module.elemMap_apply via toSpanSingleton_apply + Pi.single case-split.",
+        "code_tried": "unfold elemMap; simp [LinearMap.toSpanSingleton_apply]; Pi.single_eq_same / Pi.single_eq_of_ne.",
+        "line_number": "~1425",
+        "lean_error": null,
+        "goal_before": null,
+        "goal_after": null,
+        "result": "success",
+        "insight": "Direct calculation; closes axiom-clean."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Build Module.linearMap_finFunR_matrix_decomp: A = ∑_{(i,j)} A(Pi.single j 1) i • elemMap n m i j; this is the core matrix decomposition.",
+        "code_tried": "Decompose x = ∑_j (x j) • Pi.single j 1; push through A via map_sum + map_smul; express each row A(Pi.single j 1) = ∑_i (A(Pi.single j 1) i) • Pi.single i 1; reshuffle via Finset.sum_product_right; close via LinearMap.smul_apply + elemMap_apply.",
+        "line_number": "~1442",
+        "lean_error": "Multiple lean_run_code rounds: 'failed to synthesize AddCommMonoid (Fin m)' (1 attempt), 'rewrite did not find pattern' (3 attempts), 'show is not definitionally equal' (1 attempt). Resolved by reordering basis-decomposition vs. sum reshuffling.",
+        "goal_before": "A x = (∑ A_{ij} • elemMap _ _ i j) x",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Sum reshuffling via Finset.sum_product_right is the load-bearing step; the inner basis decomposition has to be done BEFORE the outer reshuffle, not after."
+      },
+      {
+        "attempt": 5,
+        "strategy": "Build Module.ext_comp_mk₀_ofHom_eq_zero_of_entries_mem_annihilator: the matrix-collapse helper. Given A : R^m →ₗ R^n with all entries A(Pi.single j 1) i ∈ Ann_R N, the postcomposition e.comp (mk₀ (ofHom A)) is zero in Ext^p(N, R^n).",
+        "code_tried": "Substitute the matrix decomposition; push through ofHom (ModuleCat.hom_sum + ofHom_add); push through mk₀ (Ext.mk₀_sum + Ext.mk₀_smul); push through comp (Ext.comp_sum + Ext.comp_smul); reduce each summand to A_{ij} • (e.comp (mk₀ (ofHom (elemMap _ _ i j)))); close via ext_smul_eq_zero_of_mem_annihilator (existing L229 helper) on the scalar A_{ij} ∈ Ann_R N.",
+        "line_number": "~1481",
+        "lean_error": null,
+        "goal_before": "e.comp (mk₀ (ofHom A)) (add_zero p) = 0",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "The bilinear Ext API chains perfectly: every step in the matrix-collapse argument has a directly-named Mathlib primitive. axiom-clean per lean_verify ({propext, Classical.choice, Quot.sound})."
+      },
+      {
+        "attempt": 6,
+        "strategy": "Attempt full closure of auslander_buchsbaum_formula_succ_pd body via Path B (analogist verdict).",
+        "code_tried": "NOT attempted in this iter: ~50-80 LOC base case (k=0: pd M=1) using matrix-collapse + LES of Ext on 0 → K → R^n → M → 0 + minimality clause from exists_minimalSurjection_finite_localRing; ~30-50 LOC inductive step (k≥1) using depth_of_short_exact parts (2)+(3) WITHOUT matrix-collapse (analogist Path B alternative).",
+        "line_number": "1696",
+        "lean_error": null,
+        "goal_before": "k + projectiveDimension R M = depth R",
+        "goal_after": "unchanged (residual sorry)",
+        "result": "partial",
+        "insight": "Path B is now ~3× closer: matrix-collapse helper IS the binding new substrate. Closure still requires Nat-induction restructuring of _succ_pd to do induction k generalizing M so the inductive step's IH is reachable. Iter-202 dispatch with the matrix-collapse substrate in hand."
+      }
+    ],
+    "next_steps": "Iter-202 Lane AB-Stacks-00MF-Path-B-Continue: restructure _succ_pd as induction k generalizing M; base case via matrix-collapse + LES; inductive step via depth_of_short_exact parts (2)+(3) (analogist verdict — no matrix-collapse needed for k≥1). Remove `private` per iter-201 plan option (1) commitment. Estimated 80-120 LOC for full closure."
+  },
+  {
+    "timestamp": "2026-05-29T00:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Albanese/CodimOneExtension.lean",
+      "theorem": "AlgebraicGeometry.Scheme.isRegularLocalRing_stalk_of_smooth"
+    },
+    "session": {
+      "id": "session_201",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Step A1 (Matsumura helper) requires Mathlib gap `IsRegularLocalRing → IsDomain` (Stacks 00NQ) + `A / (f₁)` regular-local-ring preservation; both confirmed absent at Mathlib b80f227 via lean_local_search + lean_leansearch + grep over RingTheory/RegularLocalRing/. The `IsRegularLocalRing.localization` (Stacks 00OF) alternative is also absent.",
+      "key_lemmas_used": [
+        "Algebra.SubmersivePresentation.basisCotangent",
+        "Basis.linearIndependent",
+        "LinearIndependent.of_isLocalizedModule",
+        "LocalizedModule.mkLinearMap",
+        "IsLocalization.AtPrime.isLocalRing",
+        "ringKrullDim_quotient_add_eq_of_regular_sequence (iter-200)",
+        "ringKrullDim_localization_atMaximal_MvPolynomial (iter-200)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Scout Mathlib for the binding Step A1 ingredients: IsRegularLocalRing → IsDomain (Stacks 00NQ), A/(f₁) regular-local-ring preservation, IsRegularLocalRing.localization.",
+        "code_tried": "lean_local_search IsWeaklyRegular.isRegular_of_isLocalizedModule_of_mem; lean_local_search isRegular_iff_isWeaklyRegular; grep -rn 'RegularLocalRing' .lake/packages/mathlib/Mathlib/RingTheory/.",
+        "line_number": null,
+        "lean_error": "All three queries empty in the forward direction; only the PID converse instance [IsLocalRing] [IsDomain] [IsPrincipalIdealRing] → IsRegularLocalRing exists.",
+        "goal_before": null,
+        "goal_after": null,
+        "result": "partial",
+        "insight": "Mathlib b80f227 lacks the forward Stacks 00NQ direction (~100-200 LOC build via Cohen-Macaulay / associated-primes theory) and the inductive A/(f₁)-regular-local preservation; the iter-201 Lane COE budget cannot scaffold both."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Build the A2 substrate sub-pieces that are Mathlib-gap-free: cotangent-side lin-indep forward-ergonomics + transport through a generic localisation map.",
+        "code_tried": "submersivePresentation_relation_cotangent_mk_linearIndependent: re-package P.basisCotangent.linearIndependent + basisCotangent_apply as Cotangent.mk-of-relation form. Proof: 1 Basis.linearIndependent + 1 funext rewrite.",
+        "line_number": "854",
+        "lean_error": "Initial attempt used ι σ as parameter names which clashed with greek-letter ambient binders; renamed to ix sx and recompiled clean.",
+        "goal_before": "LinearIndependent S (fun i ↦ Extension.Cotangent.mk ⟨P.relation i, _⟩)",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Forward-ergonomics packaging eliminates downstream basis-abstraction unfolding; axiom-clean per lean_verify."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Build the cotangent-localisation transport sub-piece.",
+        "code_tried": "submersivePresentation_relation_cotangent_mk_linearIndependent_localized: apply LinearIndependent.of_isLocalizedModule on top of #1, transporting through LocalizedModule.mkLinearMap at any prime p of S.",
+        "line_number": "889",
+        "lean_error": null,
+        "goal_before": "LinearIndependent (Localization.AtPrime p) (fun i ↦ mkLinearMap p.primeCompl (Cotangent.mk _))",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Realises Analogue D of the coe-stacks00sw recipe at the un-quotiented cotangent level; iter-202 still owes the conormal-localisation iso (I·A)/(I·A)² ≃ LocalizedModule p.primeCompl P.toExtension.Cotangent (Stacks 02JK at non-Away primes — separate Mathlib gap)."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Build the Step A3 polynomial-ring-side assembly chaining iter-200 capstones.",
+        "code_tried": "ringKrullDim_quotient_localization_MvPolynomial_of_regular: invoke IsLocalization.AtPrime.isLocalRing on A ≃ S_m, then iter-200 ringKrullDim_quotient_add_eq_of_regular_sequence on the regular sequence rs.",
+        "line_number": "924",
+        "lean_error": null,
+        "goal_before": "ringKrullDim (A ⧸ Ideal.ofList rs) + (b : WithBot ℕ∞) = (Nat.card ix : WithBot ℕ∞)",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Mathlib-gap-conditional composite: once Step A lands axiom-clean upstream, this lemma reduces ringKrullDim S_m = n (Stacks 00OE conclusion) to a one-line invocation. The substantive content lives in iter-200's Step 1+2 capstone + Step 3 additive form."
+      },
+      {
+        "attempt": 5,
+        "strategy": "Attempt L1061 isRegularLocalRing_stalk_of_smooth inline closure (PUSH-BEYOND).",
+        "code_tried": "NOT attempted — gated on (i) Step A1 (Matsumura helper, Mathlib gap) AND (ii) conormal-localisation iso for AtPrime (residual A2 gap, Mathlib gap) AND (iii) scheme-to-algebra bridge extracting SubmersivePresentation from Algebra.IsStandardSmoothOfRelativeDimension Γ(Spec, U) Γ(X.left, V) at a particular point.",
+        "line_number": "1061",
+        "lean_error": null,
+        "goal_before": "IsRegularLocalRing (X.left.presheaf.stalk z)",
+        "goal_after": "unchanged (residual sorry)",
+        "result": "partial",
+        "insight": "Multiple Mathlib gaps gate this closure; the iter-201 substrate landings cover the polynomial-ring side + the cotangent lin-indep transport sub-piece, leaving the substantive Stacks 00NQ + the conormal-localisation-iso pieces for iter-202+."
+      }
+    ],
+    "next_steps": "Iter-202+ Lane COE main effort: (1) build IsRegularLocalRing → IsDomain (Stacks 00NQ, ~100-200 LOC project-local OR Mathlib upstream PR) — note the Lane T32 re-engagement trigger also names this lemma as a piece. (2) build conormal-localisation iso for IsLocalization.AtPrime (residual A2 Mathlib gap). (3) once both land, A1 collapses to ~30-50 LOC induction. Alternative re-routing: IsRegularLocalRing.localization (Stacks 00OF) — confirmed ALSO absent at b80f227; this alternative is closed. Recommended dispatch: iter-202 mathlib-analogist to identify whether either gap has a recent upstream Mathlib PR landing, before committing a project-local build."
+  }
+]

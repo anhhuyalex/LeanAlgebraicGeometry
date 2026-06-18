@@ -1,0 +1,210 @@
+[
+  {
+    "timestamp": "2026-05-14T05:16:38Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "cechCofaceMap_pi_smul"
+    },
+    "session": {
+      "id": "session_89",
+      "model": "claude-opus"
+    },
+    "findings": {
+      "blocker": "Sandbox LSP unavailable (mathlib package missing from .lake/packages/, lake not on PATH) — same condition documented in iter-086, 087, 088. The iter-089 PROGRESS.md mandated the prover attempt S6 regardless and accept the partial-progress fallback if (c)–(h) cannot land safely. Prover delivered steps (a)+(b) minimum and explicitly declined to attempt (c)–(h) inline without LSP feedback (preserving the 'deepest committed step' re-scoping signal for iter-090).",
+      "key_lemmas_used": [
+        "Finset.cons_induction",
+        "Finset.sum_cons",
+        "ModuleCat.hom_add",
+        "ModuleCat.hom_zero (implicit via simp on empty case)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "S6 step (a) inline `have hom_sum_dist` via Finset.cons_induction over ModuleCat.hom_add; S6 step (b) `simp only [hom_sum_dist]` to distribute `.hom` over the alternating sum on both sides. Step-(c)–(h) chain explicitly NOT attempted inline (preserved as trailing `sorry` at post-(b) goal). Index type generalised from PROGRESS.md template `Fin ((ComplexShape.up ℕ).prev n + 2)` to abstract `{α : Type}` for unification flexibility under either pre- or post-hRel index shape.",
+        "code_tried": "  have hom_sum_dist :\n      ∀ {M N : ModuleCat.{u} k} {α : Type} (t : Finset α)\n        (f : α → (M ⟶ N)),\n        ModuleCat.Hom.hom (∑ i ∈ t, f i) = ∑ i ∈ t, ModuleCat.Hom.hom (f i) := by\n    intro M N α t f\n    induction t using Finset.cons_induction with\n    | empty => simp\n    | cons h_notin ih =>\n      rw [Finset.sum_cons, ModuleCat.hom_add, Finset.sum_cons, ih]\n  simp only [hom_sum_dist]\n  sorry",
+        "line_number": "522 (replaced trailing sorry; lines now shifted +25 to L547)",
+        "lean_error": "UNVERIFIED — sandbox `lean_diagnostic_messages` failed at startup: 'Failed to start Lean language server: [Errno 2] No such file or directory: lake'",
+        "goal_before": "(Pi.π Z₂ j).hom ((eqToHom ∘ₗ Σ.hom) ((piIsoPi Z₁).inv (r • y))) = r • (Pi.π Z₂ j).hom ((eqToHom ∘ₗ Σ.hom) ((piIsoPi Z₁).inv y))  -- where Σ.hom = ∑ i : Fin (prev n + 2), (-1)^i • Pi.lift (Pi.π Z₁ (· ∘ δ_i.toOrderHom) ≫ (toModuleKPresheaf C).map φ_i.op)",
+        "goal_after": "(Pi.π Z₂ j).hom ((eqToHom ∘ₗ (∑ i, .hom of (-1)^i • (Pi.lift … ≫ map_φ_i))) ((piIsoPi Z₁).inv (r • y))) = r • (Pi.π Z₂ j).hom ((eqToHom ∘ₗ (∑ i, …)) ((piIsoPi Z₁).inv y))  -- post-step-(b): .hom has been distributed across the alternating sum on each side; outer Pi-projection and inner Pi.lift remain",
+        "result": "partial",
+        "insight": "Following the iter-089 PROGRESS.md mandate's fallback ladder, the prover landed the MINIMUM required (steps a+b) instead of attempting the full (c)–(h) chain inline without LSP. The mandate was correctly framed: structure-only deliveries were forbidden, but a step-by-step partial-progress delivery with the trailing sorry pushed to the deepest committed step is acceptable and preserves the re-scoping signal for the next iter. Mathematical-honesty audit: `hom_sum_dist` has a TRUE signature (distributivity of additive monoid homomorphism over Finset.sum is universally true for ModuleCat.Hom.hom — no false-signature risk)."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Considered: `first | <full (c)–(h) chain> | sorry` wrap as a tactic-level fallback that would attempt (c)–(h) while guaranteeing compilation. REJECTED before any code was written.",
+        "code_tried": "first\n  | <full c-h chain>\n  | sorry  -- (this approach was rejected, not written to file)",
+        "line_number": "n/a (rejected without write)",
+        "lean_error": "n/a",
+        "goal_before": "(same as attempt 1's goal_after — post-step-(b) state)",
+        "goal_after": "n/a",
+        "result": "failed",
+        "insight": "Two grounds for rejection per prover task result: (i) partial progress of any non-trivially-failing sub-step would be invisible to the next iter (only `sorry` would remain visible); (ii) the iter-090 prover would lose the 'deepest committed step' signal that iter-089 PROGRESS.md's Forward Scoping uses for re-scoping. Committing the safe minimum (a)+(b) explicitly preserves the iter-090 visibility into where the chain currently stops."
+      }
+    ],
+    "next_steps": "Iter-090: paste the documented step (c)–(h) templates from `task_results/AlgebraicJacobian_Cohomology_BasicOpenCech.lean.md` (each with its specific fallback) into PROGRESS.md and re-issue the 'you MUST attempt' mandate with a finer step-by-step fallback ladder. Six specific Mathlib-references to verify pre-flight: `LinearMap.map_sum`, `Pi.lift_π_apply`, `Pi.smul_apply`, `map_mul` on `CommRingCat.Hom.hom`, `presheafMap_restrict_collapse` (already top-level at L425, fully proved), `Finset.smul_sum`. Three high-priority risks to flag pre-flight: (1) `Finset.cons_induction` case-label compatibility for the iter-089 step-(a) `induction … with` form (recovery: positional bullets); (2) `simp only [hom_sum_dist]` no-op risk if the sum is wrapped inside `eqToHom ∘ₗ` (recovery: `dsimp only` or `unfold Function.comp` to expose); (3) `Pi.smul_apply` synthesis (`letI := perI₁` recovery if `[∀ i, SMul R (Z₁ i)]` synthesis fails). Sandbox-LSP issue: continue to surface via TO_USER.md; dispatcher environment is the validation point."
+  },
+  {
+    "timestamp": "2026-05-14T05:16:38Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "basicOpenCover_isCechAcyclicCover_toModuleKSheaf (substep (a) augmented Čech simplicial object @ L639)"
+    },
+    "session": {
+      "id": "session_89",
+      "model": "claude-opus"
+    },
+    "findings": {
+      "blocker": "Multi-iter Mathlib infrastructure gap (augmented Čech simplicial object machinery; extra-degeneracy contraction). Off-limits per iter-089 PROGRESS.md (Off-limits section). No prover work this iter.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Defer until upstream Mathlib infrastructure lands or a project-local augmented-simplicial-object construction is staged."
+  },
+  {
+    "timestamp": "2026-05-14T05:16:38Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "basicOpenCover_isCechAcyclicCover_toModuleKSheaf (outer scaffolding @ L963)"
+    },
+    "session": {
+      "id": "session_89",
+      "model": "claude-opus"
+    },
+    "findings": {
+      "blocker": "Multi-iter outer-scaffolding sorry. Off-limits this iter per PROGRESS.md.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Gated on `cechCofaceMap_pi_smul` closure (Lane 1) + substep-(a) infrastructure at L639."
+  },
+  {
+    "timestamp": "2026-05-14T05:16:38Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "basicOpenCover_isCechAcyclicCover_toModuleKSheaf (substep (a) for s₀ @ L991)"
+    },
+    "session": {
+      "id": "session_89",
+      "model": "claude-opus"
+    },
+    "findings": {
+      "blocker": "Multi-iter Mathlib infrastructure gap (extra-degeneracy contraction on `s₀`-indexed slice cover). Off-limits per PROGRESS.md.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Same as L639 — gated on upstream Mathlib infrastructure."
+  },
+  {
+    "timestamp": "2026-05-14T05:16:38Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "g_R.map_smul' (@ L1181, formerly L1156)"
+    },
+    "session": {
+      "id": "session_89",
+      "model": "claude-opus"
+    },
+    "findings": {
+      "blocker": "Downstream of `cechCofaceMap_pi_smul` closure. Needs Eq.mpr casts on the codomain due to `CochainComplex.next` indexing per comment at L1131–1154. Off-limits per PROGRESS.md.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Gated on `cechCofaceMap_pi_smul` (Lane 1) closure."
+  },
+  {
+    "timestamp": "2026-05-14T05:16:38Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "h_loc_exact (@ L1210, formerly L1185)"
+    },
+    "session": {
+      "id": "session_89",
+      "model": "claude-opus"
+    },
+    "findings": {
+      "blocker": "Needs `IsLocalizedModule.Away f.1` infrastructure (multi-iter Mathlib gap). Off-limits per PROGRESS.md.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Defer pending upstream Mathlib `IsLocalizedModule.Away` infrastructure."
+  },
+  {
+    "timestamp": "2026-05-14T05:16:38Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "cotangentExactSeq_structure (case h_exact @ L636)"
+    },
+    "session": {
+      "id": "session_89",
+      "model": "claude-opus"
+    },
+    "findings": {
+      "blocker": "Off-limits per iter-089 PROGRESS.md (deferred parallel to `instIsMonoidal_W` pending upstream Mathlib developments). Iter-085 false-helper closure reverted iter-086; awaiting Route A vs Route B decision in a future iter.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Plan-agent decision pending: Route A (SheafOfModules.exact_of_presheaf_exact with TRUE iff/implication signature) vs Route B (bottom-up via ShortComplex.exact_iff_image_eq_kernel + sheafification left-exactness)."
+  },
+  {
+    "timestamp": "2026-05-14T05:16:38Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Modules/Monoidal.lean",
+      "theorem": "instIsMonoidal_W (@ L173)"
+    },
+    "session": {
+      "id": "session_89",
+      "model": "claude-opus"
+    },
+    "findings": {
+      "blocker": "Mathlib upstream gap (`PresheafOfModules.stalk_tensorObj` for varying-ring R₀). Off-limits since iter-081.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Defer pending upstream Mathlib PR or user-authorised axiom."
+  },
+  {
+    "timestamp": "2026-05-14T05:16:38Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Jacobian.lean",
+      "theorem": "nonempty_jacobianWitness (@ L179)"
+    },
+    "session": {
+      "id": "session_89",
+      "model": "claude-opus"
+    },
+    "findings": {
+      "blocker": "Phase-C/E packaging — Albanese existence + genus-0 rigidity. Iter-100+.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Phase-C scaffolding (C0–C3) must land first."
+  },
+  {
+    "timestamp": "2026-05-14T05:16:38Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/Functor.lean",
+      "theorem": "PicardFunctor.representable (@ L190)"
+    },
+    "session": {
+      "id": "session_89",
+      "model": "claude-opus"
+    },
+    "findings": {
+      "blocker": "Phase-C C0–C3 scaffolding gate.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Phase-C scaffolding (C0–C3) must land first."
+  }
+]

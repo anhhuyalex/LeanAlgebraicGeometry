@@ -1,0 +1,431 @@
+[
+  {
+    "timestamp": "2026-05-26T21:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/WeilDivisor.lean",
+      "theorem": "degree_positivePart_principal_eq_finrank"
+    },
+    "session": {
+      "id": "session_193",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "CRITICAL: even after the iter-193 plan-phase refactor added `hlp : ∃ Y, order Y (algebraMap K K(C) t) = 1`, the signature is STILL mathematically false. New counter-witness: K = K(C) = k̄(u), algebraMap = id, t = u(u-1). Then `algebraMap _ _ t ≠ 0` and `order_{{u=0}} t = 1` (so `hlp` holds), yet `positivePart(principal t) = [{u=0}] + [{u=1}]` has degree 2 while `Module.finrank K K(C) = 1`. The hypothesis captures `some` order-1 zero, not `unique` order-1 zero. Prover recommends Option 3 (restrict K to single-variable polynomial / function-field-of-ℙ¹ shape).",
+      "key_lemmas_used": [
+        "Finsupp.ofSupportFinite_coe",
+        "Finsupp.mapRange_single",
+        "Finsupp.sum_single_index",
+        "Finsupp.sum_erase_eq_sub",
+        "WithZero.log_one",
+        "map_one"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Land 8 substrate helpers and restructure body via the integrated chain (per Hartshorne II.6.9 recipe)",
+        "code_tried": "principal_apply (line 380); positivePart_single (line 569); degree_single (line 584); one_le_degree_positivePart_principal_of_order_one (line 599); degree_zero, degree_add (line 351); Scheme.RationalMap.order_one (line 401); principal_one (line 414); body of degree_positivePart_principal_eq_finrank restructured to apply degree_positivePart_eq_sum_max then extract Y₀ from hlp",
+        "line_number": "380-649, 698-771",
+        "lean_error": "n/a (helpers kernel-clean modulo principal's pre-existing sorry on the f ≠ 0 branch)",
+        "goal_before": "8 substrate helpers needed; body needs Y₀ extraction from hlp",
+        "goal_after": "no goals on helpers; body remains sorry pending the deeper ramification-inertia substrate",
+        "result": "partial",
+        "insight": "FunLike.coe does not unfold `Scheme.WeilDivisor X := X.PrimeDivisor →₀ ℤ` automatically (def, not abbrev) — use `show (X.PrimeDivisor →₀ ℤ) from principal f hf` coercion or `Finsupp.ofSupportFinite_coe`."
+      },
+      {
+        "attempt": 2,
+        "strategy": "PUSH-BEYOND: close body fully",
+        "code_tried": "Document the residual ramification-inertia gap; chain Steps 1+2 of the recipe via the new helpers but leave Steps 3-6 (Hartshorne II.6.9 affine chart factorisation, residue-field degree, Ideal.sum_ramification_inertia) for iter-194+",
+        "line_number": "770",
+        "lean_error": "n/a — also discovered the new counter-witness K=K(C), t=u(u-1) showing the signature is STILL false",
+        "goal_before": "Continue chain after extracting Y₀",
+        "goal_after": "Body sorry preserved; new soundness finding documented for iter-194 plan-phase",
+        "result": "partial",
+        "insight": "Even with the hlp hypothesis from the iter-193 refactor, the equation form admits counter-witnesses where t has order-1 at some Y but also additional positive-order zeros elsewhere. The genuine local-parameter condition is unique-zero, not some-zero."
+      }
+    ],
+    "next_steps": "iter-194 plan-phase MUST dispatch refactor lane-i-localparameter-signature-v2 with Option 3 (K restricted to single-variable polynomial / function-field-of-ℙ¹ shape). The 8 axiom-clean substrate helpers landed this iter remain valid and become genuinely useful once the signature is sound. Then iter-194+ body close needs: scheme-level order_eq_ramificationIdx bridge, affine-chart factorisation of φ : C → ℙ¹, Ideal.sum_ramification_inertia consumption."
+  },
+  {
+    "timestamp": "2026-05-26T21:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/RationalCurveIso.lean",
+      "theorem": "iso_of_degree_one"
+    },
+    "session": {
+      "id": "session_193",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Helpers (a) `phi_left_locallyQuasiFinite_of_finrank_one` and (d) `phi_left_fromNormalization_isIso_of_smoothProper_finrank_one` remain typed sorries — both gated on Mathlib gaps (no IsNormalScheme class; no smooth-curve-is-Dedekind lemma; no `LocallyQuasiFinite.of_finrank` shortcut).",
+      "key_lemmas_used": [
+        "AlgebraicGeometry.Scheme.Hom.instIsIsoToNormalizationOfIsIntegralHom",
+        "AlgebraicGeometry.IsFinite.of_isProper_of_locallyQuasiFinite",
+        "AlgebraicGeometry.Scheme.Hom.toNormalization_fromNormalization",
+        "CategoryTheory.Over.isoMk",
+        "LocallyQuasiFinite.of_fiberToSpecResidueField"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Carve Pin 3 Step 2 sub-tasks (a)/(c)/(d) as typed-sorry private helpers; close (c) axiom-clean via Mathlib re-export; assemble iso_of_degree_one body sorry-free through the three helpers + slice lift",
+        "code_tried": "private theorem phi_left_locallyQuasiFinite_of_finrank_one (line 723) typed sorry; private theorem phi_left_toNormalization_isIso_of_isIntegralHom (line 760) := inferInstance (Mathlib's instIsIsoToNormalizationOfIsIntegralHom); private theorem phi_left_fromNormalization_isIso_of_smoothProper_finrank_one (line 782) typed sorry; body of iso_of_degree_one (line 853) refactored to chain helpers via [IsFinite φ.left] → [IsIntegralHom φ.left] → [IsIso φ.left.toNormalization] + Scheme.Hom.toNormalization_fromNormalization factorisation rewrite + CategoryTheory.Over.isoMk slice lift",
+        "line_number": "723, 760, 782, 853-940",
+        "lean_error": "n/a — body now sorry-free at theorem-decl level; helpers (a)+(d) remain typed sorrys",
+        "goal_before": "iso_of_degree_one body with monolithic iter-189 sorry; original docstring (lines 799-852) needs to attach correctly to declaration after helper insertion",
+        "goal_after": "no goals on body; 2 typed sorrys remain on helpers (a) + (d)",
+        "result": "partial",
+        "insight": "Mathlib already has the Hartshorne I.6.12 'half': `instIsIsoToNormalizationOfIsIntegralHom` in `Normalization.lean:281`. Combined with `Scheme.Hom.toNormalization_fromNormalization` + `CategoryTheory.Over.isoMk`, the assembly is axiom-clean modulo the per-fibre 'smooth-dim-1 ⟹ 0-dim' wrapper (needed for helper a)."
+      }
+    ],
+    "next_steps": "iter-194+: close helper (a) via fibre-dimension argument (needs 'smooth-dim-1 morphism fibre 0-dim' substrate; mathlib-analogist consult candidate); close helper (d) via project-side IsNormalScheme substrate + smooth-curve-is-Dedekind link; close ?hlp at L521 of `Hom.poleDivisor_degree_eq_finrank` (gated on the iter-194 lane-i-localparameter-signature-v2 refactor of WeilDivisor)."
+  },
+  {
+    "timestamp": "2026-05-26T21:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/H1Vanishing.lean",
+      "theorem": "HModule_flasque_eq_zero"
+    },
+    "session": {
+      "id": "session_193",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Body fully chained but consumes 2 typed-sorry substrate helpers: `Scheme.IsFlasque.shortExact_app_surjective` (Hartshorne II Ex 1.16(b); ~150-200 LOC Zorn argument) and `Scheme.IsFlasque.injective_flasque` (Hartshorne III Lemma 2.4; ~100-150 LOC, requires j_! extension-by-zero construction).",
+      "key_lemmas_used": [
+        "HasInjectiveDimensionLT.subsingleton",
+        "Abelian.Ext.covariant_sequence_exact₁",
+        "CategoryTheory.constantSheafAdj",
+        "CategoryTheory.NatTrans.naturality_apply",
+        "Preorder.isTerminalTop",
+        "LinearMap.toSpanSingleton_apply_one",
+        "ModuleCat.hom_ext"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Land 2 axiom-clean substrate helpers + private auxiliary by-induction-on-i lemma + collapse body of HModule_flasque_eq_zero via the aux",
+        "code_tried": "ext_succ_eq_zero_of_injective_of_lower_zero (line 273) via HasInjectiveDimensionLT.subsingleton on degree n₀+1; IsFlasque.cokernel_of_shortExact_flasque_flasque (line 360) via NatTrans.naturality_apply pointwise; private HModule_flasque_subsingleton_aux (line 416) by strong induction on n with F-generalised quantifier — i=1 case via ext_one_eq_zero_of_hom_surjective_of_injective + constantSheafAdj at ⊤; step case via ext_succ_eq_zero_of_injective_of_lower_zero + IH on flasque quotient G; main theorem (line 547) reduces to aux",
+        "line_number": "273, 360, 416, 547",
+        "lean_error": "n/a (modulo the 2 named substrate sorries: shortExact_app_surjective, injective_flasque)",
+        "goal_before": "HModule kbar F i = 0 for IsFlasque F and i ≥ 1",
+        "goal_after": "Body fully closed structurally; only sorrys trace through 2 named, blueprint-pinable substrate helpers",
+        "result": "partial",
+        "insight": "Sub-step (i=1 Hom-from-const lift) closes axiom-clean via the explicit constantSheafAdj J (ModuleCat kbar) (Preorder.isTerminalTop (Opens X)) — pick s₃ := g_sec.hom 1, lift via shortExact_app_surjective at ⊤ to s₂, build f_sec := LinearMap.toSpanSingleton kbar _ s₂, apply adj.homEquiv.symm. The verification f ≫ S.g = g reduces to LinearMap.ext_ring at 1."
+      }
+    ],
+    "next_steps": "iter-194+ Lane H continuation: (1) close shortExact_app_surjective via Zorn on pairs (V, s) — needs sheaf-gluing + flasqueness extension; (2) close injective_flasque via j_! construction (project-side, ~100-150 LOC). Both axiom-clean ⟹ downstream H1_skyscraperSheaf_finrank_eq_zero + RRFormula chain become axiom-clean."
+  },
+  {
+    "timestamp": "2026-05-26T21:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Albanese/CodimOneExtension.lean",
+      "theorem": "isRegularLocalRing_stalk_of_smooth"
+    },
+    "session": {
+      "id": "session_193",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Stage 6 closure blocked on Stacks 00OE (smooth-algebra dimension formula `ringKrullDim Aₚ = relative dim`) — genuine Mathlib gap at b80f227; searched for `Smooth.*ringKrullDim`, `relativeDimension.*ringKrullDim`, `dimension.*krullDim` with no hits. Cotangent ↔ Kähler bridge over a field (Stacks 02JK) also unpackaged.",
+      "key_lemmas_used": [
+        "KaehlerDifferential.isLocalizedModule_map",
+        "Module.free_of_isLocalizedModule",
+        "IsStandardSmoothOfRelativeDimension.rank_kaehlerDifferential",
+        "Module.lift_rank_of_isLocalizedModule_of_free"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Add 2 axiom-clean Stage 5 helpers contracting the 12-line localisation-of-freeness inline assembly into named substrate",
+        "code_tried": "module_free_kaehlerDifferential_localization (Stage 5a) via KaehlerDifferential.isLocalizedModule_map + Module.free_of_isLocalizedModule; rank_kaehlerDifferential_localization_eq_relativeDimension (Stage 5b) via IsStandardSmoothOfRelativeDimension.rank_kaehlerDifferential + Module.lift_rank_of_isLocalizedModule_of_free",
+        "line_number": "~310, ~370",
+        "lean_error": "n/a — both helpers kernel-clean",
+        "goal_before": "Body of isRegularLocalRing_stalk_of_smooth has 12-line inline localisation-of-freeness chain",
+        "goal_after": "Body now reads as a clean Stage 1 → 3 → 4 → 5a → sorry(gap 6) chain",
+        "result": "partial",
+        "insight": "Module.lift_rank_of_isLocalizedModule_of_free is the canonical rank-transport-through-localisation lemma; combined with KaehlerDifferential.isLocalizedModule_map, gives the stalk-side Module.Free of Kähler differentials directly."
+      },
+      {
+        "attempt": 2,
+        "strategy": "PUSH-BEYOND: close body axiom-clean via Stages 5a/5b + conjectured Stage 6 bridges",
+        "code_tried": "Combine Stage 5a (freeness) + Stage 5b (rank = n) + the hypothetical Stage 6 bridges (a) cotangent ↔ Kähler over field + (b) Stacks 00OE smooth-algebra dim formula → derive IsRegularLocalRing",
+        "line_number": "434",
+        "lean_error": "Gap (b) Stacks 00OE smooth-algebra dimension formula is a genuine Mathlib gap at b80f227",
+        "goal_before": "Body close attempt",
+        "goal_after": "Failed; gap (b) blocks",
+        "result": "failed",
+        "insight": "DO NOT type-wrap the Stage 6 gap as a typed sorry helper to 'close' isRegularLocalRing_stalk_of_smooth — that would move sorries around without progress. Substrate must come first."
+      }
+    ],
+    "next_steps": "iter-194+: build Stacks 00OE project-side substrate (~150-200 LOC); build Stacks 02JK cotangent ↔ Kähler over a field (~80-120 LOC). Once both land, body collapses to ~5-line `omega` combining hRank + hDim + hCot."
+  },
+  {
+    "timestamp": "2026-05-26T21:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Albanese/AuslanderBuchsbaum.lean",
+      "theorem": "auslander_buchsbaum_formula"
+    },
+    "session": {
+      "id": "session_193",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "n=0 branch reduces to `depth(Fin k → R) = depth(R) for k ≥ 1` (named, narrow; ~30-50 LOC via Ext-biproduct). n=k+1 branch needs minimal finite free resolutions + Stacks 00MF + snake-lemma + depth-drops-by-one (multi-iter substrate).",
+      "key_lemmas_used": [
+        "Module.depth_eq_of_linearEquiv (NEW helper)",
+        "Module.projectiveDimension_eq_zero_iff",
+        "IsProjective.iff_projective",
+        "Module.Flat.of_projective",
+        "Module.free_of_flat_of_isLocalRing",
+        "Module.finBasis",
+        "Module.finrank_pos_iff_of_free",
+        "LinearEquiv.isRegular_congr",
+        "Submodule.map_smul''"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Land new axiom-clean substrate helper Module.depth_eq_of_linearEquiv (depth is preserved under R-linear equivalence) + structural case split on n in the main theorem with detailed branch recipes",
+        "code_tried": "Module.depth_eq_of_linearEquiv (lines 798-854): Submodule.map_smul'' + LinearEquiv.range + Submodule.map_top side condition + LinearEquiv.isRegular_congr regular-sequence transport; auslander_buchsbaum_formula (lines 876-986) split into n=0 branch (7 substantive steps closed kernel-clean through `M ≃ₗ[R] (Fin k → R)`, single residual on depth(Fin k → R) = depth(R)) + n=k+1 branch (structural sorry with full Stacks 090V recipe)",
+        "line_number": "798, 876-986",
+        "lean_error": "n/a (helper kernel-clean; main theorem has 2 raw sorry tokens within the same declaration so build still reports 1 'declaration uses sorry' warning)",
+        "goal_before": "Single bare sorry on auslander_buchsbaum_formula",
+        "goal_after": "Structural case split: n=0 residual narrowed to depth(R^k) = depth(R); n=k+1 residual = full Stacks 090V step",
+        "result": "partial",
+        "insight": "Per-decl sorry count = 1 unchanged at the warning level; per-decl raw sorry tokens = 2 (case split). The substantive content of the n=0 branch is closed except for a single narrow named substrate lemma."
+      }
+    ],
+    "next_steps": "iter-194+: build depth_of_finite_pi (~30-50 LOC, axiom-clean modulo CategoryTheory.Abelian.Ext.addEquivBiproduct); iter-195+ deeper substrate (Stacks 00MF; minimal finite free resolutions; snake-lemma; depth-drops-by-one). OFF-CRITICAL-PATH framing preserved per PROGRESS.md."
+  },
+  {
+    "timestamp": "2026-05-26T21:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/IdentityComponent.lean",
+      "theorem": "geometricallyConnected_of_connected_of_section"
+    },
+    "session": {
+      "id": "session_193",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Stacks 037Q / 04KV substrate ('X geometrically connected iff connected + alg-closure of k in Γ(X,𝒪_X) equals k') genuinely missing at Mathlib b80f227. ~30-50 LOC project-local (037Q iff-direction); ~80-120 LOC for full geometricallyConnected_of_connected_of_section body close.",
+      "key_lemmas_used": [
+        "IsOpenImmersion.lift",
+        "IsOpenImmersion.lift_fac",
+        "Subsingleton.elim (on Spec k unique point)",
+        "mem_connectedComponent",
+        "@IsOpenImmersion.lift workaround for instance synthesis failure",
+        "Scheme.pullback_map_isOpenImmersion",
+        "IsOpenImmersion.isoOfRangeEq"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Ship geometricallyConnected_of_connected_of_section as a HARD BAR typed-sorry helper (planner-sanctioned +1 sorry; second-option HARD BAR satisfaction)",
+        "code_tried": "private theorem geometricallyConnected_of_connected_of_section (line 414): signature pins f : X ⟶ Spec k + section s : Spec k ⟶ X + s ≫ f = 𝟙 + [ConnectedSpace X] ⟹ GeometricallyConnected f; body = sorry with detailed proof-outline docstring covering both Stacks 04KV (clopen-partition descent) and Stacks 037Q (alg-closure-of-k-in-global-sections) routes",
+        "line_number": "414",
+        "lean_error": "n/a — typed sorry",
+        "goal_before": "Helper missing",
+        "goal_after": "Helper signature in scope; +1 file sorry (planner-sanctioned)",
+        "result": "partial",
+        "insight": "Second-option HARD BAR ('full Stacks 04KU helper landed even with sorry-body') is satisfied; the +1 sorry is offset by 3 axiom-clean section helpers landed downstream this iter."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Add 3 axiom-clean section helpers to make the sorry-bodied helper *usable* downstream",
+        "code_tried": "identityComponentSection_range_subset (line 427) via Subsingleton.elim on Spec k unique + mem_connectedComponent; identityComponentSection (line 437) via IsOpenImmersion.lift along (identityComponentCarrier G).ι; identityComponentSection_isSection (line 460) via change + IsOpenImmersion.lift_fac + (MonObj.one).w; identityComponent_geometricallyConnected (line 500) instance derived from helper + section",
+        "line_number": "427, 437, 460, 500",
+        "lean_error": "n/a — all 3 section helpers axiom-clean; 4th instance propagates the helper's sorry",
+        "goal_before": "n/a (helper construction)",
+        "goal_after": "no goals on the 3 axiom-clean section helpers; the GeometricallyConnected instance lifts through the sorry-bodied helper",
+        "result": "success",
+        "insight": "IsOpenImmersion.lift instance-synthesis pitfall: explicit @IsOpenImmersion.lift X Y Z f g inferInstance H' form with ALL three universe-level scheme arguments is the working workaround when bare IsOpenImmersion.lift fails on def-folded carrier extraction."
+      },
+      {
+        "attempt": 3,
+        "strategy": "PUSH-BEYOND: close iso slot of baseChangeIso via the new GeometricallyConnected instance",
+        "code_tried": "Recipe documented but not landed: construct open immersion via pullback.map (IdentityComponent G).hom φ G.hom φ ι (𝟙) (𝟙); show range = preimage of (identityComponentCarrier G) under pullback.fst; show this preimage = connectedComponent (identitySectionPoint G_K) — both directions via Mathlib's GeometricallyConnected + UniversallyOpen + ConnectedSpace pullback instance + standard topology arguments; apply IsOpenImmersion.isoOfRangeEq",
+        "line_number": "n/a (recipe in task report)",
+        "lean_error": "Time-budget out (~80-120 LOC estimate)",
+        "goal_before": "1 sorry on iso slot of baseChangeIso",
+        "goal_after": "Deferred to iter-194+; substrate identityComponent_geometricallyConnected is the critical preparation",
+        "result": "failed",
+        "insight": "Push-beyond achievable next iter once the body of geometricallyConnected_of_connected_of_section closes."
+      }
+    ],
+    "next_steps": "iter-194+: (1) close geometricallyConnected_of_connected_of_section via Stacks 037Q project-side substrate (~30-50 LOC iff-direction); (2) close iso slot of baseChangeIso via the documented 4-step recipe; (3) attack isSubgroupHomomorphism via μ(G^0 × G^0) ⊆ G^0 (Kleiman §5) using the new GeometricallyConnected pullback chain."
+  },
+  {
+    "timestamp": "2026-05-26T21:30:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/QuotScheme.lean",
+      "theorem": "pullback_app_isoTensor_baseMap_sectionLinearEquiv"
+    },
+    "session": {
+      "id": "session_193",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Σ-pair construction (LinearEquiv with intertwining + Beck-Chevalley) needs (a) ⊤-section transport with `Γ(X, V)` CommRingCat-vs-Ab notation disambiguation; (b) AddEquiv → Γ(Y, U)-LinearEquiv upgrade via Hom.app_smul + ΓSpecIso scalar transport; (c) compose with step3.symm; (d) Beck-Chevalley intertwining check.",
+      "key_lemmas_used": [
+        "IsAffineOpen.SpecMap_appLE_fromSpec",
+        "Scheme.Modules.pullbackComp",
+        "Scheme.Modules.pullbackCongr",
+        "tilde.isoTop",
+        "Scheme.Modules.fromTildeΓ",
+        "isIso_toOpen_top"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Assemble the 5-step sheaf-level iso chain at the body of _sectionLinearEquiv using existing witnesses step1, step2, step3 + IsAffineOpen.SpecMap_appLE_fromSpec for the commutative square",
+        "code_tried": "have h_eq : _hU.fromSpec ≫ g = Spec.map (g.appLE V U e) ≫ _hV.fromSpec := (IsAffineOpen.SpecMap_appLE_fromSpec g _hV _hU e).symm; let composedIso := (Scheme.Modules.pullbackComp ...).app N ≪≫ (Scheme.Modules.pullbackCongr h_eq).app N ≪≫ ((Scheme.Modules.pullbackComp ...).app N).symm ≪≫ (Scheme.Modules.pullback ...).mapIso step1 ≪≫ step2; let topAdd := AddEquiv from ⊤-sections",
+        "line_number": "815, body L850-901",
+        "lean_error": "n/a (iso chain landed); residual is LinearEquiv extraction + intertwining check",
+        "goal_before": "_sectionLinearEquiv body monolithic sorry",
+        "goal_after": "Sheaf-level iso chain in place; sorry now localised to LinearEquiv extraction + Beck-Chevalley intertwining",
+        "result": "partial",
+        "insight": "Γ(X, V) ambiguity (CommRingCat reading via structure sheaf vs Ab reading via Modules.presheaf) blocks bare ascription inside ModuleCat.of args; workaround = use `set R : CommRingCat := Γ(X, V)` to bind the CommRingCat reading explicitly. Sub-key lemma: IsAffineOpen.SpecMap_appLE_fromSpec at AffineScheme.lean:464 provides the commutative square for fromSpec under a morphism."
+      }
+    ],
+    "next_steps": "iter-194+: extract LinearEquiv from composedIso + topAdd via tilde.isoTop transport + AddEquiv → LinearEquiv upgrade (Hom.app_smul over ΓSpecIso); compose with step3.symm; check Beck-Chevalley intertwining `1 ⊗ x ↦ baseMap g N e x` via naturality of pullback_app_isoTensor_unitAtV. ~80-120 LOC iter-194 close target."
+  },
+  {
+    "timestamp": "2026-05-26T21:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/Pic0AbelianVariety.lean",
+      "theorem": "FILE_SKELETON_5_DECLS"
+    },
+    "session": {
+      "id": "session_193",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "n/a — file-skeleton mode; bodies not attempted this iter per planner directive.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Create new file with 5 theorem skeletons under AlgebraicGeometry.Scheme.Pic0 matching the 5 \\lean{...} pins in Picard_Pic0AbelianVariety.tex; add root import; verify compile + axiom hygiene",
+        "code_tried": "tangentSpaceIso (line 142): Nonempty (Σ' e cot eq HModule); smooth (line 166); proper (line 185); geometricallyIrreducible (line 204); isAbelianVariety (line 231): 4-conjunct assembly; all bodies = sorry; root import in AlgebraicJacobian.lean line 22",
+        "line_number": "142, 166, 185, 204, 231",
+        "lean_error": "n/a",
+        "goal_before": "n/a (file did not exist)",
+        "goal_after": "File compiles with 5 sorries; #print axioms shows only kernel axioms (propext, sorryAx, Classical.choice, Quot.sound) — no project axioms",
+        "result": "success",
+        "insight": "Universe alignment (Type u for CotangentSpace vs Type (u+1) for Scheme.HModule) bypassed by using AddEquiv (heterogeneous universe) instead of LinearEquiv on the file-skeleton; iter-194+ refinement may upgrade to k-LinearEquiv. The `Pic0` namespace is a sibling to `Pic0Scheme` (defined in IdentityComponent.lean) — both live under `Scheme` namespace."
+      }
+    ],
+    "next_steps": "iter-194+: (1) tangentSpaceIso body via dual-numbers / truncated exponential SES (gated on FGAPicRepresentability landing); (2) proper body via Chevalley-Rosenlicht + Hartshorne II Ex 6.15; (3) smooth body after tangentSpaceIso lands (translation argument); (4) geometricallyIrreducible body via IdentityComponent.isFiniteTypeGeometricallyIrreducible specialisation + Pic0Scheme ≅ IdentityComponent (PicScheme C); (5) isAbelianVariety assembly (~10 LOC) once 4 conjunct theorems land. Also iter-194 should decide whether to deprecate the sibling iter-185 Pic0Scheme.isAbelianVariety in favour of this consolidated form."
+  },
+  {
+    "timestamp": "2026-05-26T21:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects/GmScaling.lean",
+      "theorem": "gmScalingP1_chart_agreement_cross01"
+    },
+    "session": {
+      "id": "session_193",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Single substantive residual: topological range containment `Set.range s_pair.base ⊆ Set.range (pullback.diagonal PLB.hom).base`. Two closure paths — (a) closed-points + Jacobson density (~30-50 LOC); (b) ring-level identity via path (III.a) (empirically blocked since iter-181 by Iso.trans_inv simp coverage gap).",
+      "key_lemmas_used": [
+        "IsClosedImmersion.lift_iff_range_subset",
+        "IsSeparated.isClosedImmersion_diagonal",
+        "quasiSeparatedSpace_of_quasiSeparated",
+        "quasiCompact_of_compactSpace",
+        "pullback.diagonal_fst",
+        "pullback.diagonal_snd"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Signature corrective ([IsAlgClosed kbar] propagated) + instance reorganisation (projectiveLineBar_isReduced moved up ~370 lines) + structural setup using lift_iff_range_subset + cocycle-from-diagonal-fst/snd",
+        "code_tried": "Added [IsAlgClosed kbar] to gmScalingP1_chart_agreement_cross01 + propagated to siblings; moved projectiveLineBar_isReduced instance to BEFORE the cocycle proof; derived QuasiSeparatedSpace PLB.left + QuasiSeparatedSpace (pullback PLB.hom PLB.hom) instances; added QuasiCompact s_pair instance; stated topological range containment as typed sorry (hrange, line 463); applied IsClosedImmersion.lift_iff_range_subset; derived cocycle via pullback.diagonal_fst/snd + hs_fst/hs_snd",
+        "line_number": "463, ~604-686",
+        "lean_error": "n/a (modulo the named hrange substantive residual)",
+        "goal_before": "gmScalingP1_chart_agreement_cross01 body monolithic with Substrate 1 + ring-level identity blockers",
+        "goal_after": "Steps (1)-(7) of the (III.c) blueprint recipe axiom-clean; step 3's range containment is the named residual",
+        "result": "partial",
+        "insight": "Tier-2 narrative point: the (III.c) blueprint recipe's separated-locus structural setup + range-containment-via-lift_iff_range_subset + cocycle-from-diagonal_fst/snd are axiom-clean. The substantive residual (topological range containment) is structurally narrower than the iter-188+ Substrate-1+ring-level-identity scope."
+      }
+    ],
+    "next_steps": "iter-194+: search via lean_state_search on topological range containment goal for density-style lemma. If not found, develop closed-points/Jacobson-density route (~30-50 LOC, ~2-3 iters). Avoid path (III.a) [ring-level identity] — blocked since iter-181 by Iso.trans_inv simp coverage. The collapse_at_zero lemma (line 833) remains untouched — structurally similar to cross01, so iter-195+ after the cross01 ring-map evaluation idiom matures."
+  },
+  {
+    "timestamp": "2026-05-26T21:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "iotaGm_chart1_appIso_eval"
+    },
+    "session": {
+      "id": "session_193",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Residual displaced from Proj.appIso (4-iter STUCK) to (1) kbarChart1Ring_specMap_fac (clean Mathlib API path via Proj.fromOfGlobalSections_morphismRestrict, ~30-60 LOC); (2) pullback-collapse via pullbackSpecIso + Algebra.TensorProduct.lid (clean ring collapse, ~40-60 LOC). Both attackable iter-194.",
+      "key_lemmas_used": [
+        "IsOpenImmersion.lift_uniq",
+        "Proj.fromOfGlobalSections_morphismRestrict",
+        "homogeneousLocalizationAwayIso_algebraMap (project iter-174)",
+        "simp only vs rw for proof-irrelevant auto-param dependencies"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "IsOpenImmersion.lift_uniq route — define kbarChart1Ring : Away 𝒜 X_1 →+* k̄, prove Spec.map(kbarChart1Ring) ≫ Proj.awayι X_1 = onePt.left, apply lift_uniq",
+        "code_tried": "private noncomputable def kbarChart1Ring (line 198) := (MvPolynomial.eval (fun _ => 1)).comp (homogeneousLocalizationAwayToMvPoly kbar 1); private lemma iotaGm_r_1_eq_specMap (line 244) via IsOpenImmersion.lift_uniq applied to the factorisation hypothesis; private lemma kbarChart1Ring_specMap_fac (line 222) as the substantive sorry",
+        "line_number": "198, 222, 244",
+        "lean_error": "n/a (kbarChart1Ring axiom-clean; iotaGm_r_1_eq_specMap axiom-clean conditional on kbarChart1Ring_specMap_fac which carries sorry)",
+        "goal_before": "Proj.appIso evaluation blocker (4-iter STUCK)",
+        "goal_after": "Cleaner target via named Mathlib lemmas (Proj.fromOfGlobalSections_morphismRestrict + homogeneousLocalizationAwayIso_algebraMap)",
+        "result": "success",
+        "insight": "IsOpenImmersion.lift_uniq is the right lever for bypassing opaque Proj.appIso unfolding — concrete Spec.map factorisation + range-subset hypothesis gives a clean identification."
+      },
+      {
+        "attempt": 2,
+        "strategy": "PUSH-BEYOND: close iotaGm_chart1_appIso_eval consumer via rw [iotaGm_r_1_eq_specMap]",
+        "code_tried": "rw [iotaGm_r_1_eq_specMap kbar] inserted after Stage 4 iotaGm_chart1_section unfold",
+        "line_number": "345",
+        "lean_error": "motive is not type correct (rw fails because pullback.lift cocycle hypothesis has type depending on iotaGm_r_1)",
+        "goal_before": "Goal mentions iotaGm_r_1",
+        "goal_after": "rw failed; switch to simp only",
+        "result": "failed",
+        "insight": "rw is too strict for proof-irrelevant auto-param dependencies in pullback.lift cocycle hypotheses."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Switch rw → simp only for the same rewrite",
+        "code_tried": "simp only [iotaGm_r_1_eq_specMap]",
+        "line_number": "345",
+        "lean_error": "n/a (rewrite succeeds; new residual is a Spec.map / pullback collapse)",
+        "goal_before": "Goal contains iotaGm_r_1 in pullback.lift dependency",
+        "goal_after": "iotaGm_r_1 replaced by Spec.map(kbarChart1Ring); residual is tensor-product collapse",
+        "result": "success",
+        "insight": "simp only handles proof-irrelevant auto-param dependencies via its built-in @[congr] infrastructure — the right tool when rw fails on motive-is-not-type-correct."
+      }
+    ],
+    "next_steps": "iter-194+: close kbarChart1Ring_specMap_fac (~30-60 LOC via Proj.fromOfGlobalSections_morphismRestrict chain + homogeneousLocalizationAwayIso_algebraMap); independently close iotaGm_chart1_appIso_eval's pullback-collapse residual (~40-60 LOC via pullbackSpecIso_hom_appTop chain + Algebra.TensorProduct.lid). Both together = full Lane E axiom-clean closure. The Proj.appIso 4-iter STUCK is ELIMINATED as a residual."
+  }
+]

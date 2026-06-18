@@ -1,0 +1,115 @@
+[
+  {
+    "timestamp": "2026-05-20T11:57:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "rigidity_eqOn_dense_open"
+    },
+    "session": {
+      "id": "session_159",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "bridge-2 slice-constancy remains (extracted to named helper, not yet proven)",
+      "key_lemmas_used": [
+        "snd_left_isClosedMap",
+        "IsPullback.of_right",
+        "IsPullback.of_horiz_isIso",
+        "AlgebraicGeometry.Scheme.image_preimage_eq_of_isPullback",
+        "Over.snd_left",
+        "Over.fst_left",
+        "lift_fst",
+        "lift_snd"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Add [IsAlgClosed kbar] instance to rigidity_eqOn_dense_open, rigidity_core, rigidity_lemma to enable the residue-field κ(y)=k̄ argument",
+        "code_tried": "theorem rigidity_eqOn_dense_open\\n    [IsAlgClosed kbar]\\n    {X Y Z : Over (Spec (.of kbar))} ...",
+        "line_number": "170-176",
+        "lean_error": null,
+        "goal_before": null,
+        "goal_after": null,
+        "result": "success",
+        "insight": "Antecedent strengthening; build stayed green; the three lemmas are referenced only within AVR and the downstream headline already carried [IsAlgClosed], so the change is fully contained."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Close hfib (slice fibre p₂⁻¹{y₀} ⊆ range s) via IsPullback pasting: outer iso square + canonical pullback square, read fibre off coarse PullbackCarrier layer",
+        "code_tried": "have houter : IsPullback (s ≫ p₁) X.hom X.hom (y₀.left ≫ Y.hom) := by\\n  have hiso : IsPullback (𝟙 X.left) X.hom X.hom (𝟙 (Spec (.of kbar))) := IsPullback.of_horiz_isIso ⟨by simp⟩\\n  rwa [← hsp1, ← hsec] at hiso\\nhave hL : IsPullback s X.hom p₂ y₀.left := IsPullback.of_right houter hsp2 (IsPullback.of_hasPullback X.hom Y.hom)\\nhave hrange : Set.range s.base = p₂.base ⁻¹' Set.range y₀.left.base := by simpa [...] using AlgebraicGeometry.Scheme.image_preimage_eq_of_isPullback hL.flip Set.univ",
+        "line_number": "215-242",
+        "lean_error": "intermediate: 'rewrite failed: did not find occurrence of ?f ≫ 𝟙 ?m' on hsp2; 'did not find pattern y₀.left ≫ Y.hom' on forward houter rewrite",
+        "goal_before": "(snd X Y).left.base ⁻¹' {y₀pt} ⊆ Set.range s.base",
+        "goal_after": "closed",
+        "result": "success",
+        "insight": "hfib CLOSED axiom-clean. Robustness lessons: (a) htoUnit / hsec close by `by simp` (the `rwa [Over.tensorUnit_hom, Category.comp_id]` form fails — Category.comp_id did not match `_ ≫ 𝟙 (Spec _)`); (b) hsp2 needs `exact congrArg (· ≫ y₀.left) htoUnit` because plain rw left a reflexive `a=a` unsolved (middle object (𝟙_).left vs Spec _ defeq-not-syntactic); (c) rewrite the IsPullback HYPOTHESIS backwards (`rwa [← ...] at hiso`), not the goal forward (fragile under dependent IsPullback)."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Locate the range-of-pullback-projection lemma in Mathlib's PullbackCarrier",
+        "code_tried": "grep range_fst/range_snd/image_preimage in PullbackCarrier.lean; lean_run_code on the fully-qualified name",
+        "line_number": "238-240",
+        "lean_error": "Scheme.Pullback.image_preimage_eq_of_isPullback NOT FOUND (analogy recipe's namespace wrong)",
+        "goal_before": null,
+        "goal_after": null,
+        "result": "success",
+        "insight": "The lemma lives in AlgebraicGeometry.Scheme, NOT AlgebraicGeometry.Scheme.Pullback — the Pullback namespace closes at PullbackCarrier.lean:376, before the lemma at :414. The mathlib-analogist recipe (analogies/rigidity-hfib.md) gave the wrong namespace despite claiming 'LSP-verified'."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Prove hfU inline (f maps saturated open U = p₂⁻¹(Gsetᶜ) into affine U₀) from the definition of Gset",
+        "code_tried": "have hfU : ∀ u ∈ U, f.left.base u ∈ U₀ := by intro u hu; by_contra hcon; exact hu ⟨u, hcon, rfl⟩",
+        "line_number": "270-275",
+        "lean_error": null,
+        "goal_before": "∀ u ∈ (⟨_, hUopen⟩ : Opens), f.left.base u ∈ U₀",
+        "goal_after": "closed",
+        "result": "success",
+        "insight": "2 lines, no infrastructure; affine-containment read straight off Gset = p₂ '' (f⁻¹ U₀ᶜ)."
+      },
+      {
+        "attempt": 5,
+        "strategy": "Extract the residual bridge-2 (slice-constancy) obligation into a clean named top-level helper with a faithful statement + sorry body; discharge the inline goal by applying it",
+        "code_tried": "theorem rigidity_eqOn_saturated_open_to_affine [IsAlgClosed kbar] {X Y Z} [IsProper X.hom] [GeometricallyIrreducible (X⊗Y).hom] [IsReduced (X⊗Y).left] [IsSeparated Z.hom] (f) (x₀) (U) (Vset) (_hUV) (U₀) (_hU₀) (_hfU) : U.ι ≫ f.left = U.ι ≫ (lift (toUnit (X⊗Y) ≫ x₀) (snd X Y) ≫ f).left := sorry\\n... exact rigidity_eqOn_saturated_open_to_affine f x₀ ⟨_, hUopen⟩ Gsetᶜ rfl U₀ _hU₀aff hfU",
+        "line_number": "124-141, 276",
+        "lean_error": null,
+        "goal_before": "U.ι ≫ f.left = U.ι ≫ (retract ≫ f).left",
+        "goal_after": "closed (modulo helper sorry)",
+        "result": "partial",
+        "insight": "Independently audited: the helper is TRUE-as-stated, every hypothesis load-bearing (drop _hfU/_hU₀/_hUV/[IsProper]/[IsAlgClosed] and the conclusion fails), applied non-vacuously. rigidity_eqOn_dense_open is now sorry-free in its own body. Net: Rigidity-chain went from 2 internal sorries to 1 cleanly-isolated named obligation."
+      }
+    ],
+    "next_steps": "Prove rigidity_eqOn_saturated_open_to_affine via route B (analogies/rigidity-affineconst.md): (1) per-closed-point slice-constancy (ext_of_isAffine into U₀, Γ(slice)=k̄ via isField_of_universallyClosed + finite_appTop_of_universallyClosed + alg-closed); (2) 'dense closed points ⟹ hom-ext' connective (coproduct ∐ Spec κ(x) ⟶ U dominant via closure_closedPoints, then ext_of_isDominant_of_isSeparated'). Do NOT attempt the relative Stein / f_*𝒪=𝒪 framing (confirmed Mathlib gap). Plan agent must first dispatch a blueprint-writer to add the helper's \\lean{} block + \\uses edge before the next prover lane (HARD GATE)."
+  },
+  {
+    "timestamp": "2026-05-20T11:57:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "rigidity_eqOn_saturated_open_to_affine"
+    },
+    "session": {
+      "id": "session_159",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "NEW bridge-2 helper introduced this iter; body is sorry. Genuine multi-iter geometry (analogist estimate ~1-2 iters). Has no blueprint \\lean{} block yet.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Created as a faithfully-stated scaffold with sorry body; route-B proof sketch in docstring",
+        "code_tried": "(see rigidity_eqOn_dense_open attempt 5)",
+        "line_number": "124-141",
+        "lean_error": null,
+        "goal_before": null,
+        "goal_after": null,
+        "result": "partial",
+        "insight": "Honest deferred obligation, NOT laundering (lean-auditor + lean-vs-blueprint-checker both clear)."
+      }
+    ],
+    "next_steps": "See rigidity_eqOn_dense_open next_steps. Requires blueprint block first (plan-agent HARD GATE)."
+  }
+]

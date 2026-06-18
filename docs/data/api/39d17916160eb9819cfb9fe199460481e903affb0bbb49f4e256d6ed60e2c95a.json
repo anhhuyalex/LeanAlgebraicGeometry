@@ -1,0 +1,232 @@
+[
+  {
+    "timestamp": "2026-05-14T13:50:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "cechCofaceMap_pi_smul"
+    },
+    "session": {
+      "id": "session_90",
+      "model": "opus-4-7"
+    },
+    "findings": {
+      "blocker": "Steps (d-body)/(e)/(f)/(g)/closure of the S6 distribution chain not attempted inline — each carries non-trivial HOU risk without LSP feedback (lemma name uncertainty for ModuleCat.hom_zsmul / Pi.lift_π_apply, Pi.smul_apply synthesis risk, map_mul applicability on presheaf map, presheafMap_restrict_collapse witness unification). Compilation unverified in sandbox (mathlib package missing from .lake/packages/; lake binary not on PATH — 5th consecutive iteration with this environmental gap).",
+      "key_lemmas_used": [
+        "map_sum",
+        "Finset.smul_sum",
+        "Finset.sum_congr",
+        "hom_sum_dist (iter-089 inline have)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "S6 step (c) — distribute (Pi.π Z₂ j).hom over the outer Finset.sum via universal map_sum (LinearMap is AddMonoidHomClass). Use simp only (not rw) for HOU robustness through nested AddMonoidHomClass functions (eqToHom).",
+        "code_tried": "simp only [map_sum]",
+        "line_number": "547 (was 547 pre-iter-090; trailing sorry was at L547 post-iter-089 step b)",
+        "lean_error": "UNVERIFIED IN SANDBOX — mathlib package missing; lean_diagnostic_messages fails with 'Failed to start Lean language server: No such file or directory: lake'",
+        "goal_before": "(Pi.π Z₂ j).hom ((eqToHom ∘ₗ (∑ i, .hom of (-1)^i • (Pi.lift … ≫ map_φ_i)))((piIsoPi Z₁).inv (r • y))) = r • (Pi.π Z₂ j).hom ((eqToHom ∘ₗ (∑ i, …))((piIsoPi Z₁).inv y)) — post-iter-089 step (b)",
+        "goal_after": "Expected (unverified): ∑ i, (Pi.π Z₂ j).hom (((-1)^i • Pi.lift …) ((piIsoPi Z₁).inv (r • y))) = r • ∑ i, (Pi.π Z₂ j).hom (((-1)^i • Pi.lift …) ((piIsoPi Z₁).inv y))",
+        "result": "partial",
+        "insight": "simp only [map_sum] over a direct rw with two explicit applications was chosen so the elaborator picks the right AddMonoidHomClass instance regardless of how prior simp shaped the post-(b) term. Universal map_sum preferred over LinearMap.map_sum so it fires under either form. Lemma name verified against Mathlib core; ConcreteCategory.hom_def fallback available if simp fires no-op."
+      },
+      {
+        "attempt": 2,
+        "strategy": "S6 step (h-prep) — push outer r • on RHS through the Finset.sum via Finset.smul_sum (forward direction r • ∑ = ∑ r • _) so both sides align to ∑ i ∈ s, _ form before per-summand congruence. PROGRESS.md template (h) had this at the END of the chain (rw [← Finset.smul_sum]); doing it here in forward direction is equivalent and lets us split per-summand cleanly.",
+        "code_tried": "simp only [Finset.smul_sum]",
+        "line_number": "551",
+        "lean_error": "UNVERIFIED IN SANDBOX",
+        "goal_before": "∑ i, (Pi.π Z₂ j).hom (((-1)^i • Pi.lift …) ((piIsoPi Z₁).inv (r • y))) = r • ∑ i, (Pi.π Z₂ j).hom (((-1)^i • Pi.lift …) ((piIsoPi Z₁).inv y))",
+        "goal_after": "Expected (unverified): ∑ i, (Pi.π Z₂ j).hom (((-1)^i • Pi.lift …) ((piIsoPi Z₁).inv (r • y))) = ∑ i, r • (Pi.π Z₂ j).hom (((-1)^i • Pi.lift …) ((piIsoPi Z₁).inv y))",
+        "result": "partial",
+        "insight": "Re-ordering step (h) to before the per-summand congruence is mathematically equivalent and structurally cleaner. Documented risk: if step (c) was a no-op, RHS may not have r • ∑ shape and Finset.smul_sum becomes a no-op (recovery: invert order — try Finset.sum_congr first; if it fails, additional simp/rw work needed)."
+      },
+      {
+        "attempt": 3,
+        "strategy": "S6 step (d-entry) — drop the outer Σ via per-summand congruence on the (now equal) Finsets. After this, the goal becomes (for fixed i): (Pi.π Z₂ j).hom (((-1)^i • Pi.lift f_i).hom ((piIsoPi Z₁).inv (r • y))) = r • (Pi.π Z₂ j).hom (((-1)^i • Pi.lift f_i).hom ((piIsoPi Z₁).inv y)) where f_i a = Pi.π Z₁ (a ∘ δ_i.toOrderHom) ≫ (toModuleKPresheaf C).map φ_i.op.",
+        "code_tried": "refine Finset.sum_congr rfl ?_\\n  intro i _",
+        "line_number": "557–558",
+        "lean_error": "UNVERIFIED IN SANDBOX",
+        "goal_before": "∑ i, (Pi.π Z₂ j).hom (((-1)^i • Pi.lift …) ((piIsoPi Z₁).inv (r • y))) = ∑ i, r • (Pi.π Z₂ j).hom (((-1)^i • Pi.lift …) ((piIsoPi Z₁).inv y))",
+        "goal_after": "Expected per-summand (for fixed i): (Pi.π Z₂ j).hom (((-1)^i • Pi.lift f_i).hom ((piIsoPi Z₁).inv (r • y))) = r • (Pi.π Z₂ j).hom (((-1)^i • Pi.lift f_i).hom ((piIsoPi Z₁).inv y))",
+        "result": "partial",
+        "insight": "Finset.sum_congr requires both sides to be sums over the same Finset; the prior step (h-prep) aligned both sides to ∑ i ∈ s, _ form. Documented risk: if (c) or (h-prep) didn't fire correctly, LHS/RHS would not both be sums and the refine fails. Recovery: invert order, try sum_congr first to detect the actual goal shape."
+      },
+      {
+        "attempt": 4,
+        "strategy": "S6 (d-body)/(e)/(f)/(g)/closure — NOT ATTEMPTED inline. The prover task result explicitly considered and rejected an inline attempt at the per-summand inner work, citing (a) ModuleCat.hom_zsmul lemma name uncertainty for the (-1)^i scalar action (may need ModuleCat.hom_smul or LinearMap.smul_apply); (b) Pi.lift_π_apply existence uncertainty (._apply alias may not exist); (c) Pi.smul_apply synthesis risk requiring possible letI := perI₁ prefix; (d) map_mul applicability on ((toModuleKPresheaf C).map φ_i.op).hom (RingHom vs AddHom HOU); (e) presheafMap_restrict_collapse three ≤-witnesses left to unification (documented inherited risk). Without LSP feedback, chaining all 5 steps would risk a compile error at the deepest failing step and break the file.",
+        "code_tried": "(no code committed for d-body, e, f, g, closure — trailing sorry left after d-entry at L564)",
+        "line_number": "564",
+        "lean_error": "n/a (intentional deferral per per-step fallback ladder mandate)",
+        "goal_before": "Per-summand (post-d-entry): (Pi.π Z₂ j).hom (((-1)^i • Pi.lift f_i).hom ((piIsoPi Z₁).inv (r • y))) = r • (Pi.π Z₂ j).hom (((-1)^i • Pi.lift f_i).hom ((piIsoPi Z₁).inv y))",
+        "goal_after": "n/a (trailing sorry)",
+        "result": "failed",
+        "insight": "PROGRESS.md mandate-with-per-step-fallback-ladder pattern was respected: prover committed the deepest step that was safe without LSP (d-entry), placed the trailing sorry there, and explicitly rejected the 'first | <full d-g chain> | sorry' wrap to preserve the deepest-committed-step signal for iter-091 re-scoping. This is process-correct partial progress, not failure."
+      }
+    ],
+    "next_steps": "Iter-091 inherits the trailing sorry at L564 immediately after step (d-entry) — the per-summand goal for a fixed i. The forward recipe is enumerated in task_results/AlgebraicJacobian_Cohomology_BasicOpenCech.lean.md: (d-body) simp only [Pi.lift_π_apply, ConcreteCategory.comp_apply, ModuleCat.hom_smul, LinearMap.smul_apply] with dsimp only [Pi.lift_π] fallback; (e) simp only [Pi.smul_apply] with letI := perI₁ prefix on synthesis failure; (f) rw [map_mul] verifying ((toModuleKPresheaf C).map φ_i.op).hom is a RingHom; (g) rw [presheafMap_restrict_collapse _ _ _] with ≤-witnesses to unification; closure rfl or simp only [ConcreteCategory.comp_apply]. Each step has its own per-step fallback; preserve the iter-089/090 'deepest committed step' signal."
+  },
+  {
+    "timestamp": "2026-05-14T13:50:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "cechCofaceMap_pi_smul (substep a — augmented Čech simplicial object at L656)"
+    },
+    "session": {
+      "id": "session_90",
+      "model": "opus-4-7"
+    },
+    "findings": {
+      "blocker": "Augmented Čech simplicial object infrastructure (multi-iter Mathlib gap). Deferred since iter-086 per the deferred-blocker list.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "No active work assigned this iter. Continue to defer pending augmented-Čech simplicial infrastructure in Mathlib."
+  },
+  {
+    "timestamp": "2026-05-14T13:50:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "outer scaffolding at L980"
+    },
+    "session": {
+      "id": "session_90",
+      "model": "opus-4-7"
+    },
+    "findings": {
+      "blocker": "Multi-iter scaffolding sorry; deferred since iter-086.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Defer."
+  },
+  {
+    "timestamp": "2026-05-14T13:50:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "extra-degeneracy substep for s₀ at L1008"
+    },
+    "session": {
+      "id": "session_90",
+      "model": "opus-4-7"
+    },
+    "findings": {
+      "blocker": "Augmented Čech extra-degeneracy infrastructure; multi-iter.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Defer."
+  },
+  {
+    "timestamp": "2026-05-14T13:50:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "g_R.map_smul' at L1198"
+    },
+    "session": {
+      "id": "session_90",
+      "model": "opus-4-7"
+    },
+    "findings": {
+      "blocker": "Downstream of cechCofaceMap_pi_smul closure; needs Eq.mpr casts on codomain.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Defer until cechCofaceMap_pi_smul lands fully."
+  },
+  {
+    "timestamp": "2026-05-14T13:50:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "h_loc_exact at L1227"
+    },
+    "session": {
+      "id": "session_90",
+      "model": "opus-4-7"
+    },
+    "findings": {
+      "blocker": "Needs IsLocalizedModule.Away f.1 Mathlib infrastructure.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Defer; multi-iter Mathlib gap."
+  },
+  {
+    "timestamp": "2026-05-14T13:50:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "cotangentExactSeq_structure case h_exact (L636)"
+    },
+    "session": {
+      "id": "session_90",
+      "model": "opus-4-7"
+    },
+    "findings": {
+      "blocker": "Route A (top-down SheafOfModules-level exactness) vs Route B (bottom-up ShortComplex.exact_iff_image_eq_kernel + sheafification left-exactness) decision pending since iter-085/086. Single-lane prover dispatch (BasicOpenCech only) for iter-090, no work assigned to this target.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Plan agent should commit to Route A or Route B in iter-091 PROGRESS.md and dispatch as Lane 2 if sandbox LSP becomes functional."
+  },
+  {
+    "timestamp": "2026-05-14T13:50:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Modules/Monoidal.lean",
+      "theorem": "instIsMonoidal_W (L173)"
+    },
+    "session": {
+      "id": "session_90",
+      "model": "opus-4-7"
+    },
+    "findings": {
+      "blocker": "Mathlib upstream gap (stalk-of-presheaf-tensor in varying-ring setting); off-limits since iter-081.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Defer."
+  },
+  {
+    "timestamp": "2026-05-14T13:50:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Jacobian.lean",
+      "theorem": "nonempty_jacobianWitness (L179)"
+    },
+    "session": {
+      "id": "session_90",
+      "model": "opus-4-7"
+    },
+    "findings": {
+      "blocker": "Phase C/E packaging — Albanese existence + genus-0 rigidity. iter-100+ scope.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Defer."
+  },
+  {
+    "timestamp": "2026-05-14T13:50:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/Functor.lean",
+      "theorem": "PicardFunctor.representable (L190)"
+    },
+    "session": {
+      "id": "session_90",
+      "model": "opus-4-7"
+    },
+    "findings": {
+      "blocker": "Gated on Phase C C0–C3 scaffolding.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Defer."
+  }
+]

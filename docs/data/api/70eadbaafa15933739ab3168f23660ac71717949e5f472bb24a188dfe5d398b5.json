@@ -1,0 +1,212 @@
+[
+  {
+    "timestamp": "2026-05-12T16:09:35Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "basicOpenCover_isCechAcyclicCover_toModuleKSheaf"
+    },
+    "session": {
+      "id": "session_76",
+      "model": "claude-opus-4-x (prover lane)"
+    },
+    "findings": {
+      "blocker": "Module-instance literality: the X₃ Fin-index uses opaque `(ComplexShape.up ℕ).next n`, not literal `n + 1`. `convert h` for `h_mod_X_i` produces instances differing from the canonical `e_i.toAddEquiv.module R` by a residual eta-congruence (in X₃'s case by the opaque `CochainComplex.next` unfold), which breaks the literal `r • x = e_i.symm (r • e_i x)` `rfl` step in `f_R.map_smul'`/`g_R.map_smul'`. Cascade: `h_diff_pi_smul_g`'s statement does not type-check (X₃ ≠ ∏ᶜ Z₃ defeq), and the 5-layer simp set never exposes the alternating-sum shape `h_diff_pi_smul_f` needs.",
+      "key_lemmas_used": [
+        "CochainComplex.next",
+        "ComplexShape.up.next_eq",
+        "AddEquiv.module"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Iter-075 in-flight chain (funext + 5-layer simp + Finset.sum_congr per-summand + smul_comm + congr 1) for `h_diff_pi_smul_f`",
+        "code_tried": "have h_diff_pi_smul_f := by funext j; simp only [...5-layer functor stack unfold...]; refine Finset.sum_congr rfl fun k _ => ?_; rw [smul_comm]; congr 1",
+        "line_number": "~1083 (BasicOpenCech.lean, post-iter-075 state)",
+        "lean_error": "unsolved goals (`simp made no progress`, L1088 cascade)",
+        "goal_before": "∀ (r : R) (y : ∀ i, Z₂ i), e₂ ((ConcreteCategory.hom scK₀.f) (e₂.symm (r • y))) = r • e₂ ((ConcreteCategory.hom scK₀.f) (e₂.symm y))",
+        "goal_after": "componentwise (post-funext) `_ j = _ j` goal that the alternating-sum simp lemmas cannot reach",
+        "result": "failed",
+        "insight": "The 5-layer functor stack unfold does NOT expose alternating-sum form. `Pi.smul_apply / Finset.sum_apply / Finset.smul_sum` fire only when ∑ is exposed at the head."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Use `try` wrappers to keep chain benign, then `refine Finset.sum_congr rfl ...`",
+        "code_tried": "try simp only [Pi.smul_apply, Finset.sum_apply, Finset.smul_sum]; refine Finset.sum_congr rfl fun k _ => ?_",
+        "line_number": "~1088",
+        "lean_error": "next `refine Finset.sum_congr rfl` fails — goal is `_ j = _ j`, not `∑ = ∑`",
+        "goal_before": "componentwise `_ j = _ j`",
+        "goal_after": "same — `Finset.sum_congr` does not apply",
+        "result": "failed",
+        "insight": "Once `try` masks the failure of the simp set, `refine Finset.sum_congr rfl` can't bridge the gap — confirms entire iter-075 chain is unreachable without exposing ∑."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Roll back `h_diff_pi_smul_f` body to bare `sorry`",
+        "code_tried": "have h_diff_pi_smul_f : ∀ (r : R) (y : ∀ i, Z₂ i), ... := by intro r y; sorry",
+        "line_number": "1077 (final state)",
+        "lean_error": "none — declaration uses sorry warning only",
+        "goal_before": "as attempt 1",
+        "goal_after": "n/a (sorry)",
+        "result": "partial",
+        "insight": "Recovery: preserved iter-073/075/076 S1-S8 + sign-peel + sign-free 5-step recipe in commented header."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Repair `h_mod_X₃ : Module R scK₀.X₃` via convert chains (using 1, using 4)",
+        "code_tried": "convert h using 1; congr 1  -- and variants `convert h using 4`, `exact h.cast (...)`",
+        "line_number": "~952",
+        "lean_error": "(a) `case h.e_2` left `Module ↑R T₁ = Module ↑R T₂`; (b) `Invalid field cast: Module.cast`; (c) extensionality of `Type u` fails",
+        "goal_before": "Module ↑R scK₀.X₃",
+        "goal_after": "residual `Module = Module` propositional-equality goal",
+        "result": "failed",
+        "insight": "Root cause: `scK₀.X₃ = K₀.X ((ComplexShape.up ℕ).next n)` and `ComplexShape.next` is OPAQUE (via `Classical.choose`) — no `rfl` reduction to `n + 1`."
+      },
+      {
+        "attempt": 5,
+        "strategy": "Pre-rewrite the X₃ projection using `CochainComplex.next` (Mathlib lemma `(ComplexShape.up α).next i = i + 1`) BEFORE the dsimp",
+        "code_tried": "have h_eq : scK₀.X₃ = K₀.X (n + 1) := by show K₀.X ((ComplexShape.up ℕ).next n) = K₀.X (n + 1); rw [CochainComplex.next]\nrw [h_eq]\ndsimp [K₀, cechCochain, cechComplexFunctor, toModuleKSheaf, toModuleKPresheaf_obj]\nletI := h_mod_pi₃; have h : Module R ↑(∏ᶜ Z₃) := e₃.toAddEquiv.module R; convert h",
+        "line_number": "952 (final)",
+        "lean_error": "none — clean",
+        "goal_before": "Module ↑R scK₀.X₃",
+        "goal_after": "closed",
+        "result": "success",
+        "insight": "Pre-rewriting at the type level via the explicit `CochainComplex.next` Mathlib lemma matches X₁/X₂'s pattern. Verified via `lean_diagnostic_messages` clean."
+      },
+      {
+        "attempt": 6,
+        "strategy": "Drop `h_diff_pi_smul_g` declaration entirely (it was only used by `g_R.map_smul'`)",
+        "code_tried": "-- (whole `have h_diff_pi_smul_g : ... := by ...` block removed; replaced with ITER-076 rollback comment block)",
+        "line_number": "~1170-1182",
+        "lean_error": "n/a (declaration removal)",
+        "goal_before": "n/a",
+        "goal_after": "n/a",
+        "result": "success",
+        "insight": "Statement `e₃ ((ConcreteCategory.hom scK₀.g) (e₂.symm (r • y)))` could not type-check (X₃ ≠ ∏ᶜ Z₃ defeq, same opaqueness as L952). Removing it eliminates the L1170-1182 type-mismatch and isDefEq heartbeat cascade."
+      },
+      {
+        "attempt": 7,
+        "strategy": "Roll back `f_R.map_smul'` and `g_R.map_smul'` bodies",
+        "code_tried": "f_R.map_smul' := by intro r x; sorry  (and same for g_R)",
+        "line_number": "1106, 1116 (final state)",
+        "lean_error": "(prior to rollback) L1205 unsolved + L1213 whnf heartbeat",
+        "goal_before": "(ConcreteCategory.hom scK₀.f)(r • x) = r • (ConcreteCategory.hom scK₀.f)(x)",
+        "goal_after": "n/a (sorry)",
+        "result": "partial",
+        "insight": "Root cause: convert-derived `Module R scK₀.X_i` instance ≠ literal `e_i.toAddEquiv.module R`, so `r • x = e_i.symm (r • e_i x)` does NOT close by `rfl`. Recovery noted for iter-077: rebuild `h_mod_X_i` via explicit `Eq.mpr` over a manual type equality."
+      }
+    ],
+    "next_steps": "Iter-077 prover for BasicOpenCech: (1) rebuild `h_mod_X_i` via explicit `Eq.mpr` over a manual `↑scK₀.X_i = ↑(∏ᶜ Z_i)` type equality so the resulting `Module R scK₀.X_i` instance is LITERALLY `e_i.toAddEquiv.module R`. (2) With that in hand, the iter-072 `calc` chains in `f_R.map_smul'` / `g_R.map_smul'` work as written (the `congr 1` closes by `rfl`). (3) Then re-attempt `h_diff_pi_smul_f` via S1-S8 per-summand recipe. (4) `h_loc_exact` is downstream."
+  },
+  {
+    "timestamp": "2026-05-12T16:09:40Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "cotangentExactSeqAlpha + cotangentExactSeqBeta + cotangentExactSeq_structure"
+    },
+    "session": {
+      "id": "session_76",
+      "model": "claude-opus-4-x (prover lane)"
+    },
+    "findings": {
+      "blocker": "Cumulative `rw` pattern mismatches across four sites in `cotangentExactSeqAlpha`'s `d_target` constructor (L244 additivity, L248/L258 `map_mul` rewrite pattern absence, L256 `Function expected at ConcreteCategory.hom h` underspecified `h`, L266 adjunction-coherence `rfl` claim false for `φ_g' ≫ f.c = adj_f.unit ≫ pushforward.map φ_fg'`); whnf heartbeat (>200000 hb) cascade in `cotangentExactSeqBeta` from `set adj_fg / set η` chain; downstream `_structure.h_zero` Step 7 unreachable while upstream defs are sorries.",
+      "key_lemmas_used": [
+        "Adjunction.homEquiv_naturality_right",
+        "Adjunction.homAddEquiv_zero",
+        "Equiv.apply_symm_apply",
+        "SheafOfModules.hom_ext",
+        "PresheafOfModules.DifferentialsConstruction.isUniversal'.postcomp_injective",
+        "PresheafOfModules.Derivation.d_app",
+        "PresheafOfModules.Derivation.congr_d",
+        "PresheafOfModules.Derivation.postcomp_d_apply",
+        "PresheafOfModules.comp_app",
+        "PresheafOfModules.pushforward_map_app_apply",
+        "PresheafOfModules.DifferentialsConstruction.derivation'",
+        "Adjunction.homEquiv_naturality_left",
+        "LocallyRingedSpace.comp_c"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Roll back `cotangentExactSeqAlpha` body to `sorry` (preserving the strategy comment + Step (i)-(iv) recipe)",
+        "code_tried": "noncomputable def cotangentExactSeqAlpha (f : X ⟶ Y) (g : Y ⟶ S) : ... := by\n  -- ITER-076: in-flight `d_target.d`/`d_mul`/`d_map`/`d_app` (Steps (i)-(iv) above) hit cumulative `rw` pattern mismatches at L244/L248/L256/L258 and a failing adjunction-coherence `rfl` at L266. Rolled back to `sorry` for next-iteration entry.\n  sorry",
+        "line_number": "207 (final state)",
+        "lean_error": "(prior to rollback) L244 unsolved `D_X.d ((f.c.app U).hom (a+b)) = D_X.d (… a) + D_X.d (… b)`; L248 `rw` pattern `(CommRingCat.Hom.hom (f.c.app U)) (?a * ?b)` not found; L256 `Function expected at ConcreteCategory.hom h`; L258 same as L248; L266 `rfl` fails for adjunction-coherence",
+        "goal_before": "(Scheme.Modules.pullback f).obj (relativeDifferentials g) ⟶ relativeDifferentials (f ≫ g)",
+        "goal_after": "n/a (sorry)",
+        "result": "partial",
+        "insight": "Five cumulative errors in one tactic block exceed the in-iteration repair budget. Plan-agent's fixes (L244 `rw [map_add, D_X.d_add]`; L248/L258 explicit `show`; L256 type-annotate `h` in `congr_arg`; L266 use `Adjunction.homEquiv_naturality` instead of `rfl`) are correct in principle but require coordinated re-write — deferred to iter-077."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Roll back `cotangentExactSeqBeta` body to `sorry`",
+        "code_tried": "noncomputable def cotangentExactSeqBeta (f : X ⟶ Y) (g : Y ⟶ S) : ... := by\n  -- ITER-076: in-flight `set adj_fg / set η / hη` chain produced `whnf` heartbeat timeouts (≥ 200000 hb) at L297/L342/L343 and redundant `exact h4` at L332. Rolled back.\n  sorry",
+        "line_number": "232 (final state)",
+        "lean_error": "(prior to rollback) L297, L342, L343 `whnf` heartbeat >200000; L332 `No goals to be solved` on `exact h4`",
+        "goal_before": "relativeDifferentials (f ≫ g) ⟶ relativeDifferentials f",
+        "goal_after": "n/a (sorry)",
+        "result": "partial",
+        "insight": "Proof shape correct but `homEquiv`/`pushforward` nested rewrites exceed default 200k hb. Recovery: prepend `set_option maxHeartbeats 400000 in` OR inline `η` rather than `set`-ing it. Deferred to iter-077."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Roll back `cotangentExactSeq_structure` whole body to single `sorry`; preserve in-flight Steps 1-7 chain as `/- ITER-076 disabled chain ... -/` block comment",
+        "code_tried": "(absorbs old L604 `h_exact` + L617 `h_epi` two sub-sorries into one outer sorry; the disabled chain block preserved verbatim)",
+        "line_number": "266 (final state)",
+        "lean_error": "(prior to rollback) L452 `simp made no progress`; downstream cascade `Unknown identifier cotangentExactSeqBeta` once Beta is sorried.",
+        "goal_before": "∃ α β, [exact + epi]",
+        "goal_after": "n/a (sorry)",
+        "result": "partial",
+        "insight": "Sub-sorry merge (L604 + L617 → L266) net +1 over baseline, but eliminates the brittle h_exact/h_epi entanglement until upstream Alpha+Beta close."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Convert leftover stray `sorry` inside `/- ... -/` reference comment block to `-- (sorry)` to avoid being counted by lean",
+        "code_tried": "    -- (sorry)\n-/ (close block comment)",
+        "line_number": "~491, ~509 (intermediate)",
+        "lean_error": "(prior fix attempt) `No applicable extensionality theorem found for type Type u` + `No goals to be solved` cascade from a syntactic `sorry` inside a block-comment that wasn't actually inside the comment (block-comment open delimiter `/-!` was wrong)",
+        "goal_before": "n/a (commentary)",
+        "goal_after": "compiled clean — `lean_diagnostic_messages` returns `error_count: 0`",
+        "result": "success",
+        "insight": "`/-! ...` open block comment + nested `--` lines is fragile. Use `/- ... -/` with `-- (sorry)` to neutralize all syntactic sorries inside reference blocks."
+      }
+    ],
+    "next_steps": "Iter-077 prover for Differentials: (1) Re-attempt `cotangentExactSeqAlpha` with the four targeted fixes — L244 `rw [map_add, D_X.d_add]`; L248/L258 prepend `show ...; rw [...]; rfl`; L256 type-annotate `h : _ ⟶ _` in `congr_arg`; L266 derive `hcomm` via `Adjunction.homEquiv_naturality` + `Equiv.symm_apply_eq` instead of `rfl`. (2) Re-attempt `cotangentExactSeqBeta` with `set_option maxHeartbeats 400000 in` prepended to definition; remove redundant `exact h4` at original L332. (3) Once upstream defs compile, re-enable the disabled `h_zero` chain inside `cotangentExactSeq_structure` (preserved verbatim in `/- ITER-076 disabled chain ... -/` block comment). No new helpers; no new axioms."
+  },
+  {
+    "timestamp": "2026-05-12T16:01:52Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "h_mod_X₃ (local fact inside basicOpenCover_isCechAcyclicCover_toModuleKSheaf)"
+    },
+    "session": {
+      "id": "session_76",
+      "model": "claude-opus-4-x (prover lane)"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "CochainComplex.next",
+        "AddEquiv.module"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Pre-rewrite the X₃ projection via Mathlib `CochainComplex.next` lemma, then `convert h`",
+        "code_tried": "have h_eq : scK₀.X₃ = K₀.X (n + 1) := by show K₀.X ((ComplexShape.up ℕ).next n) = K₀.X (n + 1); rw [CochainComplex.next]\nrw [h_eq]\ndsimp [K₀, cechCochain, cechComplexFunctor, toModuleKSheaf, toModuleKPresheaf_obj]\nletI := h_mod_pi₃\nhave h : Module R ↑(∏ᶜ Z₃) := e₃.toAddEquiv.module R\nconvert h",
+        "line_number": "~952",
+        "lean_error": "none — clean diagnostics",
+        "goal_before": "Module ↑R scK₀.X₃",
+        "goal_after": "closed",
+        "result": "success",
+        "insight": "ComplexShape.next is opaque (Classical.choose over Rel); explicit Mathlib lemma `CochainComplex.next : (ComplexShape.up α).next i = i + 1` bridges. Reusable for ANY `K.X (next n)` / `K.X (prev n)` instance-transport pattern."
+      }
+    ],
+    "next_steps": "Reusable pattern. Apply same explicit rewrite to `h_mod_X₂` rebuild attempt in iter-077."
+  }
+]

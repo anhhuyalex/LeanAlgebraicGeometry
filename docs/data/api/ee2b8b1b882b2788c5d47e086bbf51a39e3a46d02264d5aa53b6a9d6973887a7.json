@@ -1,0 +1,208 @@
+[
+  {
+    "timestamp": "2026-06-01T15:04:50Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/FlatBaseChange.lean",
+      "theorem": "AlgebraicGeometry.pullback_spec_tilde_iso"
+    },
+    "session": {
+      "id": "session_242",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "CategoryTheory.conjugateIsoEquiv",
+        "AlgebraicGeometry.tilde.adjunction",
+        "AlgebraicGeometry.Scheme.Modules.pullbackPushforwardAdjunction",
+        "ModuleCat.extendRestrictScalarsAdj",
+        "AlgebraicGeometry.gammaPushforwardNatIso"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Uniqueness-of-left-adjoints: compose (tilde ⊣ Γ) with (pullback ⊣ pushforward) and (extendScalars ⊣ restrictScalars) with (tilde ⊣ Γ); identify the two right adjoints by gammaPushforwardNatIso; apply Adjunction.natIsoOfRightAdjointNatIso",
+        "code_tried": "(Adjunction.natIsoOfRightAdjointNatIso ((tilde.adjunction (R := R)).comp (Scheme.Modules.pullbackPushforwardAdjunction (Spec.map φ))) ((ModuleCat.extendRestrictScalarsAdj φ.hom).comp (tilde.adjunction (R := R'))) (gammaPushforwardNatIso φ)).app M",
+        "line_number": "686",
+        "lean_error": "natIsoOfRightAdjointNatIso is deprecated; replaced with conjugateIsoEquiv",
+        "result": "partial",
+        "insight": "natIsoOfRightAdjointNatIso works but is deprecated; switched to non-deprecated conjugateIsoEquiv"
+      },
+      {
+        "attempt": 2,
+        "strategy": "Same route via non-deprecated conjugateIsoEquiv; let-bind the two composite adjunctions adjL, adjR; apply ((conjugateIsoEquiv adjL adjR).symm (gammaPushforwardNatIso φ)).symm.app M with care on the direction bookkeeping",
+        "code_tried": "let adjL := (tilde.adjunction (R := R)).comp (Scheme.Modules.pullbackPushforwardAdjunction (Spec.map φ)); let adjR := (ModuleCat.extendRestrictScalarsAdj φ.hom).comp (tilde.adjunction (R := R')); (((conjugateIsoEquiv adjL adjR).symm (gammaPushforwardNatIso φ)).symm).app M",
+        "line_number": "686",
+        "lean_error": null,
+        "goal_before": "(pullback (Spec.map φ)).obj (tilde M) ≅ tilde ((extendScalars φ.hom).obj M)",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "conjugateIsoEquiv conjugates an iso of right adjoints to an iso of left adjoints; the outer .symm fixes direction (adjL right-adj = pushforward⋙Γ_R, adjR right-adj = Γ_{R'}⋙restrictScalars). lean_verify axiom-clean {propext, Classical.choice, Quot.sound}"
+      }
+    ],
+    "next_steps": "Target 1 of the affine dictionary DONE. Both affine dictionaries (pushforward + pullback) now exist axiom-clean. Remaining for affineBaseChange_pushforward_iso = the two Mathlib-absent obligations (affine reduction + mate↔cancelBaseChange)."
+  },
+  {
+    "timestamp": "2026-06-01T14:59:01Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/FlatBaseChange.lean",
+      "theorem": "AlgebraicGeometry.gammaPushforwardNatIso"
+    },
+    "session": {
+      "id": "session_242",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "NatIso.ofComponents",
+        "AlgebraicGeometry.gammaPushforwardIso",
+        "ModuleCat.restrictScalarsCongr"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Package the per-object Γ-fragment comparison gammaPushforwardIso into a natural iso via NatIso.ofComponents, naturality by ext x; rfl",
+        "code_tried": "NatIso.ofComponents (fun N => gammaPushforwardIso φ N) (by intro …; ext x; rfl)",
+        "line_number": "664",
+        "lean_error": "Tactic `rfl` failed: LHS ((pushforward (Spec.map φ) ⋙ moduleSpecΓFunctor).map g ≫ (gammaPushforwardIso φ N).hom) x is not definitionally equal to RHS — the middle eqToIso (congrArg …) cast in gammaPushforwardIso does not reduce when composed with .map g",
+        "result": "failed",
+        "insight": "An eqToIso cast leg blocks the pointwise rfl naturality"
+      },
+      {
+        "attempt": 2,
+        "strategy": "Swap gammaPushforwardIso's middle eqToIso cast for (ModuleCat.restrictScalarsCongr hcomp).app SecN (same type, identity-on-carrier), then naturality is a pointwise rfl — exactly the iter-241 hsq fix",
+        "code_tried": "exact (ModuleCat.restrictScalarsComp'App gsRhom pushTop … SecN).symm ≪≫ (ModuleCat.restrictScalarsCongr hcomp).app SecN ≪≫ (ModuleCat.restrictScalarsComp'App φ.hom gsR'hom … SecN)",
+        "line_number": "285",
+        "lean_error": null,
+        "result": "success",
+        "insight": "Replacing eqToIso with the identity-on-carrier restrictScalarsCongr NatIso component makes every leg identity-on-elements; gammaPushforwardIso signature unchanged, still axiom-clean, downstream pushforward_spec_tilde_iso re-verified clean"
+      }
+    ],
+    "next_steps": "Reusable brick; drives pullback_spec_tilde_iso. Should be \\lean{}-pinned in the blueprint (currently unpinned — see recommendations)."
+  },
+  {
+    "timestamp": "2026-06-01T15:03:04Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/FlatBaseChange.lean",
+      "theorem": "AlgebraicGeometry.affineBaseChange_pushforward_iso"
+    },
+    "session": {
+      "id": "session_242",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Two Mathlib-absent multi-hundred-LOC obligations: (1) affine reduction — naturality/base-change compatibility of pushforwardBaseChangeMap under restriction to affine opens of S' (not packaged in Mathlib); (2) adjoint-mate ↔ cancelBaseChange identification — transporting the abstract mate through the four dictionary isos to match tilde(cancelBaseChange). Neither decomposes into a quick axiom-clean sub-step.",
+      "key_lemmas_used": [
+        "AlgebraicGeometry.Modules.isIso_iff_isIso_app_affineOpens"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Locality reduction then per-affine-open: rw [Modules.isIso_iff_isIso_app_affineOpens]; intro U, leaving IsIso (Hom.app (pushforwardBaseChangeMap …) U) for U affine",
+        "code_tried": "rw [Modules.isIso_iff_isIso_app_affineOpens]; intro U",
+        "line_number": "710",
+        "lean_error": null,
+        "goal_before": "IsIso (pushforwardBaseChangeMap f g f' g' ⋯ F)",
+        "goal_after": "∀ (U : ↑S'.affineOpens), IsIso (Hom.app (pushforwardBaseChangeMap …) ↑U)",
+        "result": "partial",
+        "insight": "Locality reduction lands; both affine dictionaries (pushforward_spec_tilde_iso, pullback_spec_tilde_iso) and cancelBaseChange are now available, but the affine-affine close still requires obligation (2) (mate↔cancelBaseChange) plus obligation (1) (the reduction of arbitrary S,S',X,X' to affine), neither of which is a single missing lemma. Left as documented partial — no bare sorry."
+      }
+    ],
+    "next_steps": "DO NOT re-dispatch a verbatim rewrite round. Decompose into two sub-lanes: (1) base-change-map↔open-restriction naturality; (2) mate↔cancelBaseChange coherence. #37189 (isIso_fromTildeΓ_pushforward) bump remains the recorded fallback for the affine close."
+  },
+  {
+    "timestamp": "2026-06-01T15:13:49Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.pullbackTensorIso"
+    },
+    "session": {
+      "id": "session_242",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Genuine Mathlib-scale build: the planner's concrete-P route requires a concrete strong-monoidal model of the abstract left-adjoint pullback. Scheme.Modules.pullback f and the underlying PresheafOfModules.pullback φ.hom are BOTH (pushforward _).leftAdjoint — abstract, no sectionwise value. For a general f the concrete left adjoint is (inverse-image presheaf) ⋙ extendScalars, but (a) there is NO PresheafOfModules.extendScalars in Mathlib (only ModuleCat.extendScalars), and (b) the underlying-presheaf inverse image is a left Kan extension (a colimit, not sectionwise) with no concrete Mathlib functor at the pin.",
+      "key_lemmas_used": [
+        "PresheafOfModules.pushforward₀OfCommRingCat",
+        "PresheafOfModules.restrictScalarsLaxMonoidal",
+        "Functor.LaxMonoidal.comp",
+        "CategoryTheory.Adjunction.leftAdjointOplaxMonoidal"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Establish (PresheafOfModules.pushforward φ).LaxMonoidal as pushforward₀OfCommRingCat ⋙ restrictScalars φ; inferInstance",
+        "code_tried": "have h : (PresheafOfModules.pushforward₀OfCommRingCat F R ⋙ PresheafOfModules.restrictScalars φ).LaxMonoidal := inferInstance; exact h",
+        "line_number": "1137",
+        "lean_error": "failed to synthesize (pushforward₀OfCommRingCat F R₀ ⋙ restrictScalars φ).LaxMonoidal",
+        "result": "failed",
+        "insight": "The forget₂-association diamond: pushforward's target type is the inner association F.op ⋙ (R₀ ⋙ forget₂), but the MonoidalCategory instance and pushforward₀OfCommRingCat are keyed on the outer (F.op ⋙ R₀) ⋙ forget₂"
+      },
+      {
+        "attempt": 2,
+        "strategy": "Try letI MonoidalCategory bridging inner↔outer association, then Functor.LaxMonoidal.comp",
+        "code_tried": "letI : MonoidalCategory (PresheafOfModules (F.op ⋙ R₀ ⋙ forget₂ …)) := inferInstanceAs (...(F.op ⋙ R₀) ⋙ forget₂...); haveI h0 := …; have h := Functor.LaxMonoidal.comp _ _",
+        "line_number": "1137",
+        "lean_error": "failed to synthesize MonoidalCategory / (restrictScalars φ).LaxMonoidal — the letI re-synthesizes a different middle MonoidalCategory than Functor.LaxMonoidal.comp wants (kernel-rejected diamond)",
+        "result": "failed",
+        "insight": "Bridging the association with letI triggers an instance diamond; the comp re-synthesizes a different middle monoidal structure than the letI carried"
+      },
+      {
+        "attempt": 3,
+        "strategy": "FIX: keep the hypothesis φ in the inner form so pushforward φ typechecks, then let φ' : (S₀⋙forget₂) ⟶ (F.op⋙R₀)⋙forget₂ := φ (a pure defeq cast to the outer form); build (pushforward₀OfCommRingCat F R₀ ⋙ restrictScalars φ').LaxMonoidal := inferInstance natively (both factors now agree on the outer middle); exact it back",
+        "code_tried": "let φ' : (S₀ ⋙ forget₂ …) ⟶ (F.op ⋙ R₀) ⋙ forget₂ … := φ; <native inferInstance on outer-association composite>",
+        "line_number": "1137",
+        "lean_error": null,
+        "result": "success",
+        "insight": "Defeq-casting φ to the outer association before synthesizing the composite avoids the diamond. presheafPushforwardLaxMonoidal landed axiom-clean."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Build the oplax pullback comparison δ via the doctrinal mate of the lax pushforward: (pullbackPushforwardAdjunction φ).leftAdjointOplaxMonoidal",
+        "code_tried": "(pullbackPushforwardAdjunction φ).leftAdjointOplaxMonoidal",
+        "line_number": "1159",
+        "lean_error": null,
+        "result": "success",
+        "insight": "presheafPullbackOplaxMonoidal landed axiom-clean. At the PRESHEAF level the pullback IS a genuine left adjoint, pushforward is lax, and PresheafOfModules is monoidal — so the canonical comparison δ : f^*(A⊗B) ⟶ f^*A⊗f^*B exists abstractly (NO MonoidalCategory(SheafOfModules) needed, correcting the directive premise). δ is only a MAP with no sectionwise value; upgrading it to an ISO is the remaining content. pullbackTensorIso itself NOT closed — left absent, no sorry."
+      }
+    ],
+    "next_steps": "DO NOT re-dispatch the concrete-P route (it needs the Mathlib-scale concrete inverse-image functor). Prover-recommended pivot: (1) transport the landed presheaf δ to the sheaf/substrate level as a MAP via sheafificationCompPullback + sheafifyTensorUnitIso (moderate LOC, axiom-clean-feasible, no concrete inverse image); (2) upgrade to iso for the IsInvertible.pullback consumer via the LOCAL-TRIVIALIZATION route (needs the forward bridge IsInvertible ⇒ IsLocallyTrivial built first) + isIso_of_isIso_restrict. Full general pullbackTensorIso only needed if a non-invertible consumer appears (none on the A.2.c path)."
+  },
+  {
+    "timestamp": "2026-06-01T15:14:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.IsInvertible.pullback"
+    },
+    "session": {
+      "id": "session_242",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Depends on pullbackTensorIso (blocked). Once a sheaf-level comparison MAP δ exists (transport of the landed presheaf δ) and is shown iso on the invertible pair via local trivialization, IsInvertible.pullback = δ⁻¹ ≫ f^*e ≫ pullbackUnitIso on witness f^*N.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Not attempted as a standalone decl this iter — gated on pullbackTensorIso / the sheaf-level δ map. Left absent (no sorry).",
+        "code_tried": "(none — blocked on prerequisite)",
+        "line_number": null,
+        "lean_error": null,
+        "result": "partial",
+        "insight": "Reachable via the local-trivialization route once the sheaf-level δ map and the forward bridge IsInvertible ⇒ IsLocallyTrivial are built; does not require the full Mathlib-scale pullbackTensorIso."
+      }
+    ],
+    "next_steps": "Build the sheaf-level δ map (step 1 above) and the forward bridge IsInvertible ⇒ IsLocallyTrivial (scheduled at A.2.c entry), then close via local trivialization + isIso_of_isIso_restrict + pullbackUnitIso."
+  }
+]

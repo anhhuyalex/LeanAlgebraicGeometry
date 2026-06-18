@@ -1,0 +1,261 @@
+[
+  {
+    "timestamp": "2026-06-02T14:45:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "pullbackTensorMap_natural"
+    },
+    "session": {
+      "id": "session_251",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "D1' is a 4-square paste; 2 of 4 squares (the two non-packaged naturality helpers) not both closed — sheafifyTensorUnitIso_hom_natural still open, so the paste cannot be assembled",
+      "key_lemmas_used": [
+        "pullbackValIso_hom_natural",
+        "sheafifyTensorUnitIso_hom_eq",
+        "delta_natural",
+        "sheafificationCompPullback"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Author the D1' statement (planner said 'Author + prove' — did not pre-exist) and reduce to the 4-square diagram; body left as `simp only [pullbackTensorMap, tensorObj_functoriality]` + documented assembly plan + one typed sorry",
+        "code_tried": "simp only [pullbackTensorMap, tensorObj_functoriality]; sorry (L1983)",
+        "line_number": "1983",
+        "lean_error": "none (typed sorry, file compiles)",
+        "result": "partial",
+        "insight": "D1' is NOT the planner's '2-step' — it needs two non-packaged naturality helpers (squares 3 and 4). The reversing signal 'D1' does not close -> idioms-transfer assumption wrong -> re-decompose' FIRED."
+      }
+    ],
+    "next_steps": "Close sheafifyTensorUnitIso_hom_natural (square 3) via a second carrier-normalisation lemma; then assemble the 4-square paste: move S1 by (sheafificationCompPullback phi).hom.naturality, discharge presheaf equation by delta_natural (square 2) + the two helpers."
+  },
+  {
+    "timestamp": "2026-06-02T14:45:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "pullbackValIso_hom_natural"
+    },
+    "session": {
+      "id": "session_251",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "sheafificationCompPullback",
+        "sheafificationAdjunction.counit.naturality",
+        "Functor.map_comp"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Square 4 of D1' (naturality of pullbackValIso in the module argument). Worked through the SheafOfModules.pullback phi vs Scheme.Modules.pullback f carrier friction using an erw idiom kit.",
+        "code_tried": "simp only [pullbackValIso, Iso.trans_hom, Iso.symm_hom, Functor.mapIso_hom, Category.assoc]; rw [← Category.assoc]; erw [(sheafificationCompPullback phi).inv.naturality u.val]; rw [show (SheafOfModules.pullback phi).map g = (Scheme.Modules.pullback f).map g from rfl]; erw [Category.assoc]; erw [← Functor.map_comp F g1 g2]; congr 1; congr 1; exact (sheafificationAdjunction ..).counit.naturality u",
+        "line_number": "1879",
+        "lean_error": "none (closed)",
+        "result": "success",
+        "insight": "VERIFIED axiom-clean first-hand: {propext, Classical.choice, Quot.sound}, no sorryAx. The '`exact` bombs' diagnosis was wrong — the heartbeat bomb was a stray `rw [← restrictScalarsId_map]`; plain `exact …counit.naturality u` succeeds. erw is required for the (α.app M').inv ≡ α.inv.app M' and (F⋙a_Y).map ≡ a_Y.map(F.map) defeq matches."
+      }
+    ],
+    "next_steps": "Reusable as square 4 in the D1' assembly. Idiom kit recorded for the remaining squares + D3'."
+  },
+  {
+    "timestamp": "2026-06-02T14:45:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "sheafifyTensorUnitIso_hom_eq"
+    },
+    "session": {
+      "id": "session_251",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "rfl"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Carrier-normalisation brick: strip the `letI instMS` cast from sheafifyTensorUnitIso.hom, restating it on the `⋙ forget₂` carrier so that Functor.map_comp merges fire.",
+        "code_tried": ":= rfl",
+        "line_number": "1853",
+        "lean_error": "none (closed by rfl)",
+        "result": "success",
+        "insight": "Closes by rfl. This is the carrier-normalisation pattern (analogue of iter-251 restrictScalarsId_map) that unblocks Functor.map_comp merges on the local MonoidalCategoryStruct carrier. Private lemma."
+      }
+    ],
+    "next_steps": "Pattern to be replicated for the whisker-carrier restatement that blocks sheafifyTensorUnitIso_hom_natural."
+  },
+  {
+    "timestamp": "2026-06-02T14:45:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "sheafifyTensorUnitIso_hom_natural"
+    },
+    "session": {
+      "id": "session_251",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Mathlib whisker lemmas (whisker_exchange[_assoc], comp_whiskerRight, whiskerLeft_comp) fail to fire (rw/simp report 'unused'/'not found') — the goal's ▷/◁ come from the file's local MonoidalCategoryStruct (forget₂ carrier), defeq-but-not-syntactic to MonoidalCategory.toMonoidalCategoryStruct",
+      "key_lemmas_used": [
+        "sheafifyTensorUnitIso_hom_eq",
+        "Functor.map_comp",
+        "MonoidalCategory.tensorHom_def",
+        "whisker_exchange (failed to fire)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Square 3 of D1'. Carrier-normalise both sides via sheafifyTensorUnitIso_hom_eq, merge whisker pairs via Functor.map_comp/erw, peel outer a.map via congr 1, expand ⊗ via tensorHom_def, then attempt whisker calculus to close.",
+        "code_tried": "rw [sheafifyTensorUnitIso_hom_eq, sheafifyTensorUnitIso_hom_eq]; rw [← Functor.map_comp, ← Functor.map_comp]; erw [← Functor.map_comp, ← Functor.map_comp]; congr 1; simp only [MonoidalCategory.tensorHom_def]; <whisker_exchange / comp_whiskerRight / whiskerLeft_comp — none fire>; sorry (L1954)",
+        "line_number": "1954",
+        "lean_error": "whisker lemmas report 'unused'/'motive not found' — do not unify with local MonoidalCategoryStruct projections",
+        "goal_after": "(p ▷ Q ≫ P' ◁ q) ≫ (η_{P'} ▷ Q') ≫ ((aP').val ◁ η_{Q'}) = (η_P ▷ Q) ≫ ((aP).val ◁ η_Q) ≫ ((a.map p).val ▷ (aQ).val) ≫ ((aP').val ◁ (a.map q).val)",
+        "result": "partial",
+        "insight": "Reduced from 'blocked at the very first merge' to ONE concrete whisker identity with the hand-proof spelled out (whisker_exchange on middle crossings + sheafification-unit η-naturality p≫η=η_P≫(a.map p).val). Blocker is carrier friction on whisker projections — a THIRD instance of the .val-normalisation class solved twice this session."
+      }
+    ],
+    "next_steps": "Author a whisker-carrier restatement lemma (analogue of sheafifyTensorUnitIso_hom_eq) re-stating the local ▷/◁ via the canonical MonoidalCategory instance, after which whisker_exchange fires and the closer goes through. OR mathlib-analogist consult on 'firing whisker_exchange on a local MonoidalCategoryStruct'."
+  },
+  {
+    "timestamp": "2026-06-02T14:45:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate/DualInverse.lean",
+      "theorem": "dual_isLocallyTrivial"
+    },
+    "session": {
+      "id": "session_251",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Body assembled (chart-chase, no sorry in own body) but transitively carries sorryAx because it references dual_restrict_iso which still has a Step-4 sorry",
+      "key_lemmas_used": [
+        "dual_restrict_iso",
+        "dualIsoOfIso",
+        "dual_unit_iso"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Chart-chase assembly mirroring tensorObj_isLocallyTrivial: for each point, pick an affine trivialising chart and compose (dual L)|_U ≅ dual(L|_U) ≅ dual 𝒪_U ≅ 𝒪_U.",
+        "code_tried": "intro x; obtain ⟨U, hxU, hU_aff, ⟨eL⟩⟩ := hL x; refine ⟨U, hxU, hU_aff, ⟨?_⟩⟩; exact dual_restrict_iso U.ι L ≪≫ (dualIsoOfIso eL).symm ≪≫ dual_unit_iso",
+        "line_number": "330",
+        "lean_error": "none in own body; lean_verify shows axioms {propext, sorryAx, Classical.choice, Quot.sound} — sorryAx inherited from dual_restrict_iso",
+        "result": "partial",
+        "insight": "VERIFIED first-hand: carries sorryAx transitively. 'CLOSED' in the task result is body-level only; the lemma is NOT axiom-clean until dual_restrict_iso's Step-4 closes. Three-step chain structure is correct and reusable."
+      }
+    ],
+    "next_steps": "Closes automatically once dual_restrict_iso Step-4 residual lands. No further work on dual_isLocallyTrivial itself."
+  },
+  {
+    "timestamp": "2026-06-02T14:45:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate/DualInverse.lean",
+      "theorem": "dual_restrict_iso"
+    },
+    "session": {
+      "id": "session_251",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Step-4: a presheaf-of-modules iso 'pushforward β commutes with dual' — a genuine NEW build, sectionwise via InternalHom.restrictScalarsRingIsoDualEquiv",
+      "key_lemmas_used": [
+        "restrictFunctorIsoPullback",
+        "sheafificationCompPullback",
+        "pushforwardPushforwardAdj",
+        "leftAdjointUniq"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Mirror tensorObj_restrict_iso: Step 1 restrictFunctorIsoPullback, Step 2 sheafificationCompPullback, Step 3 strip outer sheafification (.mapIso), H1 rewrite pullback φ to pushforward β via pushforwardPushforwardAdj∘leftAdjointUniq.",
+        "code_tried": "Steps 1–3 + H1 (LSP-verified typecheck), descending to residual: (pushforward β).obj (PresheafOfModules.dual M.val) ≅ dual ((pushforward β).obj M.val); left as typed sorry (L254)",
+        "line_number": "254",
+        "lean_error": "none (typed sorry, deliberately not thrashed per pc251 warm-context warning)",
+        "goal_after": "(pushforward β).obj (PresheafOfModules.dual M.val) ≅ dual ((pushforward β).obj M.val)",
+        "result": "partial",
+        "insight": "Steps 1–3 + H1 all typecheck. The residual is the EXACT dual analog of the H2 restrictScalarsMonoidalOfBijective tensorator: a sectionwise isoMk over the slice reconciling 𝒪_X(fV)- vs 𝒪_Y(V)-module structures via restrictScalarsRingIsoDualEquiv. NOT thrashed — single typed sorry per the pc251 warning."
+      }
+    ],
+    "next_steps": "Build the sectionwise pushforward-dual presheaf iso. Flagged for a targeted mathlib-analogist consult (api-alignment, restrictScalarsRingIsoDualEquiv) if it resists."
+  },
+  {
+    "timestamp": "2026-06-02T14:45:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate/DualInverse.lean",
+      "theorem": "presheafDualUnitIso"
+    },
+    "session": {
+      "id": "session_251",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "unitDualSectionEquiv",
+        "dualUnitIsoGen",
+        "evalLin",
+        "globalSMul_hom_apply",
+        "naturality_apply",
+        "unit_map_one",
+        "internalHomObjModule"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Third leg of dual_isLocallyTrivial: dual 𝒪_Y ≅ 𝒪_Y by sheafifying the presheaf-level PresheafOfModules.dual 𝟙_ ≅ 𝟙_ (= ℋom(𝟙_,𝟙_) ≅ 𝟙_, evaluation at 1). Built generally over {D}[Category D]{R₀ : Dᵒᵖ ⥤ CommRingCat}, instantiated at R₀ := Y.presheaf. Developed + verified in an isolated scratch importing only PresheafInternalHom.lean, then ported verbatim, scratch deleted.",
+        "code_tried": "presheafDualUnitIso := dualUnitIsoGen (R₀ := Y.presheaf); where unitDualSectionEquiv has forward φ↦evalLin 𝟙_ X φ 1, inverse r↦globalSMul (..) r, left_inv via φ-naturality toward terminal + unit_map_one; dualUnitIsoGen := isoMk (..) <nat via internalHomEval six-step>",
+        "line_number": "(§0 block)",
+        "lean_error": "none (closed)",
+        "result": "success",
+        "insight": "VERIFIED axiom-clean first-hand: {propext, Classical.choice, Quot.sound}, no sorryAx. Substantive content is left_inv (every unit-endomorphism is mult by its value at 1) + internalHomEval-style naturality. Idioms: erw (not rw) for globalSMul_hom_apply/unit_map_one defeq; `1` must be ascribed (1 : (R₀⋙forget₂..).obj X) to dodge OfNat synthesis; pin internalHomObjModule with letI."
+      }
+    ],
+    "next_steps": "Reusable infra. Feeds dual_unit_iso (the 𝒪-side third leg of dual_isLocallyTrivial)."
+  },
+  {
+    "timestamp": "2026-06-02T14:45:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate/DualInverse.lean",
+      "theorem": "homOfLocalCompat"
+    },
+    "session": {
+      "id": "session_251",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Multi-piece sheaf-of-homs gluing engine (Presheaf.IsSheaf.hom + existsUnique_gluing through overSliceSheafEquiv + homMk) — large independent build; prover ran out of budget after the dual-iso chain",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Not attempted this iter. Prover prioritised the dual-iso chain (which closed cleanly) over the gluing engine.",
+        "code_tried": "untouched scaffold sorry (L420)",
+        "line_number": "420",
+        "lean_error": "none (scaffold sorry)",
+        "result": "partial",
+        "insight": "The planner's stated minimum (homOfLocalCompat) was NOT met; prover judged the dual-iso chain higher-value. Recipe in the in-file stub: Presheaf.IsSheaf.hom + existsUnique_gluing through overSliceSheafEquiv + homMk."
+      }
+    ],
+    "next_steps": "Dedicated next-iter dispatch on the gluing engine. Frontier base of the dual lane; deps all closed."
+  }
+]

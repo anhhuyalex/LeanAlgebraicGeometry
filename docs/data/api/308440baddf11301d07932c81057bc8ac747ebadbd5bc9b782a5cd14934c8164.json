@@ -1,0 +1,289 @@
+[
+  {
+    "timestamp": "2026-05-13T03:38:21Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "basicOpenCover_isCechAcyclicCover_toModuleKSheaf (inline sub-claim h_diff_pi_smul_f, sorry at L1478)"
+    },
+    "session": {
+      "id": "session_86",
+      "model": "anthropic"
+    },
+    "findings": {
+      "blocker": "Step 2 of the iter-086 recipe (per-summand chain) stalled: the post-`hsmul_eq` goal needs a `ModuleCat.hom_sum`-style sum-distribution lemma BEFORE the per-summand `R_restrict_R_linear` can fire. `ModuleCat.hom_sum` does not exist by direct name in Mathlib (lean_loogle returned 0 results); only `ModuleCat.hom_add` (two-summand). Iterated `Finset.cons_induction` required.",
+      "key_lemmas_used": [
+        "ModuleCat.hom_add",
+        "ModuleCat.hom_comp",
+        "ConcreteCategory.comp_apply",
+        "CategoryTheory.Functor.map_comp",
+        "LinearEquiv.apply_symm_apply"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Introduce `R_restrict_R_linear` inline `have` with signature `(z : C.left.presheaf.obj (Opposite.op W))` and `(... * z)` — Step 1 of iter-086 recipe per iter-085 plan",
+        "code_tried": "have R_restrict_R_linear : ∀ {V W : Opens C.left.toTopCat} (h_VW : V ≤ W) (h_VU : V ≤ U) (h_WU : W ≤ U) (r' : ↑R) (z : C.left.presheaf.obj (Opposite.op W)), (C.left.presheaf.map (homOfLE h_VW).op).hom ((C.left.presheaf.map (homOfLE h_WU).op).hom r' * z) = (C.left.presheaf.map (homOfLE h_VU).op).hom r' * (C.left.presheaf.map (homOfLE h_VW).op).hom z := by ...",
+        "line_number": "1406",
+        "lean_error": "failed to synthesize instance of type class HMul ↑(C.left.presheaf.obj (Opposite.op W)) ↑(C.left.presheaf.obj (Opposite.op W)) ?m.2230",
+        "goal_before": "(Pi.π Z₂ j).hom ((eqToHom ∘ₗ Σ.hom) (e₁.symm (r •_pi y))) = r •_{perI₂ j} (Pi.π Z₂ j).hom ((eqToHom ∘ₗ Σ.hom) (e₁.symm y)) (S6-form from iter-085)",
+        "goal_after": "same (statement elaboration failed before tactic phase)",
+        "result": "failed",
+        "insight": "typeclass resolution at the `*` site cannot reach the bundled CommRingCat instance through the carrier coercion at statement-level"
+      },
+      {
+        "attempt": 2,
+        "strategy": "Add `↑(...)` explicit ascription on `z`",
+        "code_tried": "(z : ↑(C.left.presheaf.obj (Opposite.op W)))",
+        "line_number": "1409",
+        "lean_error": "failed to synthesize instance of type class HMul ↑(C.left.presheaf.obj (Opposite.op W)) ↑(C.left.presheaf.obj (Opposite.op W)) ?m.2229",
+        "goal_before": "same",
+        "goal_after": "same",
+        "result": "failed",
+        "insight": "explicit-coercion ascription does not unblock CommRingCat carrier-level Mul synthesis"
+      },
+      {
+        "attempt": 3,
+        "strategy": "Use `↑Γ(C.left, W)` notation for z",
+        "code_tried": "(z : ↑Γ(C.left, W))",
+        "line_number": "1409",
+        "lean_error": "failed to synthesize instance of type class HMul ↑(C.left.presheaf.obj (Opposite.op W)) ↑Γ(C.left, W) ?m.2229",
+        "goal_before": "same",
+        "goal_after": "same",
+        "result": "failed",
+        "insight": "the notation expands but the synthesis site sees both forms simultaneously"
+      },
+      {
+        "attempt": 4,
+        "strategy": "Rename `h_WU` to `_h_WU` to silence linter and signal unused",
+        "code_tried": "(_h_WU : W ≤ U)",
+        "line_number": "1408",
+        "lean_error": "same HMul synth failure",
+        "goal_before": "same",
+        "goal_after": "same",
+        "result": "failed",
+        "insight": "binder-naming has no effect on statement-level type synthesis"
+      },
+      {
+        "attempt": 5,
+        "strategy": "Revert to `↑Γ(C.left, W)` with `h_WU` named back",
+        "code_tried": "(z : ↑Γ(C.left, W))",
+        "line_number": "1409",
+        "lean_error": "same HMul synth failure",
+        "goal_before": "same",
+        "goal_after": "same",
+        "result": "failed",
+        "insight": "issue is fundamentally statement-level, not binder-level"
+      },
+      {
+        "attempt": 6,
+        "strategy": "Drop the `* z` factor entirely; state ONLY the element-level functoriality form (no Mul needed at statement level)",
+        "code_tried": "have R_restrict_R_linear : ∀ {V W : ...} (h_VW : V ≤ W) (h_VU : V ≤ U) (h_WU : W ≤ U) (r' : ↑R), (C.left.presheaf.map (homOfLE h_VW).op).hom ((C.left.presheaf.map (homOfLE h_WU).op).hom r') = (C.left.presheaf.map (homOfLE h_VU).op).hom r' := by intro V W h_VW _ _ r' ; rw [← ConcreteCategory.comp_apply, ← C.left.presheaf.map_comp]",
+        "line_number": "1406",
+        "lean_error": "unsolved goals (the `congr 1` was not yet present)",
+        "goal_before": "same",
+        "goal_after": "C.left.presheaf.map (h_VW.op ≫ h_WU.op) r' = C.left.presheaf.map h_VU.op r'",
+        "result": "partial",
+        "insight": "statement now type-checks; body needs trailing `congr 1` to close via Opens.op subsingleton"
+      },
+      {
+        "attempt": 7,
+        "strategy": "Append `congr 1 ; exact Subsingleton.elim _ _` to body",
+        "code_tried": "intro V W h_VW h_VU h_WU r' ; rw [← ConcreteCategory.comp_apply, ← C.left.presheaf.map_comp] ; congr 1 ; exact Subsingleton.elim _ _",
+        "line_number": "1415",
+        "lean_error": "No goals to be solved (at line 1415, column 11 — the trailing `exact`)",
+        "goal_before": "same",
+        "goal_after": "no goals after `congr 1`",
+        "result": "partial",
+        "insight": "the `congr 1` already closes via Opens.op subsingleton hom-types; trailing `exact` is redundant"
+      },
+      {
+        "attempt": 8,
+        "strategy": "Remove trailing `exact Subsingleton.elim _ _`; keep `intro` + `rw` + `congr 1` only",
+        "code_tried": "intro V W h_VW h_VU h_WU r' ; rw [← ConcreteCategory.comp_apply, ← C.left.presheaf.map_comp] ; congr 1",
+        "line_number": "1413",
+        "lean_error": "(none)",
+        "goal_before": "same",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "R_restrict_R_linear helper LANDED with a real 3-tactic body. No sorry, no axioms. Step 1 of recipe complete."
+      },
+      {
+        "attempt": 9,
+        "strategy": "Step 2 chain probe: `simp only [LinearMap.comp_apply, map_sum, LinearMap.zsmul_apply, ConcreteCategory.comp_apply]` at the post-`hsmul_eq` goal (now at L1466 — sorry moved to L1478 after helper)",
+        "code_tried": "simp only [LinearMap.comp_apply, map_sum, LinearMap.zsmul_apply, ConcreteCategory.comp_apply]",
+        "line_number": "1466",
+        "lean_error": "(no compile error but simp made no progress; all 4 lemmas report 'argument unused')",
+        "goal_before": "(Pi.π Z₂ j).hom ((eqToHom ∘ₗ Σ.hom) (e₁.symm (r •_pi y))) = r •_{perI₂ j} (Pi.π Z₂ j).hom ((eqToHom ∘ₗ Σ.hom) (e₁.symm y))",
+        "goal_after": "unchanged",
+        "result": "failed",
+        "insight": "iter-085 dead-end reconfirmed: standard simp lemmas don't peel the opaque `(eqToHom ∘ₗ Σ.hom)` term"
+      },
+      {
+        "attempt": 10,
+        "strategy": "Step 2 chain probe: `simp only [ModuleCat.hom_sum]`",
+        "code_tried": "simp only [ModuleCat.hom_sum]",
+        "line_number": "1466",
+        "lean_error": "(unused argument)",
+        "goal_before": "same",
+        "goal_after": "unchanged",
+        "result": "failed",
+        "insight": "ModuleCat.hom_sum may not exist; subsequent lean_loogle confirms it doesn't (0 results for pattern `ModuleCat.Hom.hom (∑ _, _)`)"
+      },
+      {
+        "attempt": 11,
+        "strategy": "Step 2 chain probe: `simp only [Pi.lift_π_apply]`",
+        "code_tried": "simp only [Pi.lift_π_apply]",
+        "line_number": "1466",
+        "lean_error": "(unused argument)",
+        "goal_before": "same",
+        "goal_after": "unchanged",
+        "result": "failed",
+        "insight": "the `Pi.lift` is INSIDE the sum, not at top level; `Pi.lift_π_apply` cannot fire until the sum is peeled first"
+      },
+      {
+        "attempt": 12,
+        "strategy": "Final iter-086 source edit: preserve `R_restrict_R_linear`; replace iter-085 obstruction comment block with iter-086 progress + iter-087 path-forward summary",
+        "code_tried": "[comment-block-only edit; tactic chain unchanged byte-for-byte]",
+        "line_number": "1466",
+        "lean_error": "(none)",
+        "goal_before": "same",
+        "goal_after": "same",
+        "result": "success",
+        "insight": "source-level delivery sealed: helper LANDED, sorry shifted L1447 → L1478, file compiles cleanly"
+      }
+    ],
+    "next_steps": "Iter-087 should implement Steps 2–5 of the recipe documented in the iter-086 task result: (1) inline `have hom_sum_dist` via `Finset.cons_induction` + `ModuleCat.hom_add` (~6 LOC), (2) apply `hom_sum_dist` to peel the sum, (3) distribute `(Pi.π Z₂ j).hom` via `map_sum` + `LinearMap.coe_sum` + `Finset.sum_apply`, (4) per-summand `(i,j)`: `Pi.lift_π_apply` → `Pi.smul_apply` (perI₁) → `(presheaf.map _).hom.map_mul` → `R_restrict_R_linear`, (5) reassemble via `Finset.smul_sum`. Total estimate: ~40–60 LOC."
+  },
+  {
+    "timestamp": "2026-05-13T03:38:21Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "cotangentExactSeq_structure (case h_exact branch, sorry at L636)"
+    },
+    "session": {
+      "id": "session_86",
+      "model": "anthropic"
+    },
+    "findings": {
+      "blocker": "Mathlib lacks (a) `SheafOfModules.exact_of_presheaf_exact` / `Sheaf.exact_of_presheaf_exact`, (b) `PresheafOfModules.shortComplex_exact_iff_pointwise`, and (c) `SheafOfModules.stalkFunctor` + corresponding exactness-reflection — confirmed by 9 search queries. Even routing via `CategoryTheory.ShortComplex.exact_map_iff_of_faithful` would require building the faithful functor + `PreservesLeftHomologyOf` / `PreservesRightHomologyOf` instances for `SheafOfModules R`, which is multi-iter upstream work.",
+      "key_lemmas_used": [
+        "CategoryTheory.ShortComplex.exact_map_iff_of_faithful (mentioned in plan but NOT applied)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Mandatory Step 1 revert: delete the iter-085 false-signature helper `_root_.SheafOfModules.exact_iff_stalkwise` at L501–521 (declaration + 16-line GAP-FILL comment block)",
+        "code_tried": "Edit removing the entire `-- GAP-FILL (iter-085, Lane 2): Stalkwise criterion ...` comment + `lemma _root_.SheafOfModules.exact_iff_stalkwise ... := by sorry` block; replaced with the iter-086 `set_option maxHeartbeats 16000000 in` (preserving the maxHeartbeats setting that was in the iter-085 layout)",
+        "line_number": "501",
+        "lean_error": "(none)",
+        "goal_before": "(file-level edit, no goal context)",
+        "goal_after": "file compiles, helper declaration removed",
+        "result": "success",
+        "insight": "REVERT successful. The false-universal claim `∀ S : ShortComplex (SheafOfModules R), S.Exact := by sorry` has been removed from the project. Mathematical honesty restored."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Mandatory Step 1 (Action 1.2): replace the iter-085 `case h_exact` body in `cotangentExactSeq_structure` (which invoked the deleted helper) with an honest `sorry`",
+        "code_tried": "case h_exact => sorry (with 3-line `% Iter-086 ...` pointer comment)",
+        "line_number": "613",
+        "lean_error": "(none)",
+        "goal_before": "(branch within tactic chain — replacement at source level)",
+        "goal_after": "(case h_exact now an open sorry, file compiles)",
+        "result": "success",
+        "insight": "`cotangentExactSeq_structure` is back to having an inline sorry in its body. Sorry count unchanged at 5 (1-for-1: removed L521 helper-body sorry, added L636 inline branch sorry)."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Optional Step 2: search Mathlib for `SheafOfModules.exact_of_presheaf_exact` or equivalent reflection-of-exactness lemma",
+        "code_tried": "lean_local_search queries: `SheafOfModules.exact`, `PresheafOfModules.shortComplex`, `Sheaf.exact`, `ShortComplex.Exact`, `SheafOfModules`, `exact_iff_stalk`, `stalkFunctor`, `exact_of_presheaf`, `SheafOfModules.forget`, `ShortComplex.map_exact`",
+        "line_number": "n/a",
+        "lean_error": "(no errors; 8 of 10 queries returned empty; 2 returned only generic / wrong-category results)",
+        "goal_before": "(search context)",
+        "goal_after": "(search context)",
+        "result": "failed",
+        "insight": "No `SheafOfModules`-level reflection-of-exactness lemma exists in Mathlib by direct name. The closest is `TopCat.Sheaf.exact_iff_stalkFunctor_map_exact` which works for `Sheaf C` over `TopCat` valued in AddCommGrpCat — not for `SheafOfModules R`."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Optional Step 2 (cont'd): natural-language search via `lean_leansearch`",
+        "code_tried": "lean_leansearch queries: 'SheafOfModules short complex exact iff presheaf section exact', 'PresheafOfModules exact iff pointwise sections', 'sheafification preserves short exact sequence sheaf of modules', 'ShortComplex exact reflected faithful functor'",
+        "line_number": "n/a",
+        "lean_error": "(no errors; one query rate-limited)",
+        "goal_before": "(search context)",
+        "goal_after": "(search context)",
+        "result": "failed",
+        "insight": "Found `CategoryTheory.ShortComplex.exact_map_iff_of_faithful` (general functorial reflection of exactness) and `PresheafOfModules.instPreservesFiniteLimitsSheafOfModulesSheafification` (sheafification preserves finite limits hence is left exact). But applying these to close `case h_exact` would require building the faithful functor `SheafOfModules R ⥤ PresheafOfModules R.val` + its `PreservesLeftHomologyOf` / `PreservesRightHomologyOf` instances, which is multi-iter upstream work not in current Mathlib."
+      },
+      {
+        "attempt": 5,
+        "strategy": "Per plan instructions: STOP without introducing any replacement helper (since no clean Mathlib lemma was found)",
+        "code_tried": "(no further edits)",
+        "line_number": "n/a",
+        "lean_error": "(none)",
+        "goal_before": "(case h_exact remains `sorry`)",
+        "goal_after": "(same)",
+        "result": "success",
+        "insight": "Plan-agent's two-prong existence check is negative. Stopping is the correct behaviour. Awaiting plan-agent decision on Route A vs Route B for iter-087."
+      }
+    ],
+    "next_steps": "Plan agent should choose between (A) top-down — define a project-local helper `SheafOfModules.exact_of_presheaf_exact` with a TRUE signature (in iff or implication form), body via `ShortComplex.exact_map_iff_of_faithful` plus the necessary faithfulness + homology-preservation instances; (B) bottom-up — skip `SheafOfModules`-level exactness entirely, use `ShortComplex.exact_iff_image_eq_kernel` and compute ker/image directly via `KaehlerDifferential.exact_mapBaseChange_map` at each open, then glue via sheafification's left-exactness. Route A is shorter once infra is in place; Route B is concrete but mechanically long. Either way, iter-087's Lane 2 budget should be reserved for whichever route is chosen — not both."
+  },
+  {
+    "timestamp": "2026-05-13T03:38:21Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Modules/Monoidal.lean",
+      "theorem": "instIsMonoidal_W"
+    },
+    "session": {
+      "id": "session_86",
+      "model": "n/a"
+    },
+    "findings": {
+      "blocker": "Mathlib gap: `PresheafOfModules.stalk_tensorObj` for varying-ring R₀ is absent. Iso-stability of sheafification under presheaf-tensor whiskering cannot be established without it.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "OFF-LIMITS this iter and every iter pending Mathlib upstream PR or user-authorised axiom. Plan agent has correctly excluded this from active prover work since iter-081."
+  },
+  {
+    "timestamp": "2026-05-13T03:38:21Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Jacobian.lean",
+      "theorem": "nonempty_jacobianWitness"
+    },
+    "session": {
+      "id": "session_86",
+      "model": "n/a"
+    },
+    "findings": {
+      "blocker": "Packages Albanese existence + genus-0 rigidity, deferred to Phase C / E.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Deferred indefinitely. Not iter-086/087 budget."
+  },
+  {
+    "timestamp": "2026-05-13T03:38:21Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/Functor.lean",
+      "theorem": "PicardFunctor.representable"
+    },
+    "session": {
+      "id": "session_86",
+      "model": "n/a"
+    },
+    "findings": {
+      "blocker": "Gated on Phase C C0–C3 scaffolding (Picard functor, line bundles, divisor-class correspondence).",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Deferred indefinitely. Not iter-086/087 budget."
+  }
+]

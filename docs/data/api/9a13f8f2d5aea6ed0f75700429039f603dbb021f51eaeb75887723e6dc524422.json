@@ -1,0 +1,295 @@
+[
+  {
+    "timestamp": "2026-05-12T21:00:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "h_diff_pi_smul_f (inside basicOpenCover_isCechAcyclicCover_toModuleKSheaf)"
+    },
+    "session": {
+      "id": "session_80",
+      "model": "prover-iter-080"
+    },
+    "findings": {
+      "blocker": "S2–S8 mechanical chain remaining: dsimp through `scK₀.f` exposes `K₀.d (prev n) n` (opaque under `(up ℕ).Rel`); explicit case-split via `CochainComplex.of_d_eq_succ` + `AlternatingCofaceMapComplex.objD` identification + per-summand `RingHom.map_mul` / `presheaf.map_comp` closure still pending. Estimated ~50–100 LOC tactic pacing.",
+      "key_lemmas_used": [
+        "Pi.module",
+        "Pi.smul_apply",
+        "RingHom.toModule",
+        "CategoryTheory.Limits.FormalCoproduct.evalOp_obj_map",
+        "AlgebraicTopology.AlternatingCofaceMapComplex.objD",
+        "ModuleCat.piIsoPi"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Refactor `h_mod_pi₁/₂/₃` from anonymous `@Pi.module … (fun i => by …)` to named `letI perI_n : ∀ i, Module R (Z_n i)` followed by `letI h_mod_pi_n : Module R (∀ i, Z_n i) := Pi.module _ _ _`",
+        "code_tried": "letI perI₁ : ∀ i, Module R (Z₁ i) := fun i => by apply RingHom.toModule; refine (C.left.presheaf.map (homOfLE ?_).op).hom; …; letI h_mod_pi₁ : Module R (∀ i, Z₁ i) := Pi.module _ _ _   (and symmetric for perI₂/h_mod_pi₂ and perI₃/h_mod_pi₃)",
+        "line_number": "L911/921/931 in pre-iter-080 file; landed at L920–949",
+        "lean_error": "none — refactor compiles cleanly",
+        "goal_before": "none (just instance restructuring; downstream `h_diff_pi_smul_f` body could not invoke `Pi.smul_apply` against the anonymous-builder smul)",
+        "goal_after": "none (instances installed; downstream `Pi.smul_apply` and the iter-079 `change … = h_mod_pi₂.toSMul.smul r _ j` reduction now elaborate on the same goal)",
+        "result": "success",
+        "insight": "`letI` (not `have`) is required for both `perI_n` and `h_mod_pi_n` so that the body of `h_mod_pi_n` unfolds to `Pi.module _ _ _ perI_n .toSMul = Pi.instSMul`; with `have`-bound the projection is opaque and `Pi.smul_apply` cannot match. This is a byte-for-byte equivalent expansion of the original `Pi.module` term, NOT a new project-local helper (per user policy 2026-05-11)."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Verify `simp only [Pi.smul_apply]` fires on the post-`funext j` goal inside `h_diff_pi_smul_f`",
+        "code_tried": "simp only [Pi.smul_apply]  -- inside h_diff_pi_smul_f body, after `intro r y; funext j`",
+        "line_number": "L1115 (h_diff_pi_smul_f body)",
+        "lean_error": "none — simp fires and reduces RHS from `(r • e₂ ((scK₀.f).hom (e₁.symm y))) j` to `r • e₂ ((scK₀.f).hom (e₁.symm y)) j`",
+        "goal_before": "e₂ ((scK₀.f).hom (e₁.symm (r • y))) j = (r • e₂ ((scK₀.f).hom (e₁.symm y))) j",
+        "goal_after": "e₂ ((scK₀.f).hom (e₁.symm (r • y))) j = r • e₂ ((scK₀.f).hom (e₁.symm y)) j",
+        "result": "success",
+        "insight": "The structural advance of iter-080: `Pi.smul_apply` now fires (iter-076/078/079 confirmed-blocker is closed). The iter-079 `change h_mod_pi₂.toSMul.smul …` step is no longer needed."
+      },
+      {
+        "attempt": 3,
+        "strategy": "S2 unfold via 5-layer dsimp to expose `scK₀.f.hom = objD X (prev n)`",
+        "code_tried": "dsimp only [scK₀, K₀, cechCochain, cechComplexFunctor, toModuleKSheaf, toModuleKPresheaf_obj]",
+        "line_number": "after the iter-080 `simp only [Pi.smul_apply]`",
+        "lean_error": "none — dsimp reduces the nested `FormalCoproduct.cochainComplexFunctor` term; verified via `lean_multi_attempt`",
+        "goal_before": "e₂ ((scK₀.f).hom (e₁.symm (r • y))) j = r • e₂ ((scK₀.f).hom (e₁.symm y)) j",
+        "goal_after": "identical shape with `scK₀.f` partially unfolded; the `K₀.d (prev n) n` opacity surfaces and needs `(up ℕ).Rel` case-split",
+        "result": "partial",
+        "insight": "Unfold layer works; the residual opacity is the `K₀.d (prev n) n` step, which under `(up ℕ).Rel` requires `CochainComplex.of_d_eq_succ` to expose the alternating sum. This is the iter-076 confirmed pain point."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Try `exact map_smul (scK₀.f.hom) r _` as an early closure",
+        "code_tried": "exact map_smul (scK₀.f.hom) r _",
+        "line_number": "after simp only [Pi.smul_apply]",
+        "lean_error": "failed to synthesize `SMul ↑R ↑(∏ᶜ Z₁)` — scK₀.f is k-linear (Field k), not R-linear; the R-linearity is precisely what we're constructing",
+        "goal_before": "e₂ ((scK₀.f).hom (e₁.symm (r • y))) j = r • e₂ ((scK₀.f).hom (e₁.symm y)) j",
+        "goal_after": "unchanged",
+        "result": "failed",
+        "insight": "`scK₀.f` is a morphism in ModuleCat k, not ModuleCat R; we cannot lift directly via `map_smul`. The R-linearity is *constructed* via the per-component R-algebra restriction maps in S7."
+      },
+      {
+        "attempt": 5,
+        "strategy": "`module` tactic as a closure attempt",
+        "code_tried": "module",
+        "line_number": "after simp only [Pi.smul_apply]",
+        "lean_error": "goal is not an equality of `Module`-linear-combinations — this is presheaf-restriction-map equality, not a module-theoretic identity",
+        "goal_before": "e₂ ((scK₀.f).hom (e₁.symm (r • y))) j = r • e₂ ((scK₀.f).hom (e₁.symm y)) j",
+        "goal_after": "unchanged",
+        "result": "failed",
+        "insight": "`module` requires a pure linear-combination shape; here both sides involve `presheaf.map (homOfLE _).op` applications that the tactic cannot bridge."
+      },
+      {
+        "attempt": 6,
+        "strategy": "`rfl` after dsimp",
+        "code_tried": "dsimp only [scK₀, K₀, cechCochain, cechComplexFunctor, toModuleKSheaf, toModuleKPresheaf_obj]; rfl",
+        "line_number": "S2 + rfl",
+        "lean_error": "the two sides are not definitionally equal without the `K₀.d (prev n) n = objD X (prev n)` case-split and the `Pi.lift` per-component decomposition",
+        "goal_before": "unchanged",
+        "goal_after": "unchanged",
+        "result": "failed",
+        "insight": "S3 (the `(up ℕ).Rel` opacity) is the genuine pain point. The iter-080 structural advance unblocks S4 onward, but S3 still requires explicit `CochainComplex.of_d_eq_succ` case-split with explicit implicit-argument instantiation."
+      }
+    ],
+    "next_steps": "iter-081: keep the iter-080 named-per-i refactor + `Pi.smul_apply` fire. Land S2 + S3 + S4 (alternating-sum exposure) — about 20 LOC. Then split the goal via `Finset.sum_apply` + `Finset.smul_sum` and close per-summand via `evalOp_obj_map` + `RingHom.map_mul` + `presheaf.map_comp`. Multi-iteration patience required; per-component R-linearity must remain inline (no helper lemma per user policy 2026-05-11)."
+  },
+  {
+    "timestamp": "2026-05-12T21:00:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "cotangentExactSeq_structure"
+    },
+    "session": {
+      "id": "session_80",
+      "model": "prover-iter-080"
+    },
+    "findings": {
+      "blocker": "Route A structurally advances `h_zero` (`SheafOfModules.hom_ext` + `apply postcomp_injective` + `ext U b` succeed; `hα_fac _ b` cannot rewrite). Root cause: metavariable-elaboration mismatch when unifying `?d_t` against the inline `d_target` Derivation' structure surfaced by `unfold cotangentExactSeqAlpha`. `erw [hα_fac _ b]` (deterministic) times out at `whnf` (200000 heartbeats). Conditional clause respected: `exact_iff_stalkwise` NOT introduced, body left as single absorbed `sorry`.",
+      "key_lemmas_used": [
+        "SheafOfModules.hom_ext",
+        "Adjunction.homAddEquiv_zero",
+        "Adjunction.homEquiv_naturality_right",
+        "Equiv.apply_symm_apply",
+        "PresheafOfModules.DifferentialsConstruction.isUniversal'.postcomp_injective",
+        "PresheafOfModules.Derivation.Universal.fac",
+        "PresheafOfModules.Derivation.postcomp_d_apply",
+        "SheafOfModules.epi_of_epi_presheaf (iter-079, in place)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Route A — per-section extensionality via `SheafOfModules.hom_ext` + explicit `show`",
+        "code_tried": "apply ((Scheme.Modules.pullbackPushforwardAdjunction f).homEquiv _ _).injective; rw [Adjunction.homAddEquiv_zero, Adjunction.homEquiv_naturality_right]; unfold cotangentExactSeqAlpha; simp only [Equiv.apply_symm_apply]; apply SheafOfModules.hom_ext; show ((isUniversal' φ_g').desc _) ≫ ((PresheafOfModules.pushforward _).map (cotangentExactSeqBeta f g).val) = 0; apply (isUniversal' φ_g').postcomp_injective; ext U b; simp only [postcomp_d_apply, comp_app, pushforward_map_app_apply, zero_app, hom_zero, zero_apply]",
+        "line_number": "L460–477 (cotangentExactSeq_structure body, h_zero branch)",
+        "lean_error": "none up to this point — Route A structurally advances; goal reduces to a ModuleCat-level equation over `(derivation' φ_g').d b`",
+        "goal_before": "∃ h, cotangentExactSeqAlpha f g ≫ cotangentExactSeqBeta f g = 0 ∧ ⟨…, h⟩.Exact ∧ Epi (cotangentExactSeqBeta f g)",
+        "goal_after": "(ModuleCat.Hom.hom ((desc d_target).app U ≫ ((pushforward _).map β.val).app U)) ((derivation' φ_g').d b) = 0",
+        "result": "partial",
+        "insight": "Route A correctly replaces the iter-076 stale `simp only [SheafOfModules.comp_val, SheafOfModules.pushforward_map_val]` step. The explicit `show` form bypasses the elaborator's eager reduction of `(_ ≫ _).val`."
+      },
+      {
+        "attempt": 2,
+        "strategy": "`rw [hα_fac _ b]` to unfold the inner `desc d_target` term",
+        "code_tried": "rw [hα_fac _ b]",
+        "line_number": "after the simp chain",
+        "lean_error": "Tactic `rewrite` failed: Did not find an occurrence of the pattern `(ModuleCat.Hom.hom (((isUniversal' φ_g').desc ?m).app U)) ((derivation' φ_g').d b)`",
+        "goal_before": "(ModuleCat.Hom.hom ((desc d_target).app U ≫ ((pushforward _).map β.val).app U)) ((derivation' φ_g').d b) = 0",
+        "goal_after": "unchanged",
+        "result": "failed",
+        "insight": "Pattern-matching fails because `d_target` is an inline anonymous Derivation' structure (built inside `cotangentExactSeqAlpha`'s body), not a named handle. The unifier cannot instantiate the metavariable `?d_t` against the inline structure."
+      },
+      {
+        "attempt": 3,
+        "strategy": "`erw [hα_fac _ b]` to relax to definitional equality",
+        "code_tried": "erw [hα_fac _ b]",
+        "line_number": "after the simp chain",
+        "lean_error": "deterministic timeout at `whnf`, 200000 heartbeats",
+        "goal_before": "same as attempt 2",
+        "goal_after": "unchanged",
+        "result": "failed",
+        "insight": "`erw`'s `whnf`-based matching balloons trying to compute the type-class instance for the inline structure against the abstract metavariable's class. Confirms the issue is unifier loop, not surface pattern mismatch."
+      },
+      {
+        "attempt": 4,
+        "strategy": "`change` + `LinearMap.comp_apply` + targeted rw",
+        "code_tried": "change ... = 0; rw [LinearMap.comp_apply]; rw [hα_fac _ b]",
+        "line_number": "after the simp chain",
+        "lean_error": "`change` succeeds; `LinearMap.comp_apply` succeeds; final `rw [hα_fac _ b]` fails with same pattern-mismatch as attempt 2",
+        "goal_before": "same as attempt 2",
+        "goal_after": "goal distributed but still inline `desc d_target`",
+        "result": "failed",
+        "insight": "Splitting the composition manually does not bypass the inline-structure unifier failure. The metavariable mismatch is invariant under the prefix tactics."
+      },
+      {
+        "attempt": 5,
+        "strategy": "`simp only [hα_fac]`",
+        "code_tried": "simp only [hα_fac]",
+        "line_number": "after the simp chain",
+        "lean_error": "made no progress",
+        "goal_before": "same as attempt 2",
+        "goal_after": "unchanged",
+        "result": "failed",
+        "insight": "`simp` matcher hits the same inline-structure problem; even with `only` it cannot bind `?d_t`."
+      },
+      {
+        "attempt": 6,
+        "strategy": "`cat_disch` / `exact?` as escape hatches",
+        "code_tried": "cat_disch  -- and separately: exact?",
+        "line_number": "top of body",
+        "lean_error": "`cat_disch`: aesop failed to prove the goal; `exact?`: could not close the goal",
+        "goal_before": "top-level conjunction",
+        "goal_after": "unchanged",
+        "result": "failed",
+        "insight": "No magic closure. The semantic content (Universal.fac + adjunction coherence at the per-section level) is not in any tactic's library."
+      },
+      {
+        "attempt": 7,
+        "strategy": "Per conditional clause, revert to single absorbed `sorry` with inline iter-081 unblock recipe documentation",
+        "code_tried": "sorry  (preceded by detailed comment block describing the three unblock routes for iter-081)",
+        "line_number": "L513–522",
+        "lean_error": "none",
+        "goal_before": "conjunction",
+        "goal_after": "closed by sorry",
+        "result": "partial",
+        "insight": "Plan's conditional clause respected: introducing `exact_iff_stalkwise` would push the file from 5 → 6 sorries (regression). The body documents three unblock paths for iter-081: (a) `set d_target := …` to bind the inline structure before invoking universal property; (b) refactor `cotangentExactSeqAlpha` to expose `d_target` as a named `noncomputable def`; (c) add Mathlib-shape helper `Derivation.postcomp_comp` and skip `ext U b` entirely."
+      }
+    ],
+    "next_steps": "iter-081: try route (a) first (set d_target with `with hd_target` before the universal-property invocation) — lowest LOC, no Mathlib gap, no refactor authorisation. If that fails, route (c) (add `Derivation.postcomp_comp` as a one-line Mathlib-shape helper). Route (b) escalates to refactor subagent. Once `h_zero` closes, introduce `exact_iff_stalkwise` as the second permitted gap-fill (sorry body) to close `h_exact`, and chain `epi_of_epi_presheaf` (iter-079, in place) for `h_epi`."
+  },
+  {
+    "timestamp": "2026-05-12T21:00:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Modules/Monoidal.lean",
+      "theorem": "instIsMonoidal_W"
+    },
+    "session": {
+      "id": "session_80",
+      "model": "prover-iter-080"
+    },
+    "findings": {
+      "blocker": "Genuine Mathlib gap: `(M ⊗_psh N).stalk x ≅ M.stalk x ⊗_{R₀.stalk x} N.stalk x` for varying-ring `PresheafOfModules R₀` is absent from Mathlib. Mathlib has `tensorLeft.PreservesColimitsOfSize` / `tensorRight.PreservesColimitsOfSize` (presheaf-tensor preserves colimits, hence stalks as colimits in the abstract) but the explicit identification with the stalk-ring tensor is not packaged.",
+      "key_lemmas_used": [
+        "MonoidalCategory.tensorHom_def",
+        "Functor.map_comp",
+        "MorphismProperty.IsMonoidal.mk'",
+        "MorphismProperty.inverseImage_iff",
+        "MorphismProperty.isomorphisms.iff",
+        "PresheafOfModules.sheafification",
+        "PresheafOfModules.tensorLeft.PreservesColimitsOfSize"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Stalks-level argument: `rw [tensorHom_def, Functor.map_comp]` to split `L (f ⊗ₘ g)` into `L (f ▷ Y₁) ≫ L (X₂ ◁ g)`",
+        "code_tried": "rw [MonoidalCategory.tensorHom_def, Functor.map_comp]",
+        "line_number": "after `simp only [MorphismProperty.inverseImage_iff, MorphismProperty.isomorphisms.iff] at hf hg ⊢` inside the `MorphismProperty.IsMonoidal.mk'` body",
+        "lean_error": "none — rewrite succeeds; verified via `lean_multi_attempt`",
+        "goal_before": "IsIso ((sheafificationFunctor X).map (f ⊗ₘ g))",
+        "goal_after": "IsIso ((sheafificationFunctor X).map (f ▷ Y₁) ≫ (sheafificationFunctor X).map (X₂ ◁ g))",
+        "result": "partial",
+        "insight": "The split is clean. Closure depends on `IsIso (L (X₂ ◁ g))` (and the symmetric whisker), reducible at each stalk to `id ⊗ g_x` for `g_x` iso of stalk-modules."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Search Mathlib for `stalk_tensorObj` / `stalk of tensor` for varying-ring PresheafOfModules",
+        "code_tried": "lean_leansearch / lean_local_search for `stalk presheaf tensor`, `colimit tensor product preserves stalk PresheafOfModules`, grep on `Mathlib/Algebra/Category` for `stalk.*tensor` and `tensor.*stalk`",
+        "line_number": "N/A (search phase)",
+        "lean_error": "no relevant identifications found",
+        "goal_before": "need `(M ⊗_psh N).stalk x ≅ M.stalk x ⊗_{R₀.stalk x} N.stalk x`",
+        "goal_after": "unchanged",
+        "result": "failed",
+        "insight": "Mathlib gap is genuine and reusable. Cleanest fix is a Mathlib PR adding `PresheafOfModules.stalk_tensorObj` (or equivalent). Defers this sorry until upstream lands."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Preserve `simp …; sorry` shape per plan-agent instruction",
+        "code_tried": "refine MorphismProperty.IsMonoidal.mk' _ fun {…} f g hf hg => ?_; simp only [MorphismProperty.inverseImage_iff, MorphismProperty.isomorphisms.iff] at hf hg ⊢; sorry",
+        "line_number": "L166–173",
+        "lean_error": "none (expected `declaration uses 'sorry'`)",
+        "goal_before": "the construction needs a `(W X).IsMonoidal` instance",
+        "goal_after": "sorry",
+        "result": "partial",
+        "insight": "Plan's hard constraint respected. Sorry count: 1 → 1 (no change, as expected per 'experimental, failure acceptable' framing). The `Functor.map_comp` rewrite was investigated via `lean_multi_attempt` only — not saved because it would not reduce the sorry count, only rephrase the same gap."
+      }
+    ],
+    "next_steps": "iter-081+: defer until either (1) a Mathlib upstream PR lands `PresheafOfModules.stalk_tensorObj` for varying-ring R₀, OR (2) user authorises a project-local axiom expressing the stalk-of-tensor identification. Phase C step C1 (LineBundle refactor) does NOT depend on closing this sorry — `MonoidalCategory X.Modules` is fully synthesisable downstream."
+  },
+  {
+    "timestamp": "2026-05-12T21:00:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Jacobian.lean",
+      "theorem": "nonempty_jacobianWitness"
+    },
+    "session": {
+      "id": "session_80",
+      "model": "prover-iter-080"
+    },
+    "findings": {
+      "blocker": "Off-limits this iteration per PROGRESS.md. Phase C step C3 packaged-existence content, scheduled iter-085+ at the earliest.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Remains deferred until Phase C C0–C2 land."
+  },
+  {
+    "timestamp": "2026-05-12T21:00:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/Functor.lean",
+      "theorem": "PicardFunctor.representable"
+    },
+    "session": {
+      "id": "session_80",
+      "model": "prover-iter-080"
+    },
+    "findings": {
+      "blocker": "Off-limits this iteration per PROGRESS.md. Gated on Phase C steps C0–C3.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Remains deferred until Phase C scaffolding completes."
+  }
+]

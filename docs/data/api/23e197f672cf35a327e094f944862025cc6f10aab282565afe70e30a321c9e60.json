@@ -1,0 +1,278 @@
+[
+  {
+    "timestamp": "2026-05-13T01:00:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "h_diff_pi_smul_f (internal lemma inside basicOpenCover_isCechAcyclicCover_toModuleKSheaf)"
+    },
+    "session": {
+      "id": "session_83",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Two new typeclass-coercion barriers: (1) `letI`-surfaced R-module on ↑scK₀.X₁ does NOT bridge `HSMul ↑R ↑(∏ᶜ Z₁)` when type-ascription propagates inward (defeq does not flow through instance synthesis); (2) `e₁.symm (r • y) = r •_{AddEquiv.module} e₁.symm y` is not rfl — requires `e₁.apply_symm_apply`. Path (a) named-comp recipe needs revision to construct per-summand R-linear map `Φ_j` at target carrier.",
+      "key_lemmas_used": [
+        "ModuleCat.piIsoPi_hom_ker_subtype_apply (preserved from iter-082)",
+        "ModuleCat.hom_ofHom",
+        "LinearMap.coe_comp"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Direct simp on LinearMap.comp_apply",
+        "code_tried": "simp only [LinearMap.comp_apply, LinearMap.coe_comp, Function.comp_apply]",
+        "line_number": 1240,
+        "lean_error": "simp made no progress",
+        "goal_before": "(ConcreteCategory.hom (Pi.π Z₂ j)) ((ConcreteCategory.hom (eqToHom_hom ∘ₗ Σ_hom)) ((piIsoPi Z₁).inv (r • y))) = r • _",
+        "goal_after": "unchanged",
+        "result": "failed",
+        "insight": "Mathlib's LinearMap.comp_apply has signature `(?f ∘ₛₗ ?g) ?x` (semilinear). HOU does not bridge to the homogeneous `∘ₗ` despite definitional equality."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Direct rw on LinearMap.comp_apply (no simp)",
+        "code_tried": "rw [LinearMap.comp_apply, LinearMap.comp_apply]",
+        "line_number": 1240,
+        "lean_error": "Did not find an occurrence of the pattern (?f ∘ₛₗ ?g) ?x in the target expression",
+        "goal_before": "same as attempt 1",
+        "goal_after": "unchanged",
+        "result": "failed",
+        "insight": "Same root cause: `∘ₛₗ` lemma does not fire on `∘ₗ` target."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Reshape via show with explicit LinearMap-form sum",
+        "code_tried": "show (...) ((... ∘ₗ ...) _) = _ • _  with explicit ∑ i, (-1)^(↑i : ℤ) • _",
+        "line_number": 1240,
+        "lean_error": "failed to synthesize instance of type class Fintype ℤ",
+        "goal_before": "same as attempt 1",
+        "goal_after": "elaboration error",
+        "result": "failed",
+        "insight": "The (-1)^(↑i : ℤ) cast triggers Fintype ℤ synthesis attempt inside Fin indexing."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Eliminate the eqToHom cast via subst hRel",
+        "code_tried": "clear h_a_fun h_a; subst hRel",
+        "line_number": 1240,
+        "lean_error": "Tactic 'subst' failed: 'n' occurs at (ComplexShape.up ℕ).prev n + 1",
+        "goal_before": "hRel : (ComplexShape.up ℕ).prev n + 1 = n in context",
+        "goal_after": "no substitution",
+        "result": "failed",
+        "insight": "Subst direction wrong: `n` appears inside `prev n` as a reference, not a fresh substitutable."
+      },
+      {
+        "attempt": 5,
+        "strategy": "Rewrite hRel everywhere",
+        "code_tried": "rw [hRel] at *",
+        "line_number": 1240,
+        "lean_error": "Creates duplicate hypotheses Z₁✝, Z₂✝, Z₃✝, hn✝, … that break downstream context references; `clear` of duplicates fails due to dependencies",
+        "goal_before": "same context",
+        "goal_after": "context with duplicate vars",
+        "result": "partial",
+        "insight": "Rewriting at * breaks the context for subsequent steps; managing dependencies is intractable."
+      },
+      {
+        "attempt": 6,
+        "strategy": "letI surface + rfl-prove smul commutation",
+        "code_tried": "letI := h_mod_X₁; letI := h_mod_X₂; have : ((e₁.symm (r • y)) : ↑scK₀.X₁) = (r • (e₁.symm y : ↑scK₀.X₁) : ↑scK₀.X₁) := rfl",
+        "line_number": 1240,
+        "lean_error": "failed to synthesize instance of type class HSMul ↑R ↑(∏ᶜ Z₁) ?m  ; AND  type mismatch: rfl has type ?m = ?m but expected r • e₁.symm y = e₁.symm (r • y)",
+        "goal_before": "letI's surface the instances; then HSMul lookup propagates inward through type ascription",
+        "goal_after": "elaboration error on both lines",
+        "result": "failed",
+        "insight": "NEW FINDING 1: Type-ascription `(r • z : ↑scK₀.X₁)` triggers HSMul lookup at source carrier ↑(∏ᶜ Z₁), not target. Defeq `↑(∏ᶜ Z₁) = ↑scK₀.X₁ := rfl` (verified by separate multi_attempt) does NOT propagate through instance synthesis. NEW FINDING 2: `e₁.symm (r • y) = r •_{AddEquiv.module} e₁.symm y` is not rfl (needs `apply_symm_apply` on inner)."
+      }
+    ],
+    "next_steps": "Iter-084: drop the let-comp recipe; construct per-summand R-linear map `Φ_j : (∀ i, Z₁ i) →ₗ[R] ↑(Z₂ j)` via `LinearMap.mk` with explicit map_smul' proved by Finset.sum_apply + Pi.smul_apply(perI₁) + RingHom.map_mul + presheaf.map_comp + project-local algebraMap_naturality (StructureSheafModuleK L161). Estimate revised to 50–80 LOC, multi-iter."
+  },
+  {
+    "timestamp": "2026-05-13T01:00:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "cotangentExactSeq_structure (case h_rest: h_exact ∧ h_epi)"
+    },
+    "session": {
+      "id": "session_83",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Bundled-vs-unbundled KaehlerDifferential.map identification: descent acts correctly on `d b` generators by desc_d + map_d + universal property, but bundled `Module ((relativeDifferentials f).val.obj U)` is over forget₂-image ring; `Submodule.span_induction` fails on `?m.N is not an inductive datatype`; `algebraize` introduces fresh non-unifying instances. Three Route 2 attempts all blocked at iff residual from `KaehlerDifferential.map_surjective`'s Π-type.",
+      "key_lemmas_used": [
+        "cotangentExactSeqBeta_hη (NEW helper, this iter)",
+        "_root_.SheafOfModules.epi_of_epi_presheaf (iter-079)",
+        "_root_.PresheafOfModules.Derivation.postcomp_comp (iter-081)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "convert KaehlerDifferential.map_surjective",
+        "code_tried": "convert _root_.KaehlerDifferential.map_surjective",
+        "line_number": 576,
+        "lean_error": "produces iff residual: `Function.Surjective ⇑(ConcreteCategory.hom ((cotangentExactSeqBeta f g).val.app U)) ↔ ∀ (R S B : Type _) [CommRing R] [CommRing S] [Algebra R S] [CommRing B] [Algebra S B] [Algebra R B] [IsScalarTower R S B], Function.Surjective ⇑(KaehlerDifferential.map R S B B)`",
+        "goal_before": "{X₁ := (Modules.pullback f).obj (relativeDifferentials g), X₂ := relativeDifferentials (f ≫ g), X₃ := relativeDifferentials f, f := cotangentExactSeqAlpha f g, g := cotangentExactSeqBeta f g, zero := ⋯}.Exact ∧ Epi (cotangentExactSeqBeta f g)",
+        "goal_after": "iff residual with full Π-type RHS",
+        "result": "failed",
+        "insight": "Cannot close iff residual without identifying the descent with KaehlerDifferential.map for specific R,S,B choices — the documented bundled-vs-unbundled blocker."
+      },
+      {
+        "attempt": 2,
+        "strategy": "convert with using 1",
+        "code_tried": "convert _root_.KaehlerDifferential.map_surjective using 1",
+        "line_number": 576,
+        "lean_error": "same iff residual but with ModuleCat.Hom.hom exposed on LHS via `show ... .hom`",
+        "goal_before": "same",
+        "goal_after": "same shape iff",
+        "result": "failed",
+        "insight": "Identical blocker; the `using 1` just exposes more structure."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Direct exact KaehlerDifferential.map_surjective",
+        "code_tried": "exact _root_.KaehlerDifferential.map_surjective",
+        "line_number": 576,
+        "lean_error": "type mismatch — map_surjective is ∀ R S B [instances]... Π-type",
+        "goal_before": "same",
+        "goal_after": "type error",
+        "result": "failed",
+        "insight": "Need concrete instances which don't unify with bundled ConcreteCategory.hom form."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Helper extraction (META advance, not direct on case h_rest)",
+        "code_tried": "lemma cotangentExactSeqBeta_hη (f : X ⟶ Y) (g : Y ⟶ S) : ∃ η, η ≫ φ2' = φ1' := by refine ⟨η, ?_⟩; change ...",
+        "line_number": 341,
+        "lean_error": "none (closed)",
+        "goal_before": "extraction of inline η+hη from cotangentExactSeqBeta body",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "η codomain corrected to (pullback f.base).obj Y.presheaf (NOT the (pushforward ∘ pullback) variant the plan-recipe suggested). Body is the verbatim iter-082 inline. Helper landed top-level, fully closed."
+      },
+      {
+        "attempt": 5,
+        "strategy": "Use helper inside cotangentExactSeqBeta via obtain",
+        "code_tried": "obtain ⟨η, hη⟩ := cotangentExactSeqBeta_hη f g",
+        "line_number": 467,
+        "lean_error": "recursor `Exists.casesOn` can only eliminate into `Prop`",
+        "goal_before": "inside noncomputable def body, need η + hη",
+        "goal_after": "cases-recursor type error",
+        "result": "failed",
+        "insight": "`obtain` (which uses `cases`) fails inside a `noncomputable def` returning `Type _`. The Exists.casesOn recursor cannot eliminate Prop into Type."
+      },
+      {
+        "attempt": 6,
+        "strategy": "Use .choose / .choose_spec instead",
+        "code_tried": "let η := (cotangentExactSeqBeta_hη f g).choose; have hη : η ≫ φ2' = φ1' := (cotangentExactSeqBeta_hη f g).choose_spec",
+        "line_number": 467,
+        "lean_error": "none",
+        "goal_before": "same as attempt 5",
+        "goal_after": "η, hη in context",
+        "result": "success",
+        "insight": "`.choose`/`.choose_spec` works because `Classical.choose` lives in `Type` and bypasses the `cases` elimination restriction."
+      }
+    ],
+    "next_steps": "Iter-084+: pursue h_epi via Option (c) — direct Submodule.range = ⊤ argument via _root_.KaehlerDifferential.span_range_derivation, sidestepping the bundled-vs-unbundled identification entirely; show range contains all `d b` via the now-external `hη` from cotangentExactSeqBeta_hη.choose_spec. Estimated 1–2 iters with careful letI sequencing. The h_exact half requires multi-iter SheafOfModules.stalkFunctor + stalkwise-exactness infrastructure (likely 3–5 iters of Mathlib gap-fill); alternative chart-by-chart route via KaehlerDifferential.exact_mapBaseChange_map is also viable but requires Phase A infrastructure."
+  },
+  {
+    "timestamp": "2026-05-13T01:00:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "cotangentExactSeqBeta_hη (new helper, top-level)"
+    },
+    "session": {
+      "id": "session_83",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "TopCat.Presheaf.pullbackPushforwardAdjunction",
+        "homEquiv.symm"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Top-level extraction of iter-082 inline η + hη body, with codomain initially typed as the plan-recipe's `(pushforward f.base).obj ((pullback f.base).obj Y.presheaf)`",
+        "code_tried": "lemma cotangentExactSeqBeta_hη (f : X ⟶ Y) (g : Y ⟶ S) : ∃ (η : ... pushforward ∘ pullback ...), ... := by ...",
+        "line_number": 341,
+        "lean_error": "type error — codomain mismatch with iter-082 inline construction",
+        "goal_before": "n/a (new top-level lemma)",
+        "goal_after": "type error",
+        "result": "failed",
+        "insight": "Plan-recipe's η codomain was off — actual iter-082 inline produces `(pullback f.base).obj Y.presheaf` (no pushforward wrap). Naming convention in blueprint chapter is consistent with the *description* `(g ∘ f)^{-1}𝒪_S ⟶ f_*(g^{-1}𝒪_S)` but the *actual code* uses the un-pushforward form (equivalent up to Mathlib's adjunction phrasing choice)."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Corrected codomain + verbatim iter-082 body wrapped in refine + change",
+        "code_tried": "lemma cotangentExactSeqBeta_hη ... : ∃ (η : (pullback (f ≫ g).base).obj S.presheaf ⟶ (pullback f.base).obj Y.presheaf), η ≫ ... = ... := by refine ⟨η, ?_⟩; change ...; <iter-082 body>",
+        "line_number": 341,
+        "lean_error": "linter.style.show warning when using `show` (changed goal direction)",
+        "goal_before": "η constructed, need to prove the coherence",
+        "goal_after": "no goals (after replacing show with change)",
+        "result": "success",
+        "insight": "Helper landed fully closed at L341–411. set_option maxHeartbeats 16000000 in preserved. `change` (not `show`) is the right rewrite-style tactic when the linter is strict about goal-direction."
+      }
+    ],
+    "next_steps": "Helper now available for downstream `case h_rest` work in iter-084+. Blueprint chapter `lem:cotangent_exact_seq_beta_hη` (Differentials.tex L120–129) already has `\\lean{...}` macro; deterministic sync_leanok phase should have added `\\leanok`."
+  },
+  {
+    "timestamp": "2026-05-13T01:00:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Modules/Monoidal.lean",
+      "theorem": "instIsMonoidal_W"
+    },
+    "session": {
+      "id": "session_83",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Off-limits per plan — Mathlib gap (`PresheafOfModules.stalk_tensorObj` for varying-ring R₀ absent). Deferred since iter-081.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Continue deferral pending Mathlib upstream or user-authorised axiom."
+  },
+  {
+    "timestamp": "2026-05-13T01:00:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Jacobian.lean",
+      "theorem": "nonempty_jacobianWitness"
+    },
+    "session": {
+      "id": "session_83",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Off-limits per plan — packaged existence assertion; gated on Phase C C0–C3 + Phase E, scheduled iter-086+.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Defer until Phase C representable assembly lands."
+  },
+  {
+    "timestamp": "2026-05-13T01:00:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/Functor.lean",
+      "theorem": "PicardFunctor.representable"
+    },
+    "session": {
+      "id": "session_83",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Off-limits per plan — gated on Phase C C0–C3 scaffolding (instIsMonoidal_W, line-bundle-Pic representability assembly).",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Defer until Phase C0 closes and C1–C3 progress."
+  }
+]

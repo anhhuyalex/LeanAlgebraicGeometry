@@ -1,0 +1,95 @@
+[
+  {
+    "timestamp": "2026-05-10T12:16:16Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/MayerVietoris.lean",
+      "theorem": "AlgebraicGeometry.Scheme.basicOpenCover"
+    },
+    "session": {
+      "id": "session_54",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "Scheme.basicOpen"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Verbatim probe-confirmed body from PROGRESS.md template — curried `s → Opens` mapping each `f ∈ s` to `C.left.basicOpen f`, with `noncomputable` modifier mandatory because `Scheme.basicOpen` pipes through `Scheme.presheaf.map`.",
+        "code_tried": "noncomputable def basicOpenCover\n    {k : Type u} [Field k] {C : Over (Spec (.of k))}\n    {U : TopologicalSpace.Opens C.left.toTopCat}\n    (s : Set Γ(C.left, U)) :\n    s → TopologicalSpace.Opens C.left.toTopCat :=\n  fun f => C.left.basicOpen (f : Γ(C.left, U))",
+        "line_number": "1333",
+        "lean_error": "",
+        "goal_before": "(landing the cover constructor; no goal — definitional)",
+        "goal_after": "(declaration accepted; kernel-only axioms [propext, Classical.choice, Quot.sound])",
+        "result": "success",
+        "insight": "`noncomputable` is dictated by Mathlib's `Scheme.basicOpen` (whose computation goes through `presheaf.map`). The `s → Opens` shape (subtype of a `Set`) lives at universe `u` matching the iter-053 carrier's existential `ι : Type u` slot."
+      }
+    ],
+    "next_steps": "Iter-055+ uses `basicOpenCover` as the `𝒰` field of the existential in `HasAffineCechAcyclicCover (toModuleKSheaf C)`."
+  },
+  {
+    "timestamp": "2026-05-10T12:16:16Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/MayerVietoris.lean",
+      "theorem": "AlgebraicGeometry.Scheme.basicOpenCover_supr_of_span_eq_top"
+    },
+    "session": {
+      "id": "session_54",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "IsAffineOpen.iSup_basicOpen_eq_self_iff"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Verbatim probe-confirmed body — `unfold basicOpenCover; exact hU.iSup_basicOpen_eq_self_iff.mpr hs`. The `unfold` step is mandatory to expose the basic-open shape so Mathlib's iSup-form lemma unifies.",
+        "code_tried": "theorem basicOpenCover_supr_of_span_eq_top\n    {k : Type u} [Field k] {C : Over (Spec (.of k))}\n    {U : TopologicalSpace.Opens C.left.toTopCat} (hU : IsAffineOpen U)\n    (s : Set Γ(C.left, U)) (hs : Ideal.span s = ⊤) :\n    ⨆ i, basicOpenCover (C := C) (U := U) s i = U := by\n  unfold basicOpenCover\n  exact hU.iSup_basicOpen_eq_self_iff.mpr hs",
+        "line_number": "1351",
+        "lean_error": "",
+        "goal_before": "⨆ i, basicOpenCover (C := C) (U := U) s i = U",
+        "goal_after": "(no goals — kernel-only axioms [propext, Classical.choice, Quot.sound])",
+        "result": "success",
+        "insight": "Mathlib's `IsAffineOpen.iSup_basicOpen_eq_self_iff` (`AffineScheme.lean` L898) states `⨆ f : s, X.basicOpen (f : Γ(X, U)) = U ↔ Ideal.span s = ⊤`. Without `unfold`, the project-local `basicOpenCover` is not unfolded at the iSup binder and the unification fails. Named arguments `(C := C) (U := U)` make the constructor positional in `s` so the goal shape matches Mathlib's exactly."
+      }
+    ],
+    "next_steps": "Iter-055+ uses this as the `(⨆ i, 𝒰 i = U)` conjunct of the `HasAffineCechAcyclicCover` existential."
+  },
+  {
+    "timestamp": "2026-05-10T12:16:16Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/MayerVietoris.lean",
+      "theorem": "AlgebraicGeometry.Scheme.basicOpenCover_isAffineOpen"
+    },
+    "session": {
+      "id": "session_54",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "IsAffineOpen.basicOpen"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Verbatim probe-confirmed body — `unfold basicOpenCover; exact hU.basicOpen i.1`. Subtype destructuring `i.1` extracts the underlying `Γ(C.left, U)` element.",
+        "code_tried": "theorem basicOpenCover_isAffineOpen\n    {k : Type u} [Field k] {C : Over (Spec (.of k))}\n    {U : TopologicalSpace.Opens C.left.toTopCat} (hU : IsAffineOpen U)\n    (s : Set Γ(C.left, U)) (i : s) :\n    IsAffineOpen (basicOpenCover (C := C) (U := U) s i) := by\n  unfold basicOpenCover\n  exact hU.basicOpen i.1",
+        "line_number": "1369",
+        "lean_error": "",
+        "goal_before": "IsAffineOpen (basicOpenCover (C := C) (U := U) s i)",
+        "goal_after": "(no goals — kernel-only axioms [propext, Classical.choice, Quot.sound])",
+        "result": "success",
+        "insight": "Mathlib's `IsAffineOpen.basicOpen` (`AffineScheme.lean` L589) takes the section as a positional argument. `i.1` is the subtype unembedding. Iter-055+ Koszul step needs `IsAffineOpen` on every finite intersection of basic opens; this thin wrapper supplies the base case."
+      }
+    ],
+    "next_steps": "Iter-055 Koszul acyclicity proof inducts on the size of the intersection using this base case + `IsAffineOpen.basicOpen` again on each iterated `basicOpen` step."
+  }
+]

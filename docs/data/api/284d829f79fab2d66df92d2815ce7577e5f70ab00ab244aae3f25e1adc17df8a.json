@@ -1,0 +1,227 @@
+[
+  {
+    "timestamp": "2026-05-12T00:00:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "basicOpenCover_isCechAcyclicCover_toModuleKSheaf.h_diff_pi_smul_f"
+    },
+    "session": {
+      "id": "session_81",
+      "model": "claude-opus-4"
+    },
+    "findings": {
+      "blocker": "S5–S8 per-summand R-linearity decomposition pending: distribute e₂=(piIsoPi Z₂).hom and alternating sum through Pi.lift; use piIsoPi_inv_kernel_ι for inverse; Finset.smul_sum on RHS; per-summand RingHom.map_mul + ← presheaf.map_comp to collapse the two restrictions V_{j∘δ_i} ≤ V_j ≤ U into V_j ≤ U.",
+      "key_lemmas_used": [
+        "ComplexShape.prev",
+        "ComplexShape.up_Rel",
+        "FormalCoproduct.cochainComplexFunctor",
+        "AlgebraicTopology.AlternatingCofaceMapComplex.objD",
+        "CochainComplex.of",
+        "FormalCoproduct.evalOp",
+        "ModuleCat.piIsoPi",
+        "dif_pos"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Establish hRel via case-split on n then execute S2+S3+S4 inline via 5-layer dsimp + full simp invocation including `dif_pos hRel` in the simp set to flush CochainComplex.of_d through its internal dite-branch",
+        "code_tried": "rcases n with _ | n\n· simp [ComplexShape.prev, ComplexShape.up_Rel] -- closes n=0 case\n· have hRel : (ComplexShape.up ℕ).prev (n+1) + 1 = n+1 := by simp [ComplexShape.prev, ComplexShape.up_Rel]\n  dsimp only [scK₀, K₀, cechCochain, cechComplexFunctor, toModuleKSheaf, toModuleKPresheaf_obj]\n  simp [FormalCoproduct.cochainComplexFunctor, FormalCoproduct.cosimplicialObjectFunctor, AlgebraicTopology.alternatingCofaceMapComplex, AlternatingCofaceMapComplex.obj, AlternatingCofaceMapComplex.objD, AlternatingCofaceMapComplex.map, CochainComplex.of, FormalCoproduct.evalOp, e₁, e₂, ModuleCat.piIsoPi, dif_pos hRel]\n  sorry",
+        "line_number": "1176",
+        "lean_error": "none — file compiles cleanly with sorry at the post-S4 goal",
+        "goal_before": "e₂ ((scK₀.f).hom (e₁.symm (r • y))) j = r • e₂ ((scK₀.f).hom (e₁.symm y)) j  (post simp only [Pi.smul_apply])",
+        "goal_after": "(piIsoPi Z₂).hom (eqToHom _ ∘ₗ (∑ i : Fin (prev n + 2), (-1)^↑i • Pi.lift (fun j' ↦ Pi.π Z₁ (j' ∘ δ_i.toOrderHom) ≫ (toModuleKPresheaf C).map (Pi.lift _).op))) ((piIsoPi Z₁).symm (r • y)) j = r • (piIsoPi Z₂).hom (eqToHom _ ∘ₗ (∑ i : Fin (prev n + 2), (-1)^↑i • Pi.lift …)) ((piIsoPi Z₁).symm y) j",
+        "result": "partial",
+        "insight": "dif_pos hRel inside a full `simp [...]` invocation (NOT `simp only`) is what flushes CochainComplex.of_d through its internal dite-branch — the iter-080 plan proposed CochainComplex.of_d_eq_succ but that lemma does not exist in Mathlib; the dif_pos-inside-full-simp trick is the correct substitute. The goal at the sorry is now the explicit alternating-sum form, ready for per-summand R-linearity (S5–S8)."
+      },
+      {
+        "attempt": 2,
+        "strategy": "close S5–S8 (per-summand R-linearity)",
+        "code_tried": "not attempted — time budget",
+        "line_number": "1196",
+        "lean_error": "n/a",
+        "goal_before": "alternating-sum form (see attempt 1 goal_after)",
+        "goal_after": "n/a",
+        "result": "failed",
+        "insight": "S5–S8 closure deferred to iter-082. Detailed recipe is now inline in the body (replacing the iter-080 rationale block): Pi.smul_apply on LHS, Finset.smul_sum on RHS, apply Finset.sum_congr rfl; intro k _, then RingHom.map_mul + ← presheaf.map_comp on each summand."
+      }
+    ],
+    "next_steps": "Iter-082 Phase B: complete S5–S8 per-summand R-linearity. Distribute e₂=(piIsoPi Z₂).hom and Pi.lift through the alternating sum to expose per-(i, j') summands at the j-component. Apply piIsoPi_inv_kernel_ι to reduce the inner argument. Use Finset.smul_sum + Finset.sum_congr rfl + RingHom.map_mul + ← presheaf.map_comp. Estimated ~30 LOC."
+  },
+  {
+    "timestamp": "2026-05-12T00:00:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "PresheafOfModules.Derivation.postcomp_comp"
+    },
+    "session": {
+      "id": "session_81",
+      "model": "claude-opus-4"
+    },
+    "findings": {
+      "blocker": "none — landed fully closed",
+      "key_lemmas_used": [
+        "PresheafOfModules.Derivation.postcomp_d_apply",
+        "PresheafOfModules.comp_app",
+        "ModuleCat composition rfl-equivalence"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Mathlib-shape Derivation distribution lemma; one-line proof via ext + simp only [postcomp_d_apply, comp_app] + rfl",
+        "code_tried": "@[simp]\nlemma _root_.PresheafOfModules.Derivation.postcomp_comp\n    {C : Type*} [Category C] {D : Type*} [Category D]\n    {F : C ⥤ D} {S : Cᵒᵖ ⥤ CommRingCat} {R : Dᵒᵖ ⥤ CommRingCat}\n    {M N P : _root_.PresheafOfModules (R ⋙ forget₂ CommRingCat RingCat)}\n    {φ : S ⟶ F.op ⋙ R}\n    (d : M.Derivation φ) (f : M ⟶ N) (g : N ⟶ P) :\n    d.postcomp (f ≫ g) = (d.postcomp f).postcomp g := by\n  ext X b\n  simp only [_root_.PresheafOfModules.Derivation.postcomp_d_apply,\n             _root_.PresheafOfModules.comp_app]\n  rfl",
+        "line_number": "455",
+        "lean_error": "none (final form)",
+        "goal_before": "d.postcomp (f ≫ g) = (d.postcomp f).postcomp g",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "`_root_.PresheafOfModules` disambiguation needed throughout — inside the Scheme namespace, `PresheafOfModules` refers to project-local `Scheme.PresheafOfModules`. `simp only [ModuleCat.hom_comp]` does not fire on the residual `(f.app X ≫ g.app X).hom (...)` because the LHS does not present in the rewriter's expected shape, but rfl recovers — composition in ModuleCat IS LinearMap.comp at the .hom level."
+      }
+    ],
+    "next_steps": "Helper is now in place at L455–465. Iter-082+ will use it inside cotangentExactSeq_structure's h_zero branch via the Route (c) chain (see milestone below)."
+  },
+  {
+    "timestamp": "2026-05-12T00:00:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "cotangentExactSeq_structure"
+    },
+    "session": {
+      "id": "session_81",
+      "model": "claude-opus-4"
+    },
+    "findings": {
+      "blocker": "After `apply SheafOfModules.epi_of_epi_presheaf` + `PresheafOfModules.epi_iff_surjective`, the goal is per-U surjectivity of `(d1.app U.unop).desc.hom`. Attempting `Submodule.mem_top y` fails to synthesize `Module ↑(X.presheaf.obj U) ↑((relativeDifferentials f).val.obj U)` because the natural module instance is over `(X.presheaf ⋙ forget₂ CommRingCat RingCat).obj U` (the forget₂-image), not directly over `X.presheaf.obj U`. The two are the same underlying ring but different categorical types, and instance synthesis does not bridge them.",
+      "key_lemmas_used": [
+        "Scheme.Modules.pullbackPushforwardAdjunction",
+        "Adjunction.homEquiv_naturality_right",
+        "Adjunction.homAddEquiv_zero",
+        "Equiv.apply_symm_apply",
+        "SheafOfModules.hom_ext",
+        "PresheafOfModules.DifferentialsConstruction.isUniversal'.postcomp_injective",
+        "PresheafOfModules.Derivation.postcomp_comp",
+        "PresheafOfModules.Derivation.Universal.fac",
+        "PresheafOfModules.Derivation.ext",
+        "SheafOfModules.epi_of_epi_presheaf",
+        "PresheafOfModules.epi_iff_surjective",
+        "KaehlerDifferential.span_range_derivation"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Route (c) chain for h_zero: adjunction-inject, unfold α, apply hom_ext + postcomp_injective, then Derivation.postcomp_comp + Universal.fac to skip the inline-d_target matcher pathology that blocked iter-080 Route A, then descend into the β-side via hβ_fac",
+        "code_tried": "apply ((Scheme.Modules.pullbackPushforwardAdjunction f).homEquiv _ _).injective\nrw [Adjunction.homAddEquiv_zero, Adjunction.homEquiv_naturality_right]\nunfold cotangentExactSeqAlpha\nsimp only [Equiv.apply_symm_apply]\napply SheafOfModules.hom_ext\nchange (PresheafOfModules.DifferentialsConstruction.isUniversal' _).desc _ ≫\n    (PresheafOfModules.pushforward f.toRingCatSheafHom.hom).map\n      (cotangentExactSeqBeta f g).val = 0\napply (PresheafOfModules.DifferentialsConstruction.isUniversal' _).postcomp_injective\nrw [PresheafOfModules.Derivation.postcomp_comp]\nsimp only [PresheafOfModules.Derivation.Universal.fac]\napply PresheafOfModules.Derivation.ext\next U b\n-- ...build φ_g'/φ_fg'/φ_2'/adj_f, hcoh, hd_app, hβ_fac...\nsimp only [PresheafOfModules.Derivation.postcomp_d_apply]\ndsimp only [AddMonoidHom.mk', AddMonoidHom.coe_mk, ZeroHom.coe_mk]\nunfold cotangentExactSeqBeta\nchange (((isUniversal' φ_fg').desc _).app (op ((Opens.map f.base).obj U.unop))).hom\n      ((derivation' φ_fg').d ((f.c.app U).hom b)) = _\nrw [hβ_fac _ ((f.c.app U).hom b)]\nrw [hd_app]\nrfl",
+        "line_number": "526",
+        "lean_error": "none (the h_zero chain closes cleanly; verified compiling when only h_exact and h_epi sub-claims remained pending — diagnostic event 122/123 reported 0 errors)",
+        "goal_before": "⊢ ∃ (h : cotangentExactSeqAlpha f g ≫ cotangentExactSeqBeta f g = 0), …Exact ∧ Epi (cotangentExactSeqBeta f g)",
+        "goal_after": "only h_exact and h_epi sub-claims remain (h_zero closed)",
+        "result": "partial",
+        "insight": "Route (c) verified working for h_zero. Avoids the iter-080 inline-d_target matcher pathology entirely by collapsing the post-composition via `Derivation.postcomp_comp` + `Universal.fac` BEFORE the inline structure is exposed via unfold. hβ_fac trick (parametrizing over abstract d_t) works cleanly on the β-side because at that point we're at the bottom of the descent chain and the inline d1 matches the universal d_t. Verified-working chain is preserved as a comment block at L507–525 for iter-082+ reinstatement."
+      },
+      {
+        "attempt": 2,
+        "strategy": "close h_epi by SheafOfModules.epi_of_epi_presheaf + PresheafOfModules.epi_iff_surjective + Submodule.mem_top on the y-side, using KaehlerDifferential.span_range_derivation",
+        "code_tried": "apply SheafOfModules.epi_of_epi_presheaf\nrw [PresheafOfModules.epi_iff_surjective]\nintro U\n-- goal: surjective ((d1.app U.unop).desc.hom)\nintro y\nhave : y ∈ (⊤ : Submodule (X.presheaf.obj U) _) := Submodule.mem_top\nrefine Submodule.span_induction this … ",
+        "line_number": "526",
+        "lean_error": "failed to synthesize `Module ↑(X.presheaf.obj U) ↑((relativeDifferentials f).val.obj U)` — natural module instance is over `(X.presheaf ⋙ forget₂ CommRingCat RingCat).obj U`, instance synthesis cannot bridge the forget₂-image typeclass to the unmediated one even though the underlying rings are equal",
+        "goal_before": "per-U surjectivity of `(d1.app U.unop).desc.hom`",
+        "goal_after": "unchanged (typeclass synthesis failure)",
+        "result": "failed",
+        "insight": "Forget₂-image module instance vs raw-ring module instance is the operative gap. Mitigation: identify `(d1.app U.unop).desc` with `CommRingCat.KaehlerDifferential.map (fac : η ∘ φ_2' = φ_fg')` using the η-coherence square that lives inside `cotangentExactSeqBeta`'s body, then apply `KaehlerDifferential.map_surjective_of_surjective` directly. Requires extracting `hη` from β's body or recomputing it inline."
+      },
+      {
+        "attempt": 3,
+        "strategy": "work around via change to KaehlerDifferential view",
+        "code_tried": "change ∃ x, _ = (y : _root_.KaehlerDifferential A B)\nletI : Algebra A B := (φ_2'.app U).hom.toAlgebra\n…",
+        "line_number": "526",
+        "lean_error": "`change` succeeds; subsequent `Submodule.mem_top y` still fails because the type of `y` after change is the coerced form but `Submodule.mem_top` needs the original ModuleCat-valued type with its instance",
+        "goal_before": "per-U surjectivity",
+        "goal_after": "unchanged after the failed Submodule.mem_top step",
+        "result": "failed",
+        "insight": "`change` does not propagate to the implicit Module instance used by downstream Submodule machinery. The structural fix is to identify the descent with `CommRingCat.KaehlerDifferential.map` (iter-082 Mitigation Route 2)."
+      },
+      {
+        "attempt": 4,
+        "strategy": "`rw [← KaehlerDifferential.span_range_derivation]` to use `⊤ ≤ range _`",
+        "code_tried": "rw [← _root_.KaehlerDifferential.span_range_derivation]",
+        "line_number": "526",
+        "lean_error": "`rw` fails to find `⊤` even when `_root_`-qualified — the typeclass instance for the Module structure on the codomain `(relativeDifferentials f).val.obj U` is not the one expected by `span_range_derivation`",
+        "goal_before": "per-U surjectivity",
+        "goal_after": "unchanged",
+        "result": "failed",
+        "insight": "Same root cause as attempts 2 and 3: forget₂-image scalar mismatch. Same mitigation."
+      },
+      {
+        "attempt": 5,
+        "strategy": "revert per conditional clause to avoid 5 → 6 regression",
+        "code_tried": "// All h_zero, h_exact, h_epi attempts and the exact_iff_stalkwise gap-fill rolled back to a single absorbed `sorry` at L526",
+        "line_number": "526",
+        "lean_error": "none — file compiles cleanly with the single absorbed sorry",
+        "goal_before": "⊢ ∃ (h : …), …Exact ∧ Epi …",
+        "goal_after": "sorry",
+        "result": "success",
+        "insight": "Plan's conditional clause respected: with Route (c) succeeding on h_zero but h_epi unable to close, introducing exact_iff_stalkwise as a free-floating sorry to claim h_exact would have shifted 5 → 6 (the _structure body sorry + the new exact_iff_stalkwise sorry — only 1-for-1 if h_zero AND h_exact AND h_epi all close). The verified-working Route (c) chain is preserved as a comment block at L507–525 for iter-082+ reinstatement, alongside concrete Mitigation Routes 1/2/3 for the h_epi typeclass coercion gap."
+      }
+    ],
+    "next_steps": "Iter-082+ recipe (4 steps): (1) Reinstate `SheafOfModules.exact_iff_stalkwise` with sorry body (1 new sorry). (2) Reinstate the Route (c) chain for h_zero (closes h_zero). (3) Close h_exact via `exact SheafOfModules.exact_iff_stalkwise _` (1-for-1 shift complete). (4) Close h_epi by identifying `(d1.app U.unop).desc` with `CommRingCat.KaehlerDifferential.map fac` using the η-coherence square inside cotangentExactSeqBeta + `KaehlerDifferential.map_surjective_of_surjective`. Net iter-082+ delta: 5 → 5 (exact_iff_stalkwise sorry replaces the _structure body sorry)."
+  },
+  {
+    "timestamp": "2026-05-12T00:00:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Modules/Monoidal.lean",
+      "theorem": "instIsMonoidal_W"
+    },
+    "session": {
+      "id": "session_81",
+      "model": "n/a"
+    },
+    "findings": {
+      "blocker": "Mathlib gap: `(M ⊗_psh N).stalk x ≅ M.stalk x ⊗_{R₀.stalk x} N.stalk x` for varying-ring `PresheafOfModules R₀` is absent (only fixed-ring `ModuleCat R` case exists in `Mathlib/Algebra/Category/ModuleCat/Tilde.lean`). Closure needs either Mathlib upstream PR or user-authorised project-local axiom. Off-limits for iter-081 per plan.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Defer indefinitely (iter-082+). Downstream consumers use `MonoidalCategory X.Modules` (fully synthesisable via `LocalizedMonoidal`); this sorry does not block Phase C step C1. Long-term: consider upstream Mathlib PR adding `PresheafOfModules.stalk_tensorObj` for varying-ring R₀."
+  },
+  {
+    "timestamp": "2026-05-12T00:00:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Jacobian.lean",
+      "theorem": "nonempty_jacobianWitness"
+    },
+    "session": {
+      "id": "session_81",
+      "model": "n/a"
+    },
+    "findings": {
+      "blocker": "Packages Albanese existence + genus-0 rigidity. Phase C/E content; off-limits this iter.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Defer to iter-086+ at the earliest."
+  },
+  {
+    "timestamp": "2026-05-12T00:00:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/Functor.lean",
+      "theorem": "PicardFunctor.representable"
+    },
+    "session": {
+      "id": "session_81",
+      "model": "n/a"
+    },
+    "findings": {
+      "blocker": "Gated on Phase C C0–C3 scaffolding. Off-limits this iter.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Defer until Phase C scaffolding lands."
+  }
+]

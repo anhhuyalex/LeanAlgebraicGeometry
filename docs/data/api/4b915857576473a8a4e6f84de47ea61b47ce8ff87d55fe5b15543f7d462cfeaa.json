@@ -1,0 +1,498 @@
+[
+  {
+    "timestamp": "2026-05-25T18:48:17Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OCofP.lean",
+      "theorem": "lineBundleAtClosedPoint (+ Steps 3-5 carrierPresheaf substrate; toFunctionField; globalSections_iff_mp/mpr cascade)"
+    },
+    "session": {
+      "id": "session_187",
+      "model": "claude-prover"
+    },
+    "findings": {
+      "blocker": "carrierPresheaf_isSheaf body remains as 1 named typed sorry (refactor Step 4 allowance); h1_vanishing_genusZero / dim_eq_two_of_genusZero / exists_nonconstant_genusZero still gated on LES + skyscraper-χ substrate",
+      "key_lemmas_used": [
+        "Preorder.isTerminalTop",
+        "constantSheafAdj.unit.app",
+        "Scheme.HModule_zero_linearEquiv",
+        "LinearMap.toSpanSingleton",
+        "constantSheafAdj.homEquiv.symm",
+        "ModuleCat.ofHom",
+        "ModuleCat.comp_apply"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Refactor Steps 3+4+5 from analogies/ocofp-carrierset-submodule-api.md: introduce carrierPresheaf functor + carrierPresheaf_isSheaf + replace lineBundleAtClosedPoint body",
+        "code_tried": "lineBundleAtClosedPoint := ⟨carrierPresheaf P hPcoh, carrierPresheaf_isSheaf P hPcoh⟩ (refactor)",
+        "line_number": "397",
+        "lean_error": "none — refactor lands; one new named typed sorry inside carrierPresheaf_isSheaf body",
+        "goal_before": "sheaf-of-modules wrapper for lineBundleAtClosedPoint body",
+        "goal_after": "sheafCondition (essentially: sheafForget-bridge typed sorry)",
+        "result": "success",
+        "insight": "Step 5 mechanically closes the L397 pre-existing sorry via bundle of the functor + sheaf condition; structure mirrors Mathlib's carrierSubmodule → sheaf pattern."
+      },
+      {
+        "attempt": 2,
+        "strategy": "toFunctionField (L480, was sorry): substantive linearEquiv via constantSheafAdj",
+        "code_tried": "`Scheme.HModule_zero_linearEquiv` ↦ `sheafToPresheaf.map` ↦ evaluate at `op ⊤` via `Preorder.isTerminalTop` ↦ apply `constantSheafAdj.unit.app` to `1 : kbar` ↦ extract `.1` from carrierSubmodule",
+        "line_number": "480",
+        "lean_error": "none",
+        "goal_before": "kbar K(C)-valued function from HModule kbar F 0",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Preorder.isTerminalTop provides the IsTerminal ⊤ witness for constantSheafAdj's sheaf-fibre-at-⊤ extraction."
+      },
+      {
+        "attempt": 3,
+        "strategy": "globalSections_iff_mpr (L617, was sorry): membership extraction",
+        "code_tried": "unfold toFunctionField; reduce to extracting f ∈ carrierSubmodule(⊤); discharge order conditions via Set.mem_univ + carrier membership",
+        "line_number": "617",
+        "lean_error": "none",
+        "goal_before": "toFunctionField P hP hPcoh s = f → order conditions",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Membership in carrierSubmodule P hPcoh (op ⊤) IS the order-conditions iff up to trivial Set.univ discharge."
+      },
+      {
+        "attempt": 4,
+        "strategy": "globalSections_iff_mp (L572, was sorry): round-trip via constantSheafAdj.homEquiv",
+        "code_tried": "LinearMap.toSpanSingleton kbar _ ⟨f, hf_in⟩ → ModuleCat.ofHom → constantSheafAdj.homEquiv.symm → HModule_zero_linearEquiv.symm; close via adj.homEquiv_unit on (1 : kbar) + ModuleCat.comp_apply",
+        "line_number": "572",
+        "lean_error": "first attempt with `rw [← h_eq]` failed to match goal; fix used direct ModuleCat.comp_apply",
+        "goal_before": "order conditions → HModule witness round-tripping to f",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Adjunction round-trip closes via the explicit unit application at 1."
+      }
+    ],
+    "next_steps": "iter-188 cascade: close carrierPresheaf_isSheaf body via sheafForget bridge (~30 LOC); h1_vanishing_genusZero requires LES + skyscraper-χ substrate from H⁰/H¹ split (Lane H output)."
+  },
+  {
+    "timestamp": "2026-05-25T18:48:17Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/LineBundlePullback.lean",
+      "theorem": "IsLocallyTrivial predicate + 5 decl refinements + IsLocallyTrivial.pullback (Stacks 01HH)"
+    },
+    "session": {
+      "id": "session_187",
+      "model": "claude-prover"
+    },
+    "findings": {
+      "blocker": "IsLocallyTrivial.pullback chart-iso step (restrictFunctorIsoPullback + pullbackComp + pullbackObjUnitToUnit chase) requires Mathlib chart-chase API — wrapped as named typed sorry",
+      "key_lemmas_used": [
+        "AffineOpenCover",
+        "Modules.restrict",
+        "SheafOfModules.unit",
+        "exists_isAffineOpen_mem_and_subset",
+        "Limits.pullback",
+        "RelPicPresheaf.functorial",
+        "Quotient.lift"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Path A: project-side IsLocallyTrivial predicate replacing planner's IsInvertible (Mathlib b80f227 ships no Scheme.Modules.IsInvertible)",
+        "code_tried": "def Scheme.LineBundle.IsLocallyTrivial {X : Scheme.{u}} (M : X.Modules) : Prop := ∀ x : X, ∃ U : X.Opens, x ∈ U ∧ IsAffineOpen U ∧ Nonempty (M.restrict U.ι ≅ SheafOfModules.unit _)",
+        "line_number": "115",
+        "lean_error": "none",
+        "goal_before": "need predicate witness for OnProduct subtype carrier-level invertibility",
+        "goal_after": "definition lands axiom-clean",
+        "result": "success",
+        "insight": "Trivialise on a per-point affine open cover rather than reusing Mathlib's ring-level Module.Invertible; matches Stacks 01H8."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Refine OnProduct from alias to subtype { M : (pullback πC πT).Modules // IsLocallyTrivial M }",
+        "code_tried": "@[reducible] noncomputable def OnProduct (πC πT) := { M : (Limits.pullback πC πT).Modules // IsLocallyTrivial M }",
+        "line_number": "130",
+        "lean_error": "none",
+        "goal_before": "carrier-level invertibility constraint encoded",
+        "goal_after": "definition lands; .1 / .2 projection helpers added",
+        "result": "success",
+        "insight": "Subtype + projection helpers preserves iter-186 axiom-cleanness while adding the semantic refinement."
+      },
+      {
+        "attempt": 3,
+        "strategy": "IsLocallyTrivial.pullback (Stacks 01HH preservation)",
+        "code_tried": "affine-chart existence decomposition: apply hM (f.base y); use exists_isAffineOpen_mem_and_subset for affine V ⊆ f⁻¹U containing y; chart-iso step wrapped as typed sorry",
+        "line_number": "156",
+        "lean_error": "none — partial closure",
+        "goal_before": "∀ y : Y, ∃ V : Y.Opens, y ∈ V ∧ IsAffineOpen V ∧ Nonempty ((f^* M).restrict V.ι ≅ SheafOfModules.unit _)",
+        "goal_after": "single chart-iso typed sorry (restrictFunctorIsoPullback chain)",
+        "result": "partial",
+        "insight": "The trivialisation-on-pullback chart-chase requires Mathlib API for restrictFunctorIsoPullback / pullbackComp composition that isn't routine — wrapped as 1 named typed sorry per iter-187 helper budget."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Cascade refinement: pullbackAlongProjection takes IsLocallyTrivial witness; RelPicPresheaf.preimage_subgroup / functorial use carrier-level Setoid + Quotient.lift over subtypes",
+        "code_tried": "r L L' := Nonempty (L.carrier ≅ L'.carrier); Quotient.lift ⟨(pullback g_C).obj L.carrier, L.isLocallyTrivial.pullback g_C⟩",
+        "line_number": "291-355",
+        "lean_error": "none",
+        "goal_before": "propagate subtype carrier through downstream consumers",
+        "goal_after": "all consumers compile axiom-clean",
+        "result": "success",
+        "insight": "@[reducible] noncomputable def OnProduct keeps iter-186 closure pattern intact while adding the witness; downstream lift consumes both carrier and witness."
+      }
+    ],
+    "next_steps": "iter-188+ close IsLocallyTrivial.pullback chart-iso chase via restrictFunctorIsoPullback + pullbackComp + pullbackObjUnitToUnit composition (~30-50 LOC)."
+  },
+  {
+    "timestamp": "2026-05-25T18:48:17Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/QuotScheme.lean",
+      "theorem": "pullback_app_isoTensor_baseMap_isBaseChange + 9-signature [IsQuasicoherent] threading + pullback_tildeIso / pushforward_isQuasicoherent named helpers"
+    },
+    "session": {
+      "id": "session_187",
+      "model": "claude-prover"
+    },
+    "findings": {
+      "blocker": "pullback_tildeIso body (Stacks 01HQ Mathlib gap, ~115-200 LOC via tilde.adjunction naturality); pushforward_isQuasicoherent body (Stacks 01XJ ~30 LOC); IsBaseChange body needs section-level linearEquiv assembled from pullback_tildeIso",
+      "key_lemmas_used": [
+        "IsBaseChange.ofEquiv",
+        "TensorProduct.isBaseChange",
+        "tilde.isoTop",
+        "hV.isoSpec",
+        "ModuleCat.of",
+        "TensorProduct A B M (B left for Module B synthesis)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Per analogist Decision 1: drop Module.Flat.isBaseChange framing (category mistake — it's a flatness-stability consumer, not a base-change producer)",
+        "code_tried": "docstring rewrite at L632-689 — replace Module.Flat.isBaseChange citation with pullback_tildeIso plan",
+        "line_number": "632-689",
+        "lean_error": "none",
+        "goal_before": "wrong framing in docstring (per analogist)",
+        "goal_after": "docstring cites Stacks 01HQ via pullback_tildeIso instead",
+        "result": "success",
+        "insight": "Module.Flat.isBaseChange : IsBaseChange → Module.Flat — a stability statement, NOT a producer."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Per analogist Decision 3: thread [N.IsQuasicoherent] / [F.IsQuasicoherent] through 9 consumer signatures",
+        "code_tried": "Add [N.IsQuasicoherent] to L563/L588/L615/L656/L717/L758/L808/L831/L840 (9 declarations)",
+        "line_number": "various",
+        "lean_error": "none",
+        "goal_before": "missing quasi-coherence hypothesis blocks Tilde-based section identification",
+        "goal_after": "all 9 signatures compile axiom-clean",
+        "result": "success",
+        "insight": "[IsQuasicoherent] is the missing typeclass; Mathlib idiom is binder rather than ad-hoc Prop in body."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Factor pullback_tildeIso as NAMED typed-sorry helper (Stacks 01HQ Mathlib gap)",
+        "code_tried": "private noncomputable def pullback_tildeIso ... : (Scheme.Modules.pullback (Spec.map φ)).obj (tilde M) ≅ tilde (ModuleCat.of B (TensorProduct A B M)) := sorry",
+        "line_number": "562",
+        "lean_error": "First try used TensorProduct A M B (M left, B right) — Lean failed to synthesize Module B; fixed by swapping to TensorProduct A B M (B left, M right)",
+        "goal_before": "factor substantive content out of IsBaseChange body",
+        "goal_after": "signature lands; body deferred (sorry)",
+        "result": "partial",
+        "insight": "Mathlib's default Module instance on TensorProduct comes from the LEFT factor — argument order matters for typeclass synthesis."
+      },
+      {
+        "attempt": 4,
+        "strategy": "pullback_app_isoTensor_baseMap_isBaseChange body via IsBaseChange.ofEquiv ∘ TensorProduct.isBaseChange",
+        "code_tried": "apply IsBaseChange.ofEquiv ... <| pullback_tildeIso ... ≪≫ ...",
+        "line_number": "618",
+        "lean_error": "IsBaseChange.ofEquiv requires f = e.toLinearMap; baseMap not of that form directly — needs section-level linearEquiv built from pullback_tildeIso + Spec-restriction transport",
+        "goal_before": "IsBaseChange (Γ_appLE baseMap)",
+        "goal_after": "sorry (PARTIAL, body deferred)",
+        "result": "failed",
+        "insight": "Direct .ofEquiv blocked: must stitch pullback_tildeIso to a section-level linear equiv via isoSpec/isoTop, then verify intertwining with baseMap."
+      },
+      {
+        "attempt": 5,
+        "strategy": "Add pushforward_isQuasicoherent (Stacks 01XJ) named typed sorry to bridge call site _of_isAffineBase",
+        "code_tried": "private theorem pushforward_isQuasicoherent ... := sorry",
+        "line_number": "588",
+        "lean_error": "none",
+        "goal_before": "call site _of_isAffineBase needs [(pushforward f).obj F).IsQuasicoherent]",
+        "goal_after": "signature lands; ~30 LOC body deferred",
+        "result": "partial",
+        "insight": "Threading [IsQuasicoherent] through pushforward needs right-adjoint preservation lemma (Stacks 01XJ)."
+      }
+    ],
+    "next_steps": "iter-188 stitch pullback_tildeIso to section-level linear equiv via hV.isoSpec / hU.isoSpec + tilde.isoTop; apply IsBaseChange transport. Body work for pullback_tildeIso itself (Stacks 01HQ) is iter-188+ ~115-200 LOC sub-build."
+  },
+  {
+    "timestamp": "2026-05-25T18:48:17Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/IdentityComponent.lean",
+      "theorem": "identityComponentCarrier body + isOpenSubgroupScheme closed-half + 5 new chapter-pin scaffolds"
+    },
+    "session": {
+      "id": "session_187",
+      "model": "claude-prover"
+    },
+    "findings": {
+      "blocker": "identityComponent_locallyConnectedSpace (EGA I 6.1.9): IsLocallyNoetherian X ⟹ LocallyConnectedSpace X.toTopCat is a Mathlib gap at b80f227; the 4-step classical argument is documented in the docstring (~80-100 LOC) but exceeds helper budget",
+      "key_lemmas_used": [
+        "connectedComponent",
+        "isOpen_connectedComponent",
+        "isClopen_connectedComponent",
+        "MonObj.one",
+        "Spec.unique",
+        "AlgebraicGeometry.LocallyOfFiniteType.isLocallyNoetherian",
+        "topologicalKrullDim",
+        "Scheme.GrpObjAsOverPullback"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "identityComponentCarrier body via connectedComponent of identitySectionPoint",
+        "code_tried": "⟨{ carrier := connectedComponent (identitySectionPoint G), is_open' := isOpen_connectedComponent }⟩  where  identitySectionPoint G := (MonObj.one (X := G)).left.base default",
+        "line_number": "133",
+        "lean_error": "requires LocallyConnectedSpace instance — relocated to new typed-sorry helper identityComponent_locallyConnectedSpace",
+        "goal_before": "sorry",
+        "goal_after": "definition lands; gap relocated",
+        "result": "success",
+        "insight": "Carrier set = connected component through e(Spec k); openness via Mathlib's isOpen_connectedComponent on a LocallyConnectedSpace; the EGA I 6.1.9 gap is now isolated to a focused instance."
+      },
+      {
+        "attempt": 2,
+        "strategy": "isOpenSubgroupScheme closed-immersion half via isClopen_connectedComponent.1",
+        "code_tried": "change IsClosed (connectedComponent (identitySectionPoint G)); exact isClopen_connectedComponent.1",
+        "line_number": "215",
+        "lean_error": "none",
+        "goal_before": "sorry",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "IsClopen = IsClosed ∧ IsOpen; .1 projects the closed component."
+      },
+      {
+        "attempt": 3,
+        "strategy": "5 new chapter-pin typed-sorry scaffolds with substantive non-tautological signatures",
+        "code_tried": "5 declarations: isSubgroupHomomorphism (Kleiman §5 (b)); isFiniteTypeGeometricallyIrreducible (Kleiman (c) three-fold conjunction); baseChangeIso (Kleiman (d) base-change Pic^0); Pic0Scheme.finrank_eq_genus (Milne §III.1 1.4(e)); Pic0Scheme.kPoints_iff_kerDegree (Milne p.88)",
+        "line_number": "260,278,302,456,478",
+        "lean_error": "none",
+        "goal_before": "chapter pins were textual-only",
+        "goal_after": "all 9 pins now resolve to Lean declarations",
+        "result": "partial",
+        "insight": "All 5 typed sorries are substantive existence/equality claims that future iters can attack independently."
+      }
+    ],
+    "next_steps": "iter-188+ prove identityComponent_locallyConnectedSpace axiom-clean via LocallyOfFiniteType.isLocallyNoetherian → NoetherianSpace → finite connected components → clopen → LocallyConnectedSpace.mk basis form (~80-100 LOC; Mathlib upstream candidate)."
+  },
+  {
+    "timestamp": "2026-05-25T18:48:17Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/RationalCurveIso.lean",
+      "theorem": "Hom.poleDivisor (4-iter STUCK route closed; substantive body lands)"
+    },
+    "session": {
+      "id": "session_187",
+      "model": "claude-prover"
+    },
+    "findings": {
+      "blocker": "localParameterAtInfty substrate (chart-1 ratio coordinate X₀/X₁ via HomogeneousLocalization.Away + germToFunctionField); ~30-50 LOC iter-188+ sub-build",
+      "key_lemmas_used": [
+        "Scheme.WeilDivisor.principal",
+        "RingHom.injective",
+        "[IsLocallyNoetherian C.left]",
+        "[Scheme.IsRegularInCodimensionOne C.left]",
+        "[Algebra K(ℙ¹) K(C)]",
+        "algebraMap"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Path (a) Finsupp via principal Weil divisor of pulled-back local parameter at infinity",
+        "code_tried": "Hom.poleDivisor φ := Scheme.WeilDivisor.principal (algebraMap _ _ (localParameterAtInfty kbar).val) halg, where halg = RingHom.injective of the field algebra map",
+        "line_number": "290",
+        "lean_error": "none — substantive body lands",
+        "goal_before": "sorry",
+        "goal_after": "no goals (modulo localParameterAtInfty named typed sorry)",
+        "result": "success",
+        "insight": "φ-dependence is carried entirely by the [Algebra K(ℙ¹) K(C)] typeclass binder (analogies/ratcurveiso-pin3.md Decision 2); body unfolds to the explicit `principal (algebraMap _ _ t.val) _` formula — NO Classical.choice / Iso.refl / empty proof_wanted."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Signature strengthening: add 4 typeclass instances to Hom.poleDivisor + propagate to consumers",
+        "code_tried": "[IsLocallyNoetherian C.left] [Scheme.IsRegularInCodimensionOne C.left] [IsIntegral (ProjectiveLineBar kbar).left] [Algebra K(ℙ¹) K(C)] — propagate to Hom.poleDivisor_degree_eq_finrank and morphism_degree_via_pole_divisor",
+        "line_number": "290,408,458",
+        "lean_error": "none",
+        "goal_before": "signature too thin for principal-divisor construction",
+        "goal_after": "all three signatures take the needed typeclass package",
+        "result": "success",
+        "insight": "Strengthening Hom.poleDivisor's signature was a prerequisite — principal needs [IsLocallyNoetherian] + [IsRegularInCodimensionOne] for WeilDivisor.principal to type-check."
+      },
+      {
+        "attempt": 3,
+        "strategy": "localParameterAtInfty named typed sorry (substrate gap)",
+        "code_tried": "private noncomputable def localParameterAtInfty (kbar : Type u) [Field kbar] [IsIntegral (ProjectiveLineBar kbar).left] : { t : (ProjectiveLineBar kbar).left.functionField // t ≠ 0 } := sorry",
+        "line_number": "304",
+        "lean_error": "none",
+        "goal_before": "need chart-1 ratio coordinate X₀/X₁ embedded in K(ℙ¹)",
+        "goal_after": "signature lands; body deferred",
+        "result": "partial",
+        "insight": "The narrow named substrate gap captures exactly the HomogeneousLocalization.Away + germToFunctionField composition; iter-188+ closes via the 4-step recipe documented in the helper's docstring."
+      }
+    ],
+    "next_steps": "iter-188 close localParameterAtInfty via projectiveLineBarAffineCover chart-1 + HomogeneousLocalization.Away + germToFunctionField + germ_injective_of_isIntegral (~30-50 LOC). Then re-attack Hom.poleDivisor_degree_eq_finrank (was BLOCKED by circular dep) and iso_of_degree_one in parallel."
+  },
+  {
+    "timestamp": "2026-05-25T18:48:17Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Albanese/AuslanderBuchsbaum.lean",
+      "theorem": "finrank_cotangentSpace_quot_span_singleton_succ (Lane G sub-lane G1 cotangent dim drop)"
+    },
+    "session": {
+      "id": "session_187",
+      "model": "claude-prover"
+    },
+    "findings": {
+      "blocker": "spanFinrank-dim-drop equation (𝔪 (R/(x))).spanFinrank + 1 = (𝔪 R).spanFinrank — needs lift-and-cons strategy (≥) + cotangent-quotient map kernel (≤); ~100-150 LOC iter-188+",
+      "key_lemmas_used": [
+        "Ideal.toCotangent_eq_zero",
+        "IsLocalRing.spanFinrank_maximalIdeal_eq_finrank_cotangentSpace",
+        "Ideal.mapCotangent",
+        "Ideal.mapCotangent_surjective_of_comap_eq",
+        "Ideal.mapCotangent_ker_of_surjective",
+        "Submodule.finrank_quotient_add_finrank",
+        "finrank_span_singleton"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Helper 1.5 toCotangent_ne_zero_of_not_mem_sq (axiom-clean): for x ∉ 𝔪² the cotangent image is nonzero",
+        "code_tried": "`Ideal.toCotangent_eq_zero` direct contrapositive — 8 LOC",
+        "line_number": "922-930",
+        "lean_error": "none",
+        "goal_before": "need preparatory lemma for κ-line construction",
+        "goal_after": "axiom-clean",
+        "result": "success",
+        "insight": "Ideal.toCotangent_eq_zero : I.toCotangent x = 0 ↔ x ∈ I^2 — direct contrapositive gives the κ-line generator."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Helper 2.0 finrank_cotangentSpace_quot_span_singleton_succ: reduce κ-finrank statement to spanFinrank statement via IsLocalRing.spanFinrank_maximalIdeal_eq_finrank_cotangentSpace",
+        "code_tried": "finrank κ (CotangentSpace R) = (𝔪 R).spanFinrank; finrank κ' (CotangentSpace (R/(x))) = (𝔪 (R/(x))).spanFinrank; reduce to spanFinrank equation; body ~17 LOC + 50 LOC docstring",
+        "line_number": "984-1010",
+        "lean_error": "none — single named typed sorry on spanFinrank-dim-drop equation",
+        "goal_before": "sorry",
+        "goal_after": "(𝔪 (R/(x))).spanFinrank + 1 = (𝔪 R).spanFinrank (typed sorry)",
+        "result": "partial",
+        "insight": "The reduction from κ-finrank to spanFinrank is axiom-clean; the substantive content (κ-line from x ∉ 𝔪²) is now concentrated in one typed sorry. Matches iter-187 acceptable-outcome criterion: ≤1 narrow named typed sorry."
+      }
+    ],
+    "next_steps": "iter-188 close spanFinrank-dim-drop via lift-and-cons (≥ direction using preservation under quotient) + cotangent-quotient kernel (≤ direction via Ideal.mapCotangent_ker_of_surjective). Mathlib substrate fully present at b80f227. Then attempt downstream auslander_buchsbaum_formula and exists_isSMulRegular_quotient_isRegularLocal_succ cascade closures."
+  },
+  {
+    "timestamp": "2026-05-25T18:48:17Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Albanese/CodimOneExtension.lean",
+      "theorem": "isRegularLocalRing_stalk_of_smooth wrap (Stacks 00TT Mathlib gap)"
+    },
+    "session": {
+      "id": "session_187",
+      "model": "claude-prover"
+    },
+    "findings": {
+      "blocker": "Mathlib b80f227 ships no Smooth → IsRegularLocalRing stalk bridge (Stacks 00TT TFAE 3-clause); cotangent-complex apparatus exists (Algebra.FormallySmooth.iff_injective_cotangentComplexBaseChange) but the regularity exit is the missing arrow",
+      "key_lemmas_used": [
+        "Scheme.ringKrullDim_stalk_eq_coheight",
+        "exact_mod_cast",
+        "IsRegularLocalRing.of_spanFinrank_maximalIdeal_le",
+        "IsRegularLocalRing.iff_finrank_cotangentSpace"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Wrap Stacks 00TT gap as named private typed-sorry helper; refactor smooth_codim_one_maximalIdeal_isPrincipal_and_ne_bot to consume it",
+        "code_tried": "private theorem isRegularLocalRing_stalk_of_smooth (X : ...) (z : ...) : IsRegularLocalRing (X.left.presheaf.stalk z) := sorry",
+        "line_number": "219",
+        "lean_error": "none — refactor lands",
+        "goal_before": "bare sorry inside hreg_dim conjunction",
+        "goal_after": "named typed sorry capturing the exact Mathlib gap",
+        "result": "success",
+        "insight": "Stacks 00TT applies at EVERY point (not just codim-1); the wrapper carries no coheight hypothesis, keeping typeclass set of the consumer minimal. lean_local_search confirmed no Smooth.isRegularLocalRing / smooth_iff_isRegular bridge at b80f227."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Refactor smooth_codim_one_maximalIdeal_isPrincipal_and_ne_bot consumer: split hreg_dim conjunction into hreg (from new helper) + hdim (from iter-184 CoheightBridge)",
+        "code_tried": "have hreg := isRegularLocalRing_stalk_of_smooth X z; have hdim : Scheme.ringKrullDim_stalk_eq_coheight ... ▸ exact_mod_cast _hz",
+        "line_number": "251",
+        "lean_error": "none — body axiom-clean modulo named helper",
+        "goal_before": "sorry inside hreg_dim's first conjunct",
+        "goal_after": "no in-body sorry; transitive sorryAx via named helper",
+        "result": "success",
+        "insight": "Splitting the conjunction makes the structural quality clear — Krull-dim half is axiom-clean (iter-184 CoheightBridge); IsRegularLocalRing half is the localized Mathlib gap."
+      }
+    ],
+    "next_steps": "iter-188+ either (a) wait for Mathlib upstream Smooth → IsRegularLocalRing bridge, or (b) formalize the Jacobian-criterion direction via cotangent-complex (Algebra.FormallySmooth.iff_injective_cotangentComplexBaseChange + IsRegularLocalRing.iff_finrank_cotangentSpace, ~200-300 LOC). extend_of_codimOneFree_of_smooth (L388) and L429 sorries are off-target for this iter."
+  },
+  {
+    "timestamp": "2026-05-25T18:48:17Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+      "theorem": "sheafOf_zero (Lane J under-dispatch correction)"
+    },
+    "session": {
+      "id": "session_187",
+      "model": "claude-prover"
+    },
+    "findings": {
+      "blocker": "sheafOf is defined as `if D = 0 then Scheme.toModuleKSheaf C else sorry` (Classical.dec-gated); any tactic that closes sheafOf_zero = toModuleKSheaf must unfold sheafOf, exposing the else sorry into the proof term — kernel sorryAx tracker propagates transitively. Computational Decidable (D = 0) doesn't exist (WeilDivisor = PrimeDivisor →₀ ℤ; PrimeDivisor.point : X has no DecidableEq). Axiom-cleanness only achievable by substantively constructing sheafOf body (Hartshorne II.6 subsheaf-of-K_C recipe, ~100-200 LOC — off-target per directive)",
+      "key_lemmas_used": [
+        "unfold sheafOf",
+        "if_pos rfl",
+        "Classical.dec",
+        "Function.update",
+        "Decidable.byCases"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "lean_multi_attempt 6 closure tactics at L169",
+        "code_tried": "unfold sheafOf; exact if_pos rfl | unfold sheafOf; rw [if_pos rfl] | unfold sheafOf; simp | unfold sheafOf; split_ifs ... | simp only [sheafOf, if_pos rfl] | rfl",
+        "line_number": "169",
+        "lean_error": "all closing tactics propagate transitive sorry via unfolded else branch; rfl/decide fail (Classical.dec opaque, free variable C)",
+        "goal_before": "sheafOf 0 = toModuleKSheaf C",
+        "goal_after": "no goals (current state) but transitive sorryAx",
+        "result": "failed",
+        "insight": "Every tactic that closes the goal unfolds sheafOf, exposing else sorry into the proof term — kernel sorryAx tracker propagates."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Restructure sheafOf to factor else branch into sheafOfNonzero (sorry)",
+        "code_tried": "if D = 0 then ... else sheafOfNonzero D where sheafOfNonzero := sorry",
+        "line_number": "137",
+        "lean_error": "identical kernel propagation",
+        "goal_before": "different syntax",
+        "goal_after": "same transitive sorryAx outcome",
+        "result": "failed",
+        "insight": "Any constant whose elaborated body references sorryAx propagates uses sorry through all consumers — regardless of subtype/Function.update/Decidable.byCases packaging."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Computational Decidable (D = 0) for if_pos rfl reduction",
+        "code_tried": "derive Decidable instance for WeilDivisor",
+        "line_number": "n/a",
+        "lean_error": "WeilDivisor = PrimeDivisor →₀ ℤ; PrimeDivisor.point : X has no DecidableEq",
+        "goal_before": "need computational decidability",
+        "goal_after": "blocked structurally",
+        "result": "failed",
+        "insight": "Scheme points have no DecidableEq; AddCommGroup X.WeilDivisor is noncomputable. NO proof-side trick exists for axiom-clean f 0 = X when f := if ... then X else sorry."
+      }
+    ],
+    "next_steps": "Either (1) accept current source-closed state (sheafOf_zero = unfold; if_pos rfl with transitive sorry — the cleanest under off-target sheafOf body), (2) widen the directive to allow sheafOf body work (~100-200 LOC Hartshorne II.6 substantive subsheaf-of-K_C), or (3) defer to iter-200+ post-sheafOf body. Critic 'ready but not dispatched' flag was a misread — iter-185 work IS the dispatch outcome."
+  }
+]

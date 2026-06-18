@@ -1,0 +1,260 @@
+[
+  {
+    "timestamp": "2026-06-18T09:13:08Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/FlatBaseChange.lean",
+      "theorem": "pullback_spec_tilde_iso_restriction_naturality"
+    },
+    "session": {
+      "id": "session_4",
+      "model": "opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "pullback_spec_tilde_iso_ring_square_natural"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Extract the post-Iso.ext b2 crux as a standalone blueprint-pinned lemma and delegate",
+        "code_tried": "exact pullback_spec_tilde_iso_ring_square_natural ψ φ ρ M",
+        "line_number": "1261",
+        "result": "success",
+        "insight": "Host body becomes sorry-free (transitively sorry-backed through the new lemma); statement is byte-identical to the new lemma so delegation typechecks. Resolves the dangling \\lean pin for lem:pullback_spec_tilde_iso_ring_square_natural."
+      }
+    ],
+    "next_steps": "Close the residual sorry in pullback_spec_tilde_iso_ring_square_natural to make this sorry-free end-to-end."
+  },
+  {
+    "timestamp": "2026-06-18T09:13:08Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/FlatBaseChange.lean",
+      "theorem": "pullback_spec_tilde_iso_ring_square_natural"
+    },
+    "session": {
+      "id": "session_4",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "2-categorical pseudo-functoriality: naturality of the opaque pullback_spec_tilde_iso (= conjugate of gammaPushforwardNatIso) across chartBaseChange_ring_square; needs 2 more homEquiv transpose peels + identifying each tilde-pullback transpose with gammaPushforwardNatIso via unit_conjugateEquiv. ~150-300 LOC.",
+      "key_lemmas_used": [
+        "Iso.eq_comp_inv",
+        "Scheme.Modules.pullbackPushforwardAdjunction",
+        "Adjunction.homEquiv_unit",
+        "unit_conjugateEquiv",
+        "conjugateEquiv_pullbackComp_inv",
+        "ModuleCat.extendScalarsComp"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Reduce to .hom equation then rearrange trailing inverse",
+        "code_tried": "apply Iso.ext; simp only [Iso.trans_hom, Iso.symm_hom, Functor.mapIso_hom]; rw [← Category.assoc, ← Category.assoc, Iso.eq_comp_inv]",
+        "line_number": "1176-1195",
+        "result": "partial",
+        "insight": "Both sides become honest morphisms Source ⟶ tilde N; clean target for transpose."
+      },
+      {
+        "attempt": 2,
+        "strategy": "First transpose peel through outermost adjunction pullback(Spec ρB) ⊣ pushforward(Spec ρB)",
+        "code_tried": "apply ((Scheme.Modules.pullbackPushforwardAdjunction (Spec.map (chartBaseChangeRingMap ψ φ ρ))).homEquiv _ _).injective",
+        "line_number": "1203",
+        "result": "partial",
+        "insight": "homEquiv-injectivity reduces to equation of morphisms X ⟶ pushforward(Spec ρB)(tilde N)."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Expand the transpose unit and share the leading unit",
+        "code_tried": "simp only [Adjunction.homEquiv_unit, Functor.map_comp, Category.assoc]",
+        "line_number": "1203",
+        "result": "partial",
+        "insight": "Both sides share leading unit; remaining = cancel unit prefix + 2 more transpose peels + the deep gammaPushforwardNatIso identification. Steps 1-3 LSP-verified; tail (the conjugate identity) is the real remaining risk, not done."
+      }
+    ],
+    "next_steps": "effort-breaker the tail into: (i) unit-prefix cancellation + re-bundle for 2nd/3rd homEquiv peels; (ii) the per-leg unit_conjugateEquiv identification of pullback_spec_tilde_iso with gammaPushforwardNatIso. Do NOT re-dispatch the monolith without this split."
+  },
+  {
+    "timestamp": "2026-06-18T09:13:08Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "modulesLocalizedMonoidal"
+    },
+    "session": {
+      "id": "session_4",
+      "model": "opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "CategoryTheory.LocalizedMonoidal",
+        "W_isMonoidal",
+        "localizedMonoidalUnitIso",
+        "PresheafOfModules.sheafification",
+        "sheafification_isLocalization (Mathlib instance)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Instantiate Mathlib LocalizedMonoidal L W ε type synonym",
+        "code_tried": "noncomputable abbrev modulesLocalizedMonoidal (X : Scheme.{u}) : Type (u+1) := LocalizedMonoidal (PresheafOfModules.sheafification (𝟙 X.ringCatSheaf.obj)) (Wsheaf X) (localizedMonoidalUnitIso X)",
+        "line_number": "1450",
+        "result": "success",
+        "insight": "L and W MUST be the literal PresheafOfModules.sheafification (𝟙 …) / inverseImage class — wrapping in abbrev (Lloc/Wsheaf as head) blocks the IsLocalization discr-tree key. MonoidalCategory/BraidedCategory/SymmetricCategory all resolve on the synonym. Universe must be Type (u+1)."
+      }
+    ],
+    "next_steps": "Build the 4 bridge lemmas (tensorObjAssoc_eq_localizedAssociator etc.) to transfer Mac Lane coherences to the hand-built tensorObj."
+  },
+  {
+    "timestamp": "2026-06-18T09:13:08Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "W_isMonoidal"
+    },
+    "session": {
+      "id": "session_4",
+      "model": "opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "ztensor_whisker_localIso",
+        "isMonoidal_of_braided_whiskerRight",
+        "braiding_naturality_right",
+        "MorphismProperty.RespectsIso"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "IsMultiplicative+RespectsIso from Mathlib; whiskerRight = ztensor_whisker_localIso; whiskerLeft by braiding conjugation",
+        "code_tried": "instance W_isMonoidal : (Wsheaf X).IsMonoidal := isMonoidal_of_braided_whiskerRight (Wsheaf X) <| fun f hf R => ztensor_whisker_localIso f hf R",
+        "line_number": "1429",
+        "result": "success",
+        "insight": "The single new precondition for LocalizedMonoidal; axiom-clean. Bare-form MonoidalCategory does NOT synthesize — needed private pshModMonoidal/Braided/Symmetric re-exports of the MonoidalPresheaf form."
+      }
+    ],
+    "next_steps": "none — done"
+  },
+  {
+    "timestamp": "2026-06-18T09:13:08Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "localizedMonoidalUnitIso"
+    },
+    "session": {
+      "id": "session_4",
+      "model": "opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "sheafificationCounitIso",
+        "unitModule"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Reflective sheafification counit iso on the unit module",
+        "code_tried": "noncomputable def localizedMonoidalUnitIso (X) := sheafificationCounitIso (unitModule X)",
+        "line_number": "1438",
+        "result": "success",
+        "insight": "Works because (toPresheafOfModules X).obj (unitModule X) = 𝟙_(MonoidalPresheaf X) by rfl — the datum ε for LocalizedMonoidal."
+      }
+    ],
+    "next_steps": "none — done"
+  },
+  {
+    "timestamp": "2026-06-18T09:13:08Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "tensorPowAdd_rightUnit (base case)"
+    },
+    "session": {
+      "id": "session_4",
+      "model": "opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "tensorBraiding_unitModule",
+        "tensorBraiding_symm",
+        "tensorObjRightUnitor",
+        "Iso.refl_trans"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "rw tensorBraiding_unitModule then collapse refl",
+        "code_tried": "rw [tensorPowAdd_zero, tensorObjRightUnitor]; congr 1; show tensorObjUnitIso (unitModule X) = tensorBraiding (unitModule X) (unitModule X) ≪≫ tensorObjUnitIso (unitModule X); rw [tensorBraiding_unitModule, Iso.refl_trans]",
+        "line_number": "1946",
+        "result": "success",
+        "insight": "Presheaf-descended; no synonym needed. β_{𝟙,𝟙}=𝟙 via braiding_tensorUnit_left+unitors_equal sheafified."
+      }
+    ],
+    "next_steps": "Successor case still sorry (line 1991) — needs bridge lemmas."
+  },
+  {
+    "timestamp": "2026-06-18T09:13:08Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "tensorPowAdd_braiding (base case)"
+    },
+    "session": {
+      "id": "session_4",
+      "model": "opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "tensorBraiding_symm",
+        "SymmetricCategory.symmetry",
+        "tensorPowAdd_rightUnit",
+        "eqToIso"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Cancel β∘β=𝟙 via tensorBraiding_symm; close eqToIso reindexers by congr",
+        "code_tried": "show tensorPowAdd L 0 nb = …; rw [tensorPowAdd_zero, tensorPowAdd_rightUnit]; simp only [tensorObjRightUnitor, Iso.trans_assoc]; rw [← Iso.trans_assoc, tensorBraiding_symm (unitModule X) (tensorPow L nb), Iso.refl_trans]; congr 1",
+        "line_number": "2013",
+        "result": "success",
+        "insight": "rw [show tensorPow L 0 = unitModule X from rfl] FAILS (motive not type correct); leading whole-goal `show` is the idiom. Final simp [← eqToIso_trans] hit max recursion; `congr 1` closes the Nat-equality reindexers."
+      }
+    ],
+    "next_steps": "Successor case still sorry (line 2013) — needs bridge lemmas."
+  },
+  {
+    "timestamp": "2026-06-18T09:13:08Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "tensorPowAdd_assoc / sectionMul_assoc_core / sectionsMul_mul_assoc"
+    },
+    "session": {
+      "id": "session_4",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Hand-built tensorObj F G = sheafification.obj(F.toPr ⊗_p G.toPr) is NOT definitionally the localized F ⊗_loc G = ((tensorBifunctor L W ε).obj F).obj G. Coherence transfer needs explicit μ-transport (object identification tensorObj F G ≅ F ⊗_loc G) threaded through every coherence — the 4 bridge lemmas, not yet built.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Diagnose (not guess) the localized-vs-handbuilt tensor mismatch",
+        "code_tried": "(diagnosis via lean_run_code on Localization.Monoidal.monoidalCategoryStruct)",
+        "result": "partial",
+        "insight": "Mathlib supplies component formulas (associator_hom_app, leftUnitor_hom_app, μ, braidingNatIso_hom_app, μ_natural_left/right). Route: build 4 bridge lemmas then rw hand-built→localized and invoke pentagon/triangle/hexagon. Fallback Option A = rewire hand-built defs onto synonym's ⊗ (refactor, out of prover lane)."
+      }
+    ],
+    "next_steps": "Build the 4 bridge lemmas (tensorObjAssoc_eq_localizedAssociator, tensorBraiding_eq_localizedBraiding, tensorObjUnitIso_eq_localizedLeftUnitor, tensorObjRightUnitor_eq_localizedRightUnitor) on the now-existing synonym. Mathlib-build mode. If μ-transport friction-heavy, fall back to Option A refactor."
+  }
+]

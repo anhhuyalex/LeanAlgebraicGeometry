@@ -1,0 +1,201 @@
+[
+  {
+    "timestamp": "2026-06-01T17:09:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.pullbackTensorMap"
+    },
+    "session": {
+      "id": "session_243",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "SheafOfModules.sheafificationCompPullback",
+        "PresheafOfModules.presheafPullbackOplaxMonoidal",
+        "Functor.OplaxMonoidal.δ",
+        "sheafifyTensorUnitIso",
+        "pullbackValIso"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Sheaf-level comparison morphism f^*(M⊗N)⟶f^*M⊗f^*N for general M,N as a 4-step composite (3 isos + a_Y.map δ); used φ' let-coercion to unstick the δ accessor whose MonoidalCategory instance is keyed on the CommRingCat forget₂-form while φ.hom presents the RingCat form.",
+        "code_tried": "noncomputable def pullbackTensorMap ... := composite of (sheafificationCompPullback φ).hom ≫ a_Y.map δ ≫ (sheafifyTensorUnitIso ...).hom ≫ a_Y.map (tensorHom (forget.map (pullbackValIso f M).hom) ...)",
+        "line_number": "1220",
+        "lean_error": null,
+        "goal_before": "(pullback f).obj (M ⊗ N) ⟶ (pullback f).obj M ⊗ (pullback f).obj N",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "The φ' let-coercion (X.presheaf ⋙ forget₂ CommRingCat RingCat ⟶ ...) lets PresheafOfModules.pullback φ' find OplaxMonoidal and the δ accessor elaborate; the ≫-composition bridges φ.hom≟φ' and ⊗ₚ≟⊗ by defeq with no manual change. Succeeded first try."
+      }
+    ],
+    "next_steps": "Feeds lem:isinvertible_pullback; that assembly is blocked on IsInvertible.isLocallyTrivial (deliverable 2)."
+  },
+  {
+    "timestamp": "2026-06-01T17:09:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.pullbackValIso"
+    },
+    "session": {
+      "id": "session_243",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "SheafOfModules.sheafificationCompPullback",
+        "asIso",
+        "Adjunction.counit"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Helper iso a_Y((pullback φ.hom).obj M.val) ≅ (pullback f).obj M via (sheafificationCompPullback φ).symm.app M.val ≪≫ (pullback f).mapIso (counit_X.app M), reusing the tensorObj_unit_iso reflective-counit idiom.",
+        "code_tried": "noncomputable def pullbackValIso (f : Y ⟶ X) (M : X.Modules) := (sheafificationCompPullback φ).symm.app M.val ≪≫ (pullback f).mapIso (asIso (... .counit).app M)",
+        "line_number": "1203",
+        "lean_error": null,
+        "goal_before": null,
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Used in step 4 of pullbackTensorMap to identify sheafified presheaf-pullback factors with the abstract (pullback f).obj."
+      }
+    ],
+    "next_steps": "Consumed by pullbackTensorMap; no blueprint pin."
+  },
+  {
+    "timestamp": "2026-06-01T17:09:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.IsInvertible.isLocallyTrivial"
+    },
+    "session": {
+      "id": "session_243",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Mathlib-scale: two scheme-level ingredients absent at the pin — (1) stalk-invertibility plumbing (sheaf iso M⊗N≅𝒪_X ⇒ Module.Invertible 𝒪_{X,x} (M.val.stalk x), ~150 LOC, no single lemma); (2) finite-presentation spreading-out for SheafOfModules on a scheme (present in Mathlib only at CommRing/LocalizedModule level).",
+      "key_lemmas_used": [
+        "Module.Invertible.free_iff_linearEquiv",
+        "CommRing.Pic.mk_eq_one_iff_free",
+        "Module.FinitePresentation.exists_free_localizedModule_powers"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Scouted Mathlib (leansearch) for scheme-level invertible⇒locally-free and SheafOfModules finite-presentation spread-out; confirmed algebra pieces exist only at CommRing/LocalizedModule level; the scheme-level lift is absent.",
+        "code_tried": "(no decl written — scouting only)",
+        "line_number": "n/a",
+        "lean_error": null,
+        "goal_before": null,
+        "goal_after": null,
+        "result": "failed",
+        "insight": "Did not write the ~150-LOC stalk-invertibility fragment: it reaches no blueprint pin and leaves the spreading-out blocker intact ⇒ churn. Per directive, no sorry pinned."
+      }
+    ],
+    "next_steps": "Open a dedicated mathlib-build sub-lane for ingredient (2) (finite-presentation spread-out over SheafOfModules/tilde), OR a Mathlib bump supplying AG-level invertible⇒locally-free-of-rank-1. Do NOT re-dispatch the same in-tree attempt."
+  },
+  {
+    "timestamp": "2026-06-01T17:09:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.IsInvertible.pullback"
+    },
+    "session": {
+      "id": "session_243",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Blocked on deliverable 2 (IsInvertible.isLocallyTrivial) by construction: the trivialising cover of M,N needed to show δ_sheaf is iso on the invertible pair comes from isLocallyTrivial.",
+      "key_lemmas_used": [
+        "pullbackTensorMap",
+        "pullbackUnitIso",
+        "tensorObj_isLocallyTrivial",
+        "isIso_of_isIso_restrict",
+        "LineBundle.IsLocallyTrivial.pullback"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Assembly fully scoped: witness f^*N with iso (asIso δ_sheaf).symm ≫ (pullback f).mapIso e ≫ pullbackUnitIso; all other inputs in-tree and verified.",
+        "code_tried": "(not assembled — gated on missing trivialising cover from deliverable 2)",
+        "line_number": "n/a",
+        "lean_error": null,
+        "goal_before": null,
+        "goal_after": null,
+        "result": "failed",
+        "insight": "Remaining crux once 2 lands: the in-blueprint 'δ_sheaf restricts to the canonical 𝒪⊗𝒪≅𝒪' compatibility (naturality of pullbackTensorMap in M,N composed with trivialisations) — discharged on the cover, NOT stalkwise. No sorry pinned."
+      }
+    ],
+    "next_steps": "Re-dispatch only after deliverable 2 lands."
+  },
+  {
+    "timestamp": "2026-06-01T17:09:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/FlatBaseChange.lean",
+      "theorem": "affineBaseChange_pushforward_iso"
+    },
+    "session": {
+      "id": "session_243",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Both named obligations Mathlib-scale: (1) base_change_map_affine_local (restriction-of-the-square compatibility of the mate); (2) pushforward_base_change_mate_cancelBaseChange (identify bespoke pushforwardBaseChangeMap with tilde(cancelBaseChange)). The aux brick pushforwardBaseChangeMap_naturality hit the SheafOfModules functor-.map-of-composite defeq wall.",
+      "key_lemmas_used": [
+        "Adjunction.homEquiv_naturality_left_symm",
+        "Adjunction.homEquiv_naturality_right_symm",
+        "pushforwardComp",
+        "pushforwardCongr",
+        "CategoryTheory.mateEquiv",
+        "TensorProduct.AlgebraTensorModule.cancelBaseChange"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Build aux brick pushforwardBaseChangeMap_naturality (naturality of bcm in sheaf F): fold both legs into adjunction transpose via ← homEquiv_naturality_left/right_symm (both fired), congr 1, reduce to naturality of inner composite Φ.",
+        "code_tried": "dsimp only [pushforwardBaseChangeMap]; rw [← Adjunction.homEquiv_naturality_left_symm, ← Adjunction.homEquiv_naturality_right_symm]; congr 1; ...",
+        "line_number": "~660",
+        "lean_error": "(progressed) unit step closed via ← Functor.map_comp_assoc + (pullbackPushforwardAdjunction g').unit.naturality η",
+        "goal_before": "(pullback g).map ((pushforward f).map η) ≫ bcm F' = bcm F ≫ (pushforward f').map ((pullback g').map η)",
+        "goal_after": "naturality of inner composite Φ remaining",
+        "result": "partial",
+        "insight": "erw [Functor.map_comp_assoc] split the unit-composite (plain rw SILENTLY FAILS); used show…from… to bridge (𝟭).map η = η defeq."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Apply the three component naturalities (pushforwardComp.hom.naturality_assoc, pushforwardCongr.hom.naturality_assoc, pushforwardComp.inv.naturality), incl. refolding via ← Functor.comp_map.",
+        "code_tried": "erw [Functor.map_comp_assoc]; simp only [Functor.comp_map]; rw [← Functor.comp_map (pushforward g') (pushforward f)]; erw [(pushforwardComp g' f).hom.naturality_assoc, ...]",
+        "line_number": "~665",
+        "lean_error": "plain rw: 'did not find an occurrence of the pattern'; erw: '(deterministic) timeout at whnf, 200000 heartbeats'",
+        "goal_before": "Φ naturality with pushforward/pullback .map-of-composite",
+        "goal_after": null,
+        "result": "failed",
+        "insight": "The functor .map of a composite is not syntactically matchable by rw for SheafOfModules functors (defeq-not-syntactic); erw whnf-explodes reconciling (F.comp G).map vs G.map(F.map …)."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Section-wise dodge: congr 1; ext U : 1; simp distributes Hom.app over ≫, rewrites bcm apps; attempt pushforwardComp_*_app_app = id.",
+        "code_tried": "congr 1; ext U : 1; simp [...]; (then pushforwardComp_hom_app_app / pushforwardComp_inv_app_app)",
+        "line_number": "~668",
+        "lean_error": "simp reports those lemmas 'unused' (no match); rw 'did not find an occurrence of the pattern'",
+        "goal_before": "clean section-level equation",
+        "goal_after": null,
+        "result": "failed",
+        "insight": "Hom.app ((pushforwardComp …).hom.app M) U displays as that but is not syntactically it (same defeq-display wall at section level). aesop_cat reduces to same goal and stalls. Brick removed, NO sorry left."
+      }
+    ],
+    "next_steps": "Switch this lane to the #37189 Mathlib bump (isIso_fromTildeΓ_pushforward) per the documented fallback (progress-critic ts243 watch-signal triggered). Do NOT re-dispatch another in-tree rw/erw round on the pushforwardComp .map-of-composite terms."
+  }
+]

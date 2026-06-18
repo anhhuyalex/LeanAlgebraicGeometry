@@ -1,0 +1,89 @@
+[
+  {
+    "timestamp": "2026-05-31T15:30:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "dual_restrict_iso (C-bridge probe for exists_tensorObj_inverse)"
+    },
+    "session": {
+      "id": "session_230",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Binding probe DOES NOT CLOSE. Mirroring tensorObj_restrict_iso, Steps 1-3 + H1 typecheck, but the residual `(PresheafOfModules.pushforward β).obj (dual M.val) ≅ dual ((pushforward β).obj M.val)` cannot be discharged by the iter-229 shared root overSliceSheafEquiv. Three independent reasons: (1) sheaf-vs-presheaf (root is Sheaf≌Sheaf; residual is presheaf-level after Step-3 strips sheafification; root not even in scope at the site, defined later at L2366); (2) fixed-value-cat vs varying-ring module (root parametric in FIXED A; residual is ModuleCat over the varying 𝒪_Y(V), the per-V internalHomObjModule action is not transported by a value-cat-fixed equiv); (3) whole-U slice site vs per-open slices (dual uses restr W = pushforward₀(Over.forget W)). Real missing ingredient: a presheaf+module per-V slice-internal-hom comparison + ring-iso transport, ~150-300 LOC with genuine Over.map coherence risk (thinness does NOT collapse it here).",
+      "key_lemmas_used": [
+        "overSliceSheafEquiv",
+        "restrictFunctorIsoPullback",
+        "sheafificationCompPullback",
+        "leftAdjointUniq"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Mirror tensorObj_restrict_iso for dual via a SCRATCH def",
+        "code_tried": "noncomputable def dual_restrict_iso_SCRATCH ... := by refine (restrictFunctorIsoPullback f).app (dual M) ≪≫ ?_; refine (sheafificationCompPullback f.toRingCatSheafHom).app (PresheafOfModules.dual M.val) ...",
+        "line_number": "~2119",
+        "lean_error": "Steps typecheck; residual iso remains open at sorry",
+        "goal_after": "(PresheafOfModules.pushforward β).obj M.val.dual ≅ (M.restrict f).val.dual",
+        "result": "partial",
+        "insight": "Steps 1-3 + H1 mirror verbatim; the residual is the genuine gap"
+      },
+      {
+        "attempt": 2,
+        "strategy": "change residual to the symmetric `dual (pushforward β · M.val)` form",
+        "code_tried": "change (PresheafOfModules.pushforward β).obj M.val.dual ≅ ((PresheafOfModules.pushforward β).obj M.val).dual",
+        "line_number": "~2137",
+        "lean_error": "type checks but does not advance to a closed goal",
+        "result": "partial",
+        "insight": "confirms residual = 'pushforward commutes with presheaf dual'"
+      },
+      {
+        "attempt": 3,
+        "strategy": "close residual via the shared root overSliceSheafEquiv.functor.mapIso",
+        "code_tried": "exact (AlgebraicGeometry.Scheme.Modules.overSliceSheafEquiv (X := Y) (U := ⊤) AddCommGrp).functor.mapIso (Iso.refl _)",
+        "line_number": "~2137",
+        "lean_error": "Unknown constant `AlgebraicGeometry.Scheme.Modules.overSliceSheafEquiv` (defined later at L2366) + type incompatibility (sheaf-level functor vs presheaf-level residual)",
+        "result": "failed",
+        "insight": "DECISIVE: the shared root cannot serve the C-consumer — sheaf-vs-presheaf + fixed-value-cat-vs-varying-ring-module mismatch"
+      },
+      {
+        "attempt": 4,
+        "strategy": "probe the unit-iso variant dual 𝟙_ ≅ 𝟙_ via Over-slice machinery",
+        "code_tried": "have h : (SheafOfModules.unit Y.ringCatSheaf).val = (𝟙_ (PresheafOfModules.{u} ...)) := rfl",
+        "line_number": "~2137",
+        "lean_error": "routes through the same Over-slice machinery; not closable here",
+        "result": "failed",
+        "insight": "dual_unit_iso shares the same slice-internal-hom dependence"
+      }
+    ],
+    "next_steps": "USER escalation: pre-committed tripwire fired. Either lift the RR-pause for the divisor Pic⁰ route, or sanction the varying-ring slice-internal-hom comparison sub-build (~150-300 LOC). Do NOT re-bet on overSliceSheafEquiv for C; do NOT build the A-engine homOfLocalCompat in isolation (the inverse needs C too)."
+  },
+  {
+    "timestamp": "2026-05-31T15:38:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "exists_tensorObj_inverse"
+    },
+    "session": {
+      "id": "session_230",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Depends on the C-bridge dual_restrict_iso which is blocked (see above). Not attempted directly this iter — the probe established the C-consumer cannot close on the existing infrastructure.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Not attempted — gated on the C-bridge probe, which returned DOES-NOT-CLOSE",
+        "code_tried": "(none — probe-only iter)",
+        "result": "partial",
+        "insight": "exists_tensorObj_inverse remains open; project sorry 80→80"
+      }
+    ],
+    "next_steps": "Gated on the USER route decision."
+  }
+]

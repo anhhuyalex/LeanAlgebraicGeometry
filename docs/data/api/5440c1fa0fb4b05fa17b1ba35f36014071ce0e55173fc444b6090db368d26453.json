@@ -1,0 +1,90 @@
+[
+  {
+    "timestamp": "2026-05-31T07:02:19Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "PresheafOfModules.internalHomEval"
+    },
+    "session": {
+      "id": "session_223",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Goal-wide whnf heartbeat bomb (deterministic timeout at whnf, 200000 heartbeats) firing on the FIRST goal-rewriting tactic of EVERY route. Root cause: the naturality goal's codomain is the PresheafOfModules monoidal unit 𝟙_ and the goal is saturated with dual M = internalHom M 𝟙_; kabstract (used by rw/erw/simp to locate the rewrite site) runs isDefEq which forces a whnf of Mathlib's PresheafOfModules.Monoidal.tensorUnit machinery whose normal form is ~exponential. NOT budget-bound; maxHeartbeats is forbidden. This is DEEPER than the iter-222 diagnosis (which localized the bomb to the single restr_map_homMk (𝟙_) f step and proposed three whnf-free routes) — all three iter-222 routes bomb on their first rewrite because the toxicity is in the goal itself, not one lemma instantiation. local irreducible on the project defs (dual, internalHomEvalApp) does NOT help: the toxic whnf is in Mathlib's 𝟙_ machinery, not the project bodies.",
+      "key_lemmas_used": [
+        "PresheafOfModules.Monoidal.tensorUnit_map",
+        "PresheafOfModules.Monoidal.tensorUnit_obj",
+        "PresheafOfModules.pushforward_obj_map_apply",
+        "PresheafOfModules.unit_map_apply",
+        "PresheafOfModules.naturality_apply"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Break the two ≫ on s ⊗ₜ φ via simp, expose the per-section equation",
+        "code_tried": "refine ModuleCat.MonoidalCategory.tensor_ext (fun s φ => ?_); simp only [ModuleCat.hom_comp, LinearMap.comp_apply]",
+        "line_number": "~1498",
+        "lean_error": "(deterministic) timeout at whnf, 200000 heartbeats",
+        "result": "failed",
+        "insight": "simp's kabstract whnf-es the 𝟙_-laden goal; bombs on the first rewrite."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Rewrite with the per-object tmul computation lemmas to reach goal G",
+        "code_tried": "erw [ModuleCat.hom_comp, ModuleCat.hom_comp, LinearMap.comp_apply, LinearMap.comp_apply]; erw [PresheafOfModules.Monoidal.tensorObj_map_tmul]; rw [internalHomEvalApp_tmul, internalHomEvalApp_tmul]",
+        "line_number": "~1463",
+        "lean_error": "(deterministic) timeout at whnf, 200000 heartbeats",
+        "result": "failed",
+        "insight": "Even erw (keyed matching) cannot avoid the whnf when the unit appears in the goal codomain."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Rewrite the monoidal unit map to the ring map directly",
+        "code_tried": "rw [PresheafOfModules.Monoidal.tensorUnit_map]",
+        "line_number": "~1498",
+        "lean_error": "(deterministic) timeout at whnf, 200000 heartbeats",
+        "result": "failed",
+        "insight": "tensorUnit_map is the correct lemma (verified to exist), but invoking it still triggers kabstract whnf over 𝟙_."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Replace 𝟙_ by the defeq PresheafOfModules.unit via a rfl-show, hoping to dodge the unit machinery",
+        "code_tried": "rw [show (𝟙_ (PresheafOfModules.{u} (R₀ ⋙ forget₂ CommRingCat RingCat))) = PresheafOfModules.unit _ from rfl]",
+        "line_number": "~1498",
+        "lean_error": "(deterministic) timeout at whnf, 200000 heartbeats",
+        "result": "failed",
+        "insight": "The rfl-show itself needs isDefEq on the unit; same bomb."
+      },
+      {
+        "attempt": 5,
+        "strategy": "simp-form of the unit map rewrite",
+        "code_tried": "simp only [PresheafOfModules.Monoidal.tensorUnit_map]",
+        "line_number": "~1498",
+        "lean_error": "(deterministic) timeout at whnf, 200000 heartbeats",
+        "result": "failed",
+        "insight": "Same kabstract whnf bomb."
+      },
+      {
+        "attempt": 6,
+        "strategy": "Shield project defs with local irreducible to stop their unfolding during isDefEq",
+        "code_tried": "attribute [local irreducible] internalHomEvalApp dual in noncomputable def internalHomEval ... (then any of attempts 1-5)",
+        "line_number": "~1011",
+        "lean_error": "(deterministic) timeout at whnf, 200000 heartbeats (and: making dual irreducible breaks the φ cast (restr X.unop M ⟶ restr X.unop 𝟙_), which needs (dual M).obj X defeq the hom type)",
+        "result": "failed",
+        "insight": "Irreducibility on project bodies cannot shield Mathlib's 𝟙_ machinery; the toxic whnf is upstream and not project-controllable."
+      },
+      {
+        "attempt": 7,
+        "strategy": "Component-wise verification via lean_multi_attempt (the opening composition-break, the unit rewrite, the star lemma, hdt2) — each returned empty diagnostics, prover briefly wrote a 'sorry closed / axiom-clean' docstring",
+        "code_tried": "lean_multi_attempt on each of the six worked steps individually",
+        "line_number": "~1463",
+        "lean_error": "FALSE POSITIVE: lean_multi_attempt reported empty diagnostics for each component, but the full lake env lean compile bombs — lean_multi_attempt does NOT reproduce full-elaboration heartbeat accounting",
+        "result": "failed",
+        "insight": "Prover honestly reverted the over-optimistic docstrings after authoritative lake compile showed the whnf bomb. KB lesson: trust lake exit codes over lean_multi_attempt for heartbeat-cost obstacles."
+      }
+    ],
+    "next_steps": "STUCK — do NOT re-dispatch the same syntactic approach. The iter-223 reversal tripwire (recorded by the iter-223 planner: 'whnf bomb still present, none of routes #2/#1/#3 close the sorry → iter-224 runs the mathlib-analogist consult BEFORE any further dispatch') is TRIPPED. iter-224 must run a mathlib-analogist (cross-domain-inspiration mode) for a whnf-free way to discharge a PresheafOfModules.Hom naturality square whose codomain is the monoidal unit 𝟙_ — e.g. an app-wise Hom builder whose naturality obligation is stated in already-reduced form, or constructing the morphism through a tensorUnit ≅ unit iso so 𝟙_ never enters the proof goal, or reducible-transparency rewriting that prevents kabstract from whnf-ing the unit. Fallback if the analogist finds no technique: revert internalHomEval to ABSENT (restoring project sorry 81→80, the iter-219–221 no-stub invariant), keeping the worked six-step reduction in a comment."
+  }
+]

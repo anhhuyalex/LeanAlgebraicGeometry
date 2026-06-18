@@ -1,0 +1,205 @@
+[
+  {
+    "timestamp": "2026-05-31T13:08:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.dual_isLocallyTrivial"
+    },
+    "session": {
+      "id": "session_228",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "The load-bearing restrict-iso `(dual M).restrict f ≅ dual (M.restrict f)` is NOT a verbatim mirror of the closed `tensorObj_restrict_iso` past Step 3/H1. Empirically (lean_goal): Steps 1-3 + H1 typecheck cleanly; the residual is `(pushforward β).obj (dual A) ≅ dual ((pushforward β).obj A)` — open-immersion pushforward commuting with the presheaf dual. This does NOT close via H2'/restrictScalarsRingIsoDualEquiv: the tensor's H2 worked because tensorObj is SECTIONWISE (a restrictScalars-image, so the strong-monoidal tensorator applies), but dual = internalHom(-,𝟙_) is the SLICE internal hom (value is a morphism-module over Over U, not a sectionwise restrictScalars-image), so it has no sectionwise strong-monoidal analogue. Closing it requires a Mathlib-absent open-immersion slice-site equivalence (~150-300 LOC). GENUINE block, not budget exhaustion.",
+      "key_lemmas_used": [
+        "restrictFunctorIsoPullback",
+        "sheafificationCompPullback",
+        "pushforwardPushforwardAdj",
+        "Adjunction.leftAdjointUniq"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Draft the requested verbatim mirror `dual_restrict_iso_SCRATCH` of the closed `tensorObj_restrict_iso`; reduce restriction to pullback (restrictFunctorIsoPullback), move pullback inside sheafification (sheafificationCompPullback), strip sheafification (.mapIso), apply H1 (pushforwardPushforwardAdj.leftAdjointUniq), then read off the residual via lean_goal.",
+        "code_tried": "noncomputable def dual_restrict_iso_SCRATCH {X Y} (f : Y ⟶ X) [IsOpenImmersion f] (M : X.Modules) : (dual M).restrict f ≅ dual (M.restrict f) := by refine (Scheme.Modules.restrictFunctorIsoPullback f).app (dual M) ≪≫ ?_ ; refine (SheafOfModules.sheafificationCompPullback f.toRingCatSheafHom).app (PresheafOfModules.dual M.val) ≪≫ ?_ ; ...",
+        "line_number": "~2099 (scratch)",
+        "lean_error": "no error — Steps 1-3 + H1 typecheck; residual goal exposed: `⊢ (PresheafOfModules.pushforward β).obj M.val.dual ≅ (M.restrict f).val.dual`, i.e. `(pushforward β).obj (dual A) ≅ dual ((pushforward β).obj A)`",
+        "result": "partial",
+        "insight": "The blueprint 'verbatim mirror' claim is correct ONLY through Step 3/H1. The residual is the slice-internal-hom-vs-sectionwise mismatch — H2' does not lift. Scratch removed (no sorry left)."
+      }
+    ],
+    "next_steps": "Route hard-blocked at H2'. Closing dual_isLocallyTrivial requires building the open-immersion slice-site equivalence (Over V in Opens Y ≅ Over (f''V) in Opens X, transporting morphism-modules naturally) — Mathlib-absent, ~150-300 LOC. The USER escalation (lift the RR pause → divisor Pic⁰, discarding the substrate) now BINDS per the iter-228 hard-block condition. Do NOT re-dispatch the verbatim-mirror route — it is empirically falsified."
+  },
+  {
+    "timestamp": "2026-05-31T13:01:50Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "PresheafOfModules.dualPrecompEquiv"
+    },
+    "session": {
+      "id": "session_228",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "",
+      "key_lemmas_used": [
+        "Preadditive.comp_add",
+        "Category.assoc",
+        "Functor.map_comp",
+        "CategoryTheory.Functor.map_id"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Build an R(U)-linear precomposition LinearEquiv on dual-section modules: φ ↦ (pushforward₀(Over.forget U)).map e.hom ≫ φ, inverse via e.inv. map_add' via `rw [Preadditive.comp_add]`.",
+        "code_tried": "map_add' := fun φ ψ => by rw [Preadditive.comp_add]",
+        "line_number": "1558",
+        "lean_error": "Tactic `rewrite` failed: Did not find an occurrence of the pattern ?f ≫ (?g + ?g') in the target — the module +/• are local letI Preadditive instances; `rw` fails on them.",
+        "result": "failed",
+        "insight": "The Hom-type +/• appear as local letI instances; rw cannot see the pattern."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Use `Preadditive.comp_add _ _ _` as a term.",
+        "code_tried": "map_add' := fun φ ψ => Preadditive.comp_add _ _ _",
+        "line_number": "1558",
+        "lean_error": "Type mismatch: Preadditive.comp_add has 3 EXPLICIT object args (P Q R) then (f g g'); `_ _ _` underfills.",
+        "result": "failed",
+        "insight": "Preadditive.comp_add has explicit object arguments."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Supply all explicit args: `Preadditive.comp_add _ _ _ _ φ ψ`.",
+        "code_tried": "map_add' := fun φ ψ => Preadditive.comp_add _ _ _ _ φ ψ",
+        "line_number": "1558",
+        "lean_error": "",
+        "result": "success",
+        "insight": "Call as `Preadditive.comp_add _ _ _ _ φ ψ` (4 underscores: 3 objects + the first morphism). left_inv/right_inv need `change` (not bare rw) to beta-reduce structure-field lambdas before `← Category.assoc`; Functor.map_id must be qualified `CategoryTheory.Functor.map_id` (else mis-resolves to monad `<$>`)."
+      }
+    ],
+    "next_steps": "Reusable section-level core; feeds dualIsoOfIso. Add `\\lean{}` blueprint pin (def:dual_precomp_equiv)."
+  },
+  {
+    "timestamp": "2026-05-31T13:01:50Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "PresheafOfModules.dualIsoOfIso"
+    },
+    "session": {
+      "id": "session_228",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "",
+      "key_lemmas_used": [
+        "PresheafOfModules.isoMk",
+        "cat_disch"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Assemble the presheaf-level 'dual respects isos' via `PresheafOfModules.isoMk (fun U => (dualPrecompEquiv e U.unop).toModuleIso)`; let the default naturality discharger handle the slice-restriction coherence.",
+        "code_tried": "noncomputable def dualIsoOfIso (e : M ≅ M') : dual M' ≅ dual M := PresheafOfModules.isoMk (fun U => (dualPrecompEquiv e U.unop).toModuleIso)",
+        "line_number": "1603",
+        "lean_error": "",
+        "result": "success",
+        "insight": "The isoMk naturality discharged by default `cat_disch` — the slice-restriction coherence is essentially definitional (Over.map g ⋙ Over.forget U = Over.forget V on .left). This confirms the dual IS cleanly contravariantly functorial in isos; the slice obstruction is specific to the open-immersion PUSHFORWARD commutation, not to iso-functoriality."
+      }
+    ],
+    "next_steps": "Add `\\lean{}` blueprint pin (def:dual_iso_of_iso, presheaf level)."
+  },
+  {
+    "timestamp": "2026-05-31T13:02:46Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.dualIsoOfIso"
+    },
+    "session": {
+      "id": "session_228",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "",
+      "key_lemmas_used": [
+        "PresheafOfModules.sheafification.mapIso",
+        "SheafOfModules.forget.mapIso",
+        "PresheafOfModules.dualIsoOfIso"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Sheafify the presheaf-level dual iso: `sheafification.mapIso (PresheafOfModules.dualIsoOfIso ((SheafOfModules.forget _).mapIso e))`. Dual analogue of `tensorObjIsoOfIso`.",
+        "code_tried": "noncomputable def dualIsoOfIso (e : M ≅ M') : dual M' ≅ dual M := sheafification.mapIso (PresheafOfModules.dualIsoOfIso ((SheafOfModules.forget _).mapIso e))",
+        "line_number": "1698",
+        "lean_error": "",
+        "result": "success",
+        "insight": "Sheaf-level 'dual respects isos', contravariant (e : M ≅ M' → dual M' ≅ dual M). Axiom-clean. This is the 'dual respects isos' ingredient of the dual_isLocallyTrivial assembly — but the assembly is blocked on the restrict-iso (H2'), not on this."
+      }
+    ],
+    "next_steps": "Add `\\lean{}` blueprint pin (def:scheme_dual_iso_of_iso). Reusable like tensorObjIsoOfIso."
+  },
+  {
+    "timestamp": "2026-05-31T13:06:35Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "PresheafOfModules.dual_unit_iso"
+    },
+    "session": {
+      "id": "session_228",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "The rank-one lemma `globalSMul_unit_eq : φ = globalSMul (φ(1))` for any endo φ of `restr U 𝟙_` blocked immediately on unit plumbing: the unit carrier `(restr U 𝟙_).obj (op (Over.mk (𝟙 U)))` has NO `OfNat 1` instance — the generator 1 of the monoidal unit 𝟙_ must be accessed through PresheafOfModules.unit's internal section API (cf. unit_map_one), not as a bare ring 1.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Build `dual_unit_iso : internalHom 𝟙_ 𝟙_ ≅ 𝟙_` (dual of structure sheaf is structure sheaf) via the rank-one lemma `globalSMul_unit_eq` stating any endo φ of restr U 𝟙_ equals multiplication by the global scalar φ(1).",
+        "code_tried": "lemma globalSMul_unit_eq {U : C} (φ : restr U (𝟙_ ...) ⟶ ...) : φ = globalSMul (φ (1)) ...",
+        "line_number": "~2099 (scratch)",
+        "lean_error": "failed to synthesize instance OfNat (↑((restr U (𝟙_ ...)).obj (op (Over.mk (𝟙 U))))) 1 — numerals are polymorphic but 1 cannot be used in this carrier type.",
+        "result": "failed",
+        "insight": "Unit generator '1' is not a bare ring 1; must go through PresheafOfModules.unit section API (unit_map_one). Removed (no sorry). Off the critical path — C-bridge is blocked on dual_restrict_iso regardless, so this second assembly ingredient was not pursued. ~80-150 LOC if revisited."
+      }
+    ],
+    "next_steps": "Off critical path; do not pursue while the C-bridge restrict-iso is hard-blocked at H2'."
+  },
+  {
+    "timestamp": "2026-05-31T13:08:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.localSection (A-engine secondary)"
+    },
+    "session": {
+      "id": "session_228",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Gated on the C-bridge landing axiom-clean (planner's secondary condition). C did not land (genuine block), so localSection was not started.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Secondary objective, conditional on C landing + budget remaining. Not reached.",
+        "code_tried": "",
+        "line_number": "",
+        "lean_error": "",
+        "result": "failed",
+        "insight": "Correctly not started — its precondition (C axiom-clean) was not met."
+      }
+    ],
+    "next_steps": "A-engine localSection remains the next critical-path sub-piece IF the route continues. But the route is now hard-blocked at the C-bridge upstream — A-engine is moot until the slice-site equivalence question is resolved or the route is abandoned per the USER fork."
+  }
+]

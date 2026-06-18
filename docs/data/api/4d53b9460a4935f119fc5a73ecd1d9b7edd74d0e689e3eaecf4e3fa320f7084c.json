@@ -1,0 +1,299 @@
+[
+  {
+    "timestamp": "2026-05-21T18:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "morphism_P1_to_grpScheme_const"
+    },
+    "session": {
+      "id": "session_166",
+      "model": "archon-prover"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "hom_additive_decomp_of_rigidity",
+        "gmScalingP1_collapse_at_zero",
+        "ext_of_isDominant_of_isSeparated'",
+        "IsProper.toIsSeparated",
+        "GrpObj.comp_div",
+        "Hom.one_def",
+        "div_eq_one"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Drop the abstract `P1` parameter; rewrite signature to use concrete `ProjectiveLineBar kbar`; outer body translates via group division `f / (toUnit ≫ zeroPt ≫ f)` and delegates the pointed case to a new private helper `morphism_P1_to_grpScheme_const_aux`.",
+        "code_tried": "theorem morphism_P1_to_grpScheme_const [IsAlgClosed kbar] {A : Over (Spec (.of kbar))} [GrpObj A] [IsProper A.hom] [Smooth A.hom] [GeometricallyIrreducible A.hom] (f : ProjectiveLineBar kbar ⟶ A) : ∃ a₀ : 𝟙_ _ ⟶ A, f = toUnit (ProjectiveLineBar kbar) ≫ a₀ := by …",
+        "line_number": "1089",
+        "result": "success",
+        "insight": "The translation step (sub `f / (toUnit ≫ a₀) → 1`) reduces to the pointed case cleanly via `div_eq_one.mp`. `lean_verify` axioms = {propext, sorryAx, Classical.choice, Quot.sound} — sorryAx propagates honestly via the helper's 5 internal sorries."
+      }
+    ],
+    "next_steps": "Discharge the 5 helper-internal sorries (3 product instances, IsReduced ProjectiveLineBar.left, IsDominant iotaGm.left); lifts the consumer to axiom-clean automatically."
+  },
+  {
+    "timestamp": "2026-05-21T18:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "morphism_P1_to_grpScheme_const_aux"
+    },
+    "session": {
+      "id": "session_166",
+      "model": "archon-prover"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "hom_additive_decomp_of_rigidity",
+        "gmScalingP1_collapse_at_zero",
+        "ext_of_isDominant_of_isSeparated'",
+        "IsProper.toIsSeparated",
+        "comp_lift",
+        "lift_fst",
+        "toUnit_unique"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Build the 𝔾ₘ-scaling shortcut: W-axis collapse via `gmScalingP1_collapse_at_zero` precomposed with `Gm.onePt`; apply Cor 1.5 with V=ProjectiveLineBar, W=Gm, base points zeroPt and onePt; collapse the W-axis restriction to `1` via the basepoint hypothesis; read `σ ≫ f = fst ≫ fV`; specialise at `x=1` via `iotaGm := lift (toUnit Gm ≫ onePt) (𝟙 Gm) ≫ gmScalingP1`; globalise via dominance + separated.",
+        "code_tried": "private theorem morphism_P1_to_grpScheme_const_aux [IsAlgClosed kbar] {A : Over (Spec (.of kbar))} [GrpObj A] [IsProper A.hom] [Smooth A.hom] [GeometricallyIrreducible A.hom] (f : ProjectiveLineBar kbar ⟶ A) (hf0 : ProjectiveLineBar.zeroPt kbar ≫ f = η[A]) : f = (1 : ProjectiveLineBar kbar ⟶ A) := by haveI hProdGI : … := sorry; haveI hProdLOFT : … := sorry; haveI hProdRed : … := sorry; … have key := hom_additive_decomp_of_rigidity (V := ProjectiveLineBar kbar) (W := Gm kbar) (ProjectiveLineBar.zeroPt kbar) (Gm.onePt kbar) (gmScalingP1 kbar ≫ f) hcorhyp; rw [hSndFW, _root_.mul_one] at key; … exact ext_of_isDominant_of_isSeparated' …",
+        "line_number": "931",
+        "lean_error": "n/a — body compiles with 5 honest open sorries",
+        "result": "partial",
+        "insight": "Five honest sorries: 3 product instances (product of geom-irred / LOFT / IsReduced over an alg-closed base — Mathlib bridge work), `IsReduced (ProjectiveLineBar kbar).left` (Mathlib lacks integrality for Proj), and `IsDominant iotaGm.left` (depends on the concrete `gmScalingP1` body in Lane 2). All five are legitimate Mathlib/Lane-2 sub-builds (lean-auditor confirmed). The basepoint hypothesis `hf0` is genuinely consumed in `hcorhyp := hcollapse ▸ hf0`."
+      }
+    ],
+    "next_steps": "Iter-167: bookkeeping pass to discharge the 3 Mathlib-bridge product instances + `IsReduced ProjectiveLineBar.left` (likely via `MorphismProperty.IsStableUnderBaseChange` for LOFT and a `Proj`-integrality helper); `IsDominant iotaGm.left` lifts automatically when Lane 2's `gmScalingP1` body lands."
+  },
+  {
+    "timestamp": "2026-05-21T18:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "genusZero_curve_iso_P1"
+    },
+    "session": {
+      "id": "session_166",
+      "model": "archon-prover"
+    },
+    "findings": {
+      "blocker": "RR bridge — Hartshorne IV.1.3.5; Mathlib has no Riemann–Roch for curves. Plan-deferred to iter-167+ as the dominant long pole."
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Signature refactor only — change target from abstract `(P1 : Over (Spec k̄))` proxy to concrete `ProjectiveLineBar kbar`.",
+        "code_tried": "theorem genusZero_curve_iso_P1 [IsAlgClosed kbar] {C : Over (Spec (.of kbar))} [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom] [GeometricallyIrreducible C.hom] (_hgenus : genus C = 0) : Nonempty (C ≅ ProjectiveLineBar kbar) := by sorry",
+        "line_number": "1131",
+        "result": "partial",
+        "insight": "Signature refactor lands clean; body deferred to iter-167+ per plan. This is the genus-0 path's dominant long pole flagged by the iter-165 progress-critic."
+      }
+    ],
+    "next_steps": "Iter-167+: literature/mathlib-analogist consult on whether Mathlib has any divisor/RR/degree-map machinery to leverage. Genus-0 → ℙ¹ has multiple textbook realizations (Hartshorne IV.1.3.5 via RR; canonical-divisor degree-2-pole-free divisor argument; Hurwitz-style by-genus-bound)."
+  },
+  {
+    "timestamp": "2026-05-21T18:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "rigidity_genus0_curve_to_grpScheme"
+    },
+    "session": {
+      "id": "session_166",
+      "model": "archon-prover"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "genusZero_curve_iso_P1",
+        "morphism_P1_to_grpScheme_const",
+        "toUnit_unique",
+        "Iso.hom_inv_id"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Iso transport: obtain φ : C ≅ ProjectiveLineBar kbar from genusZero_curve_iso_P1; define g := φ.inv ≫ f; apply morphism_P1_to_grpScheme_const to get g = toUnit ℙ¹ ≫ a₀; pin a₀ = η[A] via the pointed hypothesis transported along (p ≫ φ.hom : 𝟙_ ⟶ ℙ¹); back-transport f = φ.hom ≫ g = toUnit C ≫ η[A] using toUnit_unique.",
+        "code_tried": "theorem rigidity_genus0_curve_to_grpScheme [IsAlgClosed kbar] {C : Over (Spec (.of kbar))} [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom] [GeometricallyIrreducible C.hom] (_hgenus : genus C = 0) {A : Over (Spec (.of kbar))} [GrpObj A] [IsProper A.hom] [Smooth A.hom] [GeometricallyIrreducible A.hom] (f : C ⟶ A) (p : 𝟙_ _ ⟶ C) (_hf : p ≫ f = η[A]) : f = toUnit C ≫ η[A] := by obtain ⟨φ⟩ := genusZero_curve_iso_P1 _hgenus; …; obtain ⟨a₀, hga₀⟩ := morphism_P1_to_grpScheme_const g; …",
+        "line_number": "1156",
+        "result": "success",
+        "insight": "Sorry-free body. `lean_verify` axioms {propext, sorryAx, Classical.choice, Quot.sound} — sorryAx propagated honestly via genusZero_curve_iso_P1 (RR bridge) + morphism_P1_to_grpScheme_const's helper sorries. Lifts to axiom-clean once both upstreams discharge. This is the headline `\\thm{rigidity_genus0_curve_to_AV}` from AbelianVarietyRigidity.tex L1339."
+      }
+    ],
+    "next_steps": "Iter-167+: closure follows automatically once genusZero_curve_iso_P1 (RR bridge) + morphism_P1_to_grpScheme_const_aux's 5 helper sorries are discharged. No further AVR.lean edit needed."
+  },
+  {
+    "timestamp": "2026-05-21T18:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects.lean",
+      "theorem": "ProjectiveLineBar.zeroPt"
+    },
+    "session": {
+      "id": "session_166",
+      "model": "archon-prover"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "Proj.fromOfGlobalSections",
+        "Proj.fromOfGlobalSections_toSpecZero",
+        "IsScalarTower.of_algebraMap_eq",
+        "MvPolynomial.algebraMap_eq",
+        "MvPolynomial.eval_C",
+        "AlgebraicGeometry.toSpecΓ_SpecMap_ΓSpecIso_inv",
+        "CommRingCat.hom_ext",
+        "HomogeneousIdeal.mem_irrelevant_of_mem",
+        "MvPolynomial.isHomogeneous_X",
+        "Ideal.eq_top_iff_one"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Construct via `Proj.fromOfGlobalSections` of an evaluation map `MvPolynomial (Fin 2) kbar →+* Γ(Spec k̄, ⊤)` (vector `(0,1)`), with the irrelevant-ideal-to-top hypothesis discharged by `IsUnit (v 1)`. Section condition (`fromOfGlobalSections ≫ ProjectiveLineBar.hom = 𝟙`) chases through scalar-tower collapse to `MvPolynomial.C` + `MvPolynomial.eval_C` + the standard `toSpecΓ ≫ Spec.map (ΓSpecIso).inv = 𝟙` identity. Packaged into shared helper `pointOfVec`.",
+        "code_tried": "noncomputable def ProjectiveLineBar.zeroPt (kbar : Type u) [Field kbar] : 𝟙_ (Over (Spec (.of kbar))) ⟶ ProjectiveLineBar kbar := ProjectiveLineBar.pointOfVec kbar (fun i => if i = 0 then 0 else 1) 1 (by simp)",
+        "line_number": "268",
+        "result": "success",
+        "insight": "`lean_verify` axioms {propext, Classical.choice, Quot.sound} — kernel-clean, no sorryAx. The shared `pointOfVec` helper means `onePt` (evaluation (1,1), unit-coordinate 0) and `inftyPt` (evaluation (1,0), unit-coordinate 0) drop straight out by re-instantiation. **Tooling trap recorded**: `rw [heq]` where `heq : (f).comp C = ...` fails to match identical-looking patterns in the goal. Workaround: prove the CommRingCat-level equation `hcc` via `CommRingCat.hom_ext + ext r + change + rw [MvPolynomial.eval_C]`, then `calc` + `congrArg Spec.map hcc` + `toSpecΓ_SpecMap_ΓSpecIso_inv`."
+      }
+    ],
+    "next_steps": "Done; consumed by `morphism_P1_to_grpScheme_const_aux` (AVR L931) as the basepoint `0 ∈ ℙ¹` for the 𝔾ₘ-scaling shortcut."
+  },
+  {
+    "timestamp": "2026-05-21T18:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects.lean",
+      "theorem": "ProjectiveLineBar.onePt"
+    },
+    "session": {
+      "id": "session_166",
+      "model": "archon-prover"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "ProjectiveLineBar.pointOfVec"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Direct re-instantiation of `pointOfVec` with evaluation `(1,1)` and unit-coordinate `0`.",
+        "code_tried": "noncomputable def ProjectiveLineBar.onePt (kbar : Type u) [Field kbar] : 𝟙_ (Over (Spec (.of kbar))) ⟶ ProjectiveLineBar kbar := ProjectiveLineBar.pointOfVec kbar (fun _ => 1) 0 (by simp)",
+        "line_number": "274",
+        "result": "success",
+        "insight": "Kernel-clean. Encodes `[1:1] ∈ ℙ¹` (the affine unit)."
+      }
+    ],
+    "next_steps": "Done; consumed by `morphism_P1_to_grpScheme_const_aux` (AVR L931) for the W-axis basepoint of the 𝔾ₘ-scaling shortcut, and used by the planner's downstream `iotaGm` definition."
+  },
+  {
+    "timestamp": "2026-05-21T18:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects.lean",
+      "theorem": "ProjectiveLineBar.inftyPt"
+    },
+    "session": {
+      "id": "session_166",
+      "model": "archon-prover"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "ProjectiveLineBar.pointOfVec"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Direct re-instantiation of `pointOfVec` with evaluation `(1,0)` and unit-coordinate `0`.",
+        "code_tried": "noncomputable def ProjectiveLineBar.inftyPt (kbar : Type u) [Field kbar] : 𝟙_ (Over (Spec (.of kbar))) ⟶ ProjectiveLineBar kbar := ProjectiveLineBar.pointOfVec kbar (fun i => if i = 0 then 1 else 0) 0 (by simp)",
+        "line_number": "280",
+        "result": "success",
+        "insight": "Kernel-clean. Encodes `[1:0] ∈ ℙ¹` (the point at infinity)."
+      }
+    ],
+    "next_steps": "Done; available for any rigidity-chain extension that needs a third distinguished k̄-point."
+  },
+  {
+    "timestamp": "2026-05-21T18:30:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects.lean",
+      "theorem": "gm_grpObj"
+    },
+    "session": {
+      "id": "session_166",
+      "model": "archon-prover"
+    },
+    "findings": {
+      "blocker": "GrpObj.ofRepresentableBy on `Gm` requires a units-functor RepresentableBy witness bridging `IsLocalization.Away X`-Spec; Mathlib has the algebraic pieces (`IsLocalization.away_of_isUnit_of_bijective`, `AffineSpace.homOverEquiv`) but does not ship the units-functor → `Spec k̄[t,t⁻¹]` representable-by witness."
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Considered but NOT attempted this iter — sub-build out of scope for iter-166 Lane 2.",
+        "code_tried": "n/a",
+        "line_number": "400",
+        "result": "failed",
+        "insight": "Plan recommendation: iter-167+ dispatches `mathlib-analogist (api-alignment)` BEFORE the prover attempts this, scoped to the units-functor representable-by witness. The natural decomposition is (a) `(F.comp (forget GrpCat)).RepresentableBy (Gm kbar)` witness via `IsLocalization.away_of_isUnit_of_bijective` + `AffineSpace.homOverEquiv` + the units-functor RepresentableBy lift."
+      }
+    ],
+    "next_steps": "Iter-167: dispatch mathlib-analogist on `GrpObj.ofRepresentableBy` + units-functor; THEN prover lane."
+  },
+  {
+    "timestamp": "2026-05-21T18:30:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects.lean",
+      "theorem": "gmScalingP1"
+    },
+    "session": {
+      "id": "session_166",
+      "model": "archon-prover"
+    },
+    "findings": {
+      "blocker": "Chartwise glue via `Scheme.Cover.glueMorphisms` over `{D₊(X₀) × Gm, D₊(X₁) × Gm}` requires two `Spec.map`-of-ring-map chart morphisms (`t ↦ λ·t` on `𝔸¹ × Gm`, `u ↦ u/λ` near `∞`) and an overlap-agreement proof; substantial chart-level construction."
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Considered but NOT attempted this iter — chart-level sub-build out of scope.",
+        "code_tried": "n/a",
+        "line_number": "439",
+        "result": "failed",
+        "insight": "The chapter prose at AVR.tex L960-965 gives the exact chartwise prescription. Iter-167+ chartwise glue is a focused sub-lane after the api-alignment consult."
+      }
+    ],
+    "next_steps": "Iter-167+: build the chartwise glue. Likely needs a coordinated lane with `gm_grpObj` (which provides the σ_× ring computations downstream)."
+  },
+  {
+    "timestamp": "2026-05-21T18:30:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects.lean",
+      "theorem": "gmScalingP1_collapse_at_zero"
+    },
+    "session": {
+      "id": "session_166",
+      "model": "archon-prover"
+    },
+    "findings": {
+      "blocker": "Strictly downstream of `gmScalingP1`'s body — the statement uses `gmScalingP1` directly, so a meaningful proof requires a non-sorry body for `gmScalingP1` to compute against."
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "NOT ATTEMPTED — gated on `gmScalingP1` body landing.",
+        "code_tried": "n/a",
+        "line_number": "456",
+        "result": "failed",
+        "insight": "The statement (already-validated iter-165 for matching the rigidity consumer's `_hf` shape verbatim) is fine; only the body is gated."
+      }
+    ],
+    "next_steps": "Iter-167+: once `gmScalingP1` lands a body, this is a one-line `lift (zeroPt) (onePt) ≫ σ_× = zeroPt` chart-level computation."
+  }
+]

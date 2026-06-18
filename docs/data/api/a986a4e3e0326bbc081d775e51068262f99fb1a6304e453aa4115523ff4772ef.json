@@ -1,0 +1,155 @@
+[
+  {
+    "timestamp": "2026-05-31T01:44:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "PresheafOfModules.dual"
+    },
+    "session": {
+      "id": "session_221",
+      "model": "opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "PresheafOfModules.InternalHom.internalHom",
+        "PresheafOfModules.unit"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Define dual M as the internal hom into the monoidal unit (structure presheaf as module over itself): dual M := InternalHom.internalHom M (𝟙_ ...). Verified 𝟙_ (PresheafOfModules ...) = PresheafOfModules.unit ... by rfl. Placed in new section Dual with {D : Type u}[Category.{u,u} D]{R₀ : Dᵒᵖ ⥤ CommRingCat.{u}} (single-universe Opens X site matching internalHom).",
+        "code_tried": "noncomputable def dual (M) := InternalHom.internalHom M (𝟙_ (PresheafOfModules.{u} (R₀ ⋙ forget₂ CommRingCat RingCat)))",
+        "result": "success",
+        "insight": "PRIMARY target 1. The contravariant dual the iter-219 analogist judged 'absent at every level' is a clean specialisation of iter-220's internalHom. Axiom-clean {propext, Classical.choice, Quot.sound}."
+      }
+    ],
+    "next_steps": "Consumed by internalHomEval (the eval counit) and downstream by the ⊗-inverse / iso-class CommGroup."
+  },
+  {
+    "timestamp": "2026-05-31T01:44:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "PresheafOfModules.internalHomEvalApp"
+    },
+    "session": {
+      "id": "session_221",
+      "model": "opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "evalLin",
+        "evalLin_add",
+        "evalLin_smul",
+        "termRingMap_terminal",
+        "TensorProduct.lift",
+        "LinearMap.mk₂"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Build the per-object R(X)-bilinear contraction (M(X)) ⊗_{R(X)} (M|_X ⟶ R|_X) → R(X), s ⊗ φ ↦ φ(s), as ModuleCat.ofHom (TensorProduct.lift (LinearMap.mk₂ ...)).",
+        "code_tried": "ModuleCat.ofHom <| TensorProduct.lift <| LinearMap.mk₂ (R₀.obj X) (fun s φ => evalLin M X φ s) ...",
+        "line_number": "~1390",
+        "lean_error": "failed to synthesize Module ↑(R₀.obj X) ↑((𝟙_ ...).obj X) — the (𝟙_).obj X codomain reduces to the bare RingCat carrier",
+        "result": "success",
+        "insight": "Fixed via `show ModuleCat.of (R₀.obj X) _ ⟶ ModuleCat.of (R₀.obj X) (R₀.obj X) from ...` at the ofHom boundary (pins the build over CommRingCat ModuleCats). The 4 mk₂ obligations: linear-in-s = map_add/map_smul of evalLin; linear-in-φ = evalLin_add/evalLin_smul + add_apply/smul_apply after a `change` to beta-reduce mk₂'s lambda. Axiom-clean. Mathematical heart of internalHomEval."
+      }
+    ],
+    "next_steps": "Assemble into the natural morphism internalHomEval (see blocked milestone)."
+  },
+  {
+    "timestamp": "2026-05-31T01:44:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "PresheafOfModules.evalLin (+ evalLin_add, evalLin_smul, InternalHom.termRingMap_terminal)"
+    },
+    "session": {
+      "id": "session_221",
+      "model": "opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "IsTerminal.hom_ext",
+        "Functor.map_id",
+        "homModule",
+        "globalSMul",
+        "LinearMap.smul_apply"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "evalLin M X φ := (φ.app term).hom cast to (M.obj X) →ₗ[R₀.obj X] (R₀.obj X) via type ascription (the over-category ring at the terminal section is defeq but not syntactically R₀.obj X). termRingMap_terminal: termRingMap hT (op T) f = f via hT.hom_ext + R.map_id. evalLin_add: rfl (Hom-addition is definitionally additive on app/hom). evalLin_smul: keep the value at its NATURAL over-ring type in `change`, rw [termRingMap_terminal], rfl.",
+        "code_tried": "evalLin M X φ : (M.obj X : Type u) →ₗ[(R₀.obj X : Type u)] (R₀.obj X : Type u) := (φ.app term).hom ; termRingMap (R := (Over.forget X.unop).op ⋙ R₀) Over.mkIdTerminal ...",
+        "line_number": "~1316–1378",
+        "lean_error": "Earlier attempts failed instance synthesis (HSMul over-ring vs R₀.obj X) until the type-ascription / natural-type tricks were applied",
+        "result": "success",
+        "insight": "The central diamond-bridge tricks for the over-ring/scheme-ring diamond. All axiom-clean. Reusable for the next sub-step."
+      }
+    ],
+    "next_steps": "Support internalHomEvalApp and the eventual internalHomEval naturality."
+  },
+  {
+    "timestamp": "2026-05-31T01:44:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "PresheafOfModules.internalHomEval"
+    },
+    "session": {
+      "id": "session_221",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "The full natural eval morphism M ⊗ M^∨ ⟶ R: its naturality field reduces (via tensor_ext) to PresheafOfModules.naturality_apply φ (Over.homMk f.unop).op s MODULO Over.map pseudofunctor-coherence identifications ((dual M).map f = restrictionMap f.unop; (restr X M).map (Over.homMk f.unop).op = M.map f; etc.). This is the SAME Over.map coherence obstacle iter-220 cracked for restrictionMap via the private helper hom_app_heq (subst h; rfl) + eq_of_heq. Not added; NO sorry left behind.",
+      "key_lemmas_used": [
+        "ModuleCat.MonoidalCategory.tensor_ext",
+        "PresheafOfModules.naturality_apply",
+        "Over.map_obj",
+        "hom_app_heq (iter-220)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Hom.mk with app X := internalHomEvalApp M X and a semilinear naturality field; reduce naturality via tensor_ext to the simple-tensor equation.",
+        "code_tried": "noncomputable def internalHomEval (M) : tensorObj M (dual M) ⟶ 𝟙_ := { app := internalHomEvalApp M, naturality := by apply tensor_ext; intro s φ; ... }",
+        "line_number": "~1430",
+        "lean_error": "unsolved goals: (Monoidal.tensorObj M M.dual).map f ≫ ... — naturality square reduces to evalLin M Y ((dual M).map f φ) (M.map f s) = (𝟙_).map f ((φ.app term).hom s), the Over.map-coherence gap",
+        "result": "partial",
+        "insight": "Reduction is fully worked out and recorded in task_results; the gap is precisely the iter-220 hom_app_heq machinery. Also attempted helper internalHomEvalApp_tmul (reverted; same (𝟙_).obj X codomain ascription issue — state value at natural type)."
+      }
+    ],
+    "next_steps": "Next prover (mathlib-build): assemble internalHomEval reusing the iter-220 restrictionMap functoriality proof as template (hom_app_heq + subst). Do NOT re-derive the reduction — it is done."
+  },
+  {
+    "timestamp": "2026-05-31T01:44:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "ride-along: @[implicit_reducible] on internalHomObjModule + stale-docstring corrections"
+    },
+    "session": {
+      "id": "session_221",
+      "model": "opus"
+    },
+    "findings": {
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Add @[implicit_reducible] to internalHomObjModule (lean-auditor ts220 major) to match homModule; correct stale L37–45 status block and internalHomObjModule docstring (comment-only).",
+        "code_tried": "@[implicit_reducible] noncomputable def internalHomObjModule ...",
+        "result": "success",
+        "insight": "Ride-along Lean fixes done. Build remains green; sorry 3→3."
+      }
+    ],
+    "next_steps": "None."
+  }
+]

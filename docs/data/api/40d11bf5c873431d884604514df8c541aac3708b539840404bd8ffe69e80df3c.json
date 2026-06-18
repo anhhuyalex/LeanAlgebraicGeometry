@@ -1,0 +1,149 @@
+[
+  {
+    "timestamp": "2026-05-14T14:05:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "cechCofaceMap_pi_smul (per-summand hG discharge — was L768, now L811)"
+    },
+    "session": {
+      "id": "session_99",
+      "model": "sonnet"
+    },
+    "findings": {
+      "blocker": "Discrimination-tree pattern-unification through Pi.lift's anonymous-closure codomain `∏ᶜ (fun i_1 ↦ ModuleCat.of k Γ(C.left, op (∏ᶜ basicOpenCover ↑s₀ ∘ i_1)))` blocks all `Preadditive.zsmul_comp` / `ModuleCat.hom_zsmul` / `Linear.smul_comp` rewrites — at every layer (`(n • f) ≫ g`, `(n • f).hom`, `Pi.lift _ ≫ Pi.π _`, `set f := Pi.lift _`). Confirmed structural, not tactical: even a body-local `have h : (n • f).hom x = n • f.hom x := by intros; rfl` (which typechecks!) fails `simp only [h]` / `rw [h]`. The iter-100 hypothesis that `funext j'` would dissolve this class is FALSE — discrimination tree fails identically post-funext at the morphism-composition level. STREAK ESCALATION CRITERION TRIGGERED — 3rd consecutive prover lane on this sorry without closure.",
+      "key_lemmas_used": [
+        "Pi.smul_apply",
+        "ConcreteCategory.comp_apply",
+        "show / rfl pivot for piIsoPi-shape"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "iter-101 plan S1 — push Pi.smul through `r' • _`",
+        "code_tried": "simp only [Pi.smul_apply]",
+        "line_number": "766 (committed)",
+        "lean_error": "(none)",
+        "goal_before": "case h.h ⊢ e₂ (eqToHom_hom (smul_thing.hom (e₁.symm (r' • y')))) j' = (r' • e₂ (eqToHom_hom (smul_thing.hom (e₁.symm y')))) j'",
+        "goal_after": "case h.h ⊢ e₂ (eqToHom_hom (smul_thing.hom (e₁.symm (r' • y')))) j' = r' • e₂ (eqToHom_hom (smul_thing.hom (e₁.symm y'))) j'",
+        "result": "success",
+        "insight": "S1 lands as predicted; trivial Pi-smul-distribution."
+      },
+      {
+        "attempt": 2,
+        "strategy": "iter-101 plan S2 — `rw [ModuleCat.piIsoPi_hom_ker_subtype_apply Z₂ j']`",
+        "code_tried": "rw [ModuleCat.piIsoPi_hom_ker_subtype_apply Z₂ j', ModuleCat.piIsoPi_hom_ker_subtype_apply Z₂ j']",
+        "line_number": "768–769 (multi-attempt probe)",
+        "lean_error": "did not find an occurrence — discrimination pattern `(ConcreteCategory.hom (ModuleCat.piIsoPi Z₂).hom) ?x j'` doesn't match `e₂ x j'` syntactically (even though def-equal: `e₂ = (piIsoPi Z₂).toLinearEquiv`)",
+        "goal_before": "post-S1 goal",
+        "goal_after": "(unchanged on direct rw)",
+        "result": "failed",
+        "insight": "The same lemma name that fires in `simp_rw` form (iter-097, reverse direction, at the pre-funext frame) does NOT fire via direct `rw` here because LinearEquiv coercion masks the underlying piIsoPi.hom head. Pivot to `show` for def-eq."
+      },
+      {
+        "attempt": 3,
+        "strategy": "iter-101 plan S2 alternative — `show` def-eq pivot to (Pi.π Z₂ j').hom form",
+        "code_tried": "show (CategoryTheory.ConcreteCategory.hom (Limits.Pi.π Z₂ j')) _ = r' • (CategoryTheory.ConcreteCategory.hom (Limits.Pi.π Z₂ j')) _",
+        "line_number": "770–771 (committed)",
+        "lean_error": "(none)",
+        "goal_before": "post-S1 goal",
+        "goal_after": "(ConcreteCategory.hom (Pi.π Z₂ j')) (eqToHom_hom (smul_thing.hom (e₁.symm (r' • y')))) = r' • (ConcreteCategory.hom (Pi.π Z₂ j')) (eqToHom_hom (smul_thing.hom (e₁.symm y')))",
+        "result": "success",
+        "insight": "`show` succeeds where `rw [piIsoPi_hom_ker_subtype_apply]` fails — both sides become explicit Pi.π projections by def-eq."
+      },
+      {
+        "attempt": 4,
+        "strategy": "iter-101 plan S3 — 4-layer `← ConcreteCategory.comp_apply` to fuse into single categorical morphism",
+        "code_tried": "rw [show ModuleCat.Hom.hom = ConcreteCategory.hom (C := ModuleCat.{u} k) from rfl, show ModuleCat.Hom.hom = ConcreteCategory.hom (C := ModuleCat.{u} k) from rfl, ← ConcreteCategory.comp_apply, ← ConcreteCategory.comp_apply, ← ConcreteCategory.comp_apply, ← ConcreteCategory.comp_apply]",
+        "line_number": "776–779 (committed)",
+        "lean_error": "(none)",
+        "goal_before": "post-S2 goal",
+        "goal_after": "(ConcreteCategory.hom (((-1)^↑i • Pi.lift_thing) ≫ eqToHom ⋯ ≫ Pi.π Z₂ j')) (e₁.symm (r' • y')) = r' • (ConcreteCategory.hom (((-1)^↑i • Pi.lift_thing) ≫ eqToHom ⋯ ≫ Pi.π Z₂ j')) (e₁.symm y')",
+        "result": "success",
+        "insight": "S1–S3 chain fully committed. Post-S3 goal in clean shape for S4 (scalar extraction)."
+      },
+      {
+        "attempt": 5,
+        "strategy": "iter-101 plan S4 — `Preadditive.zsmul_comp` direct rewrite",
+        "code_tried": "rw [Preadditive.zsmul_comp]",
+        "line_number": "780+ (multi-attempt probe)",
+        "lean_error": "did not find an occurrence of the pattern `(?n • ?f) ≫ ?g`",
+        "goal_before": "post-S3 goal",
+        "goal_after": "(unchanged)",
+        "result": "failed",
+        "insight": "Same discrimination-tree class issue as pre-funext. The smul's RHS `Pi.lift fun i_1 ↦ ...` with anonymous-closure codomain blocks pattern unification."
+      },
+      {
+        "attempt": 6,
+        "strategy": "iter-101 plan S4 variant — `simp only [← ConcreteCategory.comp_apply, Preadditive.zsmul_comp]`",
+        "code_tried": "simp only [← ConcreteCategory.comp_apply, Preadditive.zsmul_comp]",
+        "line_number": "780+ (multi-attempt probe)",
+        "lean_error": "no progress",
+        "goal_before": "post-S3 goal",
+        "goal_after": "(unchanged)",
+        "result": "failed",
+        "insight": "Same root cause; `simp_rw` would also fail per iter-099 data."
+      },
+      {
+        "attempt": 7,
+        "strategy": "iter-101 plan E1 escalation — body-local `have h_smul_hom : ∀ {M N} (n : ℤ) (f : M ⟶ N) (x), (n • f).hom x = n • f.hom x := by intros; rfl`",
+        "code_tried": "have h_smul_hom : ∀ {M N : ModuleCat.{u} k} (n : ℤ) (f : M ⟶ N) (x : (M : Type _)), (ModuleCat.Hom.hom (n • f)) x = n • (ModuleCat.Hom.hom f) x := by intros; rfl; simp only [h_smul_hom]",
+        "line_number": "780+ (multi-attempt probe)",
+        "lean_error": "h_smul_hom typechecks (`rfl` valid); `simp only [h_smul_hom]` reports `no progress`; `rw [h_smul_hom]` reports pattern not found",
+        "goal_before": "post-S3 goal",
+        "goal_after": "(unchanged)",
+        "result": "failed",
+        "insight": "**CRITICAL FINDING**: even a body-local rfl-helper does NOT bypass the discrimination tree — the pattern-match check runs before rfl-evaluation. The E1 escape route from iter-100/iter-101 plans is now confirmed INSUFFICIENT for this blocker class."
+      },
+      {
+        "attempt": 8,
+        "strategy": "iter-101 plan E2 escalation (in-place variant) — `set Pi_lift_thing := Pi.lift fun i_1 ↦ ...` to name the closure",
+        "code_tried": "set Pi_lift_thing : (∏ᶜ Z₁ : ModuleCat.{u} k) ⟶ _ := Pi.lift fun i_1 ↦ Pi.π (fun i ↦ ModuleCat.of k ↑(C.left.presheaf.obj (Opposite.op (∏ᶜ basicOpenCover ↑s₀ ∘ i)))) (i_1 ∘ ⇑(SimplexCategory.Hom.toOrderHom (SimplexCategory.δ i))) ≫ (toModuleKPresheaf C).map ...",
+        "line_number": "780+ (multi-attempt probe)",
+        "lean_error": "set syntactically accepts but does NOT fold in the goal (the `_` codomain annotation collides with the actual anonymous-closure codomain in the goal)",
+        "goal_before": "post-S3 goal",
+        "goal_after": "(unchanged — Pi_lift_thing binding inserted in context but goal still references the raw Pi.lift form)",
+        "result": "failed",
+        "insight": "**CRITICAL FINDING**: in-place `set` is also INSUFFICIENT for this blocker class. The Pi.lift's anonymous-closure codomain cannot be hidden behind a name without rewriting the full inferred type. Iter-100's E2 (top-level refactor with named-codomain `T : ∀ j, Z₁ (h j) ⟶ Z₂ j`) remains as the durable escape, but requires a refactor lane."
+      }
+    ],
+    "next_steps": "**STREAK ESCALATION TRIGGERED — iter-100 plan MUST escalate.** Recommended: refactor lane (slug `pi-lift-thing-named-binder` or similar) introducing a TOP-LEVEL helper with a named per-coordinate morphism family `T : ∀ j, Z₁ (h j) ⟶ Z₂ j` (preventing the anonymous-closure issue at signature elaboration). Apply the iter-098 split-slot pattern's vindicated recipe (Miller-pattern binder). Alternative: try the E3 `LinearMap.ext`-route from the task_result (iter-099 prover suggestion) — lift the goal to `∀ z, ... z = ... z`, then unfold Pi.lift at the value level via `Pi.lift_apply`. The E1 (body-local helper) and in-place E2 (`set`) routes are now confirmed dead per attempts 7 and 8 above."
+  },
+  {
+    "timestamp": "2026-05-14T14:05:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "alternating sum substep (a) sorries (L903, L1227, L1255, L1445, L1474)"
+    },
+    "session": {
+      "id": "session_99",
+      "model": "sonnet"
+    },
+    "findings": {
+      "blocker": "Iter-101 was scheduled as a single-lane prover on L768 only. These augmented-Čech / `g_R.map_smul'` / `h_loc_exact` sites remain gated on infrastructure not yet introduced.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Off-limits per current plan. L1445 (`g_R.map_smul'`) becomes ungated only after L811 closes."
+  },
+  {
+    "timestamp": "2026-05-14T14:05:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "cotangentExactSeq_structure (L636) and other Differentials sorries (L122, L957, L974, L1116)"
+    },
+    "session": {
+      "id": "session_99",
+      "model": "sonnet"
+    },
+    "findings": {
+      "blocker": "Not assigned this iteration (single substantive lane on BasicOpenCech only).",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Deferred. Route A/B decision on L636 still pending."
+  }
+]

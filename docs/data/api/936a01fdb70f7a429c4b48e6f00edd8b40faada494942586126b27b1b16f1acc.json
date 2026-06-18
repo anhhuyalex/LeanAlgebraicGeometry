@@ -1,0 +1,214 @@
+[
+  {
+    "timestamp": "2026-06-03T11:01:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SheafOverEquivalence.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.overEquivalence"
+    },
+    "session": {
+      "id": "session_258",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "SheafOfModules.pushforwardPushforwardEquivalence",
+        "TopologicalSpace.Opens.overEquivalence",
+        "Functor.sheafPushforwardContinuous",
+        "overEquivInverseIsDenseSubsite",
+        "Functor.map_comp",
+        "Subsingleton.elim"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Build the modules-level lift of Opens.overEquivalence as pushforwardPushforwardEquivalence e phiOver psiOver H1 H2; the continuity legs were expected to resolve by inference per the analogist recipe",
+        "code_tried": "refine SheafOfModules.pushforwardPushforwardEquivalence (TopologicalSpace.Opens.overEquivalence U) ?phi ?psi ?H1 ?H2",
+        "line_number": "180",
+        "lean_error": "failed to synthesize (Opens.overEquivalence U).functor.IsContinuous ((grothendieckTopology X).over U) (grothendieckTopology U) -- the continuity legs did NOT auto-resolve",
+        "goal_before": "SheafOfModules (U:Scheme).ringCatSheaf ≌ SheafOfModules (X.ringCatSheaf.over U)",
+        "goal_after": "4 holes phi/psi/H1/H2 + 2 unsynthesized continuity instances",
+        "result": "partial",
+        "insight": "The site carrier ↥(↑U : Scheme) (Scheme→TopCat→Type coercion) is DEFINITIONALLY the subtype ↥U but KEYS DIFFERENTLY in the instance discrimination tree, so the project's overEquivInverseIsDenseSubsite (stated for bare top space ↥U) is not found and the priority-900 IsDenseSubsite→IsContinuous chain silently fails."
+      },
+      {
+        "attempt": 2,
+        "strategy": "State the two continuity instances on the scheme-carrier form and discharge by `change`-converting to the subtype ↥U form where the project instance + Mathlib chain resolve",
+        "code_tried": "instance overEquivInverseIsContinuous := by change ...IsContinuous (Opens.grothendieckTopology ↥U)...; infer_instance",
+        "line_number": "105",
+        "lean_error": null,
+        "goal_before": "IsContinuous ... (grothendieckTopology ↥(↑U:Scheme))",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "`change` to ↥U defeq-converts the discrimination-tree key; infer_instance then fires. `exact overEquivInverseIsDenseSubsite U` typechecks by defeq even when infer_instance fails."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Build phiOver/psiOver sectionwise as X.ringCatSheaf.obj.map (eqToHom (image_overEquiv_functor_obj …)).op and prove naturality + H1/H2 via Functor.map_comp combines",
+        "code_tried": "erw [← Functor.map_comp, ← Functor.map_comp]; congr 1  (phi); for psi/H1/H2: peel forget₂ then combine inner maps as a TERM (Functor.map_comp _ _ _).symm.trans ((congrArg _ (Subsingleton.elim _ _)).trans (Functor.map_comp _ _ _))",
+        "line_number": "142-206",
+        "lean_error": "rw [← Functor.map_comp] 'did not find pattern' on F = X.ringCatSheaf.obj (a forget₂-composite functor)",
+        "goal_before": "naturality / H1 / H2 ring-presheaf nat-trans equalities",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "rw [← Functor.map_comp] REFUSES to combine F.map a ≫ F.map b for the forget₂-composite X.ringCatSheaf.obj. Recipes: erw (defeq-tolerant) when the X.ringCatSheaf leg is FIRST; else peel forget₂ via `change (forget₂ …).map _ ≫ …` then combine inner maps with Functor.map_comp applied as a TERM. Use X.ringCatSheaf.obj.map UNIFORMLY (not .val.map). #print axioms = {propext, Classical.choice, Quot.sound}."
+      }
+    ],
+    "next_steps": "overEquivalence is CLOSED axiom-clean — the shared-root linchpin. Next: close the two consumer isos restrictOverIso (full body) and unitOverIso (1 leaf), then both critical-path lanes (engine chartOverIso already redirected; dual sliceDualTransport) close as consumers."
+  },
+  {
+    "timestamp": "2026-06-03T11:01:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/LineBundleCoherence.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.chartOverIso (engine redirect)"
+    },
+    "session": {
+      "id": "session_258",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "AlgebraicGeometry.Scheme.Modules.chartOverIso"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Redirect the local chartOverIso sorry-def to the general shared-root Scheme.Modules.chartOverIso (planned for next iter, pulled forward once the shared root provided the construction)",
+        "code_tried": "import AlgebraicJacobian.Picard.SheafOverEquivalence\n... chartOverIso M U e := Scheme.Modules.chartOverIso U M e",
+        "line_number": "204",
+        "lean_error": null,
+        "goal_before": "M.over U ≅ SheafOfModules.unit (X.ringCatSheaf.over U)  (local sorry-def)",
+        "goal_after": "no goals (lake env lean exit 0, locally sorry-free)",
+        "result": "success",
+        "insight": "Signatures match (shared root arg order (U)(M)(e), local (M)(U)(e)). No import cycle. The engine file is now locally sorry-free; the 5 pinned decls (chartPresentation/isFinitePresentation/isFiniteType/...) become fully axiom-clean with NO further edits once the shared root's 2 consumer isos land. Engine 1→0 local."
+      }
+    ],
+    "next_steps": "Engine is one shared-root step from fully axiom-clean. No further edits to this file needed; gated transitively on restrictOverIso + unitOverIso in SheafOverEquivalence.lean."
+  },
+  {
+    "timestamp": "2026-06-03T11:01:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SheafOverEquivalence.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.restrictOverIso"
+    },
+    "session": {
+      "id": "session_258",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Open full-body sorry; not reached this iter (budget went to overEquivalence). Route documented.",
+      "key_lemmas_used": [
+        "SheafOfModules.pushforwardComp",
+        "SheafOfModules.pushforwardNatIso",
+        "restrictFunctorAdjCounitIso"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Tested Iso.refl / eqToIso rfl / preimageIso (isoMk Iso.refl) — sectionwise both sides = Γ(M, V.left)",
+        "code_tried": "exact sorry  (documented route: M.restrict U.ι is itself pushforward along U.ι.opensFunctor; compose with pushforward φ via pushforwardComp = Iso.refl, then pushforwardNatIso along eqToIso of the two Over U ⥤ Opens X functors)",
+        "line_number": "235",
+        "lean_error": "Iso.refl/eqToIso not directly defeq at the iso level (maps differ by the image_overEquiv eqToHom)",
+        "goal_before": "(overEquivalence U).functor.obj (M.restrict U.ι) ≅ M.over U",
+        "goal_after": null,
+        "result": "partial",
+        "insight": "Genuine partial — mirror of restrictFunctorAdjCounitIso (Modules/Sheaf.lean:335), ~30-60 LOC of eqToHom/thinness machinery. Not blocked by missing Mathlib."
+      }
+    ],
+    "next_steps": "Build via pushforwardComp (= Iso.refl) + pushforwardNatIso along eqToIso of the two index functors, mirroring restrictFunctorAdjCounitIso."
+  },
+  {
+    "timestamp": "2026-06-03T11:01:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SheafOverEquivalence.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.unitOverIso"
+    },
+    "session": {
+      "id": "session_258",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "1 leaf sorry: IsIso of the additive map underlying the sectionwise ring iso (phiOver U).hom.app W",
+      "key_lemmas_used": [
+        "SheafOfModules.unitToPushforwardObjUnit",
+        "isIso_of_reflects_iso",
+        "NatTrans.isIso_iff_isIso_app",
+        "isIso_iff_of_reflects_iso",
+        "unitToPushforwardObjUnit_val_app_apply"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Construct unitOverIso as (asIso (unitToPushforwardObjUnit (phiOver U))).symm; prove IsIso (phiOver U) via reflection, then IsIso of the comparison by reflecting through forget→toPresheaf→component",
+        "code_tried": "haveI hφ : IsIso (phiOver U) := isIso_of_reflects_iso (phiOver U) (sheafToPresheaf _ RingCat) [after NatTrans.isIso_iff_isIso_app + inferInstanceAs on each component]; rw [← isIso_iff_of_reflects_iso _ (forget _), ← isIso_iff_of_reflects_iso _ (toPresheaf _), NatTrans.isIso_iff_isIso_app]; intro W; sorry",
+        "line_number": "276",
+        "lean_error": null,
+        "goal_before": "IsIso (unitToPushforwardObjUnit (phiOver U))",
+        "goal_after": "IsIso (((toPresheaf).map ((forget).map (unitToPushforwardObjUnit (phiOver U)))).app W)  -- ONE leaf",
+        "result": "partial",
+        "insight": "Construction COMPLETE; IsIso (phiOver U) PROVEN; reflection chain done to ONE leaf. Section at W is (phiOver U).hom.app W (a ring iso by hφ). Leaf = connect to (forget₂ RingCat AddCommGrpCat).map of that ring iso, ~5-10 line finish."
+      }
+    ],
+    "next_steps": "Close the 1 leaf: extract IsIso ((phiOver U).hom.app W) from hφ (NatTrans component-iso) and map through forget₂ to AddCommGrpCat."
+  },
+  {
+    "timestamp": "2026-06-03T11:01:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.pullbackTensorMap_restrict (D3' Sq2b)"
+    },
+    "session": {
+      "id": "session_258",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Objective #2 was dispatched (D3' Sq2b, analogist recipe d3sq2b258.md) but produced NO edits and NO task_result this iter. The prover capacity went to the shared root + the two held-file finishes (engine redirect, dual cleanup) instead.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Re-dispatch D3' Sq2b with the analogist d3sq2b258.md η→δ porting recipe (mirror compiling pullbackObjUnitToUnit_comp). It was NOT worked this iter despite being objective #2."
+  },
+  {
+    "timestamp": "2026-06-03T11:01:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate/DualInverse.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.sliceDualTransport"
+    },
+    "session": {
+      "id": "session_258",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "HELD per plan — gated on the shared root Scheme.Modules.overEquivalence (parallel lane). Only comment-cleanup sanctioned this iter.",
+      "key_lemmas_used": [
+        "homLocalSection",
+        "restrictScalarsRingIsoDualEquiv"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Probe the reduced goal with refine LinearEquiv.toModuleIso ?_; did NOT churn the sectionwise build (subsumed by shared root)",
+        "code_tried": "refine LinearEquiv.toModuleIso ?_  (diagnostic only; typed sorry retained)",
+        "line_number": "235",
+        "lean_error": null,
+        "goal_before": "sliceDualTransport : (over-slice dual transport iso)",
+        "goal_after": "(restr fV' M.val ⟶ restr fV' 𝟙_X) ≃ₗ[𝒪_Y(V)] (restr V ((pushforward β) M.val) ⟶ restr V 𝟙_Y)",
+        "result": "partial",
+        "insight": "The reduced ≃ₗ is EXACTLY the per-open localization of Opens.overEquivalence at V — the same construction the shared root provides at sheaf level. Direct sectionwise build = ~200 LOC churn the plan deliberately pivoted away from. Closes NEXT iter as a consumer of overEquivalence."
+      }
+    ],
+    "next_steps": "Keep HELD until restrictOverIso/unitOverIso land. Then close sliceDualTransport by localizing overEquivalence's pushforward-φ functor to the presheaf ≃ₗ at V; fallback = the documented ~200 LOC sectionwise build."
+  }
+]

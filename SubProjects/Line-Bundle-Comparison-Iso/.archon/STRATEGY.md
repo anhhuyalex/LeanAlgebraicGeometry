@@ -18,7 +18,7 @@ work package carved from Christian Merten's Jacobian challenge
 
 | Phase | Status | Iters left | LOC | Key Mathlib needs | Risks |
 |-------|--------|-----------|-----|-------------------|-------|
-| D4′ seed-1 `pullbackTensorIsoOfLocallyTrivial` (`TensorObjSubstrate.lean`) | **ACTIVE** | ~1–2 | ~30–60 | K1 presheaf-δ iso (in-proof) | Chart-chase closed; sole residual = brick K1 (`pullbackTensorMap` iso for open immersion, arbitrary M,N). Route in `### D4′` below. Risk: mate calculus; partial committable. |
+| D4′ seed-1 `pullbackTensorIsoOfLocallyTrivial` (`TensorObjSubstrate.lean`) | **ACTIVE** | ~1 | ~25–50 | `Adjunction.IsMonoidal` (Mathlib; instantiate) | Chart-chase closed; sole residual = K1's `hcompat`. NOT a Mathlib gap — discharge via the project-side instance `hadj.IsMonoidal` (sectionwise `homEquiv.injective`+`tensor_ext`) then `laxMonoidalEquivOplaxMonoidal`. Route in `### D4′`. |
 | Terminal `exists_tensorObj_inverse` close (architectural) | NEXT | ~2–3 | ~30–80 | `homOfLocalCompat` (A-bridge) | The project's SOLE bare `sorry`. Import-cycle-gated in `TensorObjSubstrate.lean` (needs `dual_isLocallyTrivial` from DualInverse, which imports TOS). RESOLUTION: refactor-MOVE the decl to a file downstream of DualInverse (only consumer is RelPicFunctor `neg`/`neg_add_cancel` → repoint its import), then close the gluing proof (bridges C+B done, A = SheafOfModules morphism descent). Standing directive lists this as one of the six required closures. |
 | Consumer seed-3 (`RelPicFunctor.lean`) | BLOCKED | ~1–2 | ~30–80 | — | `addCommGroup_via_tensorObj`; gated on seed-1 (map_add ← comparison iso) + `exists_tensorObj_inverse` (group inverse). |
 | Coverage + file-split cleanup | DEFERRED | ~1–2 | ~0 (tex/private) | — | bulk ~99 `lean_aux` isolated nodes + `TensorObjSubstrate.lean` (>3600 LOC) split; defer until active seed-1 lane lands. |
@@ -47,9 +47,14 @@ invertible — the sole residual brick **K1** (`lem:pullback_tensor_map_isiso_op
 `Functor.Monoidal.transport` is blocked by the non-synthesizable monoidal-carrier (see Pitfalls).
 Instead enter via `isIso_pullbackTensorMap_of_isIso_sheafifyDelta`, reduce to the presheaf
 `IsIso (δ (pullback φ'))`, and close it IN-PROOF mirroring the CLOSED `tensorObj_restrict_iso` (H1 =
-`pushforward β ≅ pullback φ'` via `leftAdjointUniq`; H2 = `restrictScalarsMonoidalOfBijective`) plus the
-adjunction-mate compatibility `Adjunction.IsMonoidal` (its `leftAdjoint_μ` field expresses the right
-adjoint's `μ` through the left adjoint's oplax `δ`). Reference: Stacks `lemma-tensor-product-pullback`.
+`pushforward β ≅ pullback φ'` via `leftAdjointUniq`; H2 = `restrictScalarsMonoidalOfBijective`). Steps
+A+B + the `hcompat` transposition are scaffolded; the SOLE residual `hcompat`
+(`leftAdjointOplaxMonoidal hadj .δ = μIsoβ.inv`) is exactly `hadj.IsMonoidal`
+(`Adjunction.IsMonoidal`, the Mathlib carrier). Discharge: build the project-side instance
+`hadj.IsMonoidal` (its two fields proved sectionwise via `(hadj.homEquiv _ _).injective` + `tensor_ext
+(fun _ _ ↦ rfl)`, the `ModuleCat/Monoidal/Adjunction.lean` idiom), then `hcompat` collapses via
+`laxMonoidalEquivOplaxMonoidal.right_inv` + `Functor.Monoidal.μIso`. Mathlib has the full scaffolding
+(no gap). Reference: Stacks `lemma-tensor-product-pullback`.
 The OnProduct-specialisation `pullback_tensorObj_iso` (`lem:pullback_compatible_with_tensorobj`) lands
 downstream once seed-1 closes.
 
@@ -101,9 +106,10 @@ Gaps to fill:
 - A-bridge `homOfLocalCompat` — glues compatible local `𝒪_X`-module morphisms to a
   global morphism via `homLocalSection`, `topSectionToHom`, and `homMk`.
 - D3′ — upgrade δ (`pullbackTensorMap`) to iso via `isIso_of_isIso_restrict`.
-- K1 (seed-1 residual) — presheaf-level `IsIso (δ (pullback φ'))` for an open immersion: build in-proof from
-  the closed `tensorObj_restrict_iso` H1∘H2 model + the leftAdjointUniq monoidal-mate compatibility
-  (`Adjunction.IsMonoidal`). NOT the functor-level `Functor.Monoidal.transport` (carrier diamond).
+- K1 residual `hcompat` — discharge via the project-side instance `hadj.IsMonoidal` (sectionwise
+  `restrictScalars` field check: `homEquiv.injective`+`tensor_ext`) + `laxMonoidalEquivOplaxMonoidal`.
+  Mathlib has full scaffolding (`Adjunction.IsMonoidal`, mate (op)lax defs, the `≃` uniqueness) — NO gap;
+  NOT the functor-level `Functor.Monoidal.transport` (carrier diamond). See `analogies/recon022.md`.
 
 New project material:
 - By-hand `AddCommGroup` on loc-triv iso-classes (Mathlib `Sheaf.monoidalCategory`

@@ -1,0 +1,160 @@
+[
+  {
+    "timestamp": "2026-06-03T23:20:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate/DualInverse.lean",
+      "theorem": "sliceDualTransport"
+    },
+    "session": {
+      "id": "session_263",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "map_smul' final crux d.hom (s • u) = c • d.hom u: RHS {app:=…}.app W projection is defeq-but-not-syntactic to d.hom u → rw/show/conv_rhs all report 'pattern not found'; scalar carries {toFun:=…} m MonoidWithZeroHom-coe form so rw [hring] fails",
+      "key_lemmas_used": [
+        "PresheafOfModules.hom_ext",
+        "Functor.map_add",
+        "Preadditive.add_comp",
+        "globalSMul_hom_apply",
+        "ModuleCat.restrictScalars.map_apply"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "map_add' via ma-ihom263 verified recipe",
+        "code_tried": "intro x y; apply PresheafOfModules.hom_ext; intro W; change (ModuleCat.restrictScalars _).map ((x+y).app _) ≫ _ = _; rw [show (x+y).app _ = x.app _ + y.app _ from rfl, Functor.map_add, Preadditive.add_comp]; rfl",
+        "line_number": "335",
+        "lean_error": "none (trailing rfl closes; PresheafOfModules.add_app does NOT fire — the + is internalHomObjModule instance, defeq-not-syntactic, but whole eqn is defeq so rfl lands)",
+        "result": "success",
+        "insight": "internalHomObjModule-add IS the ambient Preadditive add (single shared add) — bridge is rfl, as ma-ihom263 predicted; closes map_add' axiom-clean, sub-sorry 6→5"
+      },
+      {
+        "attempt": 2,
+        "strategy": "map_smul' expose both globalSMul actions then reduce to crux",
+        "code_tried": "intro m x; apply PresheafOfModules.hom_ext; intro W; change (ModuleCat.restrictScalars _).map ((m•x).app _) ≫ _ = _ ≫ (globalSMul Over.mkIdTerminal (restr (unop V) (𝟙_ …)) ((RingHom.id _) m)).app W; erw [PresheafOfModules.comp_app]; apply ModuleCat.hom_ext; refine LinearMap.ext fun z => ?_; simp only [ModuleCat.hom_comp, LinearMap.comp_apply, globalSMul_hom_apply, ModuleCat.restrictScalars.map_apply]",
+        "line_number": "356-364",
+        "lean_error": "none (compiles to the crux goal; sorry retained)",
+        "result": "partial",
+        "insight": "Reduced map_smul' from bare typed sorry to exposed sectionwise crux d.hom (s•u) = c•d.hom u with s = termRingMap(Over fV') W'' ((β.app V) m), c = termRingMap(Over V) W m. Finishing route fully identified: (1) hring: s = (β.app W').hom c via termRingMap_naturality + β.naturality on thin poset; (2) restrictScalars.smul_def' (← dir, verified to fire) + map_smul. Genuine blocker is tactic-mechanics (projection defeq), not a missing ingredient."
+      }
+    ],
+    "next_steps": "fine-grained on map_smul' ONLY: state hring via termRingMap_naturality+β.naturality (Subsingleton.elim slice→base), close via projection-surviving change/exact hcrux (defeq-tolerant) + ← restrictScalars.smul_def' + map_smul. Then build invFun + 2 round-trips + naturality, then dual_restrict_iso isoMk naturality."
+  },
+  {
+    "timestamp": "2026-06-03T23:20:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "sheafificationCompPullback_comp"
+    },
+    "session": {
+      "id": "session_263",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "residual relocated to new helper sheafificationCompPullback_comp_tail (sorry at L2519): the composite-adjunction-unit composition coherence B_{h≫f}.unit — non-rfl sheafification analog of unitToPushforwardObjUnit_comp; ~50-80 LOC mate calculus across 2 sheafification layers (X↔Y for f, Y↔Z for h)",
+      "key_lemmas_used": [
+        "Functor.map_comp",
+        "Adjunction.comp_unit_app",
+        "sheaf_unit_comp_pushforward_pullbackComp_inv",
+        "homEquiv_leftAdjointUniq_hom_app",
+        "pushforwardComp.hom.naturality"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "close main lemma by merging the two adjacent (forget⋙restrictScalars).map factors and consuming an extracted tail lemma (pc263 extract-then-consume)",
+        "code_tried": "erw [← Functor.map_comp, ← Functor.map_comp]; exact sheafificationCompPullback_comp_tail h f P",
+        "line_number": "2532",
+        "lean_error": "none (sheafificationCompPullback_comp now sorry-free; verified no 'declaration uses sorry')",
+        "result": "success",
+        "insight": "Main Sq1 lemma CLOSED; residual relocated (NOT eliminated) into new helper. erw required for the two ← Functor.map_comp merges (defeq-not-syntactic functor instances; plain rw 'pattern not found')."
+      },
+      {
+        "attempt": 2,
+        "strategy": "close the tail by transposing the whole equation (← homEquiv_leftAdjointUniq_hom_app to re-express B.unit as A.homEquiv(sheafCompPb (h≫f).hom.app P), then compHomEquivFactor + homEquiv_unit + congr to strip sheafification wrapper, then pushforwardComp.hom naturality slide)",
+        "code_tried": "rw [homEquiv_leftAdjointUniq_hom_app]; ... compHomEquivFactor; Adjunction.homEquiv_unit; congr 1; congr 1; ...",
+        "line_number": "2519",
+        "lean_error": "every step compiled, but proved by hand the resulting goal is homEquiv.injective-EQUIVALENT to the original (re-folding sheaf_unit_comp_pushforward_pullbackComp_inv backwards + Functor.map_comp collapses model-shape right back to the original statement)",
+        "result": "failed",
+        "insight": "CRITICAL dead-end finding: re-transposing the LHS is anti-progress (re-opaquifies the comparison). REVERTED. Correct direction: keep LHS as concrete B.unit and ASSEMBLE the RHS via homEquiv_leftAdjointUniq characterisation of the f/h sub-comparisons. rw [← sheafificationCompPullback_eq_leftAdjointUniq] also FAILS (motive/homEquiv wrapper)."
+      }
+    ],
+    "next_steps": "iter-264 fine-grain the mate calculus of sheafificationCompPullback_comp_tail: distribute RHS merged arg via comp_unit_app on U; recover the two sheafCompPb f/h.app.hom factors as B_f/B_h units via homEquiv_leftAdjointUniq_hom_app; reassemble into B_{h≫f}.unit by unit naturality of pushforwardComp/pullbackComp. Consider cross-domain analogist on the bicategorical-cocycle shape (3rd Sq1 PARTIAL ⇒ STUCK trigger live)."
+  },
+  {
+    "timestamp": "2026-06-03T23:20:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/CechHigherDirectImage.lean",
+      "theorem": "pushPullObj / pushPullMap"
+    },
+    "session": {
+      "id": "session_263",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "functor laws pushPullMap_id / pushPullMap_comp deferred (NOT added, no sorry): need the adjunction-mate calculus from Mathlib pseudofunctor coherences + eqToHom-through-Over.w bookkeeping, ~80-150 LOC",
+      "key_lemmas_used": [
+        "Scheme.Modules.pushforward",
+        "Scheme.Modules.pullback",
+        "pushforwardComp",
+        "pullbackComp",
+        "pullbackPushforwardAdjunction",
+        "Over.w"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "pushPullObj direct def + pushPullMap fully-applied forward term with explicit eqToHom congrArg proofs",
+        "code_tried": "pushPullObj := (pushforward Y.hom).obj ((pullback Y.hom).obj F); pushPullMap := (pushforward Y₁.hom).map (unit.app M₁) ≫ (pushforwardComp g.left Y₁.hom).hom.app _ ≫ eqToHom … ≫ (pushforward Y₂.hom).map ((pullbackComp g.left Y₁.hom).hom.app F) ≫ eqToHom …",
+        "line_number": "122,130",
+        "lean_error": "refine ?_ ≫ ?_ with holes FAILS ('don't know how to synthesize implicit argument Y') — must write as fully-applied forward term with explicit congrArg proofs per eqToHom",
+        "result": "success",
+        "insight": "Both defs axiom-clean ({propext,Classical.choice,Quot.sound}). eqToHom needs explicit congrArg proof so object equality is determined, not inferred from neighbours. Over.w g : g.left ≫ Y₁.hom = Y₂.hom."
+      },
+      {
+        "attempt": 2,
+        "strategy": "pushPullMap_id/comp via sectionwise ext, then abstract coherence simp",
+        "code_tried": "unfold; simp only [Over.id_left]; ext U : 1   AND   simp [pseudofunctor_right_unitality, conjugateEquiv_pullbackId_hom, Adjunction.unit_naturality, Functor.map_comp]",
+        "line_number": "(after pushPullMap)",
+        "lean_error": "sectionwise: pullback adjunction unit not sectionwise trivial (pullback = sheafify∘extendScalars) so goal does not collapse. coherence-simp: 'simp made no progress'",
+        "result": "failed",
+        "insight": "DE-COUPLING FINDING: the laws are provable from Mathlib's pseudofunctor coherences ALONE (conjugateEquiv_pullbackComp_inv, conjugateEquiv_pullbackId_hom, pseudofunctor_left/right_unitality, pseudofunctor_associativity) — they do NOT require the project-local Sq1 sheafificationCompPullback_comp, contrary to the iter-262 'engine coupled to D3′' belief. Functor laws NOT added (no sorry); file stays at 4 pre-existing sorries."
+      }
+    ],
+    "next_steps": "focused fine-grained pass on pushPullMap_id/comp using the named Mathlib pseudofunctor lemmas (mate rewrite via conjugateEquiv_pullbackComp_inv, then pseudofunctor_right_unitality / pseudofunctor_associativity, discharging eqToHom-through-Over.w transports under set_option backward.isDefEq.respectTransparency false). Then assemble G functor and tackle CechNerve/CechComplex/CechAcyclic.affine. Engine now de-coupled — can run independently of D3′."
+  },
+  {
+    "timestamp": "2026-06-03T23:20:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/LineBundleCoherence.lean",
+      "theorem": "IsLocallyTrivial.isFinitePresentation"
+    },
+    "session": {
+      "id": "session_263",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "none",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "HELD this iter — re-verify axiom-clean (no edits)",
+        "code_tried": "lean_diagnostic_messages (clean) + lean_verify on isFinitePresentation/isFiniteType",
+        "line_number": "n/a",
+        "lean_error": "none",
+        "result": "success",
+        "insight": "File fully sorry-free, axiom-clean {propext, Classical.choice, Quot.sound}. DONE, unchanged. The 4 grep 'sorry' occurrences are comment mentions only (diagnostics clean, no 'declaration uses sorry')."
+      }
+    ],
+    "next_steps": "None — DONE. Engine A.2.c loc-triv coherence deliverable complete."
+  }
+]

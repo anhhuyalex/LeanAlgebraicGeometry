@@ -1,0 +1,502 @@
+[
+  {
+    "timestamp": "2026-05-12T17:55:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "f_R.map_smul' (inside basicOpenCover_isCechAcyclicCover_toModuleKSheaf)"
+    },
+    "session": {
+      "id": "session_77",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "AddEquiv.module",
+        "Equiv.smul_def",
+        "LinearEquiv.apply_symm_apply",
+        "LinearEquiv.symm_apply_apply",
+        "h_diff_pi_smul_f",
+        "CochainComplex.next"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Rebuild h_mod_X_i via letI + exact e_i.toAddEquiv.module R (not have + convert) so the instance is both literal and registered with typeclass synthesis",
+        "code_tried": "letI h_mod_X₁ : Module R scK₀.X₁ := by dsimp only [scK₀, K₀, cechCochain, cechComplexFunctor, toModuleKSheaf, toModuleKPresheaf_obj]; letI := h_mod_pi₁; exact e₁.toAddEquiv.module R (analogous for X₂; X₃ pre-rewrites via CochainComplex.next)",
+        "line_number": "1067-1080",
+        "lean_error": "(clean — diagnostics show 0 errors after edit at log line 138)",
+        "goal_before": "Module R scK₀.X_i with scK₀.X_i = K₀.X i (i ∈ {0,1,2}) or = K₀.X ((up ℕ).next n) for i=3",
+        "goal_after": "instance synthesized literally as e_i.toAddEquiv.module R",
+        "result": "success",
+        "insight": "Iter-076's diagnosis (\"residual eta-congruence from convert\") was partially correct but missed the actual root cause: `have h` does NOT register as a typeclass instance for synthesis, so the canonical Module instance the elaborator picked was the parent class default, not the AddEquiv-transported one. `letI` registers, `exact` avoids congruence peeling — both required."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Close f_R.map_smul' via `change` to literal smul form, then `e₂.injective` + rewrite via `LinearEquiv.apply_symm_apply` + `h_diff_pi_smul_f` + `LinearEquiv.symm_apply_apply`",
+        "code_tried": "intro r x; change (ConcreteCategory.hom scK₀.f) (e₁.symm (r • e₁ x)) = e₂.symm (r • e₂ ((ConcreteCategory.hom scK₀.f) x)); apply e₂.injective; rw [LinearEquiv.apply_symm_apply, h_diff_pi_smul_f r (e₁ x), LinearEquiv.symm_apply_apply]",
+        "line_number": "1098-1103",
+        "lean_error": "(clean — closes the goal; verified via lean_diagnostic_messages log line 140 with 0 errors)",
+        "goal_before": "(scK₀.f)(r • x) = (RingHom.id R) r • (scK₀.f x)",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "With the literal `h_mod_X_i` instances, `r • x = e_i.symm (r • e_i x)` is `rfl` (Equiv.smul_def). The `change` lifts the goal to a form where applying e₂.injective + the pre-existing `h_diff_pi_smul_f` hypothesis closes everything."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Try to lift the same recipe to g_R.map_smul'",
+        "code_tried": "change (ConcreteCategory.hom scK₀.g) (e₂.symm (r • e₂ x)) = r • (ConcreteCategory.hom scK₀.g) (e₂.symm (e₂ x))",
+        "line_number": "1119",
+        "lean_error": "'change' tactic failed, pattern ... is not definitionally equal to target; followed by isDefEq + whnf heartbeat timeouts (cascade)",
+        "goal_before": "(scK₀.g)(r • x) = (RingHom.id R) r • (scK₀.g x), with scK₀.X₃ = K₀.X ((up ℕ).next n)",
+        "goal_after": "(unchanged)",
+        "result": "failed",
+        "insight": "h_mod_X₃ is `Eq.mpr h_eq.symm (e₃.toAddEquiv.module R)` because `(up ℕ).next n` is opaque (Classical.choose over Rel). The `Eq.mpr`-transport breaks the literal `change`-based alignment. Need a new `h_diff_pi_smul_g` with explicit `Eq.mpr h_eq.symm`-casts threaded through the codomain. Rolled back to sorry."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Replace `show K₀.X ((ComplexShape.up ℕ).next n) = K₀.X (n + 1)` (changes goal — triggers linter.style.show warning) with `change`",
+        "code_tried": "change K₀.X ((ComplexShape.up ℕ).next n) = K₀.X (n + 1)",
+        "line_number": "~1080 (h_eq builder)",
+        "lean_error": "(clean — linter warning gone)",
+        "goal_before": "linter.style.show warning at the `show` site",
+        "goal_after": "no warning",
+        "result": "success",
+        "insight": "`change` is the correct tactic for explicit goal rewriting; `show` is for goal display only."
+      }
+    ],
+    "next_steps": "iter-078 g_R.map_smul' (L1119): state a new auxiliary `h_diff_pi_smul_g` with explicit `Eq.mpr h_eq.symm`-casts on the codomain so the statement type-checks; then mirror the iter-077 f_R.map_smul' recipe with `change`-through-`h_eq`. Net: trades L1119 sorry for one new `h_diff_pi_smul_g` sorry (no reduction unless g-side is then closed in the same iteration)."
+  },
+  {
+    "timestamp": "2026-05-12T17:55:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "h_diff_pi_smul_f (L1079)"
+    },
+    "session": {
+      "id": "session_77",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "5-layer functor-stack unfold does not expose alternating-sum at the head; Finset.sum_congr cannot bridge to per-summand goals; needs decomposition BEFORE the simp set fires",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "No mechanical execution this iteration; iter-076 retro and the in-place comment recipe (S1-S8, 5-layer functor stack unfold) re-confirmed as not yet executable",
+        "code_tried": "(no edit — remains as sorry with the iter-073/075/076 reduction recipe preserved as comment block at L1009-1067)",
+        "line_number": "1079",
+        "lean_error": "(N/A)",
+        "goal_before": "smul-naturality on the cochain differential",
+        "goal_after": "(unchanged)",
+        "result": "partial",
+        "insight": "Documented in-place at L1009-1067. Needs the cochain-factor identification chain re-established before the inner ∑-manipulation can proceed."
+      }
+    ],
+    "next_steps": "Re-establish the cochain-factor identification chain first (likely requires explicit `simp only` with a curated set that exposes ∑ at the head); then apply S1-S8 per-summand R-linearity via algebraMap_naturality."
+  },
+  {
+    "timestamp": "2026-05-12T17:55:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "h_loc_exact (L1148)"
+    },
+    "session": {
+      "id": "session_77",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Naïve route via `LocalizedModule.map_exact (powers f.1) f_R g_R _` is circular with the outer goal `h_K₀_exact` (it requires Function.Exact f_R g_R, which is exactly what we want); intended product-localization commutation route requires `IsLocalizedModule.Away` on the product `∏ᶜ Z_i`, which is not in Mathlib for general curves",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Search Mathlib for `IsLocalizedModule.map_exact` / `LocalizedModule.map_exact` to short-circuit the localization-of-product commutation",
+        "code_tried": "lemma_search: IsLocalizedModule map_exact Function.Exact localized module; LocalizedModule.map_exact; IsLocalizedModule.map_exact",
+        "line_number": "1148",
+        "lean_error": "(no direct lemma — searches returned no usable Mathlib instance)",
+        "goal_before": "Function.Exact (LocalizedModule.map (powers f.1) f_R) (LocalizedModule.map (powers f.1) g_R)",
+        "goal_after": "(unchanged)",
+        "result": "failed",
+        "insight": "The Mathlib `LocalizedModule.map_exact` exists but takes `Function.Exact ⇑f_R ⇑g_R` as hypothesis — which is the OUTER goal h_K₀_exact. Circular."
+      }
+    ],
+    "next_steps": "Build product-localization commutation explicitly: `IsLocalizedModule.Away f.1` instance on `LocalizedModule (powers f) (∏ᶜ Z_i) ≅ ∏ᶜ LocalizedModule (powers f) Z_i` for finite indexing `↑s₀`. Non-trivial Mathlib infrastructure work."
+  },
+  {
+    "timestamp": "2026-05-12T17:55:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "extra-degeneracy substeps L495 / L819 / L847"
+    },
+    "session": {
+      "id": "session_77",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Confirmed multi-iter dead ends — no usable hypothesis or Mathlib infrastructure available",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "No work this iteration (per plan-agent triage: deferred targets)",
+        "code_tried": "(no edit)",
+        "line_number": "495, 819, 847",
+        "lean_error": "(N/A)",
+        "goal_before": "(N/A)",
+        "goal_after": "(unchanged)",
+        "result": "partial",
+        "insight": "Stay sorry'd unless user supplies new hypothesis."
+      }
+    ],
+    "next_steps": "Do not retry without new mathematical input."
+  },
+  {
+    "timestamp": "2026-05-12T17:55:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "cotangentExactSeqBeta"
+    },
+    "session": {
+      "id": "session_77",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "Adjunction.homEquiv_naturality_right",
+        "Equiv.apply_symm_apply",
+        "LocallyRingedSpace.comp_c (NOT used — Scheme composition is rfl at the .c level)",
+        "PresheafOfModules.DifferentialsConstruction.isUniversal'.postcomp_injective"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Restore the iter-072 strategy: build bridge map η := adj_fg.homEquiv.symm (g.c ≫ pushforward(g).map (adj_f.unit.app Y.presheaf)) and prove hη : η ≫ φ2' = φ1' via the h1-h7 chain",
+        "code_tried": "set η := adj_fg.homEquiv.symm (g.c ≫ pushforward(g).map (adj_f.unit.app Y.presheaf)); have hη : η ≫ φ2' = φ1' := by ... [h1-h7 chain] ...",
+        "line_number": "271-330",
+        "lean_error": "(initial: rfl failed on `(LocallyRingedSpace.comp_c f g).symm` because f, g are Scheme morphisms not LRS morphisms)",
+        "goal_before": "η ≫ φ2' = φ1' (composed-adjunction coherence)",
+        "goal_after": "(unchanged after this attempt)",
+        "result": "partial",
+        "insight": "Scheme composition projects through `toLRSHom`; the `LocallyRingedSpace.comp_c` lemma doesn't apply directly to Scheme morphisms."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Replace `(LocallyRingedSpace.comp_c f g).symm` with `rfl` since Scheme composition is defined via `f.toLRSHom ≫ g.toLRSHom` and `(f≫g).c` projects through `toLRSHom`",
+        "code_tried": "rfl (in place of the LocallyRingedSpace.comp_c rewrite)",
+        "line_number": "~315 (h6 step)",
+        "lean_error": "(clean)",
+        "goal_before": "(f ≫ g).c = g.c ≫ pushforward(g).map f.c",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "At the Scheme level, `(f≫g).c = g.c ≫ pushforward(g).map f.c` is rfl — no Mathlib lemma needed."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Apply `congr 1` to close the final step (removing the trailing `exact h4`)",
+        "code_tried": "congr 1 (no `exact h4`)",
+        "line_number": "~330",
+        "lean_error": "(clean)",
+        "goal_before": "hη upper-level equality",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "`congr 1` alone suffices once the upstream chain reduces both sides to the same hom."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Wrap the whole def in `set_option maxHeartbeats 16000000 in` to absorb the elaboration cost",
+        "code_tried": "set_option maxHeartbeats 16000000 in noncomputable def cotangentExactSeqBeta ...",
+        "line_number": "267 (above the def)",
+        "lean_error": "(clean)",
+        "goal_before": "elaboration overflow on default 200000 hb budget",
+        "goal_after": "compiles within budget",
+        "result": "success",
+        "insight": "Heartbeat boost is required for both alpha and beta due to the d_target struct's four non-trivial fields."
+      }
+    ],
+    "next_steps": "cotangentExactSeqBeta is FULLY CLOSED (no internal sorry). Next: close the d_app field of cotangentExactSeqAlpha (the one remaining internal sorry at L260)."
+  },
+  {
+    "timestamp": "2026-05-12T17:55:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "cotangentExactSeqAlpha"
+    },
+    "session": {
+      "id": "session_77",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "d_app field — adjunction-coherence identity `φ_g' ≫ f.c = adj_f.unit ≫ pushforward.map φ_fg'` is no longer rfl in current Mathlib; needs explicit pullback-composition iso `pullback f ∘ pullback g ≅ pullback (f≫g)`",
+      "key_lemmas_used": [
+        "map_add",
+        "map_mul",
+        "PresheafOfModules.Derivation'.d_map",
+        "Adjunction.homEquiv.symm",
+        "PresheafOfModules.DifferentialsConstruction.isUniversal'.desc"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "d (additivity) field — use `show ... from map_add _ _ _` workaround instead of `rw [(f.c.app U).hom.map_add]`",
+        "code_tried": "rw [show (f.c.app U).hom (a + b) = (f.c.app U).hom a + (f.c.app U).hom b from map_add _ _ _]; exact map_add D_X.d _ _",
+        "line_number": "~245 (d field)",
+        "lean_error": "iter-076 recipe `rw [(f.c.app U).hom.map_add, D_X.d_add]` failed at pattern matching due to CommRingCat.Hom.hom syntactic-vs-pretty-print mismatch",
+        "goal_before": "D_X.d ((f.c.app U).hom (a + b)) = D_X.d (... a) + D_X.d (... b)",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "The `show ... from map_add _ _ _` workaround bypasses the CommRingCat.Hom.hom syntactic-vs-pretty-print mismatch."
+      },
+      {
+        "attempt": 2,
+        "strategy": "d_mul field — analogous `show ... from map_mul _ _ _` workaround + `exact D_X.d_mul _ _`",
+        "code_tried": "rw [show (f.c.app U).hom (a * b) = (f.c.app U).hom a * (f.c.app U).hom b from map_mul _ _ _]; exact D_X.d_mul _ _",
+        "line_number": "~248",
+        "lean_error": "(clean)",
+        "goal_before": "Leibniz rule on pushforward",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Smul on pushforward module is definitionally `(f.c.app U).hom a • _`."
+      },
+      {
+        "attempt": 3,
+        "strategy": "d_map field — use `erw [hnat']` for elaboration-lenient rewrite, then `exact D_X.d_map _ _` (NOT `.symm` — iter-072 had wrong direction)",
+        "code_tried": "erw [hnat']; exact D_X.d_map _ _",
+        "line_number": "~251",
+        "lean_error": "(clean — iter-072's `.symm` was incorrect against the current pushforward goal form)",
+        "goal_before": "d-naturality on pushforward",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Direction matters: against current Mathlib's pushforward shape, `.d_map` (not `.d_map.symm`) closes."
+      },
+      {
+        "attempt": 4,
+        "strategy": "d_app field — attempt to use the adjunction-coherence identity directly",
+        "code_tried": "(various — see attempts at log lines 297-310)",
+        "line_number": "260",
+        "lean_error": "Adjunction-coherence `φ_g' ≫ f.c = adj_f.unit ≫ (pushforward).map φ_fg'` is no longer rfl in current Mathlib; needs explicit pullback-composition iso `pullback f ∘ pullback g ≅ pullback (f≫g)`",
+        "goal_before": "D_X.d ((f.c.app U).hom (φ_g'.app U a)) = 0",
+        "goal_after": "(unchanged)",
+        "result": "failed",
+        "insight": "Type-checking the composition requires the pullback composition functor equality `pullback f . obj (pullback g . obj S.presheaf) = pullback (f≫g) . obj S.presheaf`, which is true up to iso (uniqueness of left adjoints) but not definitional since `pullback := (Opens.map _).op.lan` is constructed via the left Kan extension's universal property. Rolled back to single internal sorry at L260."
+      }
+    ],
+    "next_steps": "iter-078: build the pullback-composition iso `pullback f ∘ pullback g ≅ pullback (f≫g)` as a natural iso of functors on TopCat.Presheaf. Routes: (a) Mathlib search for `lan_comp`/`lanCompIso`/`Functor.compLeftAdjoint`; (b) build via `Adjunction.leftAdjointUniq pullbackPushforwardAdjunction _`; (c) use η-bridge from cotangentExactSeqBeta to build a dual `ζ` morphism such that `(f.c.app U).hom (φ_g'.app U a) = (φ_fg'.app (f⁻¹U)) ((ζ.app U) a)`."
+  },
+  {
+    "timestamp": "2026-05-12T17:55:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "cotangentExactSeq_structure"
+    },
+    "session": {
+      "id": "session_77",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Disabled iter-076 chain depends on `unfold cotangentExactSeqAlpha` to expose inline d_target, AND on alpha fully closing (d_app sorry above remains)",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Deferred — keep as single sorry; remove the iter-076 disabled chain block to reduce file weight",
+        "code_tried": "(no edit — kept as sorry; the strategy chain is preserved in this task report)",
+        "line_number": "387",
+        "lean_error": "(N/A)",
+        "goal_before": "ShortComplex.Exact (cotangentExactSeq f g)",
+        "goal_after": "(unchanged)",
+        "result": "partial",
+        "insight": "Cannot proceed until cotangentExactSeqAlpha.d_app is closed."
+      }
+    ],
+    "next_steps": "After alpha d_app is closed (iter-078+), re-enable the h_zero proof via the chain: (1) `apply ((Scheme.Modules.pullbackPushforwardAdjunction f).homEquiv _ _).injective`; (2) `rw [Adjunction.homAddEquiv_zero, Adjunction.homEquiv_naturality_right]`; (3) `unfold cotangentExactSeqAlpha; simp only [Equiv.apply_symm_apply]`; (4) `apply SheafOfModules.hom_ext; simp only [...]`; (5-7) re-bind φ_g'/φ_fg'/φ_2'/adj_f, apply isUniversal'.postcomp_injective, ext + hd_app, chain hα_fac/hβ_fac."
+  },
+  {
+    "timestamp": "2026-05-12T17:55:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "smooth_iff_locally_free_omega / cotangent_at_section / serre_duality_genus / relativeDifferentialsPresheaf_isSheaf"
+    },
+    "session": {
+      "id": "session_77",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Long-standing deferred targets (no active prover work this iteration)",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Not attempted this iteration",
+        "code_tried": "(no edit)",
+        "line_number": "122, 671, 688, 830",
+        "lean_error": "(N/A)",
+        "goal_before": "(N/A)",
+        "goal_after": "(unchanged)",
+        "result": "partial",
+        "insight": "Defer pending plan-agent re-prioritization."
+      }
+    ],
+    "next_steps": "Re-evaluate once Phase C scaffolding is unblocked."
+  },
+  {
+    "timestamp": "2026-05-12T17:55:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Jacobian.lean",
+      "theorem": "compilation repair — 6 errors → 0"
+    },
+    "session": {
+      "id": "session_77",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "ObjectProperty.prop_of_iso",
+        "IsClosedUnderIsomorphisms",
+        "IrreducibleSpace (Spec R)",
+        "IsPullback.isIso_snd_of_isIso",
+        "Category.assoc (← direction)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Add `noncomputable` to `instGrpObj` (the only data-carrying instance — the three Prop-valued instances don't need it)",
+        "code_tried": "noncomputable instance instGrpObj : GrpObj (Jacobian C) := (jacobianWitness C).grpObj",
+        "line_number": "207-209",
+        "lean_error": "(initial: noncomputable modifier missing)",
+        "goal_before": "GrpObj is a data-carrying class so its instance needs noncomputable",
+        "goal_after": "(clean)",
+        "result": "success",
+        "insight": "Body-level change only — protected signature unchanged. Allowed per archon-protected.yaml."
+      },
+      {
+        "attempt": 2,
+        "strategy": "L121 — replace `constructor; intro x K _ y Z fst snd h` (8 binders) with structure-field syntax `where geometrically_irreducibleSpace := by intro K _ y Z fst snd h` (7 binders)",
+        "code_tried": "GeometricallyIrreducible ... where geometrically_irreducibleSpace := by intro K _ y Z fst snd h",
+        "line_number": "121",
+        "lean_error": "(initial: 8 intros vs 7 binders in field type)",
+        "goal_before": "intro pattern mismatch",
+        "goal_after": "intro shapes match",
+        "result": "partial",
+        "insight": "Downstream `rw [ObjectProperty.prop_iff_of_iso (IrreducibleSpace ·) (asIso snd)]` then failed with `failed to synthesize TopologicalSpace x✝` because (IrreducibleSpace ·) couldn't be typed without explicit P annotation."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Replace `rw + infer_instance` with direct `ObjectProperty.prop_of_iso` application carrying explicit type annotation",
+        "code_tried": "exact ObjectProperty.prop_of_iso (P := (IrreducibleSpace · : ObjectProperty Scheme)) (asIso snd).symm inferInstance",
+        "line_number": "121-122",
+        "lean_error": "(clean)",
+        "goal_before": "TopologicalSpace synthesis failure on (IrreducibleSpace ·)",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": ".symm needed because snd : Z ⟶ Spec K but we transfer IrreducibleSpace (Spec K) → Z. ObjectProperty.prop_of_iso with explicit P-annotation bypasses the synthesis issue."
+      },
+      {
+        "attempt": 4,
+        "strategy": "L57/L59/L67/L71 — Root cause diagnosis: `ι` is a Mathlib scoped notation for `GrpObj.inv` (declared in Mathlib.CategoryTheory.Monoidal.Grp_), so the binder `(ι : C ⟶ J)` in IsAlbanese's body is reinterpreted as the notation",
+        "code_tried": "Renamed existential binder `ι` to `α` in IsAlbanese; changed `(P : 𝟙_ _ ⟶ C)` to `(P : 𝟙_ (Over (Spec (.of k))) ⟶ C)`; renamed second-conjunct `(hf : ...)` to `(_ : ...)`; added explicit `{k : Type u} [Field k]` binders to namespace IsAlbanese declarations",
+        "line_number": "57-91",
+        "lean_error": "`unexpected token 'ι'; expected '_' or identifier` (parser cascade) + `Field ?m.38` stuck typeclass at L67/L71",
+        "goal_before": "Parser failure + cascading typeclass-synthesis failures",
+        "goal_after": "(clean)",
+        "result": "success",
+        "insight": "**KEY INSIGHT**: Plan agent's hint blamed variable propagation; the actual cause was a Mathlib namespace-collision (opening MonObj brings scoped notation ι). Dead-end warning: any future code in this file (or any other file opening MonObj) must avoid naming binders/variables `ι`. Use `α`, `φ`, `j`, or `i`."
+      },
+      {
+        "attempt": 5,
+        "strategy": "L101/L109/L113 — Latent errors surfaced after L57-L71 cascade resolved. `hg₁_unique (g ≫ h) ?_ : g ≫ h = g₁` (NOT g₁ = g ≫ h); `.symm`s were reversed",
+        "code_tried": "Removed three `.symm`s on L101/L109/L113; added `change h₁.ofCurve = h₁.ofCurve ≫ (g ≫ h)` to beta-reduce; used `rw [← Category.assoc, ← hg_eq, ← hh_eq]`",
+        "line_number": "101, 109, 113",
+        "lean_error": "Eq.symm direction wrong; `rw [Category.assoc, hg_eq, hh_eq]` rewriting wrong direction (unbeta-reduced goal had h₁.ofCurve ≫ (g ≫ h))",
+        "goal_before": "uniqueness chain with reversed direction",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Variable shadowing also caught: inner `have ⟨h₂, hh₂_eq, hh₂_unique⟩` shadowed outer `h₂ : IsAlbanese C P J₂`. Renamed inner morphism to k₂ (with hk₂_eq, hk₂_unique, hhg_eq_k₂, k₂_eq_id). Final `use g; refine` replaced by direct `exact ⟨g, hg_eq, fun g' hg' => hg_unique g' hg'⟩` to avoid use's auto-closing behaviour."
+      }
+    ],
+    "next_steps": "Compile-clean. nonempty_jacobianWitness at L179 remains the single Phase-C-C3 deferred sorry (existence of Albanese + genus-0 rigidity)."
+  },
+  {
+    "timestamp": "2026-05-12T17:55:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Modules/Monoidal.lean",
+      "theorem": "tensorObj / instMonoidalCategoryStruct / instMonoidalCategory"
+    },
+    "session": {
+      "id": "session_77",
+      "model": "(refactor-c0-modules-monoidal-scaffold)"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "PresheafOfModules.monoidalCategory (Mathlib)",
+        "Sheafification adjunction"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Refactor agent created scaffold file with 3 sorry-bodied declarations to unblock Phase C step C1",
+        "code_tried": "noncomputable def tensorObj (M N : X.Modules) : X.Modules := sorry; noncomputable instance instMonoidalCategoryStruct : MonoidalCategoryStruct (X.Modules) := sorry; noncomputable instance instMonoidalCategory : MonoidalCategory (X.Modules) := sorry",
+        "line_number": "55, 62, 67",
+        "lean_error": "(only 3 expected `declaration uses sorry` warnings; no errors)",
+        "goal_before": "Phase C C0 missing",
+        "goal_after": "Scaffold in place; ready for prover fills",
+        "result": "success",
+        "insight": "Mathlib provides the presheaf-side structure (PresheafOfModules.monoidalCategory) but not the sheaf-side analogue. Sheafify the presheaf-tensor product. Pentagon/triangle/hexagon axioms transfer via the sheafification adjunction."
+      }
+    ],
+    "next_steps": "iter-078: assign prover to fill tensorObj first (sheafify presheaf tensor), then build the monoidal struct fields (associator/unitors/braiding) by sheafifying their presheaf-side counterparts, then transfer the axioms via the sheafification adjunction."
+  },
+  {
+    "timestamp": "2026-05-12T17:55:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/Functor.lean",
+      "theorem": "PicardFunctor.representable"
+    },
+    "session": {
+      "id": "session_77",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Gated on Phase C C0-C3 scaffolding (Modules.Monoidal + LineBundle refinement + invertible-object Picard)",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Not attempted this iteration",
+        "code_tried": "(no edit)",
+        "line_number": "190",
+        "lean_error": "(N/A)",
+        "goal_before": "(N/A)",
+        "goal_after": "(unchanged)",
+        "result": "partial",
+        "insight": "Phase C ordering: C0 (Modules.Monoidal) → C1 (LineBundle as invertible object) → C2 (PicardFunctor) → C3 (representable)."
+      }
+    ],
+    "next_steps": "Defer until Modules.Monoidal is filled and LineBundle is refined."
+  }
+]

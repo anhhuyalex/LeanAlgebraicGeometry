@@ -1,0 +1,262 @@
+[
+  {
+    "timestamp": "2026-05-23T15:49:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OCofP.lean",
+      "theorem": "FIX-BUILD threading [IsLocallyNoetherian C.left] + per-Q [Ring.KrullDimLE 1 _]"
+    },
+    "session": {
+      "id": "session_177",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Lane WD's NEW signature change to Scheme.WeilDivisor.principal (adding [Scheme.IsRegularInCodimensionOne X]) broke OCofP.lean L335 in the merged tree — `lake build AlgebraicJacobian` still fails after Lane 1 closed the iter-176 race.",
+      "key_lemmas_used": [
+        "Scheme.RationalMap.order"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Thread [IsLocallyNoetherian C.left] into namespace `variable` block; add `[∀ Q : C.left.PrimeDivisor, Ring.KrullDimLE 1 (C.left.presheaf.stalk Q.point)]` per-lemma binder on `globalSections_iff` (L191) and `exists_nonconstant_genusZero` (L325).",
+        "code_tried": "variable [IsLocallyNoetherian C.left]\\n... [∀ Q : C.left.PrimeDivisor, Ring.KrullDimLE 1 (C.left.presheaf.stalk Q.point)]",
+        "line_number": "152-156, 192-193, 326-327",
+        "lean_error": "After Lane 1 closure: zero errors on OCofP. After Lane WD's later signature change to `principal`: `error: failed to synthesize instance of type class C.left.IsRegularInCodimensionOne` at L335 (call site `Scheme.WeilDivisor.principal (X := C.left) f hf`).",
+        "goal_before": "4 errors at L194/195/327/328 entering iter-177",
+        "goal_after": "4 errors fixed; 1 NEW error at L335 from Lane WD signature change",
+        "result": "partial",
+        "insight": "iter-177 reproduces the iter-176 parallel-lane signature-change race in reverse: Lane 1 closed the iter-176 race on `RationalMap.order`, then Lane WD introduced a NEW required class `Scheme.IsRegularInCodimensionOne` on `principal`, which OCofP.lean L335 consumes. The integration gap is structural to the multi-lane loop."
+      }
+    ],
+    "next_steps": "Iter-178 must thread [Scheme.IsRegularInCodimensionOne C.left] into the OCofP variable block — 1 LOC — and verify the full `lake build AlgebraicJacobian` clears."
+  },
+  {
+    "timestamp": "2026-05-23T15:49:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects/GmScaling.lean",
+      "theorem": "GM-AXIOM HARD STOP corrective"
+    },
+    "session": {
+      "id": "session_177",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "n/a — HARD STOP escalation executed per iter-176 armed trigger. Two named temporary `axiom` declarations replace 3 chart-bridge sorries + the collapse-at-zero sorry.",
+      "key_lemmas_used": [
+        "axiom gmScalingP1_chart_data_temp",
+        "axiom gmScalingP1_collapse_at_zero_temp"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Per directive Option (i) consolidated form: introduce a single `axiom gmScalingP1_chart_data_temp` carrying both `chart_PLB_eq` content AND `chart_agreement` content as a conjunction, then a second `axiom gmScalingP1_collapse_at_zero_temp` for the σ_×(0,λ)=0 fixed-point equation. Discharge `gmScalingP1_chart_PLB_eq` via `(gmScalingP1_chart_data_temp kbar).1 i`; `gmScalingP1_chart_agreement` via `(gmScalingP1_chart_data_temp kbar).2`; `gmScalingP1_collapse_at_zero` via `gmScalingP1_collapse_at_zero_temp kbar`.",
+        "code_tried": "axiom gmScalingP1_chart_data_temp (kbar : Type u) [Field kbar] : ... ∧ ...\\naxiom gmScalingP1_collapse_at_zero_temp (kbar : Type u) [Field kbar] : ...",
+        "line_number": "L212 (chart_data_temp), L308 (collapse_at_zero_temp)",
+        "lean_error": "n/a — axiom-laundered.",
+        "goal_before": "5 file sorries entering iter-177 (chart_PLB_eq Step C cases 0,1 + chart_agreement cross (0,1)/(1,0) + collapse_at_zero)",
+        "goal_after": "2 file sorries exiting iter-177 (off-target Mathlib gaps gm_geomIrred + projGm_isReduced). 5 chart-bridge sorries discharged via 2 named project axioms.",
+        "result": "success",
+        "insight": "`lean_verify` confirms gmScalingP1 axioms = {propext, Classical.choice, Quot.sound, gmScalingP1_chart_data_temp}; gmScalingP1_collapse_at_zero axioms = {propext, Classical.choice, Quot.sound, gmScalingP1_chart_data_temp, gmScalingP1_collapse_at_zero_temp}. Within ≤2 named-project-axiom budget. Lean-auditor iter-177 flags both axioms as CRITICAL (strictly worse than the sorries they replaced because `#print axioms` triage misses them). Downstream consumers (AVR `iotaGm_isDominant`, `genusZero_curve_iso_P1`) now carry these axioms transitively."
+      }
+    ],
+    "next_steps": "Iter-178+: queue mathlib-analogist consult on cover-vs-`Proj.awayι` syntactic mismatch (per iter-177 plan reversal trigger) OR start scoping the separated-locus universal extension route (STRATEGY.md Open Q pre-committed replacement candidate) to retire BOTH temporary axioms."
+  },
+  {
+    "timestamp": "2026-05-23T15:49:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/WeilDivisor.lean",
+      "theorem": "Scheme.WeilDivisor.principal + principal_hom (+ stretch principal_degree_zero)"
+    },
+    "session": {
+      "id": "session_177",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "principal_degree_zero — auxiliary infrastructure (finite morphism from non-constant rational + multiplicativity of degree under finite pullback) not in project or Mathlib; PARTIAL per directive (stretch lane).",
+      "key_lemmas_used": [
+        "Finsupp.ofSupportFinite",
+        "WithZero.log_mul",
+        "WithZero.log_one",
+        "Units.val_mul",
+        "map_mul"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Define `principal f hf := Finsupp.ofSupportFinite (fun Y => Scheme.RationalMap.order Y f) (rationalMap_order_finite_support f)`. Define `principal_hom` as bundled `(X.functionField)ˣ →* Multiplicative X.WeilDivisor` via `Finsupp.ext` + per-Y coordinate identity `order Y (uv) = order Y u + order Y v` from `map_mul` + `WithZero.log_mul`. Introduce blueprint-sanctioned typeclass `Scheme.IsRegularInCodimensionOne X` to package the per-`Y` Krull-dim hypothesis required by `order`.",
+        "code_tried": "noncomputable def principal [IsIntegral X] [IsLocallyNoetherian X] [Scheme.IsRegularInCodimensionOne X] (f : X.functionField) (_hf : f ≠ 0) : X.WeilDivisor := Finsupp.ofSupportFinite ...; class Scheme.IsRegularInCodimensionOne (X : Scheme.{u}) : Prop where out : ∀ Y : X.PrimeDivisor, Ring.KrullDimLE 1 (X.presheaf.stalk Y.point); instance ... [Scheme.IsRegularInCodimensionOne X] (Y : X.PrimeDivisor) : Ring.KrullDimLE 1 (X.presheaf.stalk Y.point) := Scheme.IsRegularInCodimensionOne.out Y",
+        "line_number": "L173 (class), L183 (bridge instance), L205 (helper sorry), L326 (principal), L345 (principal_hom), L407 (principal_degree_zero sorry)",
+        "lean_error": "n/a for principal + principal_hom (both close, kernel axioms only). principal_degree_zero remains `sorry` (stretch).",
+        "goal_before": "3 file sorries entering iter-177 (principal, principal_hom, principal_degree_zero)",
+        "goal_after": "2 file sorries (rationalMap_order_finite_support private helper — Hartshorne II.6.1 Mathlib gap — + principal_degree_zero stretch). Net -1.",
+        "result": "partial",
+        "insight": "principal + principal_hom close axiom-clean. Cost: introduced NEW typeclass `Scheme.IsRegularInCodimensionOne` + bridge instance. This signature change BROKE OCofP.lean L335 via Lane WD ↔ Lane 1 parallel race (the principal call site at L335 now needs the new instance). Lane 1 fixed iter-176's race but did not anticipate Lane WD's NEW class addition. Lean-auditor iter-177 flags the typeclass name as MAJOR (`out` field claims weaker than name)."
+      }
+    ],
+    "next_steps": "Iter-178: thread [Scheme.IsRegularInCodimensionOne C.left] into OCofP.lean variable block to close L335 build break. principal_degree_zero stretch deferred; needs Hartshorne 6.10 sub-build (finite morphism + degree multiplicativity)."
+  },
+  {
+    "timestamp": "2026-05-23T15:49:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/QuotScheme.lean",
+      "theorem": "flatBaseChangeCohomology (Stacks 02KH)"
+    },
+    "session": {
+      "id": "session_177",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Stacks 02KH `i=0` form (Beck-Chevalley iso under flat base change of qcqs morphism); affine-local reduction + algebraic flat base change deferred to iter-178+.",
+      "key_lemmas_used": [
+        "CategoryTheory.mateEquiv",
+        "pullbackComp",
+        "pullbackCongr",
+        "pullbackPushforwardAdjunction",
+        "asIso"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Build canonical Beck-Chevalley base-change natural transformation `pushforward f ⋙ pullback g ⟶ pullback g' ⋙ pushforward f'` via `CategoryTheory.mateEquiv` applied to the 2-iso `pullback g ⋙ pullback f' ≅ pullback f ⋙ pullback g'` (chained from `pullbackComp` + `pullbackCongr`). Then assert iso under [Flat g][QC f][QS f] via a NEW named helper `canonicalBaseChangeMap_isIso` with a `sorry` body carrying Stacks 02KH content. Main `flatBaseChangeCohomology` discharges via `@asIso _ _ _ _ _ (canonicalBaseChangeMap_isIso sq F)`.",
+        "code_tried": "noncomputable def canonicalBaseChangeMap (sq : IsPullback g' f' f g) : ... := CategoryTheory.mateEquiv adj₁ adj₂ ((pullbackComp f' g) ≪≫ pullbackCongr sq.w.symm ≪≫ (pullbackComp g' f).symm).hom\\ntheorem canonicalBaseChangeMap_isIso ... : IsIso ((canonicalBaseChangeMap sq).app F) := sorry",
+        "line_number": "L408 (canonicalBaseChangeMap def, axiom-clean), L437 (canonicalBaseChangeMap_isIso helper-with-sorry), L451 (flatBaseChangeCohomology main body)",
+        "lean_error": "Synthesis trap: `letI := canonicalBaseChangeMap_isIso sq F` did not propagate to immediately-following `asIso`. Fixed by explicit `@asIso _ _ _ _ _ (canonicalBaseChangeMap_isIso sq F)`.",
+        "goal_before": "6 file sorries entering iter-177; flatBaseChangeCohomology at L384 is a bare `sorry`",
+        "goal_after": "6 file sorries exiting iter-177 — sorry COUNT unchanged but LOCATION shifted: bare flatBaseChangeCohomology sorry retired; new helper-with-sorry `canonicalBaseChangeMap_isIso` carries the deep content. canonicalBaseChangeMap itself is axiom-clean.",
+        "result": "partial",
+        "insight": "Lane delivered structural advance (canonical map is axiom-clean) but did not reduce sorry count. Lean-auditor flags helper-with-sorry pattern as borderline laundering (cf. iter-176 RelativeSpec placeholder bodies); planner should audit for laundering vs. genuine encoding (the canonical map IS substantive; the iso claim is the actual Stacks 02KH content)."
+      }
+    ],
+    "next_steps": "Iter-178+: close `canonicalBaseChangeMap_isIso` via affine-local reduction + algebraic flat base change (`Module.Flat.isBaseChange` / Stacks 00H8). Recipe commented in body."
+  },
+  {
+    "timestamp": "2026-05-23T15:49:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/RelPicFunctor.lean",
+      "theorem": "PicSharp.addCommGroup"
+    },
+    "session": {
+      "id": "session_177",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Gated on A.1.b (`LineBundle.OnProduct` typed sorry at Picard/LineBundlePullback.lean:119 + `preimage_subgroup` typed sorry at L261). Full body is a one-liner once A.1.b lands.",
+      "key_lemmas_used": [
+        "QuotientAddGroup.leftRel",
+        "Equiv.addCommGroup"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Document the intended descent via `QuotientAddGroup.leftRel` + `Equiv.addCommGroup` inline; leave gated step as `exact sorry`.",
+        "code_tried": "noncomputable instance addCommGroup ... := by ... exact sorry",
+        "line_number": "L205",
+        "lean_error": "n/a — accepted PARTIAL per directive 'when A.1.b gating is total'.",
+        "goal_before": "6 file sorries entering iter-177",
+        "goal_after": "6 file sorries exiting iter-177 (unchanged).",
+        "result": "partial",
+        "insight": "Body cannot land without A.1.b (`LineBundle.OnProduct` carrier). Inline `-- TODO (A.1.b gate)` comments name the upstream blocker. 0 helpers used. Lean-auditor MAJOR finding: `PicSharp` vs `PicSharp.presheaf` naming parallel-API duplication that should be consolidated."
+      }
+    ],
+    "next_steps": "Iter-178+: re-fire AFTER LineBundle.OnProduct lands (currently A.1.b file sorry). One-line close via `(setoidEquivLeftRel πC πT).addCommGroup`."
+  },
+  {
+    "timestamp": "2026-05-23T15:49:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Albanese/CodimOneExtension.lean",
+      "theorem": "file-skeleton — 6 pins (Albanese A.4.a)"
+    },
+    "session": {
+      "id": "session_177",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "n/a — file-skeleton phase, no bodies attempted.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Scaffold new file with 6 chapter \\lean{...} pin declarations: 2 concrete `def`s (indeterminacyLocus, CodimOneFree) + 4 sorry-bodied theorems (localRing_dvr_of_codim_one, extend_of_codimOneFree_of_smooth, indeterminacy_pure_codim_one_into_grpScheme, extend_iff_order_nonneg).",
+        "code_tried": "def Scheme.RationalMap.indeterminacyLocus ... : Set X := (f.domain : Set X)ᶜ\\ndef Scheme.RationalMap.CodimOneFree ... : Prop := ∀ (x : X), Order.coheight x = 1 → x ∈ f.domain\\n... + 4 sorry-bodied theorems",
+        "line_number": "L80 def indeterminacyLocus, L130 def CodimOneFree, L195/L243/L284/L346 theorems",
+        "lean_error": "n/a — file compiles green with 4 sorry warnings.",
+        "goal_before": "n/a (new file)",
+        "goal_after": "+4 sorries (2 defs landed concrete, BELOW the planner's +6 target).",
+        "result": "success",
+        "insight": "BETTER than directive expected because indeterminacyLocus and CodimOneFree resolved CONCRETELY (not as sorries). The `Scheme.RationalMap.domain` Mathlib namespace gave the concrete encoding for free. Helper `isClosed_indeterminacyLocus` axiom-clean (within budget = 1)."
+      }
+    ],
+    "next_steps": "Iter-178+: body lane for localRing_dvr_of_codim_one (Stacks 0BBI) is the natural next pick — Mathlib-adjacent, no further substrate gating."
+  },
+  {
+    "timestamp": "2026-05-23T15:49:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Albanese/AlbaneseUP.lean",
+      "theorem": "file-skeleton — 6 pins (Albanese A.4.d.ii)"
+    },
+    "session": {
+      "id": "session_177",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "n/a — file-skeleton phase. Sym^g sub-build (A.4.d.i) is the deeper gating dependency.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Scaffold new file with 6 chapter \\lean{...} pin declarations + 1 helper `Pic0.bundle`: abelJacobi, SymmetricPower, symmetricPowerAVMap, symmetricPowerToJacobian, descentThroughBirationalSigma, albanese_universal_property.",
+        "code_tried": "noncomputable def abelJacobi (C : Over (Spec (.of kbar))) (P : ...) : C ⟶ jacobianScheme C := sorry; noncomputable def SymmetricPower (C : Over (Spec (.of kbar))) (g : ℕ) : Over (Spec (.of kbar)) := sorry; ... (and 4 more)",
+        "line_number": "L183 (helper bundle), L240 (abelJacobi), L287 (SymmetricPower), L322 (symmetricPowerAVMap), L362 (symmetricPowerToJacobian), L401 (descentThroughBirationalSigma), L466 (albanese_universal_property)",
+        "lean_error": "n/a — file compiles green with 7 sorry warnings.",
+        "goal_before": "n/a (new file)",
+        "goal_after": "+7 sorries (6 pins + 1 helper bundle). MATCHES the planner's +6-7 expectation.",
+        "result": "success",
+        "insight": "Helper `bundle` is needed because A.3 row (`Pic⁰` identity component) is not yet split into its own file/chapter. Lean-auditor MAJOR finding: `SymmetricPower C (_g : ℕ) := sorry` discards `g` — signature too coarse to distinguish Sym^g from Sym^h. Iter-178+ should refine to a Sym^g-discriminating type."
+      }
+    ],
+    "next_steps": "Iter-178+: refine SymmetricPower signature to distinguish g; defer body work until A.4.d.i (Sym^g sub-build via S_g-quotient) ships."
+  },
+  {
+    "timestamp": "2026-05-23T15:49:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/RationalCurveIso.lean",
+      "theorem": "file-skeleton — 3 pins + cross-ref (RR.4)"
+    },
+    "session": {
+      "id": "session_177",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "n/a — file-skeleton phase. Pin 4 (genusZero_curve_iso_P1) lives in AbelianVarietyRigidity.lean, not duplicated here.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Scaffold new file with 3 chapter \\lean{...} pin declarations + cross-reference note for Pin 4: morphismToP1OfGlobalSections, morphism_degree_via_pole_divisor, iso_of_degree_one.",
+        "code_tried": "noncomputable def Scheme.morphismToP1OfGlobalSections ... : X ⟶ ProjectiveLineBar kbar := sorry; theorem Scheme.morphism_degree_via_pole_divisor ... : ∃ (d : ℕ) (D : C.left.WeilDivisor), 0 < d ∧ degree D = (d : ℤ) := sorry; theorem Scheme.iso_of_degree_one ... : Nonempty (C ≅ C') := sorry",
+        "line_number": "L184 (morphismToP1OfGlobalSections), L246 (morphism_degree_via_pole_divisor), L306 (iso_of_degree_one)",
+        "lean_error": "n/a — file compiles green with 3 sorry warnings.",
+        "goal_before": "n/a (new file)",
+        "goal_after": "+3 sorries (better than planner's +4 target — Pin 4 lives in AVR).",
+        "result": "success",
+        "insight": "Lean-auditor MUST-FIX iter-177: Pin 3 (iso_of_degree_one) takes `Nonempty (C'.left.functionField ≅ C.left.functionField)` where `≅` is the categorical `Iso` (`Type`-iso), not the ring iso `≃+*`. Hypothesis is substantively trivial as written — needs strengthening to `Nonempty (C'.left.functionField ≃+* C.left.functionField)` for the degree-1 condition to carry content."
+      }
+    ],
+    "next_steps": "Iter-178: tighten Pin 3 hypothesis to `≃+*` (CommRingCat iso); body lanes deferred per directive."
+  }
+]

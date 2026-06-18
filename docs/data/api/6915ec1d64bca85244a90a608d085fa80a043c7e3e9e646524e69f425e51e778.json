@@ -1,0 +1,99 @@
+[
+  {
+    "timestamp": "2026-05-31T18:36:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/FlatBaseChange.lean",
+      "theorem": "pushforwardBaseChangeMap"
+    },
+    "session": {
+      "id": "session_232",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "AlgebraicGeometry.Scheme.Modules.pullbackPushforwardAdjunction",
+        "AlgebraicGeometry.Scheme.Modules.pushforwardComp",
+        "AlgebraicGeometry.Scheme.Modules.pushforwardCongr",
+        "CategoryTheory.Adjunction.homEquiv"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Build the canonical base-change map g^*(f_*F) ⟶ f'_*(g'^*F) as the adjoint mate (under pullback g ⊣ pushforward g) of the composite (pushforward f).map(unit_{g'} F) ≫ pushforwardComp ≫ pushforwardCongr(comm) ≫ pushforwardComp.inv.",
+        "code_tried": "noncomputable def pushforwardBaseChangeMap (comm : g' ≫ f = f' ≫ g) (F : X.Modules) := ((pullbackPushforwardAdjunction g).homEquiv _ _).symm ((pushforward f).map ((pullbackPushforwardAdjunction g').unit.app F) ≫ (pushforwardComp g' f).hom.app _ ≫ (pushforwardCongr comm).hom.app _ ≫ (pushforwardComp f' g).inv.app _)",
+        "line_number": "76",
+        "lean_error": "Initial: 'Ambiguous term pullback' (Scheme.Modules.pullback vs Limits.pullback under open Limits)",
+        "goal_before": "(pullback g).obj ((pushforward f).obj F) ⟶ (pushforward f').obj ((pullback g').obj F)",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Qualify as Scheme.Modules.pullback in the signature to disambiguate from Limits.pullback. lean_verify = {propext, Classical.choice, Quot.sound} — axiom-clean."
+      }
+    ],
+    "next_steps": "Wire the module import into AlgebraicJacobian.lean so the def enters the canonical package build."
+  },
+  {
+    "timestamp": "2026-05-31T18:36:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/FlatBaseChange.lean",
+      "theorem": "affineBaseChange_pushforward_iso"
+    },
+    "session": {
+      "id": "session_232",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Mathlib lacks (1) an affine dictionary translating Scheme.Modules.pushforward/pullback of tilde-modules on Spec into ModuleCat.restrictScalars / base change, and (2) an 'iso local on an affine cover' criterion for SheafOfModules maps. The algebraic heart EXISTS: TensorProduct.AlgebraTensorModule.cancelBaseChange ((R'⊗[R]A)⊗[A]M ≃ R'⊗[R]M), no flatness needed.",
+      "key_lemmas_used": [
+        "AlgebraicGeometry.Scheme.Modules.Hom.isIso_iff_isIso_app"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Reduce IsIso of the base-change map to sectionwise IsIso via Hom.isIso_iff_isIso_app, then intro the open U; close the per-section goal by the affine cancelBaseChange isomorphism.",
+        "code_tried": "rw [Scheme.Modules.Hom.isIso_iff_isIso_app]; intro U  -- then sorry",
+        "line_number": "91",
+        "lean_error": "none (reduction typechecks; sorry left at the section-iso step)",
+        "goal_before": "IsIso (pushforwardBaseChangeMap f g f' g' h.w F)",
+        "goal_after": "U : S'.Opens ⊢ IsIso (Hom.app (pushforwardBaseChangeMap …) U)",
+        "result": "partial",
+        "insight": "isIso_iff_isIso_app is a correct, live-verified reduction (lean_multi_attempt). The residual section-level goal cannot be closed without the missing affine Spec/tilde dictionary; the closing algebra (cancelBaseChange) is identified and present in Mathlib but un-wired."
+      }
+    ],
+    "next_steps": "mathlib-build lane: build Scheme.Modules.pushforward_spec_iso / pullback_spec_iso (affine dictionary) + isIso_of_isIso_over_affineCover, then close via cancelBaseChange. See informal/affineBaseChange_pushforward_iso.md."
+  },
+  {
+    "timestamp": "2026-05-31T18:36:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/FlatBaseChange.lean",
+      "theorem": "flatBaseChange_pushforward_isIso"
+    },
+    "session": {
+      "id": "session_232",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Deferred per plan directive (deep Čech+flatness theorem). Needs Čech-cohomology / affine-cover infrastructure for SheafOfModules (absent from Mathlib) on top of the affine lemma.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Documented sorry: reduce to affine target A→B flat, Čech complex computes H^0, term-wise base change via the affine lemma, flatness makes -⊗_A B exact so it commutes with H^0.",
+        "code_tried": "sorry  -- with full Stacks-02KH reduction strategy as in-body comment",
+        "line_number": "123",
+        "lean_error": "none",
+        "goal_before": "IsIso (pushforwardBaseChangeMap f g f' g' h.w F)",
+        "goal_after": "IsIso (pushforwardBaseChangeMap f g f' g' h.w F)",
+        "result": "partial",
+        "insight": "Directive explicitly permitted leaving this as a documented sorry. Strategy is recorded in-body and in the informal note; depends on the affine lemma plus missing Čech infra."
+      }
+    ],
+    "next_steps": "Do NOT assign until (a) the affine lemma is closed and (b) Čech-cohomology infrastructure for SheafOfModules exists; this is a multi-lane engine build, not a single-iter target."
+  }
+]

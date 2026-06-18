@@ -1,0 +1,228 @@
+[
+  {
+    "timestamp": "2026-05-12T20:30:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "h_diff_pi_smul_f (internal to basicOpenCover_isCechAcyclicCover_toModuleKSheaf)"
+    },
+    "session": {
+      "id": "session_79",
+      "model": "opus-4-7"
+    },
+    "findings": {
+      "blocker": "After iter-078's `intro r y; funext j`, every route to evaluate the RHS smul componentwise stalls because the smul on `↑scK₀.X_2` is mediated by `h_mod_pi₂.toSMul` (built via `Pi.module` with anonymous per-i builders), not literal `Pi.instSMul`. `simp/rw [Pi.smul_apply]` fail with 'did not find the pattern'; `letI` introducing a parallel `∀ i, Module R (Z_2 i)` does not bridge to the existing `h_mod_pi₂`-mediated smul. Only `change … = h_mod_pi₂.toSMul.smul r _ j` succeeds (defeq), but the next step (evaluating that smul componentwise) hits the same anonymous-builder wall.",
+      "key_lemmas_used": [
+        "change",
+        "h_mod_pi₂.toSMul.smul"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Add structural `change` step exposing the RHS smul explicitly as `h_mod_pi₂.toSMul.smul r _ j` on top of iter-078's `intro r y; funext j`",
+        "code_tried": "change e₂ ((ConcreteCategory.hom scK₀.f) (e₁.symm (r • y))) j = h_mod_pi₂.toSMul.smul r (e₂ ((ConcreteCategory.hom scK₀.f) (e₁.symm y))) j",
+        "line_number": "1115",
+        "lean_error": "(none — `change` succeeds, defeq holds; new goal exposed)",
+        "goal_before": "case h\\nk : Type u\\ninst : Field k\\nC : Over (Spec (CommRingCat.of k))\\nU : TopologicalSpace.Opens ↑C.left.toTopCat\\nhU : IsAffineOpen U\\ns : Set ↑Γ(C.left, U)\\nhs : Ideal.span s = ⊤\\nn : ℕ\\nhn : 0 < n\\n...\\n⊢ e₂ ((ConcreteCategory.hom (HomologicalComplex.sc K₀ n).f) (e₁.symm (r • y))) j = (r • e₂ ((ConcreteCategory.hom (HomologicalComplex.sc K₀ n).f) (e₁.symm y))) j",
+        "goal_after": "⊢ e₂ ((ConcreteCategory.hom scK₀.f) (e₁.symm (r • y))) j = h_mod_pi₂.toSMul.smul r (e₂ ((ConcreteCategory.hom scK₀.f) (e₁.symm y))) j",
+        "result": "partial",
+        "insight": "The implicit `(r • _) j` smul on the RHS is definitionally equal to `h_mod_pi₂.toSMul.smul r _ j`. This sidesteps `simp [Pi.smul_apply]` failures but does not by itself reduce the proof — it merely names the smul explicitly so further rewrites can target it."
+      },
+      {
+        "attempt": 2,
+        "strategy": "After the `change`, try `Pi.smul_apply` on the new RHS to reduce to a per-component smul",
+        "code_tried": "rw [Pi.smul_apply]  -- or  simp only [Pi.smul_apply]",
+        "line_number": "1118",
+        "lean_error": "did not find an occurrence of the pattern / unused simp argument",
+        "goal_before": "⊢ e₂ ((ConcreteCategory.hom scK₀.f) (e₁.symm (r • y))) j = h_mod_pi₂.toSMul.smul r (e₂ ((ConcreteCategory.hom scK₀.f) (e₁.symm y))) j",
+        "goal_after": "(unchanged)",
+        "result": "failed",
+        "insight": "The smul on the RHS is from `h_mod_pi₂.toSMul`, whose per-i field is a `Pi.module` builder with anonymous per-i Module instances. `Pi.smul_apply` is keyed on `Pi.instSMul`, which is structurally different — Lean does not bridge these definitionally-equal families."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Introduce a parallel named `∀ i, Module R (Z_2 i)` via `letI`, hoping typeclass search bridges to the new instance",
+        "code_tried": "letI mod_Z₂_per : ∀ i, Module R (Z₂ i) := fun i => by apply RingHom.toModule; refine (C.left.presheaf.map (homOfLE ?_).op).hom; …; letI : ∀ i, SMul R (Z₂ i) := fun i => (mod_Z₂_per i).toSMul; rw [Pi.smul_apply]",
+        "line_number": "(probed via lean_multi_attempt)",
+        "lean_error": "did not find an occurrence of the pattern",
+        "goal_before": "(same as attempt 2)",
+        "goal_after": "(unchanged)",
+        "result": "failed",
+        "insight": "Adding parallel per-i instances makes typeclass search aware of them but `Pi.smul_apply` keys on the exact smul instance in the goal, which is `h_mod_pi₂.toSMul`, not the new `letI` family. Confirms the iter-078 blocker note: refactor `h_mod_pi₂` itself to use a *named* `perI₂` outside, so its `toSMul` is synthesisable."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Try `rfl` after the `change`",
+        "code_tried": "rfl",
+        "line_number": "1119",
+        "lean_error": "(type mismatch — LHS/RHS not defeq)",
+        "goal_before": "(same)",
+        "goal_after": "(unchanged)",
+        "result": "failed",
+        "insight": "The differential `(scK₀.f).hom (e₁.symm (r • y))` is not literally `r • (scK₀.f).hom (e₁.symm y)` — closing requires the S2 5-layer dsimp + S3 alternating-sum exposure + per-summand RingHom distributivity (the iter-073 recipe). The `change` only normalises the smul name; the substantive proof remains."
+      },
+      {
+        "attempt": 5,
+        "strategy": "`show … = (Pi.instSMul.smul r _) j` to align the smul to literal Pi-form",
+        "code_tried": "show e₂ … j = (Pi.instSMul.smul r _) j",
+        "line_number": "(probed via lean_multi_attempt)",
+        "lean_error": "pattern not defeq / linter.style.show",
+        "goal_before": "(same)",
+        "goal_after": "(unchanged)",
+        "result": "failed",
+        "insight": "`Pi.instSMul` is not defeq to `h_mod_pi₂.toSMul` because the per-i builders differ syntactically (anonymous in `h_mod_pi₂` vs. typeclass-resolved in `Pi.instSMul`). Even `change` cannot bridge."
+      }
+    ],
+    "next_steps": "Iter-080 should refactor `h_mod_pi₁/₂/₃` (BasicOpenCech.lean L911/921/931) to use a `letI perI_n : ∀ i, Module R (Z_n i) := …` *first*, then `have h_mod_pi_n : Module R (∀ i, Z_n i) := Pi.module _ _ _` (or `inferInstance`). After this refactor, `Pi.smul_apply` fires directly. This is not a 'new project-local helper lemma' — it's a literal expansion of the existing `Pi.module` construction. Then complete S2 (5-layer `dsimp`) → S3 (`objD` identification) → S4 (`Pi.smul_apply` on LHS) → S5 (`Finset.smul_sum`) → S6 (`Finset.sum_congr`) → S7 (per-summand RingHom distributivity) → S8 (`rfl`)."
+  },
+  {
+    "timestamp": "2026-05-12T20:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "cotangentExactSeq_structure"
+    },
+    "session": {
+      "id": "session_79",
+      "model": "opus-4-7"
+    },
+    "findings": {
+      "blocker": "The iter-076 preserved chain's `simp only [SheafOfModules.comp_val, SheafOfModules.pushforward_map_val]` step does not fire under the iter-078 elaboration shape: `(... ≫ (Modules.pushforward f).map β).val` is reduced eagerly to the raw `{ app := …, naturality := … }.val.app x` form (no longer a redex for `SheafOfModules.comp_val`), AND `SheafOfModules.pushforward_map_val` is about the continuous-functor variant `SheafOfModules.pushforward`, not the project-level `Scheme.Modules.pushforward`. The simp lemma is stale.",
+      "key_lemmas_used": [
+        "SheafOfModules.epi_of_epi_presheaf (NEW gap-fill)",
+        "Functor.epi_of_epi_map",
+        "SheafOfModules.forget_map",
+        "SheafOfModules.instFaithfulPresheafOfModulesValRingCatForget"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Add gap-fill `SheafOfModules.epi_of_epi_presheaf` (one of two explicitly permitted) using the faithful forgetful functor to reflect presheaf-epi to sheaf-epi",
+        "code_tried": "lemma _root_.SheafOfModules.epi_of_epi_presheaf {C : Type*} [Category C] {J : CategoryTheory.GrothendieckTopology C} {R : CategoryTheory.Sheaf J RingCat} {F G : SheafOfModules R} (f : F ⟶ G) (h : CategoryTheory.Epi f.val) : CategoryTheory.Epi f := by\\n  have : CategoryTheory.Epi ((SheafOfModules.forget R).map f) := by\\n    rw [SheafOfModules.forget_map]; exact h\\n  exact (SheafOfModules.forget R).epi_of_epi_map this",
+        "line_number": "437",
+        "lean_error": "(none — gap-fill compiles cleanly)",
+        "goal_before": "(new declaration)",
+        "goal_after": "(closed)",
+        "result": "success",
+        "insight": "The bridge needed by the `h_epi` half of `cotangentExactSeq_structure`. Confirms the iter-079 plan: presheaf-level epi (via `KaehlerDifferential.map_surjective` + `PresheafOfModules.epi_iff_surjective`) lifts to sheaf-level via the faithful `SheafOfModules.forget` reflecting epimorphisms."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Inline the iter-076 preserved chain in the `h_zero` branch of `cotangentExactSeq_structure`",
+        "code_tried": "apply ((Scheme.Modules.pullbackPushforwardAdjunction f).homEquiv _ _).injective\\nrw [Adjunction.homAddEquiv_zero, Adjunction.homEquiv_naturality_right]\\nunfold cotangentExactSeqAlpha\\nsimp only [Equiv.apply_symm_apply]\\napply SheafOfModules.hom_ext\\nsimp only [SheafOfModules.comp_val, SheafOfModules.pushforward_map_val]",
+        "line_number": "475 (inserted in body)",
+        "lean_error": "`simp` made no progress",
+        "goal_before": "(post `apply SheafOfModules.hom_ext`) goal in `(X ≫ Y).val = 0.val` shape with LHS displayed as `({val := A} ≫ B).val`",
+        "goal_after": "(unchanged)",
+        "result": "failed",
+        "insight": "The iter-076 chain's simp lemma names target a shape that no longer occurs: `(f ≫ g).val` is reduced eagerly to `{app := …}.val.app x`, and `SheafOfModules.pushforward_map_val` (Mathlib continuous-functor variant) does not match the project-local `Scheme.Modules.pushforward.map.val`. The chain needs the iter-078-native `.app`-based per-section route via `Scheme.Modules.Hom.ext` / `Scheme.Modules.Hom.comp_app` / `Scheme.Modules.pushforward_map_app`."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Probe simpler unwrapping tactics via lean_multi_attempt",
+        "code_tried": "simp only [SheafOfModules.comp_val]   /   rw [SheafOfModules.comp_val]   /   rfl   /   change _ = (0 : _ ⟶ _).val   /   dsimp only [CategoryTheory.CategoryStruct.comp, SheafOfModules.instCategory]   /   apply PresheafOfModules.Hom.ext",
+        "line_number": "(probed only)",
+        "lean_error": "'simp made no progress' / 'pattern not found' / 'not defeq' / '0 infers to ℕ' / 'unification fails'",
+        "goal_before": "(see attempt 2)",
+        "goal_after": "(unchanged)",
+        "result": "failed",
+        "insight": "Only `dsimp only [CategoryStruct.comp, SheafOfModules.instCategory]` succeeded — it unfolds the composition to the raw `{ app := …, naturality := … }.val.app x` form, which is NOT a redex for the iter-076 simp chain. Confirms the iter-076 strategy needs to be re-routed via per-section extensionality before the simp chain can apply."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Document the precise blocker inline and roll back to a single `sorry` body (preserving the disabled-chain comment block verbatim for iter-080 reuse)",
+        "code_tried": "(rolled back the inlined chain; left a `sorry` with a multi-line comment describing the iter-078 elaboration shape vs the iter-076 simp lemma mismatch)",
+        "line_number": "487",
+        "lean_error": "(none — file compiles cleanly)",
+        "goal_before": "(rolled back)",
+        "goal_after": "(sorry placeholder)",
+        "result": "partial",
+        "insight": "Holding the budget at 5 sorries (no regression) while the gap-fill bridge `epi_of_epi_presheaf` is in place. The second permitted gap-fill `SheafOfModules.exact_iff_stalkwise` was NOT introduced: adding it with a `sorry` body would push the file to 6 sorries (over the iter-079 hard cap), and proving it requires the `TopCat.Presheaf.stalkFunctor`-preserves-exactness chain (multi-iteration infrastructure)."
+      }
+    ],
+    "next_steps": "Iter-080 should (1) replace the failing `simp only [SheafOfModules.comp_val, SheafOfModules.pushforward_map_val]` with the iter-078-native per-section route: use `Scheme.Modules.Hom.ext` for per-`U` extensionality, then `Scheme.Modules.Hom.comp_app` + `Scheme.Modules.pushforward_map_app` to reduce to a `PresheafOfModules.Hom` equality directly, bypassing `.val`; (2) for `h_exact`, dispatch a higher-LOC-budget lane to introduce `SheafOfModules.exact_iff_stalkwise` (the `stalkFunctor` preserves-exactness chain); (3) consume `epi_of_epi_presheaf` (this iter's bridge) plus `PresheafOfModules.epi_iff_surjective` and `KaehlerDifferential.map_surjective` to close `h_epi`."
+  },
+  {
+    "timestamp": "2026-05-12T20:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Modules/Monoidal.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.instMonoidalCategoryStruct + instMonoidalCategory (both routed through LocalizedMonoidal)"
+    },
+    "session": {
+      "id": "session_79",
+      "model": "opus-4-7"
+    },
+    "findings": {
+      "blocker": "(only the single permitted gap-fill `instIsMonoidal_W` remains) — substantive iso-stability of sheafification under presheaf-tensor whiskering. Routes blocked: (a) decomposition via `tensorHom_def` reduces to `IsMonoidal.whiskerLeft/whiskerRight` (no progress, same condition); (b) reduction via `sheafificationCompToSheaf` requires `toPresheaf R₀` to preserve tensors, which it does NOT (presheaf-of-modules tensor is `R₀(U)`-balanced while the abelian-presheaf tensor is ℤ-tensor); (c) closedness route (`Sites/Monoidal.lean` template) requires `MonoidalClosed (PresheafOfModules R₀)` + `HasFunctorEnrichedHom` for the varying-ring case, which is absent from Mathlib (only the fixed-ring `ModuleCat R` case exists, in `Algebra/Category/ModuleCat/Monoidal/Closed.lean`).",
+      "key_lemmas_used": [
+        "CategoryTheory.LocalizedMonoidal",
+        "Localization.Monoidal.monoidalCategoryStruct",
+        "Adjunction.isLocalization",
+        "PresheafOfModules.sheafificationAdjunction",
+        "MorphismProperty.IsMonoidal.mk'",
+        "PresheafOfModules.monoidalCategory"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Add the `sheafificationFunctor` abbreviation and the localization morphism property `W X := (isomorphisms _).inverseImage (sheafificationFunctor X)`",
+        "code_tried": "noncomputable abbrev sheafificationFunctor : _root_.PresheafOfModules.{u} X.ringCatSheaf.obj ⥤ X.Modules := _root_.PresheafOfModules.sheafification (𝟙 X.ringCatSheaf.obj)\\n\\nabbrev W (X : Scheme.{u}) : MorphismProperty (_root_.PresheafOfModules X.ringCatSheaf.obj) := (MorphismProperty.isomorphisms _).inverseImage (sheafificationFunctor X)",
+        "line_number": "(top-level abbreviations near the instances)",
+        "lean_error": "(none — both elaborate cleanly)",
+        "goal_before": "(top-level)",
+        "goal_after": "(top-level)",
+        "result": "success",
+        "insight": "Sets up the `LocalizedMonoidal L W (Iso.refl _)` machinery. The right adjoint `SheafOfModules.forget R ⋙ restrictScalars (𝟙 _)` is Full + Faithful (`PresheafOfModules/Sheafification.lean:168, 171`), so `Adjunction.isLocalization` gives `L.IsLocalization W`."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Add bridging instance `instMonoidalCategoryPresheaf` to install `MonoidalCategory (_root_.PresheafOfModules X.ringCatSheaf.obj)` via the definitional equality `X.ringCatSheaf.obj = X.sheaf.obj ⋙ forget₂ CommRingCat RingCat`",
+        "code_tried": "noncomputable instance instMonoidalCategoryPresheaf : MonoidalCategory (_root_.PresheafOfModules.{u} X.ringCatSheaf.obj) := show MonoidalCategory (_root_.PresheafOfModules.{u} (X.sheaf.obj ⋙ forget₂ CommRingCat.{u} RingCat.{u})) from inferInstance",
+        "line_number": "~78",
+        "lean_error": "(none)",
+        "goal_before": "(top-level)",
+        "goal_after": "(top-level)",
+        "result": "success",
+        "insight": "Structural bridge — purely typeclass-resolution plumbing, not a 'thin helper' in the user-policy sense. Required because `(W X).IsMonoidal` and `LocalizedMonoidal` references occur in the *types* of subsequent instances. Removing the iter-078 inline `letI : MonoidalCategory ... := show ... from inferInstance` boilerplate from each instance body."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Close `instMonoidalCategoryStruct` via `inferInstanceAs (MonoidalCategoryStruct (LocalizedMonoidal …))`",
+        "code_tried": "noncomputable instance instMonoidalCategoryStruct : MonoidalCategoryStruct (X.Modules) := inferInstanceAs (MonoidalCategoryStruct (LocalizedMonoidal (sheafificationFunctor X) (W X) (Iso.refl _)))",
+        "line_number": "135–138",
+        "lean_error": "(none — closes cleanly given W.IsMonoidal sorry)",
+        "goal_before": "(sorry)",
+        "goal_after": "(closed)",
+        "result": "success",
+        "insight": "The `Localization.Monoidal.monoidalCategoryStruct` instance (`Basic.lean:172`) inhabits the localization. `X.Modules` is *definitionally* the localization once `L.IsLocalization W` (via `Adjunction.isLocalization`) and `W.IsMonoidal` (the gap-fill) are in scope."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Close `instMonoidalCategory` analogously",
+        "code_tried": "noncomputable instance instMonoidalCategory : MonoidalCategory (X.Modules) := inferInstanceAs (MonoidalCategory (LocalizedMonoidal (sheafificationFunctor X) (W X) (Iso.refl _)))",
+        "line_number": "142–145",
+        "lean_error": "(none)",
+        "goal_before": "(sorry)",
+        "goal_after": "(closed)",
+        "result": "success",
+        "insight": "Pentagon, triangle, and naturality axioms transfer via `Localization.Monoidal.MonoidalCategory` instance (`Basic.lean:440`). Same architecture as struct."
+      },
+      {
+        "attempt": 5,
+        "strategy": "Attempt the `W.IsMonoidal` gap-fill via `MorphismProperty.IsMonoidal.mk'` and `tensorHom_def` decomposition",
+        "code_tried": "refine MorphismProperty.IsMonoidal.mk' _ fun {X₁ X₂ Y₁ Y₂} f g hf hg => ?_\\nsimp only [MorphismProperty.inverseImage_iff, MorphismProperty.isomorphisms.iff] at hf hg ⊢\\nsorry",
+        "line_number": "126",
+        "lean_error": "(none — leaves a single sorry on the substantive iso-stability of sheafification under presheaf-tensor whiskering)",
+        "goal_before": "(W X).IsMonoidal goal",
+        "goal_after": "IsIso ((sheafificationFunctor X).map (f ⊗ₘ g)) with hf : IsIso (L.map f), hg : IsIso (L.map g)",
+        "result": "partial",
+        "insight": "Reduction is mechanical; the substantive content (iso-stability under whiskering) is the single permitted gap-fill. `tensorHom_def` route reduces to `whiskerLeft`/`whiskerRight` stability — same condition. `sheafificationCompToSheaf` route is blocked because `toPresheaf R₀` is NOT monoidal (R₀(U)-balanced vs ℤ-tensor mismatch). Closedness-via-internal-hom route requires `MonoidalClosed (PresheafOfModules R₀)` for varying-ring R₀, which is absent from Mathlib."
+      }
+    ],
+    "next_steps": "Iter-080+ for `instIsMonoidal_W` closure: cleanest long-term is to upstream `MonoidalClosed (PresheafOfModules R₀)` to Mathlib + `HasFunctorEnrichedHom` for the varying-ring case, then `Sites/Monoidal.lean`'s approach transfers directly (multi-PR effort). Stopgap: a stalks-level argument (`Presheaf.IsLocallyInjective`/`Presheaf.IsLocallySurjective` on `1 ⊗ f`) may be tractable in ~100–200 LOC. The `instIsMonoidal_W` sorry does NOT block downstream uses of `MonoidalCategory X.Modules` — only consumers of `(W X).IsMonoidal` as a hypothesis (rare). Phase C step C1 (`LineBundle` refactor to invertible 𝒪_X-modules) can now proceed."
+  }
+]

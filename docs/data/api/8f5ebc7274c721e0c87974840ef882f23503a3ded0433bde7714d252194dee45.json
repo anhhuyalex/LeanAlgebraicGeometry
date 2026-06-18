@@ -1,0 +1,71 @@
+[
+  {
+    "timestamp": "2026-05-10T17:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/MayerVietoris.lean",
+      "theorem": "AlgebraicGeometry.Scheme.HasAffineCechAcyclicCover"
+    },
+    "session": {
+      "id": "session_53",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "",
+      "key_lemmas_used": [
+        "IsAffineOpen",
+        "TopologicalSpace.Opens",
+        "AlgebraicGeometry.Scheme.IsCechAcyclicCover",
+        "AlgebraicGeometry.Scheme.HasCechToHModuleIso"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Verbatim probe-confirmed body from PROGRESS.md template — single-field Prop-class with one existential field universally quantified over affine opens U, asserting existence of (ι : Type u, 𝒰 : ι → Opens, ⨆𝒰 = U, IsCechAcyclicCover F 𝒰, HasCechToHModuleIso F 𝒰).",
+        "code_tried": "class HasAffineCechAcyclicCover\n    {k : Type u} [Field k] {C : Over (Spec (.of k))}\n    (F : Sheaf (Opens.grothendieckTopology C.left.toTopCat) (ModuleCat.{u} k)) :\n    Prop where\n  exists_cover : ∀ {U : TopologicalSpace.Opens C.left.toTopCat},\n    IsAffineOpen U →\n      ∃ (ι : Type u) (𝒰 : ι → TopologicalSpace.Opens C.left.toTopCat),\n        (⨆ i, 𝒰 i = U) ∧ IsCechAcyclicCover F 𝒰 ∧ HasCechToHModuleIso F 𝒰",
+        "line_number": "1279–1286",
+        "lean_error": "",
+        "goal_before": "(class declaration body)",
+        "goal_after": "no goals (class declaration accepted)",
+        "result": "success",
+        "insight": "Plain Prop-class with one ∀-quantified existential field. The ∃-and-∧ packaging mirrors iter-040 / iter-043 / iter-048 / iter-050 carrier-predicate decomposition: each iteration introduces one carrier, defers its instantiation, is consumed downstream via instance synthesis. Universe-`u` annotation on `ι` is required so `𝒰 : ι → Opens (...).left.toTopCat` lives in the same universe as the rest of the consumer chain. No new axiom introduced — kernel-only [propext, Classical.choice, Quot.sound] (verified review-side via lean_verify)."
+      }
+    ],
+    "next_steps": "iter-054+ will instantiate `HasAffineCechAcyclicCover (Scheme.toModuleKSheaf C)` via the substantive Čech-vs-derived comparison theorem and basic-open Koszul acyclicity producers."
+  },
+  {
+    "timestamp": "2026-05-10T17:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/MayerVietoris.lean",
+      "theorem": "AlgebraicGeometry.Scheme.instIsAffineHModuleVanishing_of_hasAffineCechAcyclicCover"
+    },
+    "session": {
+      "id": "session_53",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "",
+      "key_lemmas_used": [
+        "AlgebraicGeometry.Scheme.HasAffineCechAcyclicCover.exists_cover",
+        "AlgebraicGeometry.Scheme.subsingleton_HModule'_of_hasCechToHModuleIso",
+        "AlgebraicGeometry.Scheme.IsAffineHModuleVanishing"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Verbatim probe-confirmed tactic body from PROGRESS.md template — `obtain` destructure of the carrier's existential, two `haveI` lines registering the conjuncts as local class instances, then chain iter-052's generalised rewrite-bridge consumer.",
+        "code_tried": "instance instIsAffineHModuleVanishing_of_hasAffineCechAcyclicCover\n    {k : Type u} [Field k] {C : Over (Spec (.of k))}\n    {F : Sheaf (Opens.grothendieckTopology C.left.toTopCat) (ModuleCat.{u} k)}\n    [HasExt.{u} (Sheaf (Opens.grothendieckTopology C.left.toTopCat) (ModuleCat.{u} k))]\n    [HasAffineCechAcyclicCover F] : IsAffineHModuleVanishing k C F where\n  subsingleton_HModule' {U} hU i hi := by\n    obtain ⟨ι, 𝒰, hcov, hacyc, hcomp⟩ :=\n      HasAffineCechAcyclicCover.exists_cover (F := F) hU\n    haveI : IsCechAcyclicCover F 𝒰 := hacyc\n    haveI : HasCechToHModuleIso F 𝒰 := hcomp\n    exact subsingleton_HModule'_of_hasCechToHModuleIso hcov i hi",
+        "line_number": "1303–1313",
+        "lean_error": "",
+        "goal_before": "[HasAffineCechAcyclicCover F] ⊢ IsAffineHModuleVanishing k C F",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "The two `haveI` lines are load-bearing: they convert the ∃-conjuncts (regular hypotheses) into local class instances so iter-052's consumer (which takes them as `[…]` arguments) fires via instance synthesis. The `(F := F)` named-argument is required when calling `HasAffineCechAcyclicCover.exists_cover`, since `F` cannot be inferred from `(hU : IsAffineOpen U)` alone. Marked as `instance` (not `theorem`) so `IsAffineHModuleVanishing k C F` synthesizes automatically downstream once any `HasAffineCechAcyclicCover` instance is in scope. Single-universe `[HasExt.{u}]` annotation only — no iter-034 universe bridge needed (mirrors iter-052's single-universe constraint). Kernel-only axioms verified review-side via lean_verify."
+      }
+    ],
+    "next_steps": "Compose with iter-053+ basic-open Koszul producer + Čech-vs-derived comparison to instantiate `HasAffineCechAcyclicCover (toModuleKSheaf C)` and supply `[IsAffineHModuleVanishing k C (toModuleKSheaf C)]` automatically to iter-040's consumer chain, unblocking Phase A step 6."
+  }
+]

@@ -1,0 +1,113 @@
+[
+  {
+    "timestamp": "2026-05-21T02:24:19Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "rigidity_eqAt_closedPoint_of_proper_into_affine"
+    },
+    "session": {
+      "id": "session_162",
+      "model": "opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "eq_comp_of_isAffine_of_properIntegral",
+        "isIntegral_of_retract",
+        "CartesianMonoidalCategory.hom_ext",
+        "Over.homMk",
+        "lift_fst",
+        "lift_snd",
+        "toUnit_unique",
+        "IsOpenImmersion.lift",
+        "pointOfClosedPoint"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Prove slice identities q = aL ≫ sL via pullback.hom_ext on (X⊗Y).left",
+        "code_tried": "apply pullback.hom_ext; rw [← Over.fst_left, Category.assoc aL sL, hsLfst, ...]",
+        "line_number": "317-360",
+        "lean_error": "Category.assoc / simp [Category.assoc] cannot match (aL ≫ sL) ≫ pullback.fst — composite middle object is syntactically (X⊗Y).left while pullback.fst domain is pullback X.hom Y.hom (defeq but keyed-match fails); `simp made no progress`; clear_value did not help",
+        "result": "failed",
+        "insight": "DEAD END: scheme-level pullback.hom_ext on (X⊗Y).left is unusable due to defeq-not-syntactic middle object mismatch"
+      },
+      {
+        "attempt": 2,
+        "strategy": "Lift q to qhat := Over.homMk q hqsec : 𝟙_ ⟶ X⊗Y and do ALL slice algebra in Over (Spec k̄) via CartesianMonoidalCategory.hom_ext",
+        "code_tried": "set qhat := Over.homMk q hqsec; set xq := qhat ≫ fst X Y; set sec := lift (𝟙 X) (toUnit X ≫ yhat); have hIover : qhat = xq ≫ sec := by apply CartesianMonoidalCategory.hom_ext; rw [..., lift_fst, ...]; have hIIover : qhat ≫ retract = x₀ ≫ sec := by apply CartesianMonoidalCategory.hom_ext; rw [..., toUnit_unique (...) (𝟙 _), ...]",
+        "line_number": "318-338",
+        "lean_error": "intermediate: `rewrite did not find pattern ?f ≫ 𝟙` (reorder the rw chain so toUnit_unique collapse precedes lift_fst)",
+        "result": "success",
+        "insight": "Over-level cartesian-monoidal algebra is clean — no pullback-object mismatch; (𝟙_).left defeq Spec k̄ and (𝟙_).hom defeq 𝟙 make Over.homMk well-typed; toUnit_unique (… ≫ toUnit _) (𝟙 _) collapses _ ≫ toUnit = 𝟙"
+      },
+      {
+        "attempt": 3,
+        "strategy": "Slice→affine via eq_comp_of_isAffine_of_properIntegral with IsIntegral X.left from the new isIntegral_of_retract; corestrict (sec≫f).left into U₀ via IsOpenImmersion.lift; finish by .trans chain",
+        "code_tried": "haveI : IsIntegral X.left := isIntegral_of_retract sec.left (fst X Y).left hsecLfst; set g := IsOpenImmersion.lift U₀.ι (sec≫f).left hrange; have key := eq_comp_of_isAffine_of_properIntegral X.hom g xq.left x₀.left (Over.w xq) (Over.w x₀); ... have hgoalq := hxqf.trans (hbridge.trans hx₀f.symm); rw [hq] at hgoalq; simpa only [Category.assoc] using hgoalq",
+        "line_number": "346-395",
+        "lean_error": "big calc failed `Trans Eq Eq ?m` synthesis (replaced by explicit .trans chain); translate-back via congrArg Over.Hom.left + simpa only [Over.comp_left, hqhatL]",
+        "result": "success",
+        "insight": "lean_verify → {propext, Classical.choice, Quot.sound}; whole Rigidity-Lemma chain delaunders. Every hypothesis load-bearing (_hx→hxc, _hUV→hsecU, _hfU→hrange, _hU₀→IsAffine)"
+      }
+    ],
+    "next_steps": "Rigidity-Lemma chain DONE. Genus-0 base-case route decision (cube vs c-hybrid vs Pic⁰) is the binding iter-163 task, decoupled from this chain."
+  },
+  {
+    "timestamp": "2026-05-21T02:24:19Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "isIntegral_of_retract"
+    },
+    "session": {
+      "id": "session_162",
+      "model": "opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "IrreducibleSpace.isIrreducible_univ",
+        "IsIrreducible.image",
+        "irreducibleSpace_def",
+        "Scheme.Hom.stalkMap_congr_hom",
+        "Scheme.Hom.stalkMap_id",
+        "Scheme.Hom.stalkMap_comp",
+        "isReduced_of_injective",
+        "isReduced_of_isReduced_stalk",
+        "isIntegral_of_irreducibleSpace_of_isReduced",
+        "ConcreteCategory.isIso_iff_bijective"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "New generic helper: retract of an integral scheme is integral. Reducedness via isReduced_of_isReduced_stalk with apply ... ; intro x",
+        "code_tried": "haveI : IsReduced S := by apply isReduced_of_isReduced_stalk; intro x ...",
+        "line_number": "215",
+        "lean_error": "failed to synthesize ∀ (x : ↥S), _root_.IsReduced ↑(S.presheaf.stalk x)",
+        "result": "failed",
+        "insight": "isReduced_of_isReduced_stalk takes stalk-reducedness as an INSTANCE arg [∀ x, IsReduced (stalk x)], NOT via apply ; intro — build `haveI hstalk : ∀ x, …` FIRST"
+      },
+      {
+        "attempt": 2,
+        "strategy": "(r≫pr).stalkMap x is iso (= 𝟙 after stalkMap_congr_hom + stalkMap_id), discharge residual IsIso (stalkCongr.hom ≫ 𝟙)",
+        "code_tried": "rw [Scheme.Hom.stalkMap_congr_hom (r ≫ pr) (𝟙 S) hrp x, Scheme.Hom.stalkMap_id, Category.comp_id]; infer_instance  /  simp only [Category.comp_id]; infer_instance",
+        "line_number": "219-221",
+        "lean_error": "rewrite failed Did not find ?f ≫ 𝟙; then failed to synthesize IsIso ((S.presheaf.stalkCongr ⋯).hom ≫ 𝟙 (S.presheaf.stalk x)); simp made no progress / infer_instance fails",
+        "result": "failed",
+        "insight": "bare infer_instance and Category.comp_id both FAIL on the residual IsIso (… ≫ 𝟙 _)"
+      },
+      {
+        "attempt": 3,
+        "strategy": "Use inferInstanceAs shape-hint for the residual iso",
+        "code_tried": "rw [Scheme.Hom.stalkMap_congr_hom (r ≫ pr) (𝟙 S) hrp x, Scheme.Hom.stalkMap_id]; exact inferInstanceAs (IsIso ((S.presheaf.stalkCongr _).hom ≫ 𝟙 _))",
+        "line_number": "220-221",
+        "lean_error": null,
+        "result": "success",
+        "insight": "inferInstanceAs (IsIso (… ≫ 𝟙 _)) is the fix; then stalkMap_comp ⟹ pr.stalkMap (r x) injective ⟹ isReduced_of_injective into reduced T-stalk ⟹ haveI hstalk first ⟹ isReduced_of_isReduced_stalk. Irreducible half: pr.base surjective via section r, IsIrreducible.image. lean_verify axiom-clean"
+      }
+    ],
+    "next_steps": "Reusable: any 'retract of integral scheme is integral'. Blueprint reduced-half prose (global sections) is mathematically insufficient — Lean uses stalks; align prose."
+  }
+]

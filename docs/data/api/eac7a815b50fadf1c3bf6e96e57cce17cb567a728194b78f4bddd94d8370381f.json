@@ -1,0 +1,145 @@
+[
+  {
+    "timestamp": "2026-06-05T07:57:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/CechHigherDirectImage.lean",
+      "theorem": "pushPullMap_comp"
+    },
+    "session": {
+      "id": "session_303",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "After removing the kernel-whnf wall, the residual pullback pseudofunctor pentagon is defeq-not-syntactic: rw/reassoc_of%/pseudofunctor_associativity fail to match (non-syntactic SheafOfModules instances on ≫/.map), erw whnf-unfolds pullbackComp into its raw TwoSquare.equivNatTrans mate (explodes), congr 1 recurses into HEq. rawPushPullMap_comp kernel-timeouts even at maxHeartbeats 4000000, so it was COMMENTED OUT.",
+      "key_lemmas_used": [
+        "pushPull_unit_comp",
+        "pushforwardComp_hom_app_id",
+        "rawPushPullMap",
+        "pushPullMap_eq_raw",
+        "Adjunction.unit.naturality",
+        "Functor.map_comp"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Direct mate-calc on Over X packaging: erw [pushPull_transport_cancel ...] x3 (middle via _assoc variant) then close",
+        "code_tried": "simp only [pushPullMap]; erw [pushPull_transport_cancel _ _ _ (Over.w (h ≫ g)) F]; erw [pushPull_transport_cancel_assoc _ _ _ (Over.w g) F]; erw [pushPull_transport_cancel _ _ _ (Over.w h) F]",
+        "line_number": "385",
+        "lean_error": "(deterministic) timeout at whnf, 200000 heartbeats (the eqToHom over-triangle transports blow up the kernel)",
+        "result": "failed",
+        "insight": "The Over X eqToHom over-triangle transports are the kernel-whnf bomb; working on the Over packaging cannot avoid them."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Extract a free-hypothesis scheme-level form rawPushPullMap with the over-triangle w : a ≫ p₁ = p₂ generalised; prove rawPushPullMap_comp by subst wg; subst wh to make eqToHom rfl = 𝟙 vanish, then pseudofunctor pentagon",
+        "code_tried": "subst wg; subst wh; simp only [rawPushPullMap, eqToHom_refl, Category.comp_id, Category.id_comp]; rw [pushPull_unit_comp b a _]; simp only [Functor.map_comp, pushforwardComp_hom_app_id, Category.assoc]; repeat erw [Category.id_comp]; erw [Functor.map_comp, Functor.map_comp]; erw [Category.assoc]; congr 1; rw [← Functor.map_comp_assoc (F := pushforward (a ≫ p₁))]; erw [unit.naturality ...]; erw [Functor.map_comp]",
+        "line_number": "432",
+        "lean_error": "After congr 1 the goal is the genuine pentagon (case e_a); subst makes transports vanish (kernel-cheap) but the whole lemma kernel-timeouts even at maxHeartbeats 4000000: (kernel) deterministic timeout at line 433",
+        "result": "partial",
+        "insight": "subst genuinely removes the kernel-whnf wall (transports become 𝟙). The residual is the pure pullback pentagon = pseudofunctor_associativity (f:=b,g:=a,h:=p₁), but it is defeq-not-syntactic: every rw/congr/erw tactic either no-matches or whnf-unfolds pullbackComp's mate. Kernel still times out compiling the partial proof, so rawPushPullMap_comp + pushPullMap_comp were both commented out, leaving the 4 axiom-clean bricks + a documented reduction."
+      }
+    ],
+    "next_steps": "Do NOT retry erw/congr on the pentagon (5th iter on this pole). Two structural routes the prover documented: (a) reformulate the pentagon via the adjunction transpose (pullbackPushforwardAdjunction).homEquiv so it becomes a pullback-side identity provable by pseudofunctor_associativity without touching the strict-pushforward defeq wall; (b) add a strictness-aware @[simp] normal form for pushforward (a≫b) so the lead peel is syntactic. Consider mathlib-analogist (cross-domain) or effort-breaker on the pentagon."
+  },
+  {
+    "timestamp": "2026-06-05T07:57:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate/DualInverse.lean",
+      "theorem": "sliceDualTransportInv"
+    },
+    "session": {
+      "id": "session_303",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "app component now CLOSED; remaining holes are naturality of the reverse component, the forward sliceDualTransport.hom, and dual_restrict_iso Step-4 isoMk naturality.",
+      "key_lemmas_used": [
+        "ModuleCat.restrictScalarsId'App",
+        "ModuleCat.restrictScalarsComp'App",
+        "dualUnitRingSwapHom",
+        "unitRelabelSwap",
+        "isIso_ε_restrictScalars_presheafMap",
+        "restrictScalars_isIso_ε_of_bijective",
+        "Scheme.Hom.appIso"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Build the reverse app component as a four-leg composite: source relabel M.val.map(eqToHom he) (semilinear) ∘ ψ-reindex restrictScalars(f.appIso).map ∘ codomain unit swap dualUnitRingSwapHom ∘ cross-fiber transport. Discharge the ?collapse hole via restrictScalarsId'App ∘ restrictScalarsComp'App, and ?unit via a new unitRelabelSwap helper.",
+        "code_tried": "refine M.val.map (eqToHom (congrArg op he.symm)) ≫ (ModuleCat.restrictScalars ((X.ringCatSheaf.obj.map (eqToHom (congrArg op he.symm))).hom)).map (?collapse ≫ core) ≫ ?unit; case collapse => exact (restrictScalarsId'App _ (hβ ..) _).inv ≫ (restrictScalarsComp'App ((f.appIso ..).hom.hom) ((β.app ..).hom) _ rfl _).inv; case unit => exact unitRelabelSwap (congrArg op he.symm)",
+        "line_number": "309",
+        "lean_error": "Required adding a β-compatibility hypothesis hβ : ∀ P, (β.app (op P)).hom.comp (f.appIso P).hom = RingHom.id (abstract β unprovable in general); discharged at the call site for β = whiskerRight (f.appIso).inv via Iso.hom_inv_id.",
+        "result": "success",
+        "insight": "The ~100-LOC instance-delicate reverse component (the iter-265→302 DUAL churning driver) closes axiom-clean ONCE the abstract dual map carries a β-compatibility hypothesis. The ε-iso for the eqToHom section-ring relabel must be phrased at the X.presheaf (CommRingCat) carrier so CommRing is native — extracted as isIso_ε_restrictScalars_presheafMap + unitRelabelSwap."
+      }
+    ],
+    "next_steps": "Close the reverse-component naturality (thin-poset square over (Over fV)ᵒᵖ, now that app is an explicit 4-leg composite), then left_inv/right_inv round-trips (now reachable), then the forward sliceDualTransport.hom and dual_restrict_iso Step-4 isoMk naturality. File 6→5 sorries; build EXIT 0, app axiom-clean."
+  },
+  {
+    "timestamp": "2026-06-05T07:57:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/FlatteningStratification.lean",
+      "theorem": "genericFlatness"
+    },
+    "session": {
+      "id": "session_303",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "genericFlatness Lean signature is DEFECTIVE: F : X.Modules has no coherence / finite-type hypothesis, so the statement is FALSE and its sorry is unprovable. Needs planner re-sign (not protected).",
+      "key_lemmas_used": [
+        "Module.FinitePresentation.exists_free_localizedModule_powers",
+        "Module.isOpen_freeLocus",
+        "Module.Flat.of_free",
+        "finitePresentation_of_finite"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Land the algebraic generic-freeness supplement (finite-morphism case) as axiom-clean lemmas to underlie the geometric statement: noetherian domain A, finite A-module M ⟹ ∃ f≠0 with M_f free / flat over A_f.",
+        "code_tried": "GenericFreeness.exists_free_localizationAway_of_finite / exists_flat_localizationAway_of_finite / exists_free_localizationAway_of_moduleFinite via FinitePresentation.exists_free_localizedModule_powers + Module.Flat.of_free",
+        "line_number": "172",
+        "lean_error": "none (3 lemmas axiom-clean {propext, Classical.choice, Quot.sound}); initial 'unknown universe level v' fixed by Type* binders",
+        "result": "success",
+        "insight": "The FINITE-module case of algebraic generic freeness is directly available from Mathlib (FinitePresentation.exists_free_localizedModule_powers). The full finite-TYPE-algebra case (Nitsure §4) needs Noether normalization + content, not yet built. The geometric genericFlatness still cannot be closed because its own signature is wrong (missing coherence hyp)."
+      }
+    ],
+    "next_steps": "Planner must re-sign genericFlatness to add the coherent / LocallyOfFiniteType hypothesis the blueprint thm:generic_flatness requires; only then is the sorry provable. Blueprint the 3 new GenericFreeness.* helpers (currently unmatched lean_aux)."
+  },
+  {
+    "timestamp": "2026-06-05T07:57:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "D3prime_sheafificationCompPullback_comp_tail"
+    },
+    "session": {
+      "id": "session_303",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Objective named ready tensor-iso nodes (jw_ismonoidal, pullback0_tensor_iso, pullback_tensor_iso_loctriv, pullback_compatible_with_tensorobj, stalk_tensor_commutation_naturality_right) do NOT exist as Lean declarations — they are blueprint-pinned only. The actionable target was the D3′ sheafificationCompPullback comp tail (whiskerRight conjugate hwr).",
+      "key_lemmas_used": [
+        "Adjunction.comp_unit_app"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Commit the forward step (e.1) of the D3′ tail: expand the RHS composite-adjunction unit (A_f.comp A_h).unit.app via Adjunction.comp_unit_app (verified non-contaminating)",
+        "code_tried": "expand RHS composite-adjunction unit into its two factors via Adjunction.comp_unit_app",
+        "line_number": "2674",
+        "lean_error": "none (file stays clean); simp only [Adjunction.comp_unit_app]; aesop_cat does NOT close (exhaustive search fails)",
+        "result": "partial",
+        "insight": "Only an incremental documented forward step landed; the D3′ tail (project-local 6-step mate calculus, Mathlib-absent coherence) remains a sorry. Lane progress this iter was marginal."
+      }
+    ],
+    "next_steps": "This lane is effectively blocked on a Mathlib-absent coherence build. Reconcile the objective with reality: the named tensor-iso nodes are blueprint statements with no Lean decl; the planner should either scaffold them or de-scope this lane. Consider effort-breaker on the D3′ tail."
+  }
+]

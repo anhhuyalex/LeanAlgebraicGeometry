@@ -1,0 +1,274 @@
+[
+  {
+    "timestamp": "2026-05-14T12:18:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "alternating_sum_pi_smul_aux_sum_comp"
+    },
+    "session": {
+      "id": "session_97",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "Preadditive.sum_comp",
+        "alternating_sum_pi_smul_aux"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "directive recipe — distribute Preadditive.sum_comp on the (∑ G_i) ≫ E term (HOU-free since G and E are binders), then apply iter-097's alternating_sum_pi_smul_aux on the family fun i ↦ G i ≫ E",
+        "code_tried": "intro r y; rw [Preadditive.sum_comp s G E]; exact alternating_sum_pi_smul_aux Z₁ Z₂ s (fun i ↦ G i ≫ E) e₁ e₂ hG r y",
+        "line_number": "532",
+        "lean_error": null,
+        "goal_before": "∀ (r : R) (y : (i : ι₁) → ↑(Z₁ i)), e₂ (((∑ i ∈ s, G i) ≫ E).hom (e₁.symm (r • y))) = r • e₂ (((∑ i ∈ s, G i) ≫ E).hom (e₁.symm y))",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Miller-pattern unification on Preadditive.sum_comp fires HOU-free because G and E are lemma binders rather than literal nested-i Pi.lift bodies — the iter-098 split-slot refactor's design hypothesis is vindicated. Body committed at L532–L537 (3 tactic lines + 3 comment lines). Single-probe + single-commit, zero error turnaround."
+      }
+    ],
+    "next_steps": "Closed. Iter-100 must preserve byte-for-byte."
+  },
+  {
+    "timestamp": "2026-05-14T12:18:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "cechCofaceMap_pi_smul"
+    },
+    "session": {
+      "id": "session_97",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Per-summand R-linearity hypothesis ?hG (residual sub-goal of Attempt 1 at L728): the polymorphic scalar (-1 : ?S)^(↑i : ℕ) at the head of each summand cannot be pinned to k, ℤ, or R, blocking every smul-aware lemma (Linear.smul_comp, Preadditive.zsmul_comp, ModuleCat.hom_smul). 6 routes attempted; all failed at the same root cause.",
+      "key_lemmas_used": [
+        "Pi.smul_apply",
+        "alternating_sum_pi_smul_aux_sum_comp",
+        "congrFun",
+        "ModuleCat.hom_comp",
+        "LinearMap.comp_apply"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Bridge to iter-098 split-slot structural lemma: reverse-direction Pi.smul_apply on RHS to lift `r • _ j` to `(r • _) j`, then congrFun ?_ j strips j on both sides symmetrically, then refine via alternating_sum_pi_smul_aux_sum_comp letting Miller-pattern unification fill Z_int, G, E, s placeholders",
+        "code_tried": "rw [← Pi.smul_apply (i := j)]; refine congrFun (alternating_sum_pi_smul_aux_sum_comp Z₁ _ Z₂ Finset.univ _ _ e₁ e₂ ?_ r y) j",
+        "line_number": "700",
+        "lean_error": null,
+        "goal_before": "(piIsoPi Z₂).hom.hom (ConcreteCategory.hom ((∑ i, (-1)^↑i • Pi.lift fun i_1 ↦ Pi.π Z₁ (i_1 ∘ ⇑(SimplexCategory.δ i).toOrderHom) ≫ (toModuleKPresheaf C).map (Pi.lift fun x ↦ Pi.π (basicOpenCover ↑s₀ ∘ i_1) ((δ i).toOrderHom x)).op) ≫ eqToHom ⋯) ((piIsoPi Z₁).toLinearEquiv.symm (r • y)) j = r • (piIsoPi Z₂).hom.hom (ConcreteCategory.hom (… same expr …)) ((piIsoPi Z₁).toLinearEquiv.symm y) j",
+        "goal_after": "case h.hG: per-summand R-linearity hypothesis on the family fun i ↦ ((-1)^↑i • Pi.lift_thing) with E := eqToHom ⋯ at L728",
+        "result": "partial",
+        "insight": "Bridge SUCCESS — Miller-pattern unification fills four placeholders cleanly; eqToHom lands in independent E slot, bypassing iter-097 Attempt-5 dead-end. Central goal of iteration achieved. Committed at L700–L712."
+      },
+      {
+        "attempt": 2,
+        "strategy": "directive-suggested simp chain for hG discharge",
+        "code_tried": "intro i _ r' y'; simp only [Preadditive.smul_comp, ModuleCat.hom_smul, LinearMap.smul_apply, ModuleCat.hom_comp, LinearMap.comp_apply, Pi.smul_apply, map_smul]; rfl",
+        "line_number": "726",
+        "lean_error": "Preadditive.smul_comp is NOT a Mathlib constant (correct names: CategoryTheory.Linear.smul_comp for k-action, CategoryTheory.Preadditive.zsmul_comp for ℤ-action). Of remaining lemmas: only ModuleCat.hom_comp + LinearMap.comp_apply fired; ModuleCat.hom_smul / LinearMap.smul_apply / Pi.smul_apply / map_smul all 'unused'.",
+        "goal_before": "per-summand R-linearity for ((-1)^↑i • Pi.lift_thing) ≫ eqToHom",
+        "goal_after": "partially distributed via ModuleCat.hom_comp + LinearMap.comp_apply, but head smul ((-1)^↑i • _) untouched",
+        "result": "failed",
+        "insight": "Directive's name 'Preadditive.smul_comp' was wrong; multiple smul-aware simp lemmas fail to fire due to polymorphic (-1)^↑i scalar."
+      },
+      {
+        "attempt": 3,
+        "strategy": "k-action smul-comp (loogle-verified Linear.smul_comp)",
+        "code_tried": "intro i _ r' y'; simp only [Linear.smul_comp]",
+        "line_number": "726",
+        "lean_error": "no progress — pattern (?r • ?f) ≫ ?g does not unify with the goal because (-1)^↑i does not elaborate as k",
+        "goal_before": "per-summand R-linearity goal",
+        "goal_after": "unchanged (no progress)",
+        "result": "failed",
+        "insight": "Linear.smul_comp's pattern matching requires the scalar to be in k; polymorphic (-1)^↑i blocks unification."
+      },
+      {
+        "attempt": 4,
+        "strategy": "ℤ-action smul-comp (Preadditive.zsmul_comp)",
+        "code_tried": "intro i _ r' y'; simp only [zsmul_comp]",
+        "line_number": "726",
+        "lean_error": "no progress — same 'pattern not found' as Attempt 3. The polymorphic (-1)^↑i is neither k nor ℤ from Lean's perspective at this goal position.",
+        "goal_before": "per-summand R-linearity goal",
+        "goal_after": "unchanged",
+        "result": "failed",
+        "insight": "ℤ-route also blocked; (-1)^↑i scalar type genuinely unresolved at goal level."
+      },
+      {
+        "attempt": 5,
+        "strategy": "rewrite via Linear.smul_comp (rw rather than simp)",
+        "code_tried": "intro i _ r' y'; rw [Linear.smul_comp]",
+        "line_number": "726",
+        "lean_error": "same pattern-not-found",
+        "goal_before": "per-summand R-linearity goal",
+        "goal_after": "unchanged",
+        "result": "failed",
+        "insight": "rw form also blocked — pattern matching is the obstacle, not simp's lemma-application discipline."
+      },
+      {
+        "attempt": 6,
+        "strategy": "compose-and-distribute then ModuleCat.hom_smul to extract scalar past .hom",
+        "code_tried": "intro i _ r' y'; simp only [ModuleCat.hom_comp, LinearMap.comp_apply, ModuleCat.hom_smul, LinearMap.smul_apply, map_smul]; rfl",
+        "line_number": "726",
+        "lean_error": "Only ModuleCat.hom_comp and LinearMap.comp_apply fire; ModuleCat.hom_smul's typeclass chain [Monoid S] [DistribMulAction S _] [SMulCommClass k S _] fails to synthesise with polymorphic (-1)^↑i. Standalone run_code at log_line 54 confirms the lemma exists and synthesises in vacuum.",
+        "goal_before": "per-summand R-linearity goal",
+        "goal_after": "partially distributed (categorical comp resolved, head smul intact)",
+        "result": "failed",
+        "insight": "Typeclass-synthesis blocker, not HOU. ModuleCat.hom_smul works for non-polymorphic scalars but cannot resolve the (-1 : ?S) scalar in this context."
+      },
+      {
+        "attempt": 7,
+        "strategy": "smoke tests of low-level scalar simp lemmas",
+        "code_tried": "intro i _ r' y'; simp only [neg_smul, one_smul, smul_neg, pow_succ, pow_zero]",
+        "line_number": "726",
+        "lean_error": "no progress — the head smul is structurally opaque to these unfolding lemmas",
+        "goal_before": "per-summand R-linearity goal",
+        "goal_after": "unchanged",
+        "result": "failed",
+        "insight": "Low-level scalar normalisation does not touch the typeclass-synthesis obstacle."
+      },
+      {
+        "attempt": 8,
+        "strategy": "commit partial chain so iter-100 starts from a partially-distributed goal",
+        "code_tried": "intro i _ r' y'; simp only [ModuleCat.hom_comp, LinearMap.comp_apply]; sorry",
+        "line_number": "726",
+        "lean_error": null,
+        "goal_before": "per-summand R-linearity goal",
+        "goal_after": "head smul + Pi.lift_thing exposed as separate .hom-applications outside e₂; eqToHom factor distributed",
+        "result": "partial",
+        "insight": "Committed at L726–L728 with detailed iter-100-guidance comment block at L713–L725. File compiles, 6 sorries in BasicOpenCech.lean."
+      }
+    ],
+    "next_steps": "Iter-100 must force-elaborate the polymorphic (-1 : ?S)^(↑i : ℕ) scalar via either (a) `change` with explicit `: ℤ` or `: k` ascription (taking care with the nested Pi.lift metavariables) or (b) `set h : ℤ := (-1)^(↑i : ℕ)` to bind it. Once pinned, Linear.smul_comp (k-route, via SMulCommClass) or Preadditive.zsmul_comp (ℤ-route) should fire. Then ModuleCat.hom_smul + LinearMap.smul_apply + map_smul (k-linearity of e₂) extract (-1)^↑i past e₂. Then discharge residual R-linearity via presheafMap_restrict_collapse (L425, proven iter-087). Estimated 20–40 tactic lines. Per the task report: 'conceptually clean but mechanically involves carefully managing typeclass synthesis across the polymorphic scalar.'"
+  },
+  {
+    "timestamp": "2026-05-14T12:18:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "(L820 substep (a) augmented Čech)"
+    },
+    "session": {
+      "id": "session_97",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Augmented Čech simplicial object infrastructure pending. Multi-iter deferred since iter-085.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Off-limits while L728 (cechCofaceMap_pi_smul Step 2) remains open."
+  },
+  {
+    "timestamp": "2026-05-14T12:18:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "(L1144, L1172 augmented Čech / extra-degeneracy)"
+    },
+    "session": {
+      "id": "session_97",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Augmented Čech / extra-degeneracy infrastructure. Multi-iter deferred.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Off-limits."
+  },
+  {
+    "timestamp": "2026-05-14T12:18:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "g_R.map_smul' (L1362) / h_loc_exact (L1391)"
+    },
+    "session": {
+      "id": "session_97",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Gated on cechCofaceMap_pi_smul body becoming sorry-free (L728).",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Off-limits until L728 closes."
+  },
+  {
+    "timestamp": "2026-05-14T12:18:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "cotangentExactSeq_structure (L636) / others (L122, L957, L974, L1116)"
+    },
+    "session": {
+      "id": "session_97",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Off-limits per plan; Route A/B decision still pending on L636.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Not assigned this iteration."
+  },
+  {
+    "timestamp": "2026-05-14T12:18:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Modules/Monoidal.lean",
+      "theorem": "instIsMonoidal_W (L173)"
+    },
+    "session": {
+      "id": "session_97",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Mathlib upstream gap; stalk-of-presheaf-tensor in the varying-ring setting. Off-limits since iter-081.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Do not assign."
+  },
+  {
+    "timestamp": "2026-05-14T12:18:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Jacobian.lean",
+      "theorem": "nonempty_jacobianWitness (L179)"
+    },
+    "session": {
+      "id": "session_97",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Phase C/E packaging; iter-100+.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Deferred until Phase C unblocks."
+  },
+  {
+    "timestamp": "2026-05-14T12:18:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/Functor.lean",
+      "theorem": "PicardFunctor.representable (L190)"
+    },
+    "session": {
+      "id": "session_97",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Gated on Phase C C0–C3.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Deferred."
+  }
+]

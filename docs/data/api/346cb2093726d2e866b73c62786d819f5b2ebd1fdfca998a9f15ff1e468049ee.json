@@ -1,0 +1,153 @@
+[
+  {
+    "timestamp": "2026-05-31T00:18:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "PresheafOfModules.InternalHom.restrictionMap (+ _add/_zero/_id/_comp/_comp_hom/_globalSMul/_smul)"
+    },
+    "session": {
+      "id": "session_220",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "PresheafOfModules.pushforward₀",
+        "CategoryTheory.Over.map",
+        "Over.mapId_eq",
+        "Over.mapComp_eq",
+        "PresheafOfModules.Hom.naturality",
+        "Over.w",
+        "globalSMul_hom_apply"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Define restrictionMap g φ := (pushforward₀ (Over.map g) ((Over.forget U).op ⋙ R ⋙ forget₂ ...)).map φ; first probed with `example` that the obj/map types reduce as expected (rfl)",
+        "code_tried": "(PresheafOfModules.pushforward₀ (Over.map g) ((Over.forget U).op ⋙ (R ⋙ forget₂ CommRingCat RingCat))).map φ",
+        "line_number": "1136",
+        "result": "success",
+        "insight": "obj reduces by rfl (restr V M), but `map` is noncomputable (restr is noncomputable); decl needs `noncomputable`."
+      },
+      {
+        "attempt": 2,
+        "strategy": "restrictionMap_add/_zero by `ext1 X; rfl` (pushforward₀ is additive sectionwise)",
+        "code_tried": "ext1 X; rfl",
+        "line_number": "1144",
+        "result": "success",
+        "insight": "additivity/zero are definitional after ext1 on the Ab-presheaf component."
+      },
+      {
+        "attempt": 3,
+        "strategy": "restrictionMap_id: tried congrArg, conv_rhs rw, eqToHom/naturality — all failed on dependent motive / type mismatch",
+        "code_tried": "ext1 X; conv_rhs => rw [← hobj X]   //  and   exact (hobj X) ▸ rfl  //  and  φ.naturality_apply (eqToHom (hobj X)) m",
+        "line_number": "1165",
+        "lean_error": "Tactic `rewrite` failed: Motive is dependent / Invalid field `naturality_apply`",
+        "result": "failed",
+        "insight": "Over.map is only pseudofunctorial (Over.mapId_eq/mapComp_eq are propositional, not defeq); rewriting along object-equality hits dependent-motive walls."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Introduce private helper hom_app_heq φ (h : X = Y) : HEq (φ.app X) (φ.app Y) proved by `subst h; rfl`; then restrictionMap_id/_comp via `eq_of_heq (hom_app_heq φ <objeq>)`",
+        "code_tried": "exact eq_of_heq (hom_app_heq φ (by rw [Over.mapComp_eq]; rfl))",
+        "line_number": "1174",
+        "result": "success",
+        "insight": "REUSABLE: the slice restriction depends only on .left (identical for reindexed objects) so source/target modules are defeq; HEq+subst is the key that cracks any pushforward₀ (Over.map -) functoriality coherence."
+      },
+      {
+        "attempt": 5,
+        "strategy": "restrictionMap_globalSMul (semilinearity core): reduce to scalar equality across the two slice bases, discharge via R.map_comp and the Over morphism identity (mkIdTerminal.from A_Y).left = (mkIdTerminal.from Y).left ≫ g (via Over.w)",
+        "code_tried": "rw [globalSMul_hom_apply]; erw [globalSMul_hom_apply]; congr 1; ... have hmor : ... := by apply Quiver.Hom.unop_inj; change ...; have e1/e2 := by simp; rw[e1,e2]; ... ; rw [hmor]; erw [← CommRingCat.comp_apply, ← R.map_comp]; rfl",
+        "line_number": "1195",
+        "result": "success",
+        "insight": "termRingMap composite identity needs the Over.w triangle; `erw` required for the CommRingCat/RingCat carrier defeq."
+      }
+    ],
+    "next_steps": "Sub-step 2 retired. Next: dual alias, internalHomEval, sheafification (sub-steps 3-5)."
+  },
+  {
+    "timestamp": "2026-05-31T00:17:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "PresheafOfModules.InternalHom.internalHom"
+    },
+    "session": {
+      "id": "session_220",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "PresheafOfModules.ofPresheaf",
+        "AddCommGrpCat.of",
+        "AddCommGrpCat.ofHom",
+        "AddCommGrpCat.hom_ext",
+        "AddMonoidHom.ext"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Package restrictionMap as →+ (restrictionMapAddHom) then build internalHomPresheaf : Cᵒᵖ ⥤ Ab with obj := AddCommGrp.of (M|_U ⟶ N|_U)",
+        "code_tried": "obj X := AddCommGrp.of (restr X.unop M ⟶ restr X.unop N); map f := AddCommGrp.ofHom (restrictionMapAddHom f.unop M N)",
+        "line_number": "1237",
+        "lean_error": "Unknown identifier `AddCommGrp.of`; later Quiver instance / universe-mismatch errors",
+        "result": "failed",
+        "insight": "Mathlib name is AddCommGrpCat (abbrev Ab := AddCommGrpCat); the morphism groups live in Type (max u uC vC), NOT Type u, so target category must be AddCommGrpCat.{max u uC vC}."
+      },
+      {
+        "attempt": 2,
+        "strategy": "map_id/map_comp of internalHomPresheaf via restrictionMap_id/_comp; needed AddCommGrpCat.hom_ext + AddMonoidHom.ext (plain `ext φ` gave universe-level mismatch in the Eq)",
+        "code_tried": "apply AddCommGrpCat.hom_ext; refine AddMonoidHom.ext fun φ => ?_; exact restrictionMap_id φ",
+        "line_number": "1245",
+        "result": "success",
+        "insight": "the AddCommGrpCat hom needs hom_ext then AddMonoidHom.ext to expose φ at the right universe."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Assemble internalHom via PresheafOfModules.ofPresheaf in a fresh single-universe section (variable {D : Type u} [Category.{u,u} D] {R₀ : Dᵒᵖ ⥤ CommRingCat.{u}})",
+        "code_tried": "letI : ∀ X, Module ... := fun X => internalHomObjModule X.unop M N; PresheafOfModules.ofPresheaf ... ",
+        "line_number": "1293",
+        "lean_error": "failed to synthesize Module instance (CommRingCat vs RingCat carrier diamond); failed to solve universe constraint u =?= max uC vC",
+        "result": "failed",
+        "insight": "ofPresheaf ties the Ab-presheaf to RingCat.{u}; only matches when base is single-universe (Opens X is SmallCategory.{u}). letI Module instance fails the carrier diamond."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Pass the Module instance explicitly via @ofPresheaf to bypass the CommRingCat/RingCat diamond",
+        "code_tried": "@PresheafOfModules.ofPresheaf D _ (R₀ ⋙ forget₂ CommRingCat RingCat) (internalHomPresheaf M N) (fun X => internalHomObjModule X.unop M N) (fun {_ _} f r m => restrictionMap_smul f M N r m)",
+        "line_number": "1293",
+        "result": "success",
+        "insight": "REUSABLE: must pass the per-object Module instance explicitly via @ofPresheaf (letI diamond is kernel-rejected); ofPresheaf's set_option backward.isDefEq.respectTransparency false then accepts the defeq carriers."
+      }
+    ],
+    "next_steps": "internalHom assembled axiom-clean. NEXT (sub-steps 3-5, fresh chunk over Opens X): dual := internalHom M unit; internalHomEval; sheafify to Scheme.Modules.dual; then exists_tensorObj_inverse (still FORBIDDEN until sheaf-level dual lands)."
+  },
+  {
+    "timestamp": "2026-05-31T00:18:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "PresheafOfModules.exists_tensorObj_inverse"
+    },
+    "session": {
+      "id": "session_220",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Infrastructure-bound: needs the sheaf-level dual (sub-steps 3-5: dual alias, evaluation map, sheafification) which are not yet built. Explicitly FORBIDDEN this iter per the funded-build plan (anti-pattern: pushing a dual-shaped helper-sorry, iter-214 d.1)."
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Not attempted — FORBIDDEN this iter; remains a typed sorry at L1733.",
+        "code_tried": "sorry",
+        "line_number": "1733",
+        "result": "partial",
+        "insight": "Unblocks only after sub-steps 3-5 land. Do NOT re-dispatch prove on this until the sheaf-level dual exists."
+      }
+    ],
+    "next_steps": "Build dual/eval/sheafify first; only then attempt the inverse."
+  }
+]

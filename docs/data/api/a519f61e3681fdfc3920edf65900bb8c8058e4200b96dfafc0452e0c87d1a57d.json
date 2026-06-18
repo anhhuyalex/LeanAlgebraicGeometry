@@ -1,0 +1,259 @@
+[
+  {
+    "timestamp": "2026-05-14T11:26:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "alternating_sum_pi_smul_aux"
+    },
+    "session": {
+      "id": "session_96",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "Finset.cons_induction",
+        "Finset.sum_cons",
+        "Finset.sum_empty",
+        "Finset.mem_cons_self",
+        "Finset.mem_cons",
+        "ModuleCat.hom_zero",
+        "ModuleCat.hom_add",
+        "LinearMap.add_apply",
+        "LinearMap.zero_apply",
+        "map_add",
+        "map_zero",
+        "smul_add",
+        "smul_zero"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Plan-recipe Finset.cons_induction after `revert hF`; simp only [Finset.sum_cons, ModuleCat.hom_add, LinearMap.add_apply, map_add] distributes on both LHS and RHS; rw [hF i (Finset.mem_cons_self), ih (∀ j hj ↦ hF j (mem_cons.mpr (Or.inr hj))) r y, smul_add] closes cons step; empty case via `simp [Finset.sum_empty, ModuleCat.hom_zero, LinearMap.zero_apply, map_zero, smul_zero]`.",
+        "code_tried": "revert hF\ninduction s using Finset.cons_induction with\n| empty =>\n  intro _hF r y\n  simp [Finset.sum_empty, ModuleCat.hom_zero, LinearMap.zero_apply,\n    map_zero, smul_zero]\n| cons i s' hi ih =>\n  intro hF r y\n  simp only [Finset.sum_cons, ModuleCat.hom_add, LinearMap.add_apply, map_add]\n  rw [hF i (Finset.mem_cons_self i s')]\n  rw [ih (fun j hj => hF j (Finset.mem_cons.mpr (Or.inr hj))) r y]\n  rw [smul_add]",
+        "line_number": 478,
+        "lean_error": null,
+        "goal_before": "∀ (r : R) (y : ∀ i, ↑(Z₁ i)), e₂ ((∑ i ∈ s, F i).hom (e₁.symm (r • y))) = r • e₂ ((∑ i ∈ s, F i).hom (e₁.symm y))",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Plan recipe transcribed cleanly with a single name correction (ModuleCat.zero_hom → ModuleCat.hom_zero). HOU-free because F is a binder of the lemma, not a literal Čech alternating-sum body. `simp only` over the four lemmas distributes the sum-of-homs across both LHS and RHS in one pass (an earlier rw-only prototype per the prover's task report failed because rw only fires LHS-pattern matches and ran out of patterns on the second pass)."
+      }
+    ],
+    "next_steps": "Body landed at L478. No further action on this target. Available as a Mathlib-style structural hook for the planned iter-098 follow-up refactor's `alternating_sum_pi_smul_aux_pi_proj` specialisation."
+  },
+  {
+    "timestamp": "2026-05-14T11:26:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "cechCofaceMap_pi_smul"
+    },
+    "session": {
+      "id": "session_96",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Goal at L657 has outer (Pi.π Z₂ j).hom and intermediate eqToHom (from `dif_pos hRel` bridging `(prev n + 1) → ↥s₀` and `n+1 → ↥s₀` index types) wrapping the sum, which does NOT match the new `alternating_sum_pi_smul_aux` lemma's conclusion shape `e₂ ((∑ F i).hom z) = r • e₂ ((∑ F i).hom z')`. Bridging requires either (a) baking `Pi.π Z₂ j` and the eqToHom-codomain into a specialised structural lemma conclusion (iter-098 refactor `alternating_sum_pi_smul_aux_pi_proj`), or (b) an HOU-free tactic-level bridge that absorbs outer `Pi.π Z₂ j` AND eqToHom — Attempts 2/3/5/6 below all fail this bridge. The B1 simp_rw bridges the OUTER projection only; the eqToHom remains unabsorbed.",
+      "key_lemmas_used": [
+        "ModuleCat.piIsoPi_hom_ker_subtype_apply"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "B1 bridge — simp_rw [← ModuleCat.piIsoPi_hom_ker_subtype_apply Z₂ j] to rewrite both `(Pi.π Z₂ j).hom z` occurrences to `(piIsoPi Z₂).hom.hom z j` form, structurally separating the outer j-evaluation from the inner body and exposing the e₂ structure.",
+        "code_tried": "simp_rw [← ModuleCat.piIsoPi_hom_ker_subtype_apply Z₂ j]",
+        "line_number": 656,
+        "lean_error": null,
+        "goal_before": "(ConcreteCategory.hom (Pi.π Z₂ j)) ((ConcreteCategory.hom ((∑ i, (-1)^↑i • Pi.lift fun i_1 ↦ Pi.π Z₁ (i_1 ∘ ⇑(δ i).toOrderHom) ≫ (toModuleKPresheaf C).map (Pi.lift fun x ↦ Pi.π (basicOpenCover ↑s₀ ∘ i_1) ((δ i).toOrderHom x)).op) ≫ eqToHom ⋯)) ((piIsoPi Z₁).toLinearEquiv.symm (r • y))) = r • (ConcreteCategory.hom (Pi.π Z₂ j)) ((ConcreteCategory.hom (… same expression …)) ((piIsoPi Z₁).toLinearEquiv.symm y))",
+        "goal_after": "Same shape but with `(piIsoPi Z₂).hom.hom (((∑ G_lit) ≫ eqToHom).hom (e₁.symm (r • y))) j = r • (piIsoPi Z₂).hom.hom (((∑ G_lit) ≫ eqToHom).hom (e₁.symm y)) j` (outer j-evaluation lifted; inner sum + eqToHom unchanged).",
+        "result": "partial",
+        "insight": "Bridging-only step. Resulting goal is closer to e₂-form on both sides but still has the inner (∑ G_lit) ≫ eqToHom — which the structural lemma's conclusion `e₂ ((∑ F i).hom z) = r • e₂ ((∑ F i).hom z')` does NOT match. Preserved byte-for-byte at L656 into iter-098."
+      },
+      {
+        "attempt": 2,
+        "strategy": "suffices h_fam : <family-level equality with literal Čech body> := by …; simpa [Pi.smul_apply] using congrFun h_fam j",
+        "code_tried": "suffices h_fam :\n    (ConcreteCategory.hom (ModuleCat.piIsoPi Z₂).hom)\n      (((∑ i, (-1)^↑i • Pi.lift (...) ≫ eqToHom (...)).hom)\n        ((piIsoPi Z₁).toLinearEquiv.symm (r • y))) =\n    r • (ConcreteCategory.hom (ModuleCat.piIsoPi Z₂).hom)\n          (((∑ i, ... same ...).hom)\n            ((piIsoPi Z₁).toLinearEquiv.symm y)) by\n  have := congrFun h_fam j\n  simpa [Pi.smul_apply] using this\nsorry",
+        "line_number": 657,
+        "lean_error": "(deterministic) timeout at `whnf`, maximum number of heartbeats (1600000) has been reached. Note: Use `set_option maxHeartbeats <num>` to set the limit.",
+        "goal_before": "(see Attempt 1 goal_after)",
+        "goal_after": "elaboration failed before tactic state changed",
+        "result": "failed",
+        "insight": "Hand-typing the literal Čech alternating-sum body inside a `suffices` re-introduces exactly the iter-096 refactor blocker that defeated the `cechCofaceMap_pi_smul_summand` companion helper. Root cause: `Pi.lift (fun i_1 => Pi.π Z₁ (i_1 ∘ ⇑(δ i).toOrderHom) ≫ …)` forces the elaborator to whnf-reduce `(ComplexShape.up ℕ).prev n + 1 = n` outside any tactic state where `dif_pos hRel` could fire. **Dead-end class for any literal-Čech-body `suffices` formulation.** Reverted in next Edit (attempts_raw log_line 48)."
+      },
+      {
+        "attempt": 3,
+        "strategy": "refine congrFun (alternating_sum_pi_smul_aux Z₁ Z₂ Finset.univ ?F e₁ e₂ ?hF r y) j — let Lean infer F via Miller-pattern unification.",
+        "code_tried": "refine congrFun (alternating_sum_pi_smul_aux Z₁ Z₂ (Finset.univ : Finset (Fin (n+1))) ?F e₁ e₂ ?hF r y) j; sorry; sorry",
+        "line_number": 657,
+        "lean_error": "First pass (no annotation): `typeclass instance problem is stuck: Fintype ?m`. Second pass (annotated `Finset.univ : Finset (Fin (n+1))`): **type mismatch** — lemma conclusion `e₂ ((∑ F i).hom (e₁.symm (r•y))) = r • e₂ (...)` in ∀ j form does not unify with goal LHS `(piIsoPi Z₂).hom.hom (((∑ G_lit) ≫ eqToHom).hom z) j` because the eqToHom is INSIDE the inner .hom-application, not absorbed.",
+        "goal_before": "(see Attempt 1 goal_after)",
+        "goal_after": "unchanged (refine failed)",
+        "result": "failed",
+        "insight": "Confirms refactor report §2 (A1)/(A2) prediction: `alternating_sum_pi_smul_aux`'s abstract signature does NOT match the L637/L657 goal directly. Needs either an inner-eqToHom-absorption tactic OR a Q-codomain-parametric specialisation (iter-098 follow-up refactor)."
+      },
+      {
+        "attempt": 4,
+        "strategy": "rw [Preadditive.sum_comp] or rw [key₂] / simp only [key₂] — push eqToHom inside the sum to convert (∑G) ≫ eqToHom to ∑(G_i ≫ eqToHom), then match structural lemma's F.",
+        "code_tried": "rw [Preadditive.sum_comp]; sorry  -- and 3 variants: rw [Preadditive.sum_comp Finset.univ], rw [key₂], simp only [key₂]",
+        "line_number": 657,
+        "lean_error": "All four variants: tactic compiled but goal UNCHANGED (rw failed to fire — HOU pattern not found).",
+        "goal_before": "(see Attempt 1 goal_after)",
+        "goal_after": "unchanged",
+        "result": "failed",
+        "insight": "Pattern `(∑ j ∈ ?s, ?f j) ≫ ?g` does not match `(∑ i, (-1)^↑i • Pi.lift (fun i_1 => …uses i in non-Miller positions…)) ≫ eqToHom`. Re-confirms iter-094/095 dead-end class — `?f i` cannot abstract over the multiple non-Miller `i` references (`(-1)^↑i`, `(δ i).toOrderHom` used twice). **DO NOT RETRY in iter-098+.** The HOU obstruction transfers verbatim from the underlying `Preadditive.sum_comp` to the body-local `key₂` from iter-094."
+      },
+      {
+        "attempt": 5,
+        "strategy": "have h_struct := alternating_sum_pi_smul_aux Z₁ Z₂ Finset.univ (fun i => <literal alternating-sum F including eqToHom>) e₁ e₂ — provide F explicitly to bypass Miller-unification.",
+        "code_tried": "have h_struct := alternating_sum_pi_smul_aux Z₁ Z₂ (Finset.univ : Finset (Fin (n+1))) (fun i => (-1 : ℤ)^(↑i : ℕ) • Pi.lift (fun (i_1 : Fin (n+1) → ↥s₀) => Pi.π Z₁ (i_1 ∘ ⇑(SimplexCategory.Hom.toOrderHom (SimplexCategory.δ i))) ≫ (toModuleKPresheaf C).map ((Pi.lift fun x => Pi.π (basicOpenCover ↑s₀ ∘ i_1) ((SimplexCategory.δ i).toOrderHom x)).op)) ≫ eqToHom (…)) e₁ e₂",
+        "line_number": 657,
+        "lean_error": "Type mismatch — `Pi.π (basicOpenCover ?m ∘ ?m_1) (...)` has type `∏ᶜ basicOpenCover ?m ∘ ?m_1 ⟶ ...` but is expected to have type `(∏ᶜ fun a ↦ basicOpenCover (↑s₀) (i_1 a)) ⟶ ...`. The inner secondary `Pi.lift`'s index type `Fin ((ComplexShape.up ℕ).prev n + 1) → ↥s₀` does not unify with the outer summation index `i_1 : Fin (n+1) → ↥s₀` outside the tactic state where `dif_pos hRel` could bridge it.",
+        "goal_before": "(see Attempt 1 goal_after)",
+        "goal_after": "elaboration failed",
+        "result": "failed",
+        "insight": "Hand-providing the literal F with eqToHom baked in re-triggers the same `dif_pos hRel`-gated index-type bridge as Attempt 2, surfacing as a unification problem OUTSIDE the tactic state. Same dead-end class as Attempt 2."
+      },
+      {
+        "attempt": 6,
+        "strategy": "rw [← ConcreteCategory.comp_apply] — re-fold the outer `(ConcreteCategory.hom (Pi.π Z₂ j)) ((ConcreteCategory.hom ((∑G) ≫ eqToHom)) z)` into `(ConcreteCategory.hom (((∑G) ≫ eqToHom) ≫ Pi.π Z₂ j)) z`, then attempt Preadditive distribution on the categorical composition.",
+        "code_tried": "rw [← ConcreteCategory.comp_apply]; sorry",
+        "line_number": 657,
+        "lean_error": "Goal unchanged (pattern not found). Both outer `ConcreteCategory.hom (Pi.π Z₂ j)` and inner `ConcreteCategory.hom ((∑G_lit) ≫ eqToHom)` are already in `ConcreteCategory.hom` form post-iter-095 cosmetic, but the lemma's LHS expects a composition `(f ≫ g) x` whereas the goal has `g (f x)` as two separate applications.",
+        "goal_before": "(see Attempt 1 goal_after)",
+        "goal_after": "unchanged",
+        "result": "failed",
+        "insight": "After iter-095's cosmetic `ModuleCat.Hom.hom → ConcreteCategory.hom` normalisation, the `← ConcreteCategory.comp_apply` re-folding direction requires the FORWARD direction of the lemma — `(ConcreteCategory.hom g ∘ ConcreteCategory.hom f) x = ConcreteCategory.hom (f ≫ g) x` — but in the post-rewrite goal both `outer.hom` and `inner.hom` are in expanded `ConcreteCategory.hom (h) (x)` form, not the lemma's `(h ∘ h') x` shape. The `eqToHom` is inside the inner application, not outside — the same structural-position obstruction as Attempt 3."
+      }
+    ],
+    "next_steps": "Iter-098 directive: invoke refactor subagent with slug `alternating-sum-pi-proj-spec` to add `alternating_sum_pi_smul_aux_pi_proj` — a specialisation of the iter-096 abstract lemma that bakes (i) the outer `Pi.π Z₂ j` projection and (ii) the `eqToHom`-codomain bridge into its conclusion. The new specialisation's call-site shape matches L657's goal exactly. Then iter-099 prover closes L657 with one `refine` invocation + per-summand discharge. **Do NOT** attempt any further `Preadditive.sum_comp` / `rw [key₂]` / hand-typed-`suffices` route — iter-097 Attempts 2/4/5 all confirm those classes are dead. Specifically, the prover should not be re-asked to bridge `Pi.π Z₂ j` + `eqToHom` at tactic level; that gap is structural and needs a refactor."
+  },
+  {
+    "timestamp": "2026-05-14T11:26:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "basicOpenCover_isCechAcyclicCover_toModuleKSheaf (substep a — outer)"
+    },
+    "session": {
+      "id": "session_96",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Off-limits this iteration — multi-iter augmented-Čech infrastructure. Plan §'Off-limits' explicitly excludes L729 / L1053 / L1081.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Untouched. Defer to multi-iter infrastructure work."
+  },
+  {
+    "timestamp": "2026-05-14T11:26:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "g_R.map_smul' (area)"
+    },
+    "session": {
+      "id": "session_96",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Gated on `cechCofaceMap_pi_smul` (L657) closing. Off-limits per plan.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Defer until L657 closes (iter-099 contingent)."
+  },
+  {
+    "timestamp": "2026-05-14T11:26:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "h_loc_exact (area)"
+    },
+    "session": {
+      "id": "session_96",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Gated on `cechCofaceMap_pi_smul` (L657) closing. Off-limits per plan.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Defer until L657 closes (iter-099 contingent)."
+  },
+  {
+    "timestamp": "2026-05-14T11:26:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "cotangentExactSeq_structure (case h_exact L636 and other Differentials sorries)"
+    },
+    "session": {
+      "id": "session_96",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Plan §'Off-limits' — Differentials.lean is parked parallel to `instIsMonoidal_W` pending upstream Mathlib developments.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Plan agent: continue to leave Differentials off-limits until the upstream stalk-of-presheaf-tensor / SheafOfModules.exact_iff_stalkwise infrastructure question resolves."
+  },
+  {
+    "timestamp": "2026-05-14T11:26:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Modules/Monoidal.lean",
+      "theorem": "instIsMonoidal_W"
+    },
+    "session": {
+      "id": "session_96",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Mathlib upstream gap (stalk-of-presheaf-tensor in the varying-ring setting); off-limits since iter-081.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Defer. No Archon-side action possible until Mathlib closes this gap."
+  },
+  {
+    "timestamp": "2026-05-14T11:26:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Jacobian.lean",
+      "theorem": "nonempty_jacobianWitness"
+    },
+    "session": {
+      "id": "session_96",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Phase C/E packaging; gated for iter-100+.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Defer."
+  },
+  {
+    "timestamp": "2026-05-14T11:26:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/Functor.lean",
+      "theorem": "PicardFunctor.representable"
+    },
+    "session": {
+      "id": "session_96",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Gated on Phase C C0–C3.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Defer."
+  }
+]

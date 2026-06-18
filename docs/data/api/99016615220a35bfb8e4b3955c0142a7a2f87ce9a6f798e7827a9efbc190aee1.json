@@ -1,0 +1,179 @@
+[
+  {
+    "timestamp": "2026-06-18T07:46:18Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/GrassmannianQuot.lean",
+      "theorem": "tautologicalQuotient_epi"
+    },
+    "session": {
+      "id": "session_1",
+      "model": "prover"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "chartQuotientMap_epi",
+        "Scheme.Modules.pullback_map_jointly_faithful",
+        "epi_comp'",
+        "cancel_epi",
+        "Functor.map_comp",
+        "universalQuotient_restrictionIso",
+        "pullbackFreeIso"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "chart-local epi via reference to later-stated lemma pullback_map_tautologicalQuotient + epi_comp (instance-implicit)",
+        "code_tried": "have hchart ... = (pullbackFreeIso).hom ≫ chartQuotientMap ≫ restrictionIso.inv ... exact epi_comp _ _",
+        "line_number": "2469",
+        "lean_error": "Unknown identifier `pullback_map_tautologicalQuotient` (L2480); failed to synthesize instance Epi (chartQuotientMap d r ↑I ⋯)",
+        "result": "failed",
+        "insight": "the helper lemma is only stated LATER in the file (L4428); must inline its identity. epi_comp instance-implicit form cannot synthesize Epi(chartQuotientMap) through the value-ModuleCat diamond."
+      },
+      {
+        "attempt": 2,
+        "strategy": "inline hptq identity, then rw [heq] + haveI Epi + epi_comp",
+        "code_tried": "have hptq : (pullback ι_I).map u ≫ restrictionIso.hom = pullbackFreeIso.hom ≫ chartQuotientMap; rw [heq]; haveI : Epi (chartQuotientMap ...) := chartQuotientMap_epi ...; exact epi_comp _ _",
+        "line_number": "2504",
+        "lean_error": "failed to synthesize instance Epi (chartQuotientMap d r ↑I ⋯); later: typeclass instance problem is stuck, Epi ?m.191 (metavariables)",
+        "result": "failed",
+        "insight": "haveI in scope does NOT rescue epi_comp's instance search; keys mismatch under the diamond. refine epi_comp ?_ ?_ leaves Epi metavars stuck."
+      },
+      {
+        "attempt": 3,
+        "strategy": "epi_comp' (explicit Epi args) feeding chartQuotientMap_epi by defeq; joint-faithfulness for the global epi",
+        "code_tried": "exact epi_comp' (epi_comp' inferInstance (chartQuotientMap_epi d r I.1 I.2)) inferInstance  -- + cancel_epi ((pullback ι_I).map u) on ((Functor.map_comp).symm.trans ((congrArg map hab).trans (Functor.map_comp)))",
+        "line_number": "2519",
+        "lean_error": "",
+        "result": "success",
+        "insight": "epi_comp' (explicit Epi arguments) supplies the split-epi fact by defeq, bypassing instance search. Global Epi follows from pullback_map_jointly_faithful: cancel chart-epi on left via cancel_epi + Functor.map_comp."
+      }
+    ],
+    "next_steps": "none — solved, axiom-clean"
+  },
+  {
+    "timestamp": "2026-06-18T07:54:23Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/GrassmannianQuot.lean",
+      "theorem": "presentedMatrix_rqPullback"
+    },
+    "session": {
+      "id": "session_1",
+      "model": "prover"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "matrixEndRect_injective",
+        "matrixEndRect_presentedMatrix",
+        "hqtot",
+        "hinvtot",
+        "f1",
+        "f2"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "uncomment the prior agent's commented calc (which claimed a calc-Trans toolchain bug)",
+        "code_tried": "calc matrixEndRect (presentedMatrix ...) = Qr.inv ≫ F.map (...q) ≫ inv (F.map ...) ≫ Qd.hom := matrixEndRect_presentedMatrix ... _ = ...",
+        "line_number": "4848",
+        "lean_error": "invalid 'calc' step, failed to synthesize `Trans` instance: Trans Eq Eq ?m.3189",
+        "result": "failed",
+        "insight": "the 'Trans' error is NOT a real toolchain bug; it is downstream of a step whose proof metavar never got assigned."
+      },
+      {
+        "attempt": 2,
+        "strategy": "convert to explicit have s1..s5 + .trans chain",
+        "code_tried": "have s1 : ... := matrixEndRect_presentedMatrix ...; have s2 : ... := by rw [hqtot, hinvtot]; have s3 ...; exact matrixEndRect_injective (s1.trans (s2.trans ...))",
+        "line_number": "4848",
+        "lean_error": "unsolved goals (s2 step: rw left a goal X = X true only up to the value-ModuleCat diamond)",
+        "result": "partial",
+        "insight": "the rw [hqtot, hinvtot] step produces a syntactically-identical X = X goal that rw's reducible auto-rfl cannot close under the diamond."
+      },
+      {
+        "attempt": 3,
+        "strategy": "append explicit full-transparency rfl after the diamond rw step",
+        "code_tried": "have s2 : ... := by rw [hqtot, hinvtot]; rfl",
+        "line_number": "4830",
+        "lean_error": "",
+        "result": "success",
+        "insight": "explicit `rfl` (full transparency) closes the post-rw X=X diamond goal that the implicit reducible rfl misses. This is the true cause of the spurious 'calc Trans Eq Eq ?m' the FIXME comment misdiagnosed."
+      }
+    ],
+    "next_steps": "none — solved, axiom-clean"
+  },
+  {
+    "timestamp": "2026-06-18T08:06:56Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/GrassmannianQuot.lean",
+      "theorem": "grPointOfRankQuotient_rqPullback_tautological"
+    },
+    "session": {
+      "id": "session_1",
+      "model": "prover"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "congrArg",
+        "Spec.map_comp",
+        "Scheme.toSpecΓ_naturality",
+        "toSpecΓ_SpecMap_ΓSpecIso_inv",
+        "hfac",
+        "hclass",
+        "hunit",
+        "Category.assoc"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "uncomment prior agent's commented calc (claimed calc-Trans bug)",
+        "code_tried": "calc W.ι ≫ grPointOfRankQuotient ... = (T.homOfLE hle ≫ chartLocus.ι) ≫ grPointOfRankQuotient ... := congrArg ... _ = ...",
+        "line_number": "5223",
+        "lean_error": "invalid 'calc' step, failed to synthesize `Trans` instance: Trans Eq Eq ?m.1752",
+        "result": "failed",
+        "insight": "same misdiagnosed Trans error as presentedMatrix; downstream of an unassigned step proof."
+      },
+      {
+        "attempt": 2,
+        "strategy": "replace final calc step's `:= hfac` with `:= by rw [hfac]`",
+        "code_tried": "_ = W.ι ≫ ψ := by rw [hfac]",
+        "line_number": "5223",
+        "lean_error": "invalid 'calc' step, failed to synthesize `Trans` instance: Trans Eq Eq ?m.1753",
+        "result": "failed",
+        "insight": "still fails inside calc; the obstruction is an earlier step, not the last."
+      },
+      {
+        "attempt": 3,
+        "strategy": "convert to have u1..u6 chain; rw [hclass] to fold the chart-class identity",
+        "code_tried": "have u6 : (W.toSpecΓ ≫ Spec.map (ofHom (aeval ... presentedMatrix ... hcI ...))) ≫ ι_I = ... := by rw [hclass]",
+        "line_number": "5223",
+        "lean_error": "Tactic `rewrite` failed: Did not find an occurrence of the pattern CommRingCat.ofHom (MvPolynomial.aeval fun pq => presentedMatrix ... hcI ...)",
+        "result": "failed",
+        "insight": "rw [hclass] fails despite identical display: the aeval arg carries presentedMatrix with an IsIso (hcI) instance differing from hcomp's. Syntactic match impossible."
+      },
+      {
+        "attempt": 4,
+        "strategy": "fold hclass through congrArg (defeq-tolerant) then collapse via Spec.map_comp + toSpecΓ naturality + hunit",
+        "code_tried": "refine u1.trans (... (congrArg (fun m => (toSpecΓ ≫ Spec.map m) ≫ ι_I) hclass).trans ?_); rw [Spec.map_comp, ← Category.assoc (toSpecΓ), ← toSpecΓ_naturality, Category.assoc ρ, hunit, Category.comp_id]",
+        "line_number": "5223",
+        "lean_error": "rewrite failed: Did not find (ρ ≫ ?g) ≫ ?h in target",
+        "result": "partial",
+        "insight": "congrArg fold works; but toSpecΓ_naturality reduces (theGlueData).U I to its defeq Spec(of MP), so hunit (stated via U I) and Category.assoc ρ (codomain U I) no longer match."
+      },
+      {
+        "attempt": 5,
+        "strategy": "finish via toSpecΓ_SpecMap_ΓSpecIso_inv (Spec R form) + arg-free Category.assoc",
+        "code_tried": "... (congrArg ... hclass).trans ?_; rw [key]; exact hfac  -- key proved by toSpecΓ_SpecMap_ΓSpecIso_inv with plain Category.assoc/← Category.assoc",
+        "line_number": "5223",
+        "lean_error": "",
+        "result": "success",
+        "insight": "use the underlying toSpecΓ_SpecMap_ΓSpecIso_inv (stated in the Spec R form, not via U I) + argument-free Category.assoc to dodge the codomain mismatch; rw [key]; exact hfac closes."
+      }
+    ],
+    "next_steps": "none — solved, axiom-clean"
+  }
+]

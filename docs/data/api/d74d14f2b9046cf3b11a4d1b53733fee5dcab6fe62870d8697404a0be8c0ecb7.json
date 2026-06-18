@@ -1,0 +1,154 @@
+[
+  {
+    "timestamp": "2026-06-01T07:11:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate/Vestigial.lean",
+      "theorem": "PresheafOfModules.isLocallyInjective_whiskerLeft_of_W"
+    },
+    "session": {
+      "id": "session_237",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "PresheafOfModules.isIso_stalkFunctor_map_of_W",
+        "PresheafOfModules.stalkTensorIso",
+        "PresheafOfModules.stalkLinearEquivOfIsIso",
+        "PresheafOfModules.injective_stalk_of_isLocallyInjective",
+        "TopCat.Presheaf.locally_surjective_iff_surjective_on_stalks",
+        "GrothendieckTopology.W_iff_isLocallyBijective",
+        "TensorProduct.congr",
+        "stalkFunctor_map_germ_apply"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Close the single open whiskering sorry via three movements: (a) d.1-bridge J.W g -> stalkwise iso, (b) B-naturality of stalkTensorIso identifying (F<|g)_x with id_{F_x} (x) g_x (inlined as `have key`), (c) flatness-free TensorProduct.congr bijectivity then injective_stalk_of_isLocallyInjective.",
+        "code_tried": "induction p using TensorProduct.induction_on with | zero => erw [map_zero ...] | tmul a m => have hRM := stalkTensorLinearMap_germ_tmul ...; rw [hL1, hLN, hRM, hE, TensorProduct.congr_tmul, LinearEquiv.refl_apply, he]; congr 1; exact (stalkLinearMap_germ g z W hzW m).symm | add p q hp hq => ...",
+        "line_number": "478-572",
+        "lean_error": null,
+        "goal_before": "IsLocallyInjective J (F <| g) given hg : J.W ((toPresheaf _).map g)",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "The dominant friction was the +/0 carrier-duality wall: additive instances on defeq carriers (toPresheaf _).obj(F (x) M) vs (Monoidal.tensorObj F M).presheaf differ SYNTACTICALLY, so rw/simp [map_add] will NOT fire on the AddCommGrpCat stalk hom phi. Fix: distribute via `have h := map_add _ _ _` TERMS; use erw [map_zero ...] for the zero case; simp only [map_add] DOES fire on LinearEquiv legs. LinearEquiv coe = underlying map by defeq, so `have hRM : eM (germ ...) = ... := stalkTensorLinearMap_germ_tmul ...` typechecks directly."
+      }
+    ],
+    "next_steps": "Whisker lemma closed; tensorObj_assoc_iso now sorry-free + axiom-clean (verified). thm:pic_commgroup is UNBLOCKED. Next target: the by-hand group law -> exists_tensorObj_inverse (715) + addCommGroup_via_tensorObj (760) in TensorObjSubstrate.lean (the carrier-pivot deferred-bridge lane)."
+  },
+  {
+    "timestamp": "2026-06-01T07:11:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate/Vestigial.lean",
+      "theorem": "PresheafOfModules.isIso_stalkFunctor_map_of_W"
+    },
+    "session": {
+      "id": "session_237",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "PresheafOfModules.injective_stalk_of_isLocallyInjective",
+        "TopCat.Presheaf.locally_surjective_iff_surjective_on_stalks",
+        "GrothendieckTopology.W_iff_isLocallyBijective",
+        "ConcreteCategory.isIso_iff_bijective"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "d.1-bridge: on the topological site Opens X, a J.W-morphism of presheaves of Ab induces an iso on every stalk. Built injective_stalk_of_isLocallyInjective (presheaf-level; Mathlib only has the sheaf version app_injective_iff_stalkFunctor_map_injective) via germ_eq + equalizer-sieve cover; combine with the surjective half (Mathlib free) and W_iff_isLocallyBijective.",
+        "code_tried": "rw [W_iff_isLocallyBijective] at hg; intro z; rw [ConcreteCategory.isIso_iff_bijective]; constructor; [injective via injective_stalk_of_isLocallyInjective; surjective via locally_surjective_iff_surjective_on_stalks]",
+        "line_number": "438-447",
+        "lean_error": null,
+        "goal_before": "J.W ((toPresheaf _).map g) -> forall z, IsIso ((stalkFunctor Ab z).map ((toPresheaf _).map g))",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Mathlib supplies the presheaf surjective stalk bridge and the SHEAF injective one only; the presheaf injective bridge had to be built directly via germ_eq + equalizer-sieve. WEqualsLocallyBijective.W unfolds to local bijectivity = locally injective AND locally surjective."
+      }
+    ],
+    "next_steps": "Reusable d.1-bridge for the topological site. Consider upstreaming injective_stalk_of_isLocallyInjective to Mathlib (the sheaf version exists; the presheaf version is the new content)."
+  },
+  {
+    "timestamp": "2026-06-01T07:11:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/FlatBaseChange.lean",
+      "theorem": "AlgebraicGeometry.pushforward_spec_tilde_iso"
+    },
+    "session": {
+      "id": "session_237",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Carrier wall: the per-basic-open localization hypothesis hloc — IsLocalizedModule (powers a) on the structure-sheaf restriction of the pushforward sections over D(a). Reduces (probe: constructor; intro x; rw [Module.End.isUnit_iff]) to Function.Bijective (a *_R .) on Gamma(N,D(a)) = M[1/phi a], i.e. the structure-sheaf smul identity a *_{R,modulesSpecToSheaf} x = phi(a) *_{R'} x at the D(a) level. Same wall iter-234/236 hit at top, resolved there only element-free.",
+      "key_lemmas_used": [
+        "AlgebraicGeometry.IsLocalizedModule.powers_restrictScalars",
+        "AlgebraicGeometry.fromTildeΓ_app_isIso_of_isLocalizedModule",
+        "Modules.isIso_of_isIso_app_of_isBasis",
+        "IsLocalizedModule.iso",
+        "Scheme.Modules.toOpen_fromTildeΓ_app",
+        "AlgebraicGeometry.gammaPushforwardTildeIso"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Build the full route-iii assembly conditional on hloc, plus the two route-iii helpers (section-level engine + ring-change core), so the only residual is the single named localization fact.",
+        "code_tried": "fromTildeΓ_app_isIso_of_isLocalizedModule: rw [ConcreteCategory.isIso_iff_bijective]; set ρ := ...restriction... ; haveI hρinst := ...; clear_value ρ; set ej := IsLocalizedModule.iso (powers a) j; set eρ := IsLocalizedModule.iso (powers a) ρ; let e := ej.symm.trans eρ; have hLeq : L = e.toLinearMap := IsLocalizedModule.ext ...; exact e.bijective",
+        "line_number": "331-410",
+        "lean_error": "(while building hLeq) IsLocalizedModule.linearEquiv S j ρ and inline (iso S j).symm.trans (iso S ρ) BOTH fail instance synthesis for ρ even though inferInstance succeeds standalone — .trans/linearEquiv expected-type propagation reinterprets ρ's domain so the local instance key no longer matches.",
+        "goal_before": "IsIso (N.fromTildeΓ.app (basicOpen a)) given [IsLocalizedModule (powers a) restriction]",
+        "goal_after": "no goals",
+        "result": "partial",
+        "insight": "Fix the instance-synthesis failure by elaborating each `iso` in a separate `set ... with` so each resolves with its own instance, then `let e := ej.symm.trans eρ`. j must be defined over the SAME unfolded domain expression as ρ ((modulesSpecToSheaf.obj N).val.obj (op top)), not via a `set ΓN`, or domain types diverge. SpecMap_preimage_basicOpen is rfl. The Hom.app vs modulesSpecToSheaf.map section coercions agree by rfl."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Assemble pushforward_spec_tilde_iso_of_isLocalizedModule (conditional) via isIso_of_isIso_app_of_isBasis over PrimeSpectrum.isBasis_basic_opens, then (asIso (fromTildeΓ N)).symm <<< (tilde.functor R).mapIso (gammaPushforwardTildeIso phi M).",
+        "code_tried": "Modules.isIso_of_isIso_app_of_isBasis (B := basicOpen) ...; each section iso = fromTildeΓ_app_isIso_of_isLocalizedModule (hloc a); compose with gammaPushforwardTildeIso",
+        "line_number": "395-410",
+        "lean_error": null,
+        "goal_before": "(Spec phi)_* (tilde M) ≅ tilde (restrictScalars phi M) given hloc",
+        "goal_after": "no goals (conditional def complete, axiom-clean)",
+        "result": "partial",
+        "insight": "Entire skeleton of the target theorem built and axiom-clean; hloc is the ONLY missing input. Unconditional pushforward_spec_tilde_iso NOT added (would need hloc proven). Two routes for next iter: (1) element-free transport via a D(a)-level ring equation + IsLocalizedModule.of_linearEquiv + powers_restrictScalars (recommended, mirrors gammaPushforwardIso); (2) direct IsLocalizedModule.mk proving the smul identity (by-hand carrier wall, higher risk)."
+      }
+    ],
+    "next_steps": "STUCK risk per the iter-237 plan's hard commitment: affineBaseChange_pushforward_iso was NOT closed (it needs the unconditional pushforward_spec_tilde_iso, which needs hloc). Next iter must close hloc via the element-free D(a)-level route OR the lane re-fires STUCK. Consider a mathlib-analogist consult on IsLocalizedModule-on-basic-opens identification before another prover round."
+  },
+  {
+    "timestamp": "2026-06-01T07:11:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/FlatBaseChange.lean",
+      "theorem": "AlgebraicGeometry.affineBaseChange_pushforward_iso"
+    },
+    "session": {
+      "id": "session_237",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Depends on the unconditional pushforward_spec_tilde_iso, which is blocked on the hloc carrier wall (see pushforward_spec_tilde_iso milestone). The first reduction (rw [Modules.isIso_iff_isIso_app_affineOpens]; intro U) is in place; the rest is sorry.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Not directly attacked this iter — gated behind pushforward_spec_tilde_iso. The blueprint route is full-faithfulness reframe (isIso_fromTildeΓ_iff reflect-isos + cancelBaseChange) once the affine tilde iso lands.",
+        "code_tried": "(unchanged; pre-existing sorry at line 470 after the affine-open reduction)",
+        "line_number": "446-470",
+        "lean_error": null,
+        "goal_before": "IsIso (pushforwardBaseChangeMap ...) for affine f, cartesian square, quasicoherent F",
+        "goal_after": "sorry",
+        "result": "failed",
+        "insight": "Cannot close until pushforward_spec_tilde_iso is unconditional. The hard sorry-closure commitment for this lane was NOT met; STUCK re-fires per the iter-237 plan's stated reversing signal."
+      }
+    ],
+    "next_steps": "Do NOT re-dispatch the same prover round on this lane without first closing hloc / pushforward_spec_tilde_iso. Per the iter-237 plan's recorded corrective: deprioritize this affine sub-lane and re-route the engine seed, OR run a targeted mathlib-analogist consult on the basic-open IsLocalizedModule identification."
+  }
+]

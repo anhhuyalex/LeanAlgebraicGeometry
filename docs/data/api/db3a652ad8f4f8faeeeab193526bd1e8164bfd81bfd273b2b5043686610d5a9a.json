@@ -1,0 +1,134 @@
+[
+  {
+    "timestamp": "2026-05-16T13:51:33Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "smooth_locally_free_omega"
+    },
+    "session": {
+      "id": "session_119",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Step 5 type-bridge: project-side section module (relativeDifferentialsPresheaf f).presheaf.obj (.op V₀) elaborates to the Kähler differential over the inverse-image-presheaf colimit ring `((TopCat.Presheaf.pullback CommRingCat f.base).obj S.presheaf).obj (.op V₀)`, NOT over `Γ(S, U₀)` as the blueprint's `relativeDifferentialsPresheaf_obj_kaehler` claims to make 'definitionally equal'. The two Kähler differential modules differ in their source ring (colimit-over-neighbourhoods-of-`f V₀` vs. `Γ(S, U₀)`); the bridge requires a `LinearEquiv` constructed via `KaehlerDifferential.map` plus an injectivity argument that uses `IsAffineOpen` cofinality on the left Kan extension at `V₀`. No off-the-shelf Mathlib lemma covers this in pinned `b80f227`.",
+      "key_lemmas_used": [
+        "AlgebraicGeometry.smoothOfRelativeDimension_iff",
+        "RingHom.IsStandardSmoothOfRelativeDimension.toAlgebra (via algebraize tactic)",
+        "Algebra.IsStandardSmoothOfRelativeDimension.isStandardSmooth",
+        "Algebra.IsStandardSmooth.free_kaehlerDifferential",
+        "Algebra.IsStandardSmoothOfRelativeDimension.rank_kaehlerDifferential",
+        "AlgebraicGeometry.Scheme.component_nontrivial"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Step 1 — extract the standard-smooth chart at `x` via `mk_iff`",
+        "code_tried": "intro x\n  have hsm : SmoothOfRelativeDimension n f := ‹_›\n  rw [smoothOfRelativeDimension_iff] at hsm\n  obtain ⟨U₀, hU₀, V₀, hV₀, hxV, e, hRing⟩ := hsm x\n  refine ⟨V₀, hxV, hV₀, ?_⟩",
+        "line_number": "93",
+        "lean_error": "none — chart `(U₀ : S.Opens, V₀ : X.Opens, e : V₀ ≤ f ⁻¹ᵁ U₀, hRing : RingHom.IsStandardSmoothOfRelativeDimension n (CommRingCat.Hom.hom (Hom.appLE f U₀ V₀ e)))` extracted cleanly",
+        "goal_before": "X S : Scheme; n : ℕ; f : X ⟶ S; [SmoothOfRelativeDimension n f] ⊢ ∀ (x : ↥X), ∃ U, x ∈ U.carrier ∧ IsAffineOpen U ∧ let R := X.ringCatSheaf.presheaf.obj (Opposite.op U); let M := (PresheafOfModules.presheaf (relativeDifferentialsPresheaf f)).obj (Opposite.op U); Module.Free ↑R ↑M ∧ Module.rank ↑R ↑M = ↑n",
+        "goal_after": "post-`refine`: prove `Module.Free ↑R ↑M ∧ Module.rank ↑R ↑M = ↑n` at `U := V₀`",
+        "result": "success",
+        "insight": "Mathlib's `mk_iff` for `SmoothOfRelativeDimension` produces `U : S.Opens` (target side) and `V : X.Opens` (source side), opposite to the file's binder name `U : X.Opens`. The M1 advisory in PROGRESS.md flagged this; the prover renamed locally to `U₀ : S.Opens, V₀ : X.Opens`."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Step 2 — algebraize the appLE ring hom",
+        "code_tried": "algebraize [CommRingCat.Hom.hom (Hom.appLE f U₀ V₀ e)]",
+        "line_number": "101",
+        "lean_error": "none — installs `algInst : Algebra ↑Γ(S, U₀) ↑Γ(X, V₀) := (CommRingCat.Hom.hom (Hom.appLE f U₀ V₀ e)).toAlgebra` and `algebraizeInst : Algebra.IsStandardSmoothOfRelativeDimension n ↑Γ(S, U₀) ↑Γ(X, V₀)`",
+        "goal_before": "same as post-attempt-1",
+        "goal_after": "two new typeclass instances in scope; goal unchanged at the term level",
+        "result": "success",
+        "insight": "The `@[algebraize ...]`-annotated lemma `RingHom.IsStandardSmoothOfRelativeDimension.toAlgebra` is picked up automatically by the `algebraize` tactic. No manual `letI`/`haveI` ring/algebra dance required."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Step 3 — Algebra.IsStandardSmooth",
+        "code_tried": "haveI : Algebra.IsStandardSmooth (Γ(S, U₀) : Type _) Γ(X, V₀) :=\n    Algebra.IsStandardSmoothOfRelativeDimension.isStandardSmooth n",
+        "line_number": "103-104",
+        "lean_error": "none",
+        "goal_before": "as before, with two new algebraize instances",
+        "goal_after": "+ `this : Algebra.IsStandardSmooth ↑Γ(S, U₀) ↑Γ(X, V₀)` in scope",
+        "result": "success",
+        "insight": "Direct Mathlib lemma — exactly as the PROGRESS.md slate prescribed. `n` argument is explicit."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Step 4 — Nontrivial Γ(X, V₀) from x ∈ V₀ (M2 advisory)",
+        "code_tried": "haveI : Nonempty V₀ := ⟨⟨x, hxV⟩⟩\n  haveI : Nontrivial (Γ(X, V₀) : Type _) := Scheme.component_nontrivial X V₀",
+        "line_number": "106-107",
+        "lean_error": "none",
+        "goal_before": "as before, with `this : Algebra.IsStandardSmooth ↑Γ(S, U₀) ↑Γ(X, V₀)` already in scope",
+        "goal_after": "+ `Nonempty ↥↑V₀`, `Nontrivial ↑Γ(X, V₀)`",
+        "result": "success",
+        "insight": "M2 advisory landed exactly as specified. `Scheme.component_nontrivial` is an instance `[Nonempty ↥U] → Nontrivial (X.presheaf.obj (.op U))`."
+      },
+      {
+        "attempt": 5,
+        "strategy": "Step 5 — derive `hfree` and `hrank` over the Mathlib algebra Kähler module",
+        "code_tried": "have hfree : Module.Free Γ(X, V₀) Ω[Γ(X, V₀)⁄Γ(S, U₀)] :=\n    Algebra.IsStandardSmooth.free_kaehlerDifferential\n  have hrank : Module.rank Γ(X, V₀) Ω[Γ(X, V₀)⁄Γ(S, U₀)] = n :=\n    Algebra.IsStandardSmoothOfRelativeDimension.rank_kaehlerDifferential n",
+        "line_number": "108-111",
+        "lean_error": "none — both `hfree` and `hrank` synthesize directly",
+        "goal_before": "Module.Free ↑R ↑M ∧ Module.rank ↑R ↑M = ↑n (R, M presheaf-form)",
+        "goal_after": "unchanged; both `hfree`/`hrank` are over the Mathlib appLE algebra, not the presheaf form yet",
+        "result": "success",
+        "insight": "The algebraic-side content of the forward implication is fully built. Both lemmas accept the synthesised typeclass context without any explicit arguments beyond `n` for `rank_kaehlerDifferential`."
+      },
+      {
+        "attempt": 6,
+        "strategy": "Step 6 — first transfer attempt: `refine ⟨?_, ?_⟩ ; convert hfree using 2 ; convert hrank using 3`",
+        "code_tried": "refine ⟨?_, ?_⟩\n  · convert hfree using 2\n  · convert hrank using 3",
+        "line_number": "132-133 (transient)",
+        "lean_error": "`unsolved goals` — both `convert` calls left residual `case a` goals identifying the project-side section module type with the Mathlib algebra Kähler-module type. The two types are NOT definitionally equal; `convert ... using 2/3` produces a `HEq`-style transport obligation that is itself non-trivial.",
+        "goal_before": "Module.Free ↑(X.ringCatSheaf.presheaf.obj (Opposite.op V₀)) ↑((PresheafOfModules.presheaf (relativeDifferentialsPresheaf f)).obj (Opposite.op V₀))",
+        "goal_after": "two transport obligations the prover could not close",
+        "result": "failed",
+        "insight": "**This is the load-bearing finding of the iter.** The blueprint claim that `relativeDifferentialsPresheaf_obj_kaehler` makes `M_U := (relativeDifferentialsPresheaf f).presheaf.obj (op V₀)` 'definitionally equal' to `Ω[Γ(X,V₀)⁄Γ(S,U₀)]` is WRONG: the project-local `relativeDifferentialsPresheaf_obj_kaehler` identifies `M_U` with `CommRingCat.KaehlerDifferential (φ'.app (op V₀))` where the source of `φ'` is `((TopCat.Presheaf.pullback CommRingCat f.base).obj S.presheaf).obj (op V₀)` — i.e. the inverse-image-presheaf at `V₀`, which is `colim_{f V₀ ⊆ W ⊆ S} S.presheaf.obj W`, NOT `Γ(S, U₀)`. The colimit-source ring is strictly larger than the chart-source ring in general. The bridge is a real `LinearEquiv` (or `RingEquiv`-then-`Module.Free.of_ringEquiv`), not a `rfl`."
+      },
+      {
+        "attempt": 7,
+        "strategy": "Investigate Mathlib bridges: KaehlerDifferential.map / map_surjective, Module.Free.of_ringEquiv, pullbackObjObjOfImageOpen, Smooth → IsOpenMap",
+        "code_tried": "lean_leansearch / Grep on: `KaehlerDifferential.mapBaseChange_surjective`, `KaehlerDifferential.map_surjective`, `Module.Free.of_ringEquiv`, `Algebra.IsStandardSmoothOfRelativeDimension.baseChange`, `TopCat.Presheaf.pullbackObjObjOfImageOpen`, `AlgebraicGeometry.Scheme.Hom.isOpenMap`, `Smooth → UniversallyOpen`, instance chain",
+        "line_number": "n/a (research)",
+        "lean_error": "n/a",
+        "goal_before": "n/a",
+        "goal_after": "n/a",
+        "result": "partial",
+        "insight": "Mathlib provides the surjection direction (`KaehlerDifferential.map_surjective`) and a free-transport lemma (`Module.Free.of_ringEquiv`) but does NOT provide: (i) an `IsOpenMap (f.base)` instance under `Smooth f` in pinned `b80f227` (only `Scheme.Hom.isOpenMap` under `[UniversallyOpen f]`, no automatic chain from `[Smooth f]`); (ii) a direct iso `((TopCat.Presheaf.pullback _ f.base).obj S.presheaf).obj (op V₀) ≃+* Γ(S, U₀)` when `IsAffineOpen U₀ ∧ IsAffineOpen V₀ ∧ V₀ ≤ f ⁻¹ᵁ U₀`. Closing the bridge requires a project-local helper roughly named `relativeDifferentialsPresheaf_iso_kaehler_appLE`."
+      },
+      {
+        "attempt": 8,
+        "strategy": "Step 7 — fallback: structure-preserving partial close using `constructor` + `all_goals first | exact hfree | exact hrank | sorry`",
+        "code_tried": "constructor\n  all_goals first\n    | exact hfree\n    | exact hrank\n    | sorry",
+        "line_number": "132-136",
+        "lean_error": "none — file compiles with a single `sorry` warning at L87 (declaration uses sorry)",
+        "goal_before": "Module.Free ↑R ↑M ∧ Module.rank ↑R ↑M = ↑n (R, M presheaf-form)",
+        "goal_after": "1 residual `sorry` at L136 representing the transport-obligations to bridge from the appLE algebra Kähler module to the inverse-image-presheaf Kähler module on `V₀`",
+        "result": "partial",
+        "insight": "Final body: the algebraic content (~45 LOC) is preserved verbatim in the file; the `first | exact hfree | exact hrank | sorry` cascade lets either `exact` fire if Lean ever closes the type identification (e.g. via a future helper), and otherwise falls through to `sorry`. The sorry is *structurally minimal* — it sits inside `all_goals first` and applies only when neither `hfree` nor `hrank` matches the goal definitionally."
+      }
+    ],
+    "next_steps": "Build the project-local helper `relativeDifferentialsPresheaf_iso_kaehler_appLE` (signature in the prover task result, body ~50-150 LOC):\n```\nlemma relativeDifferentialsPresheaf_iso_kaehler_appLE\n    (f : X ⟶ S) {U : S.Opens} {V : X.Opens}\n    (hU : IsAffineOpen U) (hV : IsAffineOpen V) (e : V ≤ f ⁻¹ᵁ U) :\n    letI := (Scheme.Hom.appLE f U V e).hom.toAlgebra\n    ((relativeDifferentialsPresheaf f).presheaf.obj (.op V) : Type _) ≃ₗ[Γ(X, V)]\n      Ω[Γ(X, V) ⁄ Γ(S, U)]\n```\nClosing the helper retires the iter-119 `sorry` at `Differentials.lean:136`. The cleanest route is likely to establish a ring-level iso `Γ(S, U) ≃+* ((TopCat.Presheaf.pullback CommRingCat f.base).obj S.presheaf).obj (.op V)` under both `IsAffineOpen` hypotheses (via cofinality of `U` in the colimit cone of neighbourhoods of `f V`), then transport via `KaehlerDifferential.mapBaseChange` (surjective on isos) + `Module.Free.of_ringEquiv`."
+  },
+  {
+    "timestamp": "2026-05-16T13:51:33Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Jacobian.lean",
+      "theorem": "nonempty_jacobianWitness"
+    },
+    "session": {
+      "id": "session_119",
+      "model": "n/a"
+    },
+    "findings": {
+      "blocker": "Foundational existence hypothesis — single explicit project-external sorry by design (Phase C exit policy). Off-limits to the autonomous loop per STRATEGY.md; closure requires Hilbert/Quot, symmetric-powers, OR genus-0+rigidity infrastructure not in pinned Mathlib `b80f227`.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Out of autonomous-loop scope. No prover dispatch scheduled."
+  }
+]

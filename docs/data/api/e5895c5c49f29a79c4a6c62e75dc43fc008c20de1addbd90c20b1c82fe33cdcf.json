@@ -1,0 +1,453 @@
+[
+  {
+    "timestamp": "2026-05-26T03:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects/Cross01Substrate.lean",
+      "theorem": "AlgebraicGeometry.IsClosedImmersion.lift_iff_range_subset"
+    },
+    "session": {
+      "id": "session_189",
+      "model": "opus-4-x"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "Scheme.Hom.support_ker",
+        "IsClosedEmbedding.isClosed_range.closure_eq",
+        "Scheme.IdealSheafData.vanishingIdeal_support",
+        "Scheme.IdealSheafData.vanishingIdeal_antimono",
+        "Scheme.IdealSheafData.le_radical",
+        "Scheme.Hom.ker_apply",
+        "Scheme.IdealSheafData.radical_ideal",
+        "eq_zero_of_pow_eq_zero",
+        "IsClosedImmersion.lift",
+        "IsClosedImmersion.lift_fac"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Lane B 6-step Galois-connection recipe per analogies/lane-b-substrate.md §2 in NEW file Cross01Substrate.lean (Step1=support_ker+closure collapse; Step2=closure_minimal; Step3/4=ring-kernel radical from reducedness via inline 5-LOC `have ker_isRadical`; Step5=5-step Galois calc chain; Step6=IsClosedImmersion.lift+lift_fac)",
+        "code_tried": "theorem IsClosedImmersion.lift_iff_range_subset {X Y Z : Scheme.{u}} (i : Z ⟶ X) [IsClosedImmersion i] [IsReduced Z] (g : Y ⟶ X) [QuasiCompact g] [IsReduced Y] : (∃ h : Y ⟶ Z, h ≫ i = g) ↔ Set.range g.base ⊆ Set.range i.base",
+        "line_number": "~80 LOC new file",
+        "lean_error": "intermediate: refine le_antisymm ?_ Scheme.IdealSheafData.le_radical failed (expected `g.ker ≤ g.ker.radical`, got `∀ I, I ≤ I.radical`) — fixed by passing explicit `_` argument as `Scheme.IdealSheafData.le_radical _`",
+        "goal_before": "(∃ h, h ≫ i = g) ↔ Set.range g.base ⊆ Set.range i.base",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Closed-immersion ⇒ QuasiCompact is automatic (via `IsClosedImmersion → IsAffineHom → QuasiCompact` low-prio instances); no need to assume `[QuasiCompact i]`. `support_ker` is the cleaner equality (`f.ker.support = closure (range f)`) — Step 1 collapses the closure for closed immersions via `IsClosedEmbedding.isClosed_range.closure_eq`. Ring-kernel radicality from reduced codomain inlined as 5-LOC local `have` rather than promoting to a helper (single use site)."
+      }
+    ],
+    "next_steps": "Lane B iter-190 prover dispatches Substrate 2 `gmRing_tensor_homogeneousAway_isDomain` ~50-80 LOC per analogies/lane-b-substrate.md §2; iter-191-193 consumer closures in GmScaling.lean (cross01 + gm_geomIrred + projGm_isReduced)."
+  },
+  {
+    "timestamp": "2026-05-26T03:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OCofP.lean",
+      "theorem": "AlgebraicGeometry.carrierPresheaf_isSheaf (Case B residual)"
+    },
+    "session": {
+      "id": "session_189",
+      "model": "opus-4-x"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "iSup_eq_bot",
+        "IrreducibleSpace.toPreirreducibleSpace",
+        "AlgebraicGeometry.irreducibleSpace_of_isIntegral",
+        "nonempty_preirreducible_inter",
+        "TopologicalSpace.Opens.not_nonempty_iff_eq_bot",
+        "TopologicalSpace.Opens.mem_iSup",
+        "TopologicalSpace.Opens.mem_bot",
+        "Submodule.inclusion",
+        "ModuleCat.hom_ofHom"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Direct unique-gluing via irreducibility — bypass Subfunctor.isSheaf_iff (refactor's carrierTypeSubfunctor in scope but unused: ModuleCat-valued carrier required an extra translation step). Inline helper `map_val` (when target Vo ≠ ⊥, carrierPresheaf.map = Submodule.inclusion, preserves .1). Extract witness via `iSup_eq_bot`; non-empty intersection from preirreducibility (`@nonempty_preirreducible_inter` with explicit instance to bridge `↥C.left` vs `↑C.left.toTopCat` friction); value uniformity `key_val` via compat+map_val; membership via mem_iSup; uniqueness via gluing-at-i₀.",
+        "code_tried": "```\nintro hSup\nhave map_val : ∀ {Vo : (Opens C.left)ᵒᵖ} {Wo} (hV : Vo.unop ≠ ⊥) (h_le : Wo.unop ≤ Vo.unop) (s : carrierPresheaf Vo), ((carrierPresheaf.map ...) s).1 = s.1 := by simp only [carrierPresheaf, dif_neg hV, ModuleCat.hom_ofHom]; rfl\nobtain ⟨i₀, hi₀⟩ := (by ... : ∃ i, U i ≠ ⊥)\nhave inter_ne_bot : ∀ i j, U i ≠ ⊥ → U j ≠ ⊥ → (U i ⊓ U j) ≠ ⊥ := ...\nhave key_val : ∀ i, U i ≠ ⊥ → (sf i).1 = v := ...\nrefine ⟨⟨v, hv_mem⟩, fun i => ?_, fun s' hs' => ?_⟩\n· ext; by_cases hUi : U i = ⊥ <;> [...; rw [map_val ..., key_val]]\n· ext; rw [map_val hSup (le_iSup _ _) s', gluing i₀]\n```",
+        "line_number": "~L644 (was L686 entering iter-189)",
+        "lean_error": "intermediate: nonempty_preirreducible_inter failed without @-form (subtype friction `↥C.left` vs `↑C.left.toTopCat`) — fixed by `@nonempty_preirreducible_inter _ _ _ _ hPre (U i).isOpen ...`",
+        "goal_before": "∃! s, ∀ i, F.map (...).op s = sf i",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Subfunctor framework not needed — direct irreducibility argument is cleaner than `Subfunctor.isSheaf_iff` because carrierPresheaf is ModuleCat-valued (not Type-valued); the Subfunctor refactor's `carrierTypeSubfunctor` def remains in the file as documentation of the conceptual approach. The instance friction between `IrreducibleSpace ↥C.left` (autosynthesised) and `Set ↑C.left.toTopCat` (what `nonempty_preirreducible_inter` wants) requires @-form invocation."
+      }
+    ],
+    "next_steps": "3 sorries remain in OCofP at L1154/L1191/L1249 (h1_vanishing_genusZero / dim_eq_two_of_genusZero / exists_nonconstant_genusZero) — all gated on RR.2.H¹ skyscraper-flasque vanishing sub-phase (committed iter-188 strategy revision; new chapter+file owed iter-190 plan-phase per A.3.ii–vi + RR.2.H¹ unstarted-phase proposals)."
+  },
+  {
+    "timestamp": "2026-05-26T03:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Albanese/AuslanderBuchsbaum.lean",
+      "theorem": "exists_isSMulRegular_quotient_isRegularLocal_succ"
+    },
+    "session": {
+      "id": "session_189",
+      "model": "opus-4-x"
+    },
+    "findings": {
+      "blocker": "Stacks 00NQ (`IsRegularLocalRing R ⟹ IsDomain R`) is genuinely absent from Mathlib at b80f227 (confirmed via lean_leansearch + lean_loogle + Grep + Find — only `RegularLocalRing/Defs.lean` exists, no `Domain.lean` / `Stacks.lean`)",
+      "key_lemmas_used": [
+        "Submodule.le_of_le_smul_of_le_jacobson_bot",
+        "Submodule.spanFinrank_bot",
+        "Ideal.span_singleton_ne_top",
+        "Ideal.Quotient.nontrivial_iff",
+        "IsLocalRing.of_surjective'",
+        "Ideal.Quotient.isNoetherianRing",
+        "IsRegularLocalRing.spanFinrank_maximalIdeal",
+        "IsRegularLocalRing.of_spanFinrank_maximalIdeal_le",
+        "IsLocalRing.spanFinrank_maximalIdeal_eq_finrank_cotangentSpace",
+        "ringKrullDim_quotient_span_singleton_succ_eq_ringKrullDim",
+        "WithBot.add_eq_coe",
+        "WithTop.add_right_cancel",
+        "IsSMulRegular.of_ne_zero",
+        "finrank_cotangentSpace_quot_span_singleton_succ (iter-188 G1 helper)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Direct close via joint induction Stacks 00NQ + 00NU (~200 LOC per directive).",
+        "code_tried": "(attempted direct application of Stacks 00NQ)",
+        "line_number": "~L1286",
+        "lean_error": "Stacks 00NQ statement `IsRegularLocalRing R → IsDomain R` not in Mathlib. Searches: lean_leansearch \"regular local ring is integral domain\" → empty; lean_loogle `IsRegularLocalRing _ → IsDomain _` → empty; Grep over Mathlib `RingTheory/RegularLocalRing/` → single file Defs.lean.",
+        "goal_before": "∀ R [CommRing R] [IsLocalRing R] [IsNoetherianRing R] [IsRegularLocalRing R] {k}, (maximalIdeal R).spanFinrank = k+1 → ∃ x : R, ... ∧ IsRegularLocalRing (R ⧸ Ideal.span {x}) ∧ ...",
+        "goal_after": "same — joint induction requires Krull's principal ideal theorem + Krull intersection + prime avoidance + minimal primes finiteness ≈ 300 LOC substrate; multi-iter.",
+        "result": "failed",
+        "insight": "Confirms iter-185 review (and the file's own L1273 docstring): Stacks 00NQ genuinely absent from Mathlib b80f227."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Structural refactor: decompose the iter-185 consolidated typed sorry into 2 axiom-clean helpers (`exists_notMemSq_of_spanFinrank_pos` via Nakayama; `exists_isSMulRegular_notMemSq_of_regularLocal_succ` via IsSMulRegular.of_ne_zero) + 1 narrow isolated typed sorry `isDomain_of_regularLocal`. Then assemble the original theorem axiom-clean modulo the lone substrate sorry, leveraging iter-188's G1 cotangent dim-drop bridge `finrank_cotangentSpace_quot_span_singleton_succ` + `IsLocalRing.spanFinrank_maximalIdeal_eq_finrank_cotangentSpace` to translate κ-finrank to spanFinrank, then `ringKrullDim_quotient_span_singleton_succ_eq_ringKrullDim` for the Krull dim drop.",
+        "code_tried": "private lemma isDomain_of_regularLocal : ∀ (R) [CommRing R] [IsLocalRing R] [IsNoetherianRing R] [IsRegularLocalRing R], IsDomain R := by sorry\nprivate lemma exists_notMemSq_of_spanFinrank_pos {R} [CommRing R] [IsLocalRing R] [IsNoetherianRing R] (h : 0 < (maximalIdeal R).spanFinrank) : ∃ x ∈ maximalIdeal R, x ∉ (maximalIdeal R) ^ 2 := by\n  by_contra h_neg; push_neg at h_neg\n  have h𝔪_le_sq : maximalIdeal R ≤ (maximalIdeal R) ^ 2 := ...\n  -- Nakayama via Submodule.le_of_le_smul_of_le_jacobson_bot\n  ...\nprivate lemma exists_isSMulRegular_notMemSq_of_regularLocal_succ ... := by\n  obtain ⟨x, hx𝔪, hxnotsq⟩ := exists_notMemSq_of_spanFinrank_pos ...\n  have hxnz : x ≠ 0 := ...\n  haveI := isDomain_of_regularLocal R\n  haveI : Module.IsTorsionFree R R := inferInstance\n  exact ⟨x, hx𝔪, hxnotsq, IsSMulRegular.of_ne_zero _ hxnz⟩\n-- assembly: orig theorem axiom-clean modulo isDomain_of_regularLocal",
+        "line_number": "~L1300 new sorry; theorem body L1286 axiom-clean modulo it",
+        "lean_error": "none — typecheck OK; `lean_diagnostic_messages` GREEN with only the 2 sorry warnings (L835 pre-existing + L1300 new substrate sorry).",
+        "goal_before": "as above",
+        "goal_after": "isolated `isDomain_of_regularLocal` substrate (Stacks 00NQ)",
+        "result": "partial",
+        "insight": "Substrate gap narrowed from consolidated `Stacks 00NQ + 00NU` to pure `Stacks 00NQ`. The Stacks 00NU regularity-propagation half is now closed axiom-clean via the iter-188 G1 bridge. File sorry count UNCHANGED (2 → 2): the iter-185 consolidated sorry was replaced by the narrower `isDomain_of_regularLocal` sorry. HARD BAR (≥1 close) NOT MET in count terms but substrate strictly narrowed."
+      }
+    ],
+    "next_steps": "iter-190+ priority: close `isDomain_of_regularLocal` (Stacks 00NQ). Options: (a) full project-side ~300 LOC via Krull PIT (Mathlib ✓) + Krull intersection (Mathlib ✓ via `Mathlib.RingTheory.AdicCompletion.Noetherian.IsHausdorff (maximalIdeal R)`) + prime avoidance (Mathlib ✓) + minimal primes finite (Mathlib ✓ via `minimalPrimes`); (b) Mathlib upstream PR ~50-100 LOC to new `RegularLocalRing/Domain.lean`; (c) Koszul-homology bypass via depth/Koszul complex API."
+  },
+  {
+    "timestamp": "2026-05-26T03:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/IdentityComponent.lean",
+      "theorem": "IdentityComponent.isFiniteTypeGeometricallyIrreducible"
+    },
+    "session": {
+      "id": "session_189",
+      "model": "opus-4-x"
+    },
+    "findings": {
+      "blocker": "`isSubgroupHomomorphism` substrate gap (EGA IV₂ 4.5.8 `isPreconnected_prod` for schemes-over-base not in Mathlib b80f227); EGA IV₂ 4.5.14 (k-rational point implies geometric connectedness) also not in Mathlib. HARD SCOPE CAP (helper budget = 0) prevented scaffolding the substrate this iter.",
+      "key_lemmas_used": [
+        "AlgebraicGeometry.locallyOfFiniteType_of_isOpenImmersion",
+        "AlgebraicGeometry.locallyOfFiniteType_comp",
+        "AlgebraicGeometry.locallyOfFiniteType_isStableUnderBaseChange",
+        "CategoryTheory.MorphismProperty.pullback_snd",
+        "AlgebraicGeometry.Scheme.GrpObjAsOverPullback"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "⟨inferInstance, inferInstance, inferInstance⟩",
+        "code_tried": "by exact ⟨inferInstance, inferInstance, inferInstance⟩",
+        "line_number": "L356",
+        "lean_error": "None of LocallyOfFiniteType / QuasiCompact / GeometricallyIrreducible auto-synthesize at unfolded `(IdentityComponent G).hom`.",
+        "goal_before": "LocallyOfFiniteType (IdentityComponent G).hom ∧ QuasiCompact (IdentityComponent G).hom ∧ GeometricallyIrreducible (IdentityComponent G).hom",
+        "goal_after": "same",
+        "result": "failed",
+        "insight": "`(IdentityComponent G).hom` opaque to instance resolution; needs `change` to expose `(identityComponentCarrier G).ι ≫ G.hom`."
+      },
+      {
+        "attempt": 2,
+        "strategy": "After `change` unfolding to `(identityComponentCarrier G).ι ≫ G.hom`, `infer_instance` each conjunct.",
+        "code_tried": "by change LocallyOfFiniteType ((identityComponentCarrier G).ι ≫ G.hom) ∧ ...; refine ⟨?_, ?_, ?_⟩ <;> [infer_instance; infer_instance; infer_instance]",
+        "line_number": "L356",
+        "lean_error": "LocallyOfFiniteType ✓; QuasiCompact ✗ (open immersion of arbitrary connected component need not be QC); GeometricallyIrreducible ✗ (no auto-instance).",
+        "goal_before": "as above",
+        "goal_after": "QC ∧ GI residual",
+        "result": "partial",
+        "insight": "`LocallyOfFiniteType` closes via `locallyOfFiniteType_of_isOpenImmersion` + `locallyOfFiniteType_comp` instance chain. QC + GI are genuine substrate (Kleiman §5 argument via `α(U×U) = G^0` + smooth-affine cover translates)."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Structural partial: replace body with `by refine ⟨?_, ?_⟩; · <LFT close>; · sorry`, bundling QC+GI into 1 sorry (no new declaration-level sorry; HARD SCOPE CAP preserved).",
+        "code_tried": "by refine ⟨?_, ?_⟩\n  · change LocallyOfFiniteType ((identityComponentCarrier G).ι ≫ G.hom); infer_instance\n  · sorry",
+        "line_number": "L356",
+        "lean_error": "None — typecheck OK.",
+        "goal_before": "LFT ∧ QC ∧ GI",
+        "goal_after": "QC ∧ GI bundled into 1 sorry",
+        "result": "partial",
+        "insight": "PARTIAL landed structurally — net declaration-level sorries unchanged (8 → 8); substrate gap localized to `QC ∧ GI` bundle. Both depend transitively on `isSubgroupHomomorphism` which itself needs the EGA IV₂ 4.5.8 substrate."
+      }
+    ],
+    "next_steps": "iter-190 escalation per HARD SCOPE CAP trigger: dispatch `mathlib-analogist cross-domain-inspiration` on group-scheme identity-component substrate (Subgroup.connectedComponentOfOne analog? OpenSubScheme.GrpObj pattern?); unbundle baseChangeIso into 3 separate typed sorries; consider project-side `Scheme.isConnected_pullback_of_isGeometricallyConnected` ~80-150 LOC helper."
+  },
+  {
+    "timestamp": "2026-05-26T03:30:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/IdentityComponent.lean",
+      "theorem": "IdentityComponent.isSubgroupHomomorphism"
+    },
+    "session": {
+      "id": "session_189",
+      "model": "opus-4-x"
+    },
+    "findings": {
+      "blocker": "No `Set.range mul ⊆ Set.range ι` substrate without EGA IV₂ 4.5.8 (`isPreconnected_prod` for schemes-over-base) which is NOT in Mathlib b80f227. Helper budget = 0 per HARD SCOPE CAP rules out scaffolding."
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "⟨inferInstance⟩",
+        "code_tried": "by exact ⟨inferInstance⟩",
+        "line_number": "L332",
+        "lean_error": "`GrpObj (IdentityComponent G)` not in scope — no instance auto-derives group-object structure on clopen subscheme containing identity.",
+        "goal_before": "Nonempty (GrpObj (IdentityComponent G))",
+        "goal_after": "same",
+        "result": "failed",
+        "insight": "No Mathlib infrastructure to inherit GrpObj from ambient scheme onto an open subscheme even containing the identity."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Structural construction of GrpObj fields via `IsOpenImmersion.lift` (factor mul through `(identityComponentCarrier G).ι`).",
+        "code_tried": "refine ⟨{ mul := IsOpenImmersion.lift (identityComponentCarrier G).ι ... ?_; ...}⟩",
+        "line_number": "L332",
+        "lean_error": "Requires `Set.range mul_composite ⊆ Set.range ι` substrate. Kleiman: `G^0 × G^0` connected (EGA IV₂ 4.5.8) + contains identity + continuous mul + connected image containing identity ⊆ G^0. EGA IV₂ 4.5.8 not in Mathlib b80f227; EGA IV₂ 4.5.14 (k-pt ⇒ geom-connected) also not in Mathlib.",
+        "goal_before": "as above",
+        "goal_after": "substrate gap",
+        "result": "failed",
+        "insight": "Mathlib gap on EGA IV₂ 4.5.8 / 4.5.14 confirmed. Helper budget = 0 from HARD SCOPE CAP forbids scaffolding the substrate this iter."
+      }
+    ],
+    "next_steps": "iter-190+: project-side `Scheme.isConnected_pullback_of_isGeometricallyConnected` substrate (~80-150 LOC) bridges identityComponent → isSubgroupHomomorphism → isFiniteTypeGeometricallyIrreducible chain. Pre-investigate via cross-domain-inspiration analogist (Subgroup.connectedComponentOfOne in Mathlib has connectedComponent-of-1 idiom for topological groups)."
+  },
+  {
+    "timestamp": "2026-05-26T03:30:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/IdentityComponent.lean",
+      "theorem": "IdentityComponent.baseChangeIso"
+    },
+    "session": {
+      "id": "session_189",
+      "model": "opus-4-x"
+    },
+    "findings": {
+      "blocker": "Σ' triple-construction — LFT-on-G_K closable axiom-clean via `MorphismProperty.pullback_snd`, but GrpObj-on-G_K needs `Scheme.GrpObjAsOverPullback` + ~10-30 LOC OverClass/asOver bridging; the substantive iso is Kleiman §5 substrate. HARD SCOPE CAP rules out +1 sorry net."
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "⟨⟨inferInstance, inferInstance, sorry⟩⟩",
+        "code_tried": "by exact ⟨⟨inferInstance, inferInstance, sorry⟩⟩",
+        "line_number": "L393",
+        "lean_error": "Neither GrpObj G_K nor LocallyOfFiniteType G_K.hom auto-instance on `Over.mk (pullback.snd G.hom φ)`.",
+        "goal_before": "Nonempty (Σ' (_g : GrpObj G_K) (_l : LocallyOfFiniteType G_K.hom), (IdentityComponent G_K).left ≅ pullback (IdentityComponent G).hom φ)",
+        "goal_after": "same",
+        "result": "failed",
+        "insight": "Auto-inference fails; explicit construction needed for each Σ-component."
+      },
+      {
+        "attempt": 2,
+        "strategy": "`MorphismProperty.pullback_snd` for LocallyOfFiniteType + leave GrpObj + iso as sorries.",
+        "code_tried": "haveI hLFT : LocallyOfFiniteType G_K.hom := MorphismProperty.pullback_snd G.hom φ inferInstance\nrefine ⟨⟨?_, hLFT, ?_⟩⟩  -- GrpObj + iso remain",
+        "line_number": "L393",
+        "lean_error": "Typechecks but leaves 2 internal sorries (GrpObj + iso). Net +1 sorry — VIOLATES HARD SCOPE CAP.",
+        "goal_before": "as above",
+        "goal_after": "GrpObj G_K + iso sorries",
+        "result": "failed",
+        "insight": "`CategoryTheory.MorphismProperty.pullback_snd` works for any `IsStableUnderBaseChangeAlong` property; `LocallyOfFiniteType` has `IsStableUnderBaseChange` registered."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Construct GrpObj G_K from Scheme.GrpObjAsOverPullback (`asOver` API).",
+        "code_tried": "-- attempt to unify G_K = Over.mk (pullback.snd G.hom φ) with asOver (pullback (M ↘ S) f) T",
+        "line_number": "L393",
+        "lean_error": "Signature mismatch: `asOver` uses `M ↘ S` notation requiring `OverClass` instances, not directly matching `Over.mk`. ~10-30 LOC bridging needed.",
+        "goal_before": "as above",
+        "goal_after": "same",
+        "result": "failed",
+        "insight": "Helper budget = 0 (HARD SCOPE CAP) prevents bridging. Left as bare sorry."
+      }
+    ],
+    "next_steps": "iter-190 unbundle baseChangeIso into 3 separately-pinned typed sorries (parallel to Lane F unbundle pattern): GrpObj-on-G_K (closable axiom-clean via `Scheme.GrpObjAsOverPullback` + ~10-30 LOC bridging); LFT-on-G_K (closable axiom-clean via `MorphismProperty.pullback_snd`); the substantive iso (Kleiman §5 substrate)."
+  },
+  {
+    "timestamp": "2026-05-26T03:30:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/IdentityComponent.lean",
+      "theorem": "Scheme.Pic0Scheme.finrank_eq_genus"
+    },
+    "session": {
+      "id": "session_189",
+      "model": "opus-4-x"
+    },
+    "findings": {
+      "blocker": "`Pic0Scheme C` itself has body `sorry` (typed); `(Pic0Scheme C).left` is opaque; the equation `topologicalKrullDim (Pic0Scheme C).left = (genus C : WithBot ℕ∞)` cannot be decided. Bridge attempt via `Pic0Scheme C := GroupScheme.IdentityComponent (PicScheme C)` blocked by `LocallyOfFiniteType (PicScheme C).hom` instance unavailability (PicScheme is itself sorry)."
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Direct unfold of Pic0Scheme.",
+        "code_tried": "unfold Pic0Scheme",
+        "line_number": "L547",
+        "lean_error": "Pic0Scheme body is `sorry` (typed); `.left` is opaque.",
+        "result": "failed",
+        "insight": "Structurally blocked at definition layer."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Bridge via `Pic0Scheme C := GroupScheme.IdentityComponent (PicScheme C)` substitution.",
+        "code_tried": "-- replace Pic0Scheme body",
+        "line_number": "L547",
+        "lean_error": "`LocallyOfFiniteType (PicScheme C).hom` instance not available; PicScheme is itself sorry.",
+        "result": "failed",
+        "insight": "Cascading sorry: needs PicScheme body work (post FGAPicRepresentability) iter-200+."
+      }
+    ],
+    "next_steps": "Gated transitively on PicScheme.lean body (FGAPic representability iter-200+). Once `[LocallyOfFiniteType (PicScheme C).hom]` lands, Pic0Scheme body becomes `GroupScheme.IdentityComponent (PicScheme C)` (axiom-clean modulo the substrate)."
+  },
+  {
+    "timestamp": "2026-05-26T03:30:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/IdentityComponent.lean",
+      "theorem": "Scheme.Pic0Scheme.kPoints_iff_kerDegree"
+    },
+    "session": {
+      "id": "session_189",
+      "model": "opus-4-x"
+    },
+    "findings": {
+      "blocker": "`(Pic0Scheme C).left` opaque (Pic0Scheme is sorry); no morphism `(Pic0Scheme C).left ⟶ (PicScheme C).left` constructible."
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Construct `inc` from `IdentityComponent.isOpenSubgroupScheme (PicScheme C)`.",
+        "code_tried": "-- direct construction",
+        "line_number": "L569",
+        "lean_error": "`(Pic0Scheme C).left` opaque.",
+        "result": "failed",
+        "insight": "Structurally blocked on Pic0Scheme def."
+      }
+    ],
+    "next_steps": "Gated on Pic0Scheme def body landing (chain: PicScheme body → Pic0Scheme bridge → kPoints_iff_kerDegree)."
+  },
+  {
+    "timestamp": "2026-05-26T03:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/QuotScheme.lean",
+      "theorem": "pullback_app_isoTensor_baseMap_sectionLinearEquiv"
+    },
+    "session": {
+      "id": "session_189",
+      "model": "opus-4-x"
+    },
+    "findings": {
+      "blocker": "Compositional bookkeeping (5-step `tilde.isoTop` chain) traces through 8 transport pieces (3 pins + `pullbackComp` + commutative-square iso + `tilde.isoTop` + Beck-Chevalley naturality); not closable in one session with the analogist's analogist-licensed unbundle alone. HARD BAR not strictly met (target still has sorry body), but residual is now PURE compositional transport with NO remaining Mathlib-gap algebra inside.",
+      "key_lemmas_used": [
+        "IsAffineOpen.fromSpec",
+        "IsAffineOpen.isoSpec",
+        "tilde",
+        "Scheme.ΓSpecIso",
+        "Module.compHom",
+        "pullback_tildeIso (Stacks 01HQ — existing Step 2 pin)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Per analogist Decision 4 (Lane F): unbundle Steps 1+3 of the 5-step Tilde-isoTop route into 2 new named typed-sorry pins, parallel to existing `pullback_tildeIso` (Step 2). Then refactor `_sectionLinearEquiv` body to explicitly consume all 3 pins via `obtain ⟨_step1⟩`, `obtain ⟨_step2⟩`, `obtain ⟨_step3⟩` — leaving compositional glue as residual sorry.",
+        "code_tried": "private theorem tildeIso_of_isQuasicoherent_isAffineOpen ... := by exact sorry  -- Step 1 (Stacks 01I8)\nprivate theorem pullback_of_openImmersion_iso_restrict ... := by  -- Step 3 (transport)\n  letI : Algebra Γ(Y, U) Γ((Spec Γ(Y, U)), ⊤) := (Scheme.ΓSpecIso _).inv.hom.toAlgebra\n  letI : Module Γ(Y, U) Γ((Scheme.Modules.pullback hU.fromSpec).obj N, ⊤) := Module.compHom _ (Scheme.ΓSpecIso _).inv.hom\n  exact sorry\n-- _sectionLinearEquiv body refactored:\nobtain ⟨_step1⟩ := tildeIso_of_isQuasicoherent_isAffineOpen N hV\nobtain ⟨_step2⟩ := pullback_tildeIso ...\nobtain ⟨_step3⟩ := pullback_of_openImmersion_iso_restrict N hU\nexact sorry  -- compositional glue",
+        "line_number": "L598-617 + L621-650 + L694-739",
+        "lean_error": "None — typecheck OK. Net +2 sorries; HARD BAR ≥1 closure on _sectionLinearEquiv NOT MET.",
+        "goal_before": "Nonempty {f : Γ(Y,U) ⊗[Γ(X,V)] Γ(N,V) →ₗ[Γ(Y,U)] Γ((pullback g).obj N, U) // ∀ x, f (1 ⊗ₜ x) = baseMap g N e x}",
+        "goal_after": "3 named typed-sorry pins + compositional glue residual",
+        "result": "partial",
+        "insight": "`Scheme.ΓSpecIso` + `Module.compHom` is the right idiom for setting up the Γ(Y,U)-module structure on a pullback section LHS. The intertwining property `f (1 ⊗ₜ x) = baseMap g N e x` traces through 8 transport pieces — too many for a one-session compositional close from 3 pins."
+      }
+    ],
+    "next_steps": "iter-190 Lane F prover: close EASIEST pin (`pullback_of_openImmersion_iso_restrict` ~30-50 LOC per analogist) axiom-clean. With Step 3 closed, the remaining `_sectionLinearEquiv` body residual is reduced to Steps 1+2 + compositional glue. iter-190 plan-phase: add 2 new chapter pins to `Picard_QuotScheme.tex` (`def:tildeIso_of_isQuasicoherent_isAffineOpen` + `def:pullback_of_openImmersion_iso_restrict`)."
+  },
+  {
+    "timestamp": "2026-05-26T03:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/RationalCurveIso.lean",
+      "theorem": "Scheme.iso_of_degree_one"
+    },
+    "session": {
+      "id": "session_189",
+      "model": "opus-4-x"
+    },
+    "findings": {
+      "blocker": "Step 2 (scheme-level lift from function-field iso via `Scheme.Hom.toNormalization`) requires 4 sub-obligations not closable in this iter: (a) `[IsIntegralHom φ.left]` from non-constant + smooth-dim-1 ⟹ finite; (b) `[QuasiCompact φ.left]`, `[QuasiSeparated φ.left]` from `[IsProper]`; (c) `Scheme.Hom.normalization φ.left = C'.left` via smoothness/normality + `fromNormalization` iso under degree-1; (d) slice-category lift `C ≅ C'` from underlying iso.",
+      "key_lemmas_used": [
+        "Subalgebra.bot_eq_top_of_finrank_eq_one",
+        "Algebra.surjective_algebraMap_iff",
+        "RingHom.injective",
+        "RingEquiv.ofBijective",
+        "Scheme.Hom.instIsIsoToNormalizationOfIsIntegralHom",
+        "IsFinite.iff_isProper_and_isAffineHom",
+        "IsFinite.iff_isIntegralHom_and_locallyOfFiniteType"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Decompose into Step 1 (function-field iso K(C') ≃+* K(C) from finrank = 1) + Step 2 (scheme-level lift). Step 1 axiom-clean inline via `Subalgebra.bot_eq_top_of_finrank_eq_one` + `Algebra.surjective_algebraMap_iff` + `RingHom.injective` (fields) + `RingEquiv.ofBijective`. Step 2 deferred with structured continuation doc (~40 lines, sub-obligations a/b/c/d enumerated inline).",
+        "code_tried": "-- Step 1 (~10 LOC closed axiom-clean):\nhave hsurj : Function.Surjective (algebraMap C'.functionField C.functionField) := by\n  rw [← Algebra.surjective_algebraMap_iff, Subalgebra.bot_eq_top_of_finrank_eq_one hφ_deg]\n  exact Algebra.top_toSubmodule.symm ▸ Subalgebra.mem_top\nhave hinj : Function.Injective (algebraMap C'.functionField C.functionField) := RingHom.injective _\nlet ff_iso : C'.functionField ≃+* C.functionField := RingEquiv.ofBijective _ ⟨hinj, hsurj⟩\n-- Step 2 (deferred):\nexact sorry  -- scheme-level lift via Scheme.Hom.toNormalization, 4 sub-obligations a-d",
+        "line_number": "L760",
+        "lean_error": "None — Step 1 typechecks; Step 2 left as bare sorry with inline doc.",
+        "goal_before": "Nonempty (C ≅ C')",
+        "goal_after": "Step 2 scheme-level lift (4 sub-obligations)",
+        "result": "partial",
+        "insight": "`Subalgebra.bot_eq_top_of_finrank_eq_one` (in `Mathlib.LinearAlgebra.Dimension.FreeAndStrongRankCondition`) gives `⊥ = ⊤` immediately from `finrank = 1`; combined with `Algebra.surjective_algebraMap_iff`, algebra-map surjectivity is one line. Mathlib gaps for Step 2: no `smooth proper dim-1 + non-constant ⟹ finite` lemma; no `fromNormalization iso when target normal + degree 1` lemma."
+      }
+    ],
+    "next_steps": "iter-190+ Lane I close Step 2 via `Scheme.Hom.toNormalization` chain (~80-150 LOC per `analogies/ratcurveiso-pin3.md`). Mathlib-analogist consult on the 2 Mathlib gaps (smooth-proper-dim-1 → finite; fromNormalization iso)."
+  },
+  {
+    "timestamp": "2026-05-26T03:30:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/RationalCurveIso.lean",
+      "theorem": "Scheme.Hom.poleDivisor_degree_eq_finrank"
+    },
+    "session": {
+      "id": "session_189",
+      "model": "opus-4-x"
+    },
+    "findings": {
+      "blocker": "STRUCTURAL UNPROVABILITY DIAGNOSIS: iter-187 body of `Hom.poleDivisor φ` is `Scheme.WeilDivisor.principal (algebraMap _ _ (localParameterAtInfty kbar).val) halg` — a PRINCIPAL divisor — so `Scheme.WeilDivisor.degree (Hom.poleDivisor φ) = 0` by `principal_degree_zero`. RHS `Module.finrank K(P^1) K(C) > 0` for non-constant φ. Theorem as stated is MATHEMATICALLY FALSE."
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Structural-conflict diagnosis — inspect iter-187 `Hom.poleDivisor` body and trace what `principal_degree_zero` lets us conclude about LHS; identify (a)/(b) corrective routes.",
+        "code_tried": "-- iter-189 structural-conflict diagnosis block (~35 lines) appended inside `by`-block at head of iter-186 5-step Ideal.sum_ramification_inertia scaffold doc",
+        "line_number": "L490",
+        "lean_error": "None (sorry retained; diagnosis is the artifact, not a closure).",
+        "goal_before": "Scheme.WeilDivisor.degree (Hom.poleDivisor φ) = (Module.finrank K(P^1) K(C) : ℤ)",
+        "goal_after": "diagnosed unprovable as stated",
+        "result": "failed",
+        "insight": "Closure requires plan-phase refactor: (a) refactor `Hom.poleDivisor` to be the positive part `(div(φ^* t_∞))_0 = φ^*[∞]` (new project-bespoke `Scheme.WeilDivisor.positivePart` infrastructure), OR (b) rename theorem to operate on `positivePart (Hom.poleDivisor φ)`. Both require plan-phase coordination with blueprint `lem:degree_via_pole_divisor` + `Hom.poleDivisor` body — out of scope for prover-stage iter-189."
+      }
+    ],
+    "next_steps": "iter-190 plan-phase priority decision: pick corrective (a) vs (b). Without it, the pin stays sorry'd indefinitely. Pin 2 is now the primary blocker for Lane I closure."
+  }
+]

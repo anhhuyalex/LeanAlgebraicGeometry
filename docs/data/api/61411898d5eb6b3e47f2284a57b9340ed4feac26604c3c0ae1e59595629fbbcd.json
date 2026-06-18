@@ -1,0 +1,117 @@
+[
+  {
+    "timestamp": "2026-06-03T06:32:05Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate/DualInverse.lean",
+      "theorem": "homOfLocalCompat"
+    },
+    "session": {
+      "id": "session_256",
+      "model": "opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "ModuleCat.restrictScalars.smul_def'",
+        "Scheme.Opens.ι_appIso",
+        "Scheme.Modules.map_smul",
+        "X.presheaf.map_id",
+        "ConcreteCategory.congr_hom",
+        "Subsingleton.elim"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Close the inner f-leg restrictScalars-𝟙 smul bridge inline (no new top-level helper) via two local `have`s: `hbridge` (native↔restrictScalars 𝟙 smul, generalized over K) and `hfl_native` (f-leg native semilinearity)",
+        "code_tried": "have hbridge : ... := by erw [ModuleCat.restrictScalars.smul_def']; simp [Scheme.Opens.ι_appIso]; <rfl>;  have hfl_native := by rw [hbridge M c y]; erw [hfl]; rfl;  erw [hfl_native, Scheme.Modules.map_smul N]; congr 1; rw [← X.presheaf.map_id (op image)]; erw [← ConcreteCategory.comp_apply, ← Functor.map_comp, ...]; refine (ConcreteCategory.congr_hom (congrArg X.presheaf.map (Subsingleton.elim _ (𝟙 (op W)))) _).trans ?_; rw [X.presheaf.map_id]; rfl",
+        "line_number": "516 (decl); ~650 (bridge)",
+        "lean_error": null,
+        "goal_before": "f-leg linearity goal: (f i).val.app P over restrictScalars 𝟙 action vs native Γ(X,image)-action (propositionally equal, not defeq)",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "erw [ModuleCat.restrictScalars.smul_def'] is the ONLY rewrite that fires on the buried `.val.obj` restrictScalars β instance; `rw`/`simp [restrictScalars.smul_def]` fail. β collapses to 𝟙 only under FULL `simp [Scheme.Opens.ι_appIso]`. Scalar reconcile: `rw [Subsingleton.elim _]` FAILS (LHS metavar) — use ConcreteCategory.congr_hom as a TERM. CommRingCat.hom_id/RingHom.id_apply do NOT match `CommRingCat.Hom.hom (𝟙 R)`; kill via `← X.presheaf.map_id`."
+      }
+    ],
+    "next_steps": "homOfLocalCompat CLOSED axiom-clean ({propext, Classical.choice, Quot.sound}), breaks the 5-iter file-sorry 2→2 CHURNING streak (now 2→1). Unblocks the A-bridge of exists_tensorObj_inverse. Remove stale comment L573-576 ('SOLE remaining sorry'). Next frontier on this file = dual_restrict_iso Step-4 (L259) — NOT this iter (structural hard wall, needs analogist/recipe first)."
+  },
+  {
+    "timestamp": "2026-06-03T06:32:05Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "pullbackTensorMap_restrict"
+    },
+    "session": {
+      "id": "session_256",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "The blueprint recipe 'MIRROR pullbackObjUnitToUnit_comp' is FALSE: pullbackTensorMap is NOT an adjunction transpose (it is a hand-built 4-fold composite S1 ≫ a.map δ ≫ S3 ≫ S4), so the mirror's opening (pullbackPushforwardAdjunction (h≫f)).homEquiv.injective leaves an un-evaluable transpose and stalls. No …homEquiv_pullbackTensorMap bridge exists.",
+      "key_lemmas_used": [
+        "Functor.OplaxMonoidal.comp_δ",
+        "PresheafOfModules.pullbackComp",
+        "conjugateEquiv_pullbackComp_inv"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Mirror pullbackObjUnitToUnit_comp via adjunction-transpose injectivity (the objectives recipe)",
+        "code_tried": "apply (pullbackPushforwardAdjunction (h≫f)).homEquiv.injective   -- also tried (SheafOfModules.forget _).map_injective",
+        "line_number": "2138",
+        "lean_error": "no bridge lemma; transpose of a concrete composite is un-evaluable (forget does not strip the codomain sheafification)",
+        "goal_before": "pullbackTensorMap (h ≫ f) M N = pullbackComp.inv ≫ (pullback h).map (ptm f) ≫ ptm h ≫ tensorObjIsoOfIso(pullbackComp)(pullbackComp)",
+        "goal_after": "unchanged / un-evaluable",
+        "result": "failed",
+        "insight": "pullbackObjUnitToUnit_comp works ONLY because pullbackObjUnitToUnit is definitionally an adjunction transpose. pullbackTensorMap is not — the mirror premise is structurally wrong (reversing signal fired as armed)."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Unfold to expose the composite structure and author an in-proof ROADMAP",
+        "code_tried": "simp only [pullbackTensorMap]  -- / unfold pullbackTensorMap",
+        "line_number": "2138",
+        "lean_error": null,
+        "goal_before": "same",
+        "goal_after": "4-fold composite exposed on both sides; confirms the conjugation by pullbackComp h f",
+        "result": "partial",
+        "insight": "Genuine route = 4-square composition coherence (cf D1′'s 4-square naturality): Sq1 sheafificationCompPullback-comp (Mathlib-absent), Sq2 comp_δ + PresheafOfModules.pullbackComp + ring-map reconcile (toRingCatSheafHom (h≫f).hom = φ'_f ≫ whiskerLeft φ'_h, defeq-not-syntactic via Opens.map_comp), Sq3 sheafifyTensorUnitIso, Sq4 pullbackValIso-comp (Mathlib-absent). Statement scaffolded + typechecks; body is a typed sorry with the ROADMAP."
+      }
+    ],
+    "next_steps": "Statement scaffolded + typechecks (new decl, did not exist before). Sorry 1→2 in file. iter-257: (1) FIRST dispatch blueprint-writer on Picard_TensorObjSubstrate.tex to realign lem:pullback_tensor_map_basechange to the GENERAL composition-coherence form + replace the disproven mirror sketch with the comp_δ/Sq1/Sq4/Sq2 route (lvb-tensorobj256 must-fix); (2) then build the 2 project sub-lemmas (Sq1, Sq4, ~40-120 LOC each) + Sq2 ring-map reconcile. Consider a mathlib-analogist on the pullbackComp composition-coherence pattern."
+  },
+  {
+    "timestamp": "2026-06-03T06:32:05Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/LineBundleCoherence.lean",
+      "theorem": "(file-skeleton: 5 sorry stubs + site-instance de-risk)"
+    },
+    "session": {
+      "id": "session_256",
+      "model": "opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "hasSheafCompose_of_preservesMulticospan",
+        "instHasWeakSheafifyOfHasSheafify",
+        "GrothendieckTopology.instWEqualsLocallyBijective...",
+        "instHasSheafifyOfPreservesLimitsForget..."
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Create the file from chapter Picard_LineBundleCoherence.tex: imports + namespace + 5 pinned decls as sorry stubs; probe site instances on J.over U with #synth",
+        "code_tried": "import AlgebraicJacobian.Picard.LineBundlePullback; namespace AlgebraicGeometry.Scheme.LineBundle; theorem IsLocallyTrivial.{exists_trivializing_cover, isFinitePresentation, isFiniteType, chart_free_rank_one}; noncomputable def chartPresentation := ... ; sorry (×5); #synth HasSheafCompose / HasWeakSheafify / WEqualsLocallyBijective / HasSheafify (temporary probes, removed)",
+        "line_number": "90-157",
+        "lean_error": null,
+        "goal_before": "N/A (scaffold)",
+        "goal_after": "success: true, 0 errors, only 5 'declaration uses sorry' warnings",
+        "result": "partial",
+        "insight": "All 4 required slice-site instances on J.over U resolve AUTOMATICALLY (concrete instance names captured) — site-instance de-risk POSITIVE, no absent ingredient. The bare fact that M.over U / M.IsFinitePresentation / M.IsFiniteType typecheck already forces them (IsFinitePresentation binds them as section variables). Engine pole can proceed to a full prover lane next iter."
+      }
+    ],
+    "next_steps": "Bar MET (compiles + de-risk report). PLANNER ACTION: import LineBundleCoherence.lean into AlgebraicJacobian.lean (currently absent — blocks loop build, blueprint/lean_decls, AND sync_leanok marker management → causes false proof-\\leanok at tex:187). iter-257: (1) blueprint-writer fix on Picard_LineBundleCoherence.tex — remove false proof-\\leanok L187, specify the chartPresentation finiteness route (Presentation.ofIsIso + auto IsFinite instance), decide on 6th decl chartPresentation_isFinite vs strengthening the return type, address chart_free_rank_one near-restatement (auditor major); (2) open the 5 bodies (exists_trivializing_cover + chart_free_rank_one are near-trivial)."
+  }
+]

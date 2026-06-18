@@ -1,0 +1,104 @@
+[
+  {
+    "timestamp": "2026-05-17T17:18:23Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cotangent/GrpObj.lean",
+      "theorem": "AlgebraicGeometry.GrpObj.cotangentSpaceAtIdentity_finrank_eq"
+    },
+    "session": {
+      "id": "session_132",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "Scheme.smooth_locally_free_omega",
+        "Module.finrank_baseChange",
+        "Module.finrank_eq_of_rank_eq",
+        "RingHom.domain_nontrivial",
+        "commRing_strongRankCondition",
+        "ModuleCat.ExtendScalars.obj'"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Reproduce iter-131 body's Classical.choose-chain on Scheme.smooth_locally_free_omega; introduce Γ(Spec k, U)-algebra structure on Γ(G.left, V) and Γ(G.left, V)-algebra structure on k; show goal as TensorProduct form (via ModuleCat.ExtendScalars.obj'); apply Module.finrank_baseChange to push finrank through; finish with Module.finrank_eq_of_rank_eq hrank.",
+        "code_tried": "  let ηleft : Spec (.of k) ⟶ G.left := CategoryTheory.CommaMorphism.left η[G]\n  let x₀ : G.left := (ConcreteCategory.hom ηleft.base) default\n  let h := Scheme.smooth_locally_free_omega (n := n) G.hom x₀\n  set U : (Spec (.of k)).Opens := h.choose with hU_def\n  set V : G.left.Opens := h.choose_spec.choose with hV_def\n  set e : V ≤ G.hom ⁻¹ᵁ U := h.choose_spec.choose_spec.choose with he_def\n  have hxV : x₀ ∈ V := h.choose_spec.choose_spec.choose_spec.1\n  letI algGV : Algebra ↥Γ(Spec (.of k), U) ↥Γ(G.left, V) := (Scheme.Hom.appLE G.hom U V e).hom.toAlgebra\n  have hfree : Module.Free ↥Γ(G.left, V) Ω[↥Γ(G.left, V) ⁄ ↥Γ(Spec (.of k), U)] := h.choose_spec.choose_spec.choose_spec.2.2.2.1\n  have hrank : Module.rank ↥Γ(G.left, V) Ω[↥Γ(G.left, V) ⁄ ↥Γ(Spec (.of k), U)] = (n : Cardinal) := h.choose_spec.choose_spec.choose_spec.2.2.2.2\n  have htop : (⊤ : (Spec (.of k)).Opens) ≤ ηleft ⁻¹ᵁ V := fun s _ => by rw [Scheme.Hom.mem_preimage, show s = default from Subsingleton.elim _ _]; exact hxV\n  let ψV : Γ(G.left, V) ⟶ CommRingCat.of k := ηleft.appLE V ⊤ htop ≫ (Scheme.ΓSpecIso (.of k)).hom\n  letI algGVk : Algebra ↥Γ(G.left, V) k := ψV.hom.toAlgebra\n  haveI : Nontrivial ↥Γ(G.left, V) := ψV.hom.domain_nontrivial\n  show Module.finrank k (TensorProduct ↥Γ(G.left, V) k (Ω[↥Γ(G.left, V) ⁄ ↥Γ(Spec (.of k), U)])) = n\n  rw [Module.finrank_baseChange (R := k) (S := ↥Γ(G.left, V)) (M' := Ω[↥Γ(G.left, V) ⁄ ↥Γ(Spec (.of k), U)])]\n  exact Module.finrank_eq_of_rank_eq hrank",
+        "line_number": "244-282",
+        "lean_error": "warning: The `show` tactic should only be used to indicate intermediate goal states for readability. However, this tactic invocation changed the goal.",
+        "goal_before": "Module.finrank k (cotangentSpaceAtIdentity (n := n) G) = n",
+        "goal_after": "no goals (after rw + exact); the `show` warning indicated a soft style issue but proof closed cleanly",
+        "result": "partial",
+        "insight": "The Classical.choose-chain extraction from the body of cotangentSpaceAtIdentity definitionally exposes the underlying TensorProduct carrier via ModuleCat.ExtendScalars.obj'. `Nontrivial Γ(G.left,V)` is discharged via `RingHom.domain_nontrivial` (the ring map into k is into a field, so the domain is nontrivial); this discharges the StrongRankCondition instance hypothesis of Module.finrank_baseChange (via Mathlib's `commRing_strongRankCondition` instance). The `show` warning indicated the tactic was changing the goal, not just exposing the same goal — the right fix was to use `change` instead of `show`."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Style cleanup: swap `show` for `change` to silence the Lean linter warning. Both tactics produce a definitional-equality change of the goal; `change` is the correct primitive when the goal is genuinely changing carrier-shape via a defeq reduction.",
+        "code_tried": "  change Module.finrank k (TensorProduct ↥Γ(G.left, V) k (Ω[↥Γ(G.left, V) ⁄ ↥Γ(Spec (.of k), U)])) = n",
+        "line_number": "276-277",
+        "lean_error": "(no error; warning removed)",
+        "goal_before": "Module.finrank k (cotangentSpaceAtIdentity (n := n) G) = n",
+        "goal_after": "Module.finrank k (TensorProduct ↥Γ(G.left, V) k (Ω[↥Γ(G.left, V) ⁄ ↥Γ(Spec (.of k), U)])) = n",
+        "result": "success",
+        "insight": "`change` is the right tactic when shifting the goal's carrier to a definitionally-equal form (here ModuleCat.ExtendScalars.obj' delta-reduces to the TensorProduct). `show` is reserved for restating the goal verbatim to aid readability; the Lean linter warns when `show` is being used to actually shift the goal."
+      }
+    ],
+    "next_steps": "Companion lemmas Module.Free k cotangentSpaceAtIdentity and Module.Finite k cotangentSpaceAtIdentity remain not bundled — these can be obtained by the same Classical.choose-chain pattern + Module.Free.baseChange / Module.Finite.baseChange (Mathlib). Iter-133+ may bundle them if downstream consumers (e.g. piece (i.b) `mulRight_globalises_cotangent`) need them. Five docstring-staleness sites in the same file flagged by `lean-auditor-review132` — to be cleaned up via iter-133+ blueprint-writer or refactor pass; no impact on compilation or kernel correctness."
+  },
+  {
+    "timestamp": "2026-05-17T17:18:23Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Jacobian.lean",
+      "theorem": "AlgebraicGeometry.genusZeroWitness"
+    },
+    "session": {
+      "id": "session_132",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "intentionally deferred (iter-127 scaffold sorry; body closure scheduled iter-138+ per STRATEGY.md sequencing, gated on the cotangent-vanishing pile closing)",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Gated on pieces (i.b)+(i.c)+(ii)+(iii) of the cotangent-vanishing pile per STRATEGY.md sequencing. Iter-133+ should consider scheduling the `positiveGenusWitness` scaffold (~20-30 LOC) per `strategy-critic-iter132` Minor recommendation."
+  },
+  {
+    "timestamp": "2026-05-17T17:18:23Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Jacobian.lean",
+      "theorem": "AlgebraicGeometry.nonempty_jacobianWitness"
+    },
+    "session": {
+      "id": "session_132",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Phase-C OFF-LIMITS per STRATEGY.md; gated on M2 close (genusZeroWitness body) AND M3 (positiveGenusWitness scaffold + body); iter-148+ work earliest",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "OFF-LIMITS until M2+M3 land. Do not assign to provers this iter or next."
+  },
+  {
+    "timestamp": "2026-05-17T17:18:23Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/RigidityKbar.lean",
+      "theorem": "AlgebraicGeometry.rigidity_over_kbar"
+    },
+    "session": {
+      "id": "session_132",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "M2.a scaffold (iter-126); gated on cotangent-vanishing pile pieces (i.a)→(i.b)→(i.c)→(ii)→(iii); iter-144+ at earliest. Piece (i.a) closed iter-132 — first piece consumed by this scaffold's body.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Defer until pieces (i.b)+(i.c)+(ii)+(iii) of the pile close. The iter-132 close of piece (i.a) (`cotangentSpaceAtIdentity_finrank_eq` + `cotangentSpaceAtIdentity` body) is a hard prerequisite-met for the eventual body; downstream pieces (i.b)+(i.c)+(ii)+(iii) remain pending."
+  }
+]

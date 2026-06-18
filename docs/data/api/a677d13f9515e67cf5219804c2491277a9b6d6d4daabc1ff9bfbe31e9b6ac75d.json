@@ -1,0 +1,263 @@
+[
+  {
+    "timestamp": "2026-05-14T10:07:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "cechCofaceMap_pi_smul"
+    },
+    "session": {
+      "id": "session_95",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "eqToHom-bridged Pi-product / unfolded-carrier type mismatch combined with outer-binder references at nested binding depths in summand body. All three plan routes (D')/(D'')/(D''') and several variants (G/H/I/X/Y) fail. Final commit is cosmetic ModuleCat.Hom.hom -> ConcreteCategory.hom rename at L592; no structural advance.",
+      "key_lemmas_used": [
+        "ModuleCat.Hom.hom = ConcreteCategory.hom (C := ModuleCat R) (abbrev equality, iter-095 rfl-rewrite)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Unfold outer ConcreteCategory.hom to .hom + reverse ModuleCat.hom_comp to refold into categorical composition",
+        "code_tried": "rw [show ∀ (x : ↑(∏ᶜ Z₂)), (ConcreteCategory.hom (Pi.π Z₂ j)) x = (Pi.π Z₂ j).hom x from fun _ => rfl, ← ModuleCat.hom_comp]",
+        "line_number": "L589 (pre-edit)",
+        "lean_error": "second rewrite (← ModuleCat.hom_comp) pattern not found — needs g.hom ∘ₗ f.hom (LinearMap composition) but goal has g.hom (f.hom x) (function application)",
+        "goal_before": "(ConcreteCategory.hom (Pi.π Z₂ j)) ((ConcreteCategory.hom ((∑ i, ...) ≫ eqToHom ⋯)) ((piIsoPi Z₁).toLinearEquiv.symm (r • y))) = r • (ConcreteCategory.hom (Pi.π Z₂ j)) ((ConcreteCategory.hom (... same expression ...)) ((piIsoPi Z₁).toLinearEquiv.symm y))",
+        "goal_after": "no progress (rewrite fails)",
+        "result": "failed",
+        "insight": "The eqToHom-source obstruction surfaces one structural layer up. The intermediate type between (Pi.π Z₂ j) and the inner (∑F) ≫ eqToHom is def-equal but not syntactically equal — same problem as iter-093, just at the outer composition."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Direct ← ConcreteCategory.comp_apply to fuse outer composition",
+        "code_tried": "rw [← ConcreteCategory.comp_apply]",
+        "line_number": "L589 (pre-edit)",
+        "lean_error": "pattern not found",
+        "goal_before": "(same as Attempt 1)",
+        "goal_after": "no progress",
+        "result": "failed",
+        "insight": "Categorical-level (?g) ∘ (?f) requires syntactic agreement between ?f's codomain and ?g's domain. With unfolded Pi-product carrier on one side and named ∏ᶜ Z₂ on the other, agreement fails."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Unfold ConcreteCategory.hom to ModuleCat.Hom.hom (precursor to a different rewrite)",
+        "code_tried": "rw [show ∀ (M N : ModuleCat.{u} k) (f : M ⟶ N) x, (ConcreteCategory.hom f) x = ModuleCat.Hom.hom f x from fun _ _ _ _ => rfl]",
+        "line_number": "L589 (pre-edit)",
+        "lean_error": "no error — rewrite succeeds but does not advance toward a usable shape",
+        "goal_before": "(same as Attempt 1)",
+        "goal_after": "Goal in ModuleCat.Hom.hom form (no closer to a usable rewrite than the entry goal)",
+        "result": "partial",
+        "insight": "Reverse of the eventual cosmetic commit. Witnesses that the two forms are abbrev-equal but does not lower HOU obstructions."
+      },
+      {
+        "attempt": 4,
+        "strategy": "show + ← LinearMap.comp_apply at the outer Pi.π level",
+        "code_tried": "show (Pi.π Z₂ j).hom _ = r • (Pi.π Z₂ j).hom _\nrw [← LinearMap.comp_apply]",
+        "line_number": "L589 (probe); L589 (transient Edit)",
+        "lean_error": "← LinearMap.comp_apply pattern ?f (?g ?x) does not unify — intermediate type def-equal but not syntactically equal (eqToHom output is ModuleCat.of k (∀ i, ↑(Z₂ i)), Pi.π input is ∏ᶜ Z₂)",
+        "goal_before": "(same as Attempt 1)",
+        "goal_after": "show clause accepted, but ← LinearMap.comp_apply fails",
+        "result": "failed",
+        "insight": "Exactly the iter-093 LinearMap.comp_apply blocker surfacing at the outer composition level. Cleared by superseding Edit (Attempt 7)."
+      },
+      {
+        "attempt": 5,
+        "strategy": "change to explicit term with _ holes for summand and eqToHom-source",
+        "code_tried": "change (ConcreteCategory.hom (Pi.π Z₂ j)) ((ConcreteCategory.hom ((∑ i, _) ≫ eqToHom _)) _) = r • (ConcreteCategory.hom (Pi.π Z₂ j)) ((ConcreteCategory.hom ((∑ i, _) ≫ eqToHom _)) _)",
+        "line_number": "L589 (probe)",
+        "lean_error": "elaboration failure on the change target — Lean cannot fill the _ placeholders because the summand body and eqToHom's implicit argument live in metavariable contexts driven by dif_pos hRel",
+        "goal_before": "(same as Attempt 1)",
+        "goal_after": "elaboration failure",
+        "result": "failed",
+        "insight": "change does not relax eqToHom-source metavariable HOU; the _-holes need elaboration support that the dif_pos metavariable context does not provide."
+      },
+      {
+        "attempt": 6,
+        "strategy": "First @-explicit cosmetic rewrite ModuleCat.Hom.hom → ConcreteCategory.hom",
+        "code_tried": "rw [show @ModuleCat.Hom.hom k _ = @ConcreteCategory.hom _ _ _ (ModuleCat.{u} k) _ _ _ from rfl]",
+        "line_number": "L589 (transient Edit)",
+        "lean_error": "Type mismatch — rfl has type ?m = ?m but is expected to have type @ModuleCat.Hom.hom k inst✝.toDivisionRing.toRing = ?m. Over-explicit @-form left too many underscores for the elaborator.",
+        "goal_before": "(same as Attempt 1)",
+        "goal_after": "diagnostic error at L593:13",
+        "result": "failed",
+        "insight": "The @-explicit form of show requires the elaborator to fill all the _ placeholders from context, but the ModuleCat ConcreteCategory typeclass instance is not directly findable from just the universe and DivisionRing."
+      },
+      {
+        "attempt": 7,
+        "strategy": "Cosmetic rewrite using named-instance form of ConcreteCategory.hom",
+        "code_tried": "rw [show ModuleCat.Hom.hom = ConcreteCategory.hom (C := ModuleCat.{u} k) from rfl]",
+        "line_number": "L592 (FINAL COMMIT)",
+        "lean_error": "none — file compiles, lean_diagnostic_messages returns [] for severity=error",
+        "goal_before": "(same as Attempt 1)",
+        "goal_after": "Goal identical except all occurrences of ModuleCat.Hom.hom are spelled ConcreteCategory.hom",
+        "result": "success",
+        "insight": "Cosmetic only. ModuleCat.Hom.hom and ConcreteCategory.hom (C := ModuleCat R) are abbrev-equal per Mathlib/Algebra/Category/ModuleCat/Basic.lean L113-115. The rename does NOT lower HOU obstructions — downstream rw [← CategoryTheory.comp_apply] still fails at the same eqToHom-source obstruction (Attempts 9, 10)."
+      },
+      {
+        "attempt": 8,
+        "strategy": "Route (D′) variant — set F := (-1)^↑i • Pi.lift ... to name the summand",
+        "code_tried": "set F : Fin (n + 1) → ((∏ᶜ Z₁ : ModuleCat.{u} k) ⟶ (∏ᶜ (fun i ↦ ModuleCat.of k (↑(C.left.presheaf.obj (Opposite.op (∏ᶜ basicOpenCover ↑s₀ ∘ i))))) : ModuleCat.{u} k)) := fun i => ((-1 : ℤ) ^ (i : ℕ)) • Pi.lift fun i_1 ↦ ... (verbatim body) ...",
+        "line_number": "L593 (probe)",
+        "lean_error": "no error — elaboration succeeds — but set does NOT fold the goal (the literal sum body remains, NOT replaced with ∑ F)",
+        "goal_before": "(same as Attempt 1)",
+        "goal_after": "F is a hypothesis but the goal is unchanged (set did not unify summand with F's body)",
+        "result": "failed",
+        "insight": "set only renames upon EXACT syntactic match. The plan's recipe required a change first to fold inner Pi.π (fun i ↦ ModuleCat.of k ↑(...)) back to a named Z₁-like form, but the inner family uses basicOpenCover ↑s₀ ∘ i (composition) whereas Z₁ uses fun a ↦ basicOpenCover ↑s₀ (i a) (applied). Eta-equivalent but not syntactically identical. The change fold cannot be expressed with Z₁ directly — and constructing a change target that matches WOULD itself contain the HOU blocker. Circular."
+      },
+      {
+        "attempt": 9,
+        "strategy": "conv_lhs navigation + ← CategoryTheory.comp_apply at focus point",
+        "code_tried": "conv_lhs => rw [← CategoryTheory.comp_apply]",
+        "line_number": "L593 (probe)",
+        "lean_error": "rewrite fails at focus point — same eqToHom-source obstruction as outer-level direct rewrite",
+        "goal_before": "(post-cosmetic, all ConcreteCategory.hom form)",
+        "goal_after": "navigation succeeds, rewrite fails",
+        "result": "failed",
+        "insight": "conv does not relax HOU's syntactic-intermediate requirement. Categorical-level composition reconstruction still needs syntactic agreement between codomain of inner and domain of outer."
+      },
+      {
+        "attempt": 10,
+        "strategy": "Ensemble simp [← CategoryTheory.comp_apply, Preadditive.sum_comp]",
+        "code_tried": "simp only [← CategoryTheory.comp_apply, Preadditive.sum_comp]",
+        "line_number": "L593 (probe)",
+        "lean_error": "simp made no progress",
+        "goal_before": "(post-cosmetic)",
+        "goal_after": "no progress",
+        "result": "failed",
+        "insight": "simp's HOU pre-filter rejects the first lemma; cascade does not fire. Same failure mode as iter-094 ensemble simp."
+      },
+      {
+        "attempt": 11,
+        "strategy": "Route (D″) Finset.cons_induction on Finset.univ",
+        "code_tried": "induction Finset.univ using Finset.cons_induction with\n| empty => simp\n| cons i s hi ih => sorry",
+        "line_number": "L593 (probe)",
+        "lean_error": "typeclass instance problem is stuck: Fintype ?m.1151 (and AddCommMonoid ?m.1153 in a Finset.sum_induction variant)",
+        "goal_before": "(post-cosmetic)",
+        "goal_after": "typeclass synthesis failure",
+        "result": "failed",
+        "insight": "Lean cannot determine the carrier type for Finset.univ because the sum's underlying carrier is implicit and the body has i in non-Miller positions. To make Route (D″) work, the WHOLE goal would need to be rephrased without the implicit Finset.univ (generalising to s : Finset (Fin (n+1)) outside the goal) — but that abstraction itself has the HOU blocker we're trying to break."
+      },
+      {
+        "attempt": 12,
+        "strategy": "Per-summand Pi.lift_π_apply collapse and trivial rfl-rewrites",
+        "code_tried": "simp only [Pi.lift_π_apply] / rw [show e₁.symm (r • y) = e₁.symm (r • y) from rfl] / conv_lhs => rw [Preadditive.sum_comp]",
+        "line_number": "L593 (probes)",
+        "lean_error": "all fail with no progress / pattern not found",
+        "goal_before": "(post-cosmetic)",
+        "goal_after": "no progress",
+        "result": "failed",
+        "insight": "Pi.lift_π_apply requires Pi.lift ≫ Pi.π = ... shape (sum at outermost), not Pi.π (Pi.lift ≫ ... ≫ eqToHom) shape. The outer (Pi.π Z₂ j) and the inner Pi.lift are separated by the eqToHom and the categorical composition; the lemma cannot fire."
+      }
+    ],
+    "next_steps": "Three syntactic routes (D′)/(D″)/(D‴) and the cosmetic prep-step are exhausted. Iter-096 should invoke the refactor subagent to reformulate `scK₀.f` coordinate-wise from the start, bypassing the Pi.lift / Pi.π / eqToHom construction in the closed term. Concretely: define scK₀.f.hom : (∀ i, Z₁ i) →ₗ[k] (∀ j, Z₂ j) directly as (s • y) j := Σᵢ (-1)^i (presheaf-restriction)(y (j ∘ δᵢ)) in coordinates. R-linearity then follows from per-summand R-linearity of each presheaf-restriction. See task_results/Cohomology_BasicOpenCech.lean.md for the detailed refactor directive. This requires REFACTORING the signature of cechCofaceMap_pi_smul (or adding a new top-level helper); estimated 1-2 iterations; mathematical content unchanged."
+  },
+  {
+    "timestamp": "2026-05-14T10:07:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "g_R.map_smul'"
+    },
+    "session": {
+      "id": "session_95",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "gated on cechCofaceMap_pi_smul body closing",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Off-limits this iter per PROGRESS.md — gated on cechCofaceMap_pi_smul. Will become attempt-ready once the iter-096 refactor lands."
+  },
+  {
+    "timestamp": "2026-05-14T10:07:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "h_loc_exact (basicOpenCover_isCechAcyclicCover_*)"
+    },
+    "session": {
+      "id": "session_95",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "gated on IsLocalizedModule.Away f.1 infrastructure; multi-iter blocker",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Off-limits this iter per PROGRESS.md."
+  },
+  {
+    "timestamp": "2026-05-14T10:07:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "cotangentExactSeq_structure (case h_exact)"
+    },
+    "session": {
+      "id": "session_95",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Route A/B decision pending; not assigned iter-095",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Off-limits this iter; reactivate after BasicOpenCech lane closes."
+  },
+  {
+    "timestamp": "2026-05-14T10:07:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Modules/Monoidal.lean",
+      "theorem": "instIsMonoidal_W"
+    },
+    "session": {
+      "id": "session_95",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Mathlib upstream gap; off-limits since iter-081",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Off-limits indefinitely until Mathlib gap closes."
+  },
+  {
+    "timestamp": "2026-05-14T10:07:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Jacobian.lean",
+      "theorem": "nonempty_jacobianWitness"
+    },
+    "session": {
+      "id": "session_95",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Phase C/E packaging; iter-100+",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Off-limits this iter."
+  },
+  {
+    "timestamp": "2026-05-14T10:07:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/Functor.lean",
+      "theorem": "PicardFunctor.representable"
+    },
+    "session": {
+      "id": "session_95",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "gated on Phase C C0-C3",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Off-limits this iter."
+  }
+]

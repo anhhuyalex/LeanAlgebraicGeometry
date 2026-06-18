@@ -1,0 +1,433 @@
+[
+  {
+    "timestamp": "2026-05-13T01:52:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "h_diff_pi_smul_f (inside basicOpenCover_isCechAcyclicCover_toModuleKSheaf, sorry at L1383)"
+    },
+    "session": {
+      "id": "session_84",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Residual = genuine per-summand R-linearity. Both iter-083 typeclass barriers (HSMul source-type ascription; e₁.symm-r-• commutation) are now cleared. Per-summand decomposition (~50–80 LOC) deferred to iter-085+.",
+      "key_lemmas_used": [
+        "AddEquiv.module",
+        "Equiv.smul_def",
+        "LinearEquiv.apply_symm_apply",
+        "ModuleCat.piIsoPi"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "simp on LinearMap.coe_comp / Function.comp_apply / map_sum to expose Pi-projection",
+        "code_tried": "simp only [map_sum, LinearMap.coe_comp, Function.comp_apply]",
+        "line_number": 1323,
+        "lean_error": "simp made no progress",
+        "goal_before": "case h … ⊢ (Pi.π Z₂ j) (... (piIsoPi Z₁).inv (r • y) ...) = r • (Pi.π Z₂ j) (... (piIsoPi Z₁).inv y ...)",
+        "goal_after": "unchanged",
+        "result": "failed",
+        "insight": "iter-083 Finding 1 reconfirmed: LinearMap.coe_comp HOU fails on `∘ₛₗ`-vs-`∘ₗ` even after letI surfaces R-module"
+      },
+      {
+        "attempt": 2,
+        "strategy": "letI surface R-module at the literal ↑(∏ᶜ Z_i) source type (NOT at ↑scK₀.X_i)",
+        "code_tried": "letI hmod_pi_Z₁_alt : Module ↑R ↑(∏ᶜ Z₁) := h_mod_X₁; sorry",
+        "line_number": 1323,
+        "lean_error": "(none — sorry-only branch validates)",
+        "goal_before": "(as in attempt 1)",
+        "goal_after": "(unchanged with sorry; but instance synthesis no longer fails)",
+        "result": "success",
+        "insight": "NEW iter-084 finding: binding under the LITERAL `↑(∏ᶜ Z_i)` form (not the defeq `↑scK₀.X_i`) is what bridges HSMul synthesis. Type-class search is syntactic."
+      },
+      {
+        "attempt": 3,
+        "strategy": "explicit show + rw [LinearEquiv.apply_symm_apply] to commute (piIsoPi Z₁).symm past r•",
+        "code_tried": "letI hmod : Module ↑R ↑(∏ᶜ Z₁) := h_mod_X₁; rw [show (piIsoPi Z₁).toLinearEquiv.symm (r • y) = (r • (piIsoPi Z₁).toLinearEquiv.symm y : ↑(∏ᶜ Z₁)) from by show e₁.symm (r • y) = e₁.symm (r • e₁ (e₁.symm y)); rw [LinearEquiv.apply_symm_apply]]",
+        "line_number": 1325,
+        "lean_error": "(none — side condition closes cleanly)",
+        "goal_before": "(post-letI)",
+        "goal_after": "Foo (r • e₁.symm y) = r • Foo (e₁.symm y) where Foo = (Pi.π Z₂ j).hom ∘ (eqToHom ∘ₗ Σ.hom)",
+        "result": "success",
+        "insight": "NEW iter-084 finding: the side condition is NOT rfl; need rw [LinearEquiv.apply_symm_apply] explicitly after the show. simp [Equiv.smul_def] does NOT fire."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Land the two letIs + rw block in source; preserve sorry",
+        "code_tried": "(edit at L1325 — two letIs + the rw block + ~60-LOC comment block + sorry)",
+        "line_number": 1325,
+        "lean_error": "(clean — 0 errors, only pre-existing style warnings)",
+        "goal_before": "(pre-edit)",
+        "goal_after": "post-rw form Foo (r • z) = r • Foo z; sorry preserved at L1383",
+        "result": "partial",
+        "insight": "Both typeclass barriers cleared. Residual = per-summand R-linearity (~50–80 LOC of mechanical decomposition deferred)."
+      }
+    ],
+    "next_steps": "Iter-085+: per-summand Φ_j : (∀ i, Z₁ i) →ₗ[R] ↑(Z₂ j) construction via LinearMap.mk with explicit map_smul'. Sequence: LinearMap.coe_comp + Function.comp_apply → Finset.sum_apply + Pi.smul_apply (with perI₁) → Pi.lift_π + Pi.π Z₁ k (e₁.symm z) = z k → RingHom.map_mul + ← presheaf.map_comp → Finset.smul_sum + Finset.sum_congr rfl."
+  },
+  {
+    "timestamp": "2026-05-13T01:52:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "cotangentExactSeq_structure.h_epi branch (was absorbed into single sorry at L645; now split via refine ⟨?h_exact, ?h_epi⟩ — h_epi closed, h_exact preserved as L640 sorry)"
+    },
+    "session": {
+      "id": "session_84",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "SheafOfModules.epi_of_epi_presheaf",
+        "PresheafOfModules.epi_iff_surjective",
+        "_root_.KaehlerDifferential.span_range_derivation",
+        "Submodule.span_induction",
+        "Submodule.mem_top",
+        "ModuleCat.Derivation.desc_d",
+        "map_zero",
+        "map_add",
+        "map_smul"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Split conjunction; scaffold both branches with sorries (Lane 2 conditional clause)",
+        "code_tried": "refine ⟨?h_exact, ?h_epi⟩\\n  case h_exact => sorry\\n  case h_epi =>\\n    apply SheafOfModules.epi_of_epi_presheaf\\n    rw [PresheafOfModules.epi_iff_surjective]\\n    intro U\\n    sorry",
+        "line_number": 645,
+        "lean_error": "(none — clean, scaffolding validates)",
+        "goal_before": "X Y S : Scheme; f : X⟶Y; g : Y⟶S; ⊢ {…}.Exact ∧ Epi (cotangentExactSeqBeta f g)",
+        "goal_after": "case h.h_exact ⊢ {…}.Exact (post-refine); case h.h_epi ⊢ Function.Surjective ⇑(ConcreteCategory.hom ((cotangentExactSeqBeta f g).val.app U)) (post-epi+intro U)",
+        "result": "partial",
+        "insight": "Scaffold validated. Conjunction split lets us close h_epi independently of the bundled-vs-unbundled `KaehlerDifferential.map` identification issue."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Wrong direction first — rw [← LinearMap.range_eq_top] to convert to range-equals-⊤",
+        "code_tried": "rw [← LinearMap.range_eq_top]",
+        "line_number": 650,
+        "lean_error": "(none initially; downstream rw blocked)",
+        "goal_before": "Function.Surjective ⇑(ConcreteCategory.hom ((cotangentExactSeqBeta f g).val.app U))",
+        "goal_after": "(ConcreteCategory.hom ((cotangentExactSeqBeta f g).val.app U)).range = ⊤",
+        "result": "partial",
+        "insight": "Reduced to range-equals-⊤, but the ⊤ is over the bundled `Submodule ↑(X.presheaf.obj U) ↑((relativeDifferentials f).val.obj U)` while span_range_derivation's ⊤ is over the unbundled `Submodule ↑(...) ↑(_root_.KaehlerDifferential …)` — they are defeq but rw is syntactic."
+      },
+      {
+        "attempt": 3,
+        "strategy": "rw [eq_top_iff, ← span_range_derivation, Submodule.span_le]",
+        "code_tried": "rw [eq_top_iff, ← _root_.KaehlerDifferential.span_range_derivation A B, Submodule.span_le]",
+        "line_number": 656,
+        "lean_error": "Tactic `rewrite` failed: Did not find an occurrence of the pattern `⊤` in the target expression `⊤ ≤ (ConcreteCategory.hom ((cotangentExactSeqBeta f g).val.app U)).range`",
+        "goal_before": "(post-rw to range form)",
+        "goal_after": "(unchanged; rw failed)",
+        "result": "failed",
+        "insight": "NEW dead-end note (preserved in code): the LHS ⊤ is bundled, RHS ⊤ is unbundled. Cannot bridge via rw. Must abandon LinearMap.range_eq_top route and use Submodule.span_induction directly on `hy : y ∈ ⊤`."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Switch to direct intro y + span_induction route",
+        "code_tried": "intro y\\nhave hspan := _root_.KaehlerDifferential.span_range_derivation A B\\nhave hy : y ∈ Submodule.span ↑(X.presheaf.obj U) (Set.range ⇑(KaehlerDifferential.D A B)) := hspan ▸ Submodule.mem_top",
+        "line_number": 661,
+        "lean_error": "type mismatch — the explicit Module annotation forces synthesis of bundled `Module ↑(X.presheaf.obj U) ↑((relativeDifferentials f).val.obj U)`, which fails (Module is actually over the forget₂-image RingCat)",
+        "goal_before": "(post-intro y)",
+        "goal_after": "(unchanged)",
+        "result": "failed",
+        "insight": "NEW iter-084 key finding: do NOT write the explicit `Submodule.span ↑R ↑M ...` form; let elaboration infer it from `hspan ▸ Submodule.mem_top` by writing `have hy := hspan ▸ (Submodule.mem_top : y ∈ ⊤)`."
+      },
+      {
+        "attempt": 5,
+        "strategy": "Implicit-type span-membership + Submodule.span_induction 4-case scaffold",
+        "code_tried": "have hy := hspan ▸ (Submodule.mem_top : y ∈ ⊤)\\ninduction hy using Submodule.span_induction with\\n| mem x hx => sorry\\n| zero => sorry\\n| add x y hx hy ih_x ih_y => sorry\\n| smul a x hx ih => sorry",
+        "line_number": 663,
+        "lean_error": "(none — scaffold clean)",
+        "goal_before": "∃ a, (...) a = y",
+        "goal_after": "four per-case goals (mem: `(...).cotangentExactSeqBeta.app U (d b) = D b`; zero: `(...).cotangentExactSeqBeta.app U _ = 0`; add: standard; smul: standard)",
+        "result": "partial",
+        "insight": "Scaffold validated. Now close case by case."
+      },
+      {
+        "attempt": 6,
+        "strategy": "mem case: unfold cotangentExactSeqBeta + exact ModuleCat.Derivation.desc_d _ _",
+        "code_tried": "| mem x hx =>\\n  obtain ⟨b, rfl⟩ := hx\\n  refine ⟨CommRingCat.KaehlerDifferential.d b, ?_⟩\\n  unfold cotangentExactSeqBeta\\n  exact ModuleCat.Derivation.desc_d _ _",
+        "line_number": 666,
+        "lean_error": "(none — clean)",
+        "goal_before": "(cotangentExactSeqBeta f g).val.app U (CommRingCat.KaehlerDifferential.d b) = (KaehlerDifferential.D A B) b",
+        "goal_after": "(no goals)",
+        "result": "success",
+        "insight": "KEY: `unfold cotangentExactSeqBeta` exposes the `isUniversal'.desc d1` form; `ModuleCat.Derivation.desc_d` closes it by collapsing `(desc d) (d b) = d.d b`. The letI bridges D ≡ _root_.KaehlerDifferential.D A B."
+      },
+      {
+        "attempt": 7,
+        "strategy": "zero + add + smul cases with simp side conditions",
+        "code_tried": "| zero => exact ⟨0, map_zero _⟩\\n| add x y hx hy ih_x ih_y => obtain ⟨a₁, ha₁⟩ := ih_x; obtain ⟨a₂, ha₂⟩ := ih_y; exact ⟨a₁ + a₂, by simp [ha₁, ha₂]⟩\\n| smul a x hx ih => obtain ⟨a', ha'⟩ := ih; exact ⟨a • a', by simp [ha']⟩",
+        "line_number": 670,
+        "lean_error": "unsolved goals on add and smul branches",
+        "goal_before": "case h.add ⊢ ((...).cotangentExactSeqBeta.app U) (a₁ + a₂) = x + y",
+        "goal_after": "(unchanged in failing branch; mem and zero closed)",
+        "result": "partial",
+        "insight": "simp overshoots. Need explicit rw + trailing rfl."
+      },
+      {
+        "attempt": 8,
+        "strategy": "add + smul cases: refine + rw [map_add/map_smul, h…]; rfl",
+        "code_tried": "| add x y hx hy ih_x ih_y => ... refine ⟨a₁ + a₂, ?_⟩; rw [map_add, ha₁, ha₂]; rfl\\n| smul a x hx ih => ... refine ⟨a • a', ?_⟩; rw [map_smul, ha']; rfl",
+        "line_number": 673,
+        "lean_error": "(none — clean, 0 errors, 0 warnings)",
+        "goal_before": "(post-refine for each case)",
+        "goal_after": "(no goals on both)",
+        "result": "success",
+        "insight": "NEW iter-084 finding: rw [map_add, ha₁, ha₂] leaves a residual structural-equality goal `x + y = x + y` that rfl closes. simp overshoots and breaks the structural form."
+      }
+    ],
+    "next_steps": "Iter-085+: close h_exact at L640. Required: project-local helper `SheafOfModules.exact_iff_stalkwise` (multi-iteration TopCat-stalk preserves-exactness chain bridging `TopCat.Presheaf.stalkFunctor` to `SheafOfModules`) + identifying stalk of `relativeDifferentials` with `_root_.KaehlerDifferential` over local-ring stalks + applying Mathlib's `KaehlerDifferential.exact_mapBaseChange_map`. Estimate: ~40–80 LOC; one or two new project-local helpers OK."
+  },
+  {
+    "timestamp": "2026-05-13T01:52:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Modules/Monoidal.lean",
+      "theorem": "instIsMonoidal_W (L173)"
+    },
+    "session": {
+      "id": "session_84",
+      "model": "(none — off-limits)"
+    },
+    "findings": {
+      "blocker": "Mathlib gap: `PresheafOfModules.stalk_tensorObj` for varying-ring R₀ absent (iter-080 confirmation, persisted).",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Off-limits since iter-081. Gated on Mathlib upstream PR or user-authorised axiom."
+  },
+  {
+    "timestamp": "2026-05-13T01:52:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Jacobian.lean",
+      "theorem": "nonempty_jacobianWitness (L179)"
+    },
+    "session": {
+      "id": "session_84",
+      "model": "(none — deferred Phase C/E)"
+    },
+    "findings": {
+      "blocker": "Packages Phase C/E existence content (iter-086+).",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Indefinitely deferred."
+  },
+  {
+    "timestamp": "2026-05-13T01:52:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/Functor.lean",
+      "theorem": "PicardFunctor.representable (L190)"
+    },
+    "session": {
+      "id": "session_84",
+      "model": "(none — gated on Phase C C0–C3)"
+    },
+    "findings": {
+      "blocker": "Gated on Phase C C0–C3 scaffolding (instIsMonoidal_W gap + downstream).",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Indefinitely deferred."
+  },
+  {
+    "timestamp": "2026-05-13T01:52:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "cotangentExactSeq_structure.h_exact branch (L640)"
+    },
+    "session": {
+      "id": "session_84",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Needs project-local helper `SheafOfModules.exact_iff_stalkwise` + identification of stalk of `relativeDifferentials` with unbundled `_root_.KaehlerDifferential` over local-ring stalks. Multi-iteration TopCat-stalk preserves-exactness chain.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Preserved as single explicit sorry after conjunction split (iter-084 Lane 2)",
+        "code_tried": "case h_exact =>\\n  sorry",
+        "line_number": 640,
+        "lean_error": "(no error — sorry is explicit per plan; iter-085+ target)",
+        "goal_before": "{X₁ := …, X₂ := …, X₃ := …, f := cotangentExactSeqAlpha, g := cotangentExactSeqBeta, zero := ⋯}.Exact",
+        "goal_after": "(unchanged)",
+        "result": "partial",
+        "insight": "iter-084 closed h_epi but left h_exact as the single explicit sorry on this lemma (5 → 5 net). The conjunction was split via `refine ⟨?h_exact, ?h_epi⟩` so iter-085+ can close h_exact independently."
+      }
+    ],
+    "next_steps": "Iter-085+: introduce `SheafOfModules.exact_iff_stalkwise` (project-local helper) + apply `_root_.KaehlerDifferential.exact_mapBaseChange_map` after stalk identification. ~40–80 LOC."
+  },
+  {
+    "timestamp": "2026-05-13T01:52:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "relativeDifferentialsPresheaf_isSheaf (L122)"
+    },
+    "session": {
+      "id": "session_84",
+      "model": "(none — long-standing transient)"
+    },
+    "findings": {
+      "blocker": "Out of scope this iter; phase B infrastructure pending.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Deferred."
+  },
+  {
+    "timestamp": "2026-05-13T01:52:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "smooth_iff_locally_free_omega (L961)"
+    },
+    "session": {
+      "id": "session_84",
+      "model": "(none — long-standing transient)"
+    },
+    "findings": {
+      "blocker": "Out of scope; phase B infrastructure pending.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Deferred."
+  },
+  {
+    "timestamp": "2026-05-13T01:52:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "cotangent_at_section (L978)"
+    },
+    "session": {
+      "id": "session_84",
+      "model": "(none — long-standing transient)"
+    },
+    "findings": {
+      "blocker": "Out of scope; phase B infrastructure pending.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Deferred."
+  },
+  {
+    "timestamp": "2026-05-13T01:52:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "serre_duality_genus (L1120)"
+    },
+    "session": {
+      "id": "session_84",
+      "model": "(none — long-standing transient)"
+    },
+    "findings": {
+      "blocker": "Out of scope; phase B infrastructure pending.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Deferred."
+  },
+  {
+    "timestamp": "2026-05-13T01:52:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "substep (a) extra-degeneracy on s (L502)"
+    },
+    "session": {
+      "id": "session_84",
+      "model": "(none — multi-iter blocker)"
+    },
+    "findings": {
+      "blocker": "Confirmed multi-iter blocker per PROGRESS.md / iter-082/083 reviews.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Gated on user-supplied hypothesis."
+  },
+  {
+    "timestamp": "2026-05-13T01:52:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "h_π_split / refinement transport (L826)"
+    },
+    "session": {
+      "id": "session_84",
+      "model": "(none — multi-iter blocker)"
+    },
+    "findings": {
+      "blocker": "Confirmed multi-iter blocker.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Gated on user-supplied hypothesis."
+  },
+  {
+    "timestamp": "2026-05-13T01:52:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "extra-degeneracy on s₀ (L854)"
+    },
+    "session": {
+      "id": "session_84",
+      "model": "(none — multi-iter blocker)"
+    },
+    "findings": {
+      "blocker": "Confirmed multi-iter blocker.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Gated on user-supplied hypothesis."
+  },
+  {
+    "timestamp": "2026-05-13T01:52:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "g_R.map_smul' (L1428)"
+    },
+    "session": {
+      "id": "session_84",
+      "model": "(none — downstream of Lane 1 closure)"
+    },
+    "findings": {
+      "blocker": "Gated on Lane 1 + h_diff_pi_smul_g restatement with Eq.mpr.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "iter-085+ after Lane 1 closure."
+  },
+  {
+    "timestamp": "2026-05-13T01:52:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "h_loc_exact (L1457)"
+    },
+    "session": {
+      "id": "session_84",
+      "model": "(none — needs IsLocalizedModule.Away infra)"
+    },
+    "findings": {
+      "blocker": "Needs `IsLocalizedModule.Away f.1` infrastructure.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "iter-085+ after Lane 1 closure."
+  }
+]

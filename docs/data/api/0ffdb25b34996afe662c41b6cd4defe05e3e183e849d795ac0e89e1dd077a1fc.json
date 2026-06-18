@@ -1,0 +1,151 @@
+[
+  {
+    "timestamp": "2026-06-02T09:34:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "pullbackEtaUnitSquare"
+    },
+    "session": {
+      "id": "session_249",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "After the full abstract mate-calculus telescope is assembled (now compiling), the residual (∗∗) is a single CONCRETE presheaf-level identity; the final micro-steps repeatedly hit Lean's Category.assoc / composite-functor `.map` matching friction, and substep (iii) needs a not-yet-created sectionwise lemma `epsilonPresheafToSheafUnit`.",
+      "key_lemmas_used": [
+        "compHomEquivFactor",
+        "leftAdjointUniqUnitEta",
+        "sheafificationCompPullback_eq_leftAdjointUniq",
+        "presheafUnit_comp_map_eta",
+        "Adjunction.homEquiv_naturality_left",
+        "Adjunction.homEquiv_naturality_right",
+        "Adjunction.homEquiv_naturality_right_symm",
+        "Adjunction.right_triangle_components",
+        "Iso.inv_comp_eq",
+        "Equiv.symm_apply_eq"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Decompose pullbackValIso.inv then distribute (pushforward φ).map via Functor.map_comp (prior body's homEquiv_unit-first route)",
+        "code_tried": "simp only [pullbackValIso, Iso.trans_inv, Iso.symm_inv, Functor.mapIso_inv]; rw [Functor.map_comp, Functor.map_comp, Functor.map_comp]",
+        "line_number": "1672",
+        "lean_error": "Tactic `rewrite` failed: Did not find an occurrence of the pattern CategoryTheory.Functor.map ?self (?f ≫ ?g)",
+        "result": "failed",
+        "insight": "Distributing pushforward.map first does not match; pivoted to keeping the goal in homEquiv form and driving the closed mate-lemmas."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Keep goal in homEquiv form; decompose pullbackValIso.inv, pull leading (pullback φ).map c⁻¹ out (homEquiv_naturality_left) and peel trailing rest (homEquiv_naturality_right)",
+        "code_tried": "simp only [pullbackValIso, Iso.trans_inv, Iso.symm_inv, Functor.mapIso_inv]; rw [Category.assoc]; erw [Adjunction.homEquiv_naturality_left, Adjunction.homEquiv_naturality_right]",
+        "line_number": "1673",
+        "lean_error": "none (compiles)",
+        "result": "partial",
+        "insight": "homEquiv-form route works where homEquiv_unit-first route failed; erw needed (rw fails on the defeq composites)."
+      },
+      {
+        "attempt": 3,
+        "strategy": "hkey local have: rewrite sheafAdj.homEquiv (sheafificationCompPullback φ).hom via compHomEquivFactor, then erw hkey + leftAdjointUniqUnitEta (both iter-248-closed lemmas)",
+        "code_tried": "have hkey : … := by rw [Equiv.eq_symm_apply, ← compHomEquivFactor]; erw [hkey, leftAdjointUniqUnitEta f]",
+        "line_number": "1676",
+        "lean_error": "none (compiles)",
+        "result": "partial",
+        "insight": "The two abstract mate-lemmas closed in iter-248 plug in cleanly; lands the X-side (sheafAdjX.homEquiv).symm (presheafAdj.unit ≫ (pushforward φ').map toSheafify_Y)."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Fold trailing (pushforward φ).map rest into the X-side homEquiv.symm via homEquiv_naturality_right_symm",
+        "code_tried": "erw [← Adjunction.homEquiv_naturality_right_symm]",
+        "line_number": "1691",
+        "lean_error": "none (compiles)",
+        "result": "partial",
+        "insight": "symm(x) ≫ k = symm(x ≫ R_X.map k) folds the rest under the symm."
+      },
+      {
+        "attempt": 5,
+        "strategy": "hXtri local have: X-side sheafification right-triangle on 𝒪_X collapses the c⁻¹/counit pair; multiple form mismatches before the working idiom",
+        "code_tried": "rw [hXtri, Category.id_comp] / reassoc_of% hXtri / (Category.assoc _ _ _).symm.trans (by rw [hXtri, Category.id_comp]) → final: simpa only [Iso.app_hom, asIso_hom, Functor.comp_map] using (sheafificationAdjunction _).right_triangle_components _",
+        "line_number": "1694",
+        "lean_error": "Tactic `rewrite` failed: Did not find an occurrence of the pattern … (assoc/composite-functor-map mismatch)",
+        "result": "partial",
+        "insight": "Category.assoc / ← Category.assoc silently fail to match (f≫g)≫h on PresheafOfModules-over-Sheaf.val composites; restrictScalars⋙forget map must be split via simp only [Functor.comp_map]; helper triangles must be stated in the SAME split form as the goal."
+      },
+      {
+        "attempt": 6,
+        "strategy": "hrhs local have: sheafAdjX.homEquiv (c.hom ≫ upu) = R_X.map upu via homEquiv_unit + the working assoc idiom",
+        "code_tried": "have hrhs : … := by rw [Adjunction.homEquiv_unit]; simp only [Functor.comp_map, Functor.map_comp]; exact (Category.assoc _ _ _).symm.trans (hXtri ▸ Category.id_comp _)",
+        "line_number": "1704",
+        "lean_error": "none (compiles)",
+        "result": "partial",
+        "insight": "(Category.assoc _ _ _).symm.trans (hXtri ▸ Category.id_comp _) is the reliable idiom for these defeq-laden composite goals; rw [hrhs] fails on a homEquiv-object defeq so use refine Eq.trans ?_ hrhs.symm."
+      },
+      {
+        "attempt": 7,
+        "strategy": "Transpose RHS (Iso.inv_comp_eq, Equiv.symm_apply_eq), collapse via hrhs, then pull η through via the iter-247-closed presheafUnit_comp_map_eta",
+        "code_tried": "rw [Iso.inv_comp_eq, Equiv.symm_apply_eq]; refine Eq.trans ?_ hrhs.symm; rw [← presheafUnit_comp_map_eta f, Category.assoc]",
+        "line_number": "1717",
+        "lean_error": "none (clean: 0 errors 0 warnings)",
+        "result": "partial",
+        "insight": "Whole abstract telescope now compiles; (∗∗) reduced to one concrete presheaf identity with a documented 3-substep recipe. Substep (iii) needs new lemma epsilonPresheafToSheafUnit, not yet created."
+      }
+    ],
+    "next_steps": "Per the iter-249 plan's armed BINARY signal (did L1672 close? — NO): iter-250 must NOT blindly re-dispatch an identical prove pass. Run a mathlib-analogist (api-alignment) consult on SheafOfModules.pushforward morphism action + the presheaf↔sheaf ε reconciliation, author the sectionwise lemma `epsilonPresheafToSheafUnit` (ε(pushforward φ') = (unitToPushforwardObjUnit φ).val, both act as φ.hom.app X), prove the Y-side triangle with the (Category.assoc _ _ _).symm.trans (… ▸ …) idiom, and assemble. All three substeps are concrete; no abstract gap remains."
+  },
+  {
+    "timestamp": "2026-06-02T09:34:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "pullbackTensorMap_unit_isIso"
+    },
+    "session": {
+      "id": "session_249",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "D2′ closer; transitively carries sorryAx via pullbackEtaUnitSquare's open (∗∗) residual. Not directly attempted this iter — closes automatically once pullbackEtaUnitSquare closes.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Not directly attempted; depends entirely on pullbackEtaUnitSquare",
+        "code_tried": "(none — transitive dependency)",
+        "line_number": "1747",
+        "lean_error": "n/a",
+        "result": "partial",
+        "insight": "Body has no own sorry; the sorry-taint propagates from pullbackEtaUnitSquare. Will become axiom-clean the moment (∗∗) closes."
+      }
+    ],
+    "next_steps": "Closes for free once pullbackEtaUnitSquare's (∗∗) residual is discharged."
+  },
+  {
+    "timestamp": "2026-06-02T09:34:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "exists_tensorObj_inverse"
+    },
+    "session": {
+      "id": "session_249",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Pre-existing guardrailed sorry (the deferred ⊗-inverse lane). Explicitly NOT attempted this iter per guardrail; needs two bridges (C: dual_isLocallyTrivial; A: SheafOfModules morphism descent).",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Not attempted (guardrailed off)",
+        "code_tried": "(none)",
+        "line_number": "699",
+        "lean_error": "n/a",
+        "result": "partial",
+        "insight": "Untouched by design; the in-body comment honestly documents the two remaining bridges and warns against the forbidden shortcut."
+      }
+    ],
+    "next_steps": "Out of scope until the D2′→D3′→D4′ chain and RPF.addCommGroup close; then revisit the ⊗-inverse lane."
+  }
+]

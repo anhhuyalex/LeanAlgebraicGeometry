@@ -1,0 +1,215 @@
+[
+  {
+    "timestamp": "2026-06-02T13:00:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "pullbackTensorMap_unit_isIso"
+    },
+    "session": {
+      "id": "session_250",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "isIso_pullbackTensorMap_unitPair_of_isIso_sheafifyEta",
+        "isIso_sheafifyEta_of_unitSquare",
+        "pullbackEtaUnitSquare"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Close D2' by feeding the now-sorry-free pullbackEtaUnitSquare into the IsIso plumbing.",
+        "code_tried": "isIso_pullbackTensorMap_unitPair_of_isIso_sheafifyEta f (isIso_sheafifyEta_of_unitSquare f (pullbackEtaUnitSquare f))",
+        "line_number": "1844",
+        "lean_error": null,
+        "goal_before": "IsIso (pullbackTensorMap f (unit X.ringCatSheaf) (unit X.ringCatSheaf))",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Closes automatically once pullbackEtaUnitSquare is sorry-free. lean_verify axioms = {propext, Classical.choice, Quot.sound}; no sorryAx. D2' is the armed binary close-or-pivot target for iter-250 — it CLOSED."
+      }
+    ],
+    "next_steps": "D2' done. Next irreducible sub-step is D3' (delta-vs-open-immersion base-change square) per STRATEGY A.1.c.sub; then D4' -> RPF.addCommGroup. Terminal Picard-cone counter stays flat ~3-4 iters (chain-depth lag, not churn)."
+  },
+  {
+    "timestamp": "2026-06-02T13:00:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "pullbackEtaUnitSquare"
+    },
+    "session": {
+      "id": "session_250",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "compHomEquivFactor",
+        "leftAdjointUniqUnitEta",
+        "sheafificationCompPullback_eq_leftAdjointUniq",
+        "presheafUnit_comp_map_eta",
+        "restrictScalarsId_map",
+        "pullbackSheafifyUnitEtaTriangle",
+        "epsilonPresheafToSheafUnit",
+        "right_triangle_components"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Strip the two restrictScalars(1) wrappers by show-into-syntactic-category + rfl (the analogist eps250 headline idiom).",
+        "code_tried": "show ... ; (whnf on restrictScalars (𝟙) over sheafification-laden composites)",
+        "line_number": "1814",
+        "lean_error": "(deterministic) timeout at `whnf`, maximum number of heartbeats (6400000) has been reached",
+        "goal_before": "(∗∗) presheaf identity with restrictScalars(𝟙) wrappers",
+        "goal_after": null,
+        "result": "failed",
+        "insight": "CATASTROPHIC. The premise that restrictScalars(𝟙) is absorbed defeq cheaply is FALSE at this term scale — whnf blows >6.4M heartbeats. Dead end; do not repeat."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Introduce a propositional rewrite restrictScalarsId_map : (restrictScalars (𝟙 R)).map g = g (:= rfl over abstract g) and strip the wrappers SYNTACTICALLY via rw, avoiding whnf.",
+        "code_tried": "rw [restrictScalarsId_map, restrictScalarsId_map]",
+        "line_number": "1833",
+        "lean_error": null,
+        "goal_before": "(∗∗) with restrictScalars(𝟙) wrappers",
+        "goal_after": "clean presheaf goal (u ≫ pf₁.map toSheafify_Y) ≫ pf₂.map (...) = (unitToPushforwardObjUnit φ).val",
+        "result": "success",
+        "insight": "The stated-propositionally rfl lemma is essentially free and is THE key to the close — sidesteps the catastrophic whnf."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Merge the two pushforward-images and fold to η F, then collapse to unitToPushforwardObjUnit via the closed feeder lemmas.",
+        "code_tried": "erw [Category.assoc, ← Functor.map_comp, pullbackSheafifyUnitEtaTriangle f, presheafUnit_comp_map_eta f, epsilonPresheafToSheafUnit f]",
+        "line_number": "1838",
+        "lean_error": null,
+        "goal_before": "merged presheaf goal",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "erw is LOAD-BEARING: the leading pushforward image is spelled `pushforward (Hom.toRingCatSheafHom f).hom` (from leftAdjointUniqUnitEta) vs trailing `pushforward φ.hom` (set-local φ); plain rw/simp only [Category.assoc] fail to match at the connecting object and a `show` unifying φ blows heartbeats. erw keyed-defeq matching reassociates tolerantly within maxHeartbeats 3200000."
+      }
+    ],
+    "next_steps": "Closed. Feeds pullbackTensorMap_unit_isIso (D2')."
+  },
+  {
+    "timestamp": "2026-06-02T13:00:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "epsilonPresheafToSheafUnit"
+    },
+    "session": {
+      "id": "session_250",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "PresheafOfModules.hom_ext",
+        "ModuleCat.hom_ext",
+        "SheafOfModules.unitToPushforwardObjUnit_val_app_apply",
+        "ModuleCat.restrictScalars_η"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Sectionwise: hom_ext -> hom_ext -> ext r, then close both sides landing on φ.hom.app X.",
+        "code_tried": "apply PresheafOfModules.hom_ext; intro X₀; apply ModuleCat.hom_ext; ext r; erw [SheafOfModules.unitToPushforwardObjUnit_val_app_apply, ModuleCat.restrictScalars_η]",
+        "line_number": "1664",
+        "lean_error": "failed to synthesize instance / CommRing diamond on (restrictScalars f).obj 𝟙_",
+        "goal_before": "Functor.LaxMonoidal.ε (pushforward φ') = (unitToPushforwardObjUnit φ).val",
+        "goal_after": "closed after letI fix",
+        "result": "success",
+        "insight": "synthInstance does not reduce (restrictScalars f).obj 𝟙_ to the canonical forget₂-carrier instance (a diamond); a letI supplying the CommRing instance on the scalar ring S₀ fixes it. Wrapped in set_option backward.isDefEq.respectTransparency false. Step 7 / substep (iii)."
+      }
+    ],
+    "next_steps": "Closed; used by pullbackEtaUnitSquare."
+  },
+  {
+    "timestamp": "2026-06-02T13:00:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "pullbackSheafifyUnitEtaTriangle"
+    },
+    "session": {
+      "id": "session_250",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "sheafificationAdjunction.unit.naturality",
+        "Functor.id_map",
+        "right_triangle_components",
+        "sheafifyUnitIso"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "erw [← unit.naturality] then Functor.id_map; Y-side right triangle on 𝒪_Y; close reading η F off goal.",
+        "code_tried": "letI : (pushforward φ').IsRightAdjoint := (pullbackPushforwardAdjunction _).isRightAdjoint; rw [← Category.assoc]; erw [← unit.naturality, Category.assoc, Functor.id_map]; have htri := right_triangle_components (unit Y); refine Eq.trans ?_ (Category.comp_id _); congr 1",
+        "line_number": "1700",
+        "lean_error": "earlier: rw/simp [htri] cannot fire (codomain 𝟙_Yp vs (unit Y).val defeq only at non-reducible transparency)",
+        "goal_before": "toSheafify_Y ≫ (a_Y.map (η F)).val ≫ sheafifyUnitIso.hom.val = η F",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Need IsRightAdjoint instance for the naturality erw. Read η F off the goal via refine Eq.trans ?_ (Category.comp_id _); congr 1 to avoid OplaxMonoidal re-synthesis. set_option maxHeartbeats 1600000. Substep (ii)."
+      }
+    ],
+    "next_steps": "Closed; used by pullbackEtaUnitSquare."
+  },
+  {
+    "timestamp": "2026-06-02T13:00:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "restrictScalarsId_map"
+    },
+    "session": {
+      "id": "session_250",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "State (PresheafOfModules.restrictScalars (𝟙 R)).map g = g propositionally over abstract g, prove by rfl.",
+        "code_tried": "rfl",
+        "line_number": "n/a (new helper)",
+        "lean_error": null,
+        "goal_before": "(restrictScalars (𝟙 R)).map g = g",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Stating it propositionally over an abstract g makes it a cheap rfl; lets restrictScalars(𝟙) wrappers be stripped by syntactic rw, avoiding the catastrophic whnf. Reusable; record in KB."
+      }
+    ],
+    "next_steps": "Reusable helper."
+  },
+  {
+    "timestamp": "2026-06-02T13:00:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "exists_tensorObj_inverse"
+    },
+    "session": {
+      "id": "session_250",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Out of scope this iter (guard-railed, deferred ⊗-inverse lane). Two bridges remain before this sorry closes; documented in informal/exists_tensorObj_inverse.md.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Not on the D2'→D3'→D4' critical path. Leave deferred per directive; address as a separate lane."
+  }
+]

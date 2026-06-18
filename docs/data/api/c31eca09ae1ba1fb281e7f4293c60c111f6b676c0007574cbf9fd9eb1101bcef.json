@@ -1,0 +1,221 @@
+[
+  {
+    "timestamp": "2026-06-03T21:13:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "sheafificationCompPullback_comp"
+    },
+    "session": {
+      "id": "session_262",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "R1/R5 collapse tail (analog of pullbackObjUnitToUnit_comp L969-996) remains; R0 fully peeled in compiling code",
+      "key_lemmas_used": [
+        "sheaf_unit_comp_pushforward_pullbackComp_inv",
+        "unit_conjugateEquiv",
+        "conjugateEquiv_pullbackComp_inv",
+        "reassoc_of%",
+        "Functor.comp_map"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "extract R0-peel conjugate as a named axiom-clean helper in the SheafOfModules spelling that matches the Sq1 goal",
+        "code_tried": "private lemma sheaf_unit_comp_pushforward_pullbackComp_inv ... := via unit_conjugateEquiv + conjugateEquiv_pullbackComp_inv; exact conj.symm",
+        "line_number": "2443",
+        "result": "success",
+        "insight": "Scheme.Modules.pushforward = SheafOfModules.pushforward ∘ toRingCatSheafHom by rfl (instant) — prior 'whnf timeout' belief was a namespace typo (Hom.toRingCatSheafHom). Building block needs SheafOfModules spelling in its STATEMENT for rw/congrArg to match."
+      },
+      {
+        "attempt": 2,
+        "strategy": "distribute the RHS Functor.map_comp without contaminating LHS",
+        "code_tried": "conv_rhs => erw [Functor.map_comp]; erw [Functor.comp_map (SheafOfModules.pushforward (Hom.toRingCatSheafHom (h ≫ f)))]",
+        "line_number": "2524",
+        "result": "success",
+        "insight": "conv_rhs is mandatory: bare erw [Functor.map_comp] on whole goal rewrites LHS sheafAdj_Z.unit into toSheafify ≫ restrictHomEquiv; rw [Functor.map_comp] does not fire (defeq-but-not-syntactic composite functor); unconfined erw chain whnf-times-out."
+      },
+      {
+        "attempt": 3,
+        "strategy": "splice the proven R0-peel key into the goal via associativity navigation",
+        "code_tried": "have key := congrArg ((forget⋙restr).map) (sheaf_unit_comp_pushforward_pullbackComp_inv h f (a_X P)); rw [Functor.map_comp] at key; simp only [Functor.comp_map] at key ⊢; erw [Category.assoc]; erw [reassoc_of% key]",
+        "line_number": "2553",
+        "lean_error": "rw [reassoc_of% key] failed: Did not find an occurrence (then succeeded with erw)",
+        "result": "partial",
+        "insight": "MUST use erw (NOT rw/simp) for both Category.assoc and reassoc_of% key: intermediate objects are defeq-but-not-syntactic Functor.obj apps, so only erw's defeq-implicit matching flattens the comp_unit_app-glued (sheafAdj_X.unit ≫ A). After splice R0 = (pullbackComp h f).inv is GONE; remaining sorry = R1/R5 tail only."
+      }
+    ],
+    "next_steps": "Close the R1/R5 collapse tail: recover the two sheafCompPb factors as B_f/B_h units via homEquiv_leftAdjointUniq_hom_app, slide pushforwardComp.hom past by NatTrans naturality, collapse with comp_unit_app + unit_naturality to B_{h≫f}.unit (~30 lines mirroring pullbackObjUnitToUnit_comp L969-996, with X-side sheafification layer already discharged). pc262 escalation trigger fires: if PARTIAL again with no close, escalate to fine-grained decomposition of the mate calculus."
+  },
+  {
+    "timestamp": "2026-06-03T21:13:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate/DualInverse.lean",
+      "theorem": "sliceDualTransport"
+    },
+    "session": {
+      "id": "session_262",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "remaining ≃ₗ-packaging fields: invFun (reverse build ~mirror of toFun), map_add'/map_smul' (internalHomObjModule-add vs PresheafOfModules.Hom-add syntactic mismatch), left_inv/right_inv (blocked on invFun), naturality (ε-naturality of restrictScalars)",
+      "key_lemmas_used": [
+        "restrictScalars_isIso_ε_of_bijective",
+        "ConcreteCategory.bijective_of_isIso",
+        "CategoryTheory.inv",
+        "Functor.LaxMonoidal.ε"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "extract leg-B's ε-iso as a NAMED atomic lemma (the STUCK-corrective measurable reduction)",
+        "code_tried": "lemma isIso_ε_restrictScalars_appIso ... := restrictScalars_isIso_ε_of_bijective (f.appIso W').inv.hom (ConcreteCategory.bijective_of_isIso (f.appIso W').inv)",
+        "line_number": "177",
+        "result": "success",
+        "insight": "ma-legb262 friction (a) confirmed: phrase the ε-iso at the CommRingCat carrier ((f.appIso W').inv.hom) where CommRing is native; ModuleCat.restrictScalars of the forget₂'d hom is rfl-equal so leg-A's domain still matches. Axiom-clean."
+      },
+      {
+        "attempt": 2,
+        "strategy": "build dualUnitRingSwap = inv(ε) and fill the codomainMap hole",
+        "code_tried": "def dualUnitRingSwap ... := haveI := isIso_ε_restrictScalars_appIso f W'; inv (ε (restrictScalars (f.appIso W').inv.hom)); then replace ?_ at app field with dualUnitRingSwap f W.unop.left",
+        "line_number": "191",
+        "result": "success",
+        "insight": "ma-legb262 friction (b) defeq prediction held EXACTLY: CommRingCat-carrier endpoints reconcile by rfl/defeq with goal's restr/𝟙_-section forms, (β.app (op W')).hom = (f.appIso W').inv.hom by rfl — NO change/eqToHom bridge needed. sliceDualTransport typed-sorry 7→6."
+      },
+      {
+        "attempt": 3,
+        "strategy": "close map_add' via hom_ext + show beta-reduction + add_app split",
+        "code_tried": "intro x y; apply PresheafOfModules.hom_ext; intro W; show (restrictScalars _).map ((x+y).app _) ≫ _ = _; rw [PresheafOfModules.add_app, Functor.map_add, add_comp]",
+        "line_number": "343",
+        "lean_error": "PresheafOfModules.add_app / Functor.map_add: pattern not found on LHS (x+y).app",
+        "result": "failed",
+        "insight": "EXACT blocker isolated: the + on x y : ↑(((pushforward β).obj M.val.dual).obj V) is the internalHomObjModule MODULE add on the dual section object, NOT syntactically the PresheafOfModules.Hom add. Needs an internalHomObjModule-add↦Hom-add defeq bridge (a change/unfold of internalHomObjModule's add field) before Functor.map_add fires."
+      }
+    ],
+    "next_steps": "Add a small internalHomObjModule-add↦Hom-add (and -smul) defeq bridge lemma, then Functor.map_add/add_comp close map_add'/map_smul'. Build invFun (reverse reindexing via (f.appIso W').hom + image_preimage_of_le down-set bijection + ε swap), then left_inv/right_inv (Iso round-trips). ~150-250 LOC remaining. Blueprint-writer must add the internalHomObjModule-bridge note to lem:slice_dual_transport (lvb-di262 major)."
+  },
+  {
+    "timestamp": "2026-06-03T21:13:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate/DualInverse.lean",
+      "theorem": "dual_restrict_iso"
+    },
+    "session": {
+      "id": "session_262",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "isoMk naturality square sorry (L487) — transitively blocked: consumes sliceDualTransport's body which is not yet concrete (6 open fields)",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "not entered this pass — transitively blocked on open sliceDualTransport fields",
+        "code_tried": "(unchanged; isoMk naturality sorry at L487 retained)",
+        "line_number": "487",
+        "result": "partial",
+        "insight": "dual_isLocallyTrivial inherits this sorry axiomatically (compiles). Unblocks automatically once sliceDualTransport closes."
+      }
+    ],
+    "next_steps": "Do NOT re-assign as a standalone target until sliceDualTransport's 6 packaging fields close. It is an assembly residual, not an independent obstacle."
+  },
+  {
+    "timestamp": "2026-06-03T21:13:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/CechHigherDirectImage.lean",
+      "theorem": "relativeCechComplexOfNerve"
+    },
+    "session": {
+      "id": "session_262",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "",
+      "key_lemmas_used": [
+        "AlgebraicTopology.alternatingCofaceMapComplex",
+        "CosimplicialObject.whiskering",
+        "CosimplicialObject.Augmented.drop",
+        "Arrow.augmentedCechNerve",
+        "Sigma.desc"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "split the Čech nerve→complex into a geometric backbone (coverArrow/coverCechNerve, unconditional) + coherence-free plumbing (relativeCechComplexOfNerve), then reduce CechComplex to a genuine body",
+        "code_tried": "coverArrow := Arrow.mk (Sigma.desc 𝒰.f); coverCechNerve := (coverArrow 𝒰).augmentedCechNerve; relativeCechComplexOfNerve := (alternatingCofaceMapComplex S.Modules).obj ((whiskering ...).obj (pushforward f)).obj (Augmented.drop.obj N)); CechComplex := relativeCechComplexOfNerve f (CechNerve 𝒰 F)",
+        "line_number": "130",
+        "result": "success",
+        "insight": "All three new decls axiom-clean ({propext,Classical.choice,Quot.sound}, verified). Scheme has coproducts + HasFiniteLimits, so the backbone is unconditional. The nerve→complex passage uses only preadditivity of S.Modules — NO pushforwardComp/pullbackComp coherence. CechComplex is now genuinely defined (real body), sorry transitivity flows only through CechNerve. sorry count 5→4."
+      }
+    ],
+    "next_steps": "Closing CechNerve axiom-clean immediately yields axiom-clean CechComplex with no further work. The remaining gap is the single push-pull functor G."
+  },
+  {
+    "timestamp": "2026-06-03T21:13:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/CechHigherDirectImage.lean",
+      "theorem": "CechNerve"
+    },
+    "session": {
+      "id": "session_262",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "push-pull functor G : (Over X)ᵒᵖ ⥤ X.Modules, (Y,p) ↦ p_* p^* F — its map_id/map_comp require eqToHom-along-Over-triangle transport + pushforwardComp/pullbackComp pentagon/triangle coherence; THE SAME coherence wall active in TensorObjSubstrate.lean (pullbackComp_δ, pushforwardComp_lax_μ)",
+      "key_lemmas_used": [
+        "pullbackPushforwardAdjunction",
+        "pushforwardComp",
+        "pullbackComp",
+        "pushforwardId",
+        "pullbackId"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "define G.map for g : Y2 ⟶ Y1 in Over X via 3-step composite (adjunction unit + pushforwardComp + pullbackComp)",
+        "code_tried": "(pushforward Y1.hom).map (η_h.app (pullback Y1.hom F)) ≫ (pushforwardComp h Y1.hom).hom.app _ ≫ (pushforward Y2.hom).map ((pullbackComp h Y1.hom).hom.app F)",
+        "line_number": "89",
+        "result": "failed",
+        "insight": "Even DEFINING G.map needs eqToHom transport along the Over-triangle g.w : h ≫ Y1.hom = Y2.hom to identify pushforward(h≫Y1.hom) with pushforward Y2.hom. G.map_id/map_comp then need the same pushforwardComp/pullbackComp coherence quagmire as TensorObjSubstrate. NOT a tactic-difficulty (aesop_cat/simp) issue. Informal agent not consulted: blocker is Lean-internal coherence plumbing, not an informal math gap."
+      }
+    ],
+    "next_steps": "Build G as a standalone Functor: Gobj, Gmap (+2 eqToHom along Over.w, axiom-clean brick), then Gmap_id/Gmap_comp. STRONG recommendation: sequence AFTER / share bricks with the TensorObjSubstrate pullbackComp_δ machinery — do NOT re-derive the coherence from scratch. This couples the engine lane to the D3′ lane."
+  },
+  {
+    "timestamp": "2026-06-03T21:13:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/LineBundleCoherence.lean",
+      "theorem": "IsLocallyTrivial.isFinitePresentation"
+    },
+    "session": {
+      "id": "session_262",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "HELD per PROGRESS (DONE); re-verify axiom-clean only",
+        "code_tried": "#print axioms (lean_verify) → {propext, Classical.choice, Quot.sound}",
+        "line_number": "250",
+        "result": "success",
+        "insight": "0 code sorries; transitively axiom-clean via the green shared root. No edits this iter. A.2.c-engine loc-triv coherence deliverable COMPLETE."
+      }
+    ],
+    "next_steps": "None — done. Do not re-assign."
+  }
+]

@@ -1,0 +1,145 @@
+[
+  {
+    "timestamp": "2026-05-18T07:04:49Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cotangent/GrpObj.lean",
+      "theorem": "AlgebraicGeometry.GrpObj.relativeDifferentialsPresheaf_basechange_along_proj_two"
+    },
+    "session": {
+      "id": "session_140",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Iter-140 BUNDLED 3-sub-sorry lane on piece (i.b) Step 2 returned PARTIAL with structural advance but 0/3 sub-sorries closed substantively. (a) IsIso sub-sorry at L689 was structurally narrowed from whole-morphism-iso to per-open iso via a new private 5-line helper `isIso_of_app_iso_module` (validated as compiling via `lean_run_code`; mirrors `Scheme.Modules.Hom.isIso_iff_isIso_app` for `PresheafOfModules`); the residual per-open closure against `KaehlerDifferential.tensorKaehlerEquiv.symm` (modulo chart-unfolding of `((pullback ψ).obj M_G).obj X`) remains. (b) d_app sub-sorry at L624 gained a successful `change (CommRingCat.KaehlerDifferential.D _).d _ = 0` scaffold that beta-reduces the goal into the clean factoring-through-φ_G form, plus a 16-line closure-recipe docstring (combine `(fst G G).w` + `(snd G G).w` + `LocallyRingedSpace.comp_c_app` + adjunction-transpose to get the witness `h`); the categorical-chase body remains `sorry`. (c) d_map sub-sorry at L643: a parallel `change`-based attempt caused a deterministic `whnf` timeout at maxHeartbeats=200000 (the RHS `((pushforward ψ).obj LHS).map f` is opaque to `whnf`), so the `change` was reverted and only the 18-line closure-recipe docstring (ψ-naturality from `NatTrans.naturality` + `relativeDifferentials'_map_d` + `pushforward = pushforward₀ ∘ restrictScalars` transparency) was committed.",
+      "key_lemmas_used": [
+        "PresheafOfModules.toPresheaf",
+        "NatTrans.isIso_iff_isIso_app",
+        "CategoryTheory.isIso_iff_of_reflects_iso",
+        "CommRingCat.KaehlerDifferential.D",
+        "ModuleCat.Derivation.d_add",
+        "ModuleCat.Derivation.d_mul",
+        "CategoryTheory.Functor.ReflectsIso.Balanced (import)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Read entry-state diagnostics + blueprint chapter slice around RigidityKbar.tex L480-970 to assemble iter-139 closure recipes for the 3 sub-sorries.",
+        "code_tried": "lean_diagnostic_messages on AlgebraicJacobian/Cotangent/GrpObj.lean",
+        "line_number": "581 (d_app sorry), 585 (d_map sorry), 624 (IsIso sorry)",
+        "lean_error": "declaration uses `sorry` warnings at L547 (basechange_along_proj_two_inv_derivation) + L612 (relativeDifferentialsPresheaf_basechange_along_proj_two)",
+        "goal_before": "d_app goal: `(fun b => (KaehlerDifferential.D ...).d ((ψ.app X).hom b)) ((... φ_G ...).app X .hom x✝) = 0`",
+        "goal_after": "unchanged (diagnostic only)",
+        "result": "partial",
+        "insight": "Entry-state confirmed: 2 decls using sorry in this file at iter-140 start; 3 inline sub-sorries in those 2 decls. d_app goal is a beta-redex over the inner derivation lambda, consistent with the iter-138 'simp does not fire' Knowledge Base pattern."
+      },
+      {
+        "attempt": 2,
+        "strategy": "d_app: add `change` scaffold to expose the KaehlerDifferential.D structure on the goal; bind the lambda argument to `a`.",
+        "code_tried": "`(fun a => by\n  change (CommRingCat.KaehlerDifferential.D _).d _ = 0\n  sorry)`",
+        "line_number": "602–624",
+        "lean_error": "none (compiles)",
+        "goal_before": "(fun b => ...) ((φ_G.app X).hom x✝) = 0",
+        "goal_after": "(CommRingCat.KaehlerDifferential.D ((pullbackPushforwardAdjunction).homEquiv.symm (fst G G).left.c .app (snd⁻¹X))).d ((ψ.app X).hom ((φ_G.app X).hom a)) = 0",
+        "result": "partial",
+        "insight": "The `change` succeeds — confirms the iter-138 Knowledge Base pattern. The closure recipe was validated standalone on a toy example via `lean_run_code`: `D.d (g.hom (k.hom a)) = 0` when `k ≫ g = f1` reduces to `Derivation.map_algebraMap` after setting up Algebra/Module/IsScalarTower via `g.hom.toAlgebra`. The categorical-witness `h : Source ⟶ ((pullback fst.left.base).obj G.left.presheaf).obj (snd⁻¹X)` with `h ≫ φ_LHS.app (snd⁻¹X) = (φ_G.app X) ≫ (ψ.app X)` is the load-bearing iter-141+ chase."
+      },
+      {
+        "attempt": 3,
+        "strategy": "d_map: try parallel `change`-based scaffold for the cross-open naturality goal.",
+        "code_tried": "`change (CommRingCat.KaehlerDifferential.D _).d _ = _` inside the d_map lambda",
+        "line_number": "626–642",
+        "lean_error": "(deterministic) timeout at `whnf`, maximum number of heartbeats (200000) has been reached",
+        "goal_before": "(d_Y).d ((G.left.presheaf.map f).hom x) = ((pushforward ψ).obj LHS .map f).hom ((d_X).d x) (deeply nested under the `((fun X => Derivation.mk ...) Y).d`)",
+        "goal_after": "timeout",
+        "result": "failed",
+        "insight": "NEW Knowledge Base pattern: `change` succeeds on d_app (LHS = ?, RHS = 0) but fails on d_map because the d_map RHS carries `((pushforward ψ).obj LHS).map f` which is opaque to `whnf` reduction (`pushforward = pushforward₀ ∘ restrictScalars` definition is `@[simps]` but not reducible). The d_map `change` was reverted; the 18-line closure-recipe docstring stays at the unmodified `sorry`."
+      },
+      {
+        "attempt": 4,
+        "strategy": "IsIso: refactor the `letI : IsIso ... := sorry` to use the iter-139 mathlib-analogist-validated Route (b'2) iso-reflection bridge.",
+        "code_tried": "Add `import Mathlib.CategoryTheory.Functor.ReflectsIso.Balanced` + add `private theorem isIso_of_app_iso_module {C : Type*} [Category C] {R : Cᵒᵖ ⥤ RingCat} {M N : PresheafOfModules R} (f : M ⟶ N) (h : ∀ X, IsIso (f.app X)) : IsIso f := by rw [← isIso_iff_of_reflects_iso _ (PresheafOfModules.toPresheaf R), NatTrans.isIso_iff_isIso_app]; intro X; exact Functor.map_isIso (forget₂ (ModuleCat _) AddCommGrpCat) (f.app X)`. Replace `letI : IsIso (basechange_along_proj_two_inv G) := sorry` with `letI : IsIso (basechange_along_proj_two_inv G) := isIso_of_app_iso_module (basechange_along_proj_two_inv G) (fun _ => sorry)`.",
+        "line_number": "544–550 (helper), 689 (use site)",
+        "lean_error": "none (compiles)",
+        "goal_before": "IsIso (basechange_along_proj_two_inv G)",
+        "goal_after": "∀ (X : (Opens G.left)ᵒᵖ), IsIso ((basechange_along_proj_two_inv G).app X)",
+        "result": "partial",
+        "insight": "Substantive structural advance: the IsIso sorry is now narrowed from a whole-morphism iso (opaque) to a per-open ModuleCat-morphism iso (chart-localised, attackable via `tensorKaehlerEquiv.symm` + chart-unfolding). The 5-line bridge helper is upstream-PR candidate (mirrors `Scheme.Modules.Hom.isIso_iff_isIso_app` in `Mathlib/AlgebraicGeometry/Modules/Sheaf.lean:132` for the `PresheafOfModules` variant). The `import` needed (`Mathlib.CategoryTheory.Functor.ReflectsIso.Balanced`) was the iter-139 analogist's critical caveat — confirmed needed for `(PresheafOfModules.toPresheaf R).ReflectsIsomorphisms` synthesis."
+      }
+    ],
+    "next_steps": "Iter-141+ prover handoff for piece (i.b) Step 2 sub-sorry closure: (1) d_app — implement the 5-step categorical chase: (i) `(fst G G).w + (snd G G).w` → `(fst G G).left ≫ G.hom = (snd G G).left ≫ G.hom`; (ii) lift via `LocallyRingedSpace.comp_c_app` to the structure-sheaf level on each open; (iii) adjunction-transpose along `pullbackPushforwardAdjunction.homEquiv` to obtain the corresponding identity on `φ_G / φ_LHS / ψ`; (iv) construct the witness `h`; (v) apply the validated `Derivation.map_algebraMap` factoring-lemma pattern (~40–80 LOC chase + ~10 LOC algebra/module/scalartower setup). (2) d_map — implement the 3-step chase: (i) ψ-naturality from `NatTrans.naturality`; (ii) Mathlib lemma `relativeDifferentials'_map_d`; (iii) leverage `pushforward = pushforward₀ ∘ restrictScalars` transparency (~30–60 LOC). (3) IsIso per-open — build `pullbackObjEquivTensor` helper first (~30–60 LOC), then the chart-level `Algebra.IsPushout`-from-affine-product helper (~80–150 LOC), then apply `tensorKaehlerEquiv_symm_D_tmul` for the value identity (~50–100 LOC) — total ~160–310 LOC. Iter-141 plan-agent decision per progress-critic-iter140 gate: PARTIAL (0–1 closed) flips to CHURNING-trigger; iter-141 plan must mid-iter strategy-critic re-dispatch + consider chart-algebra-vs-bundled re-evaluation."
+  },
+  {
+    "timestamp": "2026-05-18T07:04:49Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Cotangent/GrpObj.lean",
+      "theorem": "AlgebraicGeometry.GrpObj.mulRight_globalises_cotangent"
+    },
+    "session": {
+      "id": "session_140",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Off-limits for iter-140 prover lane per PROGRESS.md § Off-limits (depends on the iter-140 BUNDLED sub-sorry target's closure). Iter-135 carry-over `sorry`; body composes Steps 1+2+3 of piece (i.b).",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Iter-141 PASS arm (≥2 of 3 sub-sorries closed): plan-agent dispatches prover lane on this Main lemma (~20–40 LOC composition). PARTIAL arm: deferred."
+  },
+  {
+    "timestamp": "2026-05-18T07:04:49Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Jacobian.lean",
+      "theorem": "AlgebraicGeometry.Jacobian.genusZeroWitness"
+    },
+    "session": {
+      "id": "session_140",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Off-critical-path for iter-140 (M2.b scaffold). Carry-over from earlier iters.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Off-critical-path; deferred per STRATEGY.md M2.b row."
+  },
+  {
+    "timestamp": "2026-05-18T07:04:49Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Jacobian.lean",
+      "theorem": "AlgebraicGeometry.Jacobian.positiveGenusWitness"
+    },
+    "session": {
+      "id": "session_140",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Off-critical-path for iter-140 (M3 scaffold). Carry-over from earlier iters.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Off-critical-path; deferred per STRATEGY.md M3 row."
+  },
+  {
+    "timestamp": "2026-05-18T07:04:49Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/RigidityKbar.lean",
+      "theorem": "AlgebraicGeometry.rigidity_over_kbar"
+    },
+    "session": {
+      "id": "session_140",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Off-critical-path for iter-140 (M2.a scaffold). Carry-over from earlier iters.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Off-critical-path; deferred per STRATEGY.md M2.a row."
+  }
+]

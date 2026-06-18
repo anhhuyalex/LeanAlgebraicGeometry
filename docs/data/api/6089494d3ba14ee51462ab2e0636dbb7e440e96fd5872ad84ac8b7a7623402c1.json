@@ -1,0 +1,139 @@
+[
+  {
+    "timestamp": "2026-05-30T13:55:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "PresheafOfModules.isLocallyInjective_whiskerLeft_of_W"
+    },
+    "session": {
+      "id": "session_214",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Residual rests on two Mathlib-absent ingredients: (d.1-bridge) site J.W of (toPresheaf).map f ↔ ∀x IsIso ((stalkFunctor Ab x).map ...), est ~80-150 LOC; (d.2) natural iso (F ⊗ M).stalk x ≅ F_x ⊗_{R.stalk x} M_x over a VARYING ring (filtered-colimit/tensor interchange), genuinely Mathlib-absent, est ~150-250 LOC and the largest piece. Lemma is also stated over a general site C where no stalks exist — must be specialised to Opens X (decl is UNPROTECTED).",
+      "key_lemmas_used": [
+        "TopCat.Presheaf.germ_exist",
+        "TopCat.Presheaf.germ_res_apply",
+        "PresheafOfModules.germ_smul",
+        "TopCat.Presheaf.stalkFunctor_map_germ_apply",
+        "ConcreteCategory.bijective_of_isIso"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Step 0 make-or-break: search Mathlib for an off-the-shelf (J.W).IsMonoidal / monoidal SheafOfModules / IsLocalization glue that would collapse the obligation (route-(e) win condition).",
+        "code_tried": "grep over Mathlib/CategoryTheory/Sites/Monoidal.lean, Sites/Point/IsMonoidalW.lean, Algebra/Category/ModuleCat/Sheaf/Localization.lean",
+        "line_number": "n/a",
+        "lean_error": "",
+        "result": "failed",
+        "insight": "NEGATIVE — must build. (J.W).IsMonoidal exists ONLY for a fixed monoidal-closed A (Cᵒᵖ ⥤ A) via internal-hom; PresheafOfModules R (varying ring) is not Cᵒᵖ ⥤ A and MonoidalClosed (PresheafOfModules R) is verified-absent. IsMonoidalW.lean is the TEMPLATE to port, not a usable instance."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Correct the PROGRESS.md/recipe premise that there is 'no PresheafOfModules stalk infra' by checking Mathlib directly.",
+        "code_tried": "ls + read Mathlib/Algebra/Category/ModuleCat/Stalk.lean",
+        "line_number": "n/a",
+        "lean_error": "",
+        "result": "success",
+        "insight": "KEY CORRECTION: Mathlib.Algebra.Category.ModuleCat.Stalk (Andrew Yang, 2026) DOES supply, for X:TopCat, R:X.Presheaf CommRingCat, M:PresheafOfModules, the instance Module (R.stalk x) (TopCat.Presheaf.stalk M.presheaf x) plus PresheafOfModules.germ_smul. De-risks d.1: the module stalk does NOT need to be built."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Build the d.1 core: package the induced Ab-stalk map of g as an R.stalk x-linear map (stalkLinearMap), proving map_smul' by a germ chase.",
+        "code_tried": "noncomputable def stalkLinearMap ... where toFun := ConcreteCategory.hom ((stalkFunctor AddCommGrpCat x).map ((toPresheaf _).map g)); map_smul' r s := by obtain germ_exist R x r; obtain germ_exist M.presheaf x s; ... germ_res_apply + germ_smul + stalkFunctor_map_germ_apply chase",
+        "line_number": "535",
+        "lean_error": "(intermediate) rewrite failed: 'Did not find an occurrence of the pattern ?f (?x + ?y)' / 'failed to synthesize AddCommMonoid (stalk ?m x)' during exploratory lean_run_code — resolved by germ-chase reformulation",
+        "result": "success",
+        "insight": "Lands axiom-clean {propext, Classical.choice, Quot.sound}. The germ-chase via germ_exist/germ_res_apply/germ_smul is the working pattern; direct rewriting on stalkFunctor maps fails (concrete-category hom wrapping)."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Add three companion decls: germ characterisation, bijectivity from Ab-stalk iso, and the bundled LinearEquiv.",
+        "code_tried": "stalkLinearMap_germ; stalkLinearMap_bijective_of_isIso (change Function.Bijective ⇑(...); exact ConcreteCategory.bijective_of_isIso _); stalkLinearEquivOfIsIso (bundled ≃ₗ[R.stalk x])",
+        "line_number": "600-650",
+        "lean_error": "",
+        "result": "success",
+        "insight": "All axiom-clean. These package the R_x-linear stalk equivalence that the 'id_{F_x} ⊗ g_x' step of the residual consumes (combine with LinearEquiv.lTensor once d.2 lands)."
+      },
+      {
+        "attempt": 5,
+        "strategy": "Attempt to close the target sorry by combining the new bricks.",
+        "code_tried": "(not attempted to completion — left typed sorry with corrected decomposition comment)",
+        "line_number": "443",
+        "lean_error": "",
+        "result": "partial",
+        "insight": "Cannot close: still needs (d.1-bridge) site-W↔stalkwise-iso AND (d.2) varying-ring stalk-⊗ commutation; partial versions would introduce forbidden sorries. Stopped to keep the file axiom-clean."
+      }
+    ],
+    "next_steps": "Specialise isLocallyInjective_whiskerLeft_of_W to Opens X (unprotected; only consumer chain W_whiskerLeft/Right_of_W → tensorObj_assoc_iso already runs over Opens.grothendieckTopology X). Then build (d.1-bridge) from WEqualsLocallyBijective + TopCat stalk criteria (locally_surjective_iff_surjective_on_stalks, app_injective_iff_stalkFunctor_map_injective, isIso_iff_stalkFunctor_map_iso), then (d.2) from germ_exist + filtered-colimit-tensor. Then package (J.W).IsMonoidal and instantiate Localization.Monoidal.LocalizedMonoidal."
+  },
+  {
+    "timestamp": "2026-05-30T13:55:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "PresheafOfModules.stalkLinearMap"
+    },
+    "session": {
+      "id": "session_214",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "",
+      "key_lemmas_used": [
+        "TopCat.Presheaf.germ_exist",
+        "TopCat.Presheaf.germ_res_apply",
+        "PresheafOfModules.germ_smul",
+        "TopCat.Presheaf.stalkFunctor_map_germ_apply",
+        "PresheafOfModules.toPresheaf_map_app_apply"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Define the R.stalk x-linear stalk map; prove map_add' by map_add, map_smul' by germ chase over the common refinement W = U ⊓ V of the germ witnesses for r and s.",
+        "code_tried": "where toFun := ConcreteCategory.hom ((stalkFunctor AddCommGrpCat x).map ((toPresheaf _).map g)); map_smul' r s := by dsimp [RingHom.id_apply]; obtain ⟨U,hxU,r₀,rfl⟩ := germ_exist R x r; obtain ⟨V,hxV,s₀,rfl⟩ := germ_exist M.presheaf x s; set W := U ⊓ V; germ_res_apply + germ_smul + naturality key",
+        "line_number": "535",
+        "lean_error": "",
+        "result": "success",
+        "insight": "Axiom-clean. Establishes the R_x-linearity Mathlib's Stalk.lean leaves open."
+      }
+    ],
+    "next_steps": "Consumed by stalkLinearMap_bijective_of_isIso / stalkLinearEquivOfIsIso; feeds the d.1 stalkwise step of isLocallyInjective_whiskerLeft_of_W."
+  },
+  {
+    "timestamp": "2026-05-30T13:55:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "PresheafOfModules.stalkLinearEquivOfIsIso"
+    },
+    "session": {
+      "id": "session_214",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "",
+      "key_lemmas_used": [
+        "PresheafOfModules.stalkLinearMap",
+        "PresheafOfModules.stalkLinearMap_bijective_of_isIso",
+        "ConcreteCategory.bijective_of_isIso",
+        "LinearEquiv.ofBijective"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Bundle stalkLinearMap into an R.stalk x-linear equivalence when the underlying Ab-stalk map is an iso.",
+        "code_tried": "stalkLinearMap_bijective_of_isIso: change Function.Bijective ⇑(ConcreteCategory.hom ((stalkFunctor AddCommGrpCat x).map ((toPresheaf _).map g))); exact ConcreteCategory.bijective_of_isIso _ — then LinearEquiv.ofBijective",
+        "line_number": "640",
+        "lean_error": "",
+        "result": "success",
+        "insight": "Axiom-clean. This is the exact object the 'id_{F_x} ⊗ g_x is an iso' step consumes via LinearEquiv.lTensor."
+      }
+    ],
+    "next_steps": "Combine with the (d.2) stalk-⊗ iso to finish isLocallyInjective_whiskerLeft_of_W flatness-free."
+  }
+]

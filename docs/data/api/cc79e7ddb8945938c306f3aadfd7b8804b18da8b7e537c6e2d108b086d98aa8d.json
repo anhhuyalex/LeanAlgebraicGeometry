@@ -1,0 +1,527 @@
+[
+  {
+    "timestamp": "2026-05-27T02:42:28Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/WeilDivisor.lean",
+      "theorem": "instIsLocallyNoetherianProjectiveLineBar"
+    },
+    "session": {
+      "id": "session_194",
+      "model": "claude-opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "IsProper.toLocallyOfFiniteType",
+        "LocallyOfFiniteType.isLocallyNoetherian",
+        "instIsLocallyNoetherianSpecOfIsNoetherianRingCarrier"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "IsProper → LocallyOfFiniteType + Spec(.of kbar).IsLocallyNoetherian composition",
+        "code_tried": "haveI : LocallyOfFiniteType (ProjectiveLineBar kbar).hom := IsProper.toLocallyOfFiniteType _; LocallyOfFiniteType.isLocallyNoetherian _",
+        "line_number": "703",
+        "result": "success",
+        "insight": "Direct 4-LOC Mathlib composition; kernel-only axioms. ProjectiveLineBar.hom is IsProper (BareScheme.lean:106), base is Spec(.of kbar) which is IsLocallyNoetherian via Field ⟹ Noetherian"
+      }
+    ],
+    "next_steps": "instIsRegularInCodimOneProjectiveLineBar at L719 remains; requires HomogeneousLocalization at height-1 prime ⟹ DVR (Mathlib gap at b80f227)."
+  },
+  {
+    "timestamp": "2026-05-27T02:42:28Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/WeilDivisor.lean",
+      "theorem": "degree_positivePart_principal_eq_finrank"
+    },
+    "session": {
+      "id": "session_194",
+      "model": "claude-opus"
+    },
+    "findings": {
+      "blocker": "Function-field-determines-curve correspondence (Hartshorne I.6.12) + affine-chart-pullback bridge (Spec(B) := φ⁻¹(Spec(A))) are Mathlib gaps at b80f227. No Scheme.Hom.ofFunctionFieldEmbedding constructor.",
+      "key_lemmas_used": [
+        "hLPUnif destructure",
+        "Y₀ extraction"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Body restructure: destructure hLPUnif to expose uniformiser witness Y₀",
+        "code_tried": "obtain ⟨Y₀, hY₀_one, hY₀_unique⟩ := hLPUnif; -- remainder: φ from function-field embedding + affine-chart bridge",
+        "line_number": "763",
+        "result": "partial",
+        "insight": "Body now exposes Y₀; remainder needs Scheme.Hom.ofFunctionFieldEmbedding + Ideal.sum_ramification_inertia application chain. Mathlib gap I.6.12."
+      }
+    ],
+    "next_steps": "iter-200 mathlib-analogist sweep — function-field-determines-curve infrastructure question."
+  },
+  {
+    "timestamp": "2026-05-27T02:42:28Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/H1Vanishing.lean",
+      "theorem": "Scheme.IsFlasque.shortExact_app_surjective"
+    },
+    "session": {
+      "id": "session_194",
+      "model": "claude-opus"
+    },
+    "findings": {
+      "blocker": "Single focused typeclass goal `(sheafCompose (forget₂ ModuleCat AddCommGrpCat)).PreservesHomology` (or PreservesRightHomologyOf S).",
+      "key_lemmas_used": [
+        "sheafCompose_additive",
+        "sheafCompose_preservesZero",
+        "Scheme.IsFlasque.toAddCommGrpCat",
+        "TopCat.Sheaf.IsFlasque.epi_of_shortExact",
+        "Sheaf.Hom.mono_of_presheaf_mono",
+        "Sheaf.isLocallySurjective_iff_epi'",
+        "AddCommGrpCat.epi_iff_surjective"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "forget₂ bridge: lift Sheaf J (ModuleCat kbar) SES to Sheaf J AddCommGrpCat via sheafCompose (forget₂ ...); apply Mathlib's TopCat.Sheaf.IsFlasque.epi_of_shortExact; transfer via AddCommGrpCat.epi_iff_surjective",
+        "code_tried": "let SAb := S.map (sheafCompose J (forget₂ (ModuleCat kbar) AddCommGrpCat)); have hMono : Mono SAb.f := ...; have hEpi : Epi SAb.g := ...; have hExact : SAb.Exact := sorry; ...",
+        "line_number": "405",
+        "result": "partial",
+        "insight": "Mono/Epi proven axiom-clean inline; SAb.Exact isolated as focused typeclass goal. 3 new axiom-clean substrate helpers landed (sheafCompose_additive, sheafCompose_preservesZero, Scheme.IsFlasque.toAddCommGrpCat)."
+      }
+    ],
+    "next_steps": "Close `(sheafCompose (forget₂ ModuleCat AddCommGrpCat)).PreservesHomology` instance (~50-100 LOC) OR `Presheaf.exact_iff_stalk_exact` (~70-120 LOC). Both routes structurally feasible; iter-195+ direct dispatch."
+  },
+  {
+    "timestamp": "2026-05-27T02:42:28Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/H1Vanishing.lean",
+      "theorem": "Scheme.IsFlasque.injective_flasque"
+    },
+    "session": {
+      "id": "session_194",
+      "model": "claude-opus"
+    },
+    "findings": {
+      "blocker": "Mathlib b80f227 ships no `j_!` (extension-by-zero) infrastructure for module-valued sheaves, no Godement resolution for module sheaves. The Hartshorne III.2.4 proof intrinsically requires `j_!`.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Search Mathlib b80f227 extensively for j_!-extension-by-zero infrastructure on module-valued sheaves",
+        "code_tried": "(Mathlib search across Topology/Sheaves, CategoryTheory/Sites, AlgebraicGeometry/Modules)",
+        "line_number": "537",
+        "result": "failed",
+        "insight": "Found TopCat.Sheaf.IsFlasque in Topology/Sheaves/Flasque.lean but NO injective-flasque lemma and NO `j_!` construction. Godement resolution for module sheaves also missing. Direct categorical kbar-module-duality route considered but blocked by dimension-analysis subtleties."
+      }
+    ],
+    "next_steps": "Escalate to iter-200 mathlib-analogist sweep (cross-domain-inspiration mode)."
+  },
+  {
+    "timestamp": "2026-05-27T02:42:28Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Albanese/CodimOneExtension.lean",
+      "theorem": "isRegularLocalRing_stalk_of_smooth"
+    },
+    "session": {
+      "id": "session_194",
+      "model": "claude-opus"
+    },
+    "findings": {
+      "blocker": "Two specific sub-gaps: (i) relative-dimension n determination from `IsStandardSmooth` (no specific n extractable at algebra layer); (ii) Stacks 00OE smooth-algebra Krull-dimension formula (no Mathlib declaration at b80f227 relating `IsStandardSmooth(OfRelativeDimension)` to `ringKrullDim`).",
+      "key_lemmas_used": [
+        "Stage 5b reference `rank_kaehlerDifferential_localization_eq_relativeDimension`"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Instantiate Stage 5b inside body",
+        "code_tried": "rank_kaehlerDifferential_localization_eq_relativeDimension instantiation chain",
+        "line_number": "434",
+        "result": "failed",
+        "insight": "Stage 5b requires `[IsStandardSmoothOfRelativeDimension n R S]` but Stage 3 yields only `Algebra.IsStandardSmooth R S`. Lifting to OfRelativeDimension n needs specific n known (circular: needs the smooth-algebra dim formula) or read off underlying SubmersivePresentation (not exposed by IsStandardSmooth)."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Restructure body docstring with precise gap surface",
+        "code_tried": "Update L480-514 gap docstring naming 2 sub-gaps with Mathlib path references",
+        "line_number": "434",
+        "result": "success",
+        "insight": "Substantive content captured. Each sub-gap has concrete Mathlib path reference; iter-200 sweep can attack them."
+      }
+    ],
+    "next_steps": "Gated on iter-200 mathlib-analogist sweep verdict on Stacks 00OE."
+  },
+  {
+    "timestamp": "2026-05-27T02:42:28Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Albanese/CodimOneExtension.lean",
+      "theorem": "extend_of_codimOneFree_of_smooth"
+    },
+    "session": {
+      "id": "session_194",
+      "model": "claude-opus"
+    },
+    "findings": {
+      "blocker": "Stacks 0AVF depth-≥2 H¹ vanishing — Mathlib gap; `localRing_dvr_of_codim_one` substrate not yet usable.",
+      "key_lemmas_used": [
+        "Scheme.isSeparated_iff",
+        "IsSeparated.of_comp",
+        "Scheme.topIso",
+        "RationalMap.toPartialMap",
+        "PartialMap.equiv_iff_of_isSeparated"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Convert bare sorry to by-block; add axiom-clean Y.left.IsSeparated derivation; document concrete extraction roadmap",
+        "code_tried": "haveI : Y.left.IsSeparated := by ...; -- body sorry with explicit `X.topIso.inv ≫ (X.left.isoOfEq h).inv ≫ f.toPartialMap.hom` roadmap",
+        "line_number": "684",
+        "result": "partial",
+        "insight": "1 axiom-clean instance derivation added; gap commentary now structured with concrete extraction roadmap and required upstream substrate."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Full structural refactor exposing f.toPartialMap.domain = ⊤ as sole sorry",
+        "code_tried": "Restructure body exposing domain = ⊤ as single typed sorry; rest by `subst hdom + simp`",
+        "line_number": "684",
+        "result": "failed",
+        "insight": "Refactor regressed sorry count 1 → 3 (morphism-equation proof + uniqueness branch each needed extra subst/simp chains that didn't close). Backed off; original sorry structure intact."
+      }
+    ],
+    "next_steps": "Gated on iter-200 sweep verdict on Stacks 0AVF; closure roadmap documented."
+  },
+  {
+    "timestamp": "2026-05-27T02:42:28Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Albanese/CodimOneExtension.lean",
+      "theorem": "indeterminacy_pure_codim_one_into_grpScheme"
+    },
+    "session": {
+      "id": "session_194",
+      "model": "claude-opus"
+    },
+    "findings": {
+      "blocker": "Two Mathlib gaps named: (a) function-field-pullback bridge for Scheme.RationalMap; (b) scheme-level codim-1 pole-divisor/diagonal intersection lemma (Hartshorne AG 9.2 scheme-level).",
+      "key_lemmas_used": [
+        "Milne Lemma 3.3 framework"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Convert bare sorry to by-block with 4-substep precise gap surface (difference map / definedness / function-field pullback / pole-divisor-diagonal intersection)",
+        "code_tried": "4-substep documented body with each substep's Mathlib API status",
+        "line_number": "752",
+        "result": "partial",
+        "insight": "Body now precisely documents 2 Mathlib gaps + 2 axiom-clean substep components."
+      }
+    ],
+    "next_steps": "iter-200 mathlib-analogist sweep on Scheme.RationalMap function-field pullback + Hartshorne AG 9.2 scheme-level."
+  },
+  {
+    "timestamp": "2026-05-27T02:42:28Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "kbarChart1Ring_specMap_fac"
+    },
+    "session": {
+      "id": "session_194",
+      "model": "claude-opus"
+    },
+    "findings": {
+      "blocker": "Same Proj.appIso ⊤ .inv on isLocElem evaluation that has been STUCK iter-188-193. iter-193 pivot through IsOpenImmersion.lift_uniq narrows the residual but does not eliminate it.",
+      "key_lemmas_used": [
+        "iotaGm_r_1_fac",
+        "ext_of_isAffine",
+        "Proj.basicOpenIsoAway",
+        "Proj.fromOfGlobalSections_morphismRestrict"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Reroute through iotaGm_r_1_fac (iter-193 lemma) reducing morphism-level claim to appTop ring-map identity",
+        "code_tried": "rw [← iotaGm_r_1_fac kbar]; congr 1; refine ext_of_isAffine ?_",
+        "line_number": "222",
+        "result": "partial",
+        "insight": "Outer morphism-level reasoning eliminated; residual narrows to ring-map identity `Scheme.Hom.appTop (Spec.map kbarChart1Ring) = Scheme.Hom.appTop (iotaGm_r_1 kbar)`. Dead-end documented: cannot use IsOpenImmersion.lift_uniq of awayι X_1 directly (needs the same `_ ≫ awayι = onePt.left` equation)."
+      }
+    ],
+    "next_steps": "Search/contribute Mathlib lemma evaluating `Proj.awayι.appIso ⊤ .inv` on isLocElem (corollary of basicOpenIsoSpec_inv_ι + Scheme.Hom.appIso of open-immersion composition). Use Scheme.Hom.appIso_inv_app + explicit (D₊X_1).ι.appIso ⊤ formula via basicOpenIsoAway."
+  },
+  {
+    "timestamp": "2026-05-27T02:42:28Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/QuotScheme.lean",
+      "theorem": "pullback_app_isoTensor_baseMap_sectionLinearEquiv"
+    },
+    "session": {
+      "id": "session_194",
+      "model": "claude-opus"
+    },
+    "findings": {
+      "blocker": "Beck-Chevalley intertwining at 1 ⊗ₜ x provably depends on bodies of `step1` (Stacks 01I8) and `step2` (Stacks 01HQ); both are Nonempty (... ≅ ...) typed-sorry pins with opaque Classical.choice-extracted isos.",
+      "key_lemmas_used": [
+        "topAdd.toLinearEquiv",
+        "Scheme.Modules.Hom.app_smul",
+        "tilde.isoTop",
+        "ΓSpecIso",
+        "Module.compHom"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Build LinearEquiv f : T ≃ₗ[Γ(Y,U)] Γ((pullback g).obj N, U) via composedIso chain — Steps a-c of iter-189 5-step plan (axiom-clean)",
+        "code_tried": "set TR := ModuleCat.of Γ(Y,U) (T); restate Module.compHom-via-ΓSpecIso.inv.hom instance; topLin = topAdd.toLinearEquiv ...; toTensor := topLin.trans (tilde.isoTop TR).symm.toLinearEquiv; f := toTensor.symm.trans step3",
+        "line_number": "815",
+        "result": "success",
+        "insight": "LinearEquiv axiom-clean. `(tilde.isoTop M).toLinearEquiv` directly produces M ≃ₗ[R] Γ(tilde M, ⊤); two Γ(Y,U)-module instances are defeq enough to typecheck without manual Module.compHom bridge on tilde side."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Beck-Chevalley intertwining at 1 ⊗ₜ x via rfl/simp",
+        "code_tried": "rfl; simp [f, toTensor, topLin, topAdd, composedIso, pullback_app_isoTensor_baseMap, ...]; unfold ...",
+        "line_number": "957",
+        "result": "failed",
+        "insight": "rfl unfolds to chain involving `Scheme.Modules.Hom.app step1.inv`, `Scheme.Modules.Hom.app step2.inv`, `(tilde.isoTop TR).symm.toLinearEquiv.symm` applied to 1 ⊗ₜ x — cannot close by rfl/simp. Architecturally: depends on step1/step2 bodies OR Σ-pair signature refactor."
+      }
+    ],
+    "next_steps": "Refactor step1/step2 to Σ-pair signatures with canonical-iso identity (~10-15 LOC per pin), OR close step1 body via Stacks 01I8 path (~50-80 LOC). Either unblocks Beck-Chevalley."
+  },
+  {
+    "timestamp": "2026-05-27T02:42:28Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects/GmScaling.lean",
+      "theorem": "gmScalingP1_chart_agreement_cross01"
+    },
+    "session": {
+      "id": "session_194",
+      "model": "claude-opus"
+    },
+    "findings": {
+      "blocker": "Per-closed-point chart-map evaluation hCP_check — same substantive content as Lane E's `iotaGm_chart1_appIso_eval` chart-1 ring-map idiom blocker.",
+      "key_lemmas_used": [
+        "LocallyOfFiniteType.jacobsonSpace",
+        "JacobsonSpace.closure_closedPoints",
+        "Continuous.range_subset_closure_image_dense",
+        "IsClosedImmersion.isClosedEmbedding"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Closed-points reduction via JacobsonSpace.closure_closedPoints: derive Jacobson on intersection scheme via LocallyOfFiniteType chain; range Δ closed via IsClosedImmersion; reduce range containment to per-closed-point hCP_check",
+        "code_tried": "haveI hLOFT_f0 : LocallyOfFiniteType (cover.f 0) := inferInstance; -- 9 named haveIs ending in closure-assembly `Continuous.range_subset_closure_image_dense`",
+        "line_number": "463",
+        "result": "partial",
+        "insight": "9 axiom-clean structural helpers landed (full closed-points-reduction infrastructure); residual narrowed to per-closed-point chart-evaluation. JacobsonSpace via LOFT chain + density via closure_closedPoints is reusable infrastructure."
+      }
+    ],
+    "next_steps": "Per-closed-point chart-map evaluation needs chart-1 ring-map evaluation idiom (Lane E `iotaGm_chart1_appIso_eval`). When Lane E lands, this closure follows."
+  },
+  {
+    "timestamp": "2026-05-27T02:42:28Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/IdentityComponent.lean",
+      "theorem": "identityComponent_geometricallyConnected"
+    },
+    "session": {
+      "id": "session_194",
+      "model": "claude-opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "lean-auditor iter-193 must-fix recommendation"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Demote private instance to private theorem to eliminate silent sorryAx-propagation via typeclass synthesis",
+        "code_tried": "Keyword swap `private instance identityComponent_geometricallyConnected` → `private theorem identityComponent_geometricallyConnected`; consumer audit confirmed zero typeclass-resolution consumers in the file",
+        "line_number": "500",
+        "result": "success",
+        "insight": "lean-auditor iter-193 must-fix CLEARED. `lean_verify` confirms `IdentityComponent.isOpenSubgroupScheme` axioms are kernel-only (no sorryAx). The demoted-to-lemma cannot silently propagate sorryAx into typeclass resolution paths anymore. Callers must use `letI := identityComponent_geometricallyConnected G` explicitly."
+      }
+    ],
+    "next_steps": "No follow-up needed; soundness exposure closed."
+  },
+  {
+    "timestamp": "2026-05-27T02:42:28Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/IdentityComponent.lean",
+      "theorem": "geometricallyConnected_of_connected_of_section"
+    },
+    "session": {
+      "id": "session_194",
+      "model": "claude-opus"
+    },
+    "findings": {
+      "blocker": "Stacks 04KV reduction to finite separable extensions + field-tensor-product criterion (alg-closed-in + separable ⟹ field) — both Mathlib gaps at b80f227.",
+      "key_lemmas_used": [
+        "geometrically_iff_of_commRing_of_isClosedUnderIsomorphisms",
+        "pullback.lift section construction"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Restructure body: reduce via geometrically_iff_of_commRing_of_isClosedUnderIsomorphisms; construct base-changed section _sK via pullback.lift (g ≫ s) (𝟙 _); derive Nonempty",
+        "code_tried": "rw [geometrically_iff_of_commRing_of_isClosedUnderIsomorphisms]; intro K _ _; let _sK := pullback.lift (g ≫ s) (𝟙 _) (...); have : Nonempty ↑↑(pullback f g) := ⟨_sK.base ⟨0, ⟨0, rfl⟩⟩⟩; sorry",
+        "line_number": "414",
+        "result": "partial",
+        "insight": "Structural reduction axiom-clean; residual goal `ConnectedSpace ↥(pullback f (Spec.map (CommRingCat.ofHom (algebraMap k K))))` is at much more precise surface than bare sorry. Negative searches: `Algebra.TensorProduct.isField_of_isAlgebraic` is wrong direction; faithfully-flat-descent route blocked by same Stacks 037Q fibre-connectedness gap."
+      }
+    ],
+    "next_steps": "Escalate to iter-200 mathlib-analogist sweep — question: Does Mathlib (any branch) have a path from ConnectedSpace X + k-rational section ⟹ GeometricallyConnected (X → Spec k)? What Mathlib SHA/PR would land Stacks 04KV?"
+  },
+  {
+    "timestamp": "2026-05-27T02:42:28Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/RationalCurveIso.lean",
+      "theorem": "phi_left_locallyQuasiFinite_of_finrank_one"
+    },
+    "session": {
+      "id": "session_194",
+      "model": "claude-opus"
+    },
+    "findings": {
+      "blocker": "Per-fibre LocallyQuasiFinite case: `smooth-dim-1 ⟹ fibre 0-dim scheme` is a Mathlib gap at b80f227. (Generic fibre is essentially Spec K(C) → Spec K(C') iso; per-fibre case is the gap.)",
+      "key_lemmas_used": [
+        "algebraMap_bijective_of_finrank_one (new)",
+        "phi_left_functionField_algEquiv_of_finrank_one (new)",
+        "Subalgebra.bot_eq_top_of_finrank_eq_one",
+        "Algebra.bijective_algebraMap_iff",
+        "LocallyQuasiFinite.of_fiberToSpecResidueField"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Land 2 axiom-clean substrate helpers (`algebraMap_bijective_of_finrank_one` + `phi_left_functionField_algEquiv_of_finrank_one`); reduce body via `LocallyQuasiFinite.of_fiberToSpecResidueField` to per-fibre case",
+        "code_tried": "refine LocallyQuasiFinite.of_fiberToSpecResidueField (f := φ.left) (fun x => ?_); sorry",
+        "line_number": "866",
+        "result": "partial",
+        "insight": "2 axiom-clean substrate helpers landed (HARD BAR MET); body reduced to per-fibre LQF. Inline Step 1 of iso_of_degree_one refactored from 16 LOC → 4 LOC consuming new substrate."
+      }
+    ],
+    "next_steps": "Per-fibre LQF closure requires `smooth-dim-1 ⟹ 0-dim fibre` wrapper; project-side build OR iter-200 mathlib-analogist."
+  },
+  {
+    "timestamp": "2026-05-27T02:42:28Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Albanese/AuslanderBuchsbaum.lean",
+      "theorem": "auslander_buchsbaum_formula (n=0 branch substrate)"
+    },
+    "session": {
+      "id": "session_194",
+      "model": "claude-opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "Module.depth_pi_const_eq_depth_of_nonempty (NEW)",
+        "Submodule.smul_induction_on",
+        "Submodule.map_smul''",
+        "LinearMap.single_apply",
+        "Finset.univ_sum_single",
+        "Pi.isSMulRegular_iff",
+        "LinearEquiv.isRegular_congr",
+        "Submodule.quotientPi",
+        "Submodule.quotEquivOfEq",
+        "Submodule.ideal_span_singleton_smul"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Prove general substrate `Module.depth_pi_const_eq_depth_of_nonempty` (depth I (ι → M) = depth I M for nonempty finite ι), then specialise at ι = Fin k, M = R, I = 𝔪",
+        "code_tried": "private theorem ideal_smul_top_pi_const ... ; private theorem ideal_smul_top_pi_const_eq_top_iff ... ; private def quotSMulTopPiConstLinearEquiv ... ; private theorem isRegular_pi_const_iff_of_nonempty ... ; theorem Module.depth_pi_const_eq_depth_of_nonempty ... ; -- at L953: haveI : Nonempty (Fin k) := ⟨⟨0, hk⟩⟩; exact Module.depth_pi_const_eq_depth_of_nonempty _",
+        "line_number": "953",
+        "result": "success",
+        "insight": "n=0 branch substrate CLOSED axiom-clean (kernel-only: propext, Classical.choice, Quot.sound). ~135 LOC (4 helpers + main lemma). Reusable for any depth-via-free-rank argument."
+      }
+    ],
+    "next_steps": "n=k+1 branch (L1125) untouched — multi-iter substrate (Stacks 090V minimal finite free resolutions + Stacks 00MF + snake-lemma on resolutions + depth-drops-by-one). Lane G is OFF-CRITICAL-PATH per PROGRESS.md."
+  },
+  {
+    "timestamp": "2026-05-27T02:42:28Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OCofP.lean",
+      "theorem": "dim_eq_two_of_genusZero"
+    },
+    "session": {
+      "id": "session_194",
+      "model": "claude-opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "h1_vanishing_genusZero (transitive)",
+        "h0_sub_h1_lineBundleAtClosedPoint_eq_two (NEW helper)",
+        "Nat.cast_zero",
+        "sub_zero",
+        "exact_mod_cast"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Carve out χ-arithmetic into named substrate helper `h0_sub_h1_lineBundleAtClosedPoint_eq_two` (Int-valued to avoid OCofP ← OcOfD ← RRFormula import cycle); reduce body to 3-step arithmetic",
+        "code_tried": "have hχ := h0_sub_h1_lineBundleAtClosedPoint_eq_two P hP hPcoh hg; have hH1 := h1_vanishing_genusZero P hP hPcoh hg; rw [hH1] at hχ; ... exact_mod_cast",
+        "line_number": "1237",
+        "result": "success",
+        "insight": "Body closed structurally (no bare sorry); transitively gated on h0_sub_h1_lineBundleAtClosedPoint_eq_two typed sorry (substantive χ-bridge work). Scheme.eulerCharacteristic API in RRFormula.lean not importable (cycle); χ-helper stated as raw Int-valued difference. Net mathematical content identical."
+      }
+    ],
+    "next_steps": "h0_sub_h1 substrate awaits OcOfD.lean (Lane J, STRUCTURALLY BLOCKED) substrate + RRFormula χ-additivity."
+  },
+  {
+    "timestamp": "2026-05-27T02:42:28Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OCofP.lean",
+      "theorem": "exists_nonconstant_genusZero"
+    },
+    "session": {
+      "id": "session_194",
+      "model": "claude-opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "exists_nonconstant_rational_from_dim_eq_two (NEW helper)",
+        "dim_eq_two_of_genusZero",
+        "globalSections_iff_mp",
+        "Scheme.RationalMap.order_one"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Carve out linear-algebra + principal-divisor content into substrate helper consuming dim hypothesis (independent of genus); reduce body to one-line invocation supplied with dim count",
+        "code_tried": "have hdim := dim_eq_two_of_genusZero P hP hPcoh hg; exact exists_nonconstant_rational_from_dim_eq_two P hP hPcoh hdim",
+        "line_number": "1361",
+        "result": "success",
+        "insight": "Body closed structurally (no bare sorry); transitively gated on new helper. Partial setup committed inside helper: distinguished constant section `s₁` constructed concretely via globalSections_iff_mp at f = 1. Remaining: linear-algebra extraction + Stacks 02P0 principal divisor non-vanishing."
+      }
+    ],
+    "next_steps": "exists_nonconstant_rational_from_dim_eq_two is the most tractable iter-195+ leaf: self-contained, with constant-section setup in place. Attack linear-algebra extraction via LinearMap.toSpanSingleton + Submodule.span_le_iff / dimension count."
+  }
+]

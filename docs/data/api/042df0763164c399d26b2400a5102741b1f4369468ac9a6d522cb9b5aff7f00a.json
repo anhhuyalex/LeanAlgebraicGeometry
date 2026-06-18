@@ -1,0 +1,124 @@
+[
+  {
+    "timestamp": "2026-05-21T17:39:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects.lean",
+      "theorem": "Genus0BaseObjects.lean (NEW file, scaffold lane)"
+    },
+    "session": {
+      "id": "session_165",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "MvPolynomial.gradedAlgebra",
+        "MvPolynomial.homogeneousSubmodule",
+        "AlgebraicGeometry.Proj.toSpecZero",
+        "AlgebraicGeometry.Proj.instIsProperToSpecZero…",
+        "AlgebraicGeometry.Scheme.asOver",
+        "AlgebraicGeometry.AffineSpace.over",
+        "AlgebraicGeometry.AffineSpace.isoOfIsAffine",
+        "AlgebraicGeometry.isReduced_of_isOpenImmersion",
+        "AlgebraicGeometry.HasRingHomProperty.Spec_iff",
+        "RingHom.finitePresentation_algebraMap",
+        "Algebra.FiniteType.of_restrictScalars_finiteType",
+        "MvPolynomial.C_injective",
+        "MvPolynomial.homogeneousComponent_of_mem",
+        "MvPolynomial.homogeneousComponent_zero",
+        "SetLike.GradeZero.coe_algebraMap",
+        "AlgebraicGeometry.isIso_SpecMap_iff",
+        "AlgebraicGeometry.smooth_of_grpObj_of_isAlgClosed"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "NEW-file scaffold per analogist `gm-scaling-p1` 4 ALIGN_WITH_MATHLIB verdicts: Proj-based ℙ¹, GrpObj.ofRepresentableBy for Gm/Ga, Scheme.Cover.glueMorphisms for σ_×.",
+        "code_tried": "Wrote AlgebraicJacobian/Genus0BaseObjects.lean (389 LOC) with: ProjectiveLineBarScheme := Proj (MvPolynomial.homogeneousSubmodule (Fin 2) kbar); GaScheme := AffineSpace (Fin 1) (Spec (.of kbar)); GmScheme := Spec (Localization.Away (X : MvPolynomial Unit kbar)); Ga / Gm / ProjectiveLineBar as `_.asOver _`. 6 main instances landed axiom-clean (projectiveLineBar_isProper, ga_isReduced, ga_locallyOfFinitePresentation, gm_isReduced, gm_locallyOfFinitePresentation, etc.). 9 scaffold sorries: projectiveLineBar_geomIrred/smoothOfRelDim (Mathlib gap for Proj), 3 ℙ¹ points (zeroPt/onePt/inftyPt), ga_grpObj/gm_grpObj (ofRepresentableBy body deferred), gmScalingP1 (bare ⊗-morphism), gmScalingP1_collapse_at_zero (load-bearing companion lemma).",
+        "line_number": "Genus0BaseObjects.lean:1-389",
+        "lean_error": null,
+        "goal_before": "fresh file",
+        "goal_after": "9 scaffold sorries (top-level named decls); 4/4 main objects defined; 3/4 with axiom-clean primary instances. `lake build AlgebraicJacobian.Genus0BaseObjects` → green (9 sorry warnings).",
+        "result": "partial",
+        "insight": "PARTIAL gate scorecard met: 4/4 defs landed, 3/4 with axiom-clean primary instances. `projectiveLineBar_isProper` was upgraded from \"FREE from Mathlib\" (analogist verdict) to a real proof because the algebraMap k̄ → ↥(𝒜 0) bijectivity needed a Subalgebra-of-constants check (see attempt 2)."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Prove projectiveLineBar_isProper axiom-clean (deeper than analogist predicted — bijectivity of algebraMap k̄ → ↥(𝒜 0) requires explicit injective+surjective chain).",
+        "code_tried": "change IsProper (Proj.toSpecZero 𝒜 ≫ Spec.map (algebraMap kbar ↥(𝒜 0))); haveI tower := IsScalarTower.of_algebraMap_eq fun _ => rfl; haveI ft := Algebra.FiniteType.of_restrictScalars_finiteType kbar _ _; have hbij : Function.Bijective (algebraMap kbar ↥(𝒜 0)) := ⟨inj via C_injective + congrArg Subtype.val, surj witness MvPolynomial.coeff 0 v via homogeneousComponent_of_mem hv (m:=0) + homogeneousComponent_zero⟩; haveI : IsIso (Spec.map _) := (isIso_SpecMap_iff).mpr hbij; infer_instance.",
+        "line_number": "Genus0BaseObjects.lean:127-170",
+        "lean_error": null,
+        "goal_before": "⊢ IsProper (ProjectiveLineBar kbar).hom",
+        "goal_after": "no goals; axiom-clean {propext, Classical.choice, Quot.sound}",
+        "result": "success",
+        "insight": "The analogist's `gm-scaling-p1` report listed `IsProper ProjectiveLineBar.hom` as \"FREE from Proj.instIsProperToSpecZero…\" but skipped the algebra-map step: once ProjectiveLineBar = Proj 𝒜 has its OverClass via the `algebraMap k̄ → ↥(𝒜 0)` (because Mathlib's `instIsProperToSpecZero` lands on `Proj.toSpecZero`, not the composition), the prover had to (i) install the IsScalarTower instance, (ii) prove `algebraMap k̄ → ↥(𝒜 0)` bijective via the homogeneous-component-of-degree-0 ⟺ constants identification, (iii) lift to IsIso of `Spec.map`. Net: a real ~25-LOC proof closure, NOT an inferInstance one-liner. Reusable pattern: when a property is \"FREE\" through `Proj.toSpecZero` but the project's encoding uses an explicit `↘ Spec k̄` via algebraMap composition, the surjection-of-degree-0 step is the substantive piece."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Close the remaining 5 axiom-clean instances on Ga/Gm via Mathlib inferInstance bridges.",
+        "code_tried": "ga_isReduced := isReduced_of_isOpenImmersion (AffineSpace.isoOfIsAffine (Fin 1) _).hom; gm_isReduced := inferInstanceAs (IsReduced (Spec (CommRingCat.of (GmRing kbar)))); ga_locallyOfFinitePresentation := inferInstanceAs (LocallyOfFinitePresentation (AffineSpace.{0,u} (Fin 1) (Spec (.of kbar)) ↘ Spec (.of kbar))); gm_locallyOfFinitePresentation := (HasRingHomProperty.Spec_iff (P := @LocallyOfFinitePresentation)).mpr ((RingHom.finitePresentation_algebraMap (B := GmRing kbar)).mpr inferInstance); gm_isAffine := inferInstanceAs (IsAffine (Spec _)); ga_isAffineHom := inferInstanceAs (IsAffineHom (AffineSpace.{0,u} ... ↘ ...)).",
+        "line_number": "Genus0BaseObjects.lean:222-316",
+        "lean_error": null,
+        "goal_before": "various property instances on Ga/Gm",
+        "goal_after": "all axiom-clean; `lake env lean Genus0BaseObjects.lean` → exit 0",
+        "result": "success",
+        "insight": "`Ga` reducedness goes via the AffineSpace.isoOfIsAffine iso to Spec MvPolynomial-of-Fin-1, transported by isReduced_of_isOpenImmersion. `Gm` is more direct: IsReduced (Spec _) and IsAffine (Spec _) fire on the Localization.Away-of-domain. The LocallyOfFinitePresentation bridge for Gm needs HasRingHomProperty.Spec_iff to descend to RingHom.finitePresentation_algebraMap, then RingHom.finitePresentation_algebraMap.mpr inferInstance on the algebra-finite-presentation instance. None of these were the analogist's predicted one-liner shape — each required a 1-2 step bridge but all closed axiom-clean."
+      }
+    ],
+    "next_steps": "iter-166 prover lane: (a) close ga_grpObj/gm_grpObj via GrpObj.ofRepresentableBy + additive-group / units functor; (b) close gmScalingP1 via Scheme.Cover.glueMorphisms over `{D₊(X₀) × Gm, D₊(X₁) × Gm}`; (c) close gmScalingP1_collapse_at_zero (chart-level computation); (d) AVR.lean refactor of morphism_P1_to_grpScheme_const consuming the scaffold via Cor 1.5 with W = Gm. The deferred geomIrred + smoothOfRelDim instances on ℙ¹ are Mathlib gaps; defer to a future hygiene iter."
+  },
+  {
+    "timestamp": "2026-05-21T17:39:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "morphism_P1_to_grpScheme_const (AVR refactor + body close)"
+    },
+    "session": {
+      "id": "session_165",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Deferred to iter-166 by plan design — the AVR refactor lane only opens cleanly once the Genus0BaseObjects scaffold lands with stable signatures (which iter-165 delivered). iter-166 plan: import AlgebraicJacobian.Genus0BaseObjects; refactor morphism_P1_to_grpScheme_const from abstract proxy to concrete ProjectiveLineBar/Gm/gmScalingP1 triple; body chain = `hom_additive_decomp_of_rigidity` (Cor 1.5) with V=ProjectiveLineBar, W=Gm, base points ProjectiveLineBar.zeroPt, Gm.onePt; `_hf` = `gmScalingP1_collapse_at_zero`; W-axis collapse + density (Gm ⊆ ProjectiveLineBar) + `A.left.IsSeparated` (`ext_of_eqOnOpen` already proven) close it."
+  },
+  {
+    "timestamp": "2026-05-21T17:39:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "genusZero_curve_iso_P1"
+    },
+    "session": {
+      "id": "session_165",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Mathlib has no Riemann–Roch for curves; the `C ≅ ℙ¹` step needs a real sub-build (or a STRATEGY pivot)."
+    },
+    "attempts": [],
+    "next_steps": "Off-iter-165 by design. Not on the immediate prover queue. STRATEGY-bound, decision deferred to iter-166+ once morphism_P1_to_grpScheme_const lands."
+  },
+  {
+    "timestamp": "2026-05-21T17:39:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "rigidity_genus0_curve_to_grpScheme"
+    },
+    "session": {
+      "id": "session_165",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Downstream of `morphism_P1_to_grpScheme_const` + `genusZero_curve_iso_P1`; cannot land before both upstream scaffolds close."
+    },
+    "attempts": [],
+    "next_steps": "Off-iter-165 by design. Headline closes once morphism_P1_to_grpScheme_const (iter-166) + genusZero_curve_iso_P1 land."
+  }
+]

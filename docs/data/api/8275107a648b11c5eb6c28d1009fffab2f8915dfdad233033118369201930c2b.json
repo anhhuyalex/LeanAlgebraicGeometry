@@ -1,0 +1,81 @@
+[
+  {
+    "timestamp": "2026-05-19T08:01:29Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cotangent/ChartAlgebra.lean",
+      "theorem": "AlgebraicGeometry.constants_integral_over_base_field"
+    },
+    "session": {
+      "id": "session_148",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Residual sorry at L367 concentrated on the conjunction `IsPurelyInseparable k Γ(X, ⊤) ∧ Algebra.IsSeparable k Γ(X, ⊤)` (smart-proof path (b)); structural reduction lands sorry-free.",
+      "key_lemmas_used": [
+        "RingHom.range_eq_top",
+        "Scheme.ΓSpecIso",
+        "IsField.toField",
+        "RingHom.toAlgebra",
+        "IsPurelyInseparable.surjective_algebraMap_of_isSeparable"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Smart-proof path (b): reduce surjectivity of appTop.hom to `IsPurelyInseparable k Γ ∧ Algebra.IsSeparable k Γ` and discharge via Mathlib `IsPurelyInseparable.surjective_algebraMap_of_isSeparable`.",
+        "code_tried": "rw [RingHom.range_eq_top]; letI _hΓfield' := _hΓfield.toField; set α := (Scheme.ΓSpecIso (.of k)).inv ≫ (X ↘ Spec (.of k)).appTop; letI algkΓ := α.hom.toAlgebra; suffices h_surj : Function.Surjective (algebraMap k Γ) by ...; have ⟨hPI, hSep⟩ := by sorry; haveI := hPI; haveI := hSep; exact IsPurelyInseparable.surjective_algebraMap_of_isSeparable k Γ",
+        "line_number": "L307-L371",
+        "lean_error": "(initial) Unknown identifier `ΓSpecIso` — needs `Scheme.ΓSpecIso`",
+        "goal_before": "RingHom.range ((X ↘ Spec (CommRingCat.of k)).appTop.hom) = ⊤",
+        "goal_after": "IsPurelyInseparable k ↥Γ(X, ⊤) ∧ Algebra.IsSeparable k ↥Γ(X, ⊤)",
+        "result": "partial",
+        "insight": "Mathlib's `IsPurelyInseparable.surjective_algebraMap_of_isSeparable` (Mathlib/FieldTheory/PurelyInseparable/Basic.lean L158) cleanly closes the surjectivity from the two typeclass instances, bypassing the proper-Γ-flat-base-change gap (Stacks 02KH) entirely. The residual gap factors into 4 named sub-claims: (S3.pi.1) `Γ(X_{\\bar k}, ⊤) ≅ Γ ⊗_k \\bar k` flat base change; (S3.pi.2) finite-dim k-algebra with `_ ⊗_k \\bar k` having unique min prime ⇒ purely inseparable; (S3.sep.1) Smooth ⇒ Algebra.IsGeometricallyReduced k Γ (no Mathlib b80f227 instance); (S3.sep.2) geom-reduced finite field ext ⇒ separable."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Diagnostic check after the ΓSpecIso rename + structural reduction.",
+        "code_tried": "lean_diagnostic_messages on the full file",
+        "line_number": "L220 (declaration), L367 (sorry)",
+        "lean_error": "(after fix) 0 errors / 1 warning `declaration uses sorry`",
+        "goal_before": "(same as attempt 1 final)",
+        "goal_after": "(same)",
+        "result": "success",
+        "insight": "File compiles cleanly; the structural reduction stands sorry-free, with the substantive sorry concentrated at L367. Build verified via `lake build AlgebraicJacobian.Cotangent.ChartAlgebra` (8325/8325 replayed clean)."
+      }
+    ],
+    "next_steps": "Iter-149+ continuation: target (S3.pi) `IsPurelyInseparable k Γ` via the GeometricallyIrreducible ⇒ X_{\\bar k} irreducible chain (still needs (S3.pi.1) flat-base-change, ~250–500 LOC if built from scratch). Alternative: target (S3.sep) `Algebra.IsSeparable k Γ` via the smooth ⇒ geom-reduced bridge (needs (S3.sep.1) `Smooth ⇒ IsGeometricallyReduced` Mathlib instance — currently missing in b80f227). If neither (S3.pi.1) nor (S3.sep.1) is feasible iter-149, escalate to path (a) BUILD-IT or path (c) DEFER per STRATEGY.md `## Open strategic questions`."
+  },
+  {
+    "timestamp": "2026-05-19T08:01:29Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cotangent/ChartAlgebra.lean",
+      "theorem": "AlgebraicGeometry.KaehlerDifferential.mem_range_algebraMap_of_D_eq_zero"
+    },
+    "session": {
+      "id": "session_148",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Forward inclusion `ker D ⊆ range algebraMap` requires either signature inflation `[CharZero k] + [Algebra.IsStandardSmoothOfRelativeDimension k B]` plus the (BR.1)–(BR.5) Mathlib-PR-grade bridge body (~80–150 LOC), or commitment to the (p1) char-p Cartier chain (~140–230 LOC). Mathlib b80f227 ships `Differential.ContainConstants` typeclass (`Mathlib.RingTheory.Derivation.DifferentialRing` L62) but no instance for standard-smooth + CharZero.",
+      "key_lemmas_used": [
+        "Derivation.map_algebraMap (reverse inclusion, named `_hRev` iter-147)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "(p2) char-0 path via `Differential.ContainConstants`: build a bridge from the universal Kähler derivation `D : B → Ω_{B/k}` to a `Differential B` instance compatible with the kernel.",
+        "code_tried": "(no code edit; in-source docstring refresh) Sub-gap inventory documented at L137–168: (BR.1) `Algebra.IsStandardSmooth k B` chart hypothesis; (BR.2) basis selection via `Algebra.IsStandardSmooth.free_kaehlerDifferential`; (BR.3) coefficient-derivation extraction `∂_i : B → B`; (BR.4) `Differential B` instance per `∂_i`; (BR.5) `Differential.ContainConstants k B` instance for the chosen `∂_i` in `CharZero k`.",
+        "line_number": "L137-168 (docstring); L168 (residual sorry)",
+        "lean_error": "(no edit; sorry preserved at L168)",
+        "goal_before": "b ∈ (algebraMap k B).range",
+        "goal_after": "(unchanged)",
+        "result": "partial",
+        "insight": "The single Mathlib consumer of `Differential.ContainConstants` (`IsLiouville.trans` at `Mathlib/FieldTheory/Differential/Liouville.lean` L56) uses the class only on Liouville fields (`F → K` with `K/F` essentially-finite), not on standard-smooth k-algebras. Mathlib has the class but no instance for the project's standard-smooth case; this is a Mathlib-PR-grade gap, not a thin in-tree wrapper. The lemma as stated is FALSE without additional hypotheses (in char p > 0 with `B = k[X]`, `b = X^p` has `D b = 0` but `b ∉ range`). β-core consumer `df_zero_factors_through_constant_on_chart` (L196) delegates to this KDM lemma; iter-149+ signature inflation on KDM propagates to β-core but β-core has no other in-tree consumer (verified by grep), so the inflation is structurally safe."
+      }
+    ],
+    "next_steps": "Iter-149+: signature inflation to `[CharZero k] + [Algebra.IsStandardSmoothOfRelativeDimension k B]` + (BR.1)–(BR.5) bridge body (~80–150 LOC). Or commit to (p1) char-p Cartier chain (4 sub-steps p1.a–p1.d + p1.e Frobenius iteration + p1.f chart-of-proper-curve descent; ~140–230 LOC, blueprint estimate). β-core delegate's signature inflation is structurally safe per the dead-end analysis."
+  }
+]

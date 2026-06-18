@@ -1,0 +1,348 @@
+[
+  {
+    "timestamp": "2026-05-24T08:50:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "iotaGm_range_isOpen"
+    },
+    "session": {
+      "id": "session_182",
+      "model": "opus-4-7"
+    },
+    "findings": {
+      "blocker": "chart-1 factorisation of onePt.left + chart-1 open-immersion conclusion remain",
+      "key_lemmas_used": [
+        "IsOpenImmersion.isOpen_range",
+        "Over.lift_left",
+        "Cover.ι_glueMorphisms",
+        "Proj.fromOfGlobalSections_morphismRestrict"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "refactor to strictly-stronger named helper `iotaGm_isOpenImmersion`; close `iotaGm_range_isOpen` via `IsOpenImmersion.isOpen_range _`",
+        "code_tried": "haveI := iotaGm_isOpenImmersion (kbar := kbar)\n  exact IsOpenImmersion.isOpen_range _",
+        "line_number": "98",
+        "lean_error": "(none — body landed)",
+        "result": "success",
+        "insight": "strictly-stronger open-immersion claim is cleanly composable; promotes the substantive content to a single helper. `iotaGm_range_isOpen` body is now 2 lines."
+      },
+      {
+        "attempt": 2,
+        "strategy": "drive structural progress in `iotaGm_isOpenImmersion` per analogist recipe steps (a)+(c)+(d)+(e)",
+        "code_tried": "simp only [Over.comp_left, Over.id_left, Over.toUnit_left]\n    change (gmScalingP1).left = (cover).glueMorphisms gmScalingP1_chart _",
+        "line_number": "110",
+        "lean_error": "residual chart-1 factorisation of onePt.left + chart-1 open immersion of `s ≫ gmScalingP1_chart 1` left as a single named sorry",
+        "result": "partial",
+        "insight": "`Over.lift_left` + `simp only [Over.comp_left, ...]` cleanly expose the glued form; the residual sub-tasks (b) chart-1 factorisation + (f) open-immersion conclusion deferred ~60–110 LOC iter-183."
+      }
+    ],
+    "next_steps": "Close sub-task (b) — chart-1 factorisation of `onePt.left` via `Proj.fromOfGlobalSections_morphismRestrict`; close sub-task (f) — chart-1 open-immersion via `IsOpenImmersion.of_isLocalization`. May coordinate with Lane B `gmScalingP1_cover_intersection_X_iso` infrastructure."
+  },
+  {
+    "timestamp": "2026-05-24T08:50:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects/GmScaling.lean",
+      "theorem": "gmScalingP1_chart_agreement_cross01"
+    },
+    "session": {
+      "id": "session_182",
+      "model": "opus-4-7"
+    },
+    "findings": {
+      "blocker": "iso composition opaque to `simp` — needs aggregated `_inv_comp_fst` / `_inv_comp_snd` projection lemmas before cocycle body can close",
+      "key_lemmas_used": [
+        "Proj.pullbackAwayιIso",
+        "pullbackRightPullbackFstIso",
+        "pullbackLeftPullbackSndIso",
+        "pullback.congrHom",
+        "pullbackSpecIso",
+        "pullbackSymmetry",
+        "cancel_epi"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "build new kernel-clean helper `gmScalingP1_cover_intersection_X_iso` (~67 LOC) using Mathlib's `Proj.pullbackAwayιIso`",
+        "code_tried": "pullbackRightPullbackFstIso ≪≫ pullback.congrHom condition rfl ≪≫\n    asIso (pullback.map _ _ _ _ _ _ Proj.pullbackAwayιIso.hom _) ≪≫\n    pullbackLeftPullbackSndIso ≪≫ pullbackSpecIso",
+        "line_number": "new helper",
+        "lean_error": "(none — helper landed kernel-clean)",
+        "result": "success",
+        "insight": "Mathlib's `Proj.pullbackAwayιIso` (`AlgebraicGeometry/ProjectiveSpectrum/Basic.lean:258`) ships the inner intersection iso; the iter-181 task_result's plan to build a project-side `Away_X0_X1_iso` is WRONG. Verified axiom-clean `{propext, Classical.choice, Quot.sound}`."
+      },
+      {
+        "attempt": 2,
+        "strategy": "apply `cancel_epi (gmScalingP1_cover_intersection_X_iso kbar).inv` to lift the cocycle to a Spec-of-tensor-product target, then `simp` the iso projections",
+        "code_tried": "apply (cancel_epi (gmScalingP1_cover_intersection_X_iso kbar).inv).mp\n  simp only [gmScalingP1_cover_intersection_X_iso, Iso.trans_inv, ...]",
+        "line_number": "362",
+        "lean_error": "the 7-stage iso chain expands to ~800-line composition; `simp` cannot collapse without dedicated per-stage `_inv ≫ fst/snd` projection lemmas",
+        "result": "partial",
+        "insight": "each stage of the iso chain needs an aggregated projection lemma. Iter-183 recipe: `@[simps]` annotation on the new iso OR 2 manual projection lemmas (~30-40 LOC each). Once those land, cocycle closes in ~10 LOC via `Spec.map_injective` + ring algebra."
+      }
+    ],
+    "next_steps": "iter-183: add `@[simps]` to `gmScalingP1_cover_intersection_X_iso` OR prove `_inv_comp_fst` / `_inv_comp_snd` projection lemmas. Then close cocycle ~10 LOC. Estimated ~100-120 LOC across iter-183."
+  },
+  {
+    "timestamp": "2026-05-24T08:50:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Albanese/AuslanderBuchsbaum.lean",
+      "theorem": "RingTheory.Module.depth_of_short_exact"
+    },
+    "session": {
+      "id": "session_182",
+      "model": "opus-4-7"
+    },
+    "findings": {
+      "blocker": "none — closed Tier-2 modulo upstream `depth_eq_smallest_ext_index` typed sorry",
+      "key_lemmas_used": [
+        "CategoryTheory.Abelian.Ext.covariant_sequence_exact₁",
+        "CategoryTheory.Abelian.Ext.covariant_sequence_exact₂",
+        "CategoryTheory.Abelian.Ext.covariant_sequence_exact₃",
+        "ModuleCat.shortComplex_shortExact",
+        "ENat.forall_natCast_le_iff_le",
+        "ENat.add_le_add_iff_right",
+        "ENat.add_one_le_iff",
+        "postcomp_mk₀_injective_of_mono"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "PIVOT per `analogies/isregularlocalring-isdomain.md` from `exists_isRegular_of_regularLocal` to `depth_of_short_exact`. Package SES as ShortComplex.ShortExact; chase Ext-vanishing via LES at residue field",
+        "code_tried": "have hSES : ShortComplex.ShortExact _ := ModuleCat.shortComplex_shortExact (S := ⟨...⟩) _hf _hg _hex\n  ...\n  exact Ext.covariant_sequence_exact₂ e (Ext.mk₀ S.f).postcomp ... ",
+        "line_number": "285",
+        "lean_error": "`simpa using h0` timed out at 200000 heartbeats — `whnf` cannot reduce `(postcomp ...) e = (postcomp ...) 0`",
+        "result": "partial",
+        "insight": "workaround: use `apply hinj` first then `simpa using hef` — splits injectivity application before simp normalisation."
+      },
+      {
+        "attempt": 2,
+        "strategy": "after splitting via `apply`, complete 3-branch case analysis (i=0 mono case + i=j+1 LES lift case)",
+        "code_tried": "apply hinj; simpa using hef\n  -- and for i=j+1: exact₁ at `n₀ = j, n₁ = j+1` + Nat.lt_succ_self",
+        "line_number": "285",
+        "lean_error": "`Nat.exists_eq_succ_of_ne_zero` returns `i = j.succ` not `i = j + 1` — unification fails",
+        "result": "partial",
+        "insight": "workaround: extract predecessor + omega arithmetic."
+      },
+      {
+        "attempt": 3,
+        "strategy": "add 2 private helper lemmas (`ext_vanish_of_natCast_lt_depth` Tier-2 + `natCast_add_one_le_of_le_sub_one` Tier-1 axiom-clean); discharge 3 branches",
+        "code_tried": "...3-branch body assembling per-direction LES exact triples...",
+        "line_number": "285",
+        "lean_error": "(none — body landed)",
+        "result": "success",
+        "insight": "verified `'RingTheory.Module.depth_of_short_exact' depends on axioms: [propext, sorryAx, Classical.choice, Quot.sound]` matches `depth_eq_smallest_ext_index`'s axiom set — sorryAx propagates ONLY through the same-file upstream. Tier-2 disclosure."
+      }
+    ],
+    "next_steps": "iter-183: close `depth_eq_smallest_ext_index` body (Stacks 00LP, inductive chase on `0 → M → M → M/xM → 0`) to retire the upstream sorryAx → makes `depth_of_short_exact` kernel-clean."
+  },
+  {
+    "timestamp": "2026-05-24T08:50:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Albanese/AlbaneseUP.lean",
+      "theorem": "Pic0.albanese_universal_property"
+    },
+    "session": {
+      "id": "session_182",
+      "model": "opus-4-7"
+    },
+    "findings": {
+      "blocker": "file is off-limits per PROGRESS.md (iter-200+ deferral); dispatch was anomalous — but a structural-decomposition advance landed",
+      "key_lemmas_used": [
+        "descentThroughBirationalSigma",
+        "albanese_eq_iff_symmetricPower_eq (new helper)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "structural decomposition — extract the connecting biconditional `albanese_eq_iff_symmetricPower_eq` as a named typed-sorry helper; use `descentThroughBirationalSigma` plus the biconditional to assemble the goal sorry-free",
+        "code_tried": "have key := albanese_eq_iff_symmetricPower_eq C P0 φ _hφ\n  obtain ⟨ψ, hψ_sym, huniq_sym⟩ := descentThroughBirationalSigma C P0 φ _hφ\n  exact ⟨ψ, (key ψ).mpr hψ_sym, fun ψ' hψ' => huniq_sym ψ' ((key ψ').mp hψ')⟩",
+        "line_number": "512",
+        "lean_error": "(none — body landed sorry-free, transitively tainted via 2 named typed-sorry helpers)",
+        "result": "partial",
+        "insight": "headline theorem body is now sorry-free assembly. Net file count unchanged (7 → 7, monolithic body sorry → named substantive helper sorry). Tooling trap: initial placement after a docstring-block produced 'unexpected token /--; expected lemma' — relocate to its own §5.5 section."
+      }
+    ],
+    "next_steps": "iter-200+: when A.3 substrate (Pic⁰.bundle / IdentityComponent.lean) and A.4.d.i (Sym^g skeleton) land, close `albanese_eq_iff_symmetricPower_eq` body via Milne III.6.1 forward (precompose with symmetric g-fold sum, descend through π) + reverse (restrict along diagonal Q ↦ (Q, P₀, …, P₀))."
+  },
+  {
+    "timestamp": "2026-05-24T08:50:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Albanese/Thm32RationalMapExtension.lean",
+      "theorem": "av_codimOneFree_of_indeterminacy"
+    },
+    "session": {
+      "id": "session_182",
+      "model": "opus-4-7"
+    },
+    "findings": {
+      "blocker": "branch 2 (codim-1 indeterminacy disjunct) gated on `indeterminacy_codimGe2_of_smooth_of_complete` from CodimOneExtension.lean (iter-184+ post-CoheightBridge)",
+      "key_lemmas_used": [
+        "av_isIntegral_of_smooth_geomIrred",
+        "isReduced_of_isIntegral",
+        "indeterminacy_pure_codim_one_into_grpScheme",
+        "Set.not_mem_empty"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "materialise variety-package instances on A.left + invoke `indeterminacy_pure_codim_one_into_grpScheme f` + `intro x hx` + case-split on the disjunction; close branch 1 inline",
+        "code_tried": "rcases indeterminacy_pure_codim_one_into_grpScheme f with hempty | hpure\n  · exact codimOneFree_of_indeterminacyLocus_eq_empty hempty hx\n  · sorry  -- branch 2: requires codim-≥2 conclusion of Milne 3.1",
+        "line_number": "283",
+        "lean_error": "(branch 2 deferred; branch 1 closed axiom-clean via new helper `codimOneFree_of_indeterminacyLocus_eq_empty`)",
+        "result": "partial",
+        "insight": "new helper at L290 is axiom-clean and captures branch-1 logic standalone (survives parent refactor)."
+      }
+    ],
+    "next_steps": "iter-184+: once CodimOneExtension exposes `indeterminacy_codimGe2_of_smooth_of_complete`, close branch 2 via T0/sobriety + equal-coheight-1 + specialization argument (~10 LOC)."
+  },
+  {
+    "timestamp": "2026-05-24T08:50:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Albanese/CodimOneExtension.lean",
+      "theorem": "smooth_codim_one_maximalIdeal_isPrincipal_and_ne_bot"
+    },
+    "session": {
+      "id": "session_182",
+      "model": "opus-4-7"
+    },
+    "findings": {
+      "blocker": "file is off-limits per PROGRESS.md (iter-183+ post-CoheightBridge); dispatched anomalously. Prover correctly returned NO-EDIT. Two genuine Mathlib gaps (Stacks 00TT + `ringKrullDim_stalk_eq_coheight` not at pinned commit) confirmed.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "verify deferral correctness — exhaustive Mathlib search for `Smooth → IsRegularLocalRing` and `coheight → ringKrullDim` bridges at pinned commit b80f227",
+        "code_tried": "(search only — no edits)",
+        "line_number": "222",
+        "lean_error": "(no attempt made — deferral respected)",
+        "result": "failed",
+        "insight": "both bridges genuinely absent at b80f227; `ringKrullDim_stalk_eq_coheight` exists in newer Mathlib but not landed. Bridge requires iter-183 Lane M (CoheightBridge.lean ~60-100 LOC) + iter-185+ Stacks 00TT lane (~200-300 LOC)."
+      }
+    ],
+    "next_steps": "iter-183 Lane M lands `Albanese/CoheightBridge.lean` ~60-100 LOC (analogist `analogies/stacks-00tt-coheight.md` recipe). iter-184+ refactor `hreg_dim` to split into `hdim` (closed via bridge) + `hreg` (remaining sorry on Stacks 00TT)."
+  },
+  {
+    "timestamp": "2026-05-24T08:50:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects/BareScheme.lean",
+      "theorem": "projectiveLineBar_geomIrred + projectiveLineBar_smoothOfRelDim"
+    },
+    "session": {
+      "id": "session_182",
+      "model": "opus-4-7"
+    },
+    "findings": {
+      "blocker": "file is off-limits per PROGRESS.md ('Mathlib-gap scaffolds'); dispatched anomalously. Prover correctly returned NO-EDIT.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "verify Mathlib gap exhaustively; write informal/<theorem>.md sketches",
+        "code_tried": "(search-only run; informal/ sketches written; no Lean edits)",
+        "line_number": "154 + 161",
+        "lean_error": "(no attempt made — deferral respected)",
+        "result": "failed",
+        "insight": "`Algebra.Smooth → IsRegularLocalRing` and `IsStandardSmoothOfRelativeDimension MvPolynomial`-class lemmas absent. ETA per file: ~200-350 LOC (geom-irred) + ~150-250 LOC (smoothness)."
+      }
+    ],
+    "next_steps": "open dedicated lanes when downstream consumers (`iotaGm_isDominant`, `positiveGenusWitness`, `CodimOneExtension`) become blocking. Schedule iter-185+ smoothness lane; geom-irred lane only if `iotaGm_isDominant` consumer becomes blocking."
+  },
+  {
+    "timestamp": "2026-05-24T08:50:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects/Points.lean",
+      "theorem": "AlgebraicGeometry.gm_grpObj"
+    },
+    "session": {
+      "id": "session_182",
+      "model": "opus-4-7"
+    },
+    "findings": {
+      "blocker": "none — file closed iter-181; dispatched anomalously this iter, NO-EDIT correctly returned",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "verify file complete + skip per prover-prover.md 'never modify working proofs'",
+        "code_tried": "(verify-only — diagnostic_messages returns []; lean_verify on gm_grpObj returns {propext, Classical.choice, Quot.sound})",
+        "line_number": "n/a",
+        "lean_error": "(no attempt made — file done)",
+        "result": "success",
+        "insight": "`gm_grpObj` is kernel-clean transitively; the 11-iter STUCK pattern broken iter-181 holds."
+      }
+    ],
+    "next_steps": "none for this file. iter-200+ may consume `gm_grpObj` downstream."
+  },
+  {
+    "timestamp": "2026-05-24T08:50:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Jacobian.lean",
+      "theorem": "genusZeroWitness.key + positiveGenusWitness"
+    },
+    "session": {
+      "id": "session_182",
+      "model": "opus-4-7"
+    },
+    "findings": {
+      "blocker": "both sorries listed off-limits per PROGRESS.md (gated on RR.4 chain / Route A cascade); dispatched anomalously; protected signature on `Jacobian` decl forbids reformatting",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "verify both sorries are off-limits + signature decl is protected",
+        "code_tried": "(no edits)",
+        "line_number": "236 + 274",
+        "lean_error": "(no attempt made — deferral respected; protected sig honored)",
+        "result": "failed",
+        "insight": "genusZeroWitness.key gated on Lane B cross01 body landing kernel-clean + RR bridge `genusZero_curve_iso_P1` (Pin 2/Pin 3 iter-183+) + k → k̄ descent ~60-100 LOC. positiveGenusWitness is the Route A headline (~33-54 iter cascade)."
+      }
+    ],
+    "next_steps": "promote `genusZeroWitness.key` to active lane only when Lane B closes kernel-clean AND Pin 2 body lane is being scheduled (iter-183+). Defer `positiveGenusWitness` until Route A substrate (Picard scheme, Albanese UP) is in scope."
+  },
+  {
+    "timestamp": "2026-05-24T08:50:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/FGAPicRepresentability.lean",
+      "theorem": "7 file-skeleton pins"
+    },
+    "session": {
+      "id": "session_182",
+      "model": "opus-4-7"
+    },
+    "findings": {
+      "blocker": "standing deferral iter-190+ per PROGRESS.md; sibling `PicSharp` / `divFunctor` not yet landed at compatible signatures",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "verify deferral — 5 pinned declarations all downstream of `picSharp`/`divFunctor` carriers; siblings have incompatible signatures",
+        "code_tried": "(no edits)",
+        "line_number": "132/147/187/226/278/324/363",
+        "lean_error": "(no attempt made — deferral respected)",
+        "result": "failed",
+        "insight": "local `picSharp` returns `Type u` but sibling `PicSharp` returns `AddCommGrpCat.{u+1}` with extra typeclass args; coordinated signature refactor is plan-phase concern, not prover."
+      }
+    ],
+    "next_steps": "iter-190+: open file when `RelPicFunctor.PicSharp` body lands AND `QuotScheme.divFunctor` pin lands AND signature-alignment refactor reconciles them. Until then maintain typed-sorry carriers."
+  }
+]

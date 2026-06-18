@@ -1,0 +1,125 @@
+[
+  {
+    "timestamp": "2026-05-20T05:31:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cotangent/ChartAlgebra.lean",
+      "theorem": "KaehlerDifferential.mem_range_algebraMap_of_D_eq_zero"
+    },
+    "session": {
+      "id": "session_154",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "KaehlerDifferential.map_D",
+        "IsFractionRing.injective",
+        "IsScalarTower.algebraMap_apply",
+        "transcendental_iff_injective",
+        "IsFractionRing.lift",
+        "IsFractionRing.lift_algebraMap",
+        "Algebra.EssFiniteType.comp",
+        "Algebra.EssFiniteType.of_comp",
+        "PerfectField.ofCharZero",
+        "Algebra.FormallySmooth.of_perfectField",
+        "Algebra.H1Cotangent.exact_δ_mapBaseChange",
+        "KaehlerDifferential.mapBaseChange_tmul",
+        "Module.FaithfullyFlat.one_tmul_eq_zero_iff",
+        "KaehlerDifferential.isLocalizedModule_map",
+        "IsLocalizedModule.eq_zero_iff",
+        "KaehlerDifferential.polynomialEquiv_D",
+        "IntermediateField.adjoin.finiteDimensional",
+        "IsAlgClosed.algebraMap_bijective_of_isIntegral"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "FT.1–FT.3 single-element / perfect-field / Jacobi–Zariski H1Cotangent route from analogies/ftthree-kernel-iter154.md. (FT.1) push D_B b=0 to K=Frac B; reduce to algebraMap B K b ∈ range(algebraMap k K), pull back along injective B↪K. (FT.2) by_contra: if bK transcendental, embed F=Frac(k[X])↪K via IsFractionRing.lift (X↦bK); PerfectField F (char 0) ⟹ FormallySmooth F K ⟹ Subsingleton H1Cotangent ⟹ mapBaseChange k F K injective; mapBaseChange(1⊗D_F X)=D_K bK=0 ⟹ 1⊗D_F X=0 ⟹ (faithful flatness) D_F X=0. (FT.3) base case _ratfunc_D_X_ne_zero contradicts. Algebraic ⟹ _algebraic_mem_range lands b∈range over alg-closed k.",
+        "code_tried": "set K := FractionRing B; suffices hbK : algebraMap B K b ∈ (algebraMap k K).range; apply _algebraic_mem_range; by_contra hCon; ... letI algFK : Algebra F K := (IsFractionRing.lift hg).toAlgebra; haveI : Algebra.FormallySmooth F K := Algebra.FormallySmooth.of_perfectField; ... (Module.FaithfullyFlat.one_tmul_eq_zero_iff F (Ω[F⁄k]) _).mp h1tmul; exact _ratfunc_D_X_ne_zero hDFX",
+        "line_number": "197",
+        "lean_error": null,
+        "goal_before": "b ∈ (algebraMap k B).range",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "The whole route compiles end-to-end and is axiom-clean (verified {propext, Classical.choice, Quot.sound}, NO sorryAx). Two non-automatic pieces flagged by the strategy-critic resolved cleanly: Algebra F K / IsScalarTower k F K supplied explicitly via letI + IsScalarTower.of_algebraMap_eq; EssFiniteType and PerfectField instances resolved by inferInstance once stated as haveI. The standard-smooth / relative-dimension hypotheses are NOT used by the kernel argument — only [IsDomain B]+[FiniteType k B] to build K and EssFiniteType k K."
+      }
+    ],
+    "next_steps": "KDM closed ⟹ ChartAlgebra.lean is 0-sorry and axiom-clean. Downstream df_zero_factors_through_constant_on_chart is now genuinely axiom-clean (no longer sorryAx-laundering). Next critical-path target: rigidity_over_kbar (RigidityKbar.lean:88) is unblocked."
+  },
+  {
+    "timestamp": "2026-05-20T05:20:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cotangent/ChartAlgebra.lean",
+      "theorem": "_ratfunc_D_X_ne_zero"
+    },
+    "session": {
+      "id": "session_154",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "KaehlerDifferential.map_D",
+        "KaehlerDifferential.isLocalizedModule_map",
+        "IsLocalizedModule.eq_zero_iff",
+        "KaehlerDifferential.polynomialEquiv_D",
+        "Polynomial.derivative_X",
+        "nonZeroDivisors.coe_ne_zero"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "New private FT.3 base-case helper: D_{Frac(k[X])} X ≠ 0. From D_T X=0, map k k S T (D_S X)=0; by IsLocalizedModule.eq_zero_iff ∃ c∈nonZeroDivisors with c•D_S X=0; apply k[X]-linear iso polynomialEquiv (polynomialEquiv_D: D X ↦ derivative X = 1): c•1=0 contradicting nonZeroDivisors.coe_ne_zero.",
+        "code_tried": "haveI : IsLocalizedModule (nonZeroDivisors (Polynomial k)) (KaehlerDifferential.map k k (Polynomial k) (FractionRing (Polynomial k))) := KaehlerDifferential.isLocalizedModule_map k (Polynomial k) (FractionRing (Polynomial k)) (nonZeroDivisors (Polynomial k))",
+        "line_number": "118",
+        "lean_error": "Initial: analogist's bare `isLocalizedModule_map _` did not unify — needed all four explicit args R S T M.",
+        "goal_before": "KaehlerDifferential.D k (FractionRing (Polynomial k)) (algebraMap ... Polynomial.X) ≠ 0",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "isLocalizedModule_map lives in Mathlib.RingTheory.Etale.Kaehler (NOT ...Kaehler.Localization as the analogist citation table listed) and needs all four explicit args R S T M; the analogist's bare `_` did not unify."
+      }
+    ],
+    "next_steps": "Used by mem_range_algebraMap_of_D_eq_zero FT.3 step."
+  },
+  {
+    "timestamp": "2026-05-20T05:20:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cotangent/ChartAlgebra.lean",
+      "theorem": "_algebraic_mem_range"
+    },
+    "session": {
+      "id": "session_154",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "IntermediateField.adjoin.finiteDimensional",
+        "Algebra.IsIntegral.of_finite",
+        "IsAlgClosed.algebraMap_bijective_of_isIntegral",
+        "IntermediateField.AdjoinSimple.gen",
+        "IntermediateField.AdjoinSimple.algebraMap_gen",
+        "IsScalarTower.algebraMap_apply"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "New private FT.3 closer: over alg-closed k, IsAlgebraic k b ⟹ b ∈ range(algebraMap k K). k⟮b⟯ finite over k (adjoin.finiteDimensional) ⟹ integral ⟹ IsAlgClosed.algebraMap_bijective_of_isIntegral makes algebraMap k k⟮b⟯ surjective; pull the generator back.",
+        "code_tried": "haveI : FiniteDimensional k k⟮b⟯ := IntermediateField.adjoin.finiteDimensional hb.isIntegral; obtain ⟨c, hc⟩ := (IsAlgClosed.algebraMap_bijective_of_isIntegral (k := k) (K := k⟮b⟯)).surjective (IntermediateField.AdjoinSimple.gen k b)",
+        "line_number": "145",
+        "lean_error": null,
+        "goal_before": "b ∈ (algebraMap k K).range",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Required `open scoped IntermediateField` for the k⟮b⟯ adjoin notation (scoped macro). Reuses the same IsAlgClosed.algebraMap_bijective_of_isIntegral idiom already used in constants_integral_over_base_field."
+      }
+    ],
+    "next_steps": "Used by mem_range_algebraMap_of_D_eq_zero FT.3 closer step."
+  }
+]

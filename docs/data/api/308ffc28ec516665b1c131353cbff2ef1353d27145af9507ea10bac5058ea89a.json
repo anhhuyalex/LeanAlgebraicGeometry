@@ -1,0 +1,43 @@
+[
+  {
+    "timestamp": "2026-05-08T17:46:55Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/MayerVietoris.lean",
+      "theorem": "AlgebraicGeometry.Scheme.HModule'_top_sourceIso"
+    },
+    "session": {
+      "id": "session_40",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "CategoryTheory.presheafToSheaf.mapIso",
+        "CategoryTheory.Functor.isoWhiskerRight",
+        "CategoryTheory.NatIso.ofComponents",
+        "CategoryTheory.Functor.constComp",
+        "CategoryTheory.Functor.const.mapIso",
+        "Finsupp.LinearEquiv.finsuppUnique",
+        "LinearEquiv.toModuleIso",
+        "CategoryTheory.IsTerminal.from",
+        "CategoryTheory.IsTerminal.hom_ext",
+        "Equiv.toIso"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Append a new section CoverTotality between `end AffineCoverMVSquare` (was L675) and `end AlgebraicGeometry.Scheme` (was L677). Define `noncomputable def HModule'_top_sourceIso` with term-mode body composing three Mathlib pieces under (presheafToSheaf J _).mapIso: (1) terminal-collapse via NatIso.ofComponents + Equiv.toIso + IsTerminal.from/hom_ext, (2) Functor.constComp _ PUnit.{u+1} (ModuleCat.free k), (3) (Functor.const Cᵒᵖ).mapIso of (Finsupp.LinearEquiv.finsuppUnique k k PUnit).toModuleIso. Body verbatim from plan-agent probe-confirmed PROGRESS.md.",
+        "code_tried": "noncomputable def HModule'_top_sourceIso (k : Type u) [Field k] {C : Type v} [Category.{u, v} C] {J : GrothendieckTopology C} [HasWeakSheafify J (Type u)] [HasSheafify J (ModuleCat.{u} k)] {T : C} (hT : IsTerminal T) : (presheafToSheaf J _).obj ((yoneda ⋙ (Functor.whiskeringRight _ _ _).obj (ModuleCat.free k)).obj T) ≅ (constantSheaf J (ModuleCat.{u} k)).obj (ModuleCat.of k k) := (presheafToSheaf J _).mapIso (Functor.isoWhiskerRight (NatIso.ofComponents (fun _ => Equiv.toIso { toFun := fun _ => PUnit.unit, invFun := fun _ => hT.from _, left_inv := fun _ => hT.hom_ext _ _, right_inv := fun _ => rfl }) (fun _ => by ext; rfl)) (ModuleCat.free k) ≪≫ Functor.constComp _ PUnit.{u+1} (ModuleCat.free k) ≪≫ (Functor.const Cᵒᵖ).mapIso (Finsupp.LinearEquiv.finsuppUnique k k PUnit).toModuleIso)",
+        "line_number": "697-716 (post-Edit)",
+        "lean_error": null,
+        "goal_before": "Append target — the file ended at L677 with `end AlgebraicGeometry.Scheme`; new section CoverTotality opens at L677 post-Edit and the new declaration sits at L697.",
+        "goal_after": "no goals (term-mode close, kernel-only axioms verified by lean_verify)",
+        "result": "success",
+        "insight": "Top-level `Scheme.*` declarations (consuming no Scheme-typed receiver) sidestep both the iter-029 sub-namespace bare-name shadowing trap and the iter-030 dot-notation requirement — name resolution defaults to parent namespace and there is no receiver-type-driven dispatch. `noncomputable` is load-bearing because `presheafToSheaf` is itself `noncomputable`. `Functor.isoWhiskerRight` (qualified) is required; bare `isoWhiskerRight` is not in scope. `PUnit.{u+1}` explicit universe annotation forces the right level. The body composition mirrors `constantSheaf J D = Functor.const Cᵒᵖ ⋙ presheafToSheaf J D` structurally."
+      }
+    ],
+    "next_steps": "Iter-032: build the Ext-transport step consuming this source-object iso — turn it into a `LinearEquiv` `HModule' k F n T ≃ₗ[k] HModule k F n` for terminal `T`. Universe handling required (HModule lives at Type (u+1), HModule' at Type u). Then Step 4 (affine vanishing H^{>0}(Spec A, F) = 0) and Step 5 (finite-dimensional H^0)."
+  }
+]

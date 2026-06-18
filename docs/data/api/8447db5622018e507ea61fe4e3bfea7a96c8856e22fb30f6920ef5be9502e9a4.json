@@ -1,0 +1,87 @@
+[
+  {
+    "timestamp": "2026-06-17T17:00:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "pullbackTensorMap_restrict"
+    },
+    "session": {
+      "id": "session_13",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "h1 (sheafificationCompPullback_comp) states its RHS in the non-canonical Scheme.Modules.instCategory (Hom:=Modules.Hom), distinct (defeq-not-syntactic) from SheafOfModules.instCategory used by E=sheafification.map(pbComp.inv.app); so the D≫E=𝟙 cancellation (Brick1, proven) cannot be reassociated adjacent.",
+      "key_lemmas_used": [
+        "sheafificationCompPullback_comp",
+        "sheafifyMap_pullbackComp_hom_inv_id",
+        "pullbackComp_δ"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Remove iter-006 reassoc_of% h1 poison; splice S1 via erw[h1], decompose via erw[hδ], prove combined brick hcancel(S1≫E=R0≫R1≫R5) then fuse hδ+hcancel into hmain, splice via erw[reassoc_of% hmain].",
+        "code_tried": "erw [h1]; rw [Category.assoc, Category.assoc, Category.assoc]; erw [sheafifyMap_pullbackComp_hom_inv_id]; rw [Category.comp_id]",
+        "line_number": "3168-3204",
+        "lean_error": "Tactic `rewrite` failed: Did not find an occurrence of the pattern (?f ≫ ?g) ≫ ?h  [Category.assoc misses across distinct comp instances]",
+        "result": "partial",
+        "insight": "erw[h1] SUCCEEDS — splices S1→R0≫R1≫R5≫D without reassoc_of%, so iter-006 poison is removable and the prefix de-poisons (file stays GREEN). The cancellation cannot land because the outer comp is SheafOfModules-instance and the inner chain is Scheme.Modules-instance."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Spell aZ/pb explicitly (drop let-fvars) so hδ/hcancel/Brick1 share identical sheafification spelling and cod D = dom E matches syntactically.",
+        "code_tried": "rw [show ...] (explicit sheafification spellings for hδ, hcancel); rw [Category.assoc]",
+        "line_number": "3094-3204",
+        "lean_error": "simp made no progress / rewrite did not find (?f ≫ ?g) ≫ ?h; erw [Category.assoc] -> (deterministic) timeout at whnf, 3200000 heartbeats",
+        "result": "failed",
+        "insight": "Aligning OBJECT spelling does not fix the underlying CategoryStruct.comp INSTANCE clash. simp only[Category.assoc] no-progress; erw[Category.assoc] whnf-bombs on the pullback(h≫f) left-adjoint objects; dsimp[Scheme.Modules, instCategory] leaves goal unchanged."
+      }
+    ],
+    "next_steps": "Refactor-escalation trigger MET (progress-critic conv013): dispatch `refactor` subagent to re-derive sheafificationCompPullback_comp (or author a SheafOfModules-instance twin) so its RHS composes in SheafOfModules.instCategory, matching the sheafification side. Then step (i) closes via the documented hcancel/hmain bricks; steps (ii) comp_δ split and (iii) Sq3/Sq4 interleave follow."
+  },
+  {
+    "timestamp": "2026-06-17T17:00:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate/DualInverse/SliceTransport.lean",
+      "theorem": "sliceDualTransport"
+    },
+    "session": {
+      "id": "session_13",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "left_inv branch (L883) filled with a ~20-line collapse but it does NOT compile: rw [ModuleCat.restrictScalars.map_apply] at L890 fails to find its pattern. File left RED; right_inv (L912) still sorry; debug `trace_state` left at L911. Net REGRESSION green->red.",
+      "key_lemmas_used": [
+        "sliceDualTransportInv_app_apply",
+        "dualUnitRingSwap_apply",
+        "Iso.hom_inv_id_apply",
+        "PresheafOfModules.naturality_apply",
+        "eqToHom_op",
+        "ConcreteCategory.congr_hom"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Close left_inv: relabel M-side restr-map to M.val.map(eqToHom he).op via rfl+eqToHom_op in hφ, strip restrictScalars wrapper, apply hφ, collapse the two X.presheaf eqToHom relabels to 𝟙 over the thin poset.",
+        "code_tried": "rw [show ((restr ...).map ...).hom z = (M.val.map (eqToHom he).op).hom z from rfl, eqToHom_op] at hφ; rw [ModuleCat.restrictScalars.map_apply]; erw [hφ]; show ...; rw [eqToHom_op]; have hmaps : ... = 𝟙 _ := by rw [← X.presheaf.map_comp, eqToHom_trans]; exact X.presheaf.map_id _; exact ConcreteCategory.congr_hom hmaps ((φ.app W'').hom z)",
+        "line_number": "884-903",
+        "lean_error": "AlgebraicJacobian/.../SliceTransport.lean:890:8: Tactic `rewrite` failed: Did not find an occurrence of the pattern  [ModuleCat.restrictScalars.map_apply]",
+        "result": "failed",
+        "insight": "The restrictScalars.map_apply wrapper is not in the spelling rw expects at that goal position (defeq-coerced); needs erw or a different unfolding. The overall collapse strategy (hφ + X.presheaf round-trip via eqToHom_trans/map_id) is plausible and substantively complete except this one rw-miss. Branch must be fixed OR reverted to restore GREEN."
+      },
+      {
+        "attempt": 2,
+        "strategy": "right_inv (L912): mirror of left_inv; not attempted beyond inserting trace_state to inspect the goal.",
+        "code_tried": "trace_state; sorry",
+        "line_number": "911-912",
+        "lean_error": "(none — sorry; trace_state is a committed debug artifact)",
+        "result": "partial",
+        "insight": "right_inv untouched; awaits left_inv recipe to be finalized then mirrored (dualUnitRingSwapHom/dualUnitRingSwap cancel via appIso.hom_inv_id the other way)."
+      }
+    ],
+    "next_steps": "FIRST restore GREEN: either fix L890 (try `erw [ModuleCat.restrictScalars.map_apply]` or `simp only [ModuleCat.restrictScalars.map_apply]`, or inspect goal spelling) so left_inv closes, OR revert the L884-903 block back to `sorry`. REMOVE the debug `trace_state` at L911. Then complete left_inv and mirror to right_inv. DUAL was CONVERGING — one mechanical alignment from closing — do not pivot."
+  }
+]

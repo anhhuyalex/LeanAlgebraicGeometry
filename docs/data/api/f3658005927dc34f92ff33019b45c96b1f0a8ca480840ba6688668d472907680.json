@@ -1,0 +1,195 @@
+[
+  {
+    "timestamp": "2026-05-15T11:46:43Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "cechCofaceMap_pi_smul"
+    },
+    "session": {
+      "id": "session_105",
+      "model": "sonnet"
+    },
+    "findings": {
+      "blocker": "Iter-107 plan-mandated option 3 (in-line per-coord scalar pullback at the post-S5 LinearMap-chain frame, wrapper bypassed) failed across 7 routes. Same recurring class of obstructions confirmed: (a) discrim-tree pattern unification on the anonymous-closure Pi.lift codomain blocks rw [ModuleCat.hom_zsmul] / rw [ModuleCat.hom_smul] / Preadditive.zsmul_comp / ← LinearMap.comp_apply / ← ModuleCat.hom_comp; (b) deterministic whnf timeout at 1600000 heartbeats on every chain that reaches the smul-Pi.lift interface; (c) eqToHom proof-object construction for `∏ᶜ (Fin ((prev n) + 2) → s₀) → ModuleCat k` ↔ `∏ᶜ (Fin (n+1) → s₀) → ModuleCat k` family-equality requires Fin.cast, not `omega`. Body-local rfl-helper with free binders (`fun _ _ _ ↦ rfl` packaging) also failed — same root cause as iter-099 E1 dead-end. The progress-critic-iter105 STUCK verdict is reinforced: 7 consecutive PARTIAL iters on this slot (iter-099/100/101/103/105/106/107).",
+      "key_lemmas_used": [
+        "cechCofaceMap_summand_family_R_linear (iter-104 helper, staged in scope as `h_iter104`)",
+        "Preadditive.zsmul_comp (failed)",
+        "ModuleCat.hom_zsmul (failed)",
+        "ModuleCat.hom_smul (failed)",
+        "LinearMap.comp_apply (failed in ← direction)",
+        "ModuleCat.hom_comp (failed in ← direction)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Direct scalar pullback via rw [ModuleCat.hom_zsmul] on the post-S5 frame",
+        "code_tried": "rw [ModuleCat.hom_zsmul, ModuleCat.hom_zsmul]",
+        "line_number": 1119,
+        "lean_error": "(deterministic) timeout at `whnf`, maximum number of heartbeats (1600000) has been reached",
+        "goal_before": "case h.h ... ⊢ (ModuleCat.Hom.hom (Pi.π Z₂ j')) ((ModuleCat.Hom.hom (eqToHom _)) ((ModuleCat.Hom.hom ((-1) ^ ↑i • cechCofaceMap_summand_family s₀ n i)) (e₁.symm (r' • y')))) = r' • (...)",
+        "goal_after": "(error — whnf timeout)",
+        "result": "failed",
+        "insight": "The pattern-match on the anonymous-closure Pi.lift codomain triggers whnf reduction over the inner `Pi.π Z₁ (i_1 ∘ (SimplexCategory.δ i).toOrderHom)` binder. Same root cause as iter-099/100/101/103/106 attempts."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Generalize the ℤ-sign to a fresh variable σ to abstract the scalar",
+        "code_tried": "generalize hσ : ((-1 : ℤ) ^ (↑i : ℕ)) = σ",
+        "line_number": 1118,
+        "lean_error": "(succeeds; subsequent rw still times out)",
+        "goal_before": "(post-S5 LinearMap-chain frame)",
+        "goal_after": "(same shape but with `σ` free instead of `(-1)^↑i`)",
+        "result": "partial",
+        "insight": "Generalizing the scalar to a fresh variable does NOT bypass the whnf timeout. The whnf cost is in the Pi.lift body, not in the scalar — this confirms iter-100's finding."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Body-local rfl-helper with free binders (mimicking key₂ at L1052)",
+        "code_tried": "have h_zsmul : ∀ {Mc Nc} (c : ℤ) (f : Mc ⟶ Nc) (z : Mc), (ModuleCat.Hom.hom (c • f)) z = c • (ModuleCat.Hom.hom f) z := fun _ _ _ ↦ rfl; rw [h_zsmul, h_zsmul]",
+        "line_number": 1120,
+        "lean_error": "(deterministic) timeout at `whnf`, maximum number of heartbeats (1600000) has been reached",
+        "goal_before": "(post-S5 frame after generalize)",
+        "goal_after": "(error — whnf timeout)",
+        "result": "failed",
+        "insight": "The discrim-tree refusal is at the pattern-match level, not at the lemma-statement level. Even FREE binders don't help because `rw` instantiates `?f := Pi.lift (...)` and then `whnf`-reduces. Reconfirms iter-099 E1 dead-end in the post-S5 frame."
+      },
+      {
+        "attempt": 4,
+        "strategy": "simp only [ModuleCat.hom_smul] / simp only [ModuleCat.hom_smul, LinearMap.smul_apply]",
+        "code_tried": "simp only [ModuleCat.hom_smul, LinearMap.smul_apply]",
+        "line_number": 1120,
+        "lean_error": "simp made no progress",
+        "goal_before": "(post-S5 frame after generalize)",
+        "goal_after": "(unchanged)",
+        "result": "failed",
+        "insight": "ModuleCat.hom_smul's pattern `(s • f).hom = s • f.hom` (with S : Monoid, DistribMulAction S ↑N, SMulCommClass R S ↑N) doesn't unify on the anonymous-closure form. Same root cause as Attempt 1."
+      },
+      {
+        "attempt": 5,
+        "strategy": "Reverse L1114's simp to recover the categorical composite form, then pull σ at the categorical level via Preadditive.zsmul_comp",
+        "code_tried": "rw [← LinearMap.comp_apply, ← ModuleCat.hom_comp, ← LinearMap.comp_apply, ← ModuleCat.hom_comp]",
+        "line_number": 1120,
+        "lean_error": "(deterministic) timeout at `whnf`, maximum number of heartbeats (1600000) has been reached",
+        "goal_before": "(post-S5 LinearMap-chain frame)",
+        "goal_after": "(error — whnf timeout)",
+        "result": "failed",
+        "insight": "Even REVERSING the simp at L1114 (which decomposes the categorical composite) is blocked by the discrim-tree issue. Confirms iter-103 finding that the blocker is at the smul-Pi.lift interface, robust to forward AND backward composition reasoning."
+      },
+      {
+        "attempt": 6,
+        "strategy": "change / show with named family + explicit eqToHom proof object",
+        "code_tried": "change (ModuleCat.Hom.hom (Pi.π Z₂ j')) ((ModuleCat.Hom.hom (eqToHom (by dsimp only [Z₂]; congr 1; ext; omega))) ((ModuleCat.Hom.hom ((-1 : ℤ) ^ (↑i : ℕ) • cechCofaceMap_summand_family s₀ n i)) (e₁.symm (r' • y')))) = ...",
+        "line_number": 1120,
+        "lean_error": "Application type mismatch: eqToHom ⋯ has type ?m.1418 ⟶ ?m.1418 but is expected to have type (∏ᶜ fun j ↦ ModuleCat.of k ↑(C.left.presheaf.obj (Opposite.op (∏ᶜ fun a ↦ basicOpenCover (↑s₀) (j a))))).Hom (∏ᶜ Z₂); secondary attempt: `omega could not prove the goal: a possible counterexample may satisfy the constraints a ≥ 0 where a := ↑((ComplexShape.up ℕ).prev n)`",
+        "goal_before": "(post-S5 frame)",
+        "goal_after": "(eqToHom proof-object can't elaborate, OR omega cannot solve the Fin family-equality)",
+        "result": "failed",
+        "insight": "The type-equality proof obligation decomposes into `Fin ((prev n) + 2) → ↥s₀ = Fin (n+1) → ↥s₀` family equality, which `omega` cannot solve. Object-level eqToHom proofs between `∏ᶜ` products with different Fin-indexing cannot be discharged by `omega` alone; requires explicit Fin.cast-based construction. Reconfirms iter-100 finding on `_`-codomain ascription failure."
+      },
+      {
+        "attempt": 7,
+        "strategy": "Final committed partial: stage iter-104 R-linearity as a body-local `have h_iter104` (Route 1 stage from session_104 recommendations) to bank infrastructure for iter-108",
+        "code_tried": "have hRel' : (ComplexShape.up ℕ).prev n + 2 = n + 1 := by omega; have h_iter104 := cechCofaceMap_summand_family_R_linear hU s₀ n hn i r' y'; sorry",
+        "line_number": 1118,
+        "lean_error": "(no error — file compiles)",
+        "goal_before": "(post-S5 frame)",
+        "goal_after": "h_iter104 in scope = `(Pi.π Z_int j_int).hom (cechCofaceMap_summand_family s₀ n i ≫ ...).hom (e₁.symm (r' • y')) = r' • (Pi.π Z_int j_int).hom (cechCofaceMap_summand_family s₀ n i).hom (e₁.symm y')` (binder-level R-linearity at index `Fin ((prev n) + 2) → s₀`)",
+        "result": "partial",
+        "insight": "h_iter104 + hRel' staged in scope as a body-local have-block. Iter-108 can build directly on this: derive per-coord version at `j_int := j' ∘ Fin.cast hRel'` via `congrFun` + `Pi.smul_apply`, then bridge from `(Pi.π Z_int j_int).hom` to `(Pi.π Z₂ j').hom (eqToHom_outer.hom (...))` via either manual `Pi.hom_ext` + `eqToHom` lemma chain OR `rcases n with _ | n_` to symbolically eliminate `(prev n)`. This is structurally a Route B partial — banks the wrapper-free R-linearity for iter-108 reuse, but does NOT close the L1120 sorry."
+      }
+    ],
+    "next_steps": "STRATEGY.md's iter-108 abort policy fires: option 3 has now failed. Per progress-critic-iter105 STUCK verdict and strategy-critic-iter105 sunk-cost flag #1, do NOT continue wrapper engineering / heartbeat budget escalation / scalar-extraction tactic accumulation. Required iter-108 actions are mutually-exclusive: (i) dispatch refactor subagent to extract the anonymous-closure Pi.lift in `cechCofaceMap_summand_family` body into a named eta-expanded form, OR (ii) re-dispatch strategy-critic mid-iter to validate a route replacement (e.g. divisor-class-image Pic⁰ alternative), OR (iii) dispatch mathlib-analogist on Pi.hom_ext / LinearMap.pi to determine the idiomatic Mathlib way to prove R-linearity of a Pi-valued morphism without anonymous-closure issues. The `h_iter104` body-local have staged at L1119 is load-bearing partial progress that iter-108 retains."
+  },
+  {
+    "timestamp": "2026-05-15T11:46:43Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "g_R.map_smul'_at_L1754"
+    },
+    "session": {
+      "id": "session_105",
+      "model": "sonnet"
+    },
+    "findings": {
+      "blocker": "Step 2 stretch target was correctly skipped by the prover per iter-105 PROGRESS.md escalation rule (`do NOT attempt Step 2 if Step 1 (L1120) is not closed`). Step 1 partial, so Step 2 prerequisite not met.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Remains gated on L1120 closure (i.e. on `cechCofaceMap_pi_smul` per-summand `hG`)."
+  },
+  {
+    "timestamp": "2026-05-15T11:46:43Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "step_a_augmented_cech_L1212"
+    },
+    "session": {
+      "id": "session_105",
+      "model": "sonnet"
+    },
+    "findings": {
+      "blocker": "Long-standing deferred substep (a) (augmented Čech simplicial object + extra-degeneracy invocation). Not in this iter's scope.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Deferred until Phase A's `cechCofaceMap_pi_smul` path closes or is pivoted."
+  },
+  {
+    "timestamp": "2026-05-15T11:46:43Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "h_transport_K_to_K0_L1536"
+    },
+    "session": {
+      "id": "session_105",
+      "model": "sonnet"
+    },
+    "findings": {
+      "blocker": "Long-standing deferred substep — `K → K₀` finite-subspanning transport. Not in this iter's scope.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Deferred."
+  },
+  {
+    "timestamp": "2026-05-15T11:46:43Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "step_a_s0_extra_degeneracy_L1564"
+    },
+    "session": {
+      "id": "session_105",
+      "model": "sonnet"
+    },
+    "findings": {
+      "blocker": "Long-standing deferred substep — extra-degeneracy on `s₀`-indexed slice cover. Not in this iter's scope.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Deferred."
+  },
+  {
+    "timestamp": "2026-05-15T11:46:43Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "h_loc_exact_L1783"
+    },
+    "session": {
+      "id": "session_105",
+      "model": "sonnet"
+    },
+    "findings": {
+      "blocker": "Long-standing deferred substep — local exactness assembly via `exact_of_localized_span`. Not in this iter's scope.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Deferred."
+  }
+]

@@ -1,0 +1,68 @@
+[
+  {
+    "timestamp": "2026-05-17T07:00:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "AlgebraicGeometry.IsAffineOpen.appLE_isLocalization"
+    },
+    "session": {
+      "id": "session_123",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Step 2 (cocone-universal-property backward map) + Step 3 (inverse identities) remain. Packaged into the single residual AlgEquiv sorry at L362 inside the `suffices AE : Localization M ≃ₐ[Γ(S, U)] A_colim` block. Estimated 100-200 LOC for closure per iter-123 mathlib-analogist; depends on `IsLocalization.map` + `IsColimit.desc` plumbing not yet exercised in the project.",
+      "key_lemmas_used": [
+        "IsLocalization.lift",
+        "IsLocalization.lift_comp",
+        "IsLocalization.isLocalization_of_algEquiv",
+        "isUnit_appLE_unitSubmonoid_in_colim (iter-122 Step 0 helper)",
+        "appLE_colimRingHom (iter-122 helper)",
+        "appLE_colimAlgebra (iter-122 helper)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Insert structural reduction: build forward map via IsLocalization.lift, capture h_fwd_comp via IsLocalization.lift_comp, then use `suffices AE : Localization M ≃ₐ[Γ(S, U)] A_colim from IsLocalization.isLocalization_of_algEquiv M AE` to reduce to the AlgEquiv. First Edit at L290-303 region.",
+        "code_tried": "letI : Algebra Γ(S, U) (((TopCat.Presheaf.pullback CommRingCat f.base).obj S.presheaf).obj (.op V)) := appLE_colimAlgebra f e\n  set M := appLE_unitSubmonoid f hU hV e with hM_def\n  have h_unit_ring : ∀ y : M, IsUnit ((appLE_colimRingHom f e).hom y.val) := fun y => isUnit_appLE_unitSubmonoid_in_colim f hU hV e y.val y.property\n  let forward : Localization M →+* ... := IsLocalization.lift (M := M) (S := Localization M) h_unit_ring\n  ... sorry",
+        "line_number": "304 (pre-edit) → 362 (post-edit)",
+        "lean_error": "none (build succeeds with the single expected `sorry` warning)",
+        "goal_before": "X S : Scheme\\nf : X ⟶ S\\nU : S.Opens\\nV : X.Opens\\nhU : IsAffineOpen U\\nhV : IsAffineOpen V\\ne : V ≤ f ⁻¹ᵁ U\\n⊢ IsLocalization (appLE_unitSubmonoid f hU hV e) ↑(((TopCat.Presheaf.pullback CommRingCat f.base).obj S.presheaf).obj (Opposite.op V))",
+        "goal_after": "X S : Scheme\\nf : X ⟶ S\\nU : S.Opens\\nV : X.Opens\\nhU : IsAffineOpen U\\nhV : IsAffineOpen V\\nthis : Algebra ↑Γ(S, U) ↑(A_colim) := appLE_colimAlgebra f e\\nM : Submonoid ↑Γ(S, U) := appLE_unitSubmonoid f hU hV e\\nhM_def : M = ...\\nh_unit_ring : ∀ (y : ↥M), IsUnit ((appLE_colimRingHom f e).hom ↑y)\\nforward : Localization M →+* ↑A_colim := IsLocalization.lift h_unit_ring\\nh_fwd_comp : forward.comp (algebraMap (↑Γ(S, U)) (Localization M)) = (appLE_colimRingHom f e).hom\\n⊢ Localization M ≃ₐ[↑Γ(S, U)] ↑A_colim",
+        "result": "partial",
+        "insight": "Steps 1 + 4 close in-body via direct lemma applications; the remaining content of the body is the AlgEquiv construction whose components are the Step 2 cofinality backward map and the Step 3 inverse-identity verification. Using `suffices` keeps the residual sorry count at exactly 1 instead of splitting Steps 2 + 3 + algebra-map-compat into three separate sorries (which would inflate the sorry-count metric without adding closure)."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Refine the suffices comment block with a concrete `AlgEquiv.ofRingEquiv` recipe to make the iter-124 closure target explicit, including the algebra-map compatibility witness shape.",
+        "code_tried": "(comment refinement at L348-361 inside the body, adding the recipe sketch:)\n  --   let RE : Localization M ≃+* A_colim :=\n  --     RingEquiv.ofRingHom forward backward h_fb h_bf\n  --   exact AlgEquiv.ofRingEquiv (f := RE) (fun x => by\n  --     change forward (algebraMap _ _ x) = algebraMap _ _ x\n  --     have := IsLocalization.lift_eq h_unit_ring x ...)",
+        "line_number": "348-361 (comment block)",
+        "lean_error": "none (comments only)",
+        "goal_before": "unchanged from attempt 1",
+        "goal_after": "unchanged from attempt 1",
+        "result": "success",
+        "insight": "Documents the assembly shape for the iter-124 prover. AlgEquiv.ofRingEquiv on a RingEquiv constructed via RingEquiv.ofRingHom forward backward h_fb h_bf — with h_fb : backward.comp forward = id and h_bf : forward.comp backward = id verified via IsLocalization.ringHom_ext (Step 3a) and IsColimit.hom_ext (Step 3b) respectively, and the algebra-map compatibility witness routed through IsLocalization.lift_eq."
+      }
+    ],
+    "next_steps": "iter-124 prover lane on Step 2 + Step 3 closure. The detailed 6-substep decomposition is in the prover task_result § 'Detailed plan for iter-124': Step 2a (basic-open-cover helper, 30-60 LOC), Step 2b (cocone arm constructor via IsLocalization.map, 30-50 LOC), Step 2c (cocone naturality, 30-50 LOC), Step 2d (descend via Functor.descOfIsLeftKanExtension or IsColimit.desc, 10-20 LOC), Step 3 inverse identities (IsLocalization.ringHom_ext + IsColimit.hom_ext, 30-50 LOC), Step 4 already in-place. Per PROGRESS.md watch criterion 2, iter-124 continues the M1.b lane with a focused Step 2 prover lane; if Step 2 stalls > 2 iters, dispatch a refactor for a Step-2 helper per iter-122 recommendations MEDIUM #6 OR fire the STRATEGY.md 2-iter CHURNING trigger and pivot to M2.a."
+  },
+  {
+    "timestamp": "2026-05-17T07:00:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Jacobian.lean",
+      "theorem": "AlgebraicGeometry.AbelJacobi.nonempty_jacobianWitness"
+    },
+    "session": {
+      "id": "session_123",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Off-limits this iter (foundational existence hypothesis; queued behind M2 + M3 per the genus-stratified body decomposition). No prover dispatched against this site.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Unchanged. Continues to be queued behind milestones M2 (genus-0 witness via base-change-to-`k̄` + Galois descent) and M3 (positive-genus witness via Picard or symmetric-powers; user-escalation pending per iter-123 audit)."
+  }
+]

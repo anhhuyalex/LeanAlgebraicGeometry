@@ -1,0 +1,258 @@
+[
+  {
+    "timestamp": "2026-05-12T18:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "cotangentExactSeqAlpha.d_app"
+    },
+    "session": {
+      "id": "session_78",
+      "model": "claude-opus-4-x"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "TopCat.Presheaf.pullbackPushforwardAdjunction",
+        "Adjunction.homEquiv_naturality_right",
+        "Equiv.apply_symm_apply",
+        "PresheafOfModules.Derivation'.d_app"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "ζ-bridge construction (dual of iter-077's η-bridge for β); apply adj.homEquiv.injective + double homEquiv_naturality_right; collapse both sides to (f≫g).c via Equiv.apply_symm_apply on φ_fg' and φ_g'; rewrite at U via congr_arg to expose the φ_fg' factorisation; kill D_X.d via .d_app",
+        "code_tried": "let τ := ((adj_g).homEquiv S.presheaf _).symm (adj_fg.unit.app S.presheaf); have hτ : τ ≫ (pushforward f).map φ_fg' = φ_g' ≫ f.c := by apply adj_g.homEquiv.injective; rw [Adjunction.homEquiv_naturality_right, Adjunction.homEquiv_naturality_right]; ... ; show D_X.d ((f.c.app U).hom (φ_g'.app U a)) = 0; have happ : ... := by have h := congr_arg ... hτ.symm; simpa using h; rw [happ]; exact D_X.d_app _",
+        "line_number": "253-331 (final file)",
+        "lean_error": "Tactic 'rewrite' failed: Did not find an occurrence of the pattern (adj_fg.unit.app S.presheaf) ≫ (pushforward (f ≫ g)).map φ_fg' in the target expression — initial state used `show ... = ...` which did not normalize the head form for the subsequent rw",
+        "goal_before": "D_X.d ((f.c.app U).hom (φ_g'.app U a)) = 0",
+        "goal_after": "no goals (clean diagnostic at log line 119)",
+        "result": "failed",
+        "insight": "the initial `show ... = ...` triggers linter.style.show and leaves the goal in a form where the next `rw` does not match"
+      },
+      {
+        "attempt": 2,
+        "strategy": "Swap `show` for `change` in two places (eq1 inner step and outer D_X.d goal)",
+        "code_tried": "change (TopCat.Presheaf.pullbackPushforwardAdjunction CommRingCat (f ≫ g).base).homEquiv S.presheaf X.presheaf φ_fg' = _; dsimp only [φ_fg']; exact Equiv.apply_symm_apply _ _\n--- and ---\nchange D_X.d ((ConcreteCategory.hom (f.c.app U)) ((ConcreteCategory.hom (φ_g'.app U)) a)) = 0",
+        "line_number": "304-305 and 320-321 (final file)",
+        "lean_error": null,
+        "goal_before": "(adj_fg.unit.app S.presheaf ≫ (pushforward g).map ((pushforward f).map φ_fg')) = (f ≫ g).c (mid-bridge); and D_X.d ((f.c.app U).hom ((φ_g'.app U) a)) = 0 (outer)",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "`change` both passes the linter and produces a goal form `rw` can pattern-match; `dsimp only [φ_fg']` unfolds the let-binding so Equiv.apply_symm_apply closes"
+      }
+    ],
+    "next_steps": "None — target closed. The transitive sorry inheritance from relativeDifferentialsPresheaf_isSheaf (axiom profile shows sorryAx) is upstream and out of scope."
+  },
+  {
+    "timestamp": "2026-05-12T18:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "h_diff_pi_smul_f (internal to basicOpenCover_isCechAcyclicCover_toModuleKSheaf)"
+    },
+    "session": {
+      "id": "session_78",
+      "model": "claude-opus-4-x"
+    },
+    "findings": {
+      "blocker": "Pi.smul_apply does not fire against `h_mod_pi₂`-mediated smul (the RHS smul comes from RingHom.toModule (presheaf.map …).hom builder, not literal Pi.instSMul); ditto for `show e₂ (…) j = r • (e₂ (…)) j` which demands HSMul ↑R ↑(Z₂ j) ?_ — no standalone R-action exists on individual fibres",
+      "key_lemmas_used": [
+        "Pi.smul_apply (attempted, did not fire)",
+        "set_option maxHeartbeats 800000 in"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Add S1 prefix and Pi.smul_apply to expose per-component smul",
+        "code_tried": "intro r y\nfunext j\nrw [Pi.smul_apply]",
+        "line_number": "1109-1112 (final file at L1110 sorry)",
+        "lean_error": "Tactic `rewrite` failed: Did not find an occurrence of the pattern (?a • ?f) ?i in the target expression e₂ ((ConcreteCategory.hom scK₀.f) (e₁.symm (r • y))) j = (r • e₂ ((ConcreteCategory.hom scK₀.f) (e₁.symm y))) j",
+        "goal_before": "(∀ r y, e₂ ((scK₀.f).hom (e₁.symm (r • y))) = r • e₂ ((scK₀.f).hom (e₁.symm y)))",
+        "goal_after": "(unchanged; rewrite did not fire)",
+        "result": "failed",
+        "insight": "the RHS smul on `↑scK₀.X₂ ≃ ∏ᶜ Z₂` is `h_mod_pi₂`-mediated (RingHom.toModule from the presheaf restriction), not literal Pi.instSMul; `rw [Pi.smul_apply]` pattern-matches only on Pi.instSMul"
+      },
+      {
+        "attempt": 2,
+        "strategy": "Explicit `show e₂ (…) j = r • (e₂ (…)) j` to rewrite the goal per-component",
+        "code_tried": "show e₂ ((ConcreteCategory.hom scK₀.f) (e₁.symm (r • y))) j = r • (e₂ ((ConcreteCategory.hom scK₀.f) (e₁.symm y))) j",
+        "line_number": "1110 region",
+        "lean_error": "failed to synthesize instance of type class HSMul ↑R ↑(Z₂ j) ?m.1909",
+        "goal_before": "same as before",
+        "goal_after": "(elaboration failure — no R-action on Z₂ j fibre)",
+        "result": "failed",
+        "insight": "there is no standalone R-action on `Z₂ j` (the i-th coordinate of the product); the R-action lives only on the product via `h_mod_pi₂`'s opaque builder"
+      },
+      {
+        "attempt": 3,
+        "strategy": "Add `set_option maxHeartbeats 800000 in` above the enclosing theorem; restore `funext j; rw [Pi.smul_apply]`",
+        "code_tried": "set_option maxHeartbeats 800000 in\n... \n  intro r y\n  funext j\n  rw [Pi.smul_apply]",
+        "line_number": "~411 (set_option) and L1110 region",
+        "lean_error": "same `rewrite` failure as attempt 1 (heartbeats lift does not change pattern matching)",
+        "goal_before": "same",
+        "goal_after": "same",
+        "result": "failed",
+        "insight": "heartbeats lift is necessary to prevent a `whnf` timeout at the theorem head (the (r•_):Π→Π smul triggers HSMul synthesis through h_mod_pi₂'s opaque builder), but is independent of the pattern-matching issue"
+      },
+      {
+        "attempt": 4,
+        "strategy": "Try `simp only [Pi.smul_apply]` instead of `rw`",
+        "code_tried": "simp only [Pi.smul_apply]",
+        "line_number": "L1110 region",
+        "lean_error": "unused simp argument warning",
+        "goal_before": "same",
+        "goal_after": "(simp did not fire either)",
+        "result": "failed",
+        "insight": "`simp only [Pi.smul_apply]` is no more capable than `rw` against the h_mod_pi₂-mediated smul"
+      },
+      {
+        "attempt": 5,
+        "strategy": "Land final state: heartbeats lift + intro/funext prefix + sorry; preserve the S2–S8 recipe in surrounding comments",
+        "code_tried": "intro r y\nfunext j\n-- Goal: `e₂ ((scK₀.f).hom (e₁.symm (r • y))) j = r • e₂ ((scK₀.f).hom (e₁.symm y)) j`\nsorry",
+        "line_number": "L1110",
+        "lean_error": null,
+        "goal_before": "(∀ r y, ...)",
+        "goal_after": "1 sorry remains (intro/funext/sorry prefix)",
+        "result": "partial",
+        "insight": "the file is left in a state where iter-079 can attack S2–S8 directly, with heartbeats already lifted and the per-component goal exposed"
+      }
+    ],
+    "next_steps": "Iter-079 should: (a) keep the `set_option maxHeartbeats 800000 in`; (b) at the post-`funext` goal, use `change` to expose `e₂ (...) j` as a concrete per-component formula via h_mod_pi₂'s component-projection lemma before invoking Pi.smul_apply; (c) attack S3 (alternating-sum exposure) via explicit unfold of `CochainComplex.of_d_eq_succ` for the `up ℕ` shape; (d) consider switching to LinearMap.mk + restrictScalars-transported underlying differential as an alternative to per-summand chase."
+  },
+  {
+    "timestamp": "2026-05-12T18:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Modules/Monoidal.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.tensorObj"
+    },
+    "session": {
+      "id": "session_78",
+      "model": "claude-opus-4-x"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "PresheafOfModules.monoidalCategoryStruct",
+        "PresheafOfModules.sheafification",
+        "Modules.toPresheafOfModules",
+        "MonoidalCategoryStruct (via _root_.PresheafOfModules)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Direct sheafification of presheaf tensor product, without _root_ prefix or letI shadow",
+        "code_tried": "noncomputable def tensorObj (M N : X.Modules) : X.Modules :=\n  (PresheafOfModules.sheafification (𝟙 X.ringCatSheaf.obj)).obj\n    ((Modules.toPresheafOfModules X).obj M ⊗ (Modules.toPresheafOfModules X).obj N)",
+        "line_number": "60-66 in current file",
+        "lean_error": "Application type mismatch: The argument X.ringCatSheaf.obj has type (TopologicalSpace.Opens ↥X)ᵒᵖ ⥤ RingCat but is expected to have type Scheme in the application PresheafOfModules X.ringCatSheaf.obj",
+        "goal_before": "X.Modules",
+        "goal_after": "(elaboration failure)",
+        "result": "failed",
+        "insight": "two PresheafOfModules names in scope — Mathlib's general one and AlgebraicGeometry.Scheme.PresheafOfModules X (which takes a Scheme); the _root_ prefix is required to disambiguate"
+      },
+      {
+        "attempt": 2,
+        "strategy": "Add _root_ prefix; let inferInstance discover MonoidalCategoryStruct",
+        "code_tried": "(_root_.PresheafOfModules.sheafification (𝟙 X.ringCatSheaf.obj)).obj\n    ((Modules.toPresheafOfModules X).obj M ⊗ (Modules.toPresheafOfModules X).obj N)",
+        "line_number": "60-66 region",
+        "lean_error": "failed to synthesize instance of type class MonoidalCategoryStruct (_root_.PresheafOfModules X.ringCatSheaf.obj)",
+        "goal_before": "X.Modules",
+        "goal_after": "(instance synth failure)",
+        "result": "failed",
+        "insight": "Mathlib's PresheafOfModules.monoidalCategoryStruct is registered on the form `PresheafOfModules (R ⋙ forget₂ CommRingCat RingCat)`. X.ringCatSheaf.obj IS that form definitionally via sheafCompose, but not syntactically — inferInstance does not match"
+      },
+      {
+        "attempt": 3,
+        "strategy": "Add letI + show shadow to expose the syntactic form Mathlib's instance is registered on",
+        "code_tried": "noncomputable def tensorObj (M N : X.Modules) : X.Modules :=\n  letI : MonoidalCategoryStruct (_root_.PresheafOfModules.{u} X.ringCatSheaf.obj) :=\n    show MonoidalCategoryStruct\n      (_root_.PresheafOfModules.{u} (X.sheaf.obj ⋙ forget₂ CommRingCat.{u} RingCat.{u})) from\n      inferInstance\n  (_root_.PresheafOfModules.sheafification (𝟙 X.ringCatSheaf.obj)).obj\n    ((Modules.toPresheafOfModules X).obj M ⊗ (Modules.toPresheafOfModules X).obj N)",
+        "line_number": "60-66 (final file)",
+        "lean_error": null,
+        "goal_before": "X.Modules",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "the `show MonoidalCategoryStruct (_root_.PresheafOfModules.{u} (X.sheaf.obj ⋙ forget₂ CommRingCat.{u} RingCat.{u})) from inferInstance` matches Mathlib's registered form, then `letI` binds the instance on the project-side form X.ringCatSheaf.obj; outer `⊗` infers through; all remaining instance lookups (locally-bijective, HasWeakSheafify, WEqualsLocallyBijective) resolve automatically"
+      }
+    ],
+    "next_steps": "Closed. The remaining 2 sorries on instMonoidalCategoryStruct and instMonoidalCategory are the next-iter target — they reduce to a single MorphismProperty.IsMonoidal instance for the inverseImage class of `sheafification`."
+  },
+  {
+    "timestamp": "2026-05-12T18:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Modules/Monoidal.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.instMonoidalCategoryStruct"
+    },
+    "session": {
+      "id": "session_78",
+      "model": "claude-opus-4-x"
+    },
+    "findings": {
+      "blocker": "Naïve anonymous-constructor `{ tensorObj := ...; whiskerLeft := ...; ...; associator := …; leftUnitor := …; rightUnitor := … }` cannot fill the iso fields: tensorObj (tensorObj M N) K ≅ tensorObj M (tensorObj N K) unfolds to L (F (L (F M ⊗ F N)) ⊗ F K) ≅ L (F M ⊗ F (L (F N ⊗ F K))); these are connected by sheafification's monad unit η : 1 ⟹ F ∘ L, not by an iso. Same for left/right unitors. Resolution: route through LocalizedMonoidal",
+      "key_lemmas_used": [
+        "(off-the-shelf, not yet invoked) CategoryTheory.LocalizedMonoidal",
+        "(off-the-shelf, not yet invoked) Localization.Monoidal.monoidalCategoryStruct",
+        "(off-the-shelf, not yet invoked) Adjunction.isLocalization",
+        "(missing gap-fill) MorphismProperty.IsMonoidal for (isomorphisms _).inverseImage sheafification"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Direct anonymous-constructor `{...}` filling each field via sheafification of presheaf-side data: tensorObj := tensorObj X, tensorUnit := L.obj (𝟙_ _), whiskerLeft := L.map (F.obj M ◁ F.map f), etc.",
+        "code_tried": "noncomputable instance instMonoidalCategoryStruct : MonoidalCategoryStruct (X.Modules) where\n  tensorObj := tensorObj X\n  tensorUnit := L.obj (𝟙_ _)\n  whiskerLeft M _ _ f := L.map (F.obj M ◁ F.map f)\n  whiskerRight f N := L.map (F.map f ▷ F.obj N)\n  tensorHom f g := L.map (F.map f ⊗ₘ F.map g)\n  associator := ?  -- stuck\n  leftUnitor := ?\n  rightUnitor := ?",
+        "line_number": "L111-112 in final file",
+        "lean_error": "naïve Iso.refl / L.map (α_ _ _ _).hom etc. all fail type-checking: source/target objects don't match because the sheaf-side iso's source is `L (F (L (F M ⊗ F N)) ⊗ F K)` but the presheaf-side iso's source is `(F M ⊗ F N) ⊗ F K` — the inner F (L _) is not the identity",
+        "goal_before": "MonoidalCategoryStruct (X.Modules)",
+        "goal_after": "(2 sorries: this and instMonoidalCategory)",
+        "result": "failed",
+        "insight": "the data fields (tensorObj, whiskers, tensorHom, unit) ARE typeable via sheafification of presheaf data; the iso fields (associator, unitors) are NOT — they require the monad unit η:1⟹F∘L to bridge"
+      },
+      {
+        "attempt": 2,
+        "strategy": "Architectural pivot: use CategoryTheory.Localization.Monoidal.Basic with L := sheafification and W := (isomorphisms _).inverseImage L; off-the-shelf Adjunction.isLocalization (right adjoint Full+Faithful at Sheafification.lean:168,171) gives L.IsLocalization W; LocalizedMonoidal then provides the full monoidal structure; instance becomes inferInstance/single-line definitional rewrite",
+        "code_tried": "(not yet committed) — would require first supplying `instance : ((MorphismProperty.isomorphisms ...).inverseImage sheafification).IsMonoidal`",
+        "line_number": "L111-112 region",
+        "lean_error": "not yet attempted; documented in task report as iter-079 next step",
+        "goal_before": "MonoidalCategoryStruct (X.Modules)",
+        "goal_after": "(same — sorry retained pending the IsMonoidal gap-fill)",
+        "result": "partial",
+        "insight": "the LocalizedMonoidal path is the canonical resolution; once the single MorphismProperty.IsMonoidal instance is supplied, both this and instMonoidalCategory close via inferInstance"
+      }
+    ],
+    "next_steps": "Iter-079: write the single-instance gap-fill `instance : ((MorphismProperty.isomorphisms (SheafOfModules X.ringCatSheaf)).inverseImage (PresheafOfModules.sheafification (𝟙 X.ringCatSheaf.obj))).IsMonoidal` (proof body: MorphismProperty.IsMonoidal.mk' + colimit-preservation of sheafification as a left adjoint). Then instMonoidalCategoryStruct = inferInstance via LocalizedMonoidal; instMonoidalCategory = inferInstanceAs (MonoidalCategory (LocalizedMonoidal L W (Iso.refl _))). Mathlib precedent: CategoryTheory.Sheaf.monoidalCategory pattern at Sites/Monoidal.lean:165."
+  },
+  {
+    "timestamp": "2026-05-12T18:30:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Modules/Monoidal.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.instMonoidalCategory"
+    },
+    "session": {
+      "id": "session_78",
+      "model": "claude-opus-4-x"
+    },
+    "findings": {
+      "blocker": "Gated on instMonoidalCategoryStruct landing",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Deferred — would be `inferInstanceAs (MonoidalCategory (LocalizedMonoidal (L := sheafification _) (W := …) (Iso.refl _)))` once the struct lands via LocalizedMonoidal",
+        "code_tried": "(not attempted — depends on previous milestone)",
+        "line_number": "L124",
+        "lean_error": null,
+        "goal_before": "MonoidalCategory (X.Modules)",
+        "goal_after": "(sorry retained)",
+        "result": "partial",
+        "insight": "downstream of instMonoidalCategoryStruct via the LocalizedMonoidal route"
+      }
+    ],
+    "next_steps": "Same iter-079 step closes both: write the IsMonoidal gap-fill, then both instances drop out by inferInstance/inferInstanceAs."
+  }
+]

@@ -1,0 +1,112 @@
+[
+  {
+    "timestamp": "2026-05-20T11:01:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "snd_left_isClosedMap"
+    },
+    "session": {
+      "id": "session_158",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "CategoryTheory.Over.snd_left",
+        "AlgebraicGeometry.IsProper.toUniversallyClosed",
+        "AlgebraicGeometry.universallyClosed_isStableUnderBaseChange",
+        "CategoryTheory.MorphismProperty.IsStableUnderBaseChange.of_isPullback",
+        "CategoryTheory.IsPullback.of_hasPullback",
+        "AlgebraicGeometry.Scheme.Hom.isClosedMap"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Bridge 1 (closed-map step): rewrite (snd X Y).left as Limits.pullback.snd X.hom Y.hom via Over.snd_left (exact rewrite), then transport UniversallyClosed X.hom across the canonical pullback square via universallyClosed_isStableUnderBaseChange.of_isPullback, then Scheme.Hom.isClosedMap.",
+        "code_tried": "haveI hp : UniversallyClosed X.hom := IsProper.toUniversallyClosed\nhaveI : UniversallyClosed (snd X Y).left := by\n  rw [Over.snd_left]\n  exact universallyClosed_isStableUnderBaseChange.of_isPullback (IsPullback.of_hasPullback X.hom Y.hom) hp\nexact Scheme.Hom.isClosedMap _",
+        "line_number": "83",
+        "result": "success",
+        "insight": "Over.snd_left makes (snd X Y).left = pullback.snd X.hom Y.hom an EXACT rewrite (the monoidal tensor on Over S IS the chosen pullback). GOTCHA: inferInstance synthesises UniversallyClosed (pullback.snd f g) for abstract f g with bound [UniversallyClosed f] but FAILS for X.hom/Y.hom from Over (Spec k); must apply of_isPullback explicitly. lean_verify axioms = {propext, Classical.choice, Quot.sound} (NO sorryAx) — genuinely complete."
+      }
+    ],
+    "next_steps": "Reusable bridge; plan/blueprint may add a \\lean{} hint as a sub-lemma of lem:rigidity_eqOn_dense_open."
+  },
+  {
+    "timestamp": "2026-05-20T11:01:30Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "rigidity_eqOn_dense_open"
+    },
+    "session": {
+      "id": "session_158",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Two isolated TRUE-as-stated sorries remain: (1) hfib — fibre of pullback.snd over a k-bar-rational point lies in the section image (needs a BUILT lemma, no off-the-shelf Mathlib); (2) the agreement equation (bridge 2, relative affine-constancy / proper-into-affine-is-constant on U=X×V).",
+      "key_lemmas_used": [
+        "snd_left_isClosedMap",
+        "AlgebraicGeometry.exists_isAffineOpen_mem_and_subset",
+        "CategoryTheory.Limits.lift_snd",
+        "AlgebraicGeometry.Scheme.Hom.comp_apply",
+        "CategoryTheory.Over.comp_left"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Wire the full Mumford construction: closed G = p₂(f⁻¹(Z∖U₀)) via snd_left_isClosedMap; affine open U₀∋z₀ via exists_isAffineOpen_mem_and_subset (U:=⊤); V=Y∖G open; U=p₂⁻¹V; chosen k-bar point via Subsingleton (Spec k-bar) + Inhabited; non-emptiness witness s(x₀) with s the slice section.",
+        "code_tried": "have hclosed : IsClosedMap (snd X Y).left.base := snd_left_isClosedMap\n... set Gset := (snd X Y).left.base '' (f.left.base ⁻¹' (U₀ : Set Z.left)ᶜ)\nhave hG : IsClosed Gset := hclosed _ (U₀.isOpen.isClosed_compl.preimage f.left.base.hom.2)\n... refine ⟨⟨_, hUopen⟩, ⟨s.base x₀pt, ?_⟩, ?_⟩",
+        "line_number": "126-181",
+        "result": "partial",
+        "insight": "Construction wires fully and builds green. Non-emptiness reduced to a single crisp fact hfib and CLOSED modulo it — genuinely consuming _hf: hy₀ proves y₀pt ∉ Gset by hcomp := congrArg Over.Hom.left _hf (the slice f(s x)=z₀∈U₀). _hf is no longer a dead hypothesis (this repairs the iter-157 laundering)."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Discharge hfib (every point of slice p₂⁻¹{y₀} is in range of section s) via pullback-fibre topology over a k-bar-rational point.",
+        "code_tried": "have hfib : (snd X Y).left.base ⁻¹' {y₀pt} ⊆ Set.range s.base := sorry",
+        "line_number": "154",
+        "lean_error": "no off-the-shelf lemma; located API: Scheme.Pullback.carrierEquiv, Scheme.Pullback.Triplet/.tensor, Scheme.Pullback.exists_preimage_of_isPullback (existence only, not uniqueness)",
+        "result": "failed",
+        "insight": "TRUE but needs a BUILT lemma: y₀ is a section of Y.hom so κ(y₀pt)=k-bar; fibre point ≃ Triplet (x,y₀pt,s) × Spec(κ(x)⊗_{k-bar}k-bar)=Spec(field)=pt, determined by x-coord = s x. Missing glue: (a) residue field = k-bar from section, (b) tensor is a field ⟹ Subsingleton (Spec T.tensor), (c) feed through carrierEquiv."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Discharge bridge 2 (the agreement equation): on U=X×V each proper slice X×{y} maps into affine U₀ hence to a single point f(x₀,y), so f factors through p₂ on U.",
+        "code_tried": "U.ι ≫ f.left = U.ι ≫ (lift (toUnit (X ⊗ Y) ≫ x₀) (snd X Y) ≫ f).left  -- sorry",
+        "line_number": "181",
+        "lean_error": "needs a BUILT relative result; Mathlib has the absolute facts (isField_of_universallyClosed, finite_appTop_of_universallyClosed under LocallyOfFiniteType) but assembling into a scheme-morphism equality on U is the relative 'proper + geom-connected fibres ⟹ p₂,*O=O_V' / Stein-factorisation content",
+        "result": "failed",
+        "insight": "The genuine deep heart of the chain. Necessary regardless of route; shared with Route A's Albanese UP. Not throwaway."
+      }
+    ],
+    "next_steps": "Per progress-critic binding fallback: dispatch a mathlib-analogist consult scoped to the two BUILT lemmas (hfib pullback-fibre; bridge-2 relative affine-constancy) BEFORE another blind prover round. Located Mathlib entry points are in task_results."
+  },
+  {
+    "timestamp": "2026-05-20T10:58:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "rigidity_snd_lift"
+    },
+    "session": {
+      "id": "session_158",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Pre-existing (iter-157) axiom-clean helper; this iter only appended the snd_left_isClosedMap docstring/helper after it. No proof change.",
+        "code_tried": "ext1 <;> simp",
+        "line_number": "64",
+        "result": "success",
+        "insight": "Unchanged this iter; remains sorryAx-free."
+      }
+    ],
+    "next_steps": "None — closed."
+  }
+]

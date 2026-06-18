@@ -1,0 +1,153 @@
+[
+  {
+    "timestamp": "2026-06-18T03:51:17Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/FlatBaseChangeGlobal.lean",
+      "theorem": "AlgebraicGeometry.Modules.baseChangeGammaPullbackEquiv"
+    },
+    "session": {
+      "id": "session_1",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Capstone signature lacks [CompactSpace X] [QuasiSeparatedSpace X] required by thm:fbcb_global_direct; per-chart core also needs affineBaseChange_pushforward_iso which is sorry in FlatBaseChange.lean (not owned). Net sorry 1->1 (relocated/narrowed).",
+      "key_lemmas_used": [
+        "baseChangeGammaEquiv",
+        "gammaTopEquivEqLocus",
+        "pullbackGroundRingAlg",
+        "ModuleCat.restrictScalars",
+        "TopologicalSpace.Opens.map_iSup"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Decompose capstone into sorry-free composite baseChangeGammaEquiv F U hU B ≪≪ₗ baseChangeEqLocusToPullbackGamma; cover = X.affineCover",
+        "code_tried": "noncomputable def baseChangeGammaPullbackEquiv ... := baseChangeGammaEquiv F U hU B ≪≪ₗ baseChangeEqLocusToPullbackGamma F U hU B",
+        "line_number": "328",
+        "lean_error": "none (compiles)",
+        "result": "success",
+        "insight": "Capstone now carries NO top-level sorry; obligation pushed into new helper. OpenCover fields .f/.I₀ in this pin; OpenCover.iSup_opensRange gives hU."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Build base-changed cover U' iSup=⊤ via rw [← Opens.map_iSup]",
+        "code_tried": "rw [← TopologicalSpace.Opens.map_iSup, hU, TopologicalSpace.Opens.map_top]",
+        "line_number": "approx 297",
+        "lean_error": "rw fails HO-matching the ∘-form",
+        "result": "failed",
+        "insight": "Rewrite forward instead: have hmap := map_iSup ...; rw [hU, map_top] at hmap; exact hmap.symm."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Transport eX' to B-linear via LinearEquiv.restrictScalars B",
+        "code_tried": "(eX'.symm.restrictScalars B).trans ...",
+        "line_number": "303",
+        "lean_error": "typeclass instance problem is stuck (no IsScalarTower B (groundRing X') _)",
+        "result": "failed",
+        "insight": "B acts only through pullbackGroundRingAlg; LinearEquiv.restrictScalars unavailable."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Transport via ModuleCat.restrictScalars functor mapIso + ofSelfIso",
+        "code_tried": "((ModuleCat.restrictScalars (pullbackGroundRingAlg B)).mapIso (eX'.symm.toModuleIso ≈≈ ModuleCat.ofSelfIso _)).toLinearEquiv",
+        "line_number": "307",
+        "lean_error": "Unknown constant ModuleCat.ofSelfIso",
+        "result": "failed",
+        "insight": "ofSelfIso absent in this pin; ModuleCat.of R ↑M is defeq M so it is not needed."
+      },
+      {
+        "attempt": 5,
+        "strategy": "Drop ofSelfIso; transportC = restrictScalars functor mapIso of eX'.symm.toModuleIso",
+        "code_tried": "have transportC := (((ModuleCat.restrictScalars (pullbackGroundRingAlg B)).mapIso eX'.symm.toModuleIso).toLinearEquiv); ... exact (sorry) ≪≪ₗ transportC",
+        "line_number": "307-312",
+        "lean_error": "none (compiles); lone sorry remains at L312",
+        "result": "partial",
+        "insight": "Piece (c) restriction-of-scalars transport DONE. Remaining sorry narrowed to per-chart leg-identification (a)+(b), type-pinned by transportC."
+      }
+    ],
+    "next_steps": "Planner: ratify signature change adding [CompactSpace X] [QuasiSeparatedSpace X] to baseChangeGammaPullbackEquiv + helper, switch cover to finite affine cover (exists_finite_affineCover_inter_isQuasiCompact). Then prove affineBaseChange_pushforward_iso in FlatBaseChange.lean (prerequisite). Add blueprint block for baseChangeEqLocusToPullbackGamma."
+  },
+  {
+    "timestamp": "2026-06-18T03:51:17Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "AlgebraicGeometry.sectionGradedRing_gcommSemiring"
+    },
+    "session": {
+      "id": "session_1",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "4 cast-mediated coherence Eqs (sectionsMul_one_mul/_mul_one/_mul_assoc/_mul_comm = lem:sectionMul_coherent) remain sorry; assembly instance compiles but transitively depends on these sorries (not a complete proof yet). sectionsMul_one_mul rfl-split whnf-timeouts at 200000 heartbeats.",
+      "key_lemmas_used": [
+        "sectionsCast",
+        "sectionsCast_refl",
+        "gradedMonoid_eq_of_cast",
+        "gMul_def",
+        "sectionsCast_eqToIso_cancel",
+        "TensorProduct.add_tmul",
+        "DirectSum.GCommSemiring"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "sectionsCast via match on rfl; sectionsCast_refl by rfl; gradedMonoid_eq_of_cast by obtain/subst",
+        "code_tried": "match j, h with | _, rfl => LinearEquiv.refl _ _   ;  sectionsCast_refl := rfl  ;  gradedMonoid_eq_of_cast: obtain rfl: i=j := h; rw [sectionsCast_refl, refl_apply] at h2; subst h2; rfl",
+        "line_number": "approx 1700",
+        "lean_error": "none",
+        "result": "success",
+        "insight": "All 3 axiom-clean (propext/Classical.choice/Quot.sound only). Closed 3 of the 5 bricks."
+      },
+      {
+        "attempt": 2,
+        "strategy": "GMul.mul = Γ(μ_{i,j}) ∘ sectionsMul on a ⊗ₜ b; tmul over CommRingCat ringCatSheaf carrier",
+        "code_tried": "((tensorPowAdd L i j).hom.val.app (op ⊤)).hom ((sectionsMul ...).hom (a ⊗ₜ[↑(X.ringCatSheaf.obj.obj (op ⊤))] b))",
+        "line_number": "approx 1760",
+        "lean_error": "build failed: CommSemiring synthesis on ringCatSheaf carrier fails",
+        "result": "failed",
+        "insight": "tmul scalar ring must be CommRingCat ↑(X.sheaf.obj.obj ⊤) (only it carries CommSemiring), NOT the RingCat ringCatSheaf carrier."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Fix GMul.mul tmul ring to X.sheaf carrier; GOne.one = (1 : ringCatSheaf carrier)",
+        "code_tried": "a ⊗ₜ[↑(X.sheaf.obj.obj (op ⊤))] b ; GOne.one := (1 : ↑(X.ringCatSheaf.obj.obj (op ⊤)))",
+        "line_number": "approx 1760",
+        "lean_error": "none",
+        "result": "success",
+        "insight": "Closed bricks 4+5. sectionDeg L 0 defeq the ring carrier via PresheafOfModules.unit."
+      },
+      {
+        "attempt": 4,
+        "strategy": "GSemiring bilinearity mul_add/add_mul via standalone TensorProduct.tmul_add/add_tmul rewrites",
+        "code_tried": "rw [gMul_def, gMul_def, gMul_def, TensorProduct.tmul_add, map_add, map_add]",
+        "line_number": "1897-1899",
+        "lean_error": "rewrite failed: Did not find an occurrence of 0 ⊗ₜ pattern / made no progress (ring stays metavar ?m)",
+        "result": "failed",
+        "insight": "Value-ModuleCat diamond: tmul ring keyed CommRingCat but Module instance keyed RingCat (defeq, different keys). Standalone tmul rewrites fail."
+      },
+      {
+        "attempt": 5,
+        "strategy": "WORKING IDIOM: peel ModuleCat.Hom.hom with ← map_add, congr 2, exact TensorProduct.add_tmul; for zero fields expose RHS 0 = f (g 0) via conv_rhs",
+        "code_tried": "rw [gMul_def, gMul_def, gMul_def, ← map_add, ← map_add]; congr 2; exact TensorProduct.tmul_add a b c   (and dual for add_mul, mul_zero, zero_mul)",
+        "line_number": "1891-1907",
+        "lean_error": "none",
+        "result": "success",
+        "insight": "exact elaborates the lemma against the goal's bundled instances (expected-type-driven), sidestepping fresh CommRing synthesis. All 4 bilinearity fields + 2 zero fields close. instGSemiring/instGCommSemiring/sectionGradedRing_gcommSemiring assemble and compile."
+      },
+      {
+        "attempt": 6,
+        "strategy": "sectionsMul_one_mul: rw [gMul_def] then split Γ(μ_{0,n})(s)=Γ(B)(Γ(A)(s)) by := rfl and cancel reindex via sectionsCast_eqToIso_cancel",
+        "code_tried": "rw [gMul_def]; (split via rfl) then sectionsCast_eqToIso_cancel",
+        "line_number": "1876",
+        "lean_error": "(deterministic) timeout at whnf, 200000 heartbeats",
+        "result": "failed",
+        "insight": "rfl-split unfolds tensorPowAdd match through whole sheafification composite; kernel too large. Cancellation half (sectionsCast_eqToIso_cancel) IS proven; the rfl-split must instead use explicit Iso.trans_hom + SheafOfModules.comp_val + term-mode ModuleCat comp-apply. Reverted to documented sorry."
+      }
+    ],
+    "next_steps": "Next prover: (1) prove functor-composition split lemma Γ((A≪≪B).hom)(s)=Γ(B.hom)(Γ(A.hom)(s)) at .val.app ⊤ WITHOUT rfl (Iso.trans_hom + SheafOfModules.comp_val + term-mode); this unblocks sectionsMul_one_mul via sectionsCast_eqToIso_cancel. (2) prove unitor-η core Γ(λ_)(η(1⊗a))=a. (3) mul_one/mul_assoc/mul_comm need presheaf strict-monoidal + η-naturality. PREREQ for all: the split lemma in (1)."
+  }
+]

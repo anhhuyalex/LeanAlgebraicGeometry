@@ -1,0 +1,67 @@
+[
+  {
+    "timestamp": "2026-05-20T04:26:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cotangent/ChartAlgebra.lean",
+      "theorem": "constants_integral_over_base_field"
+    },
+    "session": {
+      "id": "session_153",
+      "model": "opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "GeometricallyIrreducible.irreducibleSpace_of_subsingleton",
+        "isIntegral_of_irreducibleSpace_of_isReduced",
+        "isField_of_universallyClosed",
+        "finite_appTop_of_universallyClosed",
+        "RingHom.finite_respectsIso",
+        "Algebra.IsIntegral.of_finite",
+        "IsAlgClosed.algebraMap_bijective_of_isIntegral",
+        "RingHom.range_eq_top",
+        "Function.Surjective.of_comp"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "iter-152 alg-closed three-step collapse: (1) X integral (irreducibleSpace_of_subsingleton + isIntegral_of_irreducibleSpace_of_isReduced) so Gamma(X) is a field via isField_of_universallyClosed; (2) properness gives appTop finite hence integral over k via finite_appTop_of_universallyClosed transferred across GammaSpecIso by RingHom.finite_respectsIso.2; (3) IsAlgClosed.algebraMap_bijective_of_isIntegral gives algebraMap bijective hence range = top, surjectivity of f.appTop.hom recovered via Function.Surjective.of_comp",
+        "code_tried": "set f := X ↓ Spec (CommRingCat.of k); haveI : IrreducibleSpace X := GeometricallyIrreducible.irreducibleSpace_of_subsingleton f; haveI : IsIntegral X := isIntegral_of_irreducibleSpace_of_isReduced X; letI : Field Γ(X, ⊤) := (isField_of_universallyClosed k f).toField; let F := (Scheme.ΓSpecIso (CommRingCat.of k)).inv ≫ f.appTop; have hFinF : F.hom.Finite := by apply RingHom.finite_respectsIso.2 (e := (Scheme.ΓSpecIso (CommRingCat.of k)).symm.commRingCatIsoToRingEquiv); exact finite_appTop_of_universallyClosed k f; ...; have hbij := IsAlgClosed.algebraMap_bijective_of_isIntegral; rw [RingHom.range_eq_top]; ...; exact hFsurj.of_comp",
+        "line_number": "508",
+        "lean_error": null,
+        "result": "success",
+        "insight": "RingHom.finite_respectsIso.2 precomposes finiteness by a ring iso — exact analogue of the isIntegral_respectsIso.2 step in the Mathlib isField_of_universallyClosed proof. F.hom = f.appTop.hom.comp (ΓSpecIso).inv.hom holds by rfl. Subsingleton (Spec (.of k)) is an available instance so irreducibleSpace_of_subsingleton needs no manual haveI. ~25-30 LOC; axiom-clean (propext, Classical.choice, Quot.sound; no sorryAx, verified)."
+      }
+    ],
+    "next_steps": "CLOSED. The [IsAlgClosed k] pivot is validated by this closure. No further work on this lemma."
+  },
+  {
+    "timestamp": "2026-05-20T04:26:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cotangent/ChartAlgebra.lean",
+      "theorem": "KaehlerDifferential.mem_range_algebraMap_of_D_eq_zero"
+    },
+    "session": {
+      "id": "session_153",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Mathlib gap (snapshot b80f227): the load-bearing FT.3 lemma is ABSENT — for a separably generated field extension K/k (char 0, finitely generated), ker(KaehlerDifferential.D k K) equals the relative algebraic closure of k in K (the field of constants). No such kernel-description lemma exists in Mathlib.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Close blueprint step FT.3: ker d_{Frac B / k} = relative algebraic closure of k in K, combined with FT.2 (k alg-closed in K from [IsAlgClosed k]+[IsDomain B]) gives ker d = k. Searched Mathlib for the kernel-description lemma.",
+        "code_tried": "(no code edit — bright-line search-only per PROGRESS.md objective (b))",
+        "line_number": "427",
+        "lean_error": null,
+        "result": "failed",
+        "insight": "loogle `KaehlerDifferential.D _ _ ?x = 0` -> empty. Differential.ContainConstants / mem_range_of_deriv_eq_zero is for an ABSTRACT single derivation B->B (Differential B instance), not the universal Kahler derivation K -> Omega[K/k]; only shipped instance is trivial ContainConstants A A. Algebra.FormallyUnramified.iff_isSeparable + Subsingleton Omega[L/K] only cover the ALGEBRAIC (EssFiniteType) case where Omega=0; the function field K=Frac B has positive transcendence degree so does not apply. Mathlib.RingTheory.Smooth.Field gives FormallySmooth for separably-generated extensions but exposes NO basis of Omega[K/k] from a separating transcendence basis and NO kernel description."
+      }
+    ],
+    "next_steps": "BRIGHT-LINE STOP per STRATEGY.md. Do NOT re-dispatch a prover with a cosmetic recipe variation. iter-154 should dispatch mathlib-analogist (cross-domain) on the 'ker d = field of constants for separable field extensions' shape. Suggested assembly route: build FT.3 from a separating transcendence basis {t_j} making Omega[K/k] free on {d t_j} (cotangent exact sequence k -> k(t) -> K with Omega[K/k(t)]=0 for the separable-algebraic top via FormallyUnramified), then d x = 0 forces x algebraic over k(t) and (char 0) over k, then [IsAlgClosed k] => x in k. ~research-grade."
+  }
+]

@@ -1,0 +1,161 @@
+[
+  {
+    "timestamp": "2026-05-30T19:37:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.tensorObj_restrict_iso"
+    },
+    "session": {
+      "id": "session_217",
+      "model": "claude-opus (fine-grained)"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "restrictFunctorIsoPullback",
+        "SheafOfModules.sheafificationCompPullback",
+        "sheafification.mapIso",
+        "PresheafOfModules.pushforwardPushforwardAdj",
+        "Adjunction.leftAdjointUniq",
+        "PresheafOfModules.pullbackPushforwardAdjunction",
+        "PresheafOfModules.restrictScalarsMonoidalOfBijective",
+        "Functor.Monoidal.μIso",
+        "pushforward₀OfCommRingCat"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Step 1-3: reduce the substrate-iso goal to the presheaf-level goal (pullback φ).obj(M.val ⊗ₚ N.val) ≅ (M.restrict f).val ⊗ₚ (N.restrict f).val",
+        "code_tried": "refine (restrictFunctorIsoPullback f).app _ ≪≫ ?_ ; SheafOfModules.sheafificationCompPullback ; sheafification.mapIso ?_",
+        "line_number": "1259-1290",
+        "result": "success",
+        "insight": "Steps 1-3 are all Mathlib decls; only Step 4 (H1+H2) is the genuine obligation"
+      },
+      {
+        "attempt": 2,
+        "strategy": "H1: build presheaf-level pushforwardNatTrans / pushforwardCongr / pushforwardPushforwardAdj by de-sheafifying Sheaf/PushforwardContinuous.lean (L154/L73/L226)",
+        "code_tried": "noncomputable def pushforwardPushforwardAdj : pushforward φ ⊣ pushforward ψ where unit/counit assembled from pushforwardNatTrans + pushforwardCongr + pushforwardComp/Id",
+        "line_number": "836-915",
+        "result": "success",
+        "insight": "Every line of the sheaf template manipulates .val/.val.presheaf data, so de-sheafification is mechanical (drop the Sheaf wrapper + IsContinuous letI)"
+      },
+      {
+        "attempt": 3,
+        "strategy": "discharge the H₁/H₂ unit-triangle defeq goal for the open immersion",
+        "code_tried": "exact congr($h0 x) where h0 : (f.appIso U.unop).inv ≫ f.app _ ≫ Y.presheaf.map (eqToHom ...).op = 𝟙 _",
+        "line_number": "~1265",
+        "lean_error": "lean_multi_attempt: 'unexpected identifier; expected command' / failed forms of congr($h0 x)",
+        "result": "failed",
+        "insight": "the hand-rolled h0 lemma is brittle; Mathlib already supplies f.appIso_inv_app_presheafMap"
+      },
+      {
+        "attempt": 4,
+        "strategy": "replace hand-rolled triangle with the Mathlib lemma",
+        "code_tried": "ext U x; exact congr($(f.appIso_inv_app_presheafMap U.unop) x)",
+        "line_number": "~1265",
+        "result": "success",
+        "insight": "f.app_appIso_inv and f.appIso_inv_app_presheafMap discharge H₁/H₂ verbatim, mirroring Mathlib's sheaf restrictAdjunction"
+      },
+      {
+        "attempt": 5,
+        "strategy": "keep φR / β / adjunction as opaque `set`/`have` bindings",
+        "code_tried": "set φR := (Scheme.Hom.toRingCatSheafHom f).hom with hφR ; have adj := ...",
+        "line_number": "~1245",
+        "lean_error": "adj.unit becomes opaque → congr defeq fails on the triangle goals",
+        "result": "failed",
+        "insight": "GOTCHA: φR/β must be `let` (zeta-transparent) and the open-immersion adjunction f.isOpenEmbedding.isOpenMap.adjunction must be INLINED — a have/set makes adj.unit opaque and breaks the congr defeq, exactly as in Mathlib's restrictAdjunction"
+      },
+      {
+        "attempt": 6,
+        "strategy": "close H1 by uniqueness of left adjoints against the existing pullback-pushforward adjunction",
+        "code_tried": "let H1 := hadj.leftAdjointUniq (PresheafOfModules.pullbackPushforwardAdjunction φR)",
+        "line_number": "~1310",
+        "result": "success",
+        "insight": "pullbackPushforwardAdjunction ALREADY EXISTS (Presheaf/Pullback.lean:50) — H1 is one leftAdjointUniq call, NOT a re-derivation"
+      },
+      {
+        "attempt": 7,
+        "strategy": "H2 μIso: add local MonoidalCategory instances on the X.ringCatSheaf.obj base form, then build the tensorator there",
+        "code_tried": "haveI : MonoidalCategory (PresheafOfModules X.ringCatSheaf.obj) := inferInstanceAs (...) ; restrictScalarsMonoidalOfBijective β hβ",
+        "line_number": "~1330",
+        "lean_error": "(kernel) declaration type mismatch on tensorObj_restrict_iso._aux_81 (20 errors); the local MonoidalCategory on ringCatSheaf.obj produces a ⊗-vs-Monoidal.tensorObj instance DIAMOND that the kernel rejects",
+        "result": "failed",
+        "insight": "do NOT add local MonoidalCategory instances on the X.ringCatSheaf.obj form — kernel-rejected diamond"
+      },
+      {
+        "attempt": 8,
+        "strategy": "H2 μIso over the SYNTACTIC `_ ⋙ forget₂` form, then exact against the defeq goal",
+        "code_tried": "build Functor.Monoidal.μIso for pushforward₀OfCommRingCat F X.presheaf ⋙ restrictScalars β' over the syntactic base, exact (μIso ...).symm against the X.ringCatSheaf.obj goal (only defeq)",
+        "line_number": "1330-1340",
+        "result": "success",
+        "insight": "CRITICAL technique: build μIso where the MonoidalCategory instance is found canonically (syntactic `_ ⋙ forget₂`), then exact-match the goal whose base X.ringCatSheaf.obj is only DEFEQ; (pushforward β).obj M.val = (M.restrict f).val definitionally, so the final exact closes by defeq"
+      }
+    ],
+    "next_steps": "Linchpin CLOSED axiom-clean (project 81→80, first elimination in 7 iters). Next critical-path obligations: tensorObj_assoc_iso (L1152, gated on the vestigial isLocallyInjective_whiskerLeft_of_W L600), exists_tensorObj_inverse (L1375, ⊗-dual), tensorObjIsoclassCommMonoid (group law, not in this file), then PicSharp.addCommGroup_via_tensorObj (L1415)."
+  },
+  {
+    "timestamp": "2026-05-30T19:25:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "PresheafOfModules.pushforwardPushforwardAdj"
+    },
+    "session": {
+      "id": "session_217",
+      "model": "claude-opus (fine-grained)"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "pushforwardNatTrans",
+        "pushforwardCongr",
+        "pushforwardComp",
+        "pushforwardId",
+        "Scheme.Hom.app_appIso_inv",
+        "Scheme.Hom.appIso_inv_app_presheafMap"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "de-sheafify SheafOfModules.pushforwardPushforwardAdj (PushforwardContinuous.lean:226) to the presheaf level",
+        "code_tried": "unit/counit = (pushforwardId/Comp).inv/hom ≫ pushforwardNatTrans (𝟙/_) adj.counit/unit ≫ (pushforwardCongr (by simpa using H₁/H₂)).hom ≫ ...",
+        "line_number": "908-915",
+        "result": "success",
+        "insight": "the H1 linchpin; sole genuinely-Mathlib-absent ingredient. The two helper defs pushforwardNatTrans (L840) and pushforwardCongr (L871) are also new and axiom-clean."
+      }
+    ],
+    "next_steps": "Upstream-PR candidate (presheaf-level analogue of the sheaf API)."
+  },
+  {
+    "timestamp": "2026-05-30T19:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "PresheafOfModules.restrictScalarsMonoidalOfBijective"
+    },
+    "session": {
+      "id": "session_217",
+      "model": "claude-opus (fine-grained)"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "isIso_of_isIso_app",
+        "restrictScalars_isIso_μ_of_bijective",
+        "restrictScalars_isIso_ε_of_bijective",
+        "Functor.Monoidal.ofLaxMonoidal"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "presheaf-level strong-monoidal restrictScalars for sectionwise-bijective base change",
+        "code_tried": "Functor.Monoidal.ofLaxMonoidal over the file's lax instance; μ/ε isos via isIso_of_isIso_app + the closed restrictScalars_isIso_{μ,ε}_of_bijective",
+        "line_number": "958-965",
+        "result": "success",
+        "insight": "isIso_of_isIso_app (L940, sectionwise-iso ⇒ iso via isoMk) is the enabling helper; the def must carry @[implicit_reducible] (its type is the .Monoidal class)"
+      }
+    ],
+    "next_steps": "Presheaf-level H2; pairs with the module-level restrictScalarsMonoidalOfRingEquiv from iter-216."
+  }
+]

@@ -1,0 +1,135 @@
+[
+  {
+    "timestamp": "2026-05-21T03:36:30Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "hom_additive_decomp_of_rigidity"
+    },
+    "session": {
+      "id": "session_163",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "rigidity_lemma",
+        "GrpObj.comp_div",
+        "MonObj.comp_mul",
+        "MonObj.comp_one",
+        "Hom.one_def",
+        "Hom.mul_def",
+        "comp_lift",
+        "toUnit_unique",
+        "div_self'",
+        "div_eq_one"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Milne Cor 1.5 via the GrpObj-induced hom-group: form phi = h / ((p≫f)*(q≫g)); show phi collapses the complete V-axis to 1 (= _hf of rigidity_lemma) and vanishes on the {v0}×W section; rigidity factors phi = q≫g'; section forces g'=1; div_eq_one.mp gives the decomposition.",
+        "code_tried": "set φ := h / ((fst V W ≫ f) * (snd V W ≫ g)); rw [← Hom.one_def, hφ, GrpObj.comp_div, ← hf, MonObj.comp_mul, ..., ← Hom.one_def, mul_one, div_self']",
+        "line_number": "809-864",
+        "lean_error": "first attempt: `rewrite failed: Did not find an occurrence of the pattern ?X ◁ η ≫ μ in f / (f * 1) = 1` — mul_one/one_mul resolved to the MonObj monoid-object lemmas under `open MonObj`",
+        "result": "failed",
+        "insight": "Under `open MonObj`, `mul_one`/`one_mul` are AMBIGUOUS and resolve to MonObj.mul_one (η ▷ X ≫ μ = …), the monoid-object identities, not the ordinary group identities."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Disambiguate the group identities with the _root_ prefix.",
+        "code_tried": "..., ← Hom.one_def, _root_.mul_one, div_self'  (and _root_.one_mul for hcolW)",
+        "line_number": "848,853",
+        "lean_error": null,
+        "result": "success",
+        "insight": "_root_.mul_one / _root_.one_mul force the ordinary Group identities. Lemma landed sorry-free, axiom-clean {propext, Classical.choice, Quot.sound}."
+      }
+    ],
+    "next_steps": "Foundation for av_regularMap_isHom_of_zero (Cor 1.2) and the Prop 3.9 additive-defect-map argument. The GrpObj hom-group idiom (Hom.mul_def/comp_mul/comp_div + div_eq_one) is the reusable handle."
+  },
+  {
+    "timestamp": "2026-05-21T03:36:36Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "av_regularMap_isHom_of_zero"
+    },
+    "session": {
+      "id": "session_163",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "hom_additive_decomp_of_rigidity",
+        "lift_comp_one_right",
+        "lift_comp_one_left",
+        "Hom.mul_def",
+        "lift_fst_comp_snd_comp",
+        "Hom.one_def",
+        "toUnit_unique"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Milne Cor 1.2: apply Cor 1.5 to h := μ[A] ≫ α with V=W=A based at η[A]; both axis-restrictions reduce to α via monoid unit laws lift_comp_one_right/left; decomposition becomes μ[A]≫α = (α⊗ₘα)≫μ[B] (the mul_hom axiom); package as IsMonHom α (one_hom = pointed hyp hα).",
+        "code_tried": "have key := hom_additive_decomp_of_rigidity (V:=A)(W:=A)(A:=B) η[A] η[A] (μ[A]≫α) (by rw[← Category.assoc, hbase, hα]); rw [show lift (𝟙 A)(toUnit A ≫ η[A])≫μ[A]≫α = α by ..., show lift (toUnit A ≫ η[A])(𝟙 A)≫μ[A]≫α = α by ...] at key; exact { one_hom := hα, mul_hom := by rw [key, Hom.mul_def, lift_fst_comp_snd_comp] }",
+        "line_number": "879-903",
+        "lean_error": null,
+        "result": "success",
+        "insight": "Carries THREE extra instance hyps on A⊗A ([GeometricallyIrreducible/LocallyOfFiniteType (A⊗A).hom], [IsReduced (A⊗A).left]) that Cor 1.5 needs with V=W=A — true for AVs but Mathlib does not auto-derive product instances. IsMonHom is the canonical, more-reusable conclusion. Axiom-clean."
+      }
+    ],
+    "next_steps": "Both §I.3 additivity corollaries proven. Next genus-0 targets: rationalMap_to_av_extends (Thm 3.2, surface codim-1 gap, riskiest) and morphism_Ga_to_av_const (Prop 3.9 core), then the 3 deferred scaffolds."
+  },
+  {
+    "timestamp": "2026-05-21T03:36:36Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "morphism_P1_to_grpScheme_const"
+    },
+    "session": {
+      "id": "session_163",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "deferred genus-0 scaffold (sorry body L928); not in this iter's objectives"
+    },
+    "attempts": [],
+    "next_steps": "Stale docstring (L910-912) still claims base case rests on theorem of the cube — FALSE post iter-163 cube-excision; prover should refresh when this is picked up."
+  },
+  {
+    "timestamp": "2026-05-21T03:36:36Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "genusZero_curve_iso_P1"
+    },
+    "session": {
+      "id": "session_163",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "deferred genus-0 scaffold (sorry body L952); Riemann-Roch, no Mathlib RR; not in this iter's objectives"
+    },
+    "attempts": [],
+    "next_steps": "Parallel sub-build; not near-term."
+  },
+  {
+    "timestamp": "2026-05-21T03:36:36Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "rigidity_genus0_curve_to_grpScheme"
+    },
+    "session": {
+      "id": "session_163",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "deferred genus-0 headline scaffold (sorry body L981); assembles the other two scaffolds; not in this iter's objectives"
+    },
+    "attempts": [],
+    "next_steps": "Assembles morphism_P1_to_grpScheme_const + genusZero_curve_iso_P1; trivial once both close."
+  }
+]

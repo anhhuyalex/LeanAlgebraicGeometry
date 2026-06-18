@@ -1,0 +1,281 @@
+[
+  {
+    "timestamp": "2026-05-10T01:45:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/StructureSheafModuleK.lean",
+      "theorem": "CategoryTheory.Functor.const_additive"
+    },
+    "session": {
+      "id": "session_46",
+      "model": "anthropic-claude"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "Functor.const",
+        "Functor.Additive"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Plan-agent probe-confirmed body, instance with field map_add via intros; ext; rfl",
+        "code_tried": "instance Functor.const_additive {C : Type u} [Category.{v} C] {D : Type u₂} [Category.{v₂} D] [Preadditive D] : (Functor.const C : D ⥤ C ⥤ D).Additive where\n  map_add := by intros; ext; rfl",
+        "line_number": "47-49",
+        "lean_error": "",
+        "goal_before": "(Functor.const C : D ⥤ C ⥤ D).Additive",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "intros; ext; rfl reduces componentwise f + g = f + g."
+      }
+    ],
+    "next_steps": "Iter-047 Step 4.6: produce IsAffineHModuleVanishing k C (toModuleKSheaf C)."
+  },
+  {
+    "timestamp": "2026-05-10T01:45:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/StructureSheafModuleK.lean",
+      "theorem": "CategoryTheory.Functor.const_linear"
+    },
+    "session": {
+      "id": "session_46",
+      "model": "anthropic-claude"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "Functor.const",
+        "Functor.Linear",
+        "CategoryTheory.Linear"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Plan-agent probe-confirmed body, mirrors const_additive with map_smul",
+        "code_tried": "instance Functor.const_linear {C : Type u} [Category.{v} C] {D : Type u₂} [Category.{v₂} D] [Preadditive D] (R : Type*) [Semiring R] [CategoryTheory.Linear R D] : (Functor.const C : D ⥤ C ⥤ D).Linear R where\n  map_smul := by intros; ext; rfl",
+        "line_number": "54-58",
+        "lean_error": "",
+        "goal_before": "(Functor.const C : D ⥤ C ⥤ D).Linear R",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "[CategoryTheory.Linear R D] full-path qualification is load-bearing — bare [Linear R D] resolves to a different Linear class."
+      }
+    ],
+    "next_steps": "Iter-047 Step 4.6."
+  },
+  {
+    "timestamp": "2026-05-10T01:42:44Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/StructureSheafModuleK.lean",
+      "theorem": "CategoryTheory.Adjunction.left_adjoint_linear"
+    },
+    "session": {
+      "id": "session_46",
+      "model": "anthropic-claude"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "adj.homEquiv",
+        "adj.homEquiv_unit",
+        "Adjunction.left_adjoint_additive (Mathlib pattern reference)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Plan-agent probe-confirmed body using `include adj in lemma left_adjoint_linear ...` (per-declaration include syntax)",
+        "code_tried": "include adj in\nlemma left_adjoint_linear [G.Additive] [G.Linear R] : F.Linear R where\n  map_smul {X Y} f r := (adj.homEquiv _ _).injective (by\n    simp [adj.homEquiv_unit])",
+        "line_number": "69 (initial Edit-1)",
+        "lean_error": "unexpected token 'include'; expected 'lemma'",
+        "goal_before": "F.Linear R (with adj : F ⊣ G in scope as variable)",
+        "goal_after": "(parser failed before goal)",
+        "result": "failed",
+        "insight": "The `include adj in <decl>` per-declaration syntax is not accepted by Lean's parser in this context. The correct form is the section-style `include adj` standalone line, mirroring Mathlib's CategoryTheory/Adjunction/Additive.lean L36."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Replace `include adj in <decl>` with section-style `include adj` standalone line before the three Adjunction declarations",
+        "code_tried": "include adj\n\n/-- ... -/\nlemma left_adjoint_linear [G.Additive] [G.Linear R] : F.Linear R where\n  map_smul {X Y} f r := (adj.homEquiv _ _).injective (by\n    simp [adj.homEquiv_unit])",
+        "line_number": "66 + 72-74 (Edit-2)",
+        "lean_error": "",
+        "goal_before": "F.Linear R",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Section-style `include adj` mirrors Mathlib's pattern. Functionally equivalent — adj is now an explicit dependency for all three subsequent declarations in the namespace block. simp [adj.homEquiv_unit] closes via unit naturality + Linear.smul_comp / Linear.comp_smul default simp lemmas."
+      }
+    ],
+    "next_steps": "Iter-047 Step 4.6."
+  },
+  {
+    "timestamp": "2026-05-10T01:42:44Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/StructureSheafModuleK.lean",
+      "theorem": "CategoryTheory.Adjunction.right_adjoint_linear"
+    },
+    "session": {
+      "id": "session_46",
+      "model": "anthropic-claude"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "adj.homEquiv",
+        "adj.homEquiv_counit"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Same shape as left_adjoint_linear, using adj.homEquiv_counit instead of homEquiv_unit. Lands once Edit-2's section-style `include adj` is in place.",
+        "code_tried": "lemma right_adjoint_linear [F.Additive] [F.Linear R] : G.Linear R where\n  map_smul {X Y} f r := (adj.homEquiv _ _).symm.injective (by\n    simp [adj.homEquiv_counit])",
+        "line_number": "78-80",
+        "lean_error": "",
+        "goal_before": "G.Linear R",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Dual of left_adjoint_linear via .symm.injective — pure dualisation; Mathlib's right_adjoint_additive uses the same shape."
+      }
+    ],
+    "next_steps": "Iter-047 Step 4.6."
+  },
+  {
+    "timestamp": "2026-05-10T01:42:44Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/StructureSheafModuleK.lean",
+      "theorem": "CategoryTheory.Adjunction.homLinearEquiv"
+    },
+    "session": {
+      "id": "session_46",
+      "model": "anthropic-claude"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "adj.homAddEquiv",
+        "adj.homEquiv",
+        "adj.homEquiv_unit",
+        "Adjunction.left_adjoint_linear (project-local A3)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Plan-agent probe-confirmed body — anonymous-constructor { adj.homAddEquiv X Y with map_smul' := ... } with `change` exposing the underlying homEquiv form, then simp [adj.homEquiv_unit]. The `haveI : F.Linear R := adj.left_adjoint_linear R` line is load-bearing for the simp call.",
+        "code_tried": "noncomputable def homLinearEquiv [F.Additive] [G.Additive] [G.Linear R] (X : C₁) (Y : D₁) : (F.obj X ⟶ Y) ≃ₗ[R] (X ⟶ G.obj Y) :=\n  haveI : F.Linear R := adj.left_adjoint_linear R\n  { adj.homAddEquiv X Y with\n    map_smul' := fun r f => by\n      change adj.homEquiv _ _ (r • f) = r • adj.homEquiv _ _ f\n      simp [adj.homEquiv_unit] }",
+        "line_number": "88-94",
+        "lean_error": "",
+        "goal_before": "(F.obj X ⟶ Y) ≃ₗ[R] (X ⟶ G.obj Y)",
+        "goal_after": "no goals (axioms: [propext, Classical.choice, Quot.sound])",
+        "result": "success",
+        "insight": "The `change` tactic exposing adj.homEquiv _ _ (r • f) = r • adj.homEquiv _ _ f is essential — without it, simp cannot match the homAddEquiv-spelled goal against the homEquiv_unit simp lemma. The haveI for F.Linear R via left_adjoint_linear is load-bearing for the simp call to close."
+      }
+    ],
+    "next_steps": "Iter-047 Step 4.6."
+  },
+  {
+    "timestamp": "2026-05-10T01:43:47Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/StructureSheafModuleK.lean",
+      "theorem": "AlgebraicGeometry.Scheme.constantSheafGammaHom_linearEquiv"
+    },
+    "session": {
+      "id": "session_46",
+      "model": "anthropic-claude"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "sheafificationAdjunction",
+        "left_adjoint_linear",
+        "right_adjoint_linear",
+        "right_adjoint_additive",
+        "constantSheafΓAdj",
+        "Adjunction.homLinearEquiv (A5)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Plan-agent probe-confirmed body — five haveI lines build typeclass scaffolding (presheafToSheaf Linear via sheafificationAdjunction.left_adjoint_linear, constantSheaf Additive + Linear via unfold; infer_instance, Sheaf.Γ Additive + Linear via constantSheafΓAdj.right_adjoint_*), then (constantSheafΓAdj J _).homLinearEquiv k X F.",
+        "code_tried": "noncomputable def constantSheafGammaHom_linearEquiv (k : Type u) [Field k] {C : Type v} [Category.{u, v} C] (J : GrothendieckTopology C) [HasSheafify J (ModuleCat.{u} k)] [HasGlobalSectionsFunctor J (ModuleCat.{u} k)] (X : ModuleCat.{u} k) (F : Sheaf J (ModuleCat.{u} k)) : ((constantSheaf J _).obj X ⟶ F) ≃ₗ[k] (X ⟶ (Sheaf.Γ J _).obj F) :=\n  haveI : (presheafToSheaf J (ModuleCat.{u} k)).Linear k := (sheafificationAdjunction J _).left_adjoint_linear k\n  haveI : (constantSheaf J (ModuleCat.{u} k)).Additive := by unfold constantSheaf; infer_instance\n  haveI : (Sheaf.Γ J (ModuleCat.{u} k)).Additive := (constantSheafΓAdj J _).right_adjoint_additive\n  haveI : (constantSheaf J (ModuleCat.{u} k)).Linear k := by unfold constantSheaf; infer_instance\n  haveI : (Sheaf.Γ J (ModuleCat.{u} k)).Linear k := (constantSheafΓAdj J _).right_adjoint_linear k\n  (constantSheafΓAdj J _).homLinearEquiv k X F",
+        "line_number": "710-726",
+        "lean_error": "",
+        "goal_before": "((constantSheaf J _).obj X ⟶ F) ≃ₗ[k] (X ⟶ (Sheaf.Γ J _).obj F)",
+        "goal_after": "no goals (axioms: [propext, Classical.choice, Quot.sound])",
+        "result": "success",
+        "insight": "The five haveI lines are necessary because Lean's typeclass synthesis cannot independently bridge constantSheaf Linear from Functor.const Linear + sheafification Linear without explicit guidance through `unfold constantSheaf; infer_instance`. Reusable for any composed-functor enrichment propagation."
+      }
+    ],
+    "next_steps": "Iter-047 Step 4.6."
+  },
+  {
+    "timestamp": "2026-05-10T01:43:47Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/StructureSheafModuleK.lean",
+      "theorem": "AlgebraicGeometry.Scheme.homFromOne_linearEquiv"
+    },
+    "session": {
+      "id": "session_46",
+      "model": "anthropic-claude"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "ModuleCat.homLinearEquiv",
+        "LinearMap.ringLmapEquivSelf"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Plan-agent probe-confirmed body — direct one-liner combining ModuleCat.homLinearEquiv with LinearMap.ringLmapEquivSelf via .trans.",
+        "code_tried": "noncomputable def homFromOne_linearEquiv (k : Type u) [Field k] (M : ModuleCat.{u} k) : (ModuleCat.of k k ⟶ M) ≃ₗ[k] M :=\n  (ModuleCat.homLinearEquiv (M := ModuleCat.of k k) (N := M) (S := k)).trans (LinearMap.ringLmapEquivSelf k k M)",
+        "line_number": "733-736",
+        "lean_error": "",
+        "goal_before": "(ModuleCat.of k k ⟶ M) ≃ₗ[k] M",
+        "goal_after": "no goals (axioms: [propext, Classical.choice, Quot.sound])",
+        "result": "success",
+        "insight": "Both Mathlib pieces (ModuleCat.homLinearEquiv, LinearMap.ringLmapEquivSelf) exist and slot together via .trans directly — no haveI scaffolding needed."
+      }
+    ],
+    "next_steps": "Iter-047 Step 4.6."
+  },
+  {
+    "timestamp": "2026-05-10T01:43:47Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/StructureSheafModuleK.lean",
+      "theorem": "AlgebraicGeometry.Scheme.instIsHModuleHomFinite_toModuleKSheaf"
+    },
+    "session": {
+      "id": "session_46",
+      "model": "anthropic-claude"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "module_finite_gammaObj_of_isProper (iter-045)",
+        "constantSheafGammaHom_linearEquiv (B1)",
+        "homFromOne_linearEquiv (B2)",
+        "Module.Finite.equiv",
+        "LinearEquiv.trans",
+        "LinearEquiv.symm"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Plan-agent probe-confirmed body — haveI for module_finite_gammaObj_of_isProper k C (iter-045), two `let` bindings for LE1 (B1 specialised) and LE2 (B2 specialised), then Module.Finite.equiv (LE1.trans LE2).symm.",
+        "code_tried": "noncomputable instance instIsHModuleHomFinite_toModuleKSheaf (k : Type u) [Field k] (C : Over (Spec (CommRingCat.of k))) [IsIntegral C.left] [IsProper C.hom] : IsHModuleHomFinite k C (Scheme.toModuleKSheaf C) where\n  module_finite_hom := by\n    haveI := Scheme.module_finite_gammaObj_of_isProper k C\n    let LE1 := constantSheafGammaHom_linearEquiv k (Opens.grothendieckTopology C.left.toTopCat) (ModuleCat.of k k) (Scheme.toModuleKSheaf C)\n    let LE2 := homFromOne_linearEquiv k ((Sheaf.Γ (Opens.grothendieckTopology C.left.toTopCat) (ModuleCat.{u} k)).obj (Scheme.toModuleKSheaf C))\n    exact Module.Finite.equiv (LE1.trans LE2).symm",
+        "line_number": "762-774",
+        "lean_error": "",
+        "goal_before": "IsHModuleHomFinite k C (Scheme.toModuleKSheaf C) (i.e. Module.Finite k of the Hom group)",
+        "goal_after": "no goals (axioms: [propext, Classical.choice, Quot.sound])",
+        "result": "success",
+        "insight": "The Module.Finite.equiv ... .symm orientation transports finiteness from the Sheaf.Γ.obj side (iter-045) to the Hom-from-constantSheaf side (the carrier predicate). Marked `instance` (not `theorem`) — required for typeclass synthesis to find this as a producer. Once landed, iter-043's curve consumer module_finite_HModule_zero_of_isHModuleHomFinite_curve fires automatically on Module.Finite k (HModule k (toModuleKSheaf C) 0) queries."
+      }
+    ],
+    "next_steps": "Iter-047 Step 4.6: produce IsAffineHModuleVanishing k C (toModuleKSheaf C) for the H^{>0} side via Čech-vs-derived comparison + affine Čech vanishing (multi-iteration likely)."
+  }
+]

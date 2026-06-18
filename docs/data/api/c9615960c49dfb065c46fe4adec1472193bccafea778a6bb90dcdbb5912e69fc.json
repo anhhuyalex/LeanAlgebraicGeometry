@@ -1,0 +1,75 @@
+[
+  {
+    "timestamp": "2026-05-15T13:14:25Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "h_loc_exact (inside basicOpenCover_isCechAcyclicCover_toModuleKSheaf, was L1783)"
+    },
+    "session": {
+      "id": "session_106",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "Geometric setup for analogist-Q1 ALIGN recipe committed (h_V_le_U, h_slice_eq, ~18 LOC); remaining ~100-120 LOC of glue (per-coord IsLocalization.Away + IsLocalizedModule.pi + Function.Exact.iff_of_ladder_linearEquiv) deferred to iter-109. Trailing sorry preserved on disk at L1802 (was L1783); displacement +19 lines.",
+      "key_lemmas_used": [
+        "IsAffineOpen.isLocalization_of_eq_basicOpen",
+        "Scheme.basicOpen_res",
+        "Limits.Pi.π",
+        "instIsLocalizedModuleToLinearMapToAlgHomOfIsLocalizationAlgebraMapSubmonoid",
+        "IsLocalizedModule.pi",
+        "IsLocalizedModule.iso",
+        "IsLocalizedModule.map_iso_commute",
+        "Function.Exact.iff_of_ladder_linearEquiv",
+        "LinearEquiv.conj_exact_iff_exact",
+        "Submonoid.map_powers",
+        "LocalizedModule.map",
+        "LocalizedModule.map_exact (verified CIRCULAR — not used)",
+        "exact_of_isLocalized_span (consumed by upstream rw at L1804–L1805)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Follow analogies/finite-product-localisation-and-cech-r-linearity.md Q1 ALIGN_WITH_MATHLIB recipe — close h_loc_exact via the canonical IsLocalizedModule.pi instance plus Function.Exact transport across IsLocalizedModule.iso. Step 1a (geometric setup landed): per-coord h_V_le_U : (∏ᶜ basicOpenCover ↑s₀ (x a)) ≤ U via (Pi.π _ ⟨0,_⟩).le.trans (basicOpen_le _ _). Step 1b (geometric setup landed): h_slice_eq : (∏ᶜ ...) ⊓ D(f.1) = D(f.1|V_x) via (Scheme.basicOpen_res C.left f.1 _).symm. Steps 1c-4 (~100-120 LOC of algebra adapter + pi-localisation invocation + ladder transport) deferred with trailing sorry.",
+        "code_tried": "have h_V_le_U (x : Fin (n + 1) → ↑s₀) : (∏ᶜ fun a => basicOpenCover (C := C) (U := U) ↑s₀ (x a)) ≤ U := by\n  refine (Pi.π _ (⟨0, by omega⟩ : Fin (n + 1))).le.trans ?_\n  exact basicOpen_le C.left _\nhave h_slice_eq (x : Fin (n + 1) → ↑s₀) :\n    (∏ᶜ fun a => basicOpenCover (C := C) (U := U) ↑s₀ (x a)) ⊓ C.left.basicOpen f.1 =\n      C.left.basicOpen ((ConcreteCategory.hom\n        (C.left.presheaf.map (homOfLE (h_V_le_U x)).op)) (f.1 : Γ(C.left, U))) :=\n  (Scheme.basicOpen_res C.left f.1 _).symm\n-- Steps 1c, 2, 3, 4 deferred; ~120 LOC of glue to be written iter-109.\nsorry",
+        "line_number": "1781-1802 (BasicOpenCech.lean, in-body have-block of basicOpenCover_isCechAcyclicCover_toModuleKSheaf)",
+        "lean_error": "(no error — partial-proof scaffold compiles; trailing sorry committed)",
+        "goal_before": "{k : Type u, inst : Field k, C : Over (Spec (CommRingCat.of k)), U : TopologicalSpace.Opens ↑C.left.toTopCat, hU : IsAffineOpen U, s : Set ↑Γ(C.left, U), hs : Ideal.span s = ⊤, n : ℕ, hn : 0 < n, h_a, h_a_fun, s₀ : Finset ↑Γ(C.left, U), h_sub, h_top, K, K₀, h_transport, h_a₀, h_a₀_fun, hf_eq, hg_eq, f_R, g_R, h_loc_X_i for i ∈ {1,2,3} ⊢ ∀ (f : ↑s₀), Function.Exact ⇑(LocalizedModule.map (Submonoid.powers (f.1 : R)) f_R) ⇑(LocalizedModule.map (Submonoid.powers (f.1 : R)) g_R)",
+        "goal_after": "(after h_V_le_U + h_slice_eq landed) — per-coord f : ↑s₀ obligation reduced to identifying the localised differential with the slice-cover differential and applying h_a₀_fun f. Trailing sorry committed; ~100-120 LOC of glue still pending.",
+        "result": "partial",
+        "insight": "Geometric setup lands cleanly — h_V_le_U works via single (Pi.π).le.trans (basicOpen_le _ _), and h_slice_eq is one Mathlib `Scheme.basicOpen_res` rewrite (no further work). The remaining 4 recipe steps are an algebra-tower / IsLocalizedModule.pi invocation problem, NOT a tactic-pattern problem — i.e. structurally bounded; not the discrim-tree / whnf class that has stalled L1120 for 7 iters. LocalizedModule.map_exact verified via lean_run_code as the WRONG closing tool (signature requires `Function.Exact f_R g_R` as a hypothesis — circular against the goal `h_K₀_exact` being constructed). The analogist Q1c PROCEED verdict ('Function.Exact transport across IsLocalizedModule.iso via LinearEquiv.exact_iff_exact / Function.Exact.iff_of_ladder_linearEquiv') is the correct closing tool — confirmed via lean_run_code with `@Function.Exact.iff_of_ladder_linearEquiv` printing the expected ladder signature."
+      },
+      {
+        "attempt": 2,
+        "strategy": "[Step 2 stretch on L1120 cechCofaceMap_pi_smul] — NOT attempted per PROGRESS.md gating (Step 1 must close before Step 2 fires; Step 1 partial, Step 2 correctly skipped).",
+        "code_tried": "(not attempted)",
+        "line_number": "1120 (L1120 PAUSED per strategy-critic-iter106; iter-107 partial scaffold preserved verbatim)",
+        "lean_error": "n/a",
+        "goal_before": "n/a",
+        "goal_after": "n/a",
+        "result": "skipped",
+        "insight": "Step 2 gating rule honored. L1120 has had 7 consecutive PARTIAL prover lanes (iter-099/100/101/103/105/106/107); strategy-critic-iter106 retired the iter-107 abort policy option (a) 'refactor body' as sunk cost; the L1120 lane stays PAUSED until mathlib-analogist Q2 verdict on architecture is acted on (iter-109)."
+      }
+    ],
+    "next_steps": "Iter-109 (project narrative — iter-107 Archon) plan agent should: (1) dispatch single substantive prover lane on L1802 to close Steps 1c-4 of the analogist Q1 recipe (~100-120 LOC inline). The geometric setup h_V_le_U + h_slice_eq is now landed and reusable. (2) Keep L1120 PAUSED — do NOT thrash with another wrapper variant or body-level inlining; the strategy-critic-iter106 sunk-cost flag stands. (3) If iter-109 closes L1802 cleanly, iter-110 attempts mathlib-analogist Q2 Path B on L1120 (tactical `set F := cechCofaceMap_summand_family s₀ n` + `change` pivot). (4) If iter-109 stalls on L1802 despite ALIGN verdict, fire C1 promotion per strategy-critic-iter106 critical alternative #3."
+  },
+  {
+    "timestamp": "2026-05-15T13:14:25Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "cechCofaceMap_pi_smul trailing sorry (L1120, PAUSED iter-108)"
+    },
+    "session": {
+      "id": "session_106",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "PAUSED per strategy-critic-iter106 + progress-critic-iter106 STUCK verdicts. 7 consecutive PARTIAL iters on this slot (iter-099/100/101/103/105/106/107); 6 recurring blocker phrases (anonymous-closure Pi.lift codomain, discrim-tree pattern unification, whnf timeout, eqToHom-vs-Pi.π transport, Fin index mismatch, ModuleCat.hom_zsmul/hom_smul/hom_nsmul no match). Iter-107 partial-proof scaffold preserved byte-for-byte at L1115-L1120 (`hRel'` + `h_iter104 := cechCofaceMap_summand_family_R_linear hU s₀ n hn i r' y'`). L1120 lane remains PAUSED through iter-108 → iter-109; reopening requires mathlib-analogist Q2 verdict on architecture.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "L1120 reopening depends on iter-108's L1802 closure (then attempt mathlib-analogist Q2 Path B `set F := cechCofaceMap_summand_family s₀ n` + `change` pivot, ~30-50 LOC, iter-109 or iter-110) OR firing C1 promotion (per strategy-critic-iter106 critical alternative #3 if L1802 also stalls)."
+  }
+]

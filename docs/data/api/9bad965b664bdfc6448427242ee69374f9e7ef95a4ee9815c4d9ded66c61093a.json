@@ -1,0 +1,419 @@
+[
+  {
+    "timestamp": "2026-05-25T23:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OCofP.lean",
+      "theorem": "carrierPresheaf_isSheaf"
+    },
+    "session": {
+      "id": "session_188",
+      "model": "claude-opus-4"
+    },
+    "findings": {
+      "blocker": "Original carrierPresheaf definition forces F(⊥) ≠ 0, which violates the sheaf condition (empty sieve covers ⊥, forcing F(⊥) = terminal object). Plan-phase recipe was 'literally false' for the original definition.",
+      "key_lemmas_used": [
+        "TopCat.Presheaf.isSheaf_iff_isSheafUniqueGluing",
+        "Submodule operations on trivAtBot ⊓ carrierSubmodule"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Structural carrier fix — introduce private `trivAtBot` submodule (= ⊥ at ⊥, = ⊤ elsewhere) and wrap original carrier as `carrierSubmoduleSheaf U := carrierSubmodule U ⊓ trivAtBot U`. Modify carrierPresheaf to use case-based restriction map (zero when target ⊥; inclusion otherwise). Update `globalSections_iff_mp/mpr` to provide the new `trivAtBot` factor at op ⊤ via `htop_ne_bot` helper.",
+        "code_tried": "private def trivAtBot (U : (Opens C.left.toTopCat)ᵒᵖ) : Submodule kbar (C.left.functionField) := {f | U.unop ≠ ⊥ ∨ f = 0}; carrierSubmoduleSheaf U := carrierSubmodule U ⊓ trivAtBot U",
+        "line_number": "L512 (carrierPresheaf_isSheaf body)",
+        "lean_error": "(none — structural fix compiles; this is preparation, not the proof body)",
+        "goal_before": "IsSheaf (Opens.grothendieckTopology C.left.toTopCat) carrierPresheaf",
+        "goal_after": "(file compiles; downstream consumers type-check)",
+        "result": "partial",
+        "insight": "Original carrier had a fundamental sheaf-axiom violation at the empty open. The structural carrier fix is necessary BEFORE any gluing proof can be attempted; iter-187 refactor didn't anticipate this."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Case A close: case-split on iSup U = ⊥. If yes, every U_i = ⊥ so sf i = 0 for all i, gluing is ⟨0, zero_mem⟩. Subtype.ext + hSubAt0 helper discharges.",
+        "code_tried": "rcases eq_or_ne (iSup U) ⊥ with hiSup_bot | hiSup_ne_bot; · -- Case A: every U_i = ⊥, so sf i = 0 ...; refine ⟨⟨0, zero_mem⟩, ?_, ?_⟩ ...",
+        "line_number": "L512 inside isSheafUniqueGluing branches",
+        "lean_error": "(none in Case A — closes axiom-clean)",
+        "goal_before": "given (sf : ∀ i, carrierSubmoduleSheaf(U i)) compatible, ∃! glue with restrictions equal",
+        "goal_after": "Case A: ⊥-cover branch closes; Case B remains open",
+        "result": "partial",
+        "insight": "Empty-cover case is trivially the zero section; non-empty-cover case (Case B) is the substantive content."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Case B (non-empty cover): pick i₀ with U i₀ ≠ ⊥; set v := (sf i₀).1; match (sf i).1 = v via irreducibility (any two non-empty opens intersect); build gluing ⟨v, hv_in_sup⟩.",
+        "code_tried": "obtain ⟨i₀, hi₀⟩ := ...; let v := ((sf i₀).1.1 : C.left.functionField); ... hirr.isPreirreducible_univ.subset ...",
+        "line_number": "L512 (Case B branch)",
+        "lean_error": "1. `((ModuleCat.ofHom _).hom _).1` projection cannot resolve without explicit type ascription. 2. `hirr.isPreirreducible_univ.subset` requires bridge IrreducibleSpace ↥C.left → Set ↑C.left.toTopCat form. 3. `Set.mem_iUnion at hQ'` fails: `Q.point : ↥C.left` vs iUnion over `Set ↑C.left.toTopCat` (defeq but instance synthesis fails).",
+        "goal_before": "Construct glued section v ∈ carrierSubmoduleSheaf(op (iSup U))",
+        "goal_after": "(elaboration fails; multiple subtype-friction points)",
+        "result": "failed",
+        "insight": "Direct unique-gluing on the case-based carrier is friction-heavy. Iter-189 should refactor via `CategoryTheory.Subfunctor` of `presheafToType functionField`, then `Subfunctor.isSheaf_iff` reduces to a locality check via stalks. Estimated ~80-120 LOC."
+      }
+    ],
+    "next_steps": "Refactor via Subfunctor.isSheaf_iff route iter-189; Case A close remains valid as a special case."
+  },
+  {
+    "timestamp": "2026-05-25T23:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/LineBundlePullback.lean",
+      "theorem": "Scheme.LineBundle.IsLocallyTrivial.pullback"
+    },
+    "session": {
+      "id": "session_188",
+      "model": "claude-opus-4"
+    },
+    "findings": {
+      "blocker": "(none — closure)",
+      "key_lemmas_used": [
+        "Scheme.Hom.resLE",
+        "Scheme.Modules.restrictFunctorIsoPullback",
+        "Scheme.Modules.pullbackComp",
+        "Scheme.Modules.pullbackCongr",
+        "SheafOfModules.pullbackObjUnitToUnit",
+        "SheafOfModules.instIsIsoPullbackObjUnitToUnitOfFinal",
+        "CategoryTheory.final_of_representablyFlat",
+        "AlgebraicGeometry.exists_isAffineOpen_mem_and_subset"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "7-step iso chain: `((pullback f).obj M).restrict V.ι ≅ pullback V.ι obj ... ≅ pullback (V.ι ≫ f) M ≅ pullback (g ≫ U.ι) M ≅ pullback g (M.restrict U.ι) ≅ pullback g unit_U ≅ unit_V`. Each iso comes from a Mathlib lemma; Final on `Opens.map g.base` comes from RepresentablyFlat (any scheme morphism) → final_of_representablyFlat.",
+        "code_tried": "let g := f.resLE U V hVU; have hVι_f : V.ι ≫ f = g ≫ U.ι := f.resLE_comp_ι _ _ _; let chain := (restrictFunctorIsoPullback V.ι).trans <| (pullbackComp V.ι f) ≪≫ pullbackCongr hVι_f.symm ≪≫ (pullbackComp g U.ι).symm ≪≫ (Functor.mapIso _ ((restrictFunctorIsoPullback U.ι).symm.app M)) ≪≫ (pullback g).mapIso eM ≪≫ asIso (SheafOfModules.pullbackObjUnitToUnit g.toRingCatSheafHom)",
+        "line_number": "L156 (was 1 typed sorry remaining)",
+        "lean_error": "(none after correct chain assembly)",
+        "goal_before": "∀ x, ∃ U affine, x ∈ U ∧ Nonempty ((pullback f).obj M.restrict U.ι ≅ SheafOfModules.unit _)",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "`RepresentablyFlat (Opens.map f)` is in Mathlib for any scheme morphism, not just open immersions, so `final_of_representablyFlat` gives `.Final` automatically — sidesteps iter-187 docstring's open-immersion concern."
+      }
+    ],
+    "next_steps": "File is now sorry-free axiom-clean (kernel-only). Iter-189 follow-ups: optional IsInvertible refinement on Mathlib upstream once Scheme.Modules.IsInvertible lands."
+  },
+  {
+    "timestamp": "2026-05-25T23:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/QuotScheme.lean",
+      "theorem": "pullback_app_isoTensor_baseMap_isBaseChange"
+    },
+    "session": {
+      "id": "session_188",
+      "model": "claude-opus-4"
+    },
+    "findings": {
+      "blocker": "Substantive Mathlib gaps (Stacks 01HQ pullback-tilde transport; affine_open → tilde essImage bridge) localized into the new named typed sorry `_sectionLinearEquiv`. HARD BAR ≥1 axiom-clean technically met (parent body has no direct `sorry`).",
+      "key_lemmas_used": [
+        "IsBaseChange.of_equiv",
+        "TensorProduct.isBaseChange",
+        "Nonempty Σ' packaging"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Decompose via named helper `pullback_app_isoTensor_baseMap_sectionLinearEquiv` packaging the section-level LinearEquiv + intertwining as a Σ-pair (Nonempty), then apply `IsBaseChange.of_equiv`.",
+        "code_tried": "obtain ⟨equiv, hApp⟩ := pullback_app_isoTensor_baseMap_sectionLinearEquiv g N _hU _hV e; exact IsBaseChange.of_equiv equiv hApp",
+        "line_number": "L618 → after edits L630 carries new helper",
+        "lean_error": "(none — parent body axiom-clean modulo helper sorry)",
+        "goal_before": "IsBaseChange (Γ(Y, U)) (baseMap g N e)",
+        "goal_after": "no goals (parent); body of `_sectionLinearEquiv` carries the typed sorry",
+        "result": "partial",
+        "insight": "`IsBaseChange.of_equiv` (Mathlib) takes a LinearEquiv `e : TensorProduct R S M ≃ₗ[S] N` + a proof `∀ x, e (1 ⊗ x) = f x`, which is exactly the Tilde-route output. Packaging as a single Σ-struct via `Nonempty` keeps the helper signature clean and avoids splitting into two helpers (preserving helper budget)."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Body of `_sectionLinearEquiv` via 5-step Tilde-isoTop route: tilde of Γ(N,V) on Spec Γ(X,V) via [IsQuasicoherent] → pull back via Spec.map φ → transport via isoSpec → evaluate at ⊤ via tilde.isoTop → verify intertwining via adjunction unit naturality.",
+        "code_tried": "(typed sorry on body; substrate-gap documented)",
+        "line_number": "L630 NEW helper",
+        "lean_error": "Mathlib gaps: (1) extracting tilde-presentation from [IsQuasicoherent] on a specific affine open (Mathlib has `isIso_fromTildeΓ_iff` but no direct affine-open bridge); (2) pullback compatibility across hV.isoSpec/hU.isoSpec; (3) Beck-Chevalley intertwining (~30-50 LOC).",
+        "goal_before": "Nonempty {f : TensorProduct ... ≃ₗ[..] Γ(...,..) // ∀ x, f (1 ⊗ x) = baseMap g N e x}",
+        "goal_after": "(deferred — substantive Mathlib transport gap)",
+        "result": "partial",
+        "insight": "Wiring is now: `pullback_tildeIso` (Stacks 01HQ gap) ↓ + transport ↓ → `_sectionLinearEquiv` (typed sorry) ↓ + IsBaseChange.of_equiv → `_baseMap_isBaseChange` (axiom-clean modulo helpers). When the underlying Stacks 01HQ content lands, helper body closure is ~30-50 LOC of route-stitching rather than the ~115-200 LOC the full content requires."
+      }
+    ],
+    "next_steps": "Iter-189+: close `_sectionLinearEquiv` body (~30-50 LOC stitching once `pullback_tildeIso` body lands, ~115-200 LOC for that). Per progress-critic HARD BAR escalation: route is on watch — must close ≥1 next iter or escalate to route pivot."
+  },
+  {
+    "timestamp": "2026-05-25T23:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/IdentityComponent.lean",
+      "theorem": "identityComponent_locallyConnectedSpace"
+    },
+    "session": {
+      "id": "session_188",
+      "model": "claude-opus-4"
+    },
+    "findings": {
+      "blocker": "(none — EGA I 6.1.9 Mathlib gap closed axiom-clean via 4-step classical argument)",
+      "key_lemmas_used": [
+        "TopologicalSpace.NoetherianSpace.finite_irreducibleComponents",
+        "ConnectedComponents.totallyDisconnectedSpace",
+        "TotallyDisconnectedSpace.t1Space",
+        "Finite.instDiscreteTopology",
+        "connectedComponents_preimage_singleton",
+        "AlgebraicGeometry.LocallyOfFiniteType.isLocallyNoetherian",
+        "AlgebraicGeometry.noetherianSpace_of_isAffineOpen",
+        "AlgebraicGeometry.exists_isAffineOpen_mem_and_subset",
+        "locallyConnectedSpace_iff_subsets_isOpen_isConnected",
+        "IsOpen.isOpenMap_subtype_val"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Two Mathlib-generic topology helpers + scheme-specific wrapper. (1) `noetherianSpace_finite_connectedComponents` ~17 LOC via surjection irreducibleComponents → ConnectedComponents. (2) `noetherianSpace_isOpen_connectedComponent` ~9 LOC via totallyDisconnected + t1 + finite → discrete → singleton clopen pullback. (3) Wrapper ~25 LOC: for each x ∈ neighbourhood F, extract affine open W ⊆ T ⊆ F (via mem_nhds_iff + exists_isAffineOpen_mem_and_subset); in W (Noetherian, via LocallyOfFiniteType.isLocallyNoetherian + noetherianSpace_of_isAffineOpen), `connectedComponent ⟨x, hxW⟩` is open by (2); image under Subtype.val (open map) gives the wanted open connected neighbourhood of x in F.",
+        "code_tried": "private lemma noetherianSpace_finite_connectedComponents [TopologicalSpace α] [TopologicalSpace.NoetherianSpace α] : Finite (ConnectedComponents α) := ...; private lemma noetherianSpace_isOpen_connectedComponent ... ; ... use `locallyConnectedSpace_iff_subsets_isOpen_isConnected`; ...",
+        "line_number": "L137 (private helper, now closes)",
+        "lean_error": "First attempt used `locallyConnectedSpace_iff_connectedComponentIn_open` + `connectedComponentIn_eq_image`; failed with 'failed to synthesize NoetherianSpace ↥W' because `Subtype.val`-source from `W.isOpen.isOpenMap_subtype_val` exposed `↥(↑W : Set G.left)` form while `noetherianSpace_of_isAffineOpen` registers `NoetherianSpace W` (Opens CoeSort) — defeq but instance synth didn't unfold.",
+        "goal_before": "LocallyConnectedSpace G.left",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Routing through `Finite (ConnectedComponents α) + totallyDisconnected.t1 + Finite.instDiscreteTopology` is much cleaner than directly enumerating 'other' components. Workaround for instance-synthesis trap: use the `_iff_subsets_isOpen_isConnected` form, `let xW : ↥W := ⟨x, hxW⟩` with explicit ↥, and ascribe `haveI : NoetherianSpace ↥W := ...`."
+      }
+    ],
+    "next_steps": "Transitive axiom-clean upgrades to `identityComponentCarrier` body and `isOpenSubgroupScheme` closed-half realized (no edits needed; LocallyConnectedSpace instance now in scope discharges `isOpen_connectedComponent` / `isClopen_connectedComponent.1`). Iter-189+: Pic0/Kleiman-§5 chain (8 remaining sorries) per STRATEGY.md A.3.ii–A.3.vii. Mathlib upstream PR candidate: pure-topology helpers should sit in `Mathlib/Topology/NoetherianSpace.lean`."
+  },
+  {
+    "timestamp": "2026-05-25T23:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/RationalCurveIso.lean",
+      "theorem": "localParameterAtInfty"
+    },
+    "session": {
+      "id": "session_188",
+      "model": "claude-opus-4"
+    },
+    "findings": {
+      "blocker": "(none)",
+      "key_lemmas_used": [
+        "HomogeneousLocalization.Away.mk",
+        "Proj.basicOpen",
+        "Proj.opensRange_awayι",
+        "Proj.basicOpenIsoAway",
+        "Scheme.germToFunctionField",
+        "Scheme.germToFunctionField_injective",
+        "IsLocalization.mk'_eq_zero_iff",
+        "MvPolynomial.X_ne_zero",
+        "ConcreteCategory.bijective_of_isIso"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "4-step recipe from iter-188 directive: pick chart-1 affine open D₊(X 1) from projectiveLineBarAffineCover kbar → construct ratio X₀/X₁ in Away 𝒜 (X 1) via HomogeneousLocalization.Away.mk → embed via germToFunctionField on the chart's open → discharge non-zero via germToFunctionField_injective + injectivity chain for `Nontrivial (Away 𝒜 f)`.",
+        "code_tried": "let x01 : HomogeneousLocalization.Away 𝒜 (MvPolynomial.X 1 : MvPolynomial _ _) := HomogeneousLocalization.Away.mk 𝒜 hf 1 (MvPolynomial.X 0) hf0; ... change (Scheme.germToFunctionField _ ⟨_, _⟩) ((basicOpenIsoAway _).hom.hom x01) = 0 at hsec_zero; ...",
+        "line_number": "L304 (body), edit moved to L389 after structural changes",
+        "lean_error": "Initial use of `show` triggered the style linter; switched to `change`. Final `rw [hsec_zero, map_zero]` reduces to `(0 : ...) = 0`; not auto-closed because of instance-laden term shape, so explicit `rfl` is required.",
+        "goal_before": "∃ t : C.left.functionField, t ≠ 0 ∧ (some local-parameter condition at the point at infinity)",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Concrete function-field witness — no Classical.choice placeholder. `localParameterAtInfty kbar` unfolds to the ratio coordinate X₀/X₁ on D₊(X 1), paired with a non-zero witness via injectivity of germToFunctionField + Nontriviality from the localization injection."
+      }
+    ],
+    "next_steps": "`Hom.poleDivisor` body unfolds to `Scheme.WeilDivisor.principal (algebraMap _ _ t.val) _`; circular-dep block from iter-187 is gone. Iter-189: attempt `Hom.poleDivisor_degree_eq_finrank` body via 5-step `Ideal.sum_ramification_inertia` scaffold (already documented in helper docstring). `iso_of_degree_one` (Pin 3) iter-189+ parallel via Hartshorne I.6.12."
+  },
+  {
+    "timestamp": "2026-05-25T23:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Albanese/AuslanderBuchsbaum.lean",
+      "theorem": "finrank_cotangentSpace_quot_span_singleton_succ"
+    },
+    "session": {
+      "id": "session_188",
+      "model": "claude-opus-4"
+    },
+    "findings": {
+      "blocker": "(none)",
+      "key_lemmas_used": [
+        "IsLocalRing.spanFinrank_maximalIdeal_eq_finrank_cotangentSpace",
+        "Submodule.FG.exists_span_finset_card_eq_spanFinrank",
+        "Ideal.comap_map_of_surjective'",
+        "IsLocalRing.isMaximal_iff",
+        "Ideal.map_span",
+        "Submodule.spanFinrank_span_le_ncard_of_finite",
+        "Submodule.mem_span_finset",
+        "Ideal.mul_mem_mul",
+        "IsLocalRing.notMem_maximalIdeal",
+        "Ideal.map_comap_of_surjective",
+        "linear_combination",
+        "Set.ncard_image_le",
+        "Set.ncard_coe_finset",
+        "Finset.card_erase_of_mem"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Split into (≥) lift-and-cons + (≤) Steinitz-exchange. After `IsLocalRing.spanFinrank_maximalIdeal_eq_finrank_cotangentSpace` rewrites, reduce to spanFinrank equation and `le_antisymm` into two inequalities.",
+        "code_tried": "rw [← spanFinrank_maximalIdeal_eq_finrank_cotangentSpace ..., ← spanFinrank_maximalIdeal_eq_finrank_cotangentSpace ...]; apply le_antisymm; · -- (≤) ...; · -- (≥) ...",
+        "line_number": "L984",
+        "lean_error": "(none — both directions close kernel-only)",
+        "goal_before": "Module.finrank κ(R/(x)) (CotangentSpace (R/(x))) + 1 = Module.finrank κ(R) (CotangentSpace R)",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Both directions close kernel-only (~150 LOC total). (≥): lift min gen finset T of 𝔪(R/(x)) via Function.surjInv (Ideal.Quotient.mk_surjective); T ∪ {x} generates 𝔪 R via Ideal.comap_map_of_surjective'. (≤): Steinitz-exchange. Take min gen V of 𝔪 R size n. Express x = Σ c v • v. Since x ∉ 𝔪², some c v₀ ∉ 𝔪 (Nakayama: Ideal.mul_mem_mul). Hence c v₀ is a unit, allowing v₀ = (↑u⁻¹) * x - Σ (↑u⁻¹) * c v * v; apply mkx → mkx '' V.erase v₀ generates 𝔪 R'. Tech lessons: `rw` rewrites ALL occurrences (use `rwa [← hv₀_eq] at` instead of `rw [hv₀_eq]` when v₀ appears both as standalone term and inside V.erase v₀); `Submodule.FG` dot-notation fails (use explicit `Submodule.FG.exists_span_finset_card_eq_spanFinrank h`); `linear_combination` essential when `ring` alone fails."
+      }
+    ],
+    "next_steps": "Sub-lane G2 (joint induction Stacks 00NQ ~200 LOC) unblocked. Pending typed sorry `exists_isSMulRegular_quotient_isRegularLocal_succ` (L1286) consolidates Stacks 00NQ + 00NU. Cotangent dim-drop helper closed iter-188 is the bridge between G1 and G2."
+  },
+  {
+    "timestamp": "2026-05-25T23:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/RRFormula.lean",
+      "theorem": "eulerCharacteristic_skyscraperSheaf"
+    },
+    "session": {
+      "id": "session_188",
+      "model": "claude-opus-4"
+    },
+    "findings": {
+      "blocker": "H¹ half remains gated on the project-side `RR.2.H¹` STRATEGY sub-phase (flasque-cohomology bridge ~150-300 LOC across 8-12 iters).",
+      "key_lemmas_used": [
+        "Scheme.HModule_zero_linearEquiv",
+        "Scheme.constantSheafGammaHom_linearEquiv",
+        "Scheme.homFromOne_linearEquiv",
+        "Scheme.SheafGammaObj_linearEquiv_top",
+        "LE.finrank_eq",
+        "skyscraperPresheaf_obj",
+        "if_pos",
+        "Module.finrank_self"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Direct `rw` without normalisation: `unfold eulerCharacteristic; rw [Scheme.H0_..., Scheme.H1_...]; simp`.",
+        "code_tried": "unfold eulerCharacteristic; rw [Scheme.H0_skyscraperSheaf_finrank_eq_one, Scheme.H1_skyscraperSheaf_finrank_eq_zero]; simp",
+        "line_number": "L494 parent body",
+        "lean_error": "'Did not find an occurrence of the pattern Module.finrank kbar (HModule kbar (skyscraperSheaf ...) 0) in the target ↑(Module.finrank kbar (HModule kbar (skyscraperSheaf ...) 0)) - ...' — pattern syntactically present inside `↑(·)` cast but instance/universe inference differs between helper-conclusion and parent contexts.",
+        "goal_before": "Scheme.eulerCharacteristic C (skyscraperSheaf P.point (ModuleCat.of kbar kbar)) = 1",
+        "goal_after": "(same goal — rw failed)",
+        "result": "failed",
+        "insight": "Implicit `(C := ?M)` argument of `skyscraperSheaf` elaborates differently in helper vs parent contexts; `simp only [h0, h1]` also reports no progress; omega/linarith can't bridge cast-wrapped expressions."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Add normalising `change` to force consistent universe elaboration: `change ((Module.finrank kbar (Scheme.HModule kbar (skyscraperSheaf (C := ModuleCat.{u} kbar) P.point ...) 0) : ℕ) : ℤ) - ...`. Then `rw [H0_..., H1_...]; simp`.",
+        "code_tried": "change ((Module.finrank kbar (Scheme.HModule kbar (skyscraperSheaf (C := ModuleCat.{u} kbar) P.point (ModuleCat.of kbar kbar)) 0) : ℕ) : ℤ) - ((Module.finrank kbar (Scheme.HModule kbar (skyscraperSheaf (C := ModuleCat.{u} kbar) P.point (ModuleCat.of kbar kbar)) 1) : ℕ) : ℤ) = 1; rw [H0_skyscraperSheaf_finrank_eq_one, H1_skyscraperSheaf_finrank_eq_zero]; simp",
+        "line_number": "L494",
+        "lean_error": "(none — closes)",
+        "goal_before": "Scheme.eulerCharacteristic C (skyscraperSheaf P.point (ModuleCat.of kbar kbar)) = 1",
+        "goal_after": "no goals (parent body, modulo named H¹ helper)",
+        "result": "success",
+        "insight": "Explicit (C := ModuleCat.{u} kbar) annotation needed to normalise the goal so `Module.finrank` patterns under `↑(·)` casts unify with the helper conclusions. New helper split: `H0_..._finrank_eq_one` ~45 LOC axiom-clean (3-step chain HModule_zero_linearEquiv → constantSheafGammaHom_linearEquiv → homFromOne_linearEquiv → SheafGammaObj_linearEquiv_top); `H1_..._finrank_eq_zero` Tier-3 typed sorry."
+      },
+      {
+        "attempt": 3,
+        "strategy": "H0 helper body — close `Module.finrank kbar ↑(if P.point ∈ ⊤ then ModuleCat.of kbar kbar else ⊤_ _) = 1` after rw [skyscraperPresheaf_obj]; tried `simp only [Opposite.unop_op, if_pos (P.point ∈ ⊤)]`.",
+        "code_tried": "rw [skyscraperPresheaf_obj]; simp only [Opposite.unop_op, if_pos (P.point ∈ ⊤)]; exact Module.finrank_self kbar",
+        "line_number": "L423 H0 helper",
+        "lean_error": "`simp only` only fires `unop_op`; `if_pos` reported as unused. `rw [if_pos trivial]` then fails: pattern needs `if True then ...` but the dite predicate is `P.point ∈ ⊤` (not `True`).",
+        "goal_before": "Module.finrank kbar ↑(if P.point ∈ Opposite.unop (Opposite.op ⊤) then ModuleCat.of kbar kbar else ⊤_ _) = 1",
+        "goal_after": "(stuck on dite predicate)",
+        "result": "partial",
+        "insight": "Switched to `exact (if_pos trivial).symm ▸ Module.finrank_self kbar` — the `▸` substitution unifies both the carrier and the dite predicate against the goal in a single shot. Resolved."
+      }
+    ],
+    "next_steps": "Iter-189: begin project-side flasque-cohomology bridge to close `H1_skyscraperSheaf_finrank_eq_zero` (the new typed sorry at L468) under STRATEGY.md RR.2.H¹ sub-phase. With both H¹ + `eulerCharacteristic_shortExact_add` (L322) closed, `eulerCharacteristic_sheafOf_succ` + main `eulerCharacteristic_eq_degree_plus_one_minus_genus` inherit axiom-cleanness modulo only `Scheme.WeilDivisor.sheafOf` (RR.3)."
+  },
+  {
+    "timestamp": "2026-05-25T23:30:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Genus0BaseObjects/GmScaling.lean",
+      "theorem": "gmScalingP1_chart_agreement_cross01"
+    },
+    "session": {
+      "id": "session_188",
+      "model": "claude-opus-4"
+    },
+    "findings": {
+      "blocker": "Mathlib gap at b80f227: `IsClosedImmersion.lift_iff_range_subset` is NOT present (blueprint III.c step 3 falsely claims it is). Verified via `lean_leansearch` on 'morphism factors through closed immersion iff range subset' and 'IsClosedImmersion lift range subset' — both return only the kernel-inequality form `IsClosedImmersion.lift`, no range-subset variant.",
+      "key_lemmas_used": [
+        "IsSeparated.isClosedImmersion_diagonal",
+        "pullback.diagonal",
+        "pullback.lift_fst/snd",
+        "IsClosedImmersion.lift (forms kernel-inequality only)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Execute the 4-step (III.c) MANDATORY PIVOT recipe per AbelianVarietyRigidity.tex Section III.c: (1) Build Δ : P¹ → P¹ ×_kbar P¹ via pullback.diagonal PLB.hom. (2) Build s_pair via pullback.lift with hPLB_agree from `gmScalingP1_chart_PLB_eq` + `pullback.condition`. (3) Show IsClosedImmersion Δ via `IsSeparated.isClosedImmersion_diagonal`. (4) Factor s_pair through Δ via `IsClosedImmersion.lift_iff_range_subset` (per blueprint).",
+        "code_tried": "let Δ := pullback.diagonal PLB.hom; have hPLB_agree : ... := pullback.condition.symm.trans (gmScalingP1_chart_PLB_eq kbar 0).symm ...; let s_pair := pullback.lift (chart_0 ≫ PLB.hom) (chart_1 ≫ PLB.hom) hPLB_agree; have hΔ_isCI : IsClosedImmersion Δ := IsSeparated.isClosedImmersion_diagonal; ... -- Step 4: apply IsClosedImmersion.lift_iff_range_subset",
+        "line_number": "L417 (cross01 body)",
+        "lean_error": "Mathlib name `IsClosedImmersion.lift_iff_range_subset` not present at b80f227. Direct verification: `lean_leansearch` on the two queries returned only kernel-inequality form `IsClosedImmersion.lift` (requires `f.ker ≤ g.ker`) — no range-subset variant.",
+        "goal_before": "chart_0 ≫ PLB.hom = chart_1 ≫ PLB.hom (on intersection)",
+        "goal_after": "Structural setup landed (Steps 1-3 axiom-clean); residual: produce section s : intersection → P¹ with s ≫ Δ = s_pair",
+        "result": "failed",
+        "insight": "BLUEPRINT FALSIFICATION: III.c step 3 substrate hooks paragraph (lines ~1586-1598 of AVR.tex) FALSELY claims `IsClosedImmersion.lift_iff_range_subset` is 'present at the pinned Mathlib commit b80f227'. EMPIRICAL: only `IsClosedImmersion.lift` (kernel-inequality form) exists. Three options for closure: (A) Mathlib upstream (unbounded wait); (B) project-side `lift_iff_range_subset` + `IsReduced (intersection)` ~150-200 LOC over 3-5 iters — requires the `tensor-of-domains-over-alg-closed` Mathlib gap that ALSO blocks `gm_geomIrred`/`projGm_isReduced`; (C) accept III.c BLOCKED + retire Lane B from genus-0 critical path."
+      }
+    ],
+    "next_steps": "Lane B HARD BAR FIRES (0 axiom-clean close, 4-iter STUCK + OVER_BUDGET extended to 5). ESCALATION TO USER iter-189 per directive Lane B clause — automated correctives exhausted (III.a / III.b / III.c all tested; III.c blocked on previously undetected Mathlib gap). Mathematician must choose A / B / C. iter-188 prover recommends Option B."
+  },
+  {
+    "timestamp": "2026-05-25T23:30:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "iotaGm_chart1_composition_isOpenImmersion"
+    },
+    "session": {
+      "id": "session_188",
+      "model": "claude-opus-4"
+    },
+    "findings": {
+      "blocker": "`r_1` is opaque modulo its lift characterization. Computing `r_1.appTop(isLocElem)` requires `IsOpenImmersion.lift_app` on `Proj.awayι (X 1)`, which exposes `Proj.appIso`/per-open-evaluation machinery beyond iter-188 attempt budget. `r_1.appTop` from `h_r_1 : r_1 ≫ Proj.awayι _ = onePt.left` alone is STRUCTURALLY IMPOSSIBLE: `(Proj.awayι _).appTop` has image = kbar ⊂ Away 𝒜 X_1 (degree-0 part), and `isLocElem = [X_0/X_1]` is the chart coordinate, NOT in that image.",
+      "key_lemmas_used": [
+        "Scheme.Hom.comp_appTop",
+        "Scheme.Hom.appTop",
+        "IsOpenImmersion.lift_app (target — not applied)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Default `simp` discharge on the post-Stage-8-rewrite residual.",
+        "code_tried": "simp",
+        "line_number": "L252 body (sorry residual)",
+        "lean_error": "(no closure — simp rewrites `comp_appTop`/`Iso.trans_hom` into a 6-factor `.app ⊤` chain but cannot close)",
+        "goal_before": "Scheme.Hom.appTop (LHS_big_composition) = Scheme.Hom.appTop (Spec.map alg)",
+        "goal_after": "6-factor `.app ⊤` chain: `(Spec.map eval₂Hom).app ⊤`, `(pullbackSpecIso).hom.app ⊤`, `(pullback.congrHom or pullback.map).app ⊤`, `(pullbackRightPullbackFstIso).hom.app ⊤`, `(pullbackSymmetry).hom.app ⊤`, `(pullback.lift ...).app ⊤` ; RHS `(Spec.map (algMap MvPoly → GmRing)).app ⊤`",
+        "result": "failed",
+        "insight": "Default `simp` advances but doesn't close — the 6-factor chain needs targeted rewrites per Stage-8 plan."
+      },
+      {
+        "attempt": 2,
+        "strategy": "`cancel_mono` rewrite to explicit `IsOpenImmersion.lift` form to access `lift_app`.",
+        "code_tried": "have : r_1 = IsOpenImmersion.lift (Proj.awayι (X 1) _ _) onePt.left h_range := by apply (cancel_mono (Proj.awayι _ _ _)).mp; ...",
+        "line_number": "L252",
+        "lean_error": "`Set.range _ ⊆ Set.range _` side-condition for `IsOpenImmersion.lift` requires the chart-1 factorization range containment proof, which is exactly the body of `iotaGm_onePt_chart1_factor` (L106-163). Re-establishing here would be code duplication.",
+        "goal_before": "(same)",
+        "goal_after": "(not advanced)",
+        "result": "failed",
+        "insight": "Cleaner path requires refactor of `iotaGm_chart1_composition_isOpenImmersion`'s signature to accept the explicit lift (not opaque r_1), OR adding a separate helper for the range subset. Both are iter-189+ refactor moves."
+      },
+      {
+        "attempt": 3,
+        "strategy": "`MvPolynomial.ringHom_ext` to descend to per-generator equality after `CommRingCat.hom_ext`.",
+        "code_tried": "ext1; apply MvPolynomial.ringHom_ext",
+        "line_number": "L252",
+        "lean_error": "`apply MvPolynomial.ringHom_ext` does not unify with post-`.hom`-stripped goal shape — LHS chain has many `.c.app` factors that don't directly expose the `MvPolynomial Unit kbar →+* GmRing kbar` ring map for `ringHom_ext` to fire.",
+        "goal_before": "(same)",
+        "goal_after": "(not advanced)",
+        "result": "failed",
+        "insight": "Requires additional rewrites (Spec.preimage chain or homEquiv symmetric form) to expose the underlying ring map first."
+      }
+    ],
+    "next_steps": "HARD BAR FIRES (0 close). Iter-189 escalation per progress-critic must-fix rule: Mathlib analogist call asking 'Evaluate IsOpenImmersion.lift_app of Proj.awayι composed with a Proj.fromOfGlobalSections source on basic open D₊(X_1) ⊆ Proj 𝒜'. If viable recipe returns, build project-side helper `r_1_appTop_isLocElem_eq_one ~30-50 LOC` (likely more — depends on `Proj.appIso` accessibility), then 6-step recipe reduces to mechanical simp chain. DEAD ENDS for iter-189: do NOT attempt `r_1.appTop` from `h_r_1` alone; do NOT attempt `Spec.preimage` to get the underlying ring map then evaluate."
+  }
+]

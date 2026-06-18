@@ -1,0 +1,69 @@
+[
+  {
+    "timestamp": "2026-05-09T14:53:11Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/MayerVietoris.lean",
+      "theorem": "AlgebraicGeometry.Scheme.AffineCoverMVSquare.finrank_HModule_eq_HModule'_X₄"
+    },
+    "session": {
+      "id": "session_36",
+      "model": "archon-prover"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "LinearEquiv.finrank_eq",
+        "LinearEquiv.symm",
+        "AlgebraicGeometry.Scheme.AffineCoverMVSquare.HModule'_X₄_linearEquiv"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Append two probe-confirmed theorem declarations as a single substantive Edit inside the existing `section CoverTotality`, immediately after iter-035's `HModule'_X₄_linearEquiv_curve`. Use the term-mode body `(S.HModule'_X₄_linearEquiv k F n).symm.finrank_eq`. The `.symm` is required because iter-035's bridge has signature `HModule' k F n X₄ ≃ₗ[k] HModule k F n` (LHS=X₄ corner, RHS=global) — `.symm.finrank_eq` aligns the orientation `finrank k (HModule k F n) = finrank k (HModule' k F n X₄)` with `genus C := Module.finrank k (HModule k _ 1)`.",
+        "code_tried": "theorem AffineCoverMVSquare.finrank_HModule_eq_HModule'_X₄\n    (k : Type u) [Field k] {X : Scheme.{u}} (S : X.AffineCoverMVSquare)\n    [HasExt.{u} (Sheaf (Opens.grothendieckTopology X.toTopCat) (ModuleCat.{u} k))]\n    [HasExt.{u + 1} (Sheaf (Opens.grothendieckTopology X.toTopCat) (ModuleCat.{u} k))]\n    (F : Sheaf (Opens.grothendieckTopology X.toTopCat) (ModuleCat.{u} k)) (n : ℕ) :\n    Module.finrank k (HModule k F n) =\n      Module.finrank k (HModule' k F n S.toMayerVietorisSquare.toSquare.X₄) :=\n  (S.HModule'_X₄_linearEquiv k F n).symm.finrank_eq",
+        "line_number": "960-967",
+        "lean_error": null,
+        "goal_before": "post-iter-035 file at 955 LOC; iter-035's `HModule'_X₄_linearEquiv` (LHS=X₄, RHS=global) and `_curve` already in scope inside `section CoverTotality`; goal is to introduce a finrank consequence aligned with `genus C`'s orientation.",
+        "goal_after": "no goals (term-mode definition closes immediately).",
+        "result": "success",
+        "insight": "Mathlib's `LinearEquiv.finrank_eq` plus `.symm` on iter-035's bridge directly produces the orientation `finrank k (HModule k F n) = finrank k (HModule' k F n X₄)` wanted downstream by `genus`. No lemma search, no rewrite, no tactic block — pure term mode."
+      }
+    ],
+    "next_steps": "Consume in the affine-vanishing input chain (Step 4 of the iter-028 Serre-finiteness sketch); will be combined with `Scheme.HModule'_zero_of_isAffineOpen` to extract finite-dimensionality of `HModule k F 1` on a curve."
+  },
+  {
+    "timestamp": "2026-05-09T14:53:11Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/MayerVietoris.lean",
+      "theorem": "AlgebraicGeometry.Scheme.AffineCoverMVSquare.finrank_HModule_eq_HModule'_X₄_curve"
+    },
+    "session": {
+      "id": "session_36",
+      "model": "archon-prover"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "AlgebraicGeometry.Scheme.AffineCoverMVSquare.finrank_HModule_eq_HModule'_X₄",
+        "AlgebraicGeometry.Scheme.toModuleKSheaf"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Append the curve specialisation in the same Edit as Target 1, using the dot-notation method-call form `S.finrank_HModule_eq_HModule'_X₄ k _ n` to specialise to `F := Scheme.toModuleKSheaf C` for `C : Over (Spec (CommRingCat.of k))`. Mirrors the iter-030 `_sequence_curve` and iter-035 `_X₄_linearEquiv_curve` patterns: dot-notation method-call resolves cleanly via lookup against `S : C.left.AffineCoverMVSquare`, sidestepping the iter-029 sub-namespace shadowing trap (the abstract sheaf-parameterised body needed `_root_.` qualifications; the dot-notation form does not).",
+        "code_tried": "theorem AffineCoverMVSquare.finrank_HModule_eq_HModule'_X₄_curve\n    (k : Type u) [Field k] {C : Over (Spec (CommRingCat.of k))}\n    (S : C.left.AffineCoverMVSquare)\n    [HasExt.{u} (Sheaf (Opens.grothendieckTopology C.left.toTopCat) (ModuleCat.{u} k))]\n    [HasExt.{u + 1} (Sheaf (Opens.grothendieckTopology C.left.toTopCat) (ModuleCat.{u} k))]\n    (n : ℕ) :\n    Module.finrank k (HModule k (Scheme.toModuleKSheaf C) n) =\n      Module.finrank k (HModule' k (Scheme.toModuleKSheaf C) n\n        S.toMayerVietorisSquare.toSquare.X₄) :=\n  S.finrank_HModule_eq_HModule'_X₄ k _ n",
+        "line_number": "975-984",
+        "lean_error": null,
+        "goal_before": "post-Target-1 state inside `section CoverTotality`; goal is the curve specialisation to `Scheme.toModuleKSheaf C`.",
+        "goal_after": "no goals.",
+        "result": "success",
+        "insight": "Dot-notation method-call `S.finrank_HModule_eq_HModule'_X₄ k _ n` resolves cleanly via lookup against the receiver type `C.left.AffineCoverMVSquare`. The `_` in position 2 (the `Scheme.{u}` argument to Target 1's general signature) is inferred from the receiver type, which exposes `C.left : Scheme.{u}`. Standard pattern for curve specialisations of abstract sheaf-parameterised bridges (iter-030, iter-035, now iter-036)."
+      }
+    ],
+    "next_steps": "Will be the concrete consumer when `genus C := Module.finrank k (HModule k (Scheme.toModuleKSheaf C) 1)` needs to be re-expressed in terms of an open-evaluated `HModule'` to feed Step 4's affine-vanishing input."
+  }
+]

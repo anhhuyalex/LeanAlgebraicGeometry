@@ -1,0 +1,200 @@
+[
+  {
+    "timestamp": "2026-05-20T10:11:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "rigidity_lemma"
+    },
+    "session": {
+      "id": "session_157",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "UNSOUND PROOF (must-fix, both review subagents converged). The proof compiles and reduces to a single sorry, but it NEVER consumes the collapse hypothesis _hf; it delegates to rigidity_core/rigidity_eqOn_dense_open, which DROPPED _hf and are FALSE as stated (counterexample f = fst on X=Y=Z=ℙ¹). So the 'sole remaining geometric sorry' is unsatisfiable and the lemma is NOT on a path to an honest proof. The STATEMENT is correct (it has _hf); the proof structure is broken.",
+      "key_lemmas_used": [
+        "rigidity_snd_lift",
+        "rigidity_core",
+        "Category.assoc"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Mumford witness g(y)=f(x0,y): refine with g := lift (toUnit Y ≫ x₀) (𝟙 Y) ≫ f, reduce f = snd ≫ g to the geometric core f = retract ≫ f via rw [← Category.assoc, rigidity_snd_lift]; exact rigidity_core f x₀",
+        "code_tried": "refine ⟨lift (toUnit Y ≫ x₀) (𝟙 Y) ≫ f, ?_⟩; rw [← Category.assoc, rigidity_snd_lift]; exact rigidity_core f x₀",
+        "line_number": "225",
+        "lean_error": null,
+        "goal_before": "∃ g : Y ⟶ Z, f = snd X Y ≫ g",
+        "goal_after": "no goals",
+        "result": "partial",
+        "insight": "The categorical reduction TYPE-CHECKS but is unsound: rigidity_core's conclusion 'f = retract ≫ f for arbitrary f' is FALSE (f=fst counterexample lives within the stated instances). The proof's failure to use _hf is the classic laundering tell. Verified sorryAx-transitive (axioms {propext, sorryAx, Classical.choice, Quot.sound}); no custom axioms — but the underlying sorry is unprovable as signed. The signature correction (added geom-irred/reduced/separated + x₀) is itself SOUND and matches the blueprint; the bug is that _hf was not threaded down into the helper decomposition."
+      }
+    ],
+    "next_steps": "MUST-FIX before any geometric prover lane: re-sign rigidity_core + rigidity_eqOn_dense_open to thread the collapse hypothesis (y₀/z₀/_hf, or a section through z₀), so V := Y∖G is genuinely non-empty (y₀∉G) and the agreement existential becomes true; then consume _hf in rigidity_lemma's proof. Dispatch a refactor (signatures) — NOT another prover lane on the current false decomposition."
+  },
+  {
+    "timestamp": "2026-05-20T10:02:30Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "rigidity_snd_lift"
+    },
+    "session": {
+      "id": "session_157",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "CartesianMonoidalCategory.ext1",
+        "simp"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Tried explicit comp_lift/congr/toUnit_unique decomposition first",
+        "code_tried": "rw [comp_lift]; congr 1; · rw [← Category.assoc]; congr 1; exact toUnit_unique _ _; · simp",
+        "line_number": "68",
+        "lean_error": "Function expected at toUnit_unique ?m.118 ?m.119 but this term has type ?m.118 = ?m.119; then 'No goals to be solved'",
+        "goal_before": "snd X Y ≫ lift (toUnit Y ≫ x₀) (𝟙 Y) = lift (toUnit (X ⊗ Y) ≫ x₀) (snd X Y)",
+        "goal_after": "error",
+        "result": "failed",
+        "insight": "toUnit_unique is an equality term, not a function; the manual congr path over-applied it."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Replace with extensionality + simp",
+        "code_tried": "ext1 <;> simp",
+        "line_number": "68",
+        "lean_error": null,
+        "goal_before": "snd X Y ≫ lift (toUnit Y ≫ x₀) (𝟙 Y) = lift (toUnit (X ⊗ Y) ≫ x₀) (snd X Y)",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Lift-equalities in a CartesianMonoidalCategory close uniformly by ext1 <;> simp; the explicit comp_lift API resolves through the opened namespace and need not be named. Axiom-clean: {propext, Classical.choice, Quot.sound}. This is the ONE genuinely-proven, sound new declaration of the iter."
+      }
+    ],
+    "next_steps": "Done. Reusable pattern for any monoidal lift identity. Sound and independent of the rigidity_lemma unsoundness."
+  },
+  {
+    "timestamp": "2026-05-20T10:09:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "rigidity_core"
+    },
+    "session": {
+      "id": "session_157",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "FALSE AS STATED (must-fix). Conclusion 'f = lift (toUnit (X⊗Y) ≫ x₀) (snd X Y) ≫ f' for an ARBITRARY f under only [IsProper]/[GeometricallyIrreducible]/[IsReduced]/[IsSeparated] says f is independent of the X-coordinate for every f — refuted by f = fst on X=Y=Z=ℙ¹. It 'compiles' only because it consumes the equally-false rigidity_eqOn_dense_open. The collapse hypothesis _hf was dropped.",
+      "key_lemmas_used": [
+        "rigidity_eqOn_dense_open",
+        "GeometricallyIrreducible.irreducibleSpace_of_subsingleton",
+        "Scheme.PartialMap.Opens.isDominant_ι",
+        "Over.OverMorphism.ext",
+        "ext_of_isDominant_of_isSeparated'"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Scheme-level rigidity replicated inline (the wrapper Scheme.Over.ext_of_eqOnOpen is in the DOWNSTREAM AlgebraicJacobian.Rigidity — would create an import cycle): obtain dense-open agreement from rigidity_eqOn_dense_open, build IrreducibleSpace via geometric irreducibility over the singleton Spec k̄, get IsDominant of the open inclusion, ext_of_isDominant_of_isSeparated'",
+        "code_tried": "obtain ⟨U, hU, h⟩ := rigidity_eqOn_dense_open f x₀; haveI : IrreducibleSpace (X ⊗ Y).left := …; haveI : IsDominant U.ι := Scheme.PartialMap.Opens.isDominant_ι (IsOpen.dense U.isOpen hU); refine Over.OverMorphism.ext ?_; exact ext_of_isDominant_of_isSeparated' … U.ι h",
+        "line_number": "147",
+        "lean_error": null,
+        "goal_before": "f = lift (toUnit (X ⊗ Y) ≫ x₀) (snd X Y) ≫ f",
+        "goal_after": "no goals",
+        "result": "partial",
+        "insight": "The GLUING machinery (the cited Mathlib lemmas) is real and applies correctly — but it is fed the false hypothesis h from rigidity_eqOn_dense_open, so machinery soundness does not rescue a false conclusion. The import-cycle gotcha (AVOID `import AlgebraicJacobian.Rigidity` here) is a genuine, reusable finding. The lemma must be re-signed with the collapse hypothesis."
+      }
+    ],
+    "next_steps": "Re-sign with the collapse hypothesis; keep the inlined gluing machinery (it is correct) and the import-cycle avoidance."
+  },
+  {
+    "timestamp": "2026-05-20T10:07:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "rigidity_eqOn_dense_open"
+    },
+    "session": {
+      "id": "session_157",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "FALSE AS STATED (must-fix). Asserts — with NO collapse hypothesis — the existence of a NON-EMPTY open U on which f.left = (retract ≫ f).left. Counterexample f = fst (X=Y=Z=ℙ¹): fst agrees with the constant collapse on NO non-empty open, so the existential is unsatisfiable. The two 'Mathlib bridges' in the docstring cannot prove a false statement. This is NOT the honest geometric gap the blueprint names (Mumford's V := Y∖G is non-empty precisely BECAUSE y₀∉G, which uses f(X×{y₀})={z₀}).",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Isolated the intended geometric content as an existential and deferred with sorry; located Mathlib entry points (IsProper.toUniversallyClosed, UniversallyClosed.universally_isClosedMap, isField_of_universallyClosed, finite_appTop_of_universallyClosed)",
+        "code_tried": "theorem rigidity_eqOn_dense_open ... : ∃ U : (X ⊗ Y).left.Opens, (U : Set _).Nonempty ∧ U.ι ≫ f.left = U.ι ≫ (lift (toUnit (X ⊗ Y) ≫ x₀) (snd X Y) ≫ f).left := sorry",
+        "line_number": "81",
+        "lean_error": null,
+        "goal_before": null,
+        "goal_after": null,
+        "result": "failed",
+        "insight": "The isolation is mis-signed: it dropped the collapse hypothesis, making the existential FALSE. The located Mathlib bridges are real and will be needed once the statement is repaired, but they cannot discharge a false goal. The intended honest statement must carry y₀/z₀/_hf."
+      }
+    ],
+    "next_steps": "Re-sign to include the collapse hypothesis (y₀, z₀, _hf), so the existential becomes Mumford's true 'non-empty X×V + slice constancy'. Then the bridges (closed-map ⇒ V non-empty via y₀∉G; isField_of_universallyClosed ⇒ slice constancy) become applicable. Do NOT assign a prover lane to the current false statement."
+  },
+  {
+    "timestamp": "2026-05-20T10:11:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "morphism_P1_to_grpScheme_const"
+    },
+    "session": {
+      "id": "session_157",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Deferred per single-DEEP-lane directive; rests on the theorem of the cube (deep char-free input, no Lean target yet). Honest scaffold (both subagents confirm honest disclosure).",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Blocked on theorem_of_the_cube. Do not assign until the cube is blueprinted to prover-ready detail (or proven)."
+  },
+  {
+    "timestamp": "2026-05-20T10:11:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "genusZero_curve_iso_P1"
+    },
+    "session": {
+      "id": "session_157",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Deferred; Riemann–Roch sub-build (Mathlib has no Riemann–Roch for curves). Honest scaffold.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Genuine sub-build. Not a short step; defer until a curve-theory slice is ported."
+  },
+  {
+    "timestamp": "2026-05-20T10:11:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/AbelianVarietyRigidity.lean",
+      "theorem": "rigidity_genus0_curve_to_grpScheme"
+    },
+    "session": {
+      "id": "session_157",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Deferred; headline consumed by genusZeroWitness. Composes genusZero_curve_iso_P1 with morphism_P1_to_grpScheme_const — both still sorry. Honest scaffold.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Assembles once the two upstream props land AND rigidity_lemma's decomposition is re-signed honestly. When invoking rigidity_lemma transitively, supply the new instances + the x₀ point + the collapse hypothesis."
+  }
+]

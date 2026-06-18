@@ -1,0 +1,91 @@
+[
+  {
+    "timestamp": "2026-06-02T01:14:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "pullbackLanDecomposition"
+    },
+    "session": {
+      "id": "session_244",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "Adjunction.leftAdjointCompIso",
+        "PresheafOfModules.pushforward",
+        "PresheafOfModules.restrictScalars",
+        "Functor.IsRightAdjoint",
+        "Functor.leftAdjoint"
+      ],
+      "design_note": "D1 of the committed general strong-monoidal pullback build (sec:tensorobj_pullback_monoidality). 7 axiom-clean declarations landed; D2/D3/D4 + IsInvertible.pullback NOT added (Mathlib-absent concrete pointwise model). No sorry pins added."
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Recognize pushforward₀/restrictScalars as right adjoints so their leftAdjoints (pullback0/extendScalars) exist; first via inferInstanceAs on pushforward (𝟙 ...)",
+        "code_tried": "example : (PresheafOfModules.pushforward₀.{u} Fx Rx).IsRightAdjoint := by infer_instance",
+        "line_number": "1249",
+        "lean_error": "failed to synthesize instance (PresheafOfModules.pushforward₀ Fx Rx).IsRightAdjoint",
+        "result": "failed",
+        "insight": "Plain infer_instance does not see through pushforward₀ to the pushforward instance; needs an explicit inferInstanceAs bridge."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Bridge via inferInstanceAs to pushforward (𝟙 (Fx.op ⋙ Rx)) for pushforward₀, and pushforward (F:=𝟭 C) φ for restrictScalars",
+        "code_tried": "inferInstanceAs (PresheafOfModules.pushforward.{u} (𝟙 (Fx.op ⋙ Rx))).IsRightAdjoint ; ... pushforward (F := 𝟭 Cx) φx",
+        "line_number": "1249",
+        "lean_error": "failed to synthesize (PresheafOfModules.pushforward ?m.34).IsRightAdjoint — metavariable in F not pinned for the restrictScalars case",
+        "result": "partial",
+        "insight": "The pushforward₀ case resolved; the restrictScalars case needs explicit (R := Fx.op ⋙ Rx) to pin the ring presheaf so the metavariable is determined."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Add explicit (R := Fx.op ⋙ Rx) to the restrictScalars inferInstanceAs",
+        "code_tried": "inferInstanceAs (PresheafOfModules.pushforward.{u} (F := 𝟭 Cx) (R := Fx.op ⋙ Rx) φx).IsRightAdjoint",
+        "line_number": "1249",
+        "lean_error": "",
+        "result": "success",
+        "insight": "restrictScalars (𝟙 R) is DEFEQ 𝟭 (witnessed by Mathlib's instance (restrictScalars (𝟙 R)).Full := inferInstanceAs (𝟭 _).Full); this makes both pushforward₀ and restrictScalars recognizable as pushforward instances and hence right adjoints."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Build pullback0/extendScalars as .leftAdjoint and assemble pullbackLanDecomposition via leftAdjointCompIso fed Iso.refl of the definitional factorization pushforward φ = pushforward₀ ⋙ restrictScalars",
+        "code_tried": "noncomputable def pullbackLanDecomposition ... := Adjunction.leftAdjointCompIso (Iso.refl (pushforward φ)) ; carriers use _root_.PresheafOfModules in type position",
+        "line_number": "1257-1330",
+        "lean_error": "Application type mismatch (bare PresheafOfModules shadowed inside namespace) — fixed by _root_.PresheafOfModules type qualifier",
+        "result": "success",
+        "insight": "Inside namespace AlgebraicGeometry.Scheme.Modules the bare type PresheafOfModules resolves to a Scheme-indexed thing; type-position uses need _root_.PresheafOfModules (member access PresheafOfModules.pushforward₀ is fine). pullbackLanDecomposition verified {propext, Classical.choice, Quot.sound}."
+      }
+    ],
+    "next_steps": "D2 (extendScalars strong monoidal) and D3 (pullback0_tensor_iso) both require a concrete pointwise model of the abstract .leftAdjoint functors — genuinely Mathlib-absent, multi-hundred-LOC (strategy-critic ts244 est ~20-38 iters / ~400-750 LOC). D2: build extendScalarsConcrete φ over CommRingCat bases (value at U = ModuleCat.extendScalars (φ.app U).hom), give .Monoidal via distribBaseChange + naturality, then identify with abstract via leftAdjointUniq. D3: identify pullback0 with Lan F.op, pointwise colimit over up-directed comma category (F↓V), filtered-colimit/⊗ interchange for ModuleCat-valued presheaves. D4 + IsInvertible.pullback are 3-line corollaries once D2+D3 land (pullbackUnitIso, pullbackTensorMap already in hand)."
+  },
+  {
+    "timestamp": "2026-06-02T01:14:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "pullback0TensorIso (D3)"
+    },
+    "session": {
+      "id": "session_244",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Mathlib-absent: pullback0 is the abstract (pushforward₀ F R).leftAdjoint with NO pointwise colimit (Lan) formula exposed; the δ₀ iso needs a pointwise Lan model over the up-directed comma category plus filtered-colimit/⊗ interchange for ModuleCat-valued presheaves. Multi-hundred-LOC; not closable axiom-clean in one session; the mathlib-build invariant forbids sorry pins.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Not attempted in Lean this iter — handed off as the genuine multi-iteration sub-build after D1 landed.",
+        "code_tried": "(none — design handoff)",
+        "line_number": "n/a",
+        "lean_error": "",
+        "result": "partial",
+        "insight": "Correctly NOT pinned as a sorry; precise next sub-lemmas handed off (Lan identification + filtered-colimit interchange + pullbackObjFreeIso anchor)."
+      }
+    ],
+    "next_steps": "Build bottom-up: (i) identify pullback0 on underlying Ab-presheaves with Lan F.op; (ii) pointwise Lan colimit over comma category (F↓V) = {U : f⁻¹V ⊆ U}, up-directed; (iii) filtered-colimit/⊗ interchange ⇒ δ₀ iso. Leverage pullbackObjFreeIso for the free/trivial anchor."
+  }
+]

@@ -1,0 +1,175 @@
+[
+  {
+    "timestamp": "2026-06-02T17:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "sheafifyTensorUnitIso_hom_natural"
+    },
+    "session": {
+      "id": "session_252",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Sheaf.val vs (_ ⋙ forget₂ CommRingCat RingCat) carrier-spelling split: monoidalCategoryStruct vs monoidalCategory.toMonoidalCategoryStruct on the η-whiskers, defeq-but-not-syntactic; whisker-exchange lemmas only fire within one instance group",
+      "key_lemmas_used": [
+        "sheafifyTensorUnitIso_hom_eq",
+        "MonoidalCategory.whiskerLeft",
+        "MonoidalCategory.whiskerRight",
+        "Monoidal.tensorHom_app",
+        "tensorHom_def",
+        "ModuleCat.hom_ext",
+        "PresheafOfModules.Hom.ext"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "whisker252 letI instMS recipe: add letI := inferInstanceAs forget₂ then run whisker calculus with erw[Category.assoc] join-bridges (the directive's de-risk)",
+        "code_tried": "letI instMS := inferInstanceAs (…forget₂…); ← MonoidalCategory.tensorHom_def; ← whisker_exchange ×3 via erw",
+        "line_number": "~1947",
+        "lean_error": "← tensorHom_def does not fold η-whiskers (instance keying mismatch); ← whisker_exchange fires only once (cannot bridge cross-group crossing P'◁q ≫ η_{P'}▷Q') even via erw",
+        "result": "failed",
+        "insight": "REVERSING SIGNAL fired as armed — whisker252's letI diagnosis disproved by direct lean_multi_attempt. letI is inert (η-whiskers' instance baked at the := rfl lemma's elaboration) and harmful at section level. Whisker route is structurally blocked."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Section/component route (structural rethink): drop to component level via PresheafOfModules.Hom.ext (funext U), unfold whiskers to Monoidal.tensorHom, distribute via simp+erw, then ModuleCat.hom_ext; ext x to dissolve all monoidal instances",
+        "code_tried": "refine PresheafOfModules.Hom.ext (funext fun U => ?_); simp only [whiskerLeft, whiskerRight, comp_app, tensorHom_app, tensorHom_def, Category.assoc]; erw [comp_app ×4, tensorHom_app ×6]; apply ModuleCat.hom_ext; ext x; sorry",
+        "line_number": "1914-1993",
+        "lean_error": "compiles; open sorry at L1993 (element-level TensorProduct identity, instance-free)",
+        "result": "partial",
+        "insight": "erw is the carrier-spelling bridge: head-keyed simp lemmas miss the η-group legs (Sheaf.val carrier) but erw (keyed-defeq) fires. Element descent fully dissolves the instance war. Residual is a concrete ModuleCat tmul identity to close by TensorProduct.induction_on + sectionwise η-naturality."
+      }
+    ],
+    "next_steps": "Mechanical instance-free close: induction x using TensorProduct.induction_on (zero/add via map_zero/map_add on bundled ModuleCat.Hom.hom — must feed these explicitly, simp did not auto-fire; tmul m n via ModuleCat.MonoidalCategory tmul-evaluation lemmas), close with sectionwise (sheafificationAdjunction (𝟙 …)).unit.naturality p/q at .app U after restrictScalarsId_map strip."
+  },
+  {
+    "timestamp": "2026-06-02T17:30:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "pullbackTensorMap_natural"
+    },
+    "session": {
+      "id": "session_252",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "gated on sheafifyTensorUnitIso_hom_natural (square S3 of the 4-square paste still carries the open sorry)",
+      "key_lemmas_used": [
+        "pullbackTensorMap",
+        "tensorObj_functoriality"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Authored D1′ target + documented 4-square assembly plan (S1 NatTrans naturality, S2 δ_natural under a_Y.map, S3 sheafifyTensorUnitIso_hom_natural, S4 pullbackValIso_hom_natural CLOSED); not closed — gated on S3",
+        "code_tried": "simp only [pullbackTensorMap, tensorObj_functoriality]; sorry",
+        "line_number": "1999-2022",
+        "lean_error": "open sorry at L2022 (gated on helper)",
+        "result": "partial",
+        "insight": "Correctly authored and \\lean{}-pinned with expected sorry; assembly plan valid once S3 (Step A) closes."
+      }
+    ],
+    "next_steps": "Close Step A (sheafifyTensorUnitIso_hom_natural element-level residual) first, then assemble the 4-square paste: merge a_Y.map δ ≫ S3 ≫ S4 into a_Y.map Ψ, move S1 by NatTrans naturality, discharge via δ_natural + pullbackValIso_hom_natural (CLOSED) + Step-A output."
+  },
+  {
+    "timestamp": "2026-06-02T17:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate/DualInverse.lean",
+      "theorem": "homLocalSection"
+    },
+    "session": {
+      "id": "session_252",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "none — closed axiom-clean (verified #print axioms = {propext, Classical.choice, Quot.sound}, no sorryAx)",
+      "key_lemmas_used": [
+        "Scheme.Hom.image_preimage_eq_opensRange_inf",
+        "inf_eq_right.mpr",
+        "Functor.map_comp",
+        "Subsingleton.elim",
+        "restrict_obj/restrict_map (rfl)",
+        "reassoc_of%"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Build the localSection of presheafHom directly as a NatTrans; app W via eqToHom-conjugation of (f i).val component; naturality field via M-side/N-side Functor.map_comp bridges conjugated by thin-poset Subsingleton.elim edge equalities",
+        "code_tried": "app W := M.val.presheaf.map (eqToHom h.symm) ≫ ((toPresheaf _).map (f i).val).app (op …) ≫ N.val.presheaf.map (eqToHom h); naturality: rw [← Category.assoc, hML]; erw [Category.assoc, reassoc_of% hm, hNR]; simp only [Category.assoc]; rfl",
+        "line_number": "355-404",
+        "lean_error": "none (compiles, axiom-clean)",
+        "result": "success",
+        "insight": "Carrier-friction recipe: composites mix M.val.presheaf (image form) with (M.restrict).val.presheaf (restrict form) — defeq but not syntactic, breaking rw/simp on Functor.map_comp/Category.assoc asymmetrically. WORKING: state hML in restrict form (prove via rw[(F.map_comp).symm, hsubM]; exact F.map_comp), state hNR in pure form and apply with erw, use erw for the assoc step across the restrict/image boundary. DEAD: plain rw[Functor.map_comp] forward-split, slice_lhs (atomic on defeq-boundary 2-comp), term-mode congrArg in .trans (whnf timeout)."
+      }
+    ],
+    "next_steps": "Done. Reusable carrier-friction recipe recorded in KB. Consider a \\lean{} pin in the blueprint (di252 MAJOR)."
+  },
+  {
+    "timestamp": "2026-06-02T17:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate/DualInverse.lean",
+      "theorem": "homOfLocalCompat"
+    },
+    "session": {
+      "id": "session_252",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "remaining sorry = standard gluing bookkeeping: (a) IsCompatible from HEq hf, (b) ⊤-section→morphism conversion, (c) sectionwise 𝒪_X-linearity + homMk",
+      "key_lemmas_used": [
+        "presheafHom",
+        "Presheaf.IsSheaf.hom",
+        "TopCat.Sheaf.existsUnique_gluing",
+        "homLocalSection",
+        "Opens.mem_iSup"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Reduce bare sorry to a compiling scaffold: construct hom-sheaf H, prove iSup U = ⊤, feed existsUnique_gluing with homLocalSection U f; leave one sorry for the gluing residual",
+        "code_tried": "let H : TopCat.Sheaf (Type u) X := ⟨presheafHom …, Presheaf.IsSheaf.hom _ _ N.isSheaf⟩; have hsup : iSup U = ⊤ := …; have hglue := H.existsUnique_gluing U (fun i => homLocalSection U f i); sorry",
+        "line_number": "474-510",
+        "lean_error": "compiles; one sorry at L510",
+        "result": "partial",
+        "insight": "Scaffold is genuine (lean-auditor + di252 confirm not laundered). Residual reduced to standard gluing; the load-bearing naturality (homLocalSection) is the hard part and is now done. Build green."
+      }
+    ],
+    "next_steps": "Close (a) HEq hf → IsCompatible H.1 U (homLocalSection U f) (transport HEq through eqToHom-conjugation, likely via PresheafHom.isAmalgamation_iff/sectionwise comparison); (b) ⊤-section→morphism via presheafHomSectionsEquiv + op ⊤ ↔ .sections bridge; (c) sectionwise linearity (holds on each U i, separated ⇒ global) + Scheme.Modules.homMk. Blueprint step (a) under-specified (di252 MAJOR) — needs writer expansion."
+  },
+  {
+    "timestamp": "2026-06-02T17:30:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate/DualInverse.lean",
+      "theorem": "dual_restrict_iso"
+    },
+    "session": {
+      "id": "session_252",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Step-4 presheaf residual (pushforward β).obj (dual M.val) ≅ dual ((pushforward β).obj M.val) at L256 — untouched this iter (budget consumed by homLocalSection/homOfLocalCompat)",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Not attempted — Step A (homOfLocalCompat) consumed the entire budget (~10 compile iterations against the carrier-friction wall, sibling file non-compiling for most of the session)",
+        "code_tried": "",
+        "line_number": "256",
+        "lean_error": "",
+        "result": "partial",
+        "insight": "Plan unchanged (dual252): leg (A) sliceDualTransport (standalone first) + leg (B) restrictScalarsRingIsoDualEquiv, OR inverse-uniqueness shortcut from tensorObj_restrict_iso."
+      }
+    ],
+    "next_steps": "Build sliceDualTransport as a standalone lemma first, then restrictScalarsRingIsoDualEquiv; or take the inverse-uniqueness shortcut. This is the lower-level frontier of the dual-inverse chain."
+  }
+]

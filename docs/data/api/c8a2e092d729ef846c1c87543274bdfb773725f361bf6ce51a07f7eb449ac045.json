@@ -1,0 +1,114 @@
+[
+  {
+    "timestamp": "2026-05-12T04:33:42Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "h_π_split"
+    },
+    "session": {
+      "id": "session_70",
+      "model": "kimi-k2.6"
+    },
+    "findings": {
+      "blocker": "Missing simp/rewrite lemma for alternatingCofaceMapComplex.map_f or FormalCoproduct.cechFunctor.map_app that exposes the Pi.lift form of π.f i. The 𝟙 X ≫ _ factor is not syntactically present after simp.",
+      "key_lemmas_used": [
+        "splitEpi_pi_lift_of_injective"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "simp π then rw [Category.id_comp] to expose Pi.lift form",
+        "code_tried": "simp [π]; rw [show g_simp = FormalCoproduct.cechFunctor.map g_FC by rfl]; simp [FormalCoproduct.cechFunctor_map_app, FormalCoproduct.powerMap_f, FormalCoproduct.powerMap_φ]; dsimp [g_FC]; congr; funext i_1; erw [Limits.Pi.map_id, CategoryTheory.op_id, CategoryTheory.Functor.map_id, CategoryTheory.Category.comp_id]",
+        "line_number": "787",
+        "lean_error": "Tactic 'rewrite' failed: Did not find an occurrence of the pattern 𝟙 ?m ≫ ?f",
+        "goal_before": "SplitEpi (π.f i)",
+        "goal_after": "SplitEpi (π.f i)"
+      },
+      {
+        "attempt": 2,
+        "strategy": "convert splitEpi_pi_lift_of_injective using 2, leaving equality subgoal",
+        "code_tried": "convert splitEpi_pi_lift_of_injective _ (fun j' => g_FC.f ∘ j') (h_inj' i) using 2; · simp only [π, NatTrans.hcomp_app, Functor.whiskerLeft_app, NatTrans.id_app]; rw [show g_simp = FormalCoproduct.cechFunctor.map g_FC by rfl]; simp [FormalCoproduct.cechFunctor_map_app, FormalCoproduct.powerMap_f, FormalCoproduct.powerMap_φ]",
+        "line_number": "787",
+        "lean_error": "Tactic 'rewrite' failed: Did not find an occurrence of the pattern 𝟙 ?m ≫ ?f",
+        "goal_before": "SplitEpi (π.f i)",
+        "goal_after": "SplitEpi (π.f i)"
+      },
+      {
+        "attempt": 3,
+        "strategy": "erw [Category.id_comp] instead of rw",
+        "code_tried": "erw [Category.id_comp]",
+        "line_number": "787",
+        "lean_error": "Tactic 'rewrite' failed: Did not find an occurrence of the pattern 𝟙 ?m ≫ ?f",
+        "goal_before": "π.f i = Pi.lift (fun b => Pi.π M (g_FC.f ∘ b))",
+        "goal_after": "π.f i = Pi.lift (fun b => Pi.π M (g_FC.f ∘ b))"
+      },
+      {
+        "attempt": 4,
+        "strategy": "simp [π] before rewriting g_simp",
+        "code_tried": "simp [π]; rw [show g_simp = FormalCoproduct.cechFunctor.map g_FC by rfl]; simp [FormalCoproduct.cechFunctor_map_app, FormalCoproduct.powerMap_f, FormalCoproduct.powerMap_φ]",
+        "line_number": "787",
+        "lean_error": "Tactic 'rewrite' failed: Did not find an occurrence of the pattern g_simp",
+        "goal_before": "π.f i = Pi.lift (fun b => Pi.π M (g_FC.f ∘ b))",
+        "goal_after": "π.f i = Pi.lift (fun b => Pi.π M (g_FC.f ∘ b))"
+      },
+      {
+        "attempt": 5,
+        "strategy": "Identify remaining map with product projection via simp lemmas for evalOp and cechFunctor",
+        "code_tried": "simp [FormalCoproduct.cechFunctor_map_app, FormalCoproduct.powerMap_f, FormalCoproduct.powerMap_φ]",
+        "line_number": "787",
+        "lean_error": "simp made no progress",
+        "goal_before": "π.f i = Pi.lift (fun b => Pi.π M (g_FC.f ∘ b))",
+        "goal_after": "π.f i = Pi.lift (fun b => Pi.π M (g_FC.f ∘ b))"
+      }
+    ],
+    "next_steps": "Add a dedicated simp/rewrite lemma that computes (alternatingCofaceMapComplex.map τ).f i in terms of Pi.lift and Pi.π when τ comes from FormalCoproduct.cechFunctor.map. Alternatively, use a direct funext + component-wise calculation instead of convert with the helper."
+  },
+  {
+    "timestamp": "2026-05-12T04:54:11Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "cotangentExactSeqBeta"
+    },
+    "session": {
+      "id": "session_70",
+      "model": "kimi-k2.6"
+    },
+    "findings": {
+      "blocker": "",
+      "key_lemmas_used": [
+        "Adjunction.homEquiv_naturality_right",
+        "LocallyRingedSpace.comp_c",
+        "Equiv.apply_symm_apply",
+        "PresheafOfModules.DifferentialsConstruction.isUniversal'"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Scaffolding: replace := sorry with := by sorry",
+        "code_tried": "noncomputable def cotangentExactSeqBeta (f : X ⟶ Y) (g : Y ⟶ S) : relativeDifferentials (f ≫ g) ⟶ relativeDifferentials f := by sorry",
+        "line_number": "218",
+        "lean_error": "",
+        "goal_before": "relativeDifferentials (f ≫ g) ⟶ relativeDifferentials f",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Scaffolding step, no mathematical progress."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Re-implement the iter-069 solution: adjunction factorization η ≫ φ2' = φ1' then derivation lift + universal property",
+        "code_tried": "let φ1' := ((TopCat.Presheaf.pullbackPushforwardAdjunction CommRingCat (f ≫ g).base).homEquiv S.presheaf X.presheaf).symm (f ≫ g).c; let φ2' := ((TopCat.Presheaf.pullbackPushforwardAdjunction CommRingCat f.base).homEquiv Y.presheaf X.presheaf).symm f.c; let adj_f := TopCat.Presheaf.pullbackPushforwardAdjunction CommRingCat f.base; let adj_fg := TopCat.Presheaf.pullbackPushforwardAdjunction CommRingCat (f ≫ g).base; let η := ((adj_fg.homEquiv S.presheaf ((TopCat.Presheaf.pullback CommRingCat f.base).obj Y.presheaf)).symm (g.c ≫ (TopCat.Presheaf.pushforward CommRingCat g.base).map (adj_f.unit.app Y.presheaf))); have hη : η ≫ φ2' = φ1' := by ...; let d2 := PresheafOfModules.DifferentialsConstruction.derivation' φ2'; let d1 : ...Derivation' φ1' := { d := d2.d, d_mul := d2.d_mul, d_map := d2.d_map, d_app := fun {X} a => by rw [← hη]; rfl; exact d2.d_app (η.app X a) }; let presheafHom := (PresheafOfModules.DifferentialsConstruction.isUniversal' φ1').desc d1; exact ⟨presheafHom⟩",
+        "line_number": "218",
+        "lean_error": "",
+        "goal_before": "relativeDifferentials (f ≫ g) ⟶ relativeDifferentials f",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Redundant re-implementation of the iter-069 solution. Zero net change to sorry count."
+      }
+    ],
+    "next_steps": "Target already closed in iter-069. No further work needed."
+  }
+]

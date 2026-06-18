@@ -1,0 +1,273 @@
+[
+  {
+    "timestamp": "2026-05-12T23:48:25Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/BasicOpenCech.lean",
+      "theorem": "h_diff_pi_smul_f (internal to basicOpenCover_isCechAcyclicCover_toModuleKSheaf)"
+    },
+    "session": {
+      "id": "session_82",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "S6 path-(a) blocked by LinearMap.comp_apply unification mismatch: Mathlib's lemma is stated with semilinear ∘ₛₗ pattern + explicit RingHomCompTriple, while the goal uses homogeneous ∘ₗ. Higher-order unification fails to bridge despite definitional equality. Workarounds tried (simp [LinearMap.coe_comp, Function.comp_apply], change, rfl, explicit RingHomCompTriple) all failed. Path forward: introduce a `let M : ↑(∏ᶜ Z₁) →ₗ[k] ↑(∏ᶜ Z₂) := eqToHom_hom ∘ₗ Σ_hom` abbreviation BEFORE the iter-081 simp (so comp lives behind a name), or bypass split via per-summand at function-evaluation level.",
+      "key_lemmas_used": [
+        "ModuleCat.piIsoPi_hom_ker_subtype_apply",
+        "limit.isoLimitCone (as iso re-fold)",
+        "rfl-via-show"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "S5 prelude (initial): re-fold limit.isoLimitCone shape with brace-syntax show",
+        "code_tried": "rw [show (limit.isoLimitCone {cone := ModuleCat.productCone Z₂, isLimit := ModuleCat.productConeIsLimit Z₂}) = ModuleCat.piIsoPi Z₂ from rfl, ...]",
+        "line_number": 1161,
+        "lean_error": "unexpected identifier; expected '}' at L1161 col 72; unexpected syntax",
+        "goal_before": "(piIsoPi Z₂).hom (eqToHom _ ∘ₗ Σ_hom) ((piIsoPi Z₁).symm (r • y)) j = r • (piIsoPi Z₂).hom (eqToHom _ ∘ₗ Σ_hom) ((piIsoPi Z₁).symm y) j (exposed by iter-081 simp; the iso is in limit.isoLimitCone shape)",
+        "goal_after": "same goal — parse failed",
+        "result": "failed",
+        "insight": "{cone := ..., isLimit := ...} brace anon-constructor syntax conflicts with show-expression scoping. Use ⟨..., ...⟩ instead."
+      },
+      {
+        "attempt": 2,
+        "strategy": "S5 prelude (corrected): re-fold limit.isoLimitCone with anonymous-constructor ⟨_,_⟩",
+        "code_tried": "rw [show (limit.isoLimitCone ⟨ModuleCat.productCone Z₂, ModuleCat.productConeIsLimit Z₂⟩) = ModuleCat.piIsoPi Z₂ from rfl, show (limit.isoLimitCone ⟨ModuleCat.productCone Z₁, ModuleCat.productConeIsLimit Z₁⟩) = ModuleCat.piIsoPi Z₁ from rfl]",
+        "line_number": 1161,
+        "lean_error": "",
+        "goal_before": "same as attempt 1",
+        "goal_after": "limit.isoLimitCone shape collapsed to ModuleCat.piIsoPi Z₂ on both sides; ready for piIsoPi_hom_ker_subtype_apply",
+        "result": "success",
+        "insight": "rfl works because limit.isoLimitCone of an explicit cone-with-limit pair is definitionally ModuleCat.piIsoPi."
+      },
+      {
+        "attempt": 3,
+        "strategy": "S5 push j-projection past iso: piIsoPi_hom_ker_subtype_apply on both sides",
+        "code_tried": "show (ConcreteCategory.hom (ModuleCat.piIsoPi Z₂).hom) _ j = r • (ConcreteCategory.hom (ModuleCat.piIsoPi Z₂).hom) _ j\nrw [ModuleCat.piIsoPi_hom_ker_subtype_apply, ModuleCat.piIsoPi_hom_ker_subtype_apply]",
+        "line_number": 1167,
+        "lean_error": "",
+        "goal_before": "(ConcreteCategory.hom (ModuleCat.piIsoPi Z₂).hom) ((eqToHom _ ∘ₗ Σ_hom) (...)) j = r • (ConcreteCategory.hom (ModuleCat.piIsoPi Z₂).hom) ((eqToHom _ ∘ₗ Σ_hom) (...)) j",
+        "goal_after": "(Pi.π Z₂ j).hom ((eqToHom_hom ∘ₗ Σ_hom) ((piIsoPi Z₁).inv (r • y))) = r • (Pi.π Z₂ j).hom ((eqToHom_hom ∘ₗ Σ_hom) ((piIsoPi Z₁).inv y))",
+        "result": "success",
+        "insight": "ModuleCat.piIsoPi_hom_ker_subtype_apply: (piIsoPi Z).hom x i = (Pi.π Z i) x. The j-projection is now adjacent to the differential; alternating-sum structure preserved."
+      },
+      {
+        "attempt": 4,
+        "strategy": "S6 path-(a): split (eqToHom_hom ∘ₗ Σ_hom) z into eqToHom_hom (Σ_hom z) via LinearMap.comp_apply",
+        "code_tried": "simp only [LinearMap.comp_apply]",
+        "line_number": 1240,
+        "lean_error": "no progress reported in task result; the lemma's pattern is `(?f ∘ₛₗ ?g) ?x` (semilinear) and HOU does not bridge to homogeneous `∘ₗ`",
+        "goal_before": "(Pi.π Z₂ j).hom ((eqToHom_hom ∘ₗ Σ_hom) ((piIsoPi Z₁).inv (r • y))) = r • (Pi.π Z₂ j).hom ((eqToHom_hom ∘ₗ Σ_hom) ((piIsoPi Z₁).inv y))",
+        "goal_after": "unchanged",
+        "result": "failed",
+        "insight": "Mathlib LinearMap.comp_apply has signature `(f ∘ₛₗ g) x` (semilinear notation). The homogeneous ∘ₗ in our goal is definitionally equal but HOU does not unify them as a rewrite."
+      },
+      {
+        "attempt": 5,
+        "strategy": "S6 path-(a) workaround: simp [LinearMap.coe_comp, Function.comp_apply]",
+        "code_tried": "simp only [LinearMap.coe_comp, Function.comp_apply]",
+        "line_number": 1240,
+        "lean_error": "no progress",
+        "goal_before": "same",
+        "goal_after": "unchanged",
+        "result": "failed",
+        "insight": "The `(... ∘ₗ ...) z` form does not contain an explicit ⇑(... ∘ₗ ...) coercion for these lemmas to rewrite."
+      },
+      {
+        "attempt": 6,
+        "strategy": "S6 path-(a) workaround: rfl",
+        "code_tried": "rfl",
+        "line_number": 1240,
+        "lean_error": "sides are not defeq",
+        "goal_before": "same",
+        "goal_after": "unchanged",
+        "result": "failed",
+        "insight": "The smul on Z₂ at j routes through perI₂ j (presheaf restriction map), while the LHS goes through the differential. Equality is non-trivial — needs S6–S8 proper."
+      },
+      {
+        "attempt": 7,
+        "strategy": "S6 path-(a) workaround: change to explicitly unfolded form",
+        "code_tried": "change (Pi.π Z₂ j).hom (eqToHom_hom (Σ_hom ((piIsoPi Z₁).inv (r • y)))) = ...",
+        "line_number": 1240,
+        "lean_error": "eqToHom's implicit type proof not displayable in surface syntax",
+        "goal_before": "same",
+        "goal_after": "unchanged",
+        "result": "failed",
+        "insight": "The eqToHom ⋯ in the goal carries an implicit type-equality witness that cannot be reconstructed in user-space syntax. `change` cannot bridge."
+      }
+    ],
+    "next_steps": "Iter-083+: pursue path (a) — introduce `let M : ↑(∏ᶜ Z₁) →ₗ[k] ↑(∏ᶜ Z₂) := eqToHom_hom ∘ₗ Σ_hom` BEFORE the iter-081 S2+S3+S4 simp so the comp lives behind a single named LinearMap. Then promote `M` to R-linear via per-summand reasoning. Alternative path (b): bypass the split via per-summand at function-evaluation level — use `Pi.lift_apply`/`Finset.sum_apply` from a different angle. The per-summand argument is ~30 LOC; expect 3–5 iterations to land."
+  },
+  {
+    "timestamp": "2026-05-12T23:48:25Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Differentials.lean",
+      "theorem": "cotangentExactSeq_structure"
+    },
+    "session": {
+      "id": "session_82",
+      "model": "claude-opus-4-7"
+    },
+    "findings": {
+      "blocker": "h_epi (the surjectivity-of-cotangent-descent half of the conjunction): typeclass-coercion blocker identical to iter-081. The natural module instance on `(relativeDifferentials f).val.obj U` is over the forget₂-image ring `(R ⋙ forget₂ CommRingCat RingCat).obj U`, NOT directly over `R.obj U`. Submodule.span_induction's `D b` case fails with 'x : ?m is not an inductive datatype' under the bundled Algebra setup. KaehlerDifferential.map_surjective cannot be applied directly — type mismatch between bundled and unbundled forms. exact_iff_stalkwise NOT introduced (per conditional clause: would have shifted 5 → 6).",
+      "key_lemmas_used": [
+        "Adjunction.homAddEquiv_zero",
+        "Adjunction.homEquiv_naturality_right",
+        "Equiv.apply_symm_apply",
+        "SheafOfModules.hom_ext",
+        "PresheafOfModules.DifferentialsConstruction.isUniversal'.postcomp_injective",
+        "PresheafOfModules.Derivation.postcomp_comp (iter-081 helper)",
+        "PresheafOfModules.Derivation.Universal.fac",
+        "PresheafOfModules.Derivation.ext",
+        "PresheafOfModules.Derivation'.d_app"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Lift set_option maxHeartbeats 16000000 in above lemma (accommodate active Route (c) chain)",
+        "code_tried": "set_option maxHeartbeats 16000000 in\nlemma cotangentExactSeq_structure (f : X ⟶ Y) (g : Y ⟶ S) : ∃ (h : ...), ...",
+        "line_number": 484,
+        "lean_error": "",
+        "goal_before": "lemma signature only; no body change",
+        "goal_after": "accepted; heartbeat budget lifted",
+        "result": "success",
+        "insight": "Required for the now-active Route (c) chain (~70 LOC inline) to elaborate."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Place set_option above docstring (initial misplacement)",
+        "code_tried": "set_option maxHeartbeats 16000000 in\n/-- ... -/\nlemma ...",
+        "line_number": 481,
+        "lean_error": "unexpected token 'set_option'; expected 'lemma' (event 133, log line 307)",
+        "goal_before": "n/a (parse failure)",
+        "goal_after": "n/a",
+        "result": "failed",
+        "insight": "set_option must sit between the docstring and the lemma keyword, not above the docstring. Corrected in attempt 3."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Restructure body: refine ⟨?h_zero, ?h_rest⟩; case h_zero => Route (c) chain; case h_rest => sorry",
+        "code_tried": "refine ⟨?h_zero, ?h_rest⟩\ncase h_zero =>\n  apply ((Scheme.Modules.pullbackPushforwardAdjunction f).homEquiv _ _).injective\n  rw [Adjunction.homAddEquiv_zero, Adjunction.homEquiv_naturality_right]\n  unfold cotangentExactSeqAlpha\n  simp only [Equiv.apply_symm_apply]\n  apply SheafOfModules.hom_ext\n  change (... isUniversal' _).desc _ ≫ (pushforward _).map (cotangentExactSeqBeta f g).val = 0\n  apply (... isUniversal' _).postcomp_injective\n  rw [PresheafOfModules.Derivation.postcomp_comp]\n  simp only [PresheafOfModules.Derivation.Universal.fac]\n  apply PresheafOfModules.Derivation.ext\n  ext U b\n  [build φ_g', φ_fg', φ_2', adj_f locals + hcoh + hcoh_app + hd_app + hβ_fac]\n  simp only [PresheafOfModules.Derivation.postcomp_d_apply]\n  dsimp only [AddMonoidHom.mk', AddMonoidHom.coe_mk, ZeroHom.coe_mk]\n  unfold cotangentExactSeqBeta\n  change (... isUniversal' φ_fg').desc _ . app _ . hom ((derivation' φ_fg').d ((f.c.app U).hom b)) = _\n  rw [hβ_fac _ ((f.c.app U).hom b)]\n  exact hd_app\ncase h_rest =>\n  sorry",
+        "line_number": 488,
+        "lean_error": "",
+        "goal_before": "∃ (h : α ≫ β = 0), Exact ⟨α, β, h⟩ ∧ Epi β",
+        "goal_after": "h_zero closed; h_rest remains as absorbed sorry for `h_exact ∧ h_epi`",
+        "result": "success",
+        "insight": "Reinstating the iter-081 verified-working chain in active code: ~70 LOC. The key fix is the `hβ_fac` proof uses `simp only [postcomp_d_apply] at hpt; exact hpt` (NOT `simpa`, which over-fires Universal.fac and collapses hpt to True)."
+      },
+      {
+        "attempt": 4,
+        "strategy": "h_epi via Route 2: SheafOfModules.epi_of_epi_presheaf + PresheafOfModules.epi_iff_surjective + Submodule.span_induction with KaehlerDifferential.map_surjective",
+        "code_tried": "case h_epi =>\n  apply SheafOfModules.epi_of_epi_presheaf\n  rw [PresheafOfModules.epi_iff_surjective]\n  intro U\n  [set up φ_fg', φ_2', adj_f, adj_fg, η; derive hη: η ≫ φ_2' = φ_fg']\n  [set up algebra instances via letI for A_fg → B, A_2 → B, A_fg → A_2]\n  [IsScalarTower via IsScalarTower.of_algebraMap_eq']\n  [Submodule.span_induction with the descent identification]",
+        "line_number": 560,
+        "lean_error": "failed to synthesize instance of type class Algebra ↑(…) ↑(…); subsequent Submodule.span_induction's D b case: 'x✝ : ?m.2809 is not an inductive datatype'",
+        "goal_before": "Epi (cotangentExactSeqBeta f g)",
+        "goal_after": "unchanged (after revert)",
+        "result": "failed",
+        "insight": "The `: Type _` annotation on `letI A_fg_algebra` triggers re-elaboration that drops the toAlgebra instance. Bundled-vs-unbundled KaehlerDifferential mismatch: Submodule.span_induction cannot expose the inductive structure under the bundled Algebra setup."
+      },
+      {
+        "attempt": 5,
+        "strategy": "h_epi workaround: congr_arg ConcreteCategory.hom fac to build fac_ring",
+        "code_tried": "have fac_ring := congr_arg ConcreteCategory.hom fac",
+        "line_number": null,
+        "lean_error": "Function expected at ConcreteCategory.hom (…) (event 136, log line 314)",
+        "goal_before": "fac : η.app U ≫ φ_2'.app U = φ_fg'.app U ≫ 𝟙 _",
+        "goal_after": "unchanged",
+        "result": "failed",
+        "insight": "ConcreteCategory.hom in the relevant partial-application shape is not the function expected; the congr_arg approach has the wrong shape for the CommRingCat-level equation."
+      },
+      {
+        "attempt": 6,
+        "strategy": "h_epi workaround: calc-chain for algebra-map composition",
+        "code_tried": "have fac_ring : algebraMap _ _ = (algebraMap _ _).comp (algebraMap _ _) := by calc ...",
+        "line_number": null,
+        "lean_error": "invalid 'calc' step, failed to synthesize Trans (event 157, log line 359)",
+        "goal_before": "algebraMap A_fg B = (algebraMap A_2 B).comp (algebraMap A_fg A_2)",
+        "goal_after": "unchanged",
+        "result": "failed",
+        "insight": "calc syntax does not have the transitivity instance for RingHom-shaped equalities in that exact form."
+      },
+      {
+        "attempt": 7,
+        "strategy": "h_epi workaround: change to unbundled ∃-statement",
+        "code_tried": "change ∃ x, _ = (y : _root_.KaehlerDifferential A B)",
+        "line_number": null,
+        "lean_error": "Application type mismatch: U has type (TopologicalSpace.Opens ↑X)ᵒᵖ but expected (TopologicalSpace.Opens ↑X.toTopCat)ᵒᵖ (event 168, log line 386)",
+        "goal_before": "Function.Surjective ((cotangentExactSeqBeta f g).val.app U).hom",
+        "goal_after": "unchanged",
+        "result": "failed",
+        "insight": "Bundled/unbundled type mismatch even on simple projections — the `↑X` vs `↑X.toTopCat` coercion drift cannot be bridged via `change` alone."
+      },
+      {
+        "attempt": 8,
+        "strategy": "Revert h_epi/h_exact to a single absorbed sorry (consolidate into case h_rest)",
+        "code_tried": "refine ⟨?h_zero, ?h_rest⟩\ncase h_zero => [...verified chain...]\ncase h_rest => sorry",
+        "line_number": 576,
+        "lean_error": "",
+        "goal_before": "h_exact ∧ h_epi",
+        "goal_after": "absorbed into single sorry",
+        "result": "success",
+        "insight": "Per iter-081 conditional clause: with h_epi not closing, do NOT introduce exact_iff_stalkwise as a free-floating sorry (would shift 5 → 6). Preserve net 5 → 5 with the structural advance that h_zero is now closed in code."
+      }
+    ],
+    "next_steps": "Iter-083+: Three options from prover task result. (A) Refactor approach: extract η-coherence as top-level helper `cotangentExactSeqBeta_hη`; with hη available externally, use `algebraize` for algebra+tower setup, then `convert KaehlerDifferential.map_surjective using 1`. Refactor-subagent eligible. (B) Direct in-line route continued with cleaner type handling: use `let A_fg : Type _ := (... .obj U).carrier` named bindings (NOT `(... .obj U : Type _)` inline) to prevent re-elaboration; build fac_ring without going through CommRingCat.Hom.hom of ≫. (C) Stalkwise-only: skip h_epi Route 2; build SheafOfModules.exact_iff_stalkwise (multi-iter TopCat-stalk chain) and use it to close BOTH h_exact AND h_epi, avoiding the bundled/unbundled identification entirely. Plan agent should pick one path and commit to it; trying all three serially has been the iter-076 → 081 pattern with no closure."
+  },
+  {
+    "timestamp": "2026-05-12T23:48:25Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Modules/Monoidal.lean",
+      "theorem": "instIsMonoidal_W"
+    },
+    "session": {
+      "id": "session_82",
+      "model": "n/a"
+    },
+    "findings": {
+      "blocker": "Off-limits per plan. Mathlib gap: PresheafOfModules.stalk_tensorObj for varying-ring R₀ unchanged. Requires upstream PR or user-authorised axiom.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Keep deferred. Long-term fix is upstream Mathlib PR for stalk_tensorObj with varying-ring R₀. Does not block downstream consumers (they use MonoidalCategory X.Modules)."
+  },
+  {
+    "timestamp": "2026-05-12T23:48:25Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Jacobian.lean",
+      "theorem": "nonempty_jacobianWitness"
+    },
+    "session": {
+      "id": "session_82",
+      "model": "n/a"
+    },
+    "findings": {
+      "blocker": "Off-limits per plan. Phase C step C3, iter-086+ earliest. Packages Albanese existence + genus-0 rigidity.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Keep deferred (Phase C C0–C3 not landed)."
+  },
+  {
+    "timestamp": "2026-05-12T23:48:25Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/Functor.lean",
+      "theorem": "PicardFunctor.representable"
+    },
+    "session": {
+      "id": "session_82",
+      "model": "n/a"
+    },
+    "findings": {
+      "blocker": "Off-limits per plan. Gated on Phase C C0–C3.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Keep deferred."
+  }
+]
