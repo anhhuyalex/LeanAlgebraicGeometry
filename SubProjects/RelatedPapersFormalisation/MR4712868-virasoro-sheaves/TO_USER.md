@@ -1,0 +1,1 @@
+- DAG phase complete: blueprint `Overview.tex` written with 25 declarations covering arXiv:2210.05266 (Virasoro constraints). Primary proof target: `thm:virasoro-bracket` (`[L_k, L_l] = (l-k)L_{k+l}`, purely algebraic). Loop will now proceed to the autoformalize/prover phase.

@@ -1,0 +1,748 @@
+\chapter{Atiyah bundles and isomonodromic deformations}
+\label{chap:deformation}
+
+% archon:covers MR4736527GeometricLocalSystemsOnVeryGeneralCurvesAndIsomonodromy/DeformationTheory.lean
+
+% Chapter-local macros (mirroring the source paper's definitions).
+% needs-macro (shared): \on, \sheafend should be promoted to common.tex.
+\providecommand{\on}{\operatorname}
+\providecommand{\sheafend}{\mathscr{E}\kern -1pt nd}
+
+This chapter develops the deformation-theoretic background of \S3 of the paper:
+the Atiyah bundle of a (filtered) vector bundle, its parabolic refinement via the
+residue homomorphism, the parabolic structure associated to a connection,
+isomonodromic deformations and nearby curves, and the first-order deformation
+theory that feeds the Harder--Narasimhan analysis. Throughout, $C$ is a smooth
+projective curve over $\C$ and $D \subset C$ a reduced effective divisor.
+
+\section{Flat bundles with regular singularities}
+\label{sec:deformation-flat-bundle}
+
+\begin{definition}[Flat vector bundle with regular singularities]
+  \label{def:flat-bundle}
+  \lean{LandesmanLitt.FlatBundle}
+  % SOURCE: [Landesman--Litt, arXiv:2202.00039], \S3, Notation 3.x "flat vector bundle with regular singularities" (read from references/MR4736527-local-systems-isomonodromy.tex)
+  % SOURCE QUOTE: "$$({E}, \nabla: {E}\to
+  % {E}\otimes\Omega^1_C(\log D))$$ a flat vector bundle on $C$ with regular
+  % singularities along $D$. Let $P^\bullet$ be a filtration of $E$."
+  \textit{Source: Landesman--Litt, \S3.}
+  Let $D \subset C$ be a reduced effective divisor. A \emph{flat vector bundle on
+  $C$ with regular singularities along $D$} is a pair $(E,\nabla)$ consisting of a
+  vector bundle $E$ on $C$ together with a logarithmic connection
+  \[
+    \nabla: E \to E \otimes \Omega^1_C(\log D),
+  \]
+  i.e.\ a $\C$-linear map satisfying the Leibniz rule
+  $\nabla(fs) = f\,\nabla(s) + s \otimes df$ for $f \in \sO_C$ and $s \in E$,
+  with logarithmic poles along $D$. On a curve every such connection is
+  automatically flat (integrable), the curvature lying in
+  $E \otimes \Omega^2_C(\log D) = 0$. The poles being logarithmic encodes that
+  the singularities of $\nabla$ along $D$ are regular.
+\end{definition}
+
+\section{The Atiyah bundle of a filtered vector bundle}
+\label{sec:deformation-atiyah}
+
+Following \cite[16.8.1]{EGAIV.4}, for a vector bundle $E$ on $C$ and $U \subset C$
+open, $\on{Diff}^1(E,E)(U)$ denotes the set of $\C$-linear endomorphisms $\tau$ of
+$E(U)$ such that, for all $f \in \sO_C(U)$ and $v \in E(U)$, the map
+$\tau_f: v \mapsto \tau(fv) - f\tau(v)$ is $\sO_C$-linear; thus $\tau_f$ measures
+the failure of $\tau$ to be $\sO_C$-linear.
+
+\begin{definition}[The Atiyah bundle]
+  \label{def:atiyah}
+  \lean{LandesmanLitt.AtiyahBundle}
+  % SOURCE: [Landesman--Litt, arXiv:2202.00039], \S3.1, Definition "The Atiyah bundle" (after BHH:very-stable, p. 5) (read from references/MR4736527-local-systems-isomonodromy.tex)
+  % SOURCE QUOTE: "Let $E$ be a
+  % vector bundle on a curve $C$.
+  % Define the Atiyah bundle $$\on{At}_C(E)\subset \on{Diff}^1({E}, {E})$$ as the
+  % subsheaf with sections on an open set $U \subset C$ given as follows.
+  % Let $\on{At}_C(E)(U)$ consist of those $\mathbb{C}$-endomorphisms $\tau \in
+  % \on{Diff}^1({E}, {E})(U)$ such that for each $f\in \mathscr{O}_C(U)$, the endomorphism of ${E}$ defined by $$\tau_f: v\mapsto \tau(fv)-f\tau(v)$$ is multiplication by a section $\delta_\tau(f)\in \mathscr{O}_C(U)$."
+  \textit{Source: Landesman--Litt, \S3.1 (after [BHH, ``Very stable''], p. 5).}
+  Let $E$ be a vector bundle on $C$. The \emph{Atiyah bundle}
+  $\on{At}_C(E) \subset \on{Diff}^1(E,E)$ is the subsheaf whose sections over an
+  open $U \subset C$ are those $\C$-endomorphisms $\tau \in \on{Diff}^1(E,E)(U)$
+  such that, for each $f \in \sO_C(U)$, the endomorphism
+  $\tau_f: v \mapsto \tau(fv) - f\tau(v)$ is multiplication by a section
+  $\delta_\tau(f) \in \sO_C(U)$. The assignment $f \mapsto \delta_\tau(f)$ is a
+  derivation, giving the symbol map $\delta$ below.
+\end{definition}
+
+\begin{definition}[Atiyah bundle of a filtered vector bundle]
+  \label{def:atiyah-filtered}
+  \lean{LandesmanLitt.AtiyahBundleFiltered}
+  \uses{def:atiyah}
+  % SOURCE: [Landesman--Litt, arXiv:2202.00039], \S3.1, Definition "Atiyah bundle of a filtered vector bundle" (read from references/MR4736527-local-systems-isomonodromy.tex)
+  % SOURCE QUOTE: "Let $P^\bullet := (0 = P^0 \subset P^1
+  % \subset \cdots \subset P^m = E)$ be a filtration on $E$.
+  % We define $$\on{At}_C(E, P^\bullet)\subset \on{At}_C(E)$$ to be the subsheaf
+  % consisting of those endomorphisms that preserve $P^\bullet$."
+  \textit{Source: Landesman--Litt, \S3.1.}
+  Let $P^\bullet := (0 = P^0 \subset P^1 \subset \cdots \subset P^m = E)$ be a
+  filtration of $E$ by sub-bundles. The \emph{Atiyah bundle of the filtered
+  bundle} $\on{At}_C(E,P^\bullet) \subset \on{At}_C(E)$ is the subsheaf of those
+  differential operators that preserve $P^\bullet$.
+\end{definition}
+
+\begin{remark}[The Atiyah exact sequence]
+  \label{rem:atiyah-sequence}
+  \uses{def:atiyah-filtered}
+  % SOURCE: [Landesman--Litt, arXiv:2202.00039], \S3.1, Remark (after BHH:logarithmic (2.7)) (read from references/MR4736527-local-systems-isomonodromy.tex)
+  % SOURCE QUOTE: "there is a
+  % short exact sequence
+  % \begin{equation} \label{equation:non-logarithmic-atiyah-sequence} 0\to
+  % \sheafend(E, P^\bullet)\overset{\iota}{\to} \on{At}_C(E,
+  % P^\bullet)\overset{\delta}{\to} T_C\to 0,\end{equation} where
+  % $\sheafend(E, P^\bullet)\subset \sheafend(E)$ is the subsheaf of $\mathscr{O}_C$-linear endomorphisms preserving $P^\bullet$"
+  \textit{Source: Landesman--Litt, \S3.1 (after [BHH, ``Logarithmic''], (2.7)).}
+  Unwinding the definition, there is a short exact sequence
+  \begin{equation}
+    \label{eq:atiyah-ses-nonlog}
+    0 \to \sheafend(E,P^\bullet) \xrightarrow{\iota} \on{At}_C(E,P^\bullet)
+    \xrightarrow{\delta} T_C \to 0,
+  \end{equation}
+  where $\sheafend(E,P^\bullet) \subset \sheafend(E)$ is the subsheaf of
+  $\sO_C$-linear endomorphisms preserving $P^\bullet$, the inclusion $\iota$ is
+  evident, and the symbol $\delta$ sends $\tau$ to the derivation
+  $\delta_\tau: f \mapsto \delta_\tau(f)$. Geometrically,
+  \eqref{eq:atiyah-ses-nonlog} is the descent to $C$ of the tangent sequence
+  $0 \to T_{\Pi/C} \to T_\Pi \to p^*T_C \to 0$ of the $P$-torsor of frames
+  compatible with $P^\bullet$.
+\end{remark}
+
+\begin{definition}[Atiyah bundle with respect to a divisor]
+  \label{def:atiyah-bundle-divisor}
+  \lean{LandesmanLitt.AtiyahBundleDivisor}
+  \uses{def:atiyah-filtered, rem:atiyah-sequence}
+  % SOURCE: [Landesman--Litt, arXiv:2202.00039], \S3.1, Definition "Atiyah bundle of a filtered vector bundle with respect to a divisor" (read from references/MR4736527-local-systems-isomonodromy.tex)
+  % SOURCE QUOTE: "Let $D\subset C$ be a reduced effective divisor.
+  % The Atiyah bundle $\on{At}_{(C,D)}(E,P^\bullet)$ is defined as the preimage
+  % $$\on{At}_{(C,D)}(E,P^\bullet):=\delta^{-1}(T_C(-D)),$$ where $\delta$ is the map appearing in Sequence \eqref{equation:non-logarithmic-atiyah-sequence} and where $T_C(-D)\hookrightarrow T_C$ is the natural inclusion."
+  \textit{Source: Landesman--Litt, \S3.1.}
+  Let $D \subset C$ be a reduced effective divisor. The \emph{Atiyah bundle with
+  respect to $D$} is the preimage
+  \[
+    \on{At}_{(C,D)}(E,P^\bullet) := \delta^{-1}\bigl(T_C(-D)\bigr),
+  \]
+  where $\delta$ is the symbol map of \eqref{eq:atiyah-ses-nonlog} and
+  $T_C(-D) \hookrightarrow T_C$ is the natural inclusion. It fits into the
+  logarithmic Atiyah exact sequence
+  \begin{equation}
+    \label{eq:atiyah-ses-log}
+    0 \to \sheafend(E,P^\bullet) \to \on{At}_{(C,D)}(E,P^\bullet)
+    \to T_C(-D) \to 0.
+  \end{equation}
+  When $P^\bullet = (0 \subset E)$ is trivial we omit it, writing
+  $\on{At}_{(C,D)}(E)$.
+\end{definition}
+
+\begin{proposition}[Splittings of the Atiyah sequence are connections]
+  \label{prop:atiyah-splittings}
+  \lean{LandesmanLitt.atiyah_splittings}
+  \uses{def:atiyah-bundle-divisor, def:flat-bundle}
+  % SOURCE: [Landesman--Litt, arXiv:2202.00039], \S3.1, Proposition (proposition:atiyah-splittings) (read from references/MR4736527-local-systems-isomonodromy.tex)
+  % SOURCE QUOTE: "There is a natural bijection between splittings of the Atiyah exact sequence
+  % \begin{equation}
+  % \label{equation:Atiyah-exact-sequence-normal}
+  % 0\to \sheafend(E, P^\bullet)\to \on{At}_{(C,D)}(E, P^\bullet)\to T_C(-D)\to
+  % 0.
+  % \end{equation}
+  % and flat connections on $E$ with
+  % regular singularities along $D$ and preserving $P^\bullet$, given by
+  % adjointness. That is, given a connection $$\nabla: E\to E\otimes
+  % \Omega^1_C(\log D)$$ preserving $P^\bullet$, we may by adjointness view
+  % $\nabla$ as a map $q^\nabla: T_C(-D)\to
+  % \sheafend_{\mathbb{C}}(E)$.
+  % This map factors through $\on{At}_{(C,D)}(E)$ and
+  % yields a splitting of \eqref{equation:Atiyah-exact-sequence-normal}.
+  % Moreover, this correspondence between flat connections and splittings is bijective."
+  \textit{Source: Landesman--Litt, \S3.1.}
+  Let $E$ be a vector bundle on $C$ and $D \subset C$ a reduced effective divisor.
+  There is a natural bijection between splittings of the Atiyah exact sequence
+  \eqref{eq:atiyah-ses-log} and flat connections on $E$ with regular
+  singularities along $D$ preserving $P^\bullet$. Concretely, a connection
+  $\nabla: E \to E \otimes \Omega^1_C(\log D)$ preserving $P^\bullet$ corresponds
+  by adjointness to a map $q^\nabla: T_C(-D) \to \sheafend_{\C}(E)$; this factors
+  through $\on{At}_{(C,D)}(E,P^\bullet)$ and is a section of $\delta$, and every
+  section of $\delta$ arises this way. We pass freely between $\nabla$ and
+  $q^\nabla$, calling each a connection.
+\end{proposition}
+% SOURCE QUOTE PROOF: "This is a matter of unwinding definitions."
+\begin{proof}
+  \uses{def:atiyah-bundle-divisor}
+  This is a matter of unwinding definitions. A splitting of
+  \eqref{eq:atiyah-ses-log} is an $\sO_C$-linear section
+  $q: T_C(-D) \to \on{At}_{(C,D)}(E,P^\bullet)$ of the symbol $\delta$; composing
+  with the inclusion $\on{At}_{(C,D)}(E,P^\bullet) \subset \on{Diff}^1(E,E)$ and
+  using the Leibniz identity $\delta_\tau(f) = $ symbol of $\tau$ recovers a
+  logarithmic connection $\nabla$ with $\nabla$-derivative along a vector field
+  $\theta \in T_C(-D)$ equal to $q(\theta)$. Conversely, adjointness turns
+  $\nabla: E \to E \otimes \Omega^1_C(\log D)$ into
+  $q^\nabla: T_C(-D) \to \sheafend_\C(E)$ landing in
+  $\on{At}_{(C,D)}(E,P^\bullet)$ with $\delta \circ q^\nabla = \mathrm{id}$.
+  The two assignments are mutually inverse, and both respect the filtration
+  $P^\bullet$.
+\end{proof}
+
+\section{The parabolic Atiyah bundle}
+\label{sec:deformation-parabolic-atiyah}
+
+Let $D = x_1 + \cdots + x_n$ and let $E_\star$ be a parabolic vector bundle on
+$(C,D)$. Write $\on{End}_j(E_\star)$ for the image of the natural inclusion
+$\sheafend(E_\star)_{x_j} \to \sheafend(E)_{x_j}$, viewed inside
+$\sheafend(E)_{x_j}$; the quotient $\sheafend(E)/\sheafend(E_\star)$ is the direct
+sum of the skyscrapers $\sheafend(E)_{x_j}/\on{End}_j(E_\star)$.
+
+\begin{definition}[The residue homomorphism and the residue of a connection]
+  \label{def:residue}
+  \lean{LandesmanLitt.residue}
+  \uses{def:atiyah-bundle-divisor}
+  % SOURCE: [Landesman--Litt, arXiv:2202.00039], \S3.2.1 "The residue homomorphism" (after BHH:parabolic (2.9)) (read from references/MR4736527-local-systems-isomonodromy.tex)
+  % SOURCE QUOTE: "Given any smooth proper curve $C$ and reduced divisor $D \subset C$ with $x_j$ in the support of $D$,
+  % the residue homomorphism at $x_j$ is a map ${\phi}_j: \on{At}_{(C,D)}(E)_{x_j}
+  % \to \sheafend(E)_{x_j}$ defined as follows."
+  % SOURCE QUOTE: "Define the {\em residue} $\on{Res}(\nabla)(x_j) \in \sheafend(E)_{x_j}$ as the
+  % projection of
+  % $q^\nabla_{x_j}(z \frac{\partial }{\partial z}) \in \sheafend(E)_{x_j} \oplus T_C(-D)_{x_j}$ to $\sheafend(E)_{x_j}$."
+  \textit{Source: Landesman--Litt, \S3.2.1 (after [BHH, ``Parabolic''], (2.9)).}
+  Fix $x_j$ in the support of $D$. Comparing the fibre at $x_j$ of the
+  logarithmic Atiyah sequence \eqref{eq:atiyah-ses-log} (for the trivial
+  filtration) with that of the non-logarithmic sequence
+  \eqref{eq:atiyah-ses-nonlog}, the right-hand vertical map
+  $T_C(-D)_{x_j} \to (T_C)_{x_j}$ vanishes (it is induced by the inclusion of
+  invertible sheaves $T_C(-D) \hookrightarrow T_C$, which vanishes at $x_j$).
+  Hence the middle vertical map $\alpha_j: \on{At}_{(C,D)}(E)_{x_j} \to
+  \on{At}_C(E)_{x_j}$ factors through $\sheafend(E)_{x_j}$, yielding the
+  \emph{residue homomorphism}
+  \[
+    \phi_j: \on{At}_{(C,D)}(E)_{x_j} \to \sheafend(E)_{x_j},
+  \]
+  which restricts to the identity on $\sheafend(E)_{x_j}$ and so produces a
+  splitting $\on{At}_{(C,D)}(E)_{x_j} \simeq \sheafend(E)_{x_j} \oplus
+  T_C(-D)_{x_j}$. Let $z$ be a uniformizer at $x_j$, so $z\,\partial/\partial z$
+  is a canonical section of $T_C(-D)$ at $x_j$, independent of $z$. For a
+  connection $q^\nabla: T_C(-D) \to \on{At}_{(C,D)}(E)$ with regular
+  singularities, the \emph{residue} $\on{Res}(\nabla)(x_j) \in \sheafend(E)_{x_j}$
+  is the $\sheafend(E)_{x_j}$-component of
+  $q^\nabla_{x_j}(z\,\partial/\partial z)$ under this splitting.
+\end{definition}
+
+\begin{definition}[Atiyah bundle of a parabolic bundle]
+  \label{def:parabolic-atiyah-bundle}
+  \lean{LandesmanLitt.ParabolicAtiyahBundle}
+  \uses{def:residue, def:atiyah-bundle-divisor, def:parabolic-bundle}
+  % SOURCE: [Landesman--Litt, arXiv:2202.00039], \S3.2, Definition "Atiyah bundle of a parabolic bundle" (definition:parabolic-atiyah-bundle) (read from references/MR4736527-local-systems-isomonodromy.tex)
+  % SOURCE QUOTE: "let $\widehat{\phi}_j: \on{At}_{(C, D)}(E) \to \sheafend(E)_{x_j}/\on{End}_j(E_\star)$ denote the composition
+  % \begin{align*}
+  % \on{At}_{(C, D)}(E) \to \on{At}_{(C,D)}(E)_{x_j} \xrightarrow{\phi_j}
+  % \sheafend(E)_{x_j} \to \sheafend(E)_{x_j}/\on{End}_j(E_\star).
+  % \end{align*}
+  % Define $\on{At}_{(C, D)}(E_\star)$ as the coherent subsheaf of $\on{At}_{(C, D)}(E)$ given by
+  % \begin{align*}
+  % \on{At}_{(C,D)}(E_\star) := \ker\left( \on{At}_{(C,D)}(E)
+  % \xrightarrow{\oplus_{j=1}^n \widehat{\phi}_j } \oplus_{j=1}^n
+  % \sheafend(E)_{x_j}/\on{End}_j(E_\star) \right)."
+  \textit{Source: Landesman--Litt, \S3.2.}
+  Let $E_\star = (E,\{E^i_j\},\{\alpha^i_j\})$ be a parabolic bundle on $(C,D)$.
+  For each $j$ let $\widehat{\phi}_j: \on{At}_{(C,D)}(E) \to
+  \sheafend(E)_{x_j}/\on{End}_j(E_\star)$ be the composition of restriction to
+  the fibre at $x_j$, the residue homomorphism $\phi_j$, and the quotient map.
+  The \emph{parabolic Atiyah bundle} is the coherent subsheaf
+  \[
+    \on{At}_{(C,D)}(E_\star) := \ker\Bigl(\on{At}_{(C,D)}(E)
+    \xrightarrow{\oplus_j \widehat{\phi}_j}
+    \bigoplus_{j=1}^n \sheafend(E)_{x_j}/\on{End}_j(E_\star)\Bigr),
+  \]
+  consisting of those differential operators preserving the quasiparabolic
+  filtration at each $x_j$. For a filtration $P^\bullet$ of $E$ we write
+  $\on{At}_{(C,D)}(E_\star,P^\bullet) \subset \on{At}_{(C,D)}(E_\star)$ for the
+  subsheaf preserving $P^\bullet$. It fits into a short exact sequence
+  \begin{equation}
+    \label{eq:atiyah-ses-parabolic}
+    0 \to \sheafend(E_\star,P^\bullet) \to
+    \on{At}_{(C,D)}(E_\star,P^\bullet) \to T_C(-D) \to 0,
+  \end{equation}
+  and comparing $P^\bullet$ with the trivial filtration gives
+  \begin{equation}
+    \label{eq:quotient-atiyah-bundles}
+    0 \to \on{At}_{(C,D)}(E_\star,P^\bullet) \to \on{At}_{(C,D)}(E_\star)
+    \to \sheafend(E_\star)/\sheafend(E_\star,P^\bullet) \to 0.
+  \end{equation}
+\end{definition}
+
+\section{Parabolic structure and connections}
+\label{sec:deformation-associated-parabolic}
+
+\begin{definition}[Parabolic bundle associated to a connection]
+  \label{def:associated-parabolic}
+  \lean{LandesmanLitt.associatedParabolic}
+  \uses{def:residue, def:parabolic-bundle, prop:atiyah-splittings, def:deligne-canonical-extension}
+  % SOURCE: [Landesman--Litt, arXiv:2202.00039], \S3.3, Definition "parabolic bundle associated to the connection" (definition:associated-parabolic) (read from references/MR4736527-local-systems-isomonodromy.tex)
+  % SOURCE QUOTE: "Suppose the eigenvalues of $\on{Res}(\nabla)(x_j)$ are $\eta_j^1, \ldots,
+  % \eta^{s_j}_j$. Let $$\lambda^i_j:=\on{Re}(\eta^i_j)-\lfloor \on{Re}(\eta^i_j)\rfloor \in[0,1)$$ denote the fractional part of the real
+  % part of $\eta^i_j$. Reorder the $\lambda^i_j$ and remove repetitions so that
+  % \begin{align*}
+  % 0 \leq \lambda^1_j < \lambda^2_j < \cdots < \lambda_j^{n_j} < 1.
+  % \end{align*}
+  % Define $E^i_j \subset E_{x_j}$ as the sum of all generalized eigenspaces
+  % of $\on{Res}(\nabla)(x_j)$
+  % such that the fractional part of the real part of the associated
+  % eigenvalue is $\geq \lambda^i_j$.
+  % The data $(E, \{E^i_j\}, \{\lambda^i_j\})$ is the {\em parabolic bundle
+  % associated to the connection} $\nabla$."
+  \textit{Source: Landesman--Litt, \S3.3.}
+  Let $q^\nabla: T_C(-D) \to \on{At}_{(C,D)}(E)$ be a connection with regular
+  singularities along $D$ and residue $\on{Res}(\nabla)(x_j)$ at each $x_j$
+  (\cref{def:residue}). Let $\eta^1_j,\dots,\eta^{s_j}_j$ be the eigenvalues of
+  $\on{Res}(\nabla)(x_j)$, and put
+  $\lambda^i_j := \on{Re}(\eta^i_j) - \lfloor \on{Re}(\eta^i_j)\rfloor \in [0,1)$;
+  after reordering and removing repetitions,
+  $0 \le \lambda^1_j < \cdots < \lambda^{n_j}_j < 1$. Define
+  $E^i_j \subset E_{x_j}$ as the sum of all generalized eigenspaces of
+  $\on{Res}(\nabla)(x_j)$ whose eigenvalue has fractional real part
+  $\ge \lambda^i_j$. The data $(E,\{E^i_j\},\{\lambda^i_j\})$ is the
+  \emph{parabolic bundle $E_\star$ associated to $\nabla$}. By
+  \cite[Lemma 4.1]{BHH:parabolic}, $q^\nabla$ factors through
+  $\on{At}_{(C,D)}(E_\star) \subset \on{At}_{(C,D)}(E)$. If each
+  $\on{Re}(\eta^i_j) \in [0,1)$, then $(E_\star,\nabla)$ is the
+  \emph{Deligne canonical extension} of $(E,\nabla)|_{C \setminus D}$.
+\end{definition}
+
+\begin{proposition}[Irreducibility forces the splitting condition]
+  \label{prop:irreducibility-splitting}
+  \lean{LandesmanLitt.irreducibility_splitting_condition}
+  \uses{def:associated-parabolic, prop:atiyah-splittings, def:parabolic-atiyah-bundle}
+  % SOURCE: [Landesman--Litt, arXiv:2202.00039], \S3.3, Proposition (proposition:irreduciblity-splitting-condition) (read from references/MR4736527-local-systems-isomonodromy.tex)
+  % SOURCE QUOTE: "Let $(E, \nabla: {E}\to {E}\otimes \Omega^1_C(\log D))$ be a flat
+  % vector bundle on $C$ with regular singularities along $D$,
+  % and let $E_\star$ denote the parabolic bundle associated to $\nabla$, as in
+  % \autoref{definition:associated-parabolic}.
+  % Suppose the monodromy representation $\rho$
+  % associated to $(E, \nabla)|_{C\setminus D}$ via the Riemann-Hilbert
+  % correspondence is irreducible. Let $q^\nabla:
+  % T_C(-D)\to \on{At}_{(C,D)}(E_\star)$ be the corresponding splitting of the Atiyah
+  % exact sequence via \autoref{proposition:atiyah-splittings} and
+  % \autoref{definition:associated-parabolic}. Then for any
+  % nontrivial filtration $P^\bullet$ of $E$, the composition
+  % $$T_C(-D)\overset{q^\nabla}{\to} \on{At}_{(C,D)}(E_\star){\to}
+  % \on{At}_{(C,D)}(E_\star)/\on{At}_{(C,D)}(E_\star, P^\bullet)\simeq
+  % \sheafend(E_\star)/\sheafend(E_\star,P^\bullet)$$ is nonzero."
+  \textit{Source: Landesman--Litt, \S3.3.}
+  Let $(E,\nabla)$ be a flat vector bundle on $C$ with regular singularities
+  along $D$, with associated parabolic bundle $E_\star$
+  (\cref{def:associated-parabolic}). Suppose the monodromy representation
+  $\rho$ of $(E,\nabla)|_{C \setminus D}$ (via Riemann--Hilbert) is irreducible,
+  and let $q^\nabla: T_C(-D) \to \on{At}_{(C,D)}(E_\star)$ be the corresponding
+  splitting. Then for any nontrivial filtration $P^\bullet$ of $E$, the
+  composition
+  \[
+    T_C(-D) \xrightarrow{q^\nabla} \on{At}_{(C,D)}(E_\star)
+    \to \on{At}_{(C,D)}(E_\star)/\on{At}_{(C,D)}(E_\star,P^\bullet)
+    \simeq \sheafend(E_\star)/\sheafend(E_\star,P^\bullet)
+  \]
+  is nonzero.
+\end{proposition}
+% SOURCE QUOTE PROOF: "Assume not. Then $q^\nabla$ has image in $\on{At}_{(C,D)}(E_\star, P^\bullet)$, and
+% hence yields a splitting of \eqref{equation:Atiyah-exact-sequence}.
+% Using \autoref{proposition:atiyah-splittings},
+% the corresponding connection with regular singularities on $E$ preserves $P^1$ and hence yields a flat connection on $P^1$ with regular singularities along
+% $D$, whose monodromy is a sub-representation of the monodromy representation
+% $\rho$ associated to $({E}, \nabla)|_{C\setminus D}$.
+% But this contradicts the
+% assumption that $\rho$ is irreducible."
+\begin{proof}
+  \uses{prop:atiyah-splittings, def:parabolic-atiyah-bundle}
+  Suppose the composition vanishes. Then $q^\nabla$ has image in
+  $\on{At}_{(C,D)}(E_\star,P^\bullet)$ and hence is a splitting of
+  \eqref{eq:atiyah-ses-parabolic}. By \cref{prop:atiyah-splittings} the
+  corresponding regular-singular connection on $E$ preserves $P^1$, so it
+  restricts to a flat connection on $P^1$ with regular singularities along $D$,
+  whose monodromy is a subrepresentation of $\rho$. As $P^\bullet$ is nontrivial
+  this is a proper nonzero subrepresentation, contradicting the irreducibility of
+  $\rho$. (Compare \cite[Proof of Proposition 5.3]{BHH:logarithmic} for the
+  non-parabolic case.)
+\end{proof}
+
+\section{Isomonodromic deformations}
+\label{sec:deformation-isomonodromy}
+
+We work in the following analytic setting. Let $\sC, \Delta$ be complex
+manifolds and $\pi: \sC \to \Delta$ a proper holomorphic submersion with
+connected one-dimensional fibres, $\Delta$ contractible. Let
+$s_1,\dots,s_n: \Delta \to \sC$ be disjoint sections and
+$\mathscr{D} := \bigcup_i \on{im}(s_i)$. For a base point $0 \in \Delta$ set
+$(C,D) := (\pi^{-1}(0), \pi^{-1}(0) \cap \mathscr{D})$, assumed hyperbolic.
+
+\begin{lemma}[Canonical extension of a flat bundle over the family]
+  \label{lem:iso-extension}
+  \lean{LandesmanLitt.iso_extension}
+  \uses{def:flat-bundle}
+  % SOURCE: [Landesman--Litt, arXiv:2202.00039], \S3.4, Lemma (lemma:iso-extension) (read from references/MR4736527-local-systems-isomonodromy.tex)
+  % SOURCE QUOTE: "let $$(E, \nabla: E \to E\otimes \Omega^1_C(\log
+  % D))$$ be a flat vector bundle on $C$ with regular singularities along
+  % $D$. Such a logarithmic flat vector bundle extends canonically to a
+  % logarithmic flat vector bundle $$(\mathscr{E}, \widetilde{\nabla}:
+  % \mathscr{E}\to \mathscr{E}\otimes \Omega^1_{\mathscr{C}}(\log
+  % \mathscr{D}))$$ on $\mathscr{C}$ with regular singularities along $\mathscr{D}$."
+  \textit{Source: Landesman--Litt, \S3.4.}
+  With notation as above, let $(E,\nabla: E \to E \otimes \Omega^1_C(\log D))$ be
+  a flat vector bundle on $C$ with regular singularities along $D$. Then
+  $(E,\nabla)$ extends canonically (uniquely up to unique isomorphism) to a flat
+  vector bundle
+  $(\sE, \widetilde{\nabla}: \sE \to \sE \otimes \Omega^1_{\sC}(\log \mathscr{D}))$
+  on $\sC$ with regular singularities along $\mathscr{D}$, together with an
+  isomorphism $(\sE,\widetilde{\nabla})|_C \simeq (E,\nabla)$.
+\end{lemma}
+% SOURCE QUOTE PROOF: "This follows from Deligne's work on differential equations
+% with regular singularities \cite{deligne:regular-singular} and is explained in
+% \cite[Theorem 3.4]{Heu:universal-isomonodromic}, following work of Malgrange
+% \cite{malgrange:I, malgrange:II}.
+% In particular, \cite[Theoreme 2.1]{malgrange:I} explains the case where $C$ has
+% genus zero, and the general case is similar.
+% We now recapitulate the proof.
+%
+% The restriction
+% of $({E}, \nabla)$ to $C\setminus D$ is a flat vector bundle and hence
+% gives rise to a locally constant sheaf of $\mathbb{C}$-vector spaces
+% $$\mathbb{V}:=\ker(\nabla)$$ on $C\setminus D$. As $\Delta$ is contractible, the
+% inclusion $$C\setminus D\hookrightarrow \mathscr{C}\setminus \mathscr{D}$$ is a
+% homotopy equivalence; thus $\mathbb{V}$ extends uniquely (up to canonical
+% isomorphism) to a local system $\widetilde{\mathbb{V}}$ on $\mathscr{C}\setminus
+% \mathscr{D}$.
+%
+% Manin's local results on extending flat vector bundles across divisors
+% \cite[Proposition 5.4]{deligne:regular-singular} imply that there is a
+% canonical extension, which is unique, up to unique isomorphism,
+% $$(\widetilde{\nabla}:
+% \mathscr{E}\to \mathscr{E}\otimes \Omega^1_{\mathscr{C}}(\log \mathscr{D}))$$ of
+% $$(\widetilde{\mathbb V}\otimes_{\mathbb{C}}\mathscr{O}_{\mathscr{C}\setminus
+% \mathscr{D}}, \on{id}\otimes d)$$ to a flat vector bundle on $\mathscr{C}$ with
+% regular singularities along $\mathscr{D}$, equipped with an isomorphism
+% $({\mathscr{E}}, \widetilde{\nabla})|_C\simeq (E,\nabla)."
+\begin{proof}
+  \uses{def:flat-bundle}
+  This is due to Deligne \cite{deligne:regular-singular}, with the family version
+  recorded in \cite[Theorem 3.4]{Heu:universal-isomonodromic} after Malgrange
+  \cite{malgrange:I, malgrange:II}. The restriction of $(E,\nabla)$ to
+  $C \setminus D$ is flat and so determines the local system
+  $\mathbb{V} := \ker(\nabla)$ of $\C$-vector spaces on $C \setminus D$. Since
+  $\Delta$ is contractible, the inclusion
+  $C \setminus D \hookrightarrow \sC \setminus \mathscr{D}$ is a homotopy
+  equivalence, so $\mathbb{V}$ extends uniquely (up to canonical isomorphism) to
+  a local system $\widetilde{\mathbb{V}}$ on $\sC \setminus \mathscr{D}$. By
+  Manin's local extension result
+  \cite[Proposition 5.4]{deligne:regular-singular}, the flat bundle
+  $(\widetilde{\mathbb{V}} \otimes_\C \sO_{\sC \setminus \mathscr{D}},
+  \on{id} \otimes d)$ admits a canonical extension
+  $(\sE,\widetilde{\nabla})$ across $\mathscr{D}$ with regular singularities,
+  unique up to unique isomorphism and restricting to $(E,\nabla)$ on $C$.
+\end{proof}
+
+\begin{definition}[Isomonodromic deformation]
+  \label{def:isomonodromy}
+  \lean{LandesmanLitt.IsomonodromicDeformation}
+  \uses{lem:iso-extension, def:hyperbolic}
+  % SOURCE: [Landesman--Litt, arXiv:2202.00039], \S3.4, Definition "Isomonodromic Deformation" (definition:isomonodromy) (read from references/MR4736527-local-systems-isomonodromy.tex)
+  % SOURCE QUOTE: "let $D=x_1+ \cdots+ x_n$, so that $(C, D)$ is an $n$-pointed hyperbolic curve of genus $g$. Let $(E, \nabla)$ be a flat vector bundle on $C$ with regular singularities at the $x_i$.
+  % We call the extension $(\mathscr{E}, \widetilde{\nabla})$ as in
+  % \autoref{lemma:iso-extension} \emph{the isomonodromic deformation} of $({E}, \nabla)$.
+  % If $\Delta=\mathscr{T}_{g,n}$ is the universal cover of
+  % of the analytic stack $\mathscr{M}_{g,n}$, and $\mathscr{C}\to \Delta$ is the universal curve,
+  % we call the isomonodromic deformation over such $\Delta$  \emph{the universal
+  % isomonodromic deformation}."
+  \textit{Source: Landesman--Litt, \S3.4.}
+  Let $D = x_1 + \cdots + x_n$, so $(C,D)$ is an $n$-pointed hyperbolic curve of
+  genus $g$, and let $(E,\nabla)$ be a flat vector bundle on $C$ with regular
+  singularities at the $x_i$. The canonical extension $(\sE,\widetilde{\nabla})$
+  of \cref{lem:iso-extension} over the family $\sC/\Delta$ is the
+  \emph{isomonodromic deformation} of $(E,\nabla)$; it has constant monodromy in
+  the sense that all fibres carry the local system $\widetilde{\mathbb{V}}$. When
+  $\Delta = \mathscr{T}_{g,n}$ is the universal cover of the analytic stack
+  $\mathscr{M}_{g,n}$ and $\sC \to \Delta$ is the universal curve, it is the
+  \emph{universal isomonodromic deformation}.
+\end{definition}
+
+\begin{definition}[Nearby curve]
+  \label{def:nearby}
+  \lean{LandesmanLitt.NearbyCurve}
+  \uses{def:isomonodromy, def:analytically-general}
+  % SOURCE: [Landesman--Litt, arXiv:2202.00039], \S3.4, Definition (definition:nearby) (read from references/MR4736527-local-systems-isomonodromy.tex)
+  % SOURCE QUOTE: "We use \emph{an isomonodromic deformation to a nearby curve} to denote the
+  % restriction of $(\mathscr{E}, \widetilde{\nabla})$ to any fiber of $\mathscr{C}
+  % \to \Delta$.
+  % We use
+  % \emph{an isomonodromic deformation to an analytically general nearby curve}
+  % to denote the restriction of $(\mathscr{E}, \widetilde{\nabla})$ to a
+  % general fiber of $\mathscr{C}
+  % \to \Delta$, i.e., a fiber in the complement of a nowhere dense closed analytic
+  % subset."
+  \textit{Source: Landesman--Litt, \S3.4.}
+  Take $\Delta$ the universal cover of $\mathscr{M}_{g,n}$. An \emph{isomonodromic
+  deformation to a nearby curve} is the restriction of
+  $(\sE,\widetilde{\nabla})$ to any fibre of $\sC \to \Delta$. An
+  \emph{isomonodromic deformation to an analytically general nearby curve} is its
+  restriction to a general fibre, i.e.\ a fibre lying in the complement of a
+  nowhere-dense closed analytic subset of $\Delta$.
+\end{definition}
+
+\begin{remark}
+  \label{rem:parabolic-on-iso}
+  \uses{def:associated-parabolic, def:isomonodromy}
+  The parabolic bundle $E_\star$ associated to $(E,\nabla)$ in
+  \cref{def:associated-parabolic} induces a relative parabolic structure
+  $\mathscr{E}_\star$ on the isomonodromic deformation
+  $(\sE,\widetilde{\nabla})$ (\cite[\S4.3]{BHH:parabolic}). By
+  \cite[Lemma 4.2]{BHH:parabolic} the parabolic weights and the dimensions of
+  the graded pieces on $\sE|_{\sC_t}$ are independent of $t \in \Delta$, and the
+  parabolic structure on $\sE|_{\sC_t}$ is the one associated to the restricted
+  connection.
+\end{remark}
+
+\begin{definition}[Refinement of a parabolic structure]
+  \label{def:refinements}
+  \lean{LandesmanLitt.Refinement}
+  \uses{def:parabolic-bundle}
+  % SOURCE: [Landesman--Litt, arXiv:2202.00039], \S3.4, Definition (definition:refinements) (read from references/MR4736527-local-systems-isomonodromy.tex)
+  % SOURCE QUOTE: "Let $D'\subset D$ be an effective divisor, i.e.~there exists $I\subset \{1, \cdots, n\}$ so that $D'=\sum_{j\in I} x_j$.
+  %
+  % We say a parabolic bundle $F_\star$ on $(C, D')$ is {\em refined by} $E_\star$ if for each $j\in I$ there is a subset $\{i_1, \ldots, i_{m_j}\} \subset
+  % \{2, \ldots, n_j\}$ such that there is an isomorphism of parabolic bundles
+  % $$F_\star \simeq
+  % (E, \{E^i_j\}_{j \in I, i \in \{1, i_1, \ldots, i_{m_j}\} },
+  % \{\alpha^i_j\}_{j \in I, i \in \{1, i_1, \ldots, i_{m_j}\} })."
+  \textit{Source: Landesman--Litt, \S3.4.}
+  Let $E_\star = (E,\{E^i_j\}_{1\le j\le n,\,1\le i\le n_j+1},
+  \{\alpha^i_j\}_{1\le j\le n,\,1\le i\le n_j})$ be a parabolic bundle on $(C,D)$,
+  and let $D' = \sum_{j \in I} x_j$ be an effective sub-divisor of $D$
+  ($I \subset \{1,\dots,n\}$). A parabolic bundle $F_\star$ on $(C,D')$ is
+  \emph{refined by} $E_\star$ if for each $j \in I$ there is a subset
+  $\{i_1,\dots,i_{m_j}\} \subset \{2,\dots,n_j\}$ giving an isomorphism of
+  parabolic bundles
+  \[
+    F_\star \simeq \bigl(E, \{E^i_j\}_{j \in I,\, i \in \{1,i_1,\dots,i_{m_j}\}},
+    \{\alpha^i_j\}_{j \in I,\, i \in \{1,i_1,\dots,i_{m_j}\}}\bigr).
+  \]
+  Informally, $F_\star$ is obtained from $E_\star$ by forgetting part of the
+  quasiparabolic data; the most important case is when $E_\star$ refines the
+  trivial parabolic structure $E_0$ on $E$. Each $F_\star$ refined by $E_\star$
+  carries its own isomonodromic deformation over $\Delta$, obtained from
+  $\mathscr{E}_\star$ by forgetting the corresponding part of the parabolic
+  structure.
+\end{definition}
+
+\section{Deformation theory of isomonodromic deformations}
+\label{sec:deformation-deformation-theory}
+
+We analyse the first-order deformation theory. Let $\on{Art}_\C$ be the category
+of local Artin $\C$-algebras. Fix $C$ smooth proper over $\C$,
+$D = x_1 + \cdots + x_n \subset C$ reduced effective, $(E,\nabla)$ a flat vector
+bundle with regular singularities along $D$, and a filtration $P^\bullet$ of $E$.
+
+\begin{definition}[Deformations of a curve with divisor]
+  \label{def:curve-deformation}
+  \lean{LandesmanLitt.DefCurveDivisor}
+  % SOURCE: [Landesman--Litt, arXiv:2202.00039], \S3.5, Definition "Deformations of a curve with divisor" (definition:curve-deformation) (read from references/MR4736527-local-systems-isomonodromy.tex)
+  % SOURCE QUOTE: "Let $$\on{Def}_{(C,D)}: \on{Art}_{\mathbb{C}}\to
+  % \on{Set}$$ be the functor sending a local Artin $\mathbb{C}$-algebra
+  % $(A,\mathfrak m, \kappa)$ (so $\mathfrak m$ is the maximal ideal and $\kappa$ is
+  % the residue field) to the
+  % set of flat deformations of $(C,D)$ over $A$.
+  % More precisely, it assigns to $A$ the set of those
+  % $(\mathscr C, \mathscr D, q, f)$ where
+  % $q: \mathscr C \to \on{Spec} A$ is a flat morphism, $\mathscr D \subset \mathscr C$
+  % is a relative Cartier divisor over $\on{Spec} A$ and $f: C \to \mathscr C$ is a map
+  % inducing an isomorphism $C \to \mathscr C \times_{\on{Spec} A} \on{Spec} \kappa$
+  % taking $D$ isomorphically to $\mathscr D \times_{\on{Spec} A} \on{Spec} \kappa$."
+  \textit{Source: Landesman--Litt, \S3.5.}
+  Let $\on{Def}_{(C,D)}: \on{Art}_\C \to \on{Set}$ be the functor sending a local
+  Artin $\C$-algebra $(A,\mathfrak{m},\kappa)$ to the set of flat deformations of
+  $(C,D)$ over $A$: tuples $(\sC,\mathscr{D},q,f)$ with $q: \sC \to \Spec A$
+  flat, $\mathscr{D} \subset \sC$ a relative Cartier divisor over $\Spec A$, and
+  $f: C \to \sC$ inducing an isomorphism $C \xrightarrow{\sim} \sC \times_{\Spec A}
+  \Spec \kappa$ carrying $D$ isomorphically to $\mathscr{D} \times_{\Spec A}
+  \Spec \kappa$.
+\end{definition}
+
+\begin{proposition}[First-order curve deformations]
+  \label{prop:curve-deformation}
+  \lean{LandesmanLitt.curve_deformation_h1}
+  \uses{def:curve-deformation}
+  % SOURCE: [Landesman--Litt, arXiv:2202.00039], \S3.5, Proposition (proposition:curve-deformation) (read from references/MR4736527-local-systems-isomonodromy.tex)
+  % SOURCE QUOTE: "With notation as in \autoref{definition:curve-deformation}, there is a
+  % canonical and functorial bijection
+  % $$\on{Def}_{(C,D)}(\mathbb{C}[\varepsilon]/\varepsilon^2)\overset{\sim}{\to} H^1(C, T_C(-D)).$$"
+  \textit{Source: Landesman--Litt, \S3.5.}
+  There is a canonical and functorial bijection
+  \[
+    \on{Def}_{(C,D)}(\C[\varepsilon]/\varepsilon^2)
+    \xrightarrow{\ \sim\ } H^1(C, T_C(-D)).
+  \]
+\end{proposition}
+% SOURCE QUOTE PROOF: "This is standard, see
+% \cite[Proposition 3.4.17]{sernesi:deformations-of-algebraic-schemes}."
+\begin{proof}
+  \uses{def:curve-deformation}
+  This is standard deformation theory of a curve with marked points; see
+  \cite[Proposition 3.4.17]{sernesi:deformations-of-algebraic-schemes}. A
+  first-order deformation is classified by a class in
+  $H^1(C, T_C(-D))$, the cohomology of the sheaf of vector fields vanishing along
+  $D$, which controls deformations of the pointed curve.
+\end{proof}
+
+\begin{proposition}[First-order deformations of a filtered parabolic bundle]
+  \label{prop:filtered-bundle-deformation}
+  \lean{LandesmanLitt.filtered_bundle_deformation}
+  \uses{def:parabolic-atiyah-bundle, def:atiyah-bundle-divisor, def:parabolic-bundle}
+  % SOURCE: [Landesman--Litt, arXiv:2202.00039], \S3.5, Proposition (proposition:filtered-bundle-deformation) (read from references/MR4736527-local-systems-isomonodromy.tex)
+  % SOURCE QUOTE: "Let $(E_\star, P^\bullet)$ be a filtered parabolic vector bundle on a curve $C$. Let $D\subset C$ be a reduced effective divisor.
+  % There is a canonical and functorial bijection $$\on{Def}_{(C, D, E_\star,
+  % P^\bullet)}(\mathbb{C}[\varepsilon]/\varepsilon^2)\overset{\sim}{\to} H^1(C,
+  % \on{At}_{(C,D)}(E_\star,P^\bullet)).$$"
+  \textit{Source: Landesman--Litt, \S3.5.}
+  Let $(E_\star,P^\bullet)$ be a filtered parabolic vector bundle on $C$ and
+  $D \subset C$ reduced effective. Writing $\on{Def}_{(C,D,E_\star,P^\bullet)}$
+  for the functor of flat deformations of $(C,D,E_\star,P^\bullet)$ over Artin
+  rings, there is a canonical and functorial bijection
+  \[
+    \on{Def}_{(C,D,E_\star,P^\bullet)}(\C[\varepsilon]/\varepsilon^2)
+    \xrightarrow{\ \sim\ } H^1\bigl(C, \on{At}_{(C,D)}(E_\star,P^\bullet)\bigr).
+  \]
+  When $P^\bullet$ is trivial this reads
+  $\on{Def}_{(C,D,E_\star)}(\C[\varepsilon]/\varepsilon^2) \xrightarrow{\sim}
+  H^1(C, \on{At}_{(C,D)}(E_\star))$.
+\end{proposition}
+% SOURCE QUOTE PROOF: "In the non-parabolic case, this is explained in \cite[\S2.2]{BHH:logarithmic}.
+% The parabolic case is described in \cite[Lemma 3.2]{BHH:parabolic} for
+% the case of a $1$-step filtration $P^\bullet = (0 \subset P^1 \subset
+% E)$, and the case of arbitrary length filtrations is analogous."
+\begin{proof}
+  \uses{def:parabolic-atiyah-bundle}
+  In the non-parabolic case this is \cite[\S2.2]{BHH:logarithmic}: deformations of
+  $(C,D,E)$ are governed by $H^1$ of the Atiyah bundle, the symbol map
+  $\on{At}_{(C,D)}(E) \to T_C(-D)$ recording the underlying curve deformation and
+  the kernel $\sheafend(E)$ the bundle deformation. The parabolic case follows by
+  replacing $\on{At}_{(C,D)}(E)$ with the parabolic Atiyah bundle
+  $\on{At}_{(C,D)}(E_\star,P^\bullet)$, whose local sections preserve both the
+  quasiparabolic and the $P^\bullet$ filtrations; this is
+  \cite[Lemma 3.2]{BHH:parabolic} for a one-step filtration, and the general case
+  is analogous.
+\end{proof}
+
+\begin{proposition}[The connection as a section on first-order deformations]
+  \label{prop:connection-h1}
+  \lean{LandesmanLitt.connection_h1}
+  \uses{prop:curve-deformation, prop:filtered-bundle-deformation, def:associated-parabolic, prop:atiyah-splittings, def:parabolic-atiyah-bundle}
+  % SOURCE: [Landesman--Litt, arXiv:2202.00039], \S3.5, Proposition (proposition:connection-h1) (read from references/MR4736527-local-systems-isomonodromy.tex)
+  % SOURCE QUOTE: "With notation as above, let $\delta: \on{At}_{(C,D)}(E_\star)\to T_C(-D)$ be the natural quotient map, and
+  % $$q^\nabla: T_C(-D)\to\on{At}_{(C,D)}({E_\star})$$ be the section to $\delta$
+  % described in \autoref{definition:associated-parabolic}
+  % arising
+  % from $\nabla$ via \autoref{proposition:atiyah-splittings} and
+  % \cite[Lemma 4.1]{BHH:parabolic}.
+  % Under the natural identifications
+  % $$\on{Def}_{(C,D)}(\mathbb{C}[\varepsilon]/\varepsilon^2)\overset{\sim}{\to}
+  % H^1(C, T_C(-D))$$ and $$\on{Def}_{(C,D,
+  % {E_\star})}(\mathbb{C}[\varepsilon]/\varepsilon^2)\overset{\sim}{\to} H^1(C,
+  % \on{At}_{(C,D)}({E_\star}))$$
+  % arising from \autoref{proposition:curve-deformation} and \autoref{proposition:filtered-bundle-deformation}, the two squares below commute"
+  \textit{Source: Landesman--Litt, \S3.5.}
+  Let $\delta: \on{At}_{(C,D)}(E_\star) \to T_C(-D)$ be the symbol map and
+  $q^\nabla: T_C(-D) \to \on{At}_{(C,D)}(E_\star)$ the section to $\delta$ arising
+  from $\nabla$ via \cref{prop:atiyah-splittings},
+  \cref{def:associated-parabolic}, and \cite[Lemma 4.1]{BHH:parabolic}. Under the
+  identifications of \cref{prop:curve-deformation} and
+  \cref{prop:filtered-bundle-deformation}, the forgetful map
+  $\on{Forget}: \on{Def}_{(C,D,E_\star)} \to \on{Def}_{(C,D)}$ corresponds to
+  $\delta_*: H^1(C,\on{At}_{(C,D)}(E_\star)) \to H^1(C,T_C(-D))$, and the
+  isomonodromy section $\on{iso}: \on{Def}_{(C,D)} \to \on{Def}_{(C,D,E_\star)}$
+  corresponds to $(q^\nabla)_*: H^1(C,T_C(-D)) \to H^1(C,\on{At}_{(C,D)}(E_\star))$;
+  i.e.\ both squares relating these maps commute.
+\end{proposition}
+% SOURCE QUOTE PROOF: "This is explained in \cite[Lemma 3.1 and Lemma 4.3]{BHH:parabolic}.
+% Also see \cite[\S2.2 and \S 4.1]{BHH:logarithmic} for the non-parabolic
+% case."
+\begin{proof}
+  \uses{prop:curve-deformation, prop:filtered-bundle-deformation}
+  Both squares are the functoriality of the deformation--to--$H^1$ dictionary
+  under the maps of functors $\on{Forget}$ and $\on{iso}$. The symbol map
+  $\delta$ realizes $\on{Forget}$ on tangent spaces, and the section $q^\nabla$
+  (which exists because $\nabla$ splits the Atiyah sequence,
+  \cref{prop:atiyah-splittings}, and factors through the parabolic Atiyah bundle
+  by \cref{def:associated-parabolic}) realizes $\on{iso}$. Naturality of the
+  identifications $\on{Def}(\C[\varepsilon]/\varepsilon^2) \simeq H^1$ then gives
+  $\on{Forget} \leftrightarrow \delta_*$ and $\on{iso} \leftrightarrow
+  (q^\nabla)_*$. See \cite[Lemmas 3.1, 4.3]{BHH:parabolic} and
+  \cite[\S2.2, \S4.1]{BHH:logarithmic}.
+\end{proof}
+
+\begin{lemma}[Obstruction to extending the filtration]
+  \label{lem:parabolic-extension-obstruction}
+  \lean{LandesmanLitt.parabolic_extension_obstruction}
+  \uses{prop:connection-h1, def:parabolic-atiyah-bundle}
+  % SOURCE: [Landesman--Litt, arXiv:2202.00039], \S3.5, Lemma (lemma:parabolic-extension-obstruction) (read from references/MR4736527-local-systems-isomonodromy.tex)
+  % SOURCE QUOTE: "Suppose we are given $(C,D,E_\star,\nabla)$ as in
+  % \autoref{proposition:connection-h1}
+  % and a filtration $P^\bullet$ of $E$ as in
+  % \autoref{notation:deformation-theory-iso}.
+  % Assume
+  % further we have a first-order deformation $(\mathscr C, \mathscr D)$ of $(C, D)$
+  % corresponding to an element $s \in \on{Def}_{(C,D)}(\mathbb{C}[\varepsilon]/\varepsilon^2)\overset{\sim}{\to} H^1(C, T_C(-D))$.
+  % With $q^\nabla$ as in
+  % \autoref{proposition:connection-h1},
+  % suppose $q^\nabla(s)$
+  % corresponds to a deformation $(\mathscr C, \mathscr D, \mathscr E_\star)$ of
+  % $(C,D,E_\star)$
+  % in which $P^\bullet \subset E$ admits an extension to a filtration $\mathscr
+  % P^\bullet$
+  % of $\mathscr E$.
+  % Then $$q^\nabla(s) \in \ker
+  % \left(H^1(C, \on{At}_{(C,D)}(E_\star)) \to H^1(C,
+  % \sheafend(E_\star)/\sheafend(E_\star, P^\bullet))\right)."
+  \textit{Source: Landesman--Litt, \S3.5.}
+  With $(C,D,E_\star,\nabla)$ as in \cref{prop:connection-h1} and $P^\bullet$ a
+  filtration of $E$, let $s \in \on{Def}_{(C,D)}(\C[\varepsilon]/\varepsilon^2)
+  \simeq H^1(C,T_C(-D))$ classify a first-order deformation $(\sC,\mathscr{D})$
+  of $(C,D)$. If $q^\nabla(s)$ corresponds to a deformation
+  $(\sC,\mathscr{D},\mathscr{E}_\star)$ of $(C,D,E_\star)$ in which $P^\bullet$
+  extends to a filtration $\mathscr{P}^\bullet$ of $\sE$, then
+  \[
+    q^\nabla(s) \in \ker\Bigl(H^1(C,\on{At}_{(C,D)}(E_\star)) \to
+    H^1\bigl(C,\sheafend(E_\star)/\sheafend(E_\star,P^\bullet)\bigr)\Bigr).
+  \]
+\end{lemma}
+% SOURCE QUOTE PROOF: "Note that the map
+% $$H^1(C, \on{At}_{(C,D)}(E_\star)) \to
+% H^1(C,\sheafend(E_\star)/\sheafend(E_\star, P^\bullet))$$
+% is induced by the surjection of sheaves
+% $\on{At}_{(C,D)}(E_\star)
+% \to \sheafend(E_\star)/\sheafend(E_\star, P^\bullet)$
+% from \eqref{equation:quotient-atiyah-bundles}.
+% In the above situation,
+% $q^\nabla(s) \in H^1(C, \on{At}_{(C,D)}(E_\star))$ is in the image of the natural map
+% $$H^1(C, \on{At}_{(C,D)}(E_\star, P^\bullet))\to H^1(C,
+% \on{At}_{(C,D)}(E_\star))$$ and the composition
+% $$H^1(C, \on{At}_{(C,D)}(E_\star, P^\bullet)) \to H^1(C,
+% \on{At}_{(C,D)}(E_\star)) \to H^1(C,
+% \sheafend(E_\star)/\sheafend(E_\star, P^\bullet))$$
+% vanishes. Indeed, this composition is part of the long exact sequence in cohomology induced by the short exact
+% sequence of sheaves (\ref{equation:quotient-atiyah-bundles})."
+\begin{proof}
+  \uses{prop:connection-h1, def:parabolic-atiyah-bundle}
+  The map $H^1(C,\on{At}_{(C,D)}(E_\star)) \to
+  H^1(C,\sheafend(E_\star)/\sheafend(E_\star,P^\bullet))$ is induced by the
+  surjection of sheaves $\on{At}_{(C,D)}(E_\star) \to
+  \sheafend(E_\star)/\sheafend(E_\star,P^\bullet)$ of
+  \eqref{eq:quotient-atiyah-bundles}. The hypothesis that $P^\bullet$ extends over
+  the deformation means exactly that $q^\nabla(s)$ lies in the image of
+  $H^1(C,\on{At}_{(C,D)}(E_\star,P^\bullet)) \to
+  H^1(C,\on{At}_{(C,D)}(E_\star))$. But the composition
+  \[
+    H^1(C,\on{At}_{(C,D)}(E_\star,P^\bullet)) \to
+    H^1(C,\on{At}_{(C,D)}(E_\star)) \to
+    H^1(C,\sheafend(E_\star)/\sheafend(E_\star,P^\bullet))
+  \]
+  is part of the long exact cohomology sequence of
+  \eqref{eq:quotient-atiyah-bundles} and hence vanishes. Therefore $q^\nabla(s)$
+  lies in the stated kernel.
+\end{proof}

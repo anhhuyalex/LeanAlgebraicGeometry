@@ -1,49 +1,56 @@
-# LeanAG Scope
+# LeanAlgebraicGeometry 
 
-> Note: You can consult the [dashboard](https://axeldlv00.github.io/LeanAlgebraicGeometry/), it allows to consult blueprints/code/progress/DAG of each project in a more visual way.
+LeanAG is a collection of Lean 4 / Mathlib formalization projects around algebraic geometry. Its central goal is the algebraic-geometry version of the [Algebraic Jacobian challenge](https://leanprover.zulipchat.com/#narrow/channel/583336-Autoformalization/topic/Jacobian.20challenge/near/587802685), proposed by Christian Merten after Kevin Buzzard's original differential-geometry challenge on Zulip.
 
-This repository aims at formalizing a set of related algebraic-geometry projects in Lean 4 / Mathlib. 
+The repository is organized as a scope rather than a single monolithic project. The main Jacobian formalization is developed alongside supporting subprojects and related-paper formalizations, so that reusable infrastructure can be shared across the whole effort.
 
-The main intent is solving the [Algebraic Jacobian challenge](https://leanprover.zulipchat.com/#narrow/channel/583336-Autoformalization/topic/Jacobian.20challenge/with/603571555) originally proposed by Kevin Buzzard in its Differential Geometry version on Zulip, while we focus on the [algebraic geometry version](https://leanprover.zulipchat.com/#narrow/channel/583336-Autoformalization/topic/Jacobian.20challenge/near/587802685) proposed by Christian Merten. 
-
-This project also contains related formalization projects, which may share some common infrastructure with the Jacobian challenge. 
+You can consult the [dashboard](https://axeldlv00.github.io/LeanAlgebraicGeometry/) for a visual overview of each project's blueprint, code, progress, and dependency DAG.
 
 See the [scope roadmap](roadmap.md) for a high-level overview of the scope's member projects and their dependencies.
 
-To see more details, run `archon dashboard <project-name>` for any project in the scope, and consult the generated dashboard, it renders logs and diffs, which cannot be rendered in static webpages. 
+For more details, run `archon dashboard <project-name>` for any project in the scope and consult the generated dashboard. It renders logs and diffs that cannot be shown on the static webpages.
 
 ## Table of Contents
 
 - [Scope Map](#scope-map)
 - [Methodology](#methodology)
 - [How to Contribute ?](#how-to-contribute-)
+- [License](#license)
 
 ## Scope Map
 
-Status reflects the real proof-term `sorry` count in each project's `AlgebraicJacobian/` Lean
-source (docstring mentions excluded), measured 2026-06-17.
-
 | Project | Role in the scope | Main dependency direction | Status (open `sorry`) |
 | --- | --- | --- | --- | 
-| `Algebraic-Jacobian-Challenge` | Core Jacobian / Picard / curve geometry engine | Provides infrastructure for most downstream projects | 🔄 In progress (91) |
+| `Algebraic-Jacobian-Challenge` | Core Jacobian / Picard / curve geometry engine | Provides infrastructure for most downstream projects | 🔄 In progress (93) |
 | `Cech-Cohomology` | Čech comparison and higher direct image machinery | Feeds back into the Jacobian challenge and related papers | ✅ Complete (0) |
-| `Line-Bundle-Comparison-Iso` | Tensor/dual comparison isomorphisms for relative Picard | Unblocks the Jacobian challenge at large scale | 🔄 In progress (4) |
-| `Quot-Foundations` | Quot, Grassmannian, and flat-base-change foundations | Supports the secant-bundle paper formalization | 🔄 In progress (19) |
-| `GR-quot_closure` | Grassmannian-quotient representability (H⁰ leg) | Extracted from `Quot-Foundations`; merges back | 🔄 In progress (11) |
-| `FBC-B_SNAP-chain` | Flat-base-change leg + shared SNAP foundation | Extracted from `Quot-Foundations`; merges back | 🌱 Scaffold (no Lean yet) |
-| Related papers | Formalization of related algebraic-geometry papers | Share infrastructure with the Jacobian challenge | 📝 Blueprint only (0 Lean) |
+| `Line-Bundle-Comparison-Iso` | Tensor/dual comparison isomorphisms for relative Picard | Unblocks the Jacobian challenge at large scale | 🔄 In progress (2) |
+| `Quot-Foundations` | Quot, Grassmannian, and flat-base-change foundations | Supports the secant-bundle paper formalization | 🔄 In progress (21) |
+| `GR-quot_closure` | Grassmannian-quotient representability (H⁰ leg) | Extracted from `Quot-Foundations`; merges back | 🔄 In progress (13) |
+| `FBC-B_SNAP-chain` | Flat-base-change leg + shared SNAP foundation | Extracted from `Quot-Foundations`; merges back | 🔄 In progress (14) |
+| 26 related-paper projects | Formalization of related algebraic-geometry papers | A few consume the AG base (secant/perverse/Mordell–Lang); most are self-contained | 📝 Blueprint only (0 Lean) |
 
-## Methodology 
+## Methodology
 
-We use [Archon v0.3.0](https://github.com/frenzymath/Archon) to progress in the formalization, using `Claude Opus 4.8` in the critical steps, and `Claude Sonnet` for routine tasks. 
+We use [Archon v0.3.0](https://github.com/frenzymath/Archon) to make progress on the formalization, with `Claude Opus 4.8` for critical steps and `Claude Sonnet` for routine tasks.
 
 Archon is launched autonomously, human intervention is sometimes used as "hints" given occasionally as guidance. Creating subprojects or merging subprojects also requires human intervention, but Archon is used to generate the content of the subprojects and merge them afterwards.
 
-Note that the version of Archon we use makes allows projects to read from each other, therefore avoiding dupplication of work and allowing for a more organic development of the projects.
+The version of Archon used here allows projects to read from each other. This helps avoid duplicated work and makes development across the scope more organic.
 
 ## How to Contribute ?
 
-Contribution is very welcome, and can take various forms. First, you may raise issues to propose subprojects, or hints that should be given to Archon. 
+Contributions are welcome and can take several forms.
 
-You may also directly contribute to the formalization, in this case you can create pull requests. You may use Archon or your own methods. You may create your own subprojects to avoid dupplicating your contribution with Archon's work, as Archon is currently running in most of these subprojects. 
+Issues are a good place to propose new subprojects, suggest hints that should be given to Archon, report gaps, or comment on specific parts of the code. If your issue concerns a particular declaration, please mention the declaration name and file path, and explain whether the question is about the statement, the name, the proof strategy, or its intended use.
 
+Pull requests are welcome for direct contributions to the formalization. You may use Archon or your own methods. Since Archon is currently running in most subprojects, it can be useful to open an issue before starting a larger contribution, or to work in a separate subproject that you created, or to choose a point in [the roadmap](./roadmap.md) that is marked `[ ]`, so that work is not duplicated.
+
+When adding declarations, please make names as clear and stable as possible. A good name should indicate the mathematical content of the result, fit the surrounding namespace, and be easy to search for later. If a theorem is only a temporary helper, make that clear either from its local context or from a short comment/docstring.
+
+We recommend using [Archon v0.3.0](https://github.com/frenzymath/Archon) if you run projects in this scope, because the project is structured to be compatible with Archon, but you may also use your own methods, with or without harness.
+
+## License
+
+This repository is distributed under the [Apache License 2.0](LICENSE).
+
+Author: Axel Delaval, AI4MATH@PKU

@@ -3,4 +3,520 @@
 
 % archon:covers MR4689373HigherSiegelWeilFormulaForUnitaryGroupsTheNonSingularTerms.lean MR4689373HigherSiegelWeilFormulaForUnitaryGroupsTheNonSingularTerms/Basic.lean
 
-This is the auto-bootstrapped blueprint for MR4689373: Higher Siegel-Weil formula for unitary groups: the non-singular terms.
+This chapter introduces all mathematical objects needed to state the higher Siegel--Weil
+formula for unitary groups (Theorem~\ref{thm:higher-siegel-weil}), which is Theorem~1.1
+of Feng--Yun--Zhang (2021, arXiv:2103.11514).  We follow the notation of \S1 and \S2 of
+that paper throughout.
+
+\section{Statement of main result}
+
+\begin{definition}[Hermitian map]
+  \label{def:hermitian-map}
+  \lean{HSW.HermitianMap}
+  \uses{def:etale-cover, def:serre-dual-vb}
+  % SOURCE: [FYZ], §1.1 Special cycles, footnote 1 (read from references/MR4689373-siegel-weil-unitary.tex)
+  % SOURCE QUOTE: A map of vector bundles of the form $a \co \cE \rightarrow \sigma^* \cE^\vee$ is \emph{Hermitian} if $\sigma^* a^\vee = a$.
+  \textit{Source: [FYZ], \S1.1, footnote 1.}
+  A map \(a : \cE \to \sigma^* \cE^\vee\) of coherent sheaves on \(X'\) is
+  \emph{Hermitian} if \(\sigma^* a^\vee = a\). We say \(a\) is \emph{injective}
+  (also called \emph{non-singular}) if it is injective as a map of coherent sheaves.
+\end{definition}
+
+\begin{definition}[Moduli stack of Hermitian shtukas]
+  \label{def:hermitian-shtukas-stack}
+  \lean{HSW.ShtUn}
+  \uses{def:base-curve, def:etale-cover, def:hermitian-map}
+  % SOURCE: [FYZ], §1.1 Statement of main result (read from references/MR4689373-siegel-weil-unitary.tex)
+  % SOURCE QUOTE: In \S \ref{sec: unitary shtukas} we recall the definition of the moduli stack $\Sht_{U(n)}^r$ parametrizing rank $n$ ``Hermitian shtukas'' with $r$ legs.  Roughly speaking it classifies chains of vector bundles with Hermitian structures $\cF_{0}\dashrightarrow\cF_{1}\dashrightarrow\cdots \dashrightarrow \cF_{r}\cong {}^{\t}\cF_{0}$ related by elementary modifications. It admits a fibration $\Sht_{U(n)}^r \rightarrow (X')^r$, and will play the role of Shimura varieties in the function field context.
+  \textit{Source: [FYZ], \S1.1.}
+  For integers \(n \geq 1\) and \(r \geq 0\), the moduli stack \(\Sht_{\U(n)}^r\)
+  parametrizes rank-\(n\) Hermitian shtukas with \(r\) legs: data consisting of
+  \begin{enumerate}
+    \item legs \(x'_i \in X'(S)\) for \(i = 1, \ldots, r\);
+    \item rank-\(n\) Hermitian vector bundles \(\cF_0, \ldots, \cF_r\) on
+      \(X' \times S\), each with Hermitian structure \(h_i : \cF_i \xrightarrow{\sim}
+      \sigma^* \cF_i^\vee\);
+    \item elementary modifications
+      \(\cF_{i-1} \dashrightarrow \cF_i\) (lower of length 1 at \(x'_i\), upper of
+      length 1 at \(\sigma(x'_i)\)) compatible with the Hermitian structures;
+    \item an isomorphism \(\varphi : \cF_r \cong {}^{\tau}\!\cF_0\) compatible with
+      the Hermitian structures.
+  \end{enumerate}
+  There is a natural forgetful map \(\Sht_{\U(n)}^r \to (X')^r\) sending a shtuka to
+  its legs.
+\end{definition}
+
+\begin{definition}[Special cycle]
+  \label{def:special-cycle}
+  \lean{HSW.SpecialCycle}
+  \uses{def:hermitian-shtukas-stack, def:hermitian-map, def:etale-cover}
+  % SOURCE: [FYZ], §1.1 Special cycles (read from references/MR4689373-siegel-weil-unitary.tex)
+  % SOURCE QUOTE: we introduce in \S \ref{s:int prob} certain stacks $\Cal{Z}_{\cE}^r(a)$ over $\Sht_{U(n)}^{r}$ indexed by $\cE$, a vector bundle of rank $m$ with $1\leq m\leq n$ on $X'$, and a Hermitian map$^1$ $a \co \cE \rightarrow \sigma^* \cE^{\vee}$ where $\cE^{\vee}:= \un\Hom(\cE, \omega_{X'})$ is the Serre dual of $\cE$. They classify Hermitian shtukas as in \eqref{intro Herm Sht} together with compatible maps $\cE\to \cF_{i}$ such that $a$ is induced from the Hermitian form on $\cF_{0}$. ... We will be particularly interested in the case $m=n$ and $a \co \cE \rightarrow \sigma^* \cE^{\vee}$ is injective (by this we shall always mean as a map of coherent sheaves). In this case, the ``virtual dimension'' of $\Cal{Z}_{\cE}^r(a)$ is $0$.
+  \textit{Source: [FYZ], \S1.1.}
+  For a rank-\(n\) vector bundle \(\cE\) on \(X'\) and a Hermitian map
+  \(a : \cE \to \sigma^* \cE^\vee\), the \emph{special cycle}
+  \(\cZ_{\cE}^r(a)\) is the moduli stack over \(\Sht_{\U(n)}^r\) classifying
+  Hermitian shtukas \((\cF_\bullet, h_\bullet, x'_\bullet, \varphi)\) together with
+  compatible maps \(\cE \to \cF_i\) for all \(i\), such that \(a\) is induced from
+  the Hermitian form on \(\cF_0\). When \(a\) is injective, the ``virtual dimension''
+  of \(\cZ_{\cE}^r(a)\) is \(0\).
+\end{definition}
+
+\begin{definition}[Virtual fundamental class]
+  \label{def:virtual-fundamental-class}
+  \lean{HSW.VirtualFundamentalClass}
+  \uses{def:special-cycle, def:hermitian-map}
+  % SOURCE: [FYZ], §1.1 Special cycles (read from references/MR4689373-siegel-weil-unitary.tex)
+  % SOURCE QUOTE: under the assumption that $a \co \cE \rightarrow \sigma^* \cE^{\vee}$ is injective (as a map of coherent sheaves), we are able to construct an appropriate ``virtual fundamental cycle'' $[\Cal{Z}_{\cE}^r(a) ] \in \Ch_0(\Cal{Z}_{\cE}^r(a))_{\Q}$.
+  % NOTE: P0 axiom — the construction (good framing, intersection of line-bundle cycle classes,
+  % independence of framing) is the content of Phase P2. This block is an existence axiom for P0.
+  \textit{Source: [FYZ], \S1.1.}
+  For a rank-\(n\) vector bundle \(\cE\) on \(X'\) and an injective Hermitian map
+  \(a : \cE \to \sigma^* \cE^\vee\), there exists a canonical element
+  \[
+    [\cZ_{\cE}^r(a)] \in \Ch_0(\cZ_{\cE}^r(a))_{\mathbf{Q}},
+  \]
+  called the \emph{virtual fundamental class} of the special cycle
+  \(\cZ_{\cE}^r(a)\). Its explicit construction (via good framings and intersection
+  products of line-bundle cycle classes) is carried out in Phase~P2 of the
+  formalization; see Chapter~\ref{chap:geometric-side}.
+\end{definition}
+
+\begin{definition}[Degree of special cycle]
+  \label{def:degree-special-cycle}
+  \lean{HSW.DegSpecialCycle}
+  \uses{def:virtual-fundamental-class, lem:properness-special-cycle}
+  % SOURCE: [FYZ], §1.1 Special cycles (read from references/MR4689373-siegel-weil-unitary.tex)
+  % SOURCE QUOTE: For $a$ injective, it turns out that $\Cal{Z}_{\cE}^r(a)$ is proper over $\F_{q}$, so that $[\Cal{Z}_{\cE}^r(a) ] $ has a well-defined degree $\deg[\Cal{Z}_{\cE}^r(a) ] \in \Q$.
+  \textit{Source: [FYZ], \S1.1.}
+  Since \(\cZ_{\cE}^r(a)\) is proper over \(\mathbf{F}_q\) (see
+  Lemma~\ref{lem:properness-special-cycle}), the degree
+  \[
+    \deg[\cZ_{\cE}^r(a)] \in \mathbf{Q}
+  \]
+  of the virtual fundamental class is well-defined.
+\end{definition}
+
+\begin{lemma}[Properness of special cycles]
+  \label{lem:properness-special-cycle}
+  \lean{HSW.properSpecialCycle}
+  \uses{def:special-cycle, def:hermitian-shtukas-stack, def:hermitian-map}
+  % SOURCE: [FYZ], §1.1 Special cycles (read from references/MR4689373-siegel-weil-unitary.tex)
+  % SOURCE QUOTE: For $a$ injective, it turns out that $\Cal{Z}_{\cE}^r(a)$ is proper over $\F_{q}$, so that $[\Cal{Z}_{\cE}^r(a) ] $ has a well-defined degree $\deg[\Cal{Z}_{\cE}^r(a) ] \in \Q$.
+  \textit{Source: [FYZ], \S1.1.}
+  If \(a : \cE \to \sigma^* \cE^\vee\) is injective and \(\rank(\cE) = n\), then
+  \(\cZ_{\cE}^r(a)\) is proper over \(\mathbf{F}_q\).
+\end{lemma}
+
+\begin{proof}
+  \uses{def:special-cycle, def:hermitian-shtukas-stack}
+  The injectivity of \(a\) forces the virtual dimension of \(\cZ_{\cE}^r(a)\) to be
+  zero. Properness follows from the compactness of \(\Sht_{\U(n)}^r\) over
+  \(\mathbf{F}_q\), established in the paper's Proposition ``KR cycle proper'' via the
+  Hermitian-shtuka structure and the projectivity of \(X\).
+\end{proof}
+
+\begin{definition}[Normalized Fourier coefficient]
+  \label{def:normalized-fourier-coeff}
+  \lean{HSW.NormalizedFourierCoeff}
+  \uses{def:fourier-coefficient, def:siegel-parabolic, def:levi-element-map}
+  % SOURCE: [FYZ], §1.1 The main result (read from references/MR4689373-siegel-weil-unitary.tex)
+  % SOURCE QUOTE: We let $ \wt{E}_{a}(m(\cE),s,\Phi)$ be the $a^{\mrm{th}}$ Fourier coefficient multiplied by certain normalization factors, explained precisely in \eqref{eq: normalized Eisenstein coefficients}. ... In our normalization, $s=0$ is the center of the functional equation for $\wt{E}_a(m(\cE), s, \Phi)$.
+  \textit{Source: [FYZ], \S1.1 and \S2.}
+  The \emph{normalized Fourier coefficient}
+  \(\widetilde{E}_a(m(\cE), s, \Phi)\) is the \(a\)-th Fourier coefficient of \(E\),
+  evaluated at \(m(\cE) \in M_n(\BA)\) (the Levi element corresponding to the rank-\(n\)
+  bundle \(\cE\)), and multiplied by certain normalization factors specified in \S2 of
+  the paper. In this normalization, \(s = 0\) is the center of the functional equation.
+\end{definition}
+
+\begin{definition}[Central value \texorpdfstring{$d$}{d}]
+  \label{def:central-value-d}
+  \lean{HSW.CentralValueD}
+  \uses{def:base-curve, def:etale-cover}
+  % SOURCE: [FYZ], Theorem 1.1 (read from references/MR4689373-siegel-weil-unitary.tex)
+  % SOURCE QUOTE: where $d=-\deg(\cE)+n\deg\omega_X =-\chi(X',\cE)$.
+  \textit{Source: [FYZ], Theorem~1.1.}
+  For a rank-\(n\) vector bundle \(\cE\) on \(X'\), set
+  \[
+    d = d(\cE) := -\deg(\cE) + n \deg \om_X = -\chi(X', \cE) \in \mathbf{Z}.
+  \]
+\end{definition}
+
+\begin{theorem}[Higher Siegel--Weil formula for unitary groups]
+  \label{thm:higher-siegel-weil}
+  \lean{HSW.higherSiegelWeilFormula}
+  \uses{def:normalized-fourier-coeff, def:degree-special-cycle, def:central-value-d,
+        def:hermitian-map, def:etale-cover, def:base-curve}
+  % SOURCE: [FYZ], Theorem 1.1 (read from references/MR4689373-siegel-weil-unitary.tex)
+  % SOURCE QUOTE: \begin{thm}\label{th:intro} Let $n \geq 1$ and $r \geq 0$. Let $\cE$ be a rank $n$ vector bundle on $X'$ and $a \co \cE \rightarrow \sigma^*  \cE^{\vee}$ be an injective Hermitian map. Then we have $\frac{1}{(\log q)^r}  \left(\dds \right)^r\Big|_{s=0} \left( q^{ds} \wt{E}_{a}(m(\cE),s,\Phi) \right)  =  \deg [\cZ_{\cE}^r(a)],$ where $d=-\deg(\cE)+n\deg\omega_X =-\chi(X',\cE)$.
+  \textit{Source: [FYZ], Theorem~1.1.}
+  Let \(n \geq 1\) and \(r \geq 0\). Let \(\cE\) be a rank-\(n\) vector bundle on
+  \(X'\) and \(a : \cE \to \sigma^* \cE^\vee\) an injective Hermitian map. Then
+  \[
+    \frac{1}{(\log q)^r}
+    \left(\frac{d}{ds}\right)^r\!\Bigg|_{s=0}
+    \!\bigl(q^{d s}\,\widetilde{E}_a(m(\cE), s, \Phi)\bigr)
+    \;=\; \deg[\cZ_{\cE}^r(a)],
+  \]
+  where \(d = d(\cE) = -\deg(\cE) + n\deg\om_X\) (see Definition~\ref{def:central-value-d}).
+\end{theorem}
+
+% SOURCE QUOTE PROOF: To summarize, we prove Theorem \ref{th:intro} by constructing two perverse sheaves that encode the two sides of \eqref{eq: intro higher derivatives} in the sense of sheaf-function correspondence, and then identifying these two perverse sheaves using a Hermitian variant of Springer theory, which labels these perverse sheaves by representations of the appropriate Weyl group. In this way, Theorem \ref{th:intro} is eventually unraveled into an elementary identity between representations of the Weyl group for type B/C. ... Thus, the proof of Theorem \ref{th:intro} is completed in three steps. (1) Construct a graded perverse sheaf on $\Herm_{2d}(X'/X)$, $\cK^{\Eis}_{d}=\bigoplus_{i=0}^{d}\cK^{\Eis}_{d,i}$, whose Frobenius trace at $\cQ$ is related to the LHS of \eqref{eq: intro higher derivatives}. More precisely, $\wt{E}_{a}(m(\cE),s, \Phi)= \sum_{i=0}^{d}\Tr(\Frob_{\cQ}, (\cK^{\Eis}_{d,i})_{\cQ})q^{-2is}$. (2) Construct a graded perverse sheaf on $\Herm_{2d}(X'/X)$, $\cK^{\Int}_{d}=\bigoplus_{i=0}^{d}\cK^{\Int}_{d,i}$, whose Frobenius trace at $\cQ$ is relate to the RHS. More precisely, $\deg [\cZ_{\cE}^r(a)]=\sum_{i=0}^{d}\Tr(\Frob_{\cQ}, (\cK^{\Int}_{d,i})_{\cQ})\cdot (d-2i)^{r}$. (3) Prove that $\cK^{\Eis}_{d}\cong \cK^{\Int}_{d}$ as graded perverse sheaves on $\Herm_{2d}(X'/X)$.
+\begin{proof}
+  \uses{def:fourier-coefficient, lem:fourier-coeff-factorization,
+        def:local-density, def:local-siegel-series, thm:cho-yamauchi,
+        def:special-cycle, def:virtual-fundamental-class,
+        lem:properness-special-cycle, def:degree-special-cycle,
+        def:hermitian-shtukas-stack}
+  The proof proceeds in three steps following \S1.2 of the paper.
+
+  \textbf{Step~1: Analytic side (\S\S2--5).}
+  Express \(\widetilde{E}_a(m(\cE), s, \Phi)\) as a product of local Whittaker
+  functions using Lemma~\ref{lem:fourier-coeff-factorization}.  Apply the
+  Cho--Yamauchi formula (Theorem~\ref{thm:cho-yamauchi}) for local representation
+  densities of Hermitian lattices.  The cokernel \(\cQ = \coker(a)\) is a Hermitian
+  torsion sheaf on \(X'\), and both the Fourier coefficient and the density formula
+  depend only on \(\cQ\). This yields a graded perverse sheaf
+  \(\cK^{\mathrm{Eis}}_d = \bigoplus_{i=0}^d \cK^{\mathrm{Eis}}_{d,i}\) on
+  \(\Herm_{2d}(X'/X)\), constructed from isotypical components of the Hermitian
+  Springer sheaf \(\mathrm{Spr}^{\mathrm{Herm}}_{2d}\) under the Weyl group
+  \(W_d = (\mathbf{Z}/2\mathbf{Z})^d \rtimes S_d\), such that
+  \[
+    \widetilde{E}_a(m(\cE), s, \Phi) = \sum_{i=0}^d
+      \Tr\!\bigl(\Frob_{\cQ},\; (\cK^{\mathrm{Eis}}_{d,i})_{\cQ}\bigr)\, q^{-2is}.
+  \]
+
+  \textbf{Step~2: Geometric side (\S\S6--11).}
+  Express \(\deg[\cZ_{\cE}^r(a)]\) as an intersection number on \(\Sht_{\U(n)}^r\).
+  Unfold via the Lefschetz trace formula using a Hitchin-type moduli stack
+  \(\mathcal{M}_d\) (whose base \(\mathcal{A}_d\) maps canonically to
+  \(\Herm_{2d}(X'/X)\)).  The \(r\)-th power of a canonical endomorphism \(C\) on
+  the direct image \(Rf_*\overline{\mathbf{Q}}_\ell\) of the Hitchin map
+  \(f_d : \mathcal{M}_d \to \mathcal{A}_d\) descends to a graded perverse sheaf
+  \(\cK^{\mathrm{Int}}_d = \bigoplus_{i=0}^d \cK^{\mathrm{Int}}_{d,i}\) on
+  \(\Herm_{2d}(X'/X)\), graded by eigenvalues \((d-2i)\) of \(C\), such that
+  \[
+    \deg[\cZ_{\cE}^r(a)] = \sum_{i=0}^d
+      \Tr\!\bigl(\Frob_{\cQ},\; (\cK^{\mathrm{Int}}_{d,i})_{\cQ}\bigr)\cdot (d-2i)^r.
+  \]
+
+  \textbf{Step~3: Comparison (\S12).}
+  Both \(\cK^{\mathrm{Eis}}_d\) and \(\cK^{\mathrm{Int}}_d\) are linear combinations of
+  isotypical summands of \(\mathrm{Spr}^{\mathrm{Herm}}_{2d}\) under \(W_d\). The
+  isomorphism \(\cK^{\mathrm{Eis}}_d \cong \cK^{\mathrm{Int}}_d\) as graded perverse
+  sheaves reduces to an explicit identity of graded virtual representations of \(W_d\),
+  verified directly.
+
+  \textbf{Conclusion.}
+  Substituting the graded isomorphism into the two expressions and differentiating
+  \(q^{ds} \sum_{i=0}^d c_i q^{-2is}\) \(r\) times at \(s = 0\) gives
+  \(\frac{1}{(\log q)^r} \cdot (\log q)^r \sum_{i=0}^d c_i (d-2i)^r\), matching the
+  geometric side.
+\end{proof}
+
+\section{Notation}
+
+\begin{definition}[Base curve]
+  \label{def:base-curve}
+  \lean{HSW.BaseCurve}
+  % SOURCE: [FYZ], §1 Notation (read from references/MR4689373-siegel-weil-unitary.tex)
+  % SOURCE QUOTE: Let $X$ denote a smooth curve over $k$. With the exception of \S\ref{sec: springer} and \S\ref{sec: Herm}, $X$ is assumed to be projective and geometrically connected. Let $\om_{X}$ be the line bundle of $1$-forms on $X$. Let $F=k(X)$ denote the function field of $X$.  Let $|X|$ be the set of closed points of $X$. For $v\in |X|$, let $\cO_{v}$ be the completed local ring of $X$ at $v$ with fraction field $F_{v}$ and residue field $k_{v}$.   Let $\BA=\BA_{F}$ denote the ring of ad\`eles of $F$, and $\wh\cO=\prod_{v\in |X|}\cO_{v}$. Let $\deg(v)=[k_{v}:k]$, and $q_{v}=q^{\deg(v)}=\#k_{v}$. A uniformizer of $\cO_{v}$ is typically denoted $\vp_{v}$. Let $|\cdot|_{v}: F^{\times}_{v}\to q^{\Z}_{v}$ be the absolute value such that  $|\vp_{v}|_{v}=q^{-1}_{v}$. Let $|\cdot|_{F}: \BA_{F}^{\times}\to q^{\Z}$ be the absolute value that is $|\cdot|_{v}$ on $F_{v}^{\times}$.
+  \textit{Source: [FYZ], \S1 Notation.}
+  A smooth, proper, geometrically connected curve \(X\) over \(k = \mathbf{F}_q\) of
+  odd characteristic \(p \neq 2\), equipped with:
+  \begin{itemize}
+    \item canonical bundle \(\om_X\) (the line bundle of 1-forms);
+    \item function field \(F = k(X)\);
+    \item adèle ring \(\BA = \BA_F\);
+    \item set of closed points \(|X|\);
+    \item for each \(v \in |X|\): completed local ring \(\cO_v\) with fraction field
+      \(F_v\), residue field \(k_v\), degree \(\deg(v) = [k_v:k]\),
+      \(q_v = q^{\deg(v)} = \#k_v\), uniformizer \(\varpi_v\), and absolute value
+      \(|\cdot|_v : F_v^\times \to q_v^{\mathbb{Z}}\) normalized by
+      \(|\varpi_v|_v = q_v^{-1}\).
+  \end{itemize}
+\end{definition}
+
+\begin{definition}[\'Etale double cover]
+  \label{def:etale-cover}
+  \lean{HSW.EtaleCover}
+  \uses{def:base-curve}
+  % SOURCE: [FYZ], §1 Notation (read from references/MR4689373-siegel-weil-unitary.tex)
+  % SOURCE QUOTE: Let $X'$ be another smooth curve over $k$ and $\nu:X'\to X$ be a finite map of degree $2$ that is generically \'etale. We denote by $\sigma$ the non-trivial automorphism of $X'$ over $X$. With the exception of \S\ref{ss:Herm} and \S\ref{ss:Herm Spr}, $\nu$ is assumed to be \'etale. We emphasize that the case $X'=X\coprod X$ is allowed.  Let $F'$ be the ring of rational functions on $X'$, which is either a quadratic extension of $F$ or $F\times F$. We let $k'$ be the ring of constants in $F'$. ... When $X$ (hence $X'$) is projective, let $\Bun_{\GL_{n}}$ (resp. $\Bun_{\GL_{n}'}$) be the moduli stack of rank $n$ vector bundles over $X$ (resp. $X'$). Let $g$ be the genus of $X$ and $g'$ be the arithmetic genus of $X'$. Note that whenever $\nu$ is \'{e}tale, we have $g' = 2g-1$.
+  \textit{Source: [FYZ], \S1 Notation.}
+  A finite étale double cover \(\nu : X' \to X\) (the split case \(X' = X \sqcup X\)
+  is allowed), with non-trivial involution \(\sigma \in \mathrm{Aut}(X'/X)\). The ring
+  of rational functions \(F'\) on \(X'\) is either a quadratic extension of \(F\) or
+  \(F \times F\). When \(\nu\) is étale, the arithmetic genus of \(X'\) satisfies
+  \(g' = 2g - 1\), where \(g\) is the genus of \(X\).
+\end{definition}
+
+\begin{definition}[Serre dual]
+  \label{def:serre-dual-vb}
+  \lean{HSW.SerreDual}
+  \uses{def:base-curve, def:etale-cover}
+  % SOURCE: [FYZ], §1 Notation (read from references/MR4689373-siegel-weil-unitary.tex)
+  % SOURCE QUOTE: For a vector bundle $\cE$ on $X'$, let $\cE^{\vee}=\un\Hom(\cE, \om_{X'})$ be its Serre dual.  For a torsion sheaf $\cT$ on $X'$, let $\cT^{\vee}=\un\Ext^{1}(\cT, \om_{X'})$.
+  \textit{Source: [FYZ], \S1 Notation.}
+  For a vector bundle \(\cE\) on \(X'\), its \emph{Serre dual} is
+  \(\cE^\vee := \underline{\mathrm{Hom}}(\cE, \om_{X'})\). For a torsion sheaf
+  \(\cT\) on \(X'\), its \emph{Serre dual} is
+  \(\cT^\vee := \underline{\mathrm{Ext}}^1(\cT, \om_{X'})\).
+\end{definition}
+
+\section{Siegel--Eisenstein series}
+
+\begin{definition}[Hermitian form spaces]
+  \label{def:hermitian-spaces}
+  \lean{HSW.HermitianForms}
+  \uses{def:base-curve, def:etale-cover}
+  % SOURCE: [FYZ], §2.1 Siegel–Eisenstein series (read from references/MR4689373-siegel-weil-unitary.tex)
+  % SOURCE QUOTE: For any one-dimensional $F$-vector space $L$, let $\Herm_{n}(F,L)$ be the $F$-vector space of $F'/F$-Hermitian forms $h: F'^{n}\times F'^{n}\to L\ot_{F}F'$ (with respect to the involution $1\ot\s$ on $L\ot_{F}F'$). For any $F$-algebra $R$, $\Herm_{n}(R, L):=\Herm_{n}(F,L)\ot_{F}R$ is the set of $L\ot_{F}R'$-valued $R'/R$-Hermitian forms on $R'^{n}$, where $R'=R\ot_{F}F'$.  When $L=F$ we write $\Herm_{n}(F)=\Herm_{n}(F,F)$ and $\Herm_{n}(R)=\Herm_{n}(F)\ot_F R$ for any $F$-algebra $R$.
+  \textit{Source: [FYZ], \S2.1.}
+  For a one-dimensional \(F\)-vector space \(L\), \(\Herm_n(F, L)\) is the
+  \(F\)-vector space of \(F'/F\)-Hermitian forms
+  \(h : F'^n \times F'^n \to L \otimes_F F'\) with respect to the involution
+  \(1 \otimes \sigma\) on \(L \otimes_F F'\). For an \(F\)-algebra \(R\),
+  \(\Herm_n(R, L) := \Herm_n(F, L) \otimes_F R\). We write \(\Herm_n(R) =
+  \Herm_n(R, F)\) when \(L = F\).
+\end{definition}
+
+\begin{definition}[Unramified character]
+  \label{def:chi-character}
+  \lean{HSW.UnramifiedCharacter}
+  \uses{def:base-curve, def:etale-cover}
+  % SOURCE: [FYZ], §2.1 Siegel–Eisenstein series (read from references/MR4689373-siegel-weil-unitary.tex)
+  % SOURCE QUOTE: Let $\eta: \BA_{F}^\times/F^\times\rightarrow \mathbb{C}^\times$ be the quadratic character associated to $F'/F$ by class field theory. Fix $\chi: \BA_{F'}^\times/F'^\times\rightarrow \mathbb{C}^\times$ a character such that $\chi|_{\BA_F^\times}=\eta^n$. We may view $\chi$ as a character on $M_n(\BA)$ by $\chi(m(\alpha))=\chi(\det(\alpha))$ and extend it to $P_n(\BA)$ trivially on $N_n(\BA)$. ... In this paper, we will choose $\chi$ to be unramified everywhere. To see that such $\chi$ exists, observe that since $\CC^{\times}$ is injective (in the category of abelian groups), it suffices to check that $\eta^n$ is trivial on $\ker (\Pic(X) \rightarrow \Pic(X') )$.
+  \textit{Source: [FYZ], \S2.1 and Remark~2.1.}
+  The quadratic character \(\eta : \BA_F^\times / F^\times \to \mathbf{C}^\times\)
+  associated to \(F'/F\) by class field theory.  A character
+  \(\chi : \BA_{F'}^\times / F'^\times \to \mathbf{C}^\times\) such that
+  \(\chi|_{\BA_F^\times} = \eta^n\), chosen to be unramified everywhere. Such \(\chi\)
+  exists: injectivity of \(\mathbf{C}^\times\) in abelian groups reduces the question to
+  showing \(\eta^n\) is trivial on \(\ker(\Pic(X) \to \Pic(X'))\), which holds by the
+  alternating property of the cup product pairing on
+  \(H^1(X_{\overline{\mathbf{F}}_q}, \mathbb{Z}/2\mathbb{Z})\) when \(\mathrm{char}(k) \neq 2\).
+\end{definition}
+
+\begin{definition}[Siegel parabolic]
+  \label{def:siegel-parabolic}
+  \lean{HSW.SiegelParabolic}
+  \uses{def:base-curve, def:etale-cover, def:hermitian-spaces}
+  % SOURCE: [FYZ], §2.1 Siegel–Eisenstein series (read from references/MR4689373-siegel-weil-unitary.tex)
+  % SOURCE QUOTE: Let $W$ be the standard split $F'/F$-skew-Hermitian space of dimension $2n$. Let $H_n=U(W)$. Write $\BA := \BA_F$ for the ring of adeles of $F$. Let $P_n(\BA)=M_n(\BA)N_n(\BA)$ be the standard Siegel parabolic subgroup of $H_n(\BA)$, where $M_n(\BA)=\left\{m(\alpha)=\begin{pmatrix}\alpha & 0\\0 &{}^t\bar \alpha^{-1}\end{pmatrix}: \alpha\in \GL_n(\BA_{F'})\right\}$, $N_n(\BA) = \left\{n(\beta)=\begin{pmatrix} 1_n & \beta \\0 & 1_n\end{pmatrix}: \beta\in\Herm_n(\BA_F)\right\}$.
+  \textit{Source: [FYZ], \S2.1.}
+  The standard split \(F'/F\)-skew-Hermitian space \(W\) of dimension \(2n\), with
+  unitary group \(H_n = \U(W)\). The standard Siegel parabolic
+  \(P_n(\BA) = M_n(\BA) N_n(\BA)\) of \(H_n(\BA)\) consists of:
+  \[
+    M_n(\BA) = \Bigl\{ m(\alpha) = \begin{pmatrix}\alpha & 0 \\ 0 &
+      {}^t\bar\alpha^{-1}\end{pmatrix} : \alpha \in \GL_n(\BA_{F'}) \Bigr\},
+  \]
+  \[
+    N_n(\BA) = \Bigl\{ n(\beta) = \begin{pmatrix} 1_n & \beta \\ 0 & 1_n
+    \end{pmatrix} : \beta \in \Herm_n(\BA_F) \Bigr\}.
+  \]
+\end{definition}
+
+\begin{definition}[Degenerate principal series]
+  \label{def:degenerate-principal-series}
+  \lean{HSW.DegeneratePrincipalSeries}
+  \uses{def:siegel-parabolic, def:chi-character}
+  % SOURCE: [FYZ], §2.1 Siegel–Eisenstein series (read from references/MR4689373-siegel-weil-unitary.tex)
+  % SOURCE QUOTE: Define the \emph{degenerate principal series} to be the unnormalized smooth induction $I_n(s,\chi)=\Ind_{P_n(\BA)}^{H_n(\BA)}(\chi\cdot |\cdot|_{F'}^{s+n/2}),\quad s\in \mathbb{C}$.
+  \textit{Source: [FYZ], \S2.1.}
+  The \emph{degenerate principal series}
+  \[
+    I_n(s, \chi) = \Ind_{P_n(\BA)}^{H_n(\BA)}
+      \bigl(\chi \cdot |\cdot|_{F'}^{s + n/2}\bigr), \quad s \in \mathbf{C},
+  \]
+  is the unnormalized smooth induction.
+\end{definition}
+
+\begin{definition}[Levi element map]
+  \label{def:levi-element-map}
+  \lean{HSW.LeviElementMap}
+  \uses{def:siegel-parabolic, def:etale-cover}
+  % SOURCE: FYZ-HigherSiegelWeil.tex, §2.1 (lines 841–869)
+  % SOURCE QUOTE: "M_n(\mathbb{A})=\left\{m(\alpha)=\begin{pmatrix}\alpha & 0\\0 &{}^t\bar \alpha^{-1}\end{pmatrix}: \alpha\in \GL_n(\BA_{F'})\right\}"
+  \textit{Source: [FYZ], \S2.1.}
+  For a rank-\(n\) vector bundle \(\cE\) on \(X'\), the associated \emph{Levi element}
+  \(m(\cE) \in M_n(\BA)\) is the adelization of the \(\GL_n(\BA_{F'})\)-valued matrix
+  corresponding to \(\cE\) via the adelic description of vector bundles on \(X'\). This
+  defines a map
+  \[
+    m : \Bun_{\GL_n}(X') \to M_n(\BA),
+  \]
+  where \(M_n(\BA)\) is the Levi component of the Siegel parabolic
+  (Definition~\ref{def:siegel-parabolic}). The element \(m(\cE)\) is the point at which
+  the Eisenstein series is evaluated in the normalized Fourier coefficient formula.
+\end{definition}
+
+\begin{definition}[Siegel--Eisenstein series]
+  \label{def:siegel-eisenstein-series}
+  \lean{HSW.SiegelEisensteinSeries}
+  \uses{def:degenerate-principal-series, def:chi-character}
+  % SOURCE: [FYZ], §2.1 Siegel–Eisenstein series (read from references/MR4689373-siegel-weil-unitary.tex)
+  % SOURCE QUOTE: As justified by Remark \ref{rem: chi exists}, we may choose $\chi$ to be everywhere unramified. Then  $I_n(s,\chi)$ is unramified and we fix $\Phi(-, s)\in I_n(s,\chi)$  as the unique $K=H_n(\wh\cO)$-invariant section normalized by $\Phi(1_{2n}, s)=1$. ... For a standard section $\Phi(-, s)\in I_n(s,\chi)$, define the associated \emph{Siegel--Eisenstein series} $E(g,s, \Phi)= \sum_{\gamma\in P_n(F)\backslash H_n(F)}\Phi(\gamma g, s),\quad g\in H_n(\BA),$ which converges for $\Re(s)\gg 0$ and admits meromorphic continuation to $s\in \mathbb{C}$. Notice that $E(g,s,\Phi)$ depends on the choice of $\chi$.
+  \textit{Source: [FYZ], \S2.1.}
+  The standard unramified section \(\Phi(-,s) \in I_n(s, \chi)\) is the unique
+  \(K = H_n(\hat{\cO})\)-invariant section with \(\Phi(1_{2n}, s) = 1\). The
+  \emph{Siegel--Eisenstein series} is
+  \[
+    E(g, s, \Phi) = \sum_{\gamma \in P_n(F) \backslash H_n(F)} \Phi(\gamma g, s),
+    \quad g \in H_n(\BA),
+  \]
+  converging absolutely for \(\mathrm{Re}(s) \gg 0\) and admitting meromorphic
+  continuation to all \(s \in \mathbf{C}\).
+\end{definition}
+
+\section{Fourier expansion}
+
+\begin{definition}[Fourier coefficient]
+  \label{def:fourier-coefficient}
+  \lean{HSW.FourierCoefficient}
+  \uses{def:siegel-eisenstein-series, def:hermitian-spaces}
+  % SOURCE: [FYZ], §2.2 Fourier expansion (read from references/MR4689373-siegel-weil-unitary.tex)
+  % SOURCE QUOTE: We have a Fourier expansion $E(g,s,\Phi)=\sum_{T\in\Herm_n(F,\om_{F})}E_T(g,s,\Phi),$ where $E_T(g,s,\Phi)=\int_{N_n(F)\backslash N_n(\mathbb{A})} E(n(b)g,s,\Phi)\psi_{0}(\j{T,b})\,\rd n(b),$ and the Haar measure $\rd n(b)$ is normalized such that $N_{n}(F)\bs N_{n}(\BA)$ has volume $1$. ... Suppose $T$ is \emph{nonsingular}, meaning that for one (equivalently, any) choice of trivialization of $\omega_F$ it has non-vanishing determinant, for a factorizable $\Phi=\bigotimes_{v\in|X|}\Phi_v$ we have a factorization of the Fourier coefficient into a product (cf. \cite[\S 4]{Kudla1997}) $E_T(g,s,\Phi)=|\om_{X}|_{F}^{-n^{2}/2}\prod_v W_{T,v}(g_v, s, \Phi_v)$.
+  \textit{Source: [FYZ], \S2.2.}
+  Let \(\om_F\) be the generic fiber of \(\om_X\). The Eisenstein series admits a
+  Fourier expansion indexed by \(T \in \Herm_n(F, \om_F)\):
+  \[
+    E(g, s, \Phi) = \sum_{T \in \Herm_n(F, \om_F)} E_T(g, s, \Phi),
+  \]
+  where
+  \[
+    E_T(g, s, \Phi) = \int_{N_n(F) \backslash N_n(\BA)}
+      E(n(b)\, g, s, \Phi)\, \psi_0(\langle T, b \rangle)\, dn(b),
+  \]
+  with \(\langle T, b \rangle = \mathrm{Res}(-\mathrm{Tr}(Tb))\) and the Haar measure
+  \(dn(b)\) normalized so that \(N_n(F) \backslash N_n(\BA)\) has volume \(1\). For
+  \emph{nonsingular} \(T\) (non-vanishing determinant) and factorizable
+  \(\Phi = \bigotimes_v \Phi_v\), the Fourier coefficient factorizes as in
+  Lemma~\ref{lem:fourier-coeff-factorization}.
+\end{definition}
+
+\begin{definition}[Local Whittaker function]
+  \label{def:local-whittaker}
+  \lean{HSW.LocalWhittakerFunction}
+  \uses{def:siegel-parabolic}
+  % SOURCE: [FYZ], §2.2 Fourier expansion (read from references/MR4689373-siegel-weil-unitary.tex)
+  % SOURCE QUOTE: the \emph{local (generalized) Whittaker function} is defined by $W_{T,v}(g_v, s, \Phi_v)=\int_{N_n(F_{v})}\Phi_v(w_n^{-1}n(b)g_v,s) \psi_{0}(\j{T,b}_{v}) \, \rd_{v} n(b),\quad w_n= \begin{pmatrix} 0  & 1_n\\   -1_n & 0\\ \end{pmatrix}$ and has analytic continuation to $s\in \mathbb{C}$. Here the local Haar measure $\rd_{v} n(b)$ is the one such that the volume of $N_{n}(\cO_{v})$ is $1$.
+  \textit{Source: [FYZ], \S2.2.}
+  The \emph{local Whittaker function} is
+  \[
+    W_{T,v}(g_v, s, \Phi_v) = \int_{N_n(F_v)}
+      \Phi_v\!\bigl(w_n^{-1} n(b)\, g_v,\, s\bigr)\,
+      \psi_0(\langle T, b \rangle_v)\, d_v n(b),
+    \quad w_n = \begin{pmatrix} 0 & 1_n \\ -1_n & 0 \end{pmatrix},
+  \]
+  where \(d_v n(b)\) is normalized so that \(N_n(\cO_v)\) has volume \(1\). It
+  admits analytic continuation to all \(s \in \mathbf{C}\).
+\end{definition}
+
+\begin{lemma}[Fourier coefficient factorization]
+  \label{lem:fourier-coeff-factorization}
+  \lean{HSW.fourierCoeffFactorization}
+  \uses{def:fourier-coefficient, def:local-whittaker}
+  % SOURCE: [FYZ], §2.2 Fourier expansion (read from references/MR4689373-siegel-weil-unitary.tex)
+  % SOURCE QUOTE: Suppose $T$ is \emph{nonsingular}, meaning that for one (equivalently, any) choice of trivialization of $\omega_F$ it has non-vanishing determinant, for a factorizable $\Phi=\bigotimes_{v\in|X|}\Phi_v$ we have a factorization of the Fourier coefficient into a product (cf. \cite[\S 4]{Kudla1997}) $E_T(g,s,\Phi)=|\om_{X}|_{F}^{-n^{2}/2}\prod_v W_{T,v}(g_v, s, \Phi_v)$.
+  \textit{Source: [FYZ], \S2.2 (cf.\ Kudla 1997, \S4).}
+  For nonsingular \(T \in \Herm_n(F, \om_F)\) and factorizable
+  \(\Phi = \bigotimes_v \Phi_v\),
+  \[
+    E_T(g, s, \Phi) = |\om_X|_F^{-n^2/2} \prod_v W_{T,v}(g_v, s, \Phi_v).
+  \]
+\end{lemma}
+
+\begin{proof}
+  \uses{def:fourier-coefficient, def:local-whittaker}
+  Standard: follows from the Iwasawa decomposition and local-global compatibility of
+  the Weil representation. The factor \(|\om_X|_F^{-n^2/2}\) is the ratio between the
+  global Haar measure \(dn(b)\) and the product of the local measures
+  \(\prod_v d_v n(b)\). See Kudla (1997), \S4.
+\end{proof}
+
+\section{Local densities for Hermitian lattices}
+
+\begin{definition}[Local density]
+  \label{def:local-density}
+  \lean{HSW.LocalDensity}
+  \uses{def:base-curve}
+  % SOURCE: [FYZ], §2.3 Local densities for Hermitian lattices (read from references/MR4689373-siegel-weil-unitary.tex)
+  % SOURCE QUOTE: The \emph{local density} of integral representations of $M$ by $L$ is defined to be $$\Den(M,L)\colon= \lim_{N\rightarrow +\infty}\frac{\#\Rep_{M,L}(\cO_F/\varpi^N)}{q^{N\cdot\dim (\Rep_{M,L})_{F}}}.$$ Note that if $L, M$ have $\cO_{F'}$-rank $n, m$ respectively and the generic fiber $(\Rep_{M,L})_{F}\ne\varnothing$, then $n\le m$ and $\dim (\Rep_{M,L})_{F}=\dim \U_m-\dim \U_{m-n}= n\cdot (2m-n)$.
+  \textit{Source: [FYZ], \S2.3.}
+  Let \(F\) be a non-archimedean local field with \(\mathrm{char}(F) \neq 2\),
+  \(F'/F\) either an unramified quadratic extension or \(F \times F\), and let
+  \(L, M\) be Hermitian \(\cO_{F'}\)-lattices with \(\cO_{F'}\)-ranks \(n\) and \(m\)
+  respectively. The \emph{local density} of integral representations of \(M\) by
+  \(L\) is
+  \[
+    \Den(M, L) := \lim_{N \to +\infty}
+      \frac{\# \Rep_{M,L}(\cO_F / \varpi^N)}{q^{N \cdot \dim(\Rep_{M,L})_F}},
+  \]
+  where \(\Rep_{M,L}\) is the scheme of Hermitian \(\cO_F\)-algebra homomorphisms from
+  \(L\) to \(M\). When the generic fiber \((\Rep_{M,L})_F \neq \varnothing\), one has
+  \(n \leq m\) and \(\dim(\Rep_{M,L})_F = n(2m - n)\).
+\end{definition}
+
+\section{Cho--Yamauchi formula for local density}
+
+\begin{definition}[Local Siegel series]
+  \label{def:local-siegel-series}
+  \lean{HSW.LocalSiegelSeries}
+  \uses{def:local-density}
+  % SOURCE: [FYZ], Theorem 2.3(2) (read from references/MR4689373-siegel-weil-unitary.tex)
+  % SOURCE QUOTE: There is  a (unique) polynomial $\Den(T,L)\in \mathbb{Z}[T]$, called  (normalized) \emph{local Siegel series} of $L$,  such that for all $j\geq 0$, $$\Den((\eta(\varpi) q)^{-j},L)=\frac{\Den(\iden^{n+j}, L)}{\Den(\iden^{n+j}, \iden^n)}.$$
+  \textit{Source: [FYZ], Theorem~2.3(2).}
+  There is a unique polynomial \(\Den(T, L) \in \mathbf{Z}[T]\), called the
+  \emph{(normalized) local Siegel series} of \(L\), characterized by
+  \[
+    \Den\bigl((\eta(\varpi) q)^{-j},\, L\bigr) =
+      \frac{\Den(\mathbf{1}^{n+j},\, L)}{\Den(\mathbf{1}^{n+j},\, \mathbf{1}^n)}
+    \quad \text{for all } j \geq 0,
+  \]
+  where \(\mathbf{1}^m\) denotes the self-dual Hermitian \(\cO_{F'}\)-lattice of
+  rank \(m\) with Hermitian form given by the identity matrix.
+\end{definition}
+
+\begin{theorem}[Cho--Yamauchi formula]
+  \label{thm:cho-yamauchi}
+  \lean{HSW.choYamauchi}
+  \uses{def:local-siegel-series, def:local-density}
+  % SOURCE: [FYZ], Theorem 2.3 (read from references/MR4689373-siegel-weil-unitary.tex)
+  % SOURCE QUOTE: \begin{thm}\label{th:CY} Let $j\ge0$ be an integer. Let $\iden^j$ be the self-dual Hermitian $\cO_{F'}$-lattice of rank $j$ with Hermitian form given the identity matrix $\mathbf{1}_j$. Let $L$ be a Hermitian $\cO_{F'}$-lattice of rank $n$. ... There is  a (unique) polynomial $\Den(T,L)\in \mathbb{Z}[T]$, called  (normalized) \emph{local Siegel series} of $L$,  such that for all $j\geq 0$, $\Den((\eta(\varpi) q)^{-j},L)=\frac{\Den(\iden^{n+j}, L)}{\Den(\iden^{n+j}, \iden^n)}.$ ... We have $\Den(T,L) = \sum_{L \subset L '\subset L'^{\vee} \subset L^{\vee}} T^{2\ell'(L'/L)}\fm(  t'(L');T).$ Here the sum is over $\cO_{F'}$-lattices $L'$ (in the $F'$-Hermitian space spanned by $L$) containing $L$ on which the Hermitian form is integral.
+  \textit{Source: [FYZ], Theorem~2.3.}
+  For a Hermitian \(\cO_{F'}\)-lattice \(L\) of rank \(n\), the normalized local
+  Siegel series is
+  \[
+    \Den(T, L) = \sum_{L \subset L' \subset L'^\vee \subset L^\vee}
+      T^{2\ell'(L'/L)}\, \mathfrak{m}(t'(L');\, T),
+  \]
+  where the sum is over \(\cO_{F'}\)-lattices \(L'\) containing \(L\) in the
+  \(F'\)-Hermitian space spanned by \(L\) on which the Hermitian form is integral, and
+  \[
+    \mathfrak{m}(a;\, T) := \prod_{i=0}^{a-1}\bigl(1 - (\eta(\varpi) q)^i T\bigr)
+      \in \mathbf{Z}[T].
+  \]
+  Here \(\ell'(\cdot)\) denotes length as an \(\cO_{F'}\)-module and \(t'(L')\) is the
+  \(k'\)-rank of the radical of \(L' \otimes_{\cO_F} k\).
+\end{theorem}
+
+% SOURCE QUOTE PROOF: The non-split case is proved in \cite[Thm.~3.5.1]{LZ1} and here we indicate the necessary change in the split case.  Now suppose $F'=F\times F$ and hence $k'=k\times k$. Let $L_k=L\otimes_{\cO_F} k$ and $\iden^m_{k}=\iden^m\otimes_{\cO_F} k$, which are free $k'$-modules with the induced $k'/k$-Hermitian forms. In particular, $\iden^m_{k}$ is non-degenerate and the radical of $L_k=L\otimes_{\cO_F} k$  has $k'$-rank equal to $t'(L)=t(L_1^\vee/L_1)=t(L_2^\vee/L_2)$. Let $\Isom_{\iden^m_{k}, L_k}$ be the $k$-scheme of ``isometric embeddings'' from $L_k$ to  $\iden^m_{k}$, i.e., {\em injective} $k'$-linear maps from $L_k$ to  $\iden^m_{k}$ preserving the Hermitian forms. ... It remains to show that $\#\Isom_{\iden^m_{k}, L_k}(k)= q^{m^2-(m-n)^2}\cdot \prod_{i=0}^{n+a-1}(1-q^{i-m})$ where $a=t'(L)$ ... By \eqref{eq:k pts1} ... it suffices to show \eqref{eq:k pts} in the two extreme cases: $a=0$ and $a=n$.
+\begin{proof}
+  \uses{def:local-density, def:local-siegel-series}
+  The non-split case is [LZ22a, Thm.~3.5.1]. For the split case \(F' = F \times F\),
+  one reduces to counting isometric embeddings over the residue field. Writing
+  \(L_k = L \otimes_{\cO_F} k\), a direct computation shows
+  \[
+    \# \mathrm{Isom}_{\mathbf{1}^m_k, L_k}(k)
+      = q^{m^2-(m-n)^2} \prod_{i=0}^{n+a-1}(1 - q^{i-m}),
+    \quad a = t'(L),
+  \]
+  using the splitting formula
+  \(\# \mathrm{Isom}(V_m, U_{n-a,a}) = \# \mathrm{Isom}(V_m, U_{n-a,0})
+    \cdot \# \mathrm{Isom}(V_{m-(n-a)}, U_{0,a})\),
+  which reduces to the two extremes \(a = 0\) and \(a = n\), each verified by a
+  count of injective linear maps between \(k\)-vector spaces.
+\end{proof}

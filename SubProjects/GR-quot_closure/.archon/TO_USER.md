@@ -1,12 +1,12 @@
 <!-- Shared notice board. Keep to <=2-3 short bullets; delete bullets no longer true. -->
 
-- **Extracted from *Quot-Foundations* as the GR-quot closure** (seeds: Grassmannian
-  representability + scheme + tautological-quotient epi; 287-node cone, 9 sorries). The
-  flat-base-change / generic-flatness leg was dropped (→ sibling `FBC-B_SNAP-chain`).
-- **2 of the 9 sorries are χ-blocked and NOT closable here:** `def:hilbert_polynomial` /
-  `def:quot_functor` are χ-semantic (verified against the Lean decl, not the blueprint comment)
-  and need a higher-cohomology engine this i=0 leg lacks. They stay as `sorry`, filled from the
-  cohomology leg at merge.
-- **SNAP (section graded ring) is shared with the sibling `FBC-B_SNAP-chain`.** Keep as sorry
-  here or import the sibling's finished proofs — coordinate so the two encodings don't diverge
-  (per your hint). The actually-closable frontier here is GR-quot (+ SNAP if proving locally).
+
+- **GR-quot closure DELIVERED — this leg is at its terminal state (merge-pending).** Goal seed
+  `Grassmannian.represents` is sorry-free + axiom-clean. No closable in-leg prover work remains: all
+  26 open `sorry`s are deferred-by-directive (SNAP→sibling `FBC-B_SNAP-chain`, χ→cohomology leg) or
+  out-of-cone tracked debt. Ready to merge back into *Quot-Foundations*.
+- **Blueprint-doctor broken refs are extraction artifacts**, not bugs: they target labels outside
+  the extracted 3-seed cone and resolve at merge-back. Not edited here (would diverge the
+  byte-identical-to-parent blueprint). To redirect this leg, add to `USER_HINTS.md`. (Note: the
+  sibling's SNAP is NOT yet finished — its `SectionGradedRing.lean` still has 9 sorries and has
+  diverged from ours, so an "import now" is not currently actionable; SNAP reconciles at merge.)

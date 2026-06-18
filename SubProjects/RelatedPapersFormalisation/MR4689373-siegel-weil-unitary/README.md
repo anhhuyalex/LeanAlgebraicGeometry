@@ -1,7 +1,35 @@
-# MR4689373 Higher Siegel-Weil formula for unitary groups: the non-singular terms
+# Mr4689373 Siegel Weil Unitary
 
-This project is a scaffold for the paper "Higher Siegel-Weil formula for unitary groups: the non-singular terms" (MR4689373).
+<!-- archon:readme -->
+<!-- Claude fills in the prose sections below. Keep the section headers. -->
+
+## Project
+
+<!-- One paragraph: what is being formalized and why. -->
 
 ## References
 
-See [`references/summary.md`](references/summary.md) for the paper inventory.
+See [`references/summary.md`](references/summary.md) for a description of each source.
+
+## Structure
+
+- `MR4689373HigherSiegelWeilFormulaForUnitaryGroupsTheNonSingularTerms/` — main Lean source
+- `blueprint/` — leanblueprint source (build with `leanblueprint pdf` and `leanblueprint web`)
+- `references/` — PDFs, papers, and informal notes backing the formalization
+- `archon-protected.yaml` — declarations agents must not modify
+- `.archon/` — agent state (not committed)
+
+## How to build
+
+```bash
+lake exe cache get   # download Mathlib olean cache
+lake build           # compile the project
+```
+
+## How to run the formalization loop
+
+```bash
+archon loop .
+```
+
+This launches the plan → prove → review loop and opens a dashboard.

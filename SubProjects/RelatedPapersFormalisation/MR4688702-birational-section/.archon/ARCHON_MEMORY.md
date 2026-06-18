@@ -12,3 +12,11 @@
      Bad candidates: things already obvious from the code or PROGRESS.md,
      current sorry counts, task-specific details that change every iter.
 -->
+
+- **Pure-axiom route**: no `sorry` in proof bodies; use proper `axiom` declarations for all missing infrastructure. Sorry bodies make downstream proofs vacuously admissible.
+- **Reference IDs corrected (iter-002)**: Correct arXiv IDs are bv15=1204.1260, bv19=1610.07341, bv23-valuative=2210.03406, tv18=1410.1164. Old IDs 1404.7475/1412.7523 belong to unrelated papers.
+- **Tate modules absent**: `Mathlib.AlgebraicGeometry.EllipticCurve.*` does NOT contain Tate modules of abelian varieties (Jacobians). Do not cite it.
+- **Étale fundamental gerbes absent** from Mathlib: gerbe construction (bv15/bv19) and infinite root stack (tv18) need `axiom` declarations.
+- **Parallel lanes**: once `SpecBirat` + `TBiratBirat` (steps 7–8) exist, A-path (steps 9–13) and C-path (steps 14–18) are independent — dispatch as parallel prover lanes.
+- **BSC.TODO.* names**: all 38 blueprint nodes use placeholder names. Replace with actual `BSC.*` names when writing `Basic.lean` declarations.
+- **example:gm-loop tooling gap**: leandag does not track `example` environments as DAG nodes. Cannot wire via `\uses{}` without broken ref. Plan agent should convert to `lemma` env.

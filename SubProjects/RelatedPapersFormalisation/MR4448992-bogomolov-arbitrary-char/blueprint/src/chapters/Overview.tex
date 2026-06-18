@@ -1,6 +1,981 @@
 \chapter{Overview}
 \label{chap:overview}
 
-% archon:covers MR4448992GeometricBogomolovConjectureInArbitraryCharacteristics.lean MR4448992GeometricBogomolovConjectureInArbitraryCharacteristics/Basic.lean
+% archon:covers MR4448992GeometricBogomolovConjectureInArbitraryCharacteristics.lean
+%              MR4448992GeometricBogomolovConjectureInArbitraryCharacteristics/Basic.lean
 
-This is the auto-bootstrapped blueprint for MR4448992: Geometric Bogomolov conjecture in arbitrary characteristics.
+% Chapter-local macros (all use \providecommand to avoid clashing with common.tex)
+\providecommand{\cA}{\mathcal{A}}
+\providecommand{\cL}{\mathcal{L}}
+\providecommand{\cX}{\mathcal{X}}
+\providecommand{\cT}{\mathcal{T}}
+\providecommand{\cBB}{\mathcal{B}}
+\providecommand{\cY}{\mathcal{Y}}
+\providecommand{\OK}{\overline{K}}
+\providecommand{\ok}{\overline{k}}
+\providecommand{\trdeg}{\operatorname{trdeg}}
+\providecommand{\CH}{\operatorname{CH}}
+\providecommand{\ATrace}{\operatorname{tr}}
+\providecommand{\prop}{\mathrm{prop}}
+\providecommand{\hath}{\hat{h}}
+\providecommand{\Stab}{\operatorname{Stab}}
+
+This chapter provides the complete blueprint for the paper ``Geometric Bogomolov conjecture in arbitrary characteristics'' by Xie and Yuan (arXiv:2108.09722, MR4448992). The main result is \cref{thm:main}: a subvariety of an abelian variety over a function field containing a dense set of small points is special. The proof reduces, via \cref{pro:changeField}, to the case of transcendence degree~1, then applies \cref{thm:yamakiReduction} to reduce to good reduction with trivial trace, and finally uses the Manin--Mumford conjecture (\cref{thm:maninMumford}) together with the intersection-theoretic machinery of \cref{sec:nonproper} and the numerical identity of \cref{pro:numericalEquivalent}.
+
+% =========================================================
+\section{Introduction}
+\label{sec:definitions}
+% =========================================================
+
+\subsection{Abelian varieties and heights}
+
+\begin{definition}[Projective model]
+  \label{def:ProjectiveModel}
+  \lean{MR4448992.TODO.ProjectiveModel}
+  \uses{}
+  % SOURCE: Xie--Yuan arXiv:2108.09722, \S1.1.1 (read from references/MR4448992-bogomolov-arbitrary-char.tex)
+  % SOURCE QUOTE: "A \emph{projective model of $K/k$} is a normal projective variety $S$ over $k$ with function field $K$. It follows that $\dim S=\trdeg(K/k)$."
+  \textit{Source: Xie--Yuan, arXiv:2108.09722, \S1.1.1.}
+  Let \(k\) be an algebraically closed field and \(K/k\) a finitely generated field extension
+  of transcendence degree \(\trdeg(K/k) \geq 1\).
+  A \emph{projective model of \(K/k\)} is a normal projective variety \(S\) over \(k\)
+  with function field \(K\).  In particular \(\dim S = \trdeg(K/k)\).
+\end{definition}
+
+\begin{definition}[Polarization]
+  \label{def:Polarization}
+  \lean{MR4448992.TODO.Polarization}
+  \uses{def:ProjectiveModel}
+  % SOURCE: Xie--Yuan arXiv:2108.09722, \S1.1.1 (read from references/MR4448992-bogomolov-arbitrary-char.tex)
+  % SOURCE QUOTE: "A \emph{polarization of $K/k$} is a pair $(S, \sM)$ consisting of a projective model $S$ of $K/k$ and an ample line bundle $\sM$ over $S$."
+  \textit{Source: Xie--Yuan, arXiv:2108.09722, \S1.1.1.}
+  A \emph{polarization of \(K/k\)} is a pair \((S, \cM)\) consisting of a projective model
+  \(S\) of \(K/k\) and an ample line bundle \(\cM\) over \(S\).
+\end{definition}
+
+\begin{definition}[Integral model]
+  \label{def:IntegralModel}
+  \lean{MR4448992.TODO.IntegralModel}
+  \uses{def:Polarization}
+  % SOURCE: Xie--Yuan arXiv:2108.09722, \S1.1.1 (read from references/MR4448992-bogomolov-arbitrary-char.tex)
+  % SOURCE QUOTE: "An \emph{integral model of $(A,L)$} over $S$ is a pair $(\sA, \pi, \sL)$ where: $\sA$ is a projective variety over $k$; $\pi: \sA\to S$ is a projective morphism whose generic fiber is $A$; $\sL$ is a line bundle on $\sA$ extending $L$."
+  \textit{Source: Xie--Yuan, arXiv:2108.09722, \S1.1.1.}
+  Let \(A\) be an abelian variety over \(K\) and \(L\) a symmetric ample line bundle on \(A\).
+  An \emph{integral model of \((A,L)\) over \(S\)} is a triple \((\cA, \pi, \cL)\) where
+  \(\cA\) is a projective variety over \(k\),
+  \(\pi\colon \cA \to S\) is a projective morphism with generic fiber \(A\),
+  and \(\cL\) is a line bundle on \(\cA\) extending \(L\).
+  We usually abbreviate \((\cA,\pi,\cL)\) as \((\cA,\cL)\).
+\end{definition}
+
+\subsubsection{Heights}
+
+\begin{definition}[Naive height]
+  \label{def:NaiveHeight}
+  \lean{MR4448992.TODO.NaiveHeight}
+  \uses{def:Polarization, def:IntegralModel}
+  % SOURCE: Xie--Yuan arXiv:2108.09722, \S1.1.1 (read from references/MR4448992-bogomolov-arbitrary-char.tex)
+  % SOURCE QUOTE: "The {\bf{naive height}} of $X$ with respect to the polarization $(S,\sM)$ and the integral model $(\sA, \sL)$ is defined as $h_{(\sA,\sL)}^{\sM}(X):=\frac{\sL^{\dim X+1}\cdot (\pi^*\sM)^{\dim S-1}\cdot \sX}{(1+\dim X)\deg_L(X)}$, where $\sX$ is the Zariski closure of $X$ in $\sA$, the numerator is the intersection number in $\sA$, and $\deg_L(X)=L^{\dim X}\cdot X$ is the intersection number in $A$."
+  \textit{Source: Xie--Yuan, arXiv:2108.09722, \S1.1.1.}
+  Let \(X\) be a closed subvariety of \(A\) over \(K\), and let \(\cX\) denote its
+  Zariski closure in \(\cA\).
+  The \emph{naive height} of \(X\) with respect to the polarization \((S,\cM)\) and
+  the integral model \((\cA,\cL)\) is
+  \[
+    h_{(\cA,\cL)}^{\cM}(X)
+    := \frac{\cL^{\dim X+1} \cdot (\pi^*\cM)^{\dim S-1} \cdot \cX}
+           {(1+\dim X)\,\deg_L(X)},
+  \]
+  where the numerator is the intersection number in \(\cA\) and
+  \(\deg_L(X) = L^{\dim X} \cdot X\) is the intersection number in \(A\).
+\end{definition}
+
+\begin{definition}[Canonical height]
+  \label{def:CanonicalHeight}
+  \lean{MR4448992.TODO.CanonicalHeight}
+  \uses{def:NaiveHeight}
+  % SOURCE: Xie--Yuan arXiv:2108.09722, \S1.1.1 (read from references/MR4448992-bogomolov-arbitrary-char.tex)
+  % SOURCE QUOTE: "the {\bf{canonical height}} of $X$ with respect to the polarization $(S,\sM)$ and the line bundle $L$ over $A$ is the limit $\hat{h}_L^{\sM}(X) :=\lim_{n\to +\infty} \frac{1}{n^2}h_{(\sA,\sL)}([n]X)$. Here $[n]X$ is the image of $X$ under the multiplication map $[n]:A\to A$. The limit exists, depends on $(S,\sM)$ and $L$, but is independent of the integral model $(\sA, m, \sL)$."
+  \textit{Source: Xie--Yuan, arXiv:2108.09722, \S1.1.1.}
+  The \emph{canonical height} of a closed subvariety \(X \subset A_{\OK}\) with respect to
+  the polarization \((S,\cM)\) and symmetric ample line bundle \(L\) is
+  \[
+    \hath_L^{\cM}(X)
+    := \lim_{n \to +\infty} \frac{1}{n^2}\,h_{(\cA,\cL)}([n]X),
+  \]
+  where \([n]X\) is the image of \(X\) under the multiplication-by-\(n\) map \([n]\colon A\to A\).
+  The limit exists, depends on \((S,\cM)\) and \(L\), and is independent of the choice of
+  integral model \((\cA,\cL)\).  Moreover \(\hath_L^{\cM}(X) \geq 0\).
+  When there is no ambiguity we write \(\hath(X)\).
+\end{definition}
+
+\begin{proof}
+  The key identity \(h_{(\cA,\cL)}([n]X) = n^2\,h_{(\cA,[n]^*\cL)}(X)\) together with the
+  fact that \([n]^*\cL\) and \(n^2\cL\) agree on the generic fiber shows the sequence
+  \(\frac{1}{n^2}h_{(\cA,\cL)}([n]X)\) is eventually Cauchy.  Independence of the integral
+  model is proved by comparing two models via their restrictions to the generic fiber;
+  non-negativity follows by choosing an ample model.
+  See Gubler (2007), Theorem 3.6.
+\end{proof}
+
+\subsubsection{Small points and special subvarieties}
+
+\begin{definition}[Small points]
+  \label{def:SmallPoints}
+  \lean{MR4448992.TODO.SmallPoints}
+  \uses{def:CanonicalHeight}
+  % SOURCE: Xie--Yuan arXiv:2108.09722, \S1.1.1 (read from references/MR4448992-bogomolov-arbitrary-char.tex)
+  % SOURCE QUOTE: "For any subvariety $X$ of $A_{\overline{K}}$ and any $\epsilon> 0$, we set $X(\epsilon):=\{x\in X(\overline{K})|\,\, \hat{h}(x)<\epsilon\}$. We say that $X$ \emph{contains a dense set of small points of $A/K/k$} if $X(\epsilon)$ is Zariski dense in $X$ for all $\epsilon >0$."
+  \textit{Source: Xie--Yuan, arXiv:2108.09722, \S1.1.1.}
+  For any subvariety \(X \subset A_{\OK}\) and any \(\epsilon > 0\), set
+  \(X(\epsilon) := \{ x \in X(\OK) \mid \hath(x) < \epsilon \}\).
+  We say \(X\) \emph{contains a dense set of small points of \(A/K/k\)} if \(X(\epsilon)\)
+  is Zariski dense in \(X\) for all \(\epsilon > 0\).
+  This notion is independent of the choice of \(L\) and \((S,\cM)\).
+\end{definition}
+
+\begin{definition}[\(\OK/k\)-trace]
+  \label{def:KkTrace}
+  \lean{MR4448992.TODO.KkTrace}
+  \uses{}
+  % SOURCE: Xie--Yuan arXiv:2108.09722, \S1.1.1 (read from references/MR4448992-bogomolov-arbitrary-char.tex)
+  % SOURCE QUOTE: "Let $(A^{\overline{K}/k}, \tr)$ be the $\overline{K}/k$-trace of $A_{\overline{K}}$; it is the final object of the category of pairs $(C,f)$, where $C$ is an abelian variety over $k$ and $f$ is a morphism from $C\otimes_{ k}\overline{K}$ to $A_{\overline{K}}$ (cf. [\S7]{Lang:AbelianBook} or [\S6]{Conrad}). If $\Char k=0$, $\tr$ is a closed immersion and $A^{\overline{K}/ k}\otimes_{k}\overline{K}$ can be naturally viewed as an abelian subvariety of $A_{\overline{K}}$; if $\Char k>0$, $\tr$ is a purely inseparable isogeny to its image."
+  \textit{Source: Xie--Yuan, arXiv:2108.09722, \S1.1.1.}
+  Let \(A\) be an abelian variety over \(K\).
+  The \emph{\(\OK/k\)-trace} of \(A_{\OK}\) is the pair \((A^{\OK/k}, \ATrace)\) that is
+  the final object of the category of pairs \((C,f)\) where \(C\) is an abelian variety
+  over \(k\) and \(f\colon C \otimes_k \OK \to A_{\OK}\) is a morphism.
+  When \(\operatorname{char}(k)=0\), the map \(\ATrace\) is a closed immersion;
+  when \(\operatorname{char}(k)>0\), it is a purely inseparable isogeny to its image.
+\end{definition}
+
+\begin{definition}[Torsion subvariety]
+  \label{def:TorsionSubvariety}
+  \lean{MR4448992.TODO.TorsionSubvariety}
+  \uses{}
+  % SOURCE: Xie--Yuan arXiv:2108.09722, \S1.1.1 (read from references/MR4448992-bogomolov-arbitrary-char.tex)
+  % SOURCE QUOTE: "A {\bf{torsion subvariety}} of $A_{\overline K}$ is a translate $a+C$ of an abelian subvariety $C\subset A_{\overline K}$ by a torsion point $a$ of $A_{\overline K}$."
+  \textit{Source: Xie--Yuan, arXiv:2108.09722, \S1.1.1.}
+  A \emph{torsion subvariety} of \(A_{\OK}\) is a translate \(a+C\) of an abelian subvariety
+  \(C \subset A_{\OK}\) by a torsion point \(a \in A_{\OK}\).
+\end{definition}
+
+\begin{definition}[Special subvariety]
+  \label{def:SpecialSubvariety}
+  \lean{MR4448992.TODO.SpecialSubvariety}
+  \uses{def:KkTrace, def:TorsionSubvariety}
+  % SOURCE: Xie--Yuan arXiv:2108.09722, \S1.1.1 (read from references/MR4448992-bogomolov-arbitrary-char.tex)
+  % SOURCE QUOTE: "A subvariety $X$ of $A_{\overline{K}}$ is said to be {\bf{special}} if $X=\tr(Y{\otimes_{k}\overline{K}})+T$ for some torsion subvariety $T$ of $A_{\overline{K}}$ and some subvariety $Y$ of $A^{\overline{K}/k}$."
+  \textit{Source: Xie--Yuan, arXiv:2108.09722, \S1.1.1.}
+  A closed subvariety \(X\) of \(A_{\OK}\) is \emph{special} if
+  \[
+    X = \ATrace(Y \otimes_k \OK) + T
+  \]
+  for some torsion subvariety \(T\) of \(A_{\OK}\) and some subvariety \(Y\) of
+  \(A^{\OK/k}\).
+\end{definition}
+
+\subsection{Geometric Bogomolov conjecture}
+
+\begin{theorem}[Geometric Bogomolov conjecture]
+  \label{thm:main}
+  \lean{MR4448992.TODO.main}
+  \uses{def:SmallPoints, def:SpecialSubvariety, thm:mainEssentialCase,
+        pro:changeField, thm:yamakiReduction}
+  % SOURCE: Xie--Yuan arXiv:2108.09722, Theorem 1.1 (read from references/MR4448992-bogomolov-arbitrary-char.tex)
+  % SOURCE QUOTE: "Let $k$ be an algebraically closed field. Let $K/k$ be a finitely generated field extension of transcendence degree at least 1. Let $A$ be an abelian variety over $K$. Let $X$ be a closed subvariety of $A_{\overline{K}}$. If $X$ contains a dense set of small points of $A/K/k$, then $X$ is special."
+  \textit{Source: Xie--Yuan, arXiv:2108.09722, Theorem 1.1.}
+  Let \(k\) be an algebraically closed field, \(K/k\) a finitely generated extension of
+  transcendence degree at least \(1\), \(A\) an abelian variety over \(K\), and \(X\) a
+  closed subvariety of \(A_{\OK}\).  If \(X\) contains a dense set of small points of
+  \(A/K/k\), then \(X\) is special.
+\end{theorem}
+
+% SOURCE QUOTE PROOF: "Our proof of the geometric Bogomolov conjecture is based on Yamaki's reduction theorem, which reduces the conjecture to the case of good reduction and trivial trace. We also need the Manin--Mumford conjecture (in the case of trivial trace) proved by Raynaud and Hrushovski. First, we reduce the conjecture to the case that $K/k$ has transcendence degree 1. This is the main goal of \S\ref{sec trdeg}."
+\begin{proof}
+  \uses{pro:changeField, thm:yamakiReduction, thm:mainEssentialCase}
+  By \cref{pro:changeField}, one reduces to the case \(\trdeg(K/k)=1\).
+  Then \cref{thm:yamakiReduction} (Yamaki's reduction theorem) reduces to the essential case
+  that \(A\) has good reduction everywhere over the unique smooth projective model \(S\) of
+  \(K/k\) and trivial \(\OK/k\)-trace.
+  The essential case is \cref{thm:mainEssentialCase}.
+\end{proof}
+
+% =========================================================
+\section{Non-proper intersections}
+\label{sec:nonproper}
+% =========================================================
+
+Let \(B\) be a smooth projective variety of dimension \(d\) over an algebraically closed
+field \(k\).
+
+\begin{definition}[Chow group with rational coefficients]
+  \label{def:ChowGroup}
+  \lean{MR4448992.TODO.ChowGroup}
+  \uses{}
+  % SOURCE: Xie--Yuan arXiv:2108.09722, \S2 (read from references/MR4448992-bogomolov-arbitrary-char.tex)
+  % SOURCE QUOTE: "For every $i$-cycle $Z$ of $\Q$-coefficient of $B$, denote by $[Z]$ its class in the Chow group $\CH_i(B)_{\Q}$. For $\alpha\in \CH_i(B)_{\Q}$, write $\alpha\geq 0$ if $\alpha$ can be represented by an effective $i$-cycle."
+  \textit{Source: Xie--Yuan, arXiv:2108.09722, \S2.}
+  For every \(i\)-cycle \(Z\) with \(\mathbb{Q}\)-coefficients on a smooth projective variety
+  \(B\), denote by \([Z]\) its class in the Chow group \(\CH_i(B)_{\mathbb{Q}}\).
+  Write \(\alpha \geq 0\) for \(\alpha \in \CH_i(B)_{\mathbb{Q}}\) if \(\alpha\) can be
+  represented by an effective \(i\)-cycle.
+\end{definition}
+
+\subsection{A Bertini type of result}
+
+\begin{proposition}[Bertini-type hyperplane sections through \(V\)]
+  \label{pro:bertini}
+  \lean{MR4448992.TODO.bertini}
+  \uses{}
+  % SOURCE: Xie--Yuan arXiv:2108.09722, Proposition 2.2 (read from references/MR4448992-bogomolov-arbitrary-char.tex)
+  % SOURCE QUOTE: "Let $Y$ be a projective variety over an algebraically closed field $k$. Let $V$ be a closed subvariety of $Y$ of codimension $r\geq 1$ such that $Y$ is smooth at $\eta_V.$ Let $Z_1,\dots,Z_m$ be irreducible subvarieties of $Y$. Assume that $(\cup_{i=1}^m Z_i)\cap V$ is finite; $(\cup_{i=1}^m Z_i)\cap V\subseteq Y^{\sm}\cap V^{\sm}$. Let $H$ be a Cartier divisor on $Y$ such that $\sO_Y(H)\otimes I_V$ is generated by global sections [...] Then for general elements $(s_1,\dots, s_r)\in H^0(\sO_Y(H)\otimes I_V)^r$, the following holds: $H_{s_1}\cap\dots\cap H_{s_r}$ is a proper intersection in $Y$; $H_{s_1}\cdots H_{s_r}=V+W$ where $W$ is an effective $(\dim Y-r)$-cycle such that $V\not\subseteq \Supp \,W$, and $W\cap Z_i$ is a proper intersection for every $i=1,\dots,m$."
+  \textit{Source: Xie--Yuan, arXiv:2108.09722, Proposition 2.2.}
+  Let \(Y\) be a projective variety over an algebraically closed field \(k\).
+  Let \(V \subset Y\) be a closed subvariety of codimension \(r \geq 1\) such that \(Y\) is
+  smooth at \(\eta_V\).
+  Let \(Z_1,\dots,Z_m\) be irreducible subvarieties of \(Y\) with
+  \((\bigcup_i Z_i) \cap V\) finite and contained in \(Y^{\rm sm} \cap V^{\rm sm}\).
+  Let \(H\) be a Cartier divisor such that \(\mathcal{O}_Y(H) \otimes I_V\) is generated by
+  global sections.
+  Then for general \((s_1,\dots,s_r) \in H^0(\mathcal{O}_Y(H) \otimes I_V)^r\), the divisors
+  \(H_{s_i} \in |H|\) satisfy: (a) \(H_{s_1} \cap \cdots \cap H_{s_r}\) is a proper
+  intersection in \(Y\), and (b) \(H_{s_1} \cdots H_{s_r} = V + W\) with \(W\) effective
+  and \(V \not\subseteq \operatorname{Supp}W\), and each \(W \cap Z_i\) a proper intersection.
+\end{proposition}
+
+% SOURCE QUOTE PROOF: "Because $\sO_Y(H)\otimes I_V$ is generated by global sections and $s_1,\dots, s_r$ are general in $H^0(\sO_Y(H)\otimes I_V)$, $(H_1\setminus V)\cap\dots\cap (H_r\setminus V)$ is a proper intersection in $Y\setminus V$, and $(H_1\setminus V)\cap\dots\cap (H_r\setminus V)\cap (Z_i\setminus V)$ is proper intersection in $Y\setminus V$ for every $i=1,\dots,m$. [...] Pick $x_V\in Y^{\sm}(k)\cap V^{\sm}(k)$ and set $B:=(V\cap (\cup_{i=1}^m Z_i))\cup \{x_V\}$. [...] This implies that at every point $x\in B$, there is an open neighborhood $U_x$ of $x$ such that $H_1\cap \dots \cap H_r\cap U_x=V\cap U_x.$ So $V\not\subseteq \Supp \,W$, and $W\cap B=\emptyset.$"
+\begin{proof}
+  Since \(\mathcal{O}_Y(H) \otimes I_V\) is globally generated and the \(s_i\) are general,
+  the intersection \((H_{s_1} \setminus V) \cap \cdots \cap (H_{s_r} \setminus V)\) is proper
+  in \(Y \setminus V\).  Since each \(s_i \in H^0(\mathcal{O}_Y(H) \otimes I_V)\) vanishes
+  along \(V\), we have \(V \subseteq H_{s_i}\), so \(H_{s_1} \cap \cdots \cap H_{s_r}\) is
+  pure of codimension \(r\) and hence a proper intersection in \(Y\).
+  At any point \(x \in V^{\rm sm} \cap Y^{\rm sm}\), a local basis of sections shows
+  \(H_{s_1} \cap \cdots \cap H_{s_r}\) agrees with \(V\) locally, so \(V\) does not appear
+  in the residual cycle \(W\).
+  The proper intersection condition on \(W \cap Z_i\) follows from generality of \(s_i\)
+  away from \(V\).
+\end{proof}
+
+\subsection{Proper part of an intersection}
+
+\begin{definition}[Proper component of an intersection]
+  \label{def:ProperComponent}
+  \lean{MR4448992.TODO.ProperComponent}
+  \uses{def:ChowGroup}
+  % SOURCE: Xie--Yuan arXiv:2108.09722, \S2.2 (read from references/MR4448992-bogomolov-arbitrary-char.tex)
+  % SOURCE QUOTE: "A \emph{proper component} $Z$ of $H_1\cap \dots \cap H_m\cap X$ is an irreducible component of the underling topological space of $H_1\cap \dots \cap H_m\cap X$ of dimension $\dim X-m.$ Write $m(Z, H_1\cap \dots \cap H_m\cap X)$ for the multiplicity of $Z$ in $H_1\cap \dots \cap H_m\cap X$, as defined by Serre using the tor-functor."
+  \textit{Source: Xie--Yuan, arXiv:2108.09722, \S2.2.}
+  Let \(B\) be a smooth projective variety, \(H_1,\dots,H_m\) Cartier divisors, and \(X \subset B\)
+  a subvariety.
+  A \emph{proper component} of \(H_1 \cap \cdots \cap H_m \cap X\) is an irreducible component
+  of the underlying topological space \(H_1 \cap \cdots \cap H_m \cap X\) of dimension
+  \(\dim X - m\).
+  Write \(m(Z, H_1 \cap \cdots \cap H_m \cap X)\) for the multiplicity of such a component
+  \(Z\), defined via the Serre tor-formula.
+\end{definition}
+
+\begin{definition}[Proper part of an intersection]
+  \label{def:ProperPartIntersection}
+  \lean{MR4448992.TODO.ProperPartIntersection}
+  \uses{def:ProperComponent, def:ChowGroup}
+  % SOURCE: Xie--Yuan arXiv:2108.09722, \S2.2 (read from references/MR4448992-bogomolov-arbitrary-char.tex)
+  % SOURCE QUOTE: "$(H_1\cdots H_m\cdot X)^{\prop}:=\sum m(Z, H_1\cap \dots \cap H_m\cap X) [Z],$ where the sum takes over all proper components $Z$ of $H_1\cap \dots \cap H_m\cap X$."
+  \textit{Source: Xie--Yuan, arXiv:2108.09722, \S2.2.}
+  With the notation of \cref{def:ProperComponent}, define
+  \[
+    (H_1 \cdots H_m \cdot X)^{\prop}
+    := \sum_Z m(Z,\, H_1 \cap \cdots \cap H_m \cap X)\,[Z],
+  \]
+  where the sum runs over all proper components \(Z\) of \(H_1 \cap \cdots \cap H_m \cap X\).
+\end{definition}
+
+\begin{lemma}[Cutting by globally generated divisor preserves non-negativity]
+  \label{lem:cutAmpleEff}
+  \lean{MR4448992.TODO.cutAmpleEff}
+  \uses{def:ChowGroup}
+  % SOURCE: Xie--Yuan arXiv:2108.09722, Lemma 2.3 (read from references/MR4448992-bogomolov-arbitrary-char.tex)
+  % SOURCE QUOTE: "Let $H$ be a Cartier divisor on $B$ such that $\sO_B(H)$ is globally generated. Then for $\alpha\in \CH_i(B)_{\Q}$ with $\alpha\geq 0$, $\alpha\cdot [H] \geq 0.$"
+  \textit{Source: Xie--Yuan, arXiv:2108.09722, Lemma 2.3.}
+  Let \(B\) be a smooth projective variety and \(H\) a Cartier divisor on \(B\) such that
+  \(\mathcal{O}_B(H)\) is globally generated.
+  Then for \(\alpha \in \CH_i(B)_{\mathbb{Q}}\) with \(\alpha \geq 0\),
+  we have \(\alpha \cdot [H] \geq 0\).
+\end{lemma}
+
+% SOURCE QUOTE PROOF: "We may write $\alpha=[Z]$ for an effective $i$-cycle $Z$. We can further assume that $Z$ is an integral subvariety of $B$. Because $\sO_B(H)$ is globally generated, after replacing $H$ by a general element in $|H|$, we may assume that $H\cap Z$ is a proper intersection. Then $\alpha\cdot [H]=[Z]\cdot [H]\geq 0.$"
+\begin{proof}
+  Write \(\alpha = [Z]\) with \(Z\) an effective integral subvariety.
+  Since \(\mathcal{O}_B(H)\) is globally generated, a general element of \(|H|\) meets \(Z\)
+  properly, giving an effective intersection cycle.  Thus \(\alpha \cdot [H] \geq 0\).
+\end{proof}
+
+\begin{proposition}[Proper part bounded by total intersection]
+  \label{pro:propIntBoundHyp}
+  \lean{MR4448992.TODO.propIntBoundHyp}
+  \uses{def:ProperPartIntersection, def:ChowGroup, lem:cutAmpleEff}
+  % SOURCE: Xie--Yuan arXiv:2108.09722, Proposition 2.4 (read from references/MR4448992-bogomolov-arbitrary-char.tex)
+  % SOURCE QUOTE: "Let $H_1, \dots, H_r$ be effective Cartier divisors on $B$ such that $\sO_B(H_1),\dots,\sO_B(H_r)$ are generated by global sections. Let $X$ be a subvariety of $B$. Then we have $(H_1\cdots H_r\cdot X)^{\prop}\leq H_1\cdots H_r\cdot X.$"
+  \textit{Source: Xie--Yuan, arXiv:2108.09722, Proposition 2.4.}
+  Let \(H_1,\dots,H_r\) be effective Cartier divisors on \(B\) whose sheaves
+  \(\mathcal{O}_B(H_i)\) are globally generated, and let \(X \subset B\) be a subvariety.
+  Then
+  \[
+    (H_1 \cdots H_r \cdot X)^{\prop} \leq H_1 \cdots H_r \cdot X
+    \quad\text{in}\quad \CH_{\dim X - r}(B)_{\mathbb{Q}}.
+  \]
+\end{proposition}
+
+% SOURCE QUOTE PROOF: "If $r=1,$ this lemma is trivial. Now assume that $r\geq 2$. By induction, $\sum_{j=1}^l n_jX_j\leq H_1\cdots H_{r-1}\cdot X.$ [...] By Lemma \ref{lemcutampleeff}, we have $(H_1\cdots H_r\cdot X)^{\prop}=\sum_{i=1}^m m_iV_i\leq (\sum_{j=1}^l n_jX_j)\cap H_r\leq H_1\cdots H_{r-1}\cdot V\cdot H_r.$"
+\begin{proof}
+  \uses{lem:cutAmpleEff}
+  By induction on \(r\), using \cref{lem:cutAmpleEff}: the base case \(r=1\) is immediate.
+  For \(r \geq 2\), let \(X_1,\dots,X_l\) be the components of
+  \(H_1 \cap \cdots \cap H_{r-1} \cap X\) passing through the proper components of the full
+  intersection.  By induction \(\sum_j n_j X_j \leq H_1 \cdots H_{r-1} \cdot X\), and the
+  resulting cycle meets \(H_r\) in the proper components.
+  Applying \cref{lem:cutAmpleEff} to this non-negative cycle completes the induction.
+\end{proof}
+
+\subsection{Strict transform}
+
+\begin{definition}[Excess locus]
+  \label{def:ExcessLocus}
+  \lean{MR4448992.TODO.ExcessLocus}
+  \uses{}
+  % SOURCE: Xie--Yuan arXiv:2108.09722, \S2.3 (read from references/MR4448992-bogomolov-arbitrary-char.tex)
+  % SOURCE QUOTE: "For every integer $l\geq e$, $Y_l:=\{y\in Y|\,\, \dim f^{-1}(y)\geq l\}$ is a closed subset of $Y$. We have $Y_{l+1}\subseteq Y_l$. We note that $Y_{e}=Y$ and for $l\geq e+1,$ $\dim Y_l+l\leq \dim X-1$."
+  \textit{Source: Xie--Yuan, arXiv:2108.09722, \S2.3.}
+  Let \(f \colon X \to Y\) be a surjective morphism of projective varieties with
+  \(e := \dim X - \dim Y\).
+  For every integer \(l \geq e\), the \emph{excess locus at level \(l\)} is the closed subset
+  \[
+    Y_l := \{ y \in Y \mid \dim f^{-1}(y) \geq l \}.
+  \]
+  We have \(Y_{l+1} \subseteq Y_l\), \(Y_e = Y\), and for \(l \geq e+1\) the bound
+  \(\dim Y_l + l \leq \dim X - 1\) holds.
+\end{definition}
+
+The key technical results of this section are stated below in logical order.
+
+\begin{proposition}[Main comparison inequality]
+  \label{pro:strLeqTot}
+  \lean{MR4448992.TODO.strLeqTot}
+  \uses{def:ChowGroup, def:ExcessLocus, pro:bertini, pro:propIntBoundHyp,
+        lem:pullbackProper}
+  % SOURCE: Xie--Yuan arXiv:2108.09722, Proposition 2.1 (read from references/MR4448992-bogomolov-arbitrary-char.tex)
+  % SOURCE QUOTE: "Let $g: B\to Y$ be a flat morphism between smooth projective varieties. Let $X$ be a closed subvariety of $B$ such that $f=g|_X: X\to Y$ is surjective. Denote $e=\dim X-\dim Y$. Let $V$ be a closed subvariety of $Y$ which is not contained in $Y_{e+1}=\{y\in Y|\,\, \dim f^{-1}(y)\geq e+1\}$. Let $Z_1, \dots, Z_n$ be all irreducible components of $f^{-1}(V)$ satisfying $f(Z_i)=V.$ Then $\dim Z_i=\dim V+e$ for $i=1,\dots,n$. Assume furthermore that $V\cap Y_{e+1}$ is finite and contained in $V^{\sm}$. Then we have $\sum_{i=1}^n m_i[Z_i]\leq g^*[V]\cdot [X]$ in $\CH_{\dim V+e}(B)_\Q$. Here $m_i$ is the multiplicity of $Z_i$ in $f^{-1}(V).$"
+  \textit{Source: Xie--Yuan, arXiv:2108.09722, Proposition 2.1.}
+  Let \(g\colon B \to Y\) be a flat morphism between smooth projective varieties, and let
+  \(X \subset B\) be a closed subvariety such that \(f = g|_X\colon X \to Y\) is surjective.
+  Set \(e = \dim X - \dim Y\).
+  Let \(V \subset Y\) be a closed subvariety not contained in
+  \(Y_{e+1} = \{y \in Y \mid \dim f^{-1}(y) \geq e+1\}\), and assume \(V \cap Y_{e+1}\) is
+  finite and contained in \(V^{\rm sm}\).
+  Let \(Z_1,\dots,Z_n\) be the irreducible components of \(f^{-1}(V)\) satisfying
+  \(f(Z_i)=V\); then \(\dim Z_i = \dim V + e\).
+  Then
+  \[
+    \sum_{i=1}^n m_i [Z_i] \leq g^*[V] \cdot [X]
+    \quad\text{in}\quad \CH_{\dim V+e}(B)_{\mathbb{Q}},
+  \]
+  where \(m_i\) is the multiplicity of \(Z_i\) in \(f^{-1}(V)\).
+\end{proposition}
+
+% SOURCE QUOTE PROOF: "Set $r:=\dim Y-\dim V.$ By Proposition \ref{probertini}, there are effective and very ample divisors $H_1,\dots, H_r$ on $Y$ such that $H_1\cap \dots \cap H_r$ is a proper intersection and $H_1\cdots H_r=V+W$ where $W$ is an effective $(\dim Y-r)$-cycle such that $V\not\subseteq \Supp \,W$, and such that $W\cap Y_l$ is a proper intersection for $l\geq e+1$. [...] By Lemma \ref{lempullbackproper}, $\dim f^{-1}W=\dim V+e.$ [...] By Proposition \ref{propropintboundhyp}, since $\sO_{B}(f^*H_i)$ for $i=1,\dots,r$ are generated by global sections, we get $(g^*H_1\cdots g^*H_r\cdot X)^{\prop}\leq g^*H_1\cdots g^*H_r\cdot [X].$"
+\begin{proof}
+  \uses{pro:bertini, lem:pullbackProper, pro:propIntBoundHyp, def:ChowGroup}
+  Set \(r = \dim Y - \dim V\).
+  By \cref{pro:bertini}, choose very ample divisors \(H_1,\dots,H_r\) on \(Y\) with
+  \(H_1 \cdots H_r = V + W\), \(V \not\subseteq \operatorname{Supp}W\), and each
+  \(W \cap Y_l\) a proper intersection for \(l \geq e+1\).
+  By \cref{lem:pullbackProper}, \(\dim f^{-1}(W) = \dim V + e\), so \(f^{-1}(W)\) is a
+  proper intersection.
+  One identifies \([f^{-1}(W)] = g^*[W] \cdot [X]\) over \(B \setminus g^{-1}(V)\) by
+  comparing local rings.
+  The closure \(\overline{f^{-1}(V) \cap f^{-1}(Y \setminus Y_{e+1})}\) contributes
+  \(\sum m_i[Z_i] + g^*[W] \cdot [X]\).
+  Applying \cref{pro:propIntBoundHyp} (proper part \(\leq\) total intersection for globally
+  generated pullbacks) gives the result.
+\end{proof}
+
+\begin{lemma}[Dimension of preimage under properness condition]
+  \label{lem:pullbackProper}
+  \lean{MR4448992.TODO.pullbackProper}
+  \uses{def:ExcessLocus}
+  % SOURCE: Xie--Yuan arXiv:2108.09722, Lemma 2.5 (read from references/MR4448992-bogomolov-arbitrary-char.tex)
+  % SOURCE QUOTE: "Let $W$ be a subvariety of $Y$. Assume that $W\cap Y_l$ is a proper intersection for every $l\geq e+1$. Then $\dim f^{-1}(W)=\dim W+e.$ Moreover, for every irreducible component $Z$ of $f^{-1}(W)$ with $\dim Z=\dim f^{-1}(W)$, we have $f(Z)=W.$"
+  \textit{Source: Xie--Yuan, arXiv:2108.09722, Lemma 2.5.}
+  Let \(f\colon X \to Y\) be a surjective morphism of projective varieties with
+  \(e = \dim X - \dim Y\).
+  Let \(W \subset Y\) be a subvariety such that \(W \cap Y_l\) is a proper intersection for
+  every \(l \geq e+1\).
+  Then \(\dim f^{-1}(W) = \dim W + e\), and every irreducible component \(Z\) of \(f^{-1}(W)\)
+  with \(\dim Z = \dim W + e\) satisfies \(f(Z) = W\).
+\end{lemma}
+
+% SOURCE QUOTE PROOF: "Write $W=\sqcup_{e\leq l\leq \dim X} W\cap(Y_l\setminus Y_{l+1}).$ For every $l\geq e+1$, if $W\cap(Y_l\setminus Y_{l+1})\neq \emptyset$, $\dim W\cap(Y_l\setminus Y_{l+1})\leq \dim W\cap Y_l=\dim W+\dim Y_l-\dim Y \leq \dim W+e-l-1.$ So for $l\geq e+1$, $\dim f^{-1}(W\cap (Y_l\setminus Y_{l+1}))\leq \dim W+e-1.$ Because $W\cap Y_{e+1}$ is a proper intersection, we have $W\setminus Y_{e+1}\neq \emptyset.$ Then $\dim f^{-1}(W\setminus Y_{e+1})=\dim W+e.$"
+\begin{proof}
+  Stratify \(W = \bigsqcup_{l \geq e} W \cap (Y_l \setminus Y_{l+1})\).
+  For \(l \geq e+1\), the dimension bound \(\dim Y_l \leq \dim X - l - 1\) gives
+  \(\dim f^{-1}(W \cap (Y_l \setminus Y_{l+1})) \leq \dim W + e - 1\).
+  Since \(W \cap Y_{e+1}\) is proper, \(W \setminus Y_{e+1} \neq \emptyset\), and the fiber
+  dimension is exactly \(e\) on this open stratum, giving \(\dim f^{-1}(W) = \dim W + e\).
+  The surjectivity claim follows by comparing dimensions.
+\end{proof}
+
+
+% =========================================================
+\section{Lowering the transcendence degree}
+\label{sec:trdeg}
+% =========================================================
+
+\subsection{Field of definition}
+
+\begin{lemma}[Isogeny descends from \(K\) to \(k\)]
+  \label{lem:isoBaseChange}
+  \lean{MR4448992.TODO.isoBaseChange}
+  \uses{}
+  % SOURCE: Xie--Yuan arXiv:2108.09722, Lemma 3.3 (read from references/MR4448992-bogomolov-arbitrary-char.tex)
+  % SOURCE QUOTE: "Let $A_1,A_2$ be two abelian varieties over an algebraically closed field $k$. Let $K$ be any field extension of $k$. If $A_1\otimes_kK\sim A_2\otimes_kK$, then $A_1\sim A_2.$"
+  \textit{Source: Xie--Yuan, arXiv:2108.09722, Lemma 3.3.}
+  Let \(A_1, A_2\) be abelian varieties over an algebraically closed field \(k\), and let
+  \(K/k\) be any field extension.
+  If \(A_1 \otimes_k K \sim A_2 \otimes_k K\) (isogenous over \(K\)), then \(A_1 \sim A_2\).
+\end{lemma}
+
+% SOURCE QUOTE PROOF: "There is an isogeny $\Phi: A_1\otimes_kK\to A_2\otimes_kK$ over $K.$ There is a subfield $K'$ of $K$, finite generated over $k$, such that $\Phi$ is defined over $K'$. After replacing $K$ by $K'$, we may assume that $K$ is a finitely generated extension over $k$. There is a $k$-variety $S$ such that $K=k(S).$ After shrinking $S$, we may assume that there is an isogeny $\Phi_S: A_1\times_k S\to A_2\times_k S$ over $S$ such that $\Phi$ is the generic fiber of $\Phi_S.$ Pick a point $b\in S(k)$. The restriction of $\Phi_S$ to the fiber at $b$ induces an isogeny $\Phi_b: A_1\to A_2$."
+\begin{proof}
+  The isogeny \(\Phi\colon A_1 \otimes_k K \to A_2 \otimes_k K\) is defined over a finitely
+  generated subfield \(K' \subset K\).  Spreading \(\Phi\) over a \(k\)-variety \(S\) with
+  \(k(S) = K'\) and specializing to any \(k\)-point of \(S\) yields an isogeny
+  \(A_1 \to A_2\) over \(k\).
+\end{proof}
+
+\begin{proposition}[Unique abelian variety over \(k\) compatible with \(A_1\) and \(A_2\)]
+  \label{pro:baseChangeDiagram}
+  \lean{MR4448992.TODO.baseChangeDiagram}
+  \uses{lem:isoBaseChange}
+  % SOURCE: Xie--Yuan arXiv:2108.09722, Proposition 3.2 (read from references/MR4448992-bogomolov-arbitrary-char.tex)
+  % SOURCE QUOTE: "Let $k$ be an algebraically closed field. Let $K$ be a field extension of $k$ with $\trdeg(K/k)<\infty.$ Let $k_1,k_2$ be algebraically closed intermediate fields of $K/k$ with $k_1\cap k_2=k.$ Let $A_1,A_2$ be abelian varieties over $k_1,k_2$ respectively. If $A_1\otimes_{k_1}K\sim A_2\otimes_{k_2}K$, then there is an abelian variety $A$ over $k$, such that $A_1\sim A\otimes_{k}k_1$ and $A_2\sim A\otimes_{k}k_2.$ Moreover, the abelian variety $A$ is unique up to isogeny."
+  \textit{Source: Xie--Yuan, arXiv:2108.09722, Proposition 3.2.}
+  Let \(k\) be algebraically closed, \(K/k\) a finitely generated extension,
+  \(k_1, k_2\) algebraically closed intermediate fields with \(k_1 \cap k_2 = k\), and
+  \(A_1, A_2\) abelian varieties over \(k_1, k_2\) respectively.
+  If \(A_1 \otimes_{k_1} K \sim A_2 \otimes_{k_2} K\), then there exists an abelian variety
+  \(A\) over \(k\), unique up to isogeny, such that \(A_1 \sim A \otimes_k k_1\) and
+  \(A_2 \sim A \otimes_k k_2\).
+\end{proposition}
+
+% SOURCE QUOTE PROOF: "For the existence, we only need to show that both $A_1$ and $A_2$ are defined over $k$ up to isogeny. [...] Because $A_1\otimes_{k_1}K\sim A_2\otimes_{k_2}K$, there is $k$-variety $U$ satisfying $k(U)=K$, a flat and quasi-finite morphism $\psi: U\to S_1\times S_2$, and an isogeny $\Phi_U:\sA_{1,U}=\sA_1\times_{S_1} U\longrightarrow \sA_{2,U}=\sA_2\times_{S_2} U.$ Pick a point $s=(s_1,s_2)\in \psi(U)(k)\subseteq S_1\times S_2.$ [...] Taking the geometric generic fibers [...] we get $A_1\sim \sA_{s_2}\otimes_kk_1.$"
+\begin{proof}
+  \uses{lem:isoBaseChange}
+  Uniqueness is \cref{lem:isoBaseChange}.
+  For existence it suffices to descend \(A_1\) (and symmetrically \(A_2\)) to \(k\) up to
+  isogeny.  The isogeny \(A_1 \otimes_{k_1} K \sim A_2 \otimes_{k_2} K\) is realized over a
+  flat quasi-finite cover \(U \to S_1 \times S_2\); picking a \(k\)-point \((s_1,s_2)\)
+  and restricting to \(S_1 \times \{s_2\}\) gives a family over \(S_1\) whose generic fiber
+  is isogenous to \(A_1\) and whose fiber at \(s_1\) is \(\mathcal{A}_{2,s_2}\), an abelian
+  variety over \(k\).  Hence \(A_1\) descends to \(k\).
+\end{proof}
+
+\begin{lemma}[Descent of subvariety via two subfields]
+  \label{lem:subvarDef}
+  \lean{MR4448992.TODO.subvarDef}
+  \uses{}
+  % SOURCE: Xie--Yuan arXiv:2108.09722, Lemma 3.6 (read from references/MR4448992-bogomolov-arbitrary-char.tex)
+  % SOURCE QUOTE: "Let $k_1, k_2$ be two intermediate fields of a field extension $K/k$ such that $k_1\cap k_2=k$. Let $Y$ be a variety over $k$. Let $X$ be a closed subvariety of $Y_K=Y\otimes_kK$ over $K$. Assume that as a subvariety of $Y_K$, $X$ is defined over $k_1$ and also defined over $k_2$. Then $X$ is defined over $k.$"
+  \textit{Source: Xie--Yuan, arXiv:2108.09722, Lemma 3.6.}
+  Let \(k_1, k_2\) be intermediate fields of a field extension \(K/k\) with
+  \(k_1 \cap k_2 = k\), and let \(Y\) be a variety over \(k\).
+  Let \(X \subset Y_K = Y \otimes_k K\) be a closed subvariety defined over both \(k_1\) and
+  \(k_2\) (as a subvariety of \(Y_K\)).  Then \(X\) is defined over \(k\).
+\end{lemma}
+
+% SOURCE QUOTE PROOF: "This converts to a basic result in linear algebra. Namely, let $K,k,k_1,k_2$ be as before, let $V_0$ be a vector space over $k$, and let $V=V_0\otimes_kK$ be the vector space over $K$. Let $W$ be a $K$-subspace of $V$. Assume that $W$ can be descended to $k_i$ for $i=1,2$; i.e., $W=W_i\otimes_{k_i}K$ for a $k_i$-subspace $W_i$ of $V_0\otimes_kk_i$. Then $W$ can be descended to $k$. [...] By the uniqueness of the reduced row echelon form, we have $E=E_1=E_2$. Then the coefficients of $E$ are in $k_1\cap k_2=k$."
+\begin{proof}
+  Reduce to the affine case: the ideal of \(X\) in \(R_0 \otimes_k K\) must be spanned by
+  \(I_0 \otimes_k K\) for \(I_0 = I \cap R_0\).  This follows from a linear algebra fact:
+  if a \(K\)-subspace of \(V_0 \otimes_k K\) descends to both \(k_1\) and \(k_2\) (with
+  \(k_1 \cap k_2 = k\)), its reduced row echelon form over \(K\) equals the forms over
+  \(k_1\) and \(k_2\), forcing all coefficients to lie in \(k_1 \cap k_2 = k\).
+\end{proof}
+
+\begin{corollary}[Two cases of field of definition]
+  \label{cor:defField}
+  \lean{MR4448992.TODO.defField}
+  \uses{pro:baseChangeDiagram, lem:subvarDef}
+  % SOURCE: Xie--Yuan arXiv:2108.09722, Corollary 3.7 (read from references/MR4448992-bogomolov-arbitrary-char.tex)
+  % SOURCE QUOTE: "Let $K/k$ be an extension of algebraically closed fields. (i) Let $A$ be an abelian variety over $K.$ Then there is an algebraically closed intermediate field $k_A$ of $K/k$, such that for every algebraically closed intermediate field $k'$ of $K/k$, $A$ is defined over $k'$ up to isogeny if and only if $k_A\subseteq k'.$ Moreover, we have $\trdeg(k_A/k)<\infty.$ (ii) Let $Y$ be a variety over $k$. Let $X$ be a subvariety of $Y_K=Y\otimes_kK.$ Then there is an algebraically closed intermediate field $k_{X\subseteq Y_K}$ of $K/k$, such that for every algebraically closed intermediate field $k'$ of $K/k$, $X\subseteq Y_K$ is defined over $k'$ if and only if $k_{X\subseteq Y_K}\subseteq k'.$"
+  \textit{Source: Xie--Yuan, arXiv:2108.09722, Corollary 3.7.}
+  Let \(K/k\) be an extension of algebraically closed fields.
+  \begin{enumerate}
+    \item For any abelian variety \(A\) over \(K\), there is an algebraically closed
+          intermediate field \(k_A\) of \(K/k\) with \(\trdeg(k_A/k) < \infty\) such that
+          for every algebraically closed intermediate field \(k'\) of \(K/k\),
+          \(A\) is defined over \(k'\) up to isogeny if and only if \(k_A \subseteq k'\).
+    \item For any variety \(Y\) over \(k\) and subvariety \(X \subset Y_K\), there is an
+          algebraically closed intermediate field \(k_{X \subseteq Y_K}\) of \(K/k\) such
+          that \(X\) is defined over \(k'\) if and only if \(k_{X \subseteq Y_K} \subseteq k'\).
+  \end{enumerate}
+\end{corollary}
+
+% SOURCE QUOTE PROOF: "We only prove (i). [...] So there is $k_A\in I$, such that $\trdeg(k_A/k)$ is the smallest. [...] By Proposition \ref{lembasechangediagram}, $k'\cap k_A\subseteq I.$ This proves $k_A\subseteq k'$ because $\trdeg(k_A/k)$ is the smallest."
+\begin{proof}
+  \uses{pro:baseChangeDiagram, lem:subvarDef}
+  For (i): among all algebraically closed \(k'\) over which \(A\) is defined up to isogeny,
+  choose \(k_A\) with minimal transcendence degree.  For any other such \(k'\), apply
+  \cref{pro:baseChangeDiagram} to \(k_A \cap k'\) to conclude \(k_A \subseteq k'\).
+  Part (ii) is analogous, using \cref{lem:subvarDef} in place of \cref{pro:baseChangeDiagram}.
+\end{proof}
+
+\subsection{Special subvarieties of abelian varieties}
+
+\begin{proposition}[Characterization of special via \(k_{A,X}\)]
+  \label{pro:lemNonSpecial}
+  \lean{MR4448992.TODO.lemNonSpecial}
+  \uses{def:SpecialSubvariety, cor:defField}
+  % SOURCE: Xie--Yuan arXiv:2108.09722, Proposition 3.8 (read from references/MR4448992-bogomolov-arbitrary-char.tex)
+  % SOURCE QUOTE: "Let $K/k$ be a field extension such that $k$ is algebraically closed in $K$. Let $A$ be an abelian variety over $K$. Let $X$ be a subvariety of $A_{\overline{K}}.$ Then there is $k_{A,X}\in I(K/k)$ such that for every $k'\in I(K/k)$, $X$ is special for $A/K/k'$ if and only if $k_{A,X}\subseteq k'$."
+  \textit{Source: Xie--Yuan, arXiv:2108.09722, Proposition 3.8.}
+  Let \(K/k\) be a field extension with \(k\) algebraically closed in \(K\), \(A\) an
+  abelian variety over \(K\), and \(X \subset A_{\OK}\) a subvariety.
+  There is a \(k_{A,X} \in I(K/k)\) (the set of algebraically closed intermediate
+  fields) such that for every \(k' \in I(K/k)\), \(X\) is special for \(A/K/k'\) if and
+  only if \(k_{A,X} \subseteq k'\).
+\end{proposition}
+
+% SOURCE QUOTE PROOF: "Let $\Stab^0(X)$ be the identity component of the closed subgroup scheme $\Stab(X):=\{g\in A|\,\, g+X=X\}.$ [...] After replacing $(A, X)$ by $(A/\Stab^0(X), X/\Stab^0(X))$, we may assume that $\Stab^0(X)=0.$ [...] We first assume that $\tr(A^{K/k})_K\neq A$. By Corollary \ref{cordeffield}(i), there is $k_{A,X}:=k_A\in I(K/k)$ such that for any $k'\in I(K/k)$, $\tr(A^{K/k'})_K= A$ if and only if $k_{A,X}\subseteq k'.$ [...] Now we assume that $\tr(A^{K/k})_K= A$. [...] In this case, for any $k'\in I(K/k)$, $X$ is special in $A/K/k'$ if and only if $X$ as a subvariety of $A$ is defined over $k'.$ By Corollary \ref{cordeffield}(ii), there is $k_{A,X}:=k_{X\subseteq A}\in I(K/k)$."
+\begin{proof}
+  \uses{cor:defField}
+  After quotienting by the identity component \(\Stab^0(X)\) of the stabilizer of \(X\) and
+  replacing \((A,X)\) by \((T_X - a, X - a)\) for the minimal torsion subvariety \(T_X\),
+  assume \(\Stab^0(X) = 0\) and \(T_X = A\).
+  Case 1: \(\ATrace(A^{K/k})_K \neq A\).  Then \cref{cor:defField}(i) gives \(k_A\) such
+  that \(\ATrace(A^{K/k'})_K = A\) iff \(k_A \subseteq k'\); set \(k_{A,X} = k_A\).
+  Case 2: \(\ATrace(A^{K/k})_K = A\).  Pass to the isogenous model with \(A\) defined over
+  \(k\); then \(X\) is special iff \(X\) is defined over \(k'\), so \cref{cor:defField}(ii)
+  gives \(k_{A,X} = k_{X \subseteq A}\).
+\end{proof}
+
+\subsection{Proof of Proposition \ref{pro:changeField}}
+
+\begin{lemma}[Generic hyperplane with height inequality]
+  \label{lem:genericHyperplane}
+  \lean{MR4448992.TODO.genericHyperplane}
+  \uses{def:Polarization, def:CanonicalHeight, def:NaiveHeight, def:IntegralModel}
+  % SOURCE: Xie--Yuan arXiv:2108.09722, Lemma 3.9 (read from references/MR4448992-bogomolov-arbitrary-char.tex)
+  % SOURCE QUOTE: "Let $k$ be an algebraically closed field. Let $K/k$ be a finitely generated extension of transcendence degree $\trdeg(K/k)>1.$ Let $(S,\sM)$ be a polarization of $K/k$. Assume that $\sM$ is very ample over $S$. Then there are infinitely many intermediate fields $k'$ of $K/k$, algebraically closed in $K$ and of transcendence degree $1$ over $k$, together with a geometrically integral subvariety $H$ in $S_{k'}$ of codimension 1 satisfying the following properties. (1) the divisor $H$ of $S_{k'}$ is linearly equivalent to $\sM_{k'}$; (2) the composition $H\to S_{k'} \to S$ induces an isomorphism between the generic points of $H$ and $S$."
+  \textit{Source: Xie--Yuan, arXiv:2108.09722, Lemma 3.9.}
+  Let \(k\) be algebraically closed and \(K/k\) finitely generated with
+  \(\trdeg(K/k) > 1\).  Let \((S,\cM)\) be a polarization of \(K/k\) with \(\cM\) very
+  ample.  Then there are infinitely many intermediate fields \(k'\) algebraically closed in
+  \(K\) with \(\trdeg(k'/k)=1\), each equipped with a geometrically integral divisor
+  \(H \subset S_{k'}\) linearly equivalent to \(\cM_{k'}\) and inducing an isomorphism on
+  generic points \(H \to S\).  Moreover, for any abelian variety \(A\) over \(K\) with
+  symmetric ample \(L\) and any subvariety \(X \subset A_{\OK}\),
+  \[
+    \hath_L^{\cM}(X) \geq \hath_L^{\cM_{k'}|_H}(X).
+  \]
+\end{lemma}
+
+% SOURCE QUOTE PROOF: "By a Bertini type of theorem (cf. \cite[Theorem 6.10]{Jouanolou}), for a general section $s_0\in \Gamma(S,\sM)$, $H_0=\div(s_0)$ is geometrically integral. Set $H_1=\div(s_1)$ for some $s_1\in \Gamma(S,\sM)$ which is not a multiple of $s_0$. Then $s_0$ and $s_1$ determine a plane in $\Gamma(S,\sM)$, and thus a pencil in $S$ with base locus $H_0\cap H_1$. This gives a rational map $S\dashrightarrow \P^1_k$ sending $x$ to $(s_0(x),s_1(x))$. Let $\pi:\widetilde S\to S$ be the blowing-up along $H_0\cap H_1$. Then the rational map becomes a flat morphism $\psi:\widetilde S\to \P^1_k$."
+\begin{proof}
+  Take a general section \(s_0 \in \Gamma(S,\cM)\) giving a geometrically integral \(H_0\)
+  by Bertini.  Fix another section \(s_1\) independent of \(s_0\), forming a pencil.
+  Blowing up the base locus \(H_0 \cap H_1\) yields a flat morphism
+  \(\psi\colon \widetilde{S} \to \mathbb{P}^1_k\); its generic fiber \(H' \to \operatorname{Spec}k'\)
+  (where \(k' = k(\mathbb{P}^1_k)\)) is geometrically integral, making \(k'\) algebraically
+  closed in \(K\).  The image \(H\) of \(H'\) in \(S_{k'}\) satisfies conditions (1) and (2).
+  For the height inequality: after base change from \(k\) to \(k'\), the naive height over
+  \((S,\cM)\) equals the intersection on \(\mathcal{A}_{k'}\), which dominates the naive
+  height over \((H, \cM_{k'}|_H)\) because the Zariski closure of \(X\) in \(\mathcal{A}_{k'}\)
+  dominates its trace in \(\mathcal{A}_H\).
+\end{proof}
+
+\begin{proposition}[Reduction to transcendence degree one]
+  \label{pro:changeField}
+  \lean{MR4448992.TODO.changeField}
+  \uses{pro:lemNonSpecial, lem:genericHyperplane, def:SpecialSubvariety}
+  % SOURCE: Xie--Yuan arXiv:2108.09722, Proposition 3.1 (read from references/MR4448992-bogomolov-arbitrary-char.tex)
+  % SOURCE QUOTE: "Let $k$ be an algebraically closed field. Let $K/k$ be a finitely generated field extension of transcendence degree at least 2. Let $A$ be an abelian variety over $K$. Then there are two intermediate fields $k_1,k_2$ of $K/k$, algebraically closed in $K$ and of transcendence degree $1$ over $k$, such that for any closed subvariety $X$ of $A_{\overline{K}}$, the geometric Bogomolov conjecture holds for $(A/K/k, X)$ if the geometric Bogomolov conjecture holds for $(A_{K\overline k_1}/K\overline k_1/\overline k_1,X)$ and $(A_{K\overline k_2}/K\overline k_2/\overline k_2,X)$."
+  \textit{Source: Xie--Yuan, arXiv:2108.09722, Proposition 3.1.}
+  Let \(k\) be algebraically closed, \(K/k\) finitely generated of transcendence degree at
+  least \(2\), and \(A\) an abelian variety over \(K\).
+  There are two intermediate fields \(k_1, k_2\) of \(K/k\), algebraically closed in \(K\)
+  and each of transcendence degree \(1\) over \(k\), such that for any closed subvariety
+  \(X \subset A_{\OK}\), the geometric Bogomolov conjecture holds for \((A/K/k,X)\) if it
+  holds for \((A_{K\ok_i}/K\ok_i/\ok_i, X)\) for \(i=1,2\).
+  Applying this proposition repeatedly reduces to the case \(\trdeg(K/k)=1\).
+\end{proposition}
+
+% SOURCE QUOTE PROOF: "Choose $(H_1,k_1), (H_2,k_2)$ as in Lemma \ref{generic hyperplane} such that $k_1\neq k_2$. [...] Let $X$ be a subvariety of $A_{\overline{K}}$ which contains a dense set of small points of $A/K/k$. Then $X$ contains a dense set of small points of $A_{K{\overline k_i}}/K{\overline k_i}/{\overline k_i}$ for $i=1,2$ by the height inequality. By assumption, the geometric Bogomolov conjecture holds for $(A_{K{\overline k_i}}/K{\overline k_i}/{\overline k_i}, X)$, so $X$ is special in $A/K/k_i$ for both $i=1,2.$ If $X$ is not special for $A/K/k$, let $k_{A,X}$ as in Proposition \ref{lemnonspecial}. We have $k_{A,X}\neq k.$ By $\trdeg(k_i/k)=1$, we have $k_{A,X}\not\subseteq k_i$ for at least one $i\in \{1,2\}$. Then $X$ is special for $A/K/k_i$ for that $i$. This is a contradiction."
+\begin{proof}
+  \uses{lem:genericHyperplane, pro:lemNonSpecial}
+  Choose two distinct generic hyperplanes \((H_1,k_1),(H_2,k_2)\) from
+  \cref{lem:genericHyperplane}.
+  If \(X\) has dense small points for \((A/K/k)\), then the height inequality gives dense
+  small points for \((A/K/k_i)\) for each \(i\); by hypothesis \(X\) is special for
+  \(A/K/k_i\).
+  If \(X\) were not special for \(A/K/k\), then \cref{pro:lemNonSpecial} gives \(k_{A,X} \neq k\).
+  Since each \(k_i\) has transcendence degree \(1\) over \(k\), at least one satisfies
+  \(k_{A,X} \not\subseteq k_i\), contradicting \(X\) being special for \(A/K/k_i\).
+\end{proof}
+
+% =========================================================
+\section{Line bundles over abelian schemes}
+\label{sec:linebundles}
+% =========================================================
+
+In this section \(S\) denotes a smooth projective curve over \(k\), and
+\(\pi\colon \cA \to S\) an abelian scheme of relative dimension \(g \geq 1\).
+
+\subsection{Rigidified line bundles}
+
+\begin{definition}[Multi-section]
+  \label{def:MultiSection}
+  \lean{MR4448992.TODO.MultiSection}
+  \uses{}
+  % SOURCE: Xie--Yuan arXiv:2108.09722, \S4.1 (read from references/MR4448992-bogomolov-arbitrary-char.tex)
+  % SOURCE QUOTE: "By a \emph{multi-section} of $\pi:\sA\to S$, we mean a closed integral subscheme $\sT$ of $\sA$ such that the induced morphism $\sT\to S$ is finite and flat."
+  \textit{Source: Xie--Yuan, arXiv:2108.09722, \S4.1.}
+  A \emph{multi-section} of \(\pi\colon \cA \to S\) is a closed integral subscheme
+  \(\cT \subset \cA\) such that the induced morphism \(\cT \to S\) is finite and flat.
+\end{definition}
+
+\begin{definition}[Torsion multi-section]
+  \label{def:TorsionMultiSection}
+  \lean{MR4448992.TODO.TorsionMultiSection}
+  \uses{def:MultiSection}
+  % SOURCE: Xie--Yuan arXiv:2108.09722, \S4.1 (read from references/MR4448992-bogomolov-arbitrary-char.tex)
+  % SOURCE QUOTE: "The multi-section $\sT$ is called \emph{torsion} if its corresponding element in the abelian group $\sA_\sT(\sT)$ is torsion. The \emph{order} of the torsion multi-section $\sT$ is defined to be the order of the corresponding element in $\sA_\sT(\sT)$."
+  \textit{Source: Xie--Yuan, arXiv:2108.09722, \S4.1.}
+  A multi-section \(\cT\) of \(\pi\colon \cA \to S\) is \emph{torsion} if its corresponding
+  element in the abelian group \(\cA_{\cT}(\cT)\) is torsion.
+  The \emph{order} of a torsion multi-section \(\cT\) is the order of this element.
+  Any torsion multi-section is the Zariski closure of a torsion point of \(A(\OK)_{\rm tor}\)
+  in \(\cA\).
+\end{definition}
+
+\begin{definition}[Rigidified line bundle]
+  \label{def:RigidifiedLineBundle}
+  \lean{MR4448992.TODO.RigidifiedLineBundle}
+  \uses{}
+  % SOURCE: Xie--Yuan arXiv:2108.09722, \S4.1 (read from references/MR4448992-bogomolov-arbitrary-char.tex)
+  % SOURCE QUOTE: "We say that $\sL$ is \emph{symmetric} if $[-1]^*\sL\simeq \sL$. We say that $\sL$ is \emph{anti-symmetric} if $[-1]^*\sL\simeq \sL^\vee$. We say that $\sL$ is \emph{rigidified} if it is endowed with an isomorphism $e^*\sL\simeq \sO_S$ via the identity section $e:S\to \sA$. The isomorphism is called a \emph{rigidification}."
+  \textit{Source: Xie--Yuan, arXiv:2108.09722, \S4.1.}
+  A line bundle \(\cL\) on \(\cA\) is \emph{symmetric} if \([-1]^*\cL \cong \cL\);
+  \emph{anti-symmetric} if \([-1]^*\cL \cong \cL^\vee\); and
+  \emph{rigidified} if it carries an isomorphism \(e^*\cL \cong \mathcal{O}_S\) via the
+  identity section \(e\colon S \to \cA\).
+\end{definition}
+
+\begin{lemma}[Properties of rigidified line bundles]
+  \label{lem:lineBundleProps}
+  \lean{MR4448992.TODO.lineBundleProps}
+  \uses{def:MultiSection, def:TorsionMultiSection, def:RigidifiedLineBundle}
+  % SOURCE: Xie--Yuan arXiv:2108.09722, Lemma 4.1 (read from references/MR4448992-bogomolov-arbitrary-char.tex)
+  % SOURCE QUOTE: "Let $\sL$ be a rigidified line bundle over $\sA$. Then the following hold. (1) If $\sL$ is symmetric, then $[m]^*\sL\simeq m^2\sL$ for any $m\in \Z$; if $\sL$ is anti-symmetric, then $[m]^*\sL\simeq m\sL$ for any $m\in \Z$. (2) For any torsion multi-section $\sT\subset \sA$, the line bundle $\sL|_{\sT}$ is torsion in $\Pic(\sT)$. (3) If $\sL$ is symmetric and $\pi$-ample, then $\sL$ is nef over $\sA$. (4) If $\sL$ is symmetric and $\pi$-ample, and $\sL'$ is another symmetric and rigidified line bundle over $\sA$, then there is a positive integer $a$ such that $a\sL-\sL'$ is nef over $\sA$."
+  \textit{Source: Xie--Yuan, arXiv:2108.09722, Lemma 4.1.}
+  Let \(\cL\) be a rigidified line bundle on \(\cA\).
+  \begin{enumerate}
+    \item If \(\cL\) is symmetric, then \([m]^*\cL \cong m^2\cL\) for all \(m \in \mathbb{Z}\);
+          if anti-symmetric, then \([m]^*\cL \cong m\cL\).
+    \item For any torsion multi-section \(\cT \subset \cA\), the restriction \(\cL|_{\cT}\)
+          is torsion in \(\operatorname{Pic}(\cT)\).
+    \item If \(\cL\) is symmetric and \(\pi\)-ample, then \(\cL\) is nef over \(\cA\).
+    \item If \(\cL\) is symmetric and \(\pi\)-ample, and \(\cL'\) is another symmetric
+          rigidified line bundle, then there exists a positive integer \(a\) such that
+          \(a\cL - \cL'\) is nef over \(\cA\).
+  \end{enumerate}
+\end{lemma}
+
+% SOURCE QUOTE PROOF: "For (1), we only consider the symmetric case as the anti-symmetric case is similar. Note that $[m]^*\sL- m^2\sL$ is trivial over every fiber of $\pi:\sA\to S$, so it lies in $\pi^*\Pic(S)$. Consider the pull-back to the identity section. Then $[m]^*\sL- m^2\sL$ is trivial by the rigidification. For (2), [...] Note that $\sA[m]\to S$ is the base change of $[m]:\sA\to \sA$ by the identity section. It follows that $([m]^*\sL)|_{\sA[m]}$ is trivial over $\sA[m]$ by the rigidification. Then $\sL|_{\sA[m]}$ is torsion over $\sA[m]$ by (1). For (3), since $\sL$ is $\pi$-ample, there is an ample line bundle $\sL'$ over $S$ such that $\sL+\pi^*\sL'$ is ample over $\sA$. Then $[m]^*(\sL+\pi^*\sL')\simeq m^2\sL+\pi^*\sL'$ is ample over $\sA$. The $\Q$-line bundle $\sL+m^{-2}\pi^*\sL'$ is ample over $\sA$, and thus its limit $\sL$ is nef over $\sA$. For (4), note that $a\sL-\sL'$ is $\pi$-ample for sufficiently large $a$. Apply (3)."
+\begin{proof}
+  For (1): \([m]^*\cL - m^2\cL\) is trivial on each fiber of \(\pi\), hence lies in
+  \(\pi^*\operatorname{Pic}(S)\); the rigidification \(e^*\cL \cong \mathcal{O}_S\) forces it to be trivial.
+  For (2): let \(m\) be the order of \(\cT\); the base change of \([m]\) by \(e\) gives
+  \(\cA[m] \to S\), and the rigidification makes \(([m]^*\cL)|_{\cA[m]}\) trivial; part (1)
+  then yields \(\cL|_{\cT}\) torsion.
+  For (3): choose ample \(\cL''\) on \(S\) so \(\cL + \pi^*\cL''\) is ample; the limit
+  \(\lim_{m\to\infty}({\cL + m^{-2}\pi^*\cL''})\) is \(\cL\), which is thus nef.
+  For (4): \(a\cL - \cL'\) is \(\pi\)-ample for large \(a\), then apply (3).
+\end{proof}
+
+\subsection{Numerical classes of torsion multi-sections}
+
+\begin{proposition}[Torsion multi-section numerically equivalent to self-intersection]
+  \label{pro:numericalEquivalent}
+  \lean{MR4448992.TODO.numericalEquivalent}
+  \uses{lem:lineBundleProps, def:MultiSection, def:TorsionMultiSection,
+        def:RigidifiedLineBundle, def:ChowGroup}
+  % SOURCE: Xie--Yuan arXiv:2108.09722, Proposition 4.2 (read from references/MR4448992-bogomolov-arbitrary-char.tex)
+  % SOURCE QUOTE: "Let $S$ be a smooth projective curve over a field $k$. Let $\pi:\sA\to S$ be an abelian scheme over $S$ of relative dimension $g\geq 1$. Let $\sL$ be a symmetric and rigidified line bundle over $\sA$. Let $\sT$ be a torsion multi-section of $\sA$ over $S$. Then there is a numerical equivalence $[\sL]^g\equiv \frac{\deg(\sL_\eta)}{\deg(\sT/S)} [\sT]$ of 1-cycles over $\sA$. Here $\eta$ is the generic point of $S$, and $\deg(\sL_\eta)$ is the degree of $\sL_\eta$ over the abelian variety $\sA_\eta$."
+  \textit{Source: Xie--Yuan, arXiv:2108.09722, Proposition 4.2.}
+  Let \(\cL\) be symmetric and rigidified on \(\cA\), and \(\cT\) a torsion multi-section.
+  Then there is a numerical equivalence of \(1\)-cycles on \(\cA\):
+  \[
+    [\cL]^g \equiv \frac{\deg(\cL_\eta)}{\deg(\cT/S)}\,[\cT].
+  \]
+\end{proposition}
+
+% SOURCE QUOTE PROOF: "It suffices to prove that $\sL^g\cdot \sM= \frac{\deg(\sL_\eta)}{\deg(\sT/S)} \sT\cdot \sM$ for any line bundle $\sM$ over $\sA$. We first prove that if $\sM$ is rigidified, then both sides are 0. The right-hand side is 0 by Lemma \ref{line bundle}(2). For the left-hand side, [...] $[m]^*\sM\simeq m^i\sM$ for $i=1,2$. By the projection formula, $([m]^*\sL)^g\cdot ([m]^*\sM)= \deg([m]) \sL^g\cdot \sM.$ This is just $m^{2g+i}\, \sL^g\cdot \sM= m^{2g}\, \sL^g\cdot \sM.$ It follows that $\sL^g\cdot \sM=0.$ To prove the identity for general $\sM$, write $\sM=(\sM-\pi^*e^*\sM)+\pi^*e^*\sM$. [...] This follows from the simply equalities $\sL^g\cdot \pi^*\sN=\deg(\sL_\eta)\deg(\sN),\quad \sT\cdot \pi^*\sN=\deg(\sT/S)\deg(\sN).$"
+\begin{proof}
+  \uses{lem:lineBundleProps}
+  It suffices to show \(\cL^g \cdot \mathcal{M} = \frac{\deg(\cL_\eta)}{\deg(\cT/S)} \cT \cdot \mathcal{M}\)
+  for any line bundle \(\mathcal{M}\) on \(\cA\).
+  If \(\mathcal{M}\) is rigidified: the right side is zero by \cref{lem:lineBundleProps}(2);
+  the left side is zero by the projection formula and the identity
+  \([m]^*\cL \cong m^2\cL\), which gives \(m^{2g+i}\cL^g\cdot\mathcal{M} = m^{2g}\cL^g\cdot\mathcal{M}\)
+  (for \(i=1\) or \(2\)), forcing \(\cL^g \cdot \mathcal{M}=0\).
+  For general \(\mathcal{M}\), write \(\mathcal{M} = (\mathcal{M} - \pi^*e^*\mathcal{M}) + \pi^*e^*\mathcal{M}\);
+  the first summand is canonically rigidified, handled above.
+  For \(\mathcal{M} = \pi^*\mathcal{N}\), both sides equal \(\deg(\cL_\eta)\deg(\mathcal{N})\) and
+  \(\deg(\cT/S)\deg(\mathcal{N})\) respectively, giving the ratio.
+\end{proof}
+
+\subsection{Canonical height}
+
+\begin{lemma}[Canonical height equals naive height for good reduction]
+  \label{lem:canonicalHeightGoodReduction}
+  \lean{MR4448992.TODO.canonicalHeightGoodReduction}
+  \uses{def:NaiveHeight, def:CanonicalHeight, lem:lineBundleProps,
+        def:RigidifiedLineBundle}
+  % SOURCE: Xie--Yuan arXiv:2108.09722, \S4.3 (read from references/MR4448992-bogomolov-arbitrary-char.tex)
+  % SOURCE QUOTE: "Assume that $A$ has everywhere \emph{good reduction} over $S$. [...] Let $\sL$ be a symmetric and rigidified line bundle over $\sA$ extending $L$. [...] By Lemma \ref{line bundle}(1) and the projection formula, the naive height $h_{\sL}(X)=\frac{\sL^{\dim X+1}\cdot \sX}{(\dim X+1)\deg_L(X)}$ already satisfies $h_{\sL}([n]X)=n^2\, h_{\sL}(X)$. As a consequence, $h_{\sL}(X)$ is exactly equal to the canonical height $\hat h(X)$ associated to $L$."
+  \textit{Source: Xie--Yuan, arXiv:2108.09722, \S4.3.}
+  Let \(S\) be a smooth projective curve with function field \(K=k(S)\), and let \(A/K\)
+  have everywhere good reduction over \(S\).
+  Let \(\pi\colon \cA \to S\) be the N\'eron model and \(\cL\) a symmetric rigidified
+  extension of a symmetric ample \(L\) on \(A\).
+  For any closed subvariety \(X \subset A\) with Zariski closure \(\cX \subset \cA\),
+  \[
+    \hath(X) = h_{\cL}(X)
+    := \frac{\cL^{\dim X+1} \cdot \cX}{(\dim X+1)\deg_L(X)}.
+  \]
+  That is, the naive height already equals the canonical height.
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:lineBundleProps}
+  By \cref{lem:lineBundleProps}(1), \([n]^*\cL \cong n^2\cL\).
+  The projection formula gives
+  \(h_{\cL}([n]X) = n^2\,h_{\cL}(X)\).
+  Since the Tate limit is \(\lim_{n\to\infty}\frac{1}{n^2}h_{\cL}([n]X)\), the limit
+  stabilizes to \(h_{\cL}(X)\) immediately.
+\end{proof}
+
+% =========================================================
+\section{Proof of the geometric Bogomolov conjecture}
+\label{sec:finalproof}
+% =========================================================
+
+We now gather the external results needed and prove the main theorem under assumptions
+(a)--(d) of the paper.
+
+\begin{theorem}[Manin--Mumford conjecture (Raynaud--Hrushovski)]
+  \label{thm:maninMumford}
+  \lean{MR4448992.TODO.maninMumford}
+  \uses{def:TorsionSubvariety, def:KkTrace}
+  % SOURCE: Xie--Yuan arXiv:2108.09722, Theorem 5.1 (read from references/MR4448992-bogomolov-arbitrary-char.tex)
+  % SOURCE QUOTE: "Let $K$ be a finitely generated field over an algebraically closed field $k$. Let $A$ be an abelian variety over $K$ of trivial $\overline K/ k$-trace. Let $X$ be a closed subvariety of $A_{\overline K}$. Assume that $X(\overline K)\cap A(\overline K)_\tor$ is Zariski dense in $X$. Then $X$ is a torsion subvariety of $A_{\overline K}$."
+  \textit{Source: Xie--Yuan, arXiv:2108.09722, Theorem 5.1.}
+  Let \(K\) be a finitely generated field over an algebraically closed field \(k\),
+  \(A\) an abelian variety over \(K\) with trivial \(\OK/k\)-trace, and \(X\) a closed
+  subvariety of \(A_{\OK}\).
+  If \(X(\OK) \cap A(\OK)_{\rm tor}\) is Zariski dense in \(X\), then \(X\) is a torsion
+  subvariety of \(A_{\OK}\).
+\end{theorem}
+
+\begin{proof}
+  Used as external result.
+  Proved by Raynaud (char~0, \cite{Raynaud1983}) and Hrushovski (arbitrary char,
+  \cite{Hrushovski2001}); an algebraic-geometry proof is given by Pink--R\"{o}ssler
+  \cite{Pink2002a}.
+\end{proof}
+
+\begin{lemma}[Zhang--Gubler fundamental inequality]
+  \label{lem:fundamentalInequality}
+  \lean{MR4448992.TODO.fundamentalInequality}
+  \uses{def:SmallPoints, def:CanonicalHeight}
+  % SOURCE: Xie--Yuan arXiv:2108.09722, Lemma 5.2 (read from references/MR4448992-bogomolov-arbitrary-char.tex)
+  % SOURCE QUOTE: "Let $K/k$ be a finitely generated field extension of transcendence degree $1$. Let $A$ be an abelian variety over $K$. Let $L$ be a symmetric and ample line bundle over $A$. Let $X$ be a closed subvariety of $A_\OK$. If $X$ contains a dense set of small points of $A/K/k$, then $\widehat h_L(X)=0$."
+  \textit{Source: Xie--Yuan, arXiv:2108.09722, Lemma 5.2.}
+  Let \(\trdeg(K/k) = 1\), \(A\) an abelian variety over \(K\), \(L\) symmetric and ample
+  on \(A\), and \(X \subset A_{\OK}\) a closed subvariety.
+  If \(X\) contains a dense set of small points of \(A/K/k\), then \(\hath_L(X) = 0\).
+\end{lemma}
+
+% SOURCE QUOTE PROOF: "It is a direct consequence of the fundamental inequality, which asserts that $\sup_{U\subset X} \inf_{x\in U(\overline K)} \widehat h_L(x) \geq \widehat h_L(X).$ [...] The fundamental inequality was proved over number fields by Zhang \cite[Theorem 1.10]{Zhang1995}. It was generalized to function fields by Gubler \cite[Lemma 4.1]{Gubler2007}."
+\begin{proof}
+  Used as external result.
+  By the fundamental inequality \(\sup_{U \subset X}\inf_{x \in U(\OK)}\hath_L(x) \geq \hath_L(X)\),
+  if \(X\) has dense small points then the left side is \(0\).
+  Proved in the function field case by Gubler (2007), Lemma 4.1.
+\end{proof}
+
+\begin{theorem}[Yamaki's reduction theorem]
+  \label{thm:yamakiReduction}
+  \lean{MR4448992.TODO.yamakiReduction}
+  \uses{def:KkTrace}
+  % SOURCE: Xie--Yuan arXiv:2108.09722, \S5 (read from references/MR4448992-bogomolov-arbitrary-char.tex)
+  % SOURCE QUOTE: "Yamaki \cite[Theorem 1.5]{Yamaki2016a} asserts that the geometric Bogomolov conjecture holds for $A$ if and only if it holds for $A'/\tr(A^{K/k}\otimes_kK)$. This gives the condition."
+  \textit{Source: Xie--Yuan, arXiv:2108.09722, \S5 (citing Yamaki 2016a, Theorem 1.5).}
+  Let \(\trdeg(K/k)=1\), \(S\) the unique smooth projective model, and suppose \(A\) has
+  semi-stable reduction over \(S\).
+  Denote by \(A'\) the maximal abelian subvariety of \(A\) with everywhere good reduction.
+  The geometric Bogomolov conjecture holds for \(A/K/k\) if and only if it holds for
+  \(A'/\ATrace(A^{K/k} \otimes_k K)\).
+  In particular, one may reduce to the case that \(A\) has good reduction everywhere and
+  trivial \(\OK/k\)-trace.
+\end{theorem}
+
+\begin{proof}
+  Used as external result; see Yamaki (2016a), Theorem 1.5.
+\end{proof}
+
+\begin{lemma}[Northcott property for canonical heights]
+  \label{lem:northcott}
+  \lean{MR4448992.TODO.northcott}
+  \uses{def:CanonicalHeight, def:KkTrace}
+  % SOURCE: Xie--Yuan arXiv:2108.09722, \S5 (read from references/MR4448992-bogomolov-arbitrary-char.tex)
+  % SOURCE QUOTE: "By assumption, $A$ has a trivial $\overline K/ k$-trace, so $B$ and $C$ have trivial $\overline K/ k$-traces. Then $\hat h_{L_2}(t')=0$ implies that $t'\in C(K)_\tor$. This follows from the Northcott property (cf. \cite[Theorem 9.15]{Conrad})."
+  \textit{Source: Xie--Yuan, arXiv:2108.09722, \S5 (citing Conrad, Theorem 9.15).}
+  Let \(K/k\) be a function field of transcendence degree \(1\) over an algebraically closed
+  field \(k\), and let \(A\) be an abelian variety over \(K\) with trivial \(\OK/k\)-trace.
+  If \(t \in A(K)\) satisfies \(\hath(t) = 0\), then \(t\) is a torsion point of \(A(K)\).
+  More generally, for any \(x \in A(\OK)\), \(\hath(x)=0\) and trivial trace imply \(x\) is
+  torsion.
+\end{lemma}
+
+\begin{proof}
+  Used as external result; see Conrad, Theorem 9.15.
+  The key point is that in the function field setting with trivial trace, the canonical height
+  is a positive definite quadratic form on \(A(\OK)/A(\OK)_{\rm tor}\), so its vanishing
+  forces a torsion element.
+\end{proof}
+
+\subsection{Subvarieties generated by addition}
+
+\begin{definition}[Addition map and its image]
+  \label{def:AdditionMap}
+  \lean{MR4448992.TODO.AdditionMap}
+  \uses{}
+  % SOURCE: Xie--Yuan arXiv:2108.09722, \S5.1 (read from references/MR4448992-bogomolov-arbitrary-char.tex)
+  % SOURCE QUOTE: "For any integer $m\geq1$, denote by $X_m$ the image of the addition morphism $f_m:X^m\longrightarrow A, \quad (x_1,\cdots, x_m) \longmapsto x_1+ \cdots+ x_m.$ Set $X_0=0$ to be the identity point of $A$. Since $X_m$ is the image of the addition morphism $X_{m-1}\times X\to A$, we have $\dim X_{m-1}\leq \dim X_m\leq \dim X_{m-1}+\dim X, \quad m\geq1.$"
+  \textit{Source: Xie--Yuan, arXiv:2108.09722, \S5.1.}
+  For \(X \subset A_{\OK}\) a closed subvariety and any integer \(m \geq 1\), define
+  \(X_m \subset A\) as the image of the addition morphism
+  \(f_m\colon X^m \to A,\quad (x_1,\dots,x_m) \mapsto x_1+\cdots+x_m\).
+  Set \(X_0 = \{0\}\).
+  The sequence of dimensions satisfies
+  \(\dim X_{m-1} \leq \dim X_m \leq \dim X_{m-1} + \dim X\).
+\end{definition}
+
+\begin{lemma}[Addition stabilizes to a torsion subvariety]
+  \label{lem:addition}
+  \lean{MR4448992.TODO.addition}
+  \uses{def:AdditionMap, def:CanonicalHeight, def:KkTrace, lem:northcott,
+        def:TorsionSubvariety}
+  % SOURCE: Xie--Yuan arXiv:2108.09722, Lemma 5.3 (read from references/MR4448992-bogomolov-arbitrary-char.tex)
+  % SOURCE QUOTE: "There is a unique integer $r\geq 1$ such that $\dim X_{r-1}<\dim X_r$ and $X_r$ is a torsion subvariety of $A$."
+  \textit{Source: Xie--Yuan, arXiv:2108.09722, Lemma 5.3.}
+  Assume conditions (a)--(d) of the main proof hold: \(\trdeg(K/k)=1\), \(A\) has good
+  reduction everywhere, and \(A\) has trivial \(\OK/k\)-trace.
+  Assume further that \(X \subset A\) contains a dense set of small points.
+  Then there is a unique integer \(r \geq 1\) such that \(\dim X_{r-1} < \dim X_r\) and
+  \(X_r\) is a torsion subvariety of \(A\).
+\end{lemma}
+
+% SOURCE QUOTE PROOF: "Fix a point $x_0\in X(K)$, which exists by replacing $K$ by a finite extension. Denote by $X_m'=X_m-mx_0$ the translation of $X_m$ by $-mx_0$ in $A$. [...] there is $r\geq 1$ such that $X_m'\subsetneq X_r'$ for all $m<r$ and $X_m'= X_r'$ for all $m\geq r$. It follows that there is a morphism $\sigma: X_r' \times X_r' \to X_{2r}' = X_r'$ induced by the addition morphism of $A$. This is sufficient to imply that $B=X_r'$ is an abelian subvariety of $A$. [...] There is a surjective homomorphism $A \to B$ such that the composition $B\to A \to B$ is an isogeny. This induces an isogeny $A\to A'$ with $A'=B\times C$. [...] This forces $\hat h_{L_2}(t')=0$ as $B+t'$ contains a dense set of small points of $A'/K/k$. [...] Then $\hat h_{L_2}(t')=0$ implies that $t'\in C(K)_\tor$. This follows from the Northcott property."
+\begin{proof}
+  \uses{lem:northcott, def:CanonicalHeight}
+  Fix \(x_0 \in X(K)\) (replacing \(K\) by a finite extension if needed).
+  The translates \(X_m' = X_m - mx_0\) form an increasing sequence of subvarieties, which
+  stabilizes to some \(B = X_r'\) for a unique \(r\).
+  The stabilization gives a morphism \(B \times B \to B\), from which one shows \(B\) is an
+  abelian subvariety of \(A\).
+  Thus \(X_r = B + rx_0\); set \(C = A/B\) and let \(t'\) be the image of \(rx_0\) in \(C\).
+  Since small points of \(X\) transfer to \(X_r\), the subvariety \(B + t'\) has dense small
+  points in \(C\), forcing \(\hath_{L_2}(t')=0\) (with \(L_2\) a symmetric ample on \(C\)).
+  By the trivial trace assumption and \cref{lem:northcott}, \(t' \in C(K)_{\rm tor}\), so
+  \(X_r = B + rx_0\) is a torsion subvariety.
+\end{proof}
+
+\subsection{Fibers of the addition map}
+
+\begin{proposition}[Fibers of addition map have canonical height zero]
+  \label{pro:torsionFiber}
+  \lean{MR4448992.TODO.torsionFiber}
+  \uses{def:AdditionMap, pro:strLeqTot, pro:numericalEquivalent,
+        lem:lineBundleProps, lem:fundamentalInequality,
+        lem:canonicalHeightGoodReduction, def:ExcessLocus}
+  % SOURCE: Xie--Yuan arXiv:2108.09722, Proposition 5.4 (read from references/MR4448992-bogomolov-arbitrary-char.tex)
+  % SOURCE QUOTE: "For any $t\in A'(\OK)_\tor\setminus A'_{e+1}(\OK)$, every irreducible component of the fiber $f^{-1}(t)\subset (X_{r-1}\times X)_\OK$ has canonical height 0 in $(A\times A)_\OK$."
+  \textit{Source: Xie--Yuan, arXiv:2108.09722, Proposition 5.4.}
+  Let \(A'\) denote the abelian subvariety \(X_r\) from \cref{lem:addition}, and let
+  \(f\colon X_{r-1} \times X \to A'\) be the restriction of the summation map.
+  Set \(e = \dim X_{r-1} + \dim X - \dim A'\) (the relative dimension of \(f\)).
+  For any torsion point \(t \in A'(\OK)_{\rm tor} \setminus A'_{e+1}(\OK)\), every
+  irreducible component of the fiber \(f^{-1}(t)\) in \((X_{r-1} \times X)_{\OK}\) has
+  canonical height \(0\) in \((A \times A)_{\OK}\).
+\end{proposition}
+
+% SOURCE QUOTE PROOF: "Apply Proposition \ref{prostrleqtot} to the triangle of the second diagram. We obtain that $\sum_{i=1}^n m_i[\sZ_i]\leq h^*[\sT]\cdot [\sY]$ in $\CH_{e+1}(\sB)_\Q$. [...] By Proposition \ref{numerical equivalent}, there is a numerical equivalence $[\sT]\equiv a\, [\sL_{\sA'}]^{\dim A'}$ in $\CH_{1}(\sA')_\Q$ for some $a>0$. By these two results, we have $\sum_{i=1}^n m_i[\sZ_i]\cdot [\sL_\sB]^{e+1} \leq a\, h^*[\sT]\cdot [\sY] \cdot [\sL_\sB]^{e+1} =a\, [h^*\sL_{\sA'}]^{\dim A'} \cdot [\sL_\sB]^{e+1}\cdot [\sY].$ By Lemma \ref{line bundle}(4), there is a constant $b>0$ such that $b\, \sL_\sB-h^*\sL_{\sA'}$ is a nef line bundle over $\sB$. [...] As in the proof of Lemma \ref{addition}, ``small points'' of $X$ transfer to ``small points'' of $Y=X_{r-1}\times X$. Then $Y$ has a dense set of small points in $B$. By Lemma \ref{fundamental inequality}, the height $h_{\sL_\sB}(Y)=0$. Then we have $[\sY] \cdot [\sL_\sB]^{\dim \sY}=0$. This forces $[\sZ_i]\cdot [\sL_\sB]^{e+1}$, and thus $h_{\sL_\sB}(Z_i)=0.$"
+\begin{proof}
+  \uses{pro:strLeqTot, pro:numericalEquivalent, lem:lineBundleProps,
+        lem:fundamentalInequality, lem:canonicalHeightGoodReduction}
+  Let \(\cA'\) (resp.\ \(\cB\)) be the Zariski closure of \(A'\) (resp.\ of the preimage of
+  \(A'\) in \(A \times A\)) in the N\'eron models; let \(\cY\) be the closure of
+  \(Y = X_{r-1} \times X\) in \(\cA \times_S \cA\).
+  Fix a torsion multi-section \(\cT\) of \(\cA' \to S\) whose generic fiber \(T\) avoids
+  \(A'_{e+1}\).
+  Applying \cref{pro:strLeqTot} to the map \(\cY \to \cA'\) and the subvariety \(\cT\) gives
+  \(\sum_i m_i[\mathcal{Z}_i] \leq h^*[\cT]\cdot[\cY]\) in \(\CH_{e+1}(\cB)_{\mathbb{Q}}\).
+  By \cref{pro:numericalEquivalent}, \([\cT] \equiv a\,[\cL_{\cA'}]^{\dim A'}\) for some
+  \(a > 0\), so the right side is \(\leq a\,b^{\dim A'}[\cL_{\cB}]^{\dim \cY}\cdot[\cY]\)
+  (using the nef bound \(b\cL_{\cB} - h^*\cL_{\cA'} \geq 0\) from \cref{lem:lineBundleProps}(4)).
+  Since \(Y\) has dense small points (inherited from \(X\)), \cref{lem:fundamentalInequality}
+  and \cref{lem:canonicalHeightGoodReduction} give \([\cY]\cdot[\cL_{\cB}]^{\dim\cY}=0\),
+  forcing each \(\mathcal{Z}_i\cdot[\cL_{\cB}]^{e+1}=0\), i.e.\ \(\hath(Z_i)=0\).
+\end{proof}
+
+\subsection{Lowering the dimension}
+
+\begin{theorem}[Bogomolov conjecture in the essential case]
+  \label{thm:mainEssentialCase}
+  \lean{MR4448992.TODO.mainEssentialCase}
+  \uses{lem:addition, pro:torsionFiber, thm:maninMumford, lem:northcott,
+        lem:fundamentalInequality, def:TorsionSubvariety}
+  % SOURCE: Xie--Yuan arXiv:2108.09722, \S5.3 (read from references/MR4448992-bogomolov-arbitrary-char.tex)
+  % SOURCE QUOTE: "Now we prove that $X$ is torsion by induction on $\dim X$. If $\dim X=0$, we must have $\hat h(X)=0$, and then $X$ is a torsion point of $A$ by the Northcott theorem (cf. \cite[Theorem 9.15]{Conrad}). If $\dim X>0$, consider the morphism $f:X_{r-1}\times X\to A'$ obtained in assumption (e). By Proposition \ref{torsion fiber}, for any $t\in A'(\OK)_\tor\setminus A'_{e+1}(\OK)$, every irreducible component of the fiber $f^{-1}(t)\subset (X_{r-1}\times X)_\OK$ has canonical height 0 in $A\times A$. Note that every irreducible component of $f^{-1}(t)$ has dimension $e<\dim X$. By induction, it is torsion in $A\times A$. [...] By the Manin--Mumford conjecture (cf. Theorem \ref{MM}), $X_{r-1}\times X$ is a torsion subvariety of $A\times A$. Then $X$ is a torsion subvariety of $A$."
+  \textit{Source: Xie--Yuan, arXiv:2108.09722, \S5.3.}
+  Under assumptions (a)--(d) (transcendence degree \(1\), good reduction, trivial trace),
+  if \(X \subset A\) is a closed subvariety containing a dense set of small points of
+  \(A/K/k\), then \(X\) is a torsion subvariety of \(A\).
+\end{theorem}
+
+% SOURCE QUOTE PROOF: "Now we prove that $X$ is torsion by induction on $\dim X$. If $\dim X=0$, we must have $\hat h(X)=0$, and then $X$ is a torsion point of $A$ by the Northcott theorem (cf. \cite[Theorem 9.15]{Conrad}). If $\dim X>0$, consider the morphism $f:X_{r-1}\times X\to A'$ obtained in assumption (e). By Proposition \ref{torsion fiber}, for any $t\in A'(\OK)_\tor\setminus A'_{e+1}(\OK)$, every irreducible component of the fiber $f^{-1}(t)\subset (X_{r-1}\times X)_\OK$ has canonical height 0 in $A\times A$. Note that every irreducible component of $f^{-1}(t)$ has dimension $e<\dim X$. By induction, it is torsion in $A\times A$. Therefore, $f^{-1}(t)$ contains a Zariski dense set of torsion points of $A\times A$. As $A'(\OK)_\tor\setminus A'_{e+1}(\OK)$ is Zariski dense in $A'$, $X_{r-1}\times X$ contains a Zariski dense set of torsion points of $A\times A$. By the Manin--Mumford conjecture (cf. Theorem \ref{MM}), $X_{r-1}\times X$ is a torsion subvariety of $A\times A$. Then $X$ is a torsion subvariety of $A$, since it is the image of the composition of $X_{r-1}\times X\to A\times A$ with $p_2:A\times A\to A$."
+\begin{proof}
+  \uses{lem:northcott, pro:torsionFiber, thm:maninMumford, lem:addition}
+  Induction on \(\dim X\).
+
+  \emph{Base case \(\dim X = 0\):} Dense small points force \(\hath(X)=0\), so \(X\) is a
+  single torsion point by \cref{lem:northcott}.
+
+  \emph{Inductive step \(\dim X > 0\):}
+  By \cref{lem:addition}, choose \(r\) such that \(A' = X_r\) is a torsion abelian
+  subvariety and \(e = \dim X_{r-1} + \dim X - \dim A' < \dim X\).
+  Replacing \(A\) by \(A'\) and \(X\) by \(X - rx_0\), assume \(A' = A\).
+  Let \(f\colon X_{r-1}\times X \to A\) be the summation map.
+  For any torsion \(t \in A(\OK)_{\rm tor} \setminus A_{e+1}(\OK)\), every component of
+  \(f^{-1}(t)\) has canonical height \(0\) by \cref{pro:torsionFiber} and dimension \(e < \dim X\).
+  By induction, each component is a torsion subvariety of \(A \times A\), hence
+  \(f^{-1}(t)\) contains a Zariski dense set of torsion points.
+  Since \(A(\OK)_{\rm tor} \setminus A_{e+1}(\OK)\) is dense in \(A\), the product
+  \(X_{r-1}\times X\) contains a dense set of torsion points.
+  By the Manin--Mumford conjecture (\cref{thm:maninMumford}),
+  \(X_{r-1}\times X\) is a torsion subvariety of \(A\times A\).
+  Hence \(X\) is torsion in \(A\), as the image under \(p_2\colon A\times A\to A\).
+\end{proof}

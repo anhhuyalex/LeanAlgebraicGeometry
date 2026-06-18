@@ -3,4 +3,934 @@
 
 % archon:covers MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.lean MR4419629SquarefreeValuesOfPolynomialDiscriminantsI/Basic.lean
 
-This is the auto-bootstrapped blueprint for MR4419629: Squarefree values of polynomial discriminants I.
+This chapter is the complete blueprint for the formalization of
+Bhargava--Shankar--Wang,
+\textit{Squarefree values of polynomial discriminants I} (MR4419629).
+It contains all definitions, auxiliary lemmas, main theorems, and
+corollaries needed to formalize the paper, together with their
+dependency wiring.  The two goal nodes are
+\cref{thm:squarefree_disc_density} (Main Theorem~1.1) and
+\cref{thm:maximal_order_density} (Main Theorem~1.2).
+
+All Lean declarations live in the namespace
+\texttt{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI}.
+
+%% ================================================================
+%% The section structure below mirrors the section (and subsection)
+%% structure of the reference paper Bhargava--Shankar--Wang,
+%% "Squarefree values of polynomial discriminants I" (MR4419629).
+%% Items are grouped under the paper section they come from; no
+%% mathematical content has been changed.
+%% ================================================================
+
+\section{Introduction}
+
+%% ----------------------------------------------------------------
+%% SECTION 1 -- Polynomial space, height, discriminant
+%% ----------------------------------------------------------------
+
+\begin{definition}[Monic polynomial space]
+  \label{def:monic_poly_space}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.monicPolySpace}
+  \uses{}
+  The space \(V_n(\mathbb{Z})\) is the set of all monic integer
+  polynomials of degree \(n\):
+  \[
+    V_n(\mathbb{Z}) := \bigl\{f(x)=x^n+a_1x^{n-1}+\cdots+a_n
+    \mid a_i\in\mathbb{Z}\bigr\}.
+  \]
+\end{definition}
+
+\begin{definition}[Height]
+  \label{def:height}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.height}
+  \uses{def:monic_poly_space}
+  For \(f(x)=x^n+a_1x^{n-1}+\cdots+a_n\in V_n(\mathbb{Z})\), define
+  \[
+    H(f):=\max\bigl\{|a_1|,\,|a_2|^{1/2},\,\ldots,\,|a_n|^{1/n}\bigr\}.
+  \]
+\end{definition}
+
+\begin{definition}[Discriminant]
+  \label{def:discriminant}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.polyDiscriminant}
+  \uses{def:monic_poly_space, lem:disc_mathlib}
+  \textit{Provided by Mathlib via \texttt{Polynomial.discriminant}.}
+  The discriminant \(\Delta(f)\) of a polynomial \(f\in V_n(\mathbb{Z})\)
+  is defined by
+  \[
+    \Delta(f) = (-1)^{n(n-1)/2}\,\mathrm{Res}(f,f')\,/\,\mathrm{lc}(f),
+  \]
+  where \(\mathrm{Res}\) denotes the resultant and \(\mathrm{lc}(f)=1\)
+  for monic \(f\).
+\end{definition}
+
+\begin{definition}[Squarefree discriminant]
+  \label{def:squarefree_disc}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.squarefreeDisc}
+  \uses{def:monic_poly_space, def:discriminant, lem:squarefree_mathlib}
+  A polynomial \(f\in V_n(\mathbb{Z})\) has \emph{squarefree
+  discriminant} if \(\Delta(f)\) is squarefree, i.e.\ not divisible
+  by \(p^2\) for any prime \(p\).
+\end{definition}
+
+\begin{definition}[Natural density]
+  \label{def:natural_density}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.naturalDensity}
+  \uses{def:monic_poly_space, def:height}
+  The \emph{natural density} of a subset \(S\subset V_n(\mathbb{Z})\)
+  with respect to the height ordering is
+  \[
+    \lim_{X\to\infty}
+      \frac{\#\{f\in S : H(f)<X\}}
+           {\#\{f\in V_n(\mathbb{Z}) : H(f)<X\}},
+  \]
+  when the limit exists.
+\end{definition}
+
+\begin{definition}[Local density]
+  \label{def:local_density}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.localDensity}
+  \uses{def:monic_poly_space, def:discriminant}
+  Define the constants \(\lambda_n(p)\) by:
+  \begin{itemize}
+    \item \(\lambda_1(p)=1\) for all primes \(p\), and
+          \(\lambda_n(2)=\tfrac12\) for \(n\geq 2\);
+    \item for \(p\neq 2\) and \(n=2\): \(\lambda_2(p)=1-\tfrac{1}{p^2}\);
+    \item for \(p\neq 2\) and \(n\geq 3\):
+      \[
+        \lambda_n(p)=1-\frac{3p^{n-1}-p^{n-2}+(-1)^n(p-1)^2}{p^n(p+1)}.
+      \]
+  \end{itemize}
+  Then \(\lambda_n(p)\) is the density (in the \(p\)-adic sense) of
+  monic polynomials of degree \(n\) over \(\mathbb{Z}_p\) with
+  discriminant not divisible by \(p^2\).
+\end{definition}
+
+\begin{definition}[Euler product constant]
+  \label{def:euler_product}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.eulerProduct}
+  \uses{def:local_density}
+  Set \(\lambda_n:=\prod_p \lambda_n(p)\), the Euler product over all
+  primes \(p\).  This is the expected density of monic integer
+  polynomials of degree \(n\) with squarefree discriminant.
+\end{definition}
+
+%% ----------------------------------------------------------------
+%% SECTION 2 -- Strong/weak divisibility and sets U_m
+%% ----------------------------------------------------------------
+
+\begin{definition}[Strong divisibility]
+  \label{def:strong_divisibility}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.stronglyDivides}
+  \uses{def:monic_poly_space, def:discriminant}
+  For a prime \(p\) and \(f\in V_n(\mathbb{Z})\) with \(p^2\mid\Delta(f)\),
+  we say \(p^2\) \emph{strongly divides} \(\Delta(f)\) if
+  \(p^2\mid\Delta(f+pg)\) for every integer polynomial \(g\) of
+  degree \(n\).  Equivalently, \(f\bmod p\) has at least two distinct
+  multiple roots in \(\overline{\mathbb{F}}_p\), or has a root of
+  multiplicity at least \(3\) in \(\mathbb{F}_p\).
+\end{definition}
+
+\begin{definition}[Weak divisibility]
+  \label{def:weak_divisibility}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.weaklyDivides}
+  \uses{def:monic_poly_space, def:discriminant, def:strong_divisibility}
+  We say \(p^2\) \emph{weakly divides} \(\Delta(f)\) if \(p^2\mid\Delta(f)\)
+  but \(p^2\) does not strongly divide \(\Delta(f)\).  Equivalently,
+  \(f\bmod p\) has exactly one multiple root in \(\mathbb{F}_p\) and
+  that root is a simple double root.
+\end{definition}
+
+\begin{definition}[\(U_m^{(s)}\) --- strongly divisible set]
+  \label{def:U_m_strong}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.U_m_strong}
+  \uses{def:monic_poly_space, def:strong_divisibility}
+  For a positive squarefree integer \(m\), let \(U_m^{(s)}\) denote
+  the set of polynomials \(f\in V_n(\mathbb{Z})\) whose discriminant
+  is strongly divisible by \(p^2\) for every prime factor \(p\) of \(m\).
+\end{definition}
+
+\begin{definition}[\(U_m^{(w)}\) --- weakly divisible set]
+  \label{def:U_m_weak}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.U_m_weak}
+  \uses{def:monic_poly_space, def:weak_divisibility}
+  For a positive squarefree integer \(m\), let \(U_m^{(w)}\) denote
+  the set of polynomials \(f\in V_n(\mathbb{Z})\) whose discriminant
+  is weakly divisible by \(p^2\) for every prime factor \(p\) of \(m\).
+\end{definition}
+
+%% ----------------------------------------------------------------
+%% SECTION 4 -- Number-theoretic definitions (maximal order, monogenic)
+%% ----------------------------------------------------------------
+
+\begin{definition}[Maximal order]
+  \label{def:maximal_order}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.isMaximalOrder}
+  \uses{def:monic_poly_space, def:discriminant, lem:squarefree_mathlib}
+  For an irreducible \(f\in V_n(\mathbb{Z})\), the ring
+  \(\mathbb{Z}[x]/(f(x))\) is the \emph{maximal order} (ring of
+  integers) in \(\mathbb{Q}[x]/(f(x))\) if and only if its
+  discriminant is squarefree.  Equivalently, for every prime \(p\) the
+  local ring \(\mathbb{Z}_p[x]/(f(x))\) is the maximal order in
+  \(\mathbb{Q}_p[x]/(f(x))\).
+\end{definition}
+
+\begin{definition}[Monogenic number field]
+  \label{def:monogenic_field}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.isMonogenic}
+  \uses{def:maximal_order}
+  A number field \(K\) of degree \(n\) is \emph{monogenic} if its
+  ring of integers \(\mathcal{O}_K\) is generated over \(\mathbb{Z}\)
+  by a single element, i.e.\ \(\mathcal{O}_K=\mathbb{Z}[\theta]\)
+  for some \(\theta\in K\).
+\end{definition}
+
+%% ----------------------------------------------------------------
+%% SECTION 5 -- Mathlib dependency anchors
+%% ----------------------------------------------------------------
+
+\begin{lemma}[Discriminant in Mathlib]
+  \label{lem:disc_mathlib}
+  \lean{Mathlib.RingTheory.Polynomial.Discriminant}
+  \mathlibok
+  \textit{Provided by Mathlib.}
+  \texttt{Polynomial.discriminant} computes \(\Delta(f)=(-1)^{n(n-1)/2}\mathrm{Res}(f,f')\)
+  for a polynomial \(f\) over a commutative ring; for a monic
+  polynomial this coincides with the resultant formula above.
+\end{lemma}
+
+\begin{lemma}[Squarefree in Mathlib]
+  \label{lem:squarefree_mathlib}
+  \lean{Mathlib.Algebra.Squarefree.Basic}
+  \mathlibok
+  \textit{Provided by Mathlib.}
+  \texttt{Squarefree a} asserts that \(a\) is not divisible by the
+  square of any non-unit element of the ambient monoid.
+\end{lemma}
+
+\begin{lemma}[ZMod polynomial rings in Mathlib]
+  \label{lem:zmod_poly_mathlib}
+  \lean{Mathlib.Data.ZMod.Basic}
+  \mathlibok
+  \textit{Provided by Mathlib.}
+  The polynomial ring \(\mathtt{Polynomial}\,(\mathtt{ZMod}\,p)\) is
+  available in Mathlib for every positive integer \(p\); in particular
+  for primes it is the polynomial ring over \(\mathbb{F}_p\).
+\end{lemma}
+
+%% ----------------------------------------------------------------
+%% SECTION 6 -- Counting lemmas / local densities
+%% ----------------------------------------------------------------
+
+\begin{lemma}[Count of all monic polynomials]
+  \label{lem:count_all_polys}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.countAllPolys}
+  \uses{def:monic_poly_space, def:height}
+  \[
+    \#\bigl\{f\in V_n(\mathbb{Z}) : H(f)<X\bigr\}
+    = 2^n X^{n(n+1)/2} + O\!\left(X^{n(n+1)/2-1}\right).
+  \]
+\end{lemma}
+\begin{proof}
+  \uses{def:monic_poly_space, def:height}
+  The condition \(H(f)<X\) is equivalent to \(|a_i|<X^i\) for each
+  \(i=1,\ldots,n\), so the count equals
+  \(\prod_{i=1}^n (2\lfloor X^i\rfloor+1)\sim 2^n X^{1+2+\cdots+n}=2^n X^{n(n+1)/2}\).
+\end{proof}
+
+\begin{lemma}[Local density formula --- Yamamura]
+  \label{lem:yamamura_local}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.yamamuraLocal}
+  \uses{def:local_density, lem:zmod_poly_mathlib}
+  For each prime \(p\), the density in the \(p\)-adic sense of monic
+  polynomials of degree \(n\) over \(\mathbb{Z}_p\) with discriminant
+  not divisible by \(p^2\) equals \(\lambda_n(p)\) as defined in
+  \cref{def:local_density}.
+\end{lemma}
+\begin{proof}
+  \uses{def:local_density}
+  This is Proposition~3 of Yamamura (cited as \cite{Yamamura2} in the
+  paper).  The proof is a direct \(p\)-adic integral computation
+  classifying monic polynomials modulo \(p^2\) by the type of their
+  discriminant divisibility.  We cite this as a black-box result for
+  the formalization.
+\end{proof}
+
+\begin{lemma}[Upper bound via local densities]
+  \label{lem:local_global_upper}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.localGlobalUpper}
+  \uses{def:natural_density, def:local_density, def:euler_product,
+        lem:yamamura_local, lem:count_all_polys}
+  The upper density of monic integer polynomials of degree \(n\) with
+  squarefree discriminant is at most \(\lambda_n\).
+\end{lemma}
+\begin{proof}
+  \uses{def:natural_density, def:local_density, def:euler_product,
+        lem:yamamura_local, lem:count_all_polys}
+  By inclusion-exclusion, the proportion of polynomials with
+  \(p^2\nmid\Delta(f)\) for all \(p\) is at most the product over
+  primes of the local densities \(\lambda_n(p)\), which converges to
+  \(\lambda_n\) by \cref{def:euler_product} and \cref{lem:yamamura_local}.
+\end{proof}
+
+%% ----------------------------------------------------------------
+%% Main estimate (Theorem 1.3 of the paper) and its uniformity form
+%% ----------------------------------------------------------------
+
+\begin{theorem}[Tail estimate --- strongly divisible case]
+  \label{thm:tail_strong}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.tailStrong}
+  \uses{def:U_m_strong, def:height, lem:count_all_polys}
+  For any real \(M>0\) and \(\varepsilon>0\),
+  \[
+    \#\bigcup_{\substack{m>M\\m\;\text{squarefree}}}
+    \bigl\{f\in U_m^{(s)} : H(f)<X\bigr\}
+    = O_\varepsilon\!\left(\frac{X^{n(n+1)/2+\varepsilon}}{M}\right)
+    + O\!\left(X^{n(n+1)/2-1}\right).
+  \]
+\end{theorem}
+\begin{proof}
+  \uses{def:U_m_strong, def:strong_divisibility}
+  This is proved by a quantitative version of the Ekedahl sieve
+  (geometric sieve of Bhargava--Shankar, Theorem~3.3 of
+  \cite{geosieve}).  The same proof applies with weighted homogeneous
+  heights in place of homogeneous heights.  The larger range of the
+  last coefficient \(a_n\) yields a stronger error term.
+  The formalization records this as a sorry-body pending full
+  formalization of the Ekedahl sieve.
+\end{proof}
+
+\begin{theorem}[Combined tail estimate]
+  \label{thm:tail_estimate}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.tailEstimate}
+  \uses{thm:tail_strong, thm:tail_weak_odd, thm:tail_weak_even,
+        def:U_m_strong, def:U_m_weak}
+  For any \(M>0\) and \(\varepsilon>0\):
+  \begin{itemize}
+    \item[(a)]
+      \(\#\bigcup_{m>M,\,m\,\text{sqf}}\{f\in U_m^{(s)} : H(f)<X\}
+      = O_\varepsilon(X^{n(n+1)/2+\varepsilon}/M)
+      + O(X^{n(n+1)/2-1});\)
+    \item[(b)]
+      \(\#\bigcup_{m>M,\,m\,\text{sqf}}\{f\in U_m^{(w)} : H(f)<X\}
+      = O_\varepsilon(X^{n(n+1)/2+\varepsilon}/M)
+      + O_\varepsilon(X^{n(n+1)/2-1/5+\varepsilon}).\)
+  \end{itemize}
+\end{theorem}
+\begin{proof}
+  \uses{thm:tail_strong, thm:tail_weak_odd, thm:tail_weak_even,
+        lem:reducible_bound}
+  Part (a) is \cref{thm:tail_strong}.  Part (b) follows from
+  \cref{thm:orbit_injection_odd} (resp.\ \cref{thm:orbit_injection_even})
+  for odd (resp.\ even) \(n\), which reduces to counting
+  \(G(\mathbb{Z})\)-orbits in \(\mathcal{L}\), and then
+  \cref{thm:tail_weak_odd} (resp.\ \cref{thm:tail_weak_even}).
+  The contribution of reducible polynomials is absorbed by
+  \cref{lem:reducible_bound}.
+\end{proof}
+
+\begin{theorem}[Uniformity estimate]
+  \label{thm:uniformity}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.uniformityEstimate}
+  \uses{thm:tail_estimate, def:U_m_strong, def:U_m_weak}
+  For any \(M>0\) and \(\varepsilon>0\), writing
+  \(U_m=U_m^{(s)}\cup U_m^{(w)}\),
+  \[
+    \sum_{\substack{m>M\\m\;\text{squarefree}}}
+    \#\{f\in U_m : H(f)<X\}
+    = O_\varepsilon\!\left(\frac{X^{n(n+1)/2+\varepsilon}}{\sqrt{M}}\right)
+    + O_\varepsilon\!\left(X^{n(n+1)/2-1/5+\varepsilon}\right).
+  \]
+\end{theorem}
+\begin{proof}
+  \uses{thm:tail_estimate}
+  Combine the tail estimates of \cref{thm:tail_estimate}(a) and (b)
+  by summing over squarefree \(m>M\) and applying a Cauchy--Schwarz or
+  partial-summation argument (Section~4 of the paper).
+\end{proof}
+
+%% ----------------------------------------------------------------
+%% Main theorems 1.1 and 1.2
+%% ----------------------------------------------------------------
+
+\begin{theorem}[Squarefree discriminant density --- Main Theorem~1.1]
+  \label{thm:squarefree_disc_density}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.squarefreeDiscDensity}
+  \uses{def:natural_density, def:squarefree_disc, def:euler_product,
+        lem:local_global_upper, lem:yamamura_local, thm:uniformity,
+        lem:count_all_polys, lem:reducible_bound}
+  Let \(n\geq 1\).  When monic integer polynomials
+  \(f(x)=x^n+a_1x^{n-1}+\cdots+a_n\) are ordered by
+  \(H(f)=\max\{|a_1|,|a_2|^{1/2},\ldots,|a_n|^{1/n}\}\), the natural
+  density of polynomials with squarefree discriminant exists and equals
+  \(\lambda_n=\prod_p\lambda_n(p)>0\).
+\end{theorem}
+\begin{proof}
+  \uses{lem:local_global_upper, lem:yamamura_local, thm:uniformity,
+        lem:count_all_polys, lem:reducible_bound,
+        def:natural_density, def:squarefree_disc, def:euler_product}
+  The upper bound \(\limsup\leq\lambda_n\) is \cref{lem:local_global_upper}.
+  For the lower bound, write
+  \[
+    \#\{H(f)<X,\,\Delta(f)\,\text{squarefree}\}
+    =\#\{H(f)<X\}-\sum_{p}\#\{H(f)<X,\,p^2\mid\Delta(f)\}+\cdots
+  \]
+  Split primes into \(p\leq M=X^{1/2}\) and \(p>M\).  The large-\(p\)
+  tail is controlled by \cref{thm:uniformity} with \(M=X^{1/2}\):
+  the error is \(O_\varepsilon(X^{n(n+1)/2-1/4+\varepsilon})\).
+  The small-\(p\) contribution, by inclusion-exclusion and
+  \cref{lem:yamamura_local}, gives the correct Euler product
+  contribution from primes up to \(M\).  Combining and letting
+  \(X\to\infty\) gives \(\liminf\geq\lambda_n\).
+\end{proof}
+
+\begin{theorem}[Maximal order density --- Main Theorem~1.2]
+  \label{thm:maximal_order_density}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.maximalOrderDensity}
+  \uses{def:natural_density, def:maximal_order, def:monic_poly_space,
+        thm:uniformity, lem:yamamura_local, lem:count_all_polys,
+        lem:reducible_bound, lem:squarefree_mathlib}
+  Let \(n>1\).  The natural density of monic integer polynomials
+  \(f(x)\) of degree \(n\) such that \(\mathbb{Z}[x]/(f(x))\) is the
+  ring of integers in its fraction field equals
+  \(\prod_p(1-1/p^2)=\zeta(2)^{-1}\approx 60.79\%\).
+\end{theorem}
+\begin{proof}
+  \uses{def:maximal_order, thm:uniformity, lem:yamamura_local,
+        lem:count_all_polys, lem:reducible_bound}
+  The ring \(\mathbb{Z}[x]/(f(x))\) is maximal at \(p\) if and only if
+  \(p^2\nmid\mathrm{disc}(\mathbb{Z}[x]/(f(x)))\), and the local
+  density at \(p\) is \(\rho_n(p)=1-1/p^2\) by Lenstra (cited as
+  Proposition~3.5 of \cite{ABZ}).  The global density argument is
+  then the same sieve as in \cref{thm:squarefree_disc_density},
+  using \(\rho_n(p)\) in place of \(\lambda_n(p)\) and the same
+  \cref{thm:uniformity} tail bound.
+\end{proof}
+
+\section{A uniformity estimate for odd degree monic polynomials}
+
+\subsection{Invariant theory for the fundamental representation:
+  $\SO_n$ on the space $W$ of symmetric $n\times n$ matrices}
+
+%% ----------------------------------------------------------------
+%% SECTION 3 -- Symmetric matrix space, G-action, invariants
+%% ----------------------------------------------------------------
+
+\begin{definition}[Symmetric matrix space]
+  \label{def:symmetric_matrix_space}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.symmetricMatrixSpace}
+  \uses{}
+  Let \(W=W_n\) denote the space of symmetric \(n\times n\) matrices
+  with coefficients in a commutative ring.  Let \(A_0\) be the
+  \(n\times n\) symmetric matrix with \(1\)'s on the anti-diagonal and
+  \(0\)'s elsewhere.
+\end{definition}
+
+\begin{definition}[\(\mathrm{SO}_n\)-action on \(W\)]
+  \label{def:SO_n_action}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.SO_n_action}
+  \uses{def:symmetric_matrix_space}
+  The group \(G=\mathrm{SO}(A_0)\) acts on \(W\) by
+  \(\gamma\cdot B=\gamma B\gamma^t\) for \(\gamma\in G\), \(B\in W\).
+\end{definition}
+
+\begin{definition}[Invariant polynomial of \(B\in W\)]
+  \label{def:invariant_polynomial}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.invariantPolynomial}
+  \uses{def:symmetric_matrix_space, def:SO_n_action}
+  For \(n=2g+1\) (odd), define the \emph{invariant polynomial} of
+  \(B\in W\) by
+  \[
+    f_B(x):=(-1)^{g}\det(A_0 x - B).
+  \]
+  For \(n=2g+2\) (even), the working sign used in the paper's even-case
+  invariant theory (\S3.1) is \((-1)^{g+1}\), so that
+  \[
+    f_B(x):=(-1)^{g+1}\det(A_0 x - B).
+  \]
+  For general \(n\), the analogous formula with the appropriate sign
+  \((-1)^{n(n-1)/2}\) yields a monic polynomial of degree \(n\).
+  The ring of polynomial invariants of the \(G(\mathbb{C})\)-action on
+  \(W(\mathbb{C})\) is freely generated by the coefficients of \(f_B\).
+  \textit{Source: \S3.1 of the paper (even case
+  \(f_B(x)=(-1)^{g+1}\det(A_0x-B)\)).}
+\end{definition}
+
+\begin{definition}[Subspace \(W_0\)]
+  \label{def:W_zero}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.W_zero}
+  \uses{def:symmetric_matrix_space}
+  For \(n=2g+1\) odd, let \(W_0\subset W\) be the subspace of
+  symmetric matrices whose top-left \(g\times g\) block is zero.
+  For \(n=2g+2\) even, \(W_0\) consists of symmetric matrices whose
+  top-left \(g\times(g+1)\) block is zero.
+\end{definition}
+
+\begin{definition}[Subgroup \(G_0\)]
+  \label{def:G_zero}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.G_zero}
+  \uses{def:SO_n_action, def:W_zero}
+  Let \(G_0\subset G\) be the subgroup of elements \(\gamma\in G\)
+  such that \(\gamma^t\) preserves the subspace \(Y_g\) spanned by
+  the first \(g\) standard basis vectors.  Elements of \(G_0\) have
+  block form
+  \(\gamma=\bigl(\begin{smallmatrix}\gamma_1 & 0\\ \delta &
+  \gamma_2\end{smallmatrix}\bigr)\).
+  The group \(G_0\) acts on \(W_0\), and the action on the top
+  \(g\times(g+1)\) block satisfies
+  \((\gamma\cdot B)^{\mathrm{top}}=\gamma_1 B^{\mathrm{top}}\gamma_2^t\).
+\end{definition}
+
+\begin{definition}[\(Q\)-invariant on \(V_g\)]
+  \label{def:Q_invariant_V}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.Q_invariant_V}
+  \uses{def:G_zero}
+  For \(v=(A,B)\) a pair of \(g\times(g+1)\) matrices, let
+  \(M_v(x,y)\) be the vector of length \(g+1\) of \(g\times g\)
+  minors of \(Ax-By\), where the \(i\)-th component is
+  \((-1)^{i-1}\) times the determinant of \(Ax-By\) with column \(i\)
+  removed.  Define
+  \[
+    Q(v):=\det\bigl(\text{$(g+1)\times(g+1)$ matrix of coefficients
+    of $M_v(x,y)$}\bigr).
+  \]
+  This is a relative invariant for the action of
+  \(H_g:=\mathrm{SL}_2\times\mathrm{GL}_g\times\mathrm{GL}_{g+1}\):
+  \[
+    Q((\gamma_0,\gamma_1,\gamma_2)\cdot v)
+    =\det(\gamma_1)^{g+1}\det(\gamma_2)^g\,Q(v).
+  \]
+\end{definition}
+
+\begin{definition}[\(Q\)-invariant on \(W_0\)]
+  \label{def:Q_invariant_W}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.Q_invariant_W}
+  \uses{def:W_zero, def:G_zero, def:Q_invariant_V, def:symmetric_matrix_space}
+  For \(B\in W_0\), define
+  \(Q(B):=Q(A_0^{\mathrm{top}},B^{\mathrm{top}})\), where the
+  superscript denotes the top \(g\times(g+1)\) block.  For
+  \(\gamma\in G_0\) as in \cref{def:G_zero}, the transformation law
+  depends on the parity of \(n\).  In the odd case \(n=2g+1\) (eq.\ \texttt{weightG\_0} of the paper),
+  \[
+    Q(\gamma\cdot B)=\det(\gamma_1)\,Q(B).
+  \]
+  In the even case \(n=2g+2\), an element \(\gamma\in G_0\) has the
+  block form
+  \(\gamma=\bigl(\begin{smallmatrix}\gamma_1 & 0 & 0\\ \delta_1 &
+  \alpha & 0\\ \delta_2 & \delta_3 & \gamma_2\end{smallmatrix}\bigr)\)
+  with a \(1\times 1\) middle block \(\alpha\), and the law acquires an
+  extra factor \(\alpha^{-g}\):
+  \[
+    Q(\gamma\cdot B)
+    =\det(\gamma_1)^{g+1}\det(\gamma_2)^{g}\,Q(B)
+    =\det(\gamma_1)\,\alpha^{-g}\,Q(B).
+  \]
+  \textit{Source: eq.\ \texttt{weightG\_0even} of the paper.}
+\end{definition}
+
+\subsection{Embedding $\U_m^\w$ into $\frac12W(\Z)$}
+
+%% ----------------------------------------------------------------
+%% SECTION 7 -- Weak divisibility structural lemma (hidden p^2)
+%% ----------------------------------------------------------------
+
+\begin{lemma}[Hidden \(p^2\) in weakly divisible polynomials]
+  \label{lem:hiddenp2}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.hiddenP2}
+  \uses{def:monic_poly_space, def:weak_divisibility, def:U_m_weak}
+  Let \(m\) be a positive squarefree integer and let \(f\) be a monic
+  integer polynomial whose discriminant is weakly divisible by \(p^2\)
+  for all \(p\mid m\).  Then there exists an integer \(\ell\) such
+  that
+  \[
+    f(x+\ell)=x^n+b_1x^{n-1}+\cdots+b_{n-2}x^2+b_{n-1}x+b_n
+  \]
+  with \(m\mid b_{n-1}\) and \(m^2\mid b_n\).
+\end{lemma}
+\begin{proof}
+  \uses{def:weak_divisibility}
+  By the Chinese Remainder Theorem it suffices to treat the case
+  \(m=p\) prime.  Since \(p\mid\Delta(f)\), the reduction \(f\bmod p\)
+  has a repeated factor \(h(x)^e\).  Since the divisibility is weak,
+  \(h\) is linear and \(e=2\); shifting by \(\ell\) makes the double
+  root sit at \(0\), giving \(p\mid b_{n-1}\) and \(p\mid b_n\).
+  Writing \(\Delta(f)=b_n\Delta_1+b_{n-1}^2\Delta_3\) (a resultant
+  expansion argument shows \(b_{n-1}^2\mid\Delta_2\) when \(b_n=0\))
+  and using \(p^2\mid\Delta(f)\) together with \(p\mid b_{n-1}\)
+  forces \(p^2\mid b_n\).
+\end{proof}
+
+\begin{lemma}[Explicit matrix construction (odd degree)]
+  \label{lem:matrix_construction_odd}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.matrixConstructionOdd}
+  \uses{def:symmetric_matrix_space, def:W_zero, def:invariant_polynomial,
+        def:Q_invariant_W}
+  For \(n=2g+1\) odd and integers \(m,c_1,\ldots,c_n\), there exists
+  an explicit matrix \(B_m(c_1,\ldots,c_n)\in\tfrac{1}{2}W_0(\mathbb{Z})\)
+  such that
+  \[
+    f_{B_m(c_1,\ldots,c_n)}(x)
+    =x^n+c_1x^{n-1}+\cdots+c_{n-2}x^2+mc_{n-1}x+m^2c_n
+  \]
+  and \(Q(B_m(c_1,\ldots,c_n))=m\).
+\end{lemma}
+\begin{proof}
+  \uses{def:Q_invariant_W, def:invariant_polynomial}
+  The matrix \(B_m(c_1,\ldots,c_n)\) is defined by the explicit
+  anti-diagonal construction of Section~2.2 of the paper.  The
+  invariant polynomial identity is a direct determinant computation.
+  The \(Q\)-invariant equals \(m\) by computing the vector of minors
+  \(M_v(x,y)=(x^g,x^{g-1}y,\ldots,xy^{g-1},my^g)^t\) and taking
+  the determinant of the resulting \((g+1)\times(g+1)\) coefficient
+  matrix.
+\end{proof}
+
+\begin{lemma}[\(Q\)-invariant well-defined on \(G(\mathbb{Z})\)-orbits]
+  \label{lem:extendQ_odd}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.extendQ_odd}
+  \uses{def:Q_invariant_W, def:W_zero, def:G_zero, def:SO_n_action,
+        def:invariant_polynomial}
+  Let \(B\in W_0(\mathbb{Q})\) with irreducible invariant polynomial
+  \(f\).  For every \(B'\in W_0(\mathbb{Q})\) that is
+  \(G(\mathbb{Z})\)-equivalent to \(B\), we have \(Q(B')=\pm Q(B)\).
+\end{lemma}
+\begin{proof}
+  \uses{def:Q_invariant_W, def:G_zero}
+  Let \(B'=\gamma\cdot B\) with \(\gamma\in G(\mathbb{Z})\).
+  Both \(Y_g\) and \(\gamma^t Y_g\) are \(g\)-dimensional subspaces
+  over \(\mathbb{Q}\) isotropic for both \(A_0\) and \(B\).  Since
+  \(f\) is irreducible over \(\mathbb{Q}\), the group \(J_f[2](\mathbb{Q})\)
+  is trivial, so these two subspaces coincide.  Hence
+  \(\gamma\in G_0(\mathbb{Z})\), and the transformation law
+  \(Q(\gamma\cdot B)=\det(\gamma_1)Q(B)\) with
+  \(\det(\gamma_1)=\pm1\) gives the result.
+\end{proof}
+
+\begin{theorem}[Embedding of \(U_m^{(w)}\) --- odd degree]
+  \label{thm:embedding_odd}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.embeddingOdd}
+  \uses{def:U_m_weak, def:W_zero, def:Q_invariant_W,
+        lem:hiddenp2, lem:matrix_construction_odd}
+  Let \(m\) be a positive squarefree integer and \(n=2g+1\) odd.
+  There exists a map \(\sigma_m:U_m^{(w)}\to\tfrac12 W_0(\mathbb{Z})\)
+  such that for every \(f\in U_m^{(w)}\),
+  \[
+    f_{\sigma_m(f)}=f \quad\text{and}\quad Q(\sigma_m(f))=m.
+  \]
+\end{theorem}
+\begin{proof}
+  \uses{lem:hiddenp2, lem:matrix_construction_odd}
+  By \cref{lem:hiddenp2} there exist \(\ell\) and \(c_1,\ldots,c_n\)
+  such that \(f(x+\ell)=x^n+c_1x^{n-1}+\cdots+mc_{n-1}x+m^2c_n\).
+  Set \(\sigma_m(f)=B_m(c_1,\ldots,c_n)+\ell A_0\).  By
+  \cref{lem:matrix_construction_odd} and the \(\mathrm{SL}_2\)-invariance
+  of \(Q\), we have \(f_{\sigma_m(f)}=f\) and \(Q(\sigma_m(f))=m\).
+\end{proof}
+
+\begin{theorem}[Orbit injection --- odd degree]
+  \label{thm:orbit_injection_odd}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.orbitInjectionOdd}
+  \uses{thm:embedding_odd, lem:extendQ_odd,
+        def:U_m_weak, def:SO_n_action}
+  Let \(m\) be squarefree and \(n=2g+1\) odd.  Let
+  \(\mathcal{L}\) be the set of elements in \(\tfrac12 W(\mathbb{Z})\)
+  that are \(G(\mathbb{Z})\)-equivalent to some element of
+  \(\tfrac12 W_0(\mathbb{Z})\) and have irreducible invariant polynomial.
+  There exists an injective map
+  \(\bar\sigma_m:U_m^{(w),\mathrm{irr}}\to G(\mathbb{Z})\backslash\mathcal{L}\)
+  such that \(f_{\bar\sigma_m(f)}=f\) for every
+  \(f\in U_m^{(w),\mathrm{irr}}\), and every orbit in the image has
+  \(|Q|\)-invariant equal to \(m\).
+\end{theorem}
+\begin{proof}
+  \uses{thm:embedding_odd, lem:extendQ_odd}
+  By \cref{thm:embedding_odd}, distinct elements of
+  \(U_m^{(w),\mathrm{irr}}\) map to distinct orbits (since the
+  invariant polynomial is recovered).  By \cref{lem:extendQ_odd},
+  \(|Q|\) is well-defined on \(G(\mathbb{Z})\)-orbits in
+  \(\mathcal{L}\), and the image orbits have \(|Q|=m\).
+\end{proof}
+
+\subsection{Counting $G(\Z)$-orbits in $\frac12W(\Z)$}
+
+\begin{theorem}[Geometry-of-numbers tail estimate --- odd]
+  \label{thm:tail_weak_odd}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.tailWeakOdd}
+  \uses{thm:orbit_injection_odd, def:height, lem:count_all_polys}
+  For any \(M>0\) and \(\varepsilon>0\), the number of
+  \(G(\mathbb{Z})\)-equivalence classes in
+  \(\mathcal{L}\subset\tfrac12 W(\mathbb{Z})\) with height \(<X\)
+  and \(|Q|>M\) satisfies
+  \[
+    N(\mathcal{L};M;X)
+    = O_\varepsilon\!\left(\frac{X^{n(n+1)/2+\varepsilon}}{M}\right)
+    + O_\varepsilon\!\left(X^{n(n+1)/2-1/5+\varepsilon}\right).
+  \]
+\end{theorem}
+\begin{proof}
+  \uses{thm:orbit_injection_odd}
+  By geometry-of-numbers counting in the cuspidal region of a
+  fundamental domain for \(G(\mathbb{Z})\) acting on \(W(\mathbb{R})\),
+  following the methods of Bhargava--Gross (Section~2.3 of the paper).
+  The \(Q\)-invariant controls the depth in the cusp.  This is a
+  sorry-body pending full formalization of the geometry-of-numbers
+  argument.
+\end{proof}
+
+\section{A uniformity estimate for even degree monic polynomials}
+
+\subsection{Invariant theory for the fundamental representation: $\SO_n$ on the space $W$ of symmetric $n\times n$ matrices}
+
+\begin{proposition}[\(Q\)-invariant well-defined on \(G(\mathbb{Z})\)-orbits --- even degree]
+  \label{prop:extendQeven}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.extendQ_even}
+  \uses{def:Q_invariant_W, def:W_zero, def:G_zero, def:SO_n_action,
+        def:invariant_polynomial}
+  Let \(B\in W_0(\mathbb{Q})\) be an element whose invariant
+  polynomial \(f(x)\) is irreducible over \(\mathbb{Q}\) and, when
+  \(n\geq 4\), does not factor as \(g(x)\bar{g}(x)\) over any
+  quadratic extension of \(\mathbb{Q}\).  Then for every
+  \(B'\in W_0(\mathbb{Q})\) that is \(G(\mathbb{Z})\)-equivalent to
+  \(B\), we have \(Q(B')=\pm Q(B)\).
+  \textit{Source: Proposition~\texttt{prop:extendQeven} of the paper.}
+\end{proposition}
+\begin{proof}
+  \uses{def:Q_invariant_W, def:G_zero}
+  The assumption on the factorization property of \(f(x)\) implies
+  that \(J_f[2](\mathbb{Q})\) is trivial.  The proof is then identical
+  to that of \cref{lem:extendQ_odd}: for \(B'=\gamma\cdot B\) with
+  \(\gamma\in G(\mathbb{Z})\), the \(g\)-dimensional subspaces \(Y_g\)
+  and \(\gamma^t Y_g\) (isotropic for both \(A_0\) and \(B\)) coincide
+  by triviality of \(J_f[2](\mathbb{Q})\), forcing
+  \(\gamma\in G_0(\mathbb{Z})\), and the even-case transformation law
+  of \cref{def:Q_invariant_W} gives the result.
+\end{proof}
+
+\subsection{Embedding $\U_m^\w$ into $\frac14W(\Z)$}
+
+\begin{lemma}[Explicit matrix construction (even degree)]
+  \label{lem:matrix_construction_even}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.matrixConstructionEven}
+  \uses{def:symmetric_matrix_space, def:W_zero, def:invariant_polynomial,
+        def:Q_invariant_W}
+  For \(n=2g+2\) even and integers \(m,c_1,\ldots,c_n\), there exists
+  an explicit matrix \(B_m(c_1,\ldots,c_n)\in\tfrac{1}{4}W_0(\mathbb{Z})\)
+  satisfying the same identities as in \cref{lem:matrix_construction_odd}.
+\end{lemma}
+\begin{proof}
+  \uses{def:Q_invariant_W, def:invariant_polynomial}
+  The construction is analogous to the odd case, with appropriate
+  modifications to the block structure for \(n\) even; see Section~3
+  of the paper.
+\end{proof}
+
+\begin{theorem}[Embedding of \(U_m^{(w)}\) --- even degree]
+  \label{thm:embedding_even}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.embeddingEven}
+  \uses{def:U_m_weak, def:W_zero, def:Q_invariant_W,
+        lem:hiddenp2, lem:matrix_construction_even}
+  Same as \cref{thm:embedding_odd} for \(n=2g+2\) even, with image in
+  \(\tfrac14 W_0(\mathbb{Z})\).
+\end{theorem}
+\begin{proof}
+  \uses{lem:hiddenp2, lem:matrix_construction_even}
+  Analogous to the odd case, using \cref{lem:matrix_construction_even}
+  in place of \cref{lem:matrix_construction_odd}.
+\end{proof}
+
+\begin{theorem}[Orbit injection --- even degree]
+  \label{thm:orbit_injection_even}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.orbitInjectionEven}
+  \uses{thm:embedding_even, prop:extendQeven,
+        def:U_m_weak, def:SO_n_action}
+  Same as \cref{thm:orbit_injection_odd} for \(n\) even, with
+  \(\mathcal{L}\subset\tfrac14 W(\mathbb{Z})\), and the additional
+  condition that \(f\) does not factor as \(g(x)\bar{g}(x)\) over any
+  quadratic extension.
+\end{theorem}
+\begin{proof}
+  \uses{thm:embedding_even, prop:extendQeven}
+  Analogous to the odd case; the extra factoring condition excludes
+  the even-degree obstruction analogous to \(J_f[2]\) being
+  non-trivial over quadratic extensions.
+\end{proof}
+
+\subsection{Counting $G(\Z)$-orbits in $\frac14W(\Z)$}
+
+\begin{theorem}[Geometry-of-numbers tail estimate --- even]
+  \label{thm:tail_weak_even}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.tailWeakEven}
+  \uses{thm:orbit_injection_even, def:height, lem:count_all_polys}
+  Same bound as \cref{thm:tail_weak_odd} for \(n\) even with
+  \(\mathcal{L}\subset\tfrac14 W(\mathbb{Z})\).
+\end{theorem}
+\begin{proof}
+  \uses{thm:orbit_injection_even}
+  Analogous to the odd case; see Section~3 of the paper.  Sorry-body
+  pending geometry-of-numbers formalization.
+\end{proof}
+
+\section{Proof of the main theorems}
+
+\subsection{Estimates on reducible forms}
+
+\begin{lemma}[Bound on reducible polynomials]
+  \label{lem:reducible_bound}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.reducibleBound}
+  \uses{def:monic_poly_space, def:height}
+  The number of reducible monic integer polynomials of degree \(n\)
+  with \(H(f)<X\) is \(O\!\left(X^{n(n+1)/2-n+1}\log X\right)\), hence
+  \(o\!\left(X^{n(n+1)/2}\right)\).
+  \textit{Source: Proposition~\texttt{propredboundall} of the paper.}
+\end{lemma}
+\begin{proof}
+  \uses{def:monic_poly_space, def:height, lem:count_all_polys}
+  A reducible monic polynomial of degree \(n\) factors as a product
+  of two monic polynomials of degrees \(k\) and \(n-k\) for some
+  \(1\leq k\leq n-1\).  A counting argument using height bounds on
+  each factor gives the stated estimate.
+\end{proof}
+
+\section{A lower bound on the number of degree-$n$ number fields that are monogenic / have a short generating vector}
+
+%% ----------------------------------------------------------------
+%% Strongly quasi-reduced polynomials and density lemmas
+%% ----------------------------------------------------------------
+
+\begin{definition}[Strongly quasi-reduced polynomial]
+  \label{def:strongly_quasi_reduced}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.stronglyQuasiReduced}
+  \uses{def:monic_poly_space}
+  A monic real polynomial \(g(x)\) of degree \(n\) with nonzero
+  discriminant is \emph{strongly quasi-reduced} if there exist monic
+  integer polynomials \(h_i\) of degree \(i\) for
+  \(i=1,\ldots,n-1\) such that
+  \(1,h_1(\theta),h_2(\theta),\ldots,h_{n-1}(\theta)\) is the unique
+  Minkowski-reduced basis of the lattice \(R_g\), where \(\theta\) is
+  the image of \(x\) in \(\mathbb{R}[x]/(g(x))\).
+\end{definition}
+
+\begin{lemma}[100\% of polynomials are strongly quasi-reduced]
+  \label{lem:strongly_quasi_reduced_density}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.sqrDensity}
+  \uses{def:strongly_quasi_reduced, def:natural_density, def:height,
+        lem:count_all_polys}
+  The natural density of the set of monic integer polynomials of
+  degree \(n\) that are \emph{not} strongly quasi-reduced equals zero;
+  equivalently, 100\% of monic integer polynomials are strongly
+  quasi-reduced.
+\end{lemma}
+\begin{proof}
+  \uses{def:strongly_quasi_reduced, def:natural_density}
+  This follows from Minkowski reduction theory: for a generic monic
+  polynomial \(g\) (in a set of full density) the natural power basis
+  \(1,\theta,\ldots,\theta^{n-1}\) already satisfies the
+  Minkowski-reduction condition, since the successive minima of
+  \(R_g\) are controlled by \(H(g)\) up to bounded constants.
+\end{proof}
+
+\begin{lemma}[Distinct strongly quasi-reduced polynomials yield distinct rings]
+  \label{lem:quasi_reduced_distinct}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.sqrDistinct}
+  \uses{def:strongly_quasi_reduced, def:monic_poly_space}
+  Two distinct strongly quasi-reduced monic integer polynomials
+  \(g(x)\) and \(g^*(x)\) of degree \(n\) with vanishing
+  \(x^{n-1}\)-term yield non-isomorphic rings \(R_g\) and
+  \(R_{g^*}\).
+\end{lemma}
+\begin{proof}
+  \uses{def:strongly_quasi_reduced}
+  The Minkowski-reduced basis of \(R_g\) is uniquely determined by
+  \(g\), and its successive minima distinguish the lattice up to
+  isometry.  Two distinct strongly quasi-reduced polynomials produce
+  rings with different Minkowski-reduced bases, hence non-isomorphic
+  as \(\mathbb{Z}\)-lattices and in particular as rings.
+\end{proof}
+
+\begin{theorem}[Squarefree discriminant density with vanishing trace --- Theorem~5.4]
+  \label{thm:vanishing_trace_density}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.vanishingTraceDensity}
+  \uses{def:natural_density, def:squarefree_disc, def:height,
+        thm:squarefree_disc_density}
+  Let \(n\geq 1\).  When monic integer polynomials
+  \(f(x)=x^n+a_1x^{n-1}+\cdots+a_n\) of degree \(n\) with \(a_1=0\)
+  are ordered by
+  \(H(f)=\max\{|a_1|,|a_2|^{1/2},\ldots,|a_n|^{1/n}\}\), the density
+  having squarefree discriminant \(\Delta(f)\) exists and equals
+  \(\kappa_n=\prod_p\kappa_n(p)>0\), where \(\kappa_n(p)\) is the
+  density of monic polynomials \(f(x)\) over \(\mathbb{Z}_p\) with
+  vanishing \(x^{n-1}\)-coefficient having discriminant indivisible by
+  \(p^2\).  The analogue holds with the condition \(a_1=0\) replaced by
+  \(0\leq a_1<n\), in which case \(\kappa_n\) is replaced by the
+  constant \(\lambda_n=\prod_p\lambda_n(p)>0\) of
+  \cref{thm:squarefree_disc_density}.
+  \textit{Source: Theorem~\texttt{vanishinga1} of the paper
+  (the \(a_1=0\) variant of Theorem~1.1).}
+\end{theorem}
+\begin{proof}
+  \uses{thm:squarefree_disc_density}
+  The proof of \cref{thm:squarefree_disc_density} applies verbatim to
+  monic integer polynomials having vanishing \(x^{n-1}\)-coefficient:
+  one replaces the representation \(W\) (along with \(W_0\) and
+  \(W_{00}\)) by the codimension-1 linear subspace consisting of
+  symmetric matrices with anti-trace \(0\); the rest of the argument
+  carries through identically.  For the \(0\leq a_1<n\) variant, every
+  monic degree-\(n\) polynomial \(f(x)\) admits a unique \(c\in\mathbb{Z}\)
+  with \(f(x+c)\) having \(x^{n-1}\)-coefficient in \([0,n)\), which
+  recovers the constant \(\lambda_n\).
+\end{proof}
+
+%% ----------------------------------------------------------------
+%% Corollaries 1.3 and 1.4
+%% ----------------------------------------------------------------
+
+\begin{corollary}[Monogenic \(S_n\)-fields --- Corollary~1.3]
+  \label{cor:monogenic_fields}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.monogenicFields}
+  \uses{thm:vanishing_trace_density, def:monogenic_field,
+        lem:strongly_quasi_reduced_density, lem:quasi_reduced_distinct}
+  Let \(n>1\).  The number of isomorphism classes of degree-\(n\)
+  number fields that are monogenic, have Galois group \(S_n\), and
+  have absolute discriminant less than \(X\) is
+  \(\gg X^{1/2+1/n}\).
+\end{corollary}
+\begin{proof}
+  \uses{thm:vanishing_trace_density,
+        lem:strongly_quasi_reduced_density, lem:quasi_reduced_distinct,
+        def:monogenic_field, def:strongly_quasi_reduced}
+  By \cref{thm:vanishing_trace_density} and
+  \cref{lem:strongly_quasi_reduced_density}, there are
+  \(\gg X^{1/2+1/n}\) strongly quasi-reduced monic integer polynomials
+  \(g\) of degree \(n\) with vanishing \(x^{n-1}\)-term, squarefree
+  discriminant, and height \(<X^{1/(n(n-1))}\).  Squarefree
+  discriminant forces the Galois group to be \(S_n\) and
+  \(\mathbb{Z}[x]/(g(x))\) to be maximal, hence monogenic.  By
+  \cref{lem:quasi_reduced_distinct} these yield
+  \(\gg X^{1/2+1/n}\) non-isomorphic monogenic rings of integers.
+\end{proof}
+
+\begin{corollary}[Shortest vector in rings of integers --- Corollary~1.4]
+  \label{cor:shortest_vector}
+  \lean{MR4419629SquarefreeValuesOfPolynomialDiscriminantsI.shortestVector}
+  \uses{thm:vanishing_trace_density, def:monogenic_field,
+        lem:strongly_quasi_reduced_density, lem:quasi_reduced_distinct}
+  Let \(n>1\).  The number of isomorphism classes of degree-\(n\)
+  number fields \(K\) whose shortest vector in \(\mathcal{O}_K\)
+  generating \(K\) has length \(<Y\) is
+  \(\asymp Y^{(n-1)(n+2)/2}\).
+\end{corollary}
+\begin{proof}
+  \uses{thm:vanishing_trace_density,
+        lem:strongly_quasi_reduced_density, lem:quasi_reduced_distinct,
+        def:strongly_quasi_reduced}
+  The upper bound is due to Ellenberg--Venkatesh.  For the lower bound,
+  strongly quasi-reduced polynomials \(f\) of height \(<Y\) satisfy
+  \(\|\theta\|\ll Y\), so the shortest generating vector in
+  \(\mathcal{O}_K\) has length \(O(Y)\).  By
+  \cref{thm:vanishing_trace_density} and
+  \cref{lem:strongly_quasi_reduced_density} there are
+  \(\gg Y^{(n-1)(n+2)/2}\) such fields from distinct strongly
+  quasi-reduced polynomials with squarefree discriminant and height
+  \(<Y\).
+\end{proof}

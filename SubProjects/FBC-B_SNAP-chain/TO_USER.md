@@ -1,15 +1,13 @@
 <!-- Shared notice board. Keep to <=2-3 short bullets; delete bullets no longer true. -->
 
-- **Proving healthy on `opus`** (iters 078–080 closed 9 sorries → 9 left, 0 axioms, builds green); 3 lanes
-  active iter-081. FBC goal leg routes via the DIRECT H⁰-equalizer (Stacks 02KH.2); its capstone
-  `baseChangeGammaPullbackEquiv` stub landed this iter (signature analogist-verified). The old adjoint-mate
-  apparatus is abandoned/dead-code. Restore a `fable` lane only with valid creds.
-- **Scope decision (iter-081, made):** the parent's `def:hilbert_polynomial` is the **Euler characteristic
-  χ**, which needs higher cohomology this i=0 / Čech-independent leg does NOT have. So this leg will NOT
-  formalize the Hilbert polynomial or the general Quot functor (they belong to the sibling cohomology leg);
-  it delivers the χ-independent Grassmannian core (representability via rank-d locally-free quotients).
-  Override via `USER_HINTS.md` if the parent intends a different split.
-- **Two loop-infra bugs (user-side fix, non-blocking):** (a) `sync_leanok` strips the 22-name multi-decl
-  `\lean{}` pin on `lem:relativeTensor_objectwise_coequalizer` when that SNAP chapter is touched (review
-  re-applies by hand); (b) the leandag unmatched-decl scan counts `private` decls, inflating coverage debt.
-  RelativeSpec Stacks tags (01LM/01LP/01LT) reference-retrieved otherwise.
+- **Both lanes healthy on `opus`, 0 axioms.** SNAP `SectionGradedRing.lean`: 1 of 4 graded-ring
+  coherences now closed axiom-clean (`sectionsMul_one_mul`); the 3 remaining each need a small
+  `tensorPowAdd`-coherence prerequisite (right-unitor/associator/braiding, by induction) before they
+  close. FBC `FlatBaseChangeGlobal.lean`: the 4-step chain is scaffolded and the bridge's forward
+  direction is proven.
+- **FBC's remaining gap is one precisely-identified piece of Mathlib-absent infra** (per-chart
+  base-change dictionary `pullback_spec_tilde_iso` over a finite cover of a non-affine `X`, ~hundreds of
+  LOC). This is genuine new infrastructure, not a stuck tactic; the next iters scope an infra lane for it.
+- **FBC route pivot remains the working decision** (concrete module-tilde chain, bypassing the
+  mate-stuck abstract affine base change; Stacks 02KH verbatim, source-validated). The loop proceeds on
+  it; steer via `USER_HINTS.md` only if a different decomposition is intended.

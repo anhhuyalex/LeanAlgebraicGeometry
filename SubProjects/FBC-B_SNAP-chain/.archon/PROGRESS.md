@@ -13,74 +13,94 @@ prover
 ## End-state overview
 
 **Zero inline `sorry` in the dependency cone of the seed declarations + kernel-only axioms.**
-This subproject bundles two Čech-independent (i=0) legs extracted from the parent
-*Quot-Foundations* `thm:fga_pic_representability` cone:
+Two Čech-independent (i=0) legs split from the parent *Quot-Foundations* `thm:fga_pic_representability`
+cone (full arc in STRATEGY.md):
 
-- **FBC-B** — flat base change for the pushforward of a quasi-coherent sheaf in degree 0.
-- **SNAP** — the section graded ring `Γ_*(X,L)`.
-
-Seeds: `thm:flat_base_change_pushforward`, `thm:fbcb_global_direct`,
-`lem:affine_base_change_pushforward`, `lem:sectionGradedRing_gcommSemiring`,
-`lem:sectionGradedModule_gmodule`. Full arc in STRATEGY.md.
+- **FBC-B** — flat base change of the degree-0 pushforward (`thm:flat_base_change_pushforward`), via the
+  CONCRETE-tilde equalizer chain. Per-chart iso (a) DONE sorry-free; restriction-naturality (b) reduced
+  to its lone crux sub-lemma `pullback_spec_tilde_iso_ring_square_natural` (PARTIAL: 4-step transpose
+  reduction validated iter-004; mechanical tail remains).
+- **SNAP** — the section graded ring `Γ_*(X,L)` (`lem:sectionGradedRing_gcommSemiring`). `LocalizedMonoidal`
+  foundation DONE axiom-clean (iter-004); 6 residual sorries gated on the 4 bridge lemmas, whose blueprint
+  was re-typed iter-005 (object-iso-conjugated; the gate cleared via `snap-gate`).
 
 ## Current Objectives
 
-TWO independent frontier lanes (different files, no edit race). **NEVER positional
-`rw`/`simp`/`erw` under the `X.Modules`/Scheme-cat diamond**; use term-mode
-(`.trans`/`congrArg`/applied `map_smul`) + the `change`-to-nested-application lever for the
-value-ModuleCat diamond.
+TWO lanes, different files (no edit race). Both cleared the HARD GATE this iter. progress-critic `pc005`:
+FBC CHURNING → corrective = dispatch the crux prover NOW (route validated, lemmas located, no more
+prep); SNAP UNCLEAR/positive → proceed. blueprint-reviewer `br005` flagged the SNAP bridge lemmas as
+ill-typed/under-specified → writer `snap-bridge-mu` re-typed them → scoped re-gate `snap-gate` PASS
+(complete+correct).
 
-1. **`AlgebraicJacobian/Picard/SectionGradedRing.lean`** — SNAP graded assembly.
-   - Fill the cast/coherence bricks bottom-up: `sectionsCast`, `sectionsCast_refl`,
-     `gradedMonoid_eq_of_cast`, the `GradedMonoid.GMul`/`GOne` instance bodies, then the 4
-     cast-mediated coherence Eqs `sectionsMul_one_mul`/`_mul_one`/`_mul_assoc`/`_mul_comm`
-     (= `lem:sectionMul_coherent`).
-   - THEN build the `GMonoid`/`GSemiring`/`GCommSemiring`/`Gmodule` assembly instances
-     mirroring `TensorPower.Basic` field-for-field (`gnpow` defaulted; bilinearity FREE) —
-     this lands `lem:sectionGradedRing_gcommSemiring` + `lem:sectionGradedModule_gmodule`.
-   - Blueprint: `chapters/Picard_SectionGradedRing.tex`. [prover-mode: prove]
+1. **`AlgebraicJacobian/Cohomology/FlatBaseChange.lean`** — close the FBC (b) crux.
+   - **PROVE** `AlgebraicGeometry.pullback_spec_tilde_iso_ring_square_natural`
+     (`lem:pullback_spec_tilde_iso_ring_square_natural`): the lone residual sorry. **Attempt the body;
+     recipe:** `task_results/AlgebraicJacobian_Cohomology_FlatBaseChange.lean.md` (iter-004) + the
+     enriched blueprint proof. Route: the eq of isos reduces to the `.hom` morphism eq; rearrange the
+     trailing inverse; the goal is a map OUT of `L_tot.obj M` (composite left adjoint
+     `tilde ⋙ pullback(Spec inclR) ⋙ pullback(Spec ρB)`), so peel the 3 adjunctions in turn (each
+     cancels a common unit prefix), landing in `ModuleCat ↑R`; there each `pullback_spec_tilde_iso` leg
+     transposes to `gammaPushforwardNatIso` via `unit_conjugateEquiv` [verified]; the geometric
+     comparison via `conjugateEquiv_pullbackComp_inv` [verified]; the reassociation via
+     `ModuleCat.extendScalarsComp` [verified]; all identity-on-elements ⇒ coincide by the pointwise-`rfl`
+     naturality of `gammaPushforwardNatIso`. All bricks (b1/geometric/b2-alg) already proved sorry-free.
+   - **Do NOT touch** the dead mate decls (`base_change_mate_*`, `pushforward_base_change_mate_*`) or the
+     seeds (`affineBaseChange_pushforward_iso`, `flatBaseChange_pushforward_isIso`) — those stay as-is
+     (the mate apparatus is scheduled for a dedicated excision iter; see STRATEGY).
+   - Blueprint: `chapters/Cohomology_FlatBaseChange.tex`
+     (`lem:pullback_spec_tilde_iso_ring_square_natural` — proof block now carries the 4-step route).
+     [prover-mode: prove]
 
-2. **`AlgebraicJacobian/Cohomology/FlatBaseChangeGlobal.lean`** — FBC-B DIRECT capstone.
-   - `Modules.baseChangeGammaPullbackEquiv` (`thm:fbcb_global_direct`):
-     `Γ(X,F)⊗_A B ≃ₗ[B] Γ(X', F')`. Proof per blueprint 3-step: LHS is LITERALLY
-     `baseChangeGammaEquiv F U hU B`'s domain (start there) → transport the RHS eqLocus to
-     `gammaModA F' ⊤` via `gammaTopEquivEqLocus` applied to `F' = (Scheme.Modules.pullback g').obj F`
-     and the base-changed cover, identifying base-changed legs with `F'`'s restriction legs via
-     `pullback_spec_tilde_iso` (01I9) + `affine_base_change_pushforward` [both DONE in
-     FlatBaseChange.lean]. RHS `B`-module is `restrictScalars` along
-     `pullbackGroundRingAlg B : B → groundRing X'` (no `Algebra B (groundRing X')` instance needed).
-   - Blueprint: `chapters/Cohomology_FlatBaseChange.tex` (`thm:fbcb_global_direct`). [prover-mode: prove]
+2. **`AlgebraicJacobian/Picard/SectionGradedRing.lean`** — build the bridge layer + close the coherences.
+   The bridge blueprint was re-typed this iter (writer `snap-bridge-mu`); follow `sec:sgr_localized_monoidal`.
+   Work bottom-up; go as far as possible, hand off a precise decomposition if blocked.
+   - **Build** `tensorObjLocalizedIso F G : tensorObj F G ≅ F ⊗_loc G` (`def:tensorObjLocalizedIso`) =
+     `μ⁻¹ ≫ (counit_F ⊗_loc counit_G)`, where `μ` is Mathlib `Localization.Monoidal.μ` [verified] and the
+     counit is `sheafificationCounitIso`. This is the identification iso the bridges thread.
+   - **Prove the 4 bridge lemmas** (`lem:tensorObjAssoc_eq_localizedAssociator`,
+     `lem:tensorBraiding_eq_localizedBraiding`, `lem:tensorObjUnitor_eq_localized`,
+     `lem:tensorObjRightUnitor_eq_localized`) in their **object-iso-CONJUGATED commuting-square form**
+     (NOT bare `α = α^loc` — that is a type error since `⊗_loc` is not defeq to `tensorObj`). Expand both
+     sides via the Mathlib component formulas `Localization.Monoidal.{associator_hom_app,
+     leftUnitor_hom_app, rightUnitor_hom_app, braidingNatIso_hom_app, μ_natural_left, μ_natural_right}`
+     [verified by writer]; both reduce to the sheafified presheaf coherence + μ-naturality.
+   - **Close the 5 coherences** `tensorPowAdd_{rightUnit,braiding,assoc}` (succ steps),
+     `sectionMul_assoc_core`, `sectionsMul_mul_assoc` via the Mathlib laws (`MonoidalCategory.pentagon`/
+     `triangle`, `BraidedCategory.hexagon`) transported through the bridges + the existing `tensorPowAdd`
+     inductions. Once these land, `instGMonoid/GSemiring/GCommSemiring` + `sectionGradedRing_gcommSemiring`
+     become axiom-clean.
+   - Blueprint: `chapters/Picard_SectionGradedRing.tex` (`sec:sgr_localized_monoidal`:
+     `def:tensorObjLocalizedIso`, `lem:localizationMonoidal_mu_mathlib`, the 4 bridges, the coherence
+     sketches). [prover-mode: mathlib-build]
 
 ## Queued — NEXT iters
 
-- **FBC-B reduction lemma + capstone wiring.** Scaffold `flatBaseChange_isIso_iff_gammaTensorComparison`
-  (`lem:flat_base_change_reduce_global_sections`), reconciling the abstract pullback-square
-  parametrization of `pushforwardBaseChangeMap` with the direct-`B` parametrization; then fill
-  `affineBaseChange_pushforward_iso` / `flatBaseChange_pushforward_isIso` from
-  `baseChangeGammaPullbackEquiv` (signatures movable between files).
-- The retained `base_change_mate_*` declarations in FlatBaseChange.lean are off-path **riders**
-  (kept only because proved legs still reference their signatures). The mate route is ABANDONED;
-  do not re-attempt it. They may be trimmed once the named legs are filled via the direct route.
+- **FBC mate excision (dedicated cleanup iter)** — delete the COMPILE-DEAD mate apparatus
+  (`base_change_mate_{domain,codomain}_read`/`_gstar_transpose`/`_section_identity`/`_generator_trace`/
+  `pushforward_base_change_mate_*`) + dead `/-!` planning blocks + dead `set_option`s; sync the blueprint
+  `\uses` web (delete `lem:pushforward_base_change_mate_*`/`_domain_read`/`_codomain_read` blocks). KEEP
+  `base_change_mate_regroupEquiv` + `base_change_map_affine_local`. Run via `refactor`, NOT alongside an
+  FBC prover (file-stability). Clears the recurring lean-auditor false-doc must-fix + enables file-split.
+- **FBC Global assembly** `baseChange_sheafConditionFork_tensorIso` (FlatBaseChangeGlobal.lean): once (b)
+  lands + `TensorProduct.piRight` (c), rewrite as the (a)+(b)+(c)→(d) assembly + ADD `[IsSeparated X]`/
+  `[Fintype ι]`/`[F.IsQuasicoherent]` hyps + `baseChangeEqLocusToPullbackGamma` + `baseChangeGammaPullbackEquiv`.
+- **FBC separated → MV → bridge → goal**: discharge both seeds. Bridge reverse gated on qcqs-pushforward-QC
+  (Stacks 01XJ) — verify Mathlib / `mathlib-build` first (STRATEGY Open Q).
+- **FBC file-split for parallelism** (user standing directive) — after mate excision.
+- **SNAP** `sectionGradedModule_gmodule` — after the coherences close.
 
 ## Standing notes
 
-- **Prover model:** `opus`. Re-pin a `fable` lane only with valid creds.
-- **Import architecture:** root `AlgebraicJacobian.lean` imports each leaf; provers add decls to
-  EXISTING files. FlatBaseChangeGlobal imports FlatBaseChange (one-way); FlatBaseChange imports
-  RegroupHelper. SectionGradedRing is standalone.
-- **Cold-build:** validate with real `lake build AlgebraicJacobian.Cohomology.FlatBaseChangeGlobal` /
-  `...Picard.SectionGradedRing` (LSP hides `(kernel) deterministic timeout`); do NOT reintroduce
-  `maxHeartbeats 1e6`.
+- **Prover model:** `opus`.
+- **Import architecture:** root `AlgebraicJacobian.lean` imports each leaf. FlatBaseChangeGlobal imports
+  FlatBaseChange (one-way); FlatBaseChange imports RegroupHelper. SectionGradedRing standalone.
+- **Cold-build:** validate with real `lake build AlgebraicJacobian.Cohomology.FlatBaseChange` /
+  `...Picard.SectionGradedRing` (LSP hides `(kernel) deterministic timeout`); never add `maxHeartbeats 1e6`.
 - **No LLM API key in env** — use blueprint + Mathlib search + the analogist subagent.
-- **SNAP do-not-retry:** full `MonoidalCategory (SheafOfModules)` / strong-monoidal sheafification
-  NOT needed; the crux is CLOSED. Stalkwise + "presheaf+Γ-at-end" routes are DEAD. Carrier:
-  `AddCommGrpCat` NOT `AddCommGrp`; a `have` mentioning `P ⊗ Q` must spell
-  `MonoidalCategory.tensorObj (C := MonoidalPresheaf X) P Q`. `sectionsMul_assoc_unit` = FOUR
-  cast-mediated component Eqs (NOT one GradedMonoid Eq, NOT a raw HEq).
-- **FBC do-not-retry:** the mate keystone `_legs_conj` (+`_gstar_transpose`) is ABANDONED — do NOT
-  re-attempt it. Named legs route via FBC-B direct (`baseChangeGammaPullbackEquiv`). RHS `B`-module
-  is `restrictScalars` along `B → groundRing X'`; do NOT chase `groundRing X' = B` (that is the
-  theorem at `F = O_X`, a consequence not a hypothesis).
-- **Merge-back discipline:** never rename kept decls/labels/paths; never add `\leanok` by hand.
-  Advisory freeze (`affineBaseChange_pushforward_iso`, `flatBaseChange_pushforward_isIso`): keep
-  SIGNATURES stable, fill BODIES freely (movable between files preserving signature).
+- **SNAP bridge hazard:** localized `⊗_loc` is NOT defeq to hand-built `tensorObj` → bridges are
+  object-iso-conjugated via `tensorObjLocalizedIso` (Option B); a bare `α = α^loc` is a type error.
+- **FBC do-not-retry:** the mate keystone is ABANDONED; per-affine base change uses concrete
+  `pullback_spec_tilde_iso` (NOT abstract affineBC). `lem:pushforward_base_change_mate_sections_direct`
+  `\lean{}` pin REMOVED iter-005 — never re-add.
+- **Merge-back discipline:** never rename kept decls/labels; never add `\leanok` by hand. No declarations
+  are currently protected — chain decls may be re-signed to add missing hyps.

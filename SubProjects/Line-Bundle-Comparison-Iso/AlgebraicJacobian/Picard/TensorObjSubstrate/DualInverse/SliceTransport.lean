@@ -613,6 +613,9 @@ lemma sliceDualTransport_naturality_apply {X Y : Scheme.{u}} (f : Y ⟶ X) [IsOp
     ((φ.app (op (Over.mk ((Hom.opensFunctor f).map (unop X₁).hom)))).hom z)
 
 open PresheafOfModules InternalHom Opposite in
+-- This def assembles the full `≃ₗ` (all six fields: `toFun`/`invFun`/`map_add'`/`map_smul'`/
+-- `left_inv`/`right_inv`) inline, so its elaboration exceeds the default heartbeat budget.
+set_option maxHeartbeats 1600000 in
 /-- **Leg (A)∘(B): the sectionwise slice transport of the dual along an open immersion.**
 
 For an open immersion `f : Y ⟶ X`, `M : X.Modules`, and an open `V` of `Y` (as `(Opens Y)ᵒᵖ`),
@@ -880,7 +883,26 @@ noncomputable def sliceDualTransport {X Y : Scheme.{u}} (f : Y ⟶ X) [IsOpenImm
     have hφ := PresheafOfModules.naturality_apply φ
       (Over.homMk (eqToHom he) (Subsingleton.elim _ _) :
         (Over.mk ((Hom.opensFunctor f).map (homOfLE hPV)) : Over (f ''ᵁ unop V)) ⟶ unop W'').op z
-    sorry
+    -- M-side: the `restr fV M.val`-relabel underlying `M.val.map (eqToHom (congrArg op he.symm))`.
+    rw [show ((restr (unop ((Hom.opensFunctor f).op.obj V)) M.val).map
+          (Over.homMk (eqToHom he) (Subsingleton.elim _ _) :
+            (Over.mk ((Hom.opensFunctor f).map (homOfLE hPV)) : Over (f ''ᵁ unop V)) ⟶
+              unop W'').op).hom z
+        = (M.val.map (eqToHom he).op).hom z from rfl, eqToHom_op] at hφ
+    -- strip the `restrictScalars`-functor wrapper (defeq), then apply the φ-naturality square
+    erw [hφ]
+    -- the unit-side `restr fV 𝟙_X`-relabel is the `X.presheaf`-relabel `eqToHom (congrArg op he.symm)`;
+    -- restate the goal cleanly (defeq) so the two `X.presheaf` relabels can collapse.
+    show (X.presheaf.map (eqToHom (congrArg op he))).hom
+        ((X.presheaf.map (eqToHom he).op).hom ((φ.app W'').hom z))
+      = (φ.app W'').hom z
+    rw [eqToHom_op]
+    -- the two `X.presheaf` relabels compose to `𝟙` over the thin poset (`he`-round-trip).
+    have hmaps : X.presheaf.map (eqToHom (congr_arg op he.symm)) ≫
+        X.presheaf.map (eqToHom (congrArg op he)) = 𝟙 _ := by
+      rw [← X.presheaf.map_comp, eqToHom_trans]
+      exact X.presheaf.map_id _
+    exact ConcreteCategory.congr_hom hmaps ((φ.app W'').hom z)
   -- (6) right_inv: `toFun (invFun ψ) = ψ`, the `Iso.hom_inv_id` mirror of (5): the same collapse
   --     with `dualUnitRingSwapHom`/`dualUnitRingSwap` cancelling via `appIso.hom_inv_id` the other way.
   · intro ψ
@@ -888,7 +910,118 @@ noncomputable def sliceDualTransport {X Y : Scheme.{u}} (f : Y ⟶ X) [IsOpenImm
     intro W
     apply ModuleCat.hom_ext
     refine LinearMap.ext fun z => ?_
-    sorry
+    -- β-compatibility, re-derived inline (matches the discharge in `invFun`, proof-irrelevant).
+    have hβc : ∀ (P : TopologicalSpace.Opens ↥Y),
+        ((β.app (op P)).hom).comp ((Scheme.Hom.appIso f P).hom.hom) = RingHom.id _ := by
+      intro P
+      rw [hβ]
+      have h := congrArg CommRingCat.Hom.hom (Scheme.Hom.appIso f P).hom_inv_id
+      simpa only [Functor.whiskerRight_app, CommRingCat.forgetToRingCat_map_hom,
+        CommRingCat.hom_comp, CommRingCat.hom_id] using h
+    -- the X-slice object at which the forward `toFun` evaluates the reverse section `invFun ψ`.
+    set W'' : (Over ((Hom.opensFunctor f).obj (unop V)))ᵒᵖ :=
+      op (Over.mk ((Hom.opensFunctor f).map (unop W).hom)) with hW''
+    have hPV : f ⁻¹ᵁ (unop W'').left ≤ unop V :=
+      le_trans ((TopologicalSpace.Opens.map f.base).monotone (unop W'').hom.le)
+        (le_of_eq (f.preimage_image_eq (unop V)))
+    have he : f ''ᵁ (f ⁻¹ᵁ (unop W'').left) = (unop W'').left := by
+      rw [Scheme.Hom.image_preimage_eq_opensRange_inf]
+      exact inf_eq_right.mpr ((unop W'').hom.le.trans (f.image_le_opensRange (unop V)))
+    -- peel the forward `toFun` (`restrictScalars`-functor wrapper is defeq — exactly the same
+    -- defeq that `erw [hφ]` exploits in `left_inv`), exposing the clean reverse-component `app`
+    -- via `sliceDualTransportInv_app_apply`.
+    show (dualUnitRingSwap f (unop W).left).hom
+        ((ModuleCat.Hom.hom ((sliceDualTransportInv f M V β hβc ψ).app W'')) z)
+      = (ModuleCat.Hom.hom (ψ.app W)) z
+    rw [sliceDualTransportInv_app_apply f M V β hβc ψ W'' hPV he z]
+    simp only [dualUnitRingSwapHom_apply, unitRelabelSwap_apply]
+    erw [dualUnitRingSwap_apply]
+    -- GOAL NOW (derived; abbreviate `A := (unop W).left`, `P := f⁻¹ᵁ (unop W'').left = f⁻¹ᵁ (f''ᵁ A)`,
+    -- so `P = A` propositionally by `f.preimage_image_eq A`, and `(unop W'').left = f''ᵁ A`):
+    --   (f.appIso A).hom.hom
+    --     ((X.presheaf.map (eqToHom (congrArg op he))).hom            -- the unitRelabelSwap leg
+    --       ((f.appIso P).inv.hom                                     -- the dualUnitRingSwapHom leg
+    --         ((ψ.app (op (Over.mk (homOfLE hPV)))).hom
+    --           ((M.val.map (eqToHom (congrArg op he.symm))).hom z))))
+    --     = (ψ.app W).hom z
+    --
+    -- REMAINING — three steps, each VERIFIED ON PAPER (see task_result; unverifiable in Lean THIS
+    -- iter because the imported `TensorObjSubstrate.lean` is RED — concurrent D3′ lane, import race):
+    --
+    -- (1) RING IDENTITY.  The three structure-ring legs collapse to a single `Y.presheaf` relabel.
+    --     Set `hPA : f⁻¹ᵁ (unop W'').left = (unop W).left := f.preimage_image_eq (unop W).left`.
+    --     Prove the CommRingCat morphism identity
+    --       hcomp : (f.appIso P).inv ≫ X.presheaf.map (eqToHom (congrArg op he)) ≫ (f.appIso A).hom
+    --                 = Y.presheaf.map (eqToHom (congrArg op hPA))
+    --     from `Scheme.Hom.appIso_inv_naturality f (eqToHom (congrArg op hPA))`
+    --       (gives  Y.presheaf.map (eqToHom hPA) ≫ (f.appIso A).inv
+    --                 = (f.appIso P).inv ≫ X.presheaf.map ((opensFunctor f).op.map (eqToHom hPA))),
+    --     rewriting `(opensFunctor f).op.map (eqToHom hPA) = eqToHom (congrArg op he)` via
+    --     `Functor.map_eqToHom`/`eqToHom`-uniqueness, then post-composing `(f.appIso A).hom` and
+    --     cancelling `(f.appIso A).inv ≫ (f.appIso A).hom = 𝟙` by `Iso.inv_hom_id`.
+    --     Apply `ConcreteCategory.congr_hom hcomp _` to rewrite the three nested ring legs into
+    --       (Y.presheaf.map (eqToHom (congrArg op hPA))).hom
+    --         ((ψ.app (op (Over.mk (homOfLE hPV)))).hom ((M.val.map (eqToHom (congrArg op he.symm))).hom z)).
+    --
+    -- (2) ψ-NATURALITY.  Let `k : Over.mk (homOfLE hPV) ⟶ unop W` in `Over (unop V)` be
+    --       `Over.homMk (eqToHom hPA) (Subsingleton.elim _ _)` (thin poset, `P = A`).  Then
+    --       hψ := PresheafOfModules.naturality_apply ψ k.op z  gives
+    --         ψ.app (op (Over.mk (homOfLE hPV))) ((restr V ((pushforward β).obj M.val)).map k.op z)
+    --           = (restr V 𝟙_Y).map k.op (ψ.app (op (unop W)) z).
+    --     The domain edge `(restr V ((pushforward β) M.val)).map k.op z` is defeq to
+    --     `(M.val.map (eqToHom (congrArg op he.symm))).hom z` (both are the `M.val`-restriction
+    --     `f''ᵁ A → f''ᵁ P` over the thin poset `Opens X`, `Subsingleton.elim`; same `fuse`/`rfl`
+    --     bridge as `sliceDualTransportInv_naturality_apply`'s `hM`).  Rewrite to expose
+    --     `(restr V 𝟙_Y).map k.op (ψ.app W z) = (Y.presheaf.map (eqToHom (congrArg op hPA.symm))).hom (ψ.app W z)`.
+    --
+    -- (3) Y.presheaf ROUND-TRIP.  The two `Y.presheaf` relabels compose to `𝟙`:
+    --       Y.presheaf.map (eqToHom (congrArg op hPA.symm)) ≫ Y.presheaf.map (eqToHom (congrArg op hPA)) = 𝟙
+    --     by `← Y.presheaf.map_comp`, `eqToHom_trans`, `Y.presheaf.map_id` — the exact mirror of
+    --     `left_inv`'s `hmaps` step (there on `X.presheaf`).  `ConcreteCategory.congr_hom` closes to
+    --     `(ψ.app W).hom z`.
+    -- Step (1): collapse the three structure-ring legs into a single `Y.presheaf` relabel.
+    have hPA : f ⁻¹ᵁ (unop W'').left = (unop W).left := f.preimage_image_eq (unop W).left
+    have hcomp :
+        (Scheme.Hom.appIso f (f ⁻¹ᵁ (unop W'').left)).inv ≫
+            X.presheaf.map (eqToHom (congrArg op he)) ≫ (Scheme.Hom.appIso f (unop W).left).hom
+          = Y.presheaf.map (eqToHom (congrArg op hPA)) := by
+      have hnat := Scheme.Hom.appIso_inv_naturality f
+        (eqToHom (congrArg op hPA) :
+          (op (f ⁻¹ᵁ (unop W'').left) : (TopologicalSpace.Opens ↥Y)ᵒᵖ) ⟶ op (unop W).left)
+      rw [eqToHom_map (Hom.opensFunctor f).op (congrArg op hPA)] at hnat
+      rw [← Category.assoc,
+        show (Scheme.Hom.appIso f (f ⁻¹ᵁ (unop W'').left)).inv ≫
+              X.presheaf.map (eqToHom (congrArg op he))
+            = Y.presheaf.map (eqToHom (congrArg op hPA)) ≫
+                (Scheme.Hom.appIso f (unop W).left).inv from hnat.symm]
+      exact (Category.assoc _ _ _).trans
+        ((congrArg (Y.presheaf.map (eqToHom (congrArg op hPA)) ≫ ·)
+            (Scheme.Hom.appIso f (unop W).left).inv_hom_id).trans (Category.comp_id _))
+    have step1 := ConcreteCategory.congr_hom hcomp
+      ((ψ.app (op (Over.mk (homOfLE hPV)))).hom
+        ((M.val.map (eqToHom (congrArg op he.symm))).hom z))
+    simp only [ConcreteCategory.comp_apply] at step1
+    erw [step1]
+    -- Step (2): ψ-naturality at the slice morphism `Over.mk (homOfLE hPV) ⟶ unop W`.
+    have hψ := PresheafOfModules.naturality_apply ψ
+      (Over.homMk (eqToHom hPA) (Subsingleton.elim _ _) :
+        (Over.mk (homOfLE hPV) : Over (unop V)) ⟶ unop W).op z
+    rw [show ((restr (unop V) ((PresheafOfModules.pushforward β).obj M.val)).map
+          (Over.homMk (eqToHom hPA) (Subsingleton.elim _ _) :
+            (Over.mk (homOfLE hPV) : Over (unop V)) ⟶ unop W).op).hom z
+        = (M.val.map (eqToHom (congrArg op he.symm))).hom z from rfl] at hψ
+    erw [hψ]
+    -- Step (3): the unit-side `restr V 𝟙_Y`-relabel is the `Y.presheaf`-relabel `eqToHom hPA.op`;
+    -- restate cleanly (defeq) so the two `Y.presheaf` relabels collapse to `𝟙` over the thin poset.
+    show (Y.presheaf.map (eqToHom (congrArg op hPA))).hom
+        ((Y.presheaf.map (eqToHom hPA).op).hom ((ψ.app W).hom z))
+      = (ψ.app W).hom z
+    rw [eqToHom_op]
+    have hmaps : Y.presheaf.map (eqToHom (congrArg op hPA.symm)) ≫
+        Y.presheaf.map (eqToHom (congrArg op hPA)) = 𝟙 _ := by
+      rw [← Y.presheaf.map_comp, eqToHom_trans]
+      exact Y.presheaf.map_id _
+    exact ConcreteCategory.congr_hom hmaps ((ψ.app W).hom z)
 
 end Modules
 

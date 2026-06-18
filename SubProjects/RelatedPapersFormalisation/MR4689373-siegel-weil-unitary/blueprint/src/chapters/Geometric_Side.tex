@@ -1,0 +1,199 @@
+% archon:future-covers MR4689373HigherSiegelWeilFormulaForUnitaryGroupsTheNonSingularTerms/Geometric.lean
+\chapter{The Geometric Side: Hermitian Shtukas and Virtual Fundamental Classes}
+\label{chap:geometric-side}
+
+This chapter formalizes Phase~P2 of the project: the geometric construction of the virtual
+fundamental class \([\cZ_{\cE}^r(a)] \in \Ch_0(\cZ_{\cE}^r(a))_{\mathbf{Q}}\). The key
+steps are: (1) define the Hermitian shtuka chain model for special cycles; (2) establish
+the virtual class in the line-bundle case via intersection products; (3) introduce good framings
+to reduce the general case; (4) prove independence of framing; (5) establish properness and
+the well-definedness of the degree. We follow \S\S5--10 of Feng--Yun--Zhang [MR4689373].
+
+\section{Moduli of hermitian shtukas}
+
+\begin{definition}[Hermitian shtuka chain]
+  \label{def:herm-shtuka-chain}
+  \lean{HSW.HermShtukaChain}
+  \uses{def:hermitian-shtukas-stack, def:etale-cover, def:serre-dual-vb, def:hermitian-map}
+  % SOURCE: FYZ-HigherSiegelWeil.tex, §5.1–5.2
+  % SOURCE QUOTE: "classify chains of vector bundles with Hermitian structures
+  %   \(\cF_0 \dashrightarrow \cF_1 \dashrightarrow \cdots \dashrightarrow \cF_r \cong {}^\tau\cF_0\)
+  %   related by elementary modifications"
+  \textit{Source: Feng--Yun--Zhang [MR4689373], \S5.1--5.2.}
+  A \emph{rank-\(n\) Hermitian shtuka chain of level \(r\)} over a test scheme \(S\) is
+  a diagram of rank-\(n\) vector bundles
+  \[
+    \cE_0 \xleftarrow{\;f_1\;} \cE_1 \xleftarrow{\;f_2\;} \cdots \xleftarrow{\;f_r\;}
+    \cE_r
+  \]
+  on \(X' \times S\), together with Hermitian structures
+  \(h_i : \cE_i \xrightarrow{\sim} \sigma^*\cE_i^\vee\) and an isomorphism
+  \(\varphi : \cE_r \xrightarrow{\sim} \sigma^*\cE_0^\vee\) compatible with all \(h_i\),
+  such that:
+  \begin{enumerate}
+    \item Each \(f_i : \cE_i \to \cE_{i-1}\) is an \emph{elementary modification}: an
+      injective bundle map whose cokernel is a skyscraper sheaf at a single closed point
+      \(x'_i \in X'(S)\) of length \(1\).
+    \item The composite
+      \(\cE_0 \hookrightarrow \cdots \hookrightarrow \cE_r \xrightarrow{\varphi}
+      \sigma^*\cE_0^\vee\)
+      is an injective Hermitian map (Definition~\ref{def:hermitian-map}).
+  \end{enumerate}
+  The moduli functor of such chains represents a locally Noetherian algebraic stack, which
+  is the explicit model of \(\Sht_{\U(n)}^r\) (Definition~\ref{def:hermitian-shtukas-stack}).
+\end{definition}
+
+\section{Special cycles: basic properties}
+
+\begin{lemma}[Virtual dimension in the line-bundle case]
+  \label{lem:line-bundle-dim}
+  \lean{HSW.lineBundleVirtualDim}
+  \uses{def:herm-shtuka-chain, def:special-cycle, def:base-curve}
+  % SOURCE: FYZ-HigherSiegelWeil.tex, §6.1–6.3
+  % SOURCE QUOTE: "when \(\cL\) is a line bundle and \(a:\cL\to\sigma^*\cL^\vee\) is an
+  %   injective Hermitian map, \(\cZ_\cL^r(a)\) has the expected dimension"
+  \textit{Source: Feng--Yun--Zhang [MR4689373], \S6.1--6.3.}
+  When \(n = 1\) (i.e., \(\cE = \cL\) is a line bundle) and
+  \(a : \cL \to \sigma^*\cL^\vee\) is an injective Hermitian map, the special cycle
+  \(\cZ_{\cL}^r(a)\) has virtual dimension \(0\): the expected codimension \(r\) cut
+  in \(\Sht_{\U(1)}^r\) (which has virtual dimension \(r\)) is achieved exactly.
+\end{lemma}
+
+\begin{proof}
+  \uses{def:herm-shtuka-chain, def:special-cycle}
+  The moduli stack \(\Sht_{\U(1)}^r\) has virtual dimension \(r\): each elementary
+  modification in the shtuka chain contributes \(1\) to the dimension count
+  (a point of \(X'\)), giving \(r\) parameters. The Hermitian condition imposed by
+  \(a\) is a degree-\(r\) closed condition that cuts out a zero-dimensional substack.
+  Formally, the \(r\) elementary modifications at legs \(x'_1, \ldots, x'_r \in X'(S)\)
+  together with the constraint that the composite map equals \(a\) impose \(r\) scalar
+  conditions (one per leg) on the \(r\)-dimensional space of legs, leaving virtual
+  dimension \(0\).
+\end{proof}
+
+\begin{definition}[Virtual class in the line-bundle case]
+  \label{def:virtual-class-lb}
+  \lean{HSW.VirtualClassLineBdl}
+  \uses{lem:line-bundle-dim, def:special-cycle, def:base-curve, def:virtual-fundamental-class}
+  % SOURCE: FYZ-HigherSiegelWeil.tex, §6.4–6.6
+  % SOURCE QUOTE: "the class \([\cZ_\cE^r(a)]\in\Ch_0(\cZ_\cE^r(a))_\mathbf{Q}\) can be
+  %   defined as (the restriction to \(\cZ_\cE^r(a)\) of) the intersection product of
+  %   \(\cZ_{\cL_i}^r(a_{ii})\) for the diagonal entries \(a_{ii}\) of \(a\)"
+  \textit{Source: Feng--Yun--Zhang [MR4689373], \S6.4--6.6.}
+  For a line bundle \(\cL\) on \(X'\) and an injective Hermitian map
+  \(a : \cL \to \sigma^*\cL^\vee\), the \emph{virtual fundamental class}
+  \[
+    [\cZ_{\cL}^r(a)] \in \Ch_0(\cZ_{\cL}^r(a))_{\mathbf{Q}}
+  \]
+  is defined as the intersection product of the \(r\) relative effective Cartier divisors
+  \(D_1, \ldots, D_r\) on \(\Sht_{\U(1)}^r\), where \(D_i\) is the divisor defined by the
+  \(i\)-th elementary modification \(\cE_{i-1} \leftarrow \cE_i\) (i.e., the zero locus
+  of the modification map viewed as a section of a line bundle). The intersection
+  \(D_1 \cdot D_2 \cdots D_r\) lies in \(\Ch_0\) by Lemma~\ref{lem:line-bundle-dim}.
+\end{definition}
+
+\begin{theorem}[Properness of the special cycle]
+  \label{thm:properness-shtuka-full}
+  \lean{HSW.properSpecialCycleFull}
+  \uses{def:herm-shtuka-chain, lem:properness-special-cycle, def:hermitian-map}
+  % SOURCE: FYZ-HigherSiegelWeil.tex, §"Corank n special cycles", Prop. (prop: KR cycle proper)
+  % SOURCE QUOTE: "Then $\cZ^{r}_{\cE}(a)$ is a proper scheme over $k$ that depends only on
+  %   the torsion sheaf $\cQ=\coker(a)=\s^{*}\cE^{\vee}/\cE$ together with the Hermitian structure"
+  \textit{Source: Feng--Yun--Zhang [MR4689373], Proposition~``KR cycle proper''.}
+  Let \(a : \cE \to \sigma^*\cE^\vee\) be injective. The algebraic stack
+  \(\cZ_{\cE}^r(a)\) is proper over \(\mathrm{Spec}(\mathbf{F}_q)\).
+\end{theorem}
+
+\begin{proof}
+  \uses{def:herm-shtuka-chain, lem:properness-special-cycle}
+  The Hermitian shtuka chain \((\cE_0, \ldots, \cE_r)\) in \(\cZ_{\cE}^r(a)\) is
+  bounded: the modification loci \(x'_1, \ldots, x'_r \in X'\) are constrained by
+  the composite map equaling the fixed injective \(a\), so the legs are confined to
+  a proper closed subscheme of \((X')^r\). Specifically, the cokernel of the composite
+  \(\cE_r \hookrightarrow \cE_0 \xrightarrow{a} \sigma^*\cE_0^\vee\) must be
+  zero (by injectivity of \(a\)), which forces the shtuka chain to be globally bounded.
+  Properness then follows from the paper's Proposition ``KR cycle proper'' (quoted in
+  Lemma~\ref{lem:properness-special-cycle}): \(\cZ_\cE^r(a) \subset \Sht_{\U(n)}^r\)
+  is a closed substack of a proper stack.
+\end{proof}
+
+\section{Hitchin-type moduli spaces}
+
+\begin{definition}[Good framing]
+  \label{def:good-framing}
+  \lean{HSW.GoodFraming}
+  \uses{def:herm-shtuka-chain, def:special-cycle, def:etale-cover}
+  % SOURCE: FYZ-HigherSiegelWeil.tex, §8.1–8.3
+  % SOURCE QUOTE: "introducing the notion of a \emph{good framing} for \(\cE\) to reduce
+  %   to the case of a sum of line bundles"
+  \textit{Source: Feng--Yun--Zhang [MR4689373], \S8.1--8.3.}
+  Let \(\cE\) be a rank-\(n\) vector bundle on \(X'\) with an injective Hermitian map
+  \(a : \cE \to \sigma^*\cE^\vee\). A \emph{good framing} for \((\cE, a)\) is a
+  datum \((\cL_1, \ldots, \cL_n, \phi)\) consisting of line bundles \(\cL_i\) on
+  \(X'\) and an isomorphism
+  \[
+    \phi : \cL_1 \oplus \cdots \oplus \cL_n \xrightarrow{\;\sim\;} \cE
+  \]
+  such that the induced Hermitian map
+  \(a_\phi := \phi^{-1} \circ a \circ \phi : \bigoplus \cL_i \to
+  \sigma^*\bigoplus \cL_i^\vee\)
+  is diagonal (i.e., \(a_\phi = \mathrm{diag}(a_{11}, \ldots, a_{nn})\) with each
+  \(a_{ii} : \cL_i \to \sigma^*\cL_i^\vee\) injective Hermitian).
+  Good framings exist after passing to an étale cover of the base \(S\).
+\end{definition}
+
+\begin{lemma}[Independence of framing]
+  \label{lem:framing-independence}
+  \lean{HSW.framingIndependence}
+  \uses{def:good-framing, def:virtual-class-lb, def:special-cycle}
+  % SOURCE: FYZ-HigherSiegelWeil.tex, §§9–10
+  % SOURCE QUOTE: "we ... verif[y] independence of the choice [of framing]"
+  \textit{Source: Feng--Yun--Zhang [MR4689373], \S\S9--10.}
+  For any two good framings \(\phi_1, \phi_2\) of \((\cE, a)\), the virtual fundamental
+  classes they define in \(\Ch_0(\cZ_{\cE}^r(a))_{\mathbf{Q}}\) are equal.
+\end{lemma}
+
+\begin{proof}
+  \uses{def:good-framing, def:virtual-class-lb}
+  Any two good framings differ by an element \(g \in \GL_n\) (acting on
+  \(\bigoplus \cL_i\)), and the diagonal Hermitian maps transform by
+  \(a \mapsto g \cdot a \cdot {}^t\bar{g}\). The intersection class
+  \([\cZ_{\cE}^r(a_\phi)] = \prod_i [\cZ_{\cL_i}^r(a_{ii})]\) depends only on the
+  diagonal entries \(a_{ii}\), which transform by the \(\GL_n\)-action.  A direct
+  computation on intersection products shows the class is invariant under this
+  action: the permutation matrix \(S_n\)-action on the \(\cL_i\) permutes the
+  factors of the product, and the \((\mathbf{Z}/2\mathbf{Z})^n\)-action (changing
+  sign of some \(a_{ii}\)) preserves injectivity and the class. Independence then
+  follows by descent, since good framings form an étale torsor.
+\end{proof}
+
+\section{Comparison of two cycle classes}
+
+\begin{definition}[Virtual fundamental class: construction]
+  \label{def:virtual-class-full}
+  \lean{HSW.VirtualClassFull}
+  \uses{def:good-framing, lem:framing-independence, thm:properness-shtuka-full,
+        def:virtual-class-lb, def:virtual-fundamental-class, def:degree-special-cycle}
+  % SOURCE: FYZ-HigherSiegelWeil.tex, §10.4
+  % SOURCE QUOTE: "we are able to construct an appropriate ``virtual fundamental cycle''
+  %   \([\cZ_\cE^r(a)] \in \Ch_0(\cZ_\cE^r(a))_\mathbf{Q}\)"
+  \textit{Source: Feng--Yun--Zhang [MR4689373], \S10.4.}
+  For a rank-\(n\) vector bundle \(\cE\) on \(X'\) and injective Hermitian \(a\),
+  the virtual fundamental class
+  \[
+    [\cZ_{\cE}^r(a)] \in \Ch_0(\cZ_{\cE}^r(a))_{\mathbf{Q}}
+  \]
+  is constructed by choosing any good framing \(\phi\) (Definition~\ref{def:good-framing}),
+  applying Definition~\ref{def:virtual-class-lb} to the line-bundle case to obtain a class
+  \([\cZ_{\bigoplus \cL_i}^r(a_\phi)]\), and transporting via \(\phi^{-1}\). By
+  Lemma~\ref{lem:framing-independence} this is independent of \(\phi\). By
+  Theorem~\ref{thm:properness-shtuka-full}, \(\cZ_{\cE}^r(a)\) is proper over
+  \(\mathbf{F}_q\), so the degree map
+  \[
+    \deg : \Ch_0(\cZ_{\cE}^r(a))_{\mathbf{Q}} \to \mathbf{Q}
+  \]
+  is well-defined (counting \(\mathbf{F}_q\)-points with automorphism-group weights).
+  This construction fulfills the P0 axiom of Definition~\ref{def:virtual-fundamental-class}
+  and makes \(\deg[\cZ_{\cE}^r(a)] \in \mathbf{Q}\) the right-hand side of
+  Theorem~\ref{thm:higher-siegel-weil}.
+\end{definition}

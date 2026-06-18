@@ -4,11 +4,10 @@
      HARD LIMITS: max 10 bullets · ~600 chars total.
      Prune before adding. Only keep what would surprise an agent reading
      the code fresh. Do NOT duplicate things obvious from the codebase.
-
-     Good candidates: dead-end tactics, files not to touch, Mathlib gap
-     coordinates, protected invariants, per-file hazards, standing routes
-     to avoid, axioms that must not be accepted.
-
-     Bad candidates: things already obvious from the code or PROGRESS.md,
-     current sorry counts, task-specific details that change every iter.
 -->
+
+- Five axioms (do NOT try to prove): `thm:period-map`, `thm:rank-bound-subsystem`, `thm:cohomologically-rigid-integral`, `thm:nah-unitarity`, `prop:mcg-finite-family` — require Hodge theory / étale homotopy absent from Mathlib.
+- Surface group π₁(Σ_{g,n}) and Mod_{g,n} are NOT in Mathlib; must be introduced as abstract objects/axioms.
+- Main theorem Lean name: `MR4717077CanonicalRepresentationsOfSurfaceGroups.finiteImage_of_mcgFinite`.
+- Use `\mathcal{}` in prose (not `\mathscr{}`); `\mathscr` only in `% SOURCE QUOTE` comments.
+- Single blueprint chapter `Overview.tex` covers both Lean files via `archon:covers`.

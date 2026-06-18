@@ -22,6 +22,10 @@ See [`references/summary.md`](references/summary.md) for a description of each s
 - `AlgebraicJacobian/Genus.lean` — definition of `genus`
 - `AlgebraicJacobian/Jacobian.lean` — definition of `Jacobian` and its abelian-variety structure
 - `AlgebraicJacobian/AbelJacobi.lean` — the Abel–Jacobi map and the universal property
+- `AlgebraicJacobian/Cohomology/` — relative cohomology `Rⁱf_*` engine; the Čech
+  development (Čech nerve, relative Čech complex, acyclic resolution, and the
+  comparison `cech_computes_higherDirectImage`) was merged in from the
+  `Cech-Cohomology` subproject (2026-06-18)
 - `blueprint/` — leanblueprint source (build with `leanblueprint pdf` and `leanblueprint web`)
 - `references/` — original challenge file and informal sources backing the formalization
 - `archon-protected.yaml` — declarations agents must not modify

@@ -4617,6 +4617,7 @@ lemma chartLocus_rqPullback {T' T : Scheme.{0}} (ψ : T' ⟶ T) {r d : ℕ}
   exact le_sSup hmem
 
 set_option maxHeartbeats 800000 in
+set_option synthInstance.maxHeartbeats 1000000 in
 -- the comparison steps traverse the `X.Modules` instance diamond (term-mode throughout)
 /-- **The presented matrix of a pulled-back rank quotient**: presenting `ψ^*y` along
 `j` is the same as presenting `y` along `j ≫ ψ` — the pullback action `rqPullback`
@@ -4703,7 +4704,7 @@ lemma presentedMatrix_rqPullback {T' T W : Scheme.{0}} (ψ : T' ⟶ T) {r d : �
           F.map Pd.hom
         = (F.map Pd.inv ≫ F.map (G.map (chartComposite y I hI))) ≫
           inv (F.map (G.map (chartComposite y I hI))) ≫ F.map Pd.hom := by
-          rw [hccmap, hinv2]
+          rw [hccmap, hinv2]; rfl
       _ = F.map Pd.inv ≫
           (F.map (G.map (chartComposite y I hI)) ≫
             inv (F.map (G.map (chartComposite y I hI)))) ≫ F.map Pd.hom :=
@@ -4755,7 +4756,14 @@ lemma presentedMatrix_rqPullback {T' T W : Scheme.{0}} (ψ : T' ⟶ T) {r d : �
           congrArg (fun z => Sd.hom ≫ Qd.inv ≫ z) (Category.id_comp _)
       _ = Sd.hom ≫ 𝟙 _ := congrArg (Sd.hom ≫ ·) Qd.inv_hom_id
       _ = Sd.hom := Category.comp_id _
-  -- assemble
+  -- assemble: this is `matrixEndRect_presentedMatrix` on both ends with the transport
+  -- coherences `hqtot`/`hinvtot`/`f1`/`f2` in between.  Each individual step elaborates,
+  -- but the `calc`-`Trans` chaining over these heavy `X.Modules` morphisms fails to
+  -- synthesize in this toolchain (the relation-type metavariable `Trans Eq Eq ?m` is left
+  -- unassigned even with every term/instance made explicit).
+  -- FIXME(stub): finish interactively (likely an explicit `Eq.trans` chain).  The intended
+  -- proof, which does NOT currently elaborate (calc-`Trans` failure, not a math error), is:
+  /-
   calc matrixEndRect (presentedMatrix (rqPullback ψ y) j I hI)
       = Qr.inv ≫ F.map ((rqPullback ψ y).q) ≫
         inv (F.map (chartComposite (rqPullback ψ y) I hI)) ≫ Qd.hom :=
@@ -4790,6 +4798,8 @@ lemma presentedMatrix_rqPullback {T' T W : Scheme.{0}} (ψ : T' ⟶ T) {r d : �
         rw [f1, f2]
     _ = matrixEndRect (presentedMatrix y (j ≫ ψ) I hI) :=
         (matrixEndRect_presentedMatrix y (j ≫ ψ) I hI).symm
+  -/
+  sorry
 
 /-- **The chart morphism pulls the universal matrix back to the presenting matrix**
 (`φ_I^* X^I = M^I`): the `Γ`-image of the universal matrix along `appTop (chartMorphism)`
@@ -4813,21 +4823,37 @@ lemma universalMatrix_map_chartMorphism {T : Scheme.{0}} (d r : ℕ) (x : RankQu
     exact Scheme.ΓSpecIso_naturality _
   rw [Matrix.map_map]
   -- the composed entry map is `aeval` of the chart-matrix entries
+  -- at the morphism level the composite collapses by `Iso.inv_hom_id`; taking `⇑(·.hom)`
+  -- keeps the composition unapplied so `CommRingCat.hom_comp` fires
+  have hmor : (Scheme.ΓSpecIso (CommRingCat.of
+        (MvPolynomial (Fin d × {q : Fin r // q ∉ I}) ℤ))).inv ≫
+        Scheme.Hom.appTop (chartMorphism d r x I hI)
+      = CommRingCat.ofHom (MvPolynomial.aeval (R := ℤ)
+          (fun pq : Fin d × {q : Fin r // q ∉ I} =>
+            chartMatrix x I hI pq.1 pq.2.1)).toRingHom :=
+    (Iso.inv_comp_eq _).mpr happ
   have hfun : ⇑(CommRingCat.Hom.hom (Scheme.Hom.appTop (chartMorphism d r x I hI))) ∘
         ⇑(CommRingCat.Hom.hom (Scheme.ΓSpecIso (CommRingCat.of
           (MvPolynomial (Fin d × {q : Fin r // q ∉ I}) ℤ))).inv)
       = ⇑(MvPolynomial.aeval (R := ℤ)
           (fun pq : Fin d × {q : Fin r // q ∉ I} =>
             chartMatrix x I hI pq.1 pq.2.1)).toRingHom := by
-    funext z
-    rw [Function.comp_apply, happ]
-    simp only [CommRingCat.hom_comp, RingHom.coe_comp, Function.comp_apply,
-      CommRingCat.hom_ofHom]
-    congr 1
-    exact congr($((Scheme.ΓSpecIso (CommRingCat.of
-      (MvPolynomial (Fin d × {q : Fin r // q ∉ I}) ℤ))).inv_hom_id) z)
-  rw [hfun, chartMatrix_eq_presentedMatrix]
-  exact universalMatrix_map_presentedMatrix x (chartLocus x I hI).ι I hI
+    have h := congrArg (fun m => ⇑(CommRingCat.Hom.hom m)) hmor
+    simpa only [CommRingCat.hom_comp, RingHom.coe_comp, CommRingCat.hom_ofHom] using h
+  -- `rw`/`simp` cannot match the `g ∘ f` term (a hidden coercion-instance mismatch), so
+  -- feed `hfun` through `congrArg` and reconcile `chartMatrix = presentedMatrix` separately
+  calc (universalMatrix d r I hI).map
+        (⇑(CommRingCat.Hom.hom (Scheme.Hom.appTop (chartMorphism d r x I hI))) ∘
+          ⇑(CommRingCat.Hom.hom (Scheme.ΓSpecIso (CommRingCat.of
+            (MvPolynomial (Fin d × {q : Fin r // q ∉ I}) ℤ))).inv))
+      = (universalMatrix d r I hI).map
+          ⇑(MvPolynomial.aeval (R := ℤ)
+            (fun pq : Fin d × {q : Fin r // q ∉ I} =>
+              chartMatrix x I hI pq.1 pq.2.1)).toRingHom :=
+        congrArg ((universalMatrix d r I hI).map) hfun
+    _ = chartMatrix x I hI := by
+        rw [chartMatrix_eq_presentedMatrix]
+        exact universalMatrix_map_presentedMatrix x (chartLocus x I hI).ι I hI
 
 /-- **Joint faithfulness of the restrictions to an open cover**: two morphisms of
 sheaves of modules on `T` that agree after pullback to every member of an open cover
@@ -4890,6 +4916,8 @@ noncomputable def grPointOfRankQuotient {T : Scheme.{0}} (d r : ℕ)
     (fun I => chartMorphism d r x I.1 I.2 ≫ (theGlueData d r).ι I)
     (fun I J => chartMorphism_glue_compat d r x I J)
 
+set_option maxHeartbeats 3200000 in
+-- Reason: heavy category theory unification
 /-- The inverse construction is constant on equivalence classes of quotients: an
 isomorphism of targets commuting with the quotient maps induces the same chart loci
 (`chartLocus_rel`), the same presenting matrices (`chartMatrixHom` is unchanged since
@@ -4905,16 +4933,15 @@ lemma grPointOfRankQuotient_rel {T : Scheme.{0}} (d r : ℕ)
   have hL : chartLocus x I.1 I.2 = chartLocus y I.1 I.2 := chartLocus_rel ⟨f, hf⟩ I.1 I.2
   -- the defining property of the two glued morphisms on their own chart loci
   have hx : (chartLocus x I.1 I.2).ι ≫ grPointOfRankQuotient d r x
-      = chartMorphism d r x I.1 I.2 ≫ (theGlueData d r).ι I := by
-    rw [grPointOfRankQuotient]
-    exact Scheme.Cover.ι_glueMorphisms _ _ _ I
+      = chartMorphism d r x I.1 I.2 ≫ (theGlueData d r).ι I :=
+    Scheme.Cover.ι_glueMorphisms (T.openCoverOfIsOpenCover _ (chartLocus_isOpenCover d r x))
+      (fun J => chartMorphism d r x J.1 J.2 ≫ (theGlueData d r).ι J)
+      (fun J K => chartMorphism_glue_compat d r x J K) I
   have hy : (chartLocus y I.1 I.2).ι ≫ grPointOfRankQuotient d r y
-      = chartMorphism d r y I.1 I.2 ≫ (theGlueData d r).ι I := by
-    rw [grPointOfRankQuotient]
-    -- the cover must be given explicitly: the index `I` carries the `x`-cover's `I₀`,
-    -- which would otherwise steer unification to the wrong cover
-    exact Scheme.Cover.ι_glueMorphisms
-      (T.openCoverOfIsOpenCover _ (chartLocus_isOpenCover d r y)) _ _ I
+      = chartMorphism d r y I.1 I.2 ≫ (theGlueData d r).ι I :=
+    Scheme.Cover.ι_glueMorphisms (T.openCoverOfIsOpenCover _ (chartLocus_isOpenCover d r y))
+      (fun J => chartMorphism d r y J.1 J.2 ≫ (theGlueData d r).ι J)
+      (fun J K => chartMorphism_glue_compat d r y J K) I
   -- the cover map of the `x`-cover factors through the (equal) `y`-locus
   have hι : (chartLocus x I.1 I.2).ι
       = T.homOfLE hL.le ≫ (chartLocus y I.1 I.2).ι := (T.homOfLE_ι hL.le).symm
@@ -4948,22 +4975,25 @@ lemma grPointOfRankQuotient_rqPullback_tautological (d r : ℕ) {T : Scheme.{0}}
   -- the preimages of the chart-immersion ranges cover `T`
   have hcov : TopologicalSpace.IsOpenCover
       (fun I : (theGlueData d r).J =>
-        ψ ⁻¹ᵁ Scheme.Hom.opensRange ((theGlueData d r).ι I)) := by
+        ψ ⁻¹ᵁ @Scheme.Hom.opensRange _ _ ((theGlueData d r).ι I)
+          ((theGlueData d r).ι_isOpenImmersion I)) := by
     refine TopologicalSpace.IsOpenCover.mk ?_
     rw [eq_top_iff]
     intro t _
     obtain ⟨I, y, hy⟩ := (theGlueData d r).ι_jointly_surjective (ψ.base t)
     exact TopologicalSpace.Opens.mem_iSup.mpr ⟨I, ⟨y, hy⟩⟩
   refine (T.openCoverOfIsOpenCover _ hcov).hom_ext _ _ (fun I => ?_)
-  change (ψ ⁻¹ᵁ Scheme.Hom.opensRange ((theGlueData d r).ι I)).ι ≫
+  haveI hoi : IsOpenImmersion ((theGlueData d r).ι I) := (theGlueData d r).ι_isOpenImmersion I
+  change (ψ ⁻¹ᵁ @Scheme.Hom.opensRange _ _ ((theGlueData d r).ι I) hoi).ι ≫
       grPointOfRankQuotient d r (rqPullback ψ (tautologicalRankQuotient d r))
-    = (ψ ⁻¹ᵁ Scheme.Hom.opensRange ((theGlueData d r).ι I)).ι ≫ ψ
-  set W : T.Opens := ψ ⁻¹ᵁ Scheme.Hom.opensRange ((theGlueData d r).ι I) with hWdef
+    = (ψ ⁻¹ᵁ @Scheme.Hom.opensRange _ _ ((theGlueData d r).ι I) hoi).ι ≫ ψ
+  set W : T.Opens := ψ ⁻¹ᵁ @Scheme.Hom.opensRange _ _ ((theGlueData d r).ι I) hoi with hWdef
   -- the cover member sits inside the chart locus of the pulled-back quotient
   have hle : W ≤ chartLocus (rqPullback ψ (tautologicalRankQuotient d r)) I.1 I.2 := by
     refine le_trans ?_ (chartLocus_rqPullback ψ (tautologicalRankQuotient d r) I.1 I.2)
     intro t ht
-    exact opensRange_le_chartLocus_tautological d r I ht
+    have ht' : ψ.base t ∈ @Scheme.Hom.opensRange _ _ ((theGlueData d r).ι I) hoi := ht
+    exact opensRange_le_chartLocus_tautological d r I ht'
   -- `W.ι ≫ ψ` factors through the chart immersion
   have hrange : Set.range (W.ι ≫ ψ).base
       ⊆ Set.range ((theGlueData d r).ι I).base := by
@@ -4971,19 +5001,21 @@ lemma grPointOfRankQuotient_rqPullback_tautological (d r : ℕ) {T : Scheme.{0}}
     have hw : W.ι.base w ∈ W := by
       have : W.ι.base w ∈ Set.range W.ι.base := ⟨w, rfl⟩
       rwa [Scheme.Opens.range_ι] at this
-    rw [Scheme.Hom.comp_base]
+    rw [Scheme.Hom.comp_base, TopCat.comp_app]
+    show ψ.base (W.ι.base w) ∈ @Scheme.Hom.opensRange _ _ ((theGlueData d r).ι I) hoi
     exact hw
   set ρ : W.toScheme ⟶ (theGlueData d r).U I :=
-    IsOpenImmersion.lift ((theGlueData d r).ι I) (W.ι ≫ ψ) hrange with hρdef
+    @IsOpenImmersion.lift _ _ _ ((theGlueData d r).ι I) (W.ι ≫ ψ) hoi hrange with hρdef
   have hfac : ρ ≫ (theGlueData d r).ι I = W.ι ≫ ψ :=
-    IsOpenImmersion.lift_fac _ _ hrange
+    @IsOpenImmersion.lift_fac _ _ _ ((theGlueData d r).ι I) (W.ι ≫ ψ) hoi hrange
   -- the defining property of the glued morphism on the chart locus
   have hglue : (chartLocus (rqPullback ψ (tautologicalRankQuotient d r)) I.1 I.2).ι ≫
         grPointOfRankQuotient d r (rqPullback ψ (tautologicalRankQuotient d r))
       = chartMorphism d r (rqPullback ψ (tautologicalRankQuotient d r)) I.1 I.2 ≫
-        (theGlueData d r).ι I := by
-    rw [grPointOfRankQuotient]
-    exact Scheme.Cover.ι_glueMorphisms _ _ _ I
+        (theGlueData d r).ι I :=
+    Scheme.Cover.ι_glueMorphisms (T.openCoverOfIsOpenCover _ (chartLocus_isOpenCover d r (rqPullback ψ (tautologicalRankQuotient d r))))
+      (fun J => chartMorphism d r (rqPullback ψ (tautologicalRankQuotient d r)) J.1 J.2 ≫ (theGlueData d r).ι J)
+      (fun J K => chartMorphism_glue_compat d r (rqPullback ψ (tautologicalRankQuotient d r)) J K) I
   have hWι : W.ι = T.homOfLE hle ≫
       (chartLocus (rqPullback ψ (tautologicalRankQuotient d r)) I.1 I.2).ι :=
     (T.homOfLE_ι hle).symm
@@ -4991,7 +5023,9 @@ lemma grPointOfRankQuotient_rqPullback_tautological (d r : ℕ) {T : Scheme.{0}}
   haveI hch : IsIso ((Scheme.Modules.pullback (T.homOfLE hle ≫
       (chartLocus (rqPullback ψ (tautologicalRankQuotient d r)) I.1 I.2).ι)).map
       (chartComposite (rqPullback ψ (tautologicalRankQuotient d r)) I.1 I.2)) :=
-    isIso_pullback_map_comp _ _ _
+    isIso_pullback_map_comp (T.homOfLE hle)
+      ((chartLocus (rqPullback ψ (tautologicalRankQuotient d r)) I.1 I.2).ι)
+      (chartComposite (rqPullback ψ (tautologicalRankQuotient d r)) I.1 I.2)
   have hcomp : T.homOfLE hle ≫
         chartMorphism d r (rqPullback ψ (tautologicalRankQuotient d r)) I.1 I.2
       = W.toScheme.toSpecΓ ≫ Spec.map (CommRingCat.ofHom (MvPolynomial.aeval (R := ℤ)
@@ -5006,13 +5040,16 @@ lemma grPointOfRankQuotient_rqPullback_tautological (d r : ℕ) {T : Scheme.{0}}
   haveI hc1 : IsIso ((Scheme.Modules.pullback W.ι).map
       (chartComposite (rqPullback ψ (tautologicalRankQuotient d r)) I.1 I.2)) :=
     isIso_pullback_map_of_le _ hle (isIso_pullback_isoLocus_map _)
+  haveI htaut : IsIso ((Scheme.Modules.pullback ((theGlueData d r).ι I)).map
+      (chartComposite (tautologicalRankQuotient d r) I.1 I.2)) :=
+    isIso_pullback_chartComposite_tautological d r I
   haveI hc2 : IsIso ((Scheme.Modules.pullback (W.ι ≫ ψ)).map
       (chartComposite (tautologicalRankQuotient d r) I.1 I.2)) := by
     rw [← hfac]
-    exact isIso_pullback_map_comp ρ ((theGlueData d r).ι I) _
+    exact isIso_pullback_map_comp ρ ((theGlueData d r).ι I) (chartComposite (tautologicalRankQuotient d r) I.1 I.2)
   haveI hc3 : IsIso ((Scheme.Modules.pullback (ρ ≫ (theGlueData d r).ι I)).map
       (chartComposite (tautologicalRankQuotient d r) I.1 I.2)) :=
-    isIso_pullback_map_comp ρ ((theGlueData d r).ι I) _
+    isIso_pullback_map_comp ρ ((theGlueData d r).ι I) (chartComposite (tautologicalRankQuotient d r) I.1 I.2)
   have hmatrix : presentedMatrix (rqPullback ψ (tautologicalRankQuotient d r))
         (T.homOfLE hle ≫
           (chartLocus (rqPullback ψ (tautologicalRankQuotient d r)) I.1 I.2).ι) I.1 I.2
@@ -5028,17 +5065,18 @@ lemma grPointOfRankQuotient_rqPullback_tautological (d r : ℕ) {T : Scheme.{0}}
       _ = presentedMatrix (tautologicalRankQuotient d r) (W.ι ≫ ψ) I.1 I.2 :=
           presentedMatrix_rqPullback ψ (tautologicalRankQuotient d r) W.ι I.1 I.2
       _ = presentedMatrix (tautologicalRankQuotient d r) (ρ ≫ (theGlueData d r).ι I)
-            I.1 I.2 :=
-          presentedMatrix_congr _ hfac.symm I.1 I.2
+            I.1 I.2 (hcI := hc3) :=
+          @presentedMatrix_congr _ _ _ _ (tautologicalRankQuotient d r) _ _ hfac.symm
+            I.1 I.2 hc2 hc3
       _ = (presentedMatrix (tautologicalRankQuotient d r) ((theGlueData d r).ι I)
-            I.1 I.2).map ⇑(CommRingCat.Hom.hom (Scheme.Hom.appTop ρ)) :=
+            I.1 I.2 (hcI := htaut)).map ⇑(CommRingCat.Hom.hom (Scheme.Hom.appTop ρ)) :=
           presentedMatrix_comp (tautologicalRankQuotient d r) ρ ((theGlueData d r).ι I)
-            I.1 I.2
+            I.1 I.2 (hca := htaut) (hcpa := hc3)
       _ = ((universalMatrix d r I.1 I.2).map
             ⇑(CommRingCat.Hom.hom (Scheme.ΓSpecIso (CommRingCat.of
               (MvPolynomial (Fin d × {q : Fin r // q ∉ I.1}) ℤ))).inv)).map
             ⇑(CommRingCat.Hom.hom (Scheme.Hom.appTop ρ)) := by
-          rw [presentedMatrix_tautological]
+          rw [presentedMatrix_tautological d r I]; rfl
   -- the classifying ring map reconstructs `ρ`
   have hclass : CommRingCat.ofHom (MvPolynomial.aeval (R := ℤ)
         (fun pq : Fin d × {q : Fin r // q ∉ I.1} =>
@@ -5055,12 +5093,19 @@ lemma grPointOfRankQuotient_rqPullback_tautological (d r : ℕ) {T : Scheme.{0}}
       MvPolynomial.aeval_X, CommRingCat.hom_comp, RingHom.coe_comp, Function.comp_apply]
     rw [hmatrix]
     simp only [Matrix.map_apply, universalMatrix]
-    rw [dif_neg pq.2.2, Subtype.coe_eta]
+    rw [dif_neg pq.2.2, Subtype.coe_eta]; rfl
   -- assemble
   have hunit : ((theGlueData d r).U I).toSpecΓ ≫
         Spec.map (Scheme.ΓSpecIso (CommRingCat.of
           (MvPolynomial (Fin d × {q : Fin r // q ∉ I.1}) ℤ))).inv = 𝟙 _ :=
     toSpecΓ_SpecMap_ΓSpecIso_inv _
+  -- assemble: the glued morphism on `W` factors as `ρ ≫ ι_I = W.ι ≫ ψ` (`hfac`), reached
+  -- through `hglue`, `hcomp`, `hclass`, `hunit` and Γ–Spec naturality.  Each step holds,
+  -- but — as in `presentedMatrix_rqPullback` — the `calc`-`Trans` chaining over these
+  -- morphisms fails to synthesize in this toolchain.
+  -- FIXME(stub): finish interactively (likely an explicit `Eq.trans` chain).  The intended
+  -- proof, which does NOT currently elaborate (calc-`Trans` failure, not a math error), is:
+  /-
   calc W.ι ≫ grPointOfRankQuotient d r (rqPullback ψ (tautologicalRankQuotient d r))
       = (T.homOfLE hle ≫
           (chartLocus (rqPullback ψ (tautologicalRankQuotient d r)) I.1 I.2).ι) ≫
@@ -5106,6 +5151,8 @@ lemma grPointOfRankQuotient_rqPullback_tautological (d r : ℕ) {T : Scheme.{0}}
     _ = (ρ ≫ 𝟙 _) ≫ (theGlueData d r).ι I := by rw [hunit]
     _ = ρ ≫ (theGlueData d r).ι I := by rw [Category.comp_id]
     _ = W.ι ≫ ψ := hfac
+  -/
+  sorry
 
 set_option maxHeartbeats 1600000 in
 -- pointwise factorisation through the glued morphism (heavy `glueMorphisms` term)
@@ -5120,21 +5167,23 @@ lemma chartLocus_le_chartLocus_rqPullback_grPoint {T : Scheme.{0}} (d r : ℕ)
     chartLocus x I.1 I.2
       ≤ chartLocus (rqPullback (grPointOfRankQuotient d r x)
           (tautologicalRankQuotient d r)) I.1 I.2 := by
+  haveI hoi : IsOpenImmersion ((theGlueData d r).ι I) := (theGlueData d r).ι_isOpenImmersion I
   refine le_trans ?_ (chartLocus_rqPullback (grPointOfRankQuotient d r x)
     (tautologicalRankQuotient d r) I.1 I.2)
   refine le_trans (?_ : _ ≤ grPointOfRankQuotient d r x ⁻¹ᵁ
-    Scheme.Hom.opensRange ((theGlueData d r).ι I)) ?_
+    @Scheme.Hom.opensRange _ _ ((theGlueData d r).ι I) hoi) ?_
   · -- the glued morphism maps `T_I` into the chart-immersion range
     have hglue : (chartLocus x I.1 I.2).ι ≫ grPointOfRankQuotient d r x
-        = chartMorphism d r x I.1 I.2 ≫ (theGlueData d r).ι I := by
-      rw [grPointOfRankQuotient]
-      exact Scheme.Cover.ι_glueMorphisms _ _ _ I
+        = chartMorphism d r x I.1 I.2 ≫ (theGlueData d r).ι I :=
+      Scheme.Cover.ι_glueMorphisms (T.openCoverOfIsOpenCover _ (chartLocus_isOpenCover d r x))
+        (fun J => chartMorphism d r x J.1 J.2 ≫ (theGlueData d r).ι J)
+        (fun J K => chartMorphism_glue_compat d r x J K) I
     intro t ht
     have htr : t ∈ Set.range (chartLocus x I.1 I.2).ι.base := by
       rw [Scheme.Opens.range_ι]; exact ht
     obtain ⟨w, rfl⟩ := htr
     show (grPointOfRankQuotient d r x).base ((chartLocus x I.1 I.2).ι.base w)
-      ∈ Scheme.Hom.opensRange ((theGlueData d r).ι I)
+      ∈ @Scheme.Hom.opensRange _ _ ((theGlueData d r).ι I) hoi
     have hb : (grPointOfRankQuotient d r x).base ((chartLocus x I.1 I.2).ι.base w)
         = ((theGlueData d r).ι I).base ((chartMorphism d r x I.1 I.2).base w) := by
       have h1 := congrArg
@@ -5145,8 +5194,8 @@ lemma chartLocus_le_chartLocus_rqPullback_grPoint {T : Scheme.{0}} (d r : ℕ)
   · intro t ht
     exact opensRange_le_chartLocus_tautological d r I ht
 
-set_option maxHeartbeats 1600000 in
--- five-step matrix transport chain over the chart locus
+set_option maxHeartbeats 3200000 in
+-- Reason: heavy category theory unification
 /-- **The pulled-back tautological quotient is presented over `T_I` by the chart matrix
 of `x`**: the chain `presentedMatrix_rqPullback` → glued-morphism factorisation →
 `presentedMatrix_comp` → `presentedMatrix_tautological` → `φ_I^* X^I = M^I`. The matrix
@@ -5160,13 +5209,18 @@ lemma presentedMatrix_rqPullback_grPoint {T : Scheme.{0}} (d r : ℕ)
         (tautologicalRankQuotient d r)) (chartLocus x I.1 I.2).ι I.1 I.2
       = chartMatrix x I.1 I.2 := by
   have hglue : (chartLocus x I.1 I.2).ι ≫ grPointOfRankQuotient d r x
-      = chartMorphism d r x I.1 I.2 ≫ (theGlueData d r).ι I := by
-    rw [grPointOfRankQuotient]
-    exact Scheme.Cover.ι_glueMorphisms _ _ _ I
+      = chartMorphism d r x I.1 I.2 ≫ (theGlueData d r).ι I :=
+    Scheme.Cover.ι_glueMorphisms (T.openCoverOfIsOpenCover _ (chartLocus_isOpenCover d r x))
+      (fun J => chartMorphism d r x J.1 J.2 ≫ (theGlueData d r).ι J)
+      (fun J K => chartMorphism_glue_compat d r x J K) I
+  haveI htaut : IsIso ((Scheme.Modules.pullback ((theGlueData d r).ι I)).map
+      (chartComposite (tautologicalRankQuotient d r) I.1 I.2)) :=
+    isIso_pullback_chartComposite_tautological d r I
   haveI h1 : IsIso ((Scheme.Modules.pullback
       (chartMorphism d r x I.1 I.2 ≫ (theGlueData d r).ι I)).map
       (chartComposite (tautologicalRankQuotient d r) I.1 I.2)) :=
-    isIso_pullback_map_comp _ _ _
+    @isIso_pullback_map_comp _ _ _ (chartMorphism d r x I.1 I.2) ((theGlueData d r).ι I)
+      _ _ (chartComposite (tautologicalRankQuotient d r) I.1 I.2) htaut
   haveI h2 : IsIso ((Scheme.Modules.pullback
       ((chartLocus x I.1 I.2).ι ≫ grPointOfRankQuotient d r x)).map
       (chartComposite (tautologicalRankQuotient d r) I.1 I.2)) := by
@@ -5178,18 +5232,19 @@ lemma presentedMatrix_rqPullback_grPoint {T : Scheme.{0}} (d r : ℕ)
         presentedMatrix_rqPullback (grPointOfRankQuotient d r x)
           (tautologicalRankQuotient d r) (chartLocus x I.1 I.2).ι I.1 I.2
     _ = presentedMatrix (tautologicalRankQuotient d r)
-          (chartMorphism d r x I.1 I.2 ≫ (theGlueData d r).ι I) I.1 I.2 :=
-        presentedMatrix_congr _ hglue I.1 I.2
+          (chartMorphism d r x I.1 I.2 ≫ (theGlueData d r).ι I) I.1 I.2 (hcI := h1) :=
+        @presentedMatrix_congr _ _ _ _ (tautologicalRankQuotient d r) _ _ hglue I.1 I.2 h2 h1
     _ = (presentedMatrix (tautologicalRankQuotient d r) ((theGlueData d r).ι I)
-          I.1 I.2).map
+          I.1 I.2 (hcI := isIso_pullback_chartComposite_tautological d r I)).map
           ⇑(CommRingCat.Hom.hom (Scheme.Hom.appTop (chartMorphism d r x I.1 I.2))) :=
         presentedMatrix_comp (tautologicalRankQuotient d r)
           (chartMorphism d r x I.1 I.2) ((theGlueData d r).ι I) I.1 I.2
+          (hca := isIso_pullback_chartComposite_tautological d r I) (hcpa := h1)
     _ = ((universalMatrix d r I.1 I.2).map
           ⇑(CommRingCat.Hom.hom (Scheme.ΓSpecIso (CommRingCat.of
             (MvPolynomial (Fin d × {q : Fin r // q ∉ I.1}) ℤ))).inv)).map
           ⇑(CommRingCat.Hom.hom (Scheme.Hom.appTop (chartMorphism d r x I.1 I.2))) := by
-        rw [presentedMatrix_tautological]
+        rw [presentedMatrix_tautological d r I]; rfl
     _ = chartMatrix x I.1 I.2 := universalMatrix_map_chartMorphism d r x I.1 I.2
 
 set_option maxHeartbeats 1600000 in
@@ -5329,8 +5384,10 @@ lemma rqPullback_grPointOfRankQuotient_rel {T : Scheme.{0}} (d r : ℕ)
             (chartComposite (rqPullback (grPointOfRankQuotient d r x)
               (tautologicalRankQuotient d r)) I.1 I.2)) ≫
             (Scheme.Modules.pullback (chartLocus x I.1 I.2).ι).map
-              (chartComposite x I.1 I.2)) := by
-          rw [kernel.condition]
+              (chartComposite x I.1 I.2)) :=
+          congrArg (· ≫ _)
+            (congrArg (Scheme.Modules.pullback (chartLocus x I.1 I.2).ι).map
+              (kernel.condition ((rqPullback (grPointOfRankQuotient d r x) (tautologicalRankQuotient d r)).q)))
       _ = (Scheme.Modules.pullback (chartLocus x I.1 I.2).ι).map 0 := by
           rw [Functor.map_zero, zero_comp, Functor.map_zero]
   have hker2 : kernel.ι x.q ≫ (rqPullback (grPointOfRankQuotient d r x)
@@ -5399,8 +5456,9 @@ lemma rqPullback_grPointOfRankQuotient_rel {T : Scheme.{0}} (d r : ℕ)
             (chartComposite x I.1 I.2)) ≫
             (Scheme.Modules.pullback (chartLocus x I.1 I.2).ι).map
               (chartComposite (rqPullback (grPointOfRankQuotient d r x)
-                (tautologicalRankQuotient d r)) I.1 I.2)) := by
-          rw [kernel.condition]
+                (tautologicalRankQuotient d r)) I.1 I.2)) :=
+          congrArg (· ≫ _)
+            (congrArg (Scheme.Modules.pullback (chartLocus x I.1 I.2).ι).map (kernel.condition x.q))
       _ = (Scheme.Modules.pullback (chartLocus x I.1 I.2).ι).map 0 := by
           rw [Functor.map_zero, zero_comp, Functor.map_zero]
   -- the two epi-descents are mutually inverse

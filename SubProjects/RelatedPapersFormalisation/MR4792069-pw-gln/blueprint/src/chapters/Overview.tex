@@ -3,4 +3,373 @@
 
 % archon:covers MR4792069ThePwConjectureForGln.lean MR4792069ThePwConjectureForGln/Basic.lean
 
-This is the auto-bootstrapped blueprint for MR4792069: The P=W conjecture for GL_n.
+\providecommand{\git}{\mathbin{/\mkern-6mu/}}
+
+The $P=W$ theorem, proved by Maulik and Shen in arXiv:2209.02568 (Annals of Mathematics 200
+(2024), no.~2), establishes a surprising identity between two filtrations on the singular
+cohomology of the $\mathrm{GL}_n$-character variety $M_B$ of a smooth projective curve $C$
+of genus $g \geq 2$ over $\mathbb{C}$.  The \emph{perverse filtration}
+$P_\bullet H^*(M_B, \mathbb{Q})$ is governed by the topology of the Hitchin fibration
+$h \colon M_{\mathrm{Dol}} \to A$ on the Dolbeault moduli space of stable Higgs bundles; it
+is transported to $M_B$ via the non-abelian Hodge diffeomorphism $M_{\mathrm{Dol}} \cong M_B$
+of Simpson.  The \emph{weight filtration} $W_\bullet H^*(M_B, \mathbb{Q})$ arises from the
+mixed Hodge structure on the cohomology of the affine character variety.  The theorem asserts
+that these two filtrations coincide: $P_k H^m(M_B, \mathbb{Q}) = W_{2k} H^m(M_B, \mathbb{Q})$
+for all $k, m \geq 0$.  This was Conjecture~0.1 of de Cataldo--Hausel--Migliorini and is
+proved as Theorem~0.2 of the Maulik--Shen paper for all ranks $n \geq 1$ and genera $g \geq 2$.
+
+The proof reduces $P=W$ to the \emph{strong perversity} of tautological Chern classes of the
+universal Higgs bundle (using Markman, Shende, and Mellit's curious Hard Lefschetz theorem).
+This sheaf-theoretic statement is then reduced from the Hitchin system to twisted Hitchin
+systems via vanishing cycle functors, established over the elliptic locus by Yun's global
+Springer theory, and extended to the full Hitchin base by a parabolic support theorem.
+
+\section{Introduction}
+
+\begin{definition}[SmoothProjectiveCurve]
+  \label{def:smooth-projective-curve}
+  \lean{MR4792069ThePwConjectureForGln.SmoothProjectiveCurve}
+  % SOURCE: [Maulik--Shen], arXiv:2209.02568, §0.1, p.1 (read from references/pw-gln-maulik-shen.tex)
+  % SOURCE QUOTE: "Let $C$ be a nonsingular irreducible projective curve of genus $g \geq 2$."
+  \textit{Source: Maulik--Shen, arXiv:2209.02568, §0.1.}
+  A \emph{smooth projective curve} is a smooth, projective, connected algebraic curve $C$
+  over $\mathbb{C}$ of genus $g$, where $g \geq 2$.  This is the standing assumption
+  throughout the paper.
+\end{definition}
+
+\begin{definition}[CharacterVariety]
+  \label{def:character-variety}
+  \lean{MR4792069ThePwConjectureForGln.CharacterVariety}
+  \uses{def:smooth-projective-curve}
+  % SOURCE: [Maulik--Shen], arXiv:2209.02568, §0.1, p.1 (read from references/pw-gln-maulik-shen.tex)
+  % SOURCE QUOTE: "The Betti moduli space $M_B$ is the (twisted) character variety associated
+  % with $\mathrm{GL}_n(\BC)$ and degree $d$.  It parametrizes isomorphism classes of
+  % irreducible local systems
+  % \[
+  % \rho: \pi_1(C\backslash \{p\}) \rightarrow \mathrm{GL}_n(\BC)
+  % \]
+  % where $\rho$ sends a loop around a chosen point $p$ to
+  % $e^{\frac{2\pi \sqrt{-1} d}{n}}\mathrm{Id}_n$.  Concretely, we have
+  % \begin{equation*}
+  % M_B := \Big{\{}a_k, b_k \in \mathrm{GL}_n(\BC),~k=1,2,\dots,g: ~~\prod_{j=1}^g [a_j, b_j]
+  % = e^{\frac{2\pi \sqrt{-1} d}{n}}\mathrm{Id}_n \Big{\}}\git\mathrm{GL}_n(\BC).
+  % \end{equation*}
+  % It is an affine variety whose mixed Hodge structure admits a nontrivial weight filtration
+  % \[
+  % W_0 H^*(M_B, \BQ) \subset W_1H^*(M_B, \BQ) \subset \cdots \subset H^*(M_B, \BQ).
+  % \]"
+  \textit{Source: Maulik--Shen, arXiv:2209.02568, §0.1.}
+  Let $C$ be a smooth projective curve of genus $g \geq 2$ (\cref{def:smooth-projective-curve}).
+  For coprime integers $n \geq 1$ and $d \in \mathbb{Z}$, the
+  \emph{$\mathrm{GL}_n$-character variety} $M_B = M_B(C, \mathrm{GL}_n)$ is the affine
+  complex algebraic variety
+  \[
+    M_B \;:=\;
+    \Bigl\{(a_k, b_k)_{k=1}^g \in \mathrm{GL}_n(\mathbb{C})^{2g} :
+      \prod_{j=1}^g [a_j, b_j] = e^{2\pi i d/n} \mathrm{Id}_n
+    \Bigr\} \git \mathrm{GL}_n(\mathbb{C}),
+  \]
+  where $\mathrm{GL}_n(\mathbb{C})$ acts by simultaneous conjugation.  The cohomology
+  $H^*(M_B, \mathbb{Q})$ carries a mixed Hodge structure with weight filtration
+  \[
+    W_0 H^*(M_B, \mathbb{Q}) \subset W_1 H^*(M_B, \mathbb{Q})
+    \subset \cdots \subset H^*(M_B, \mathbb{Q}).
+  \]
+\end{definition}
+
+\begin{definition}[DolbeaultModuli]
+  \label{def:dolbeault-moduli}
+  \lean{MR4792069ThePwConjectureForGln.DolbeaultModuli}
+  \uses{def:smooth-projective-curve, def:character-variety}
+  % SOURCE: [Maulik--Shen], arXiv:2209.02568, §0.1, p.1 (read from references/pw-gln-maulik-shen.tex)
+  % SOURCE QUOTE: "The Dolbeault moduli space parameterizes stable Higgs bundles $(\CE, \theta)$
+  % on $C$, where $\CE$ is a vector bundle on $C$ of rank $n$ and degree $d$,
+  % $\theta: \CE \to \CE \otimes \Omega_C^1$ is a Higgs field, and stability is defined with
+  % respect to the slope $\mu(\CE,\theta) ={\mathrm{deg}(\CE)}/{\mathrm{rk(\CE)}}$."
+  \textit{Source: Maulik--Shen, arXiv:2209.02568, §0.1.}
+  Let $C$ be a smooth projective curve of genus $g \geq 2$ (\cref{def:smooth-projective-curve}).
+  For coprime integers $n \geq 1$ and $d \in \mathbb{Z}$, the \emph{Dolbeault moduli space}
+  $M_{\mathrm{Dol}} = M_{\mathrm{Dol}}(C, \mathrm{GL}_n)$ is the moduli space of stable Higgs
+  bundles $(\mathcal{E}, \theta)$ on $C$, where $\mathcal{E}$ is a rank-$n$ vector bundle of
+  degree $d$ and $\theta \colon \mathcal{E} \to \mathcal{E} \otimes \Omega^1_C$ is a Higgs
+  field; stability is with respect to the slope $\mu = \deg(\mathcal{E})/\mathrm{rk}(\mathcal{E})$.
+  The non-abelian Hodge correspondence of Simpson gives a diffeomorphism (of smooth manifolds)
+  $M_{\mathrm{Dol}} \cong M_B$, canonically identifying their cohomology:
+  \(H^*(M_{\mathrm{Dol}}, \mathbb{Q}) = H^*(M_B, \mathbb{Q})\).
+\end{definition}
+
+\begin{definition}[HitchinFibration]
+  \label{def:hitchin-fibration}
+  \lean{MR4792069ThePwConjectureForGln.HitchinFibration}
+  \uses{def:dolbeault-moduli}
+  % SOURCE: [Maulik--Shen], arXiv:2209.02568, §0.1, p.1 (read from references/pw-gln-maulik-shen.tex)
+  % SOURCE QUOTE: "The moduli space $M_{\mathrm{Dol}}$ admits the structure of a completely
+  % integrable system
+  % \[
+  % h: M_{\mathrm{Dol}} \to A := \bigoplus_{i=1}^n H^0(C, {\Omega_C^{1}}^{\otimes i}),
+  % \quad (\CE, \theta) \mapsto \mathrm{char.polynomial}(\theta),
+  % \]
+  % which is referred to as the Hitchin system \cite{Hit, Hit1}. The Hitchin map $h$ is
+  % surjective and proper; it is also Lagrangian with respect to the canonical holomorphic
+  % symplectic form on $M_{\mathrm{Dol}}$ induced by the hyper-K\"ahler metric."
+  \textit{Source: Maulik--Shen, arXiv:2209.02568, §0.1.}
+  The \emph{Hitchin fibration} is the proper surjective morphism
+  \[
+    h \colon M_{\mathrm{Dol}} \;\longrightarrow\;
+    A \;:=\; \bigoplus_{i=1}^n H^0\!\bigl(C, (\Omega^1_C)^{\otimes i}\bigr),
+    \quad (\mathcal{E}, \theta) \mapsto \mathrm{char.\,pol.}(\theta),
+  \]
+  where $A$ is the \emph{Hitchin base}.  The map $h$ records the coefficients of the
+  characteristic polynomial of the Higgs field; it is a Lagrangian fibration with respect to
+  the holomorphic symplectic form on $M_{\mathrm{Dol}}$.  Via the non-abelian Hodge
+  diffeomorphism (\cref{def:dolbeault-moduli}), $h$ induces a topological map
+  $h_B \colon M_B \to A$, the Hitchin map on the Betti side.
+\end{definition}
+
+\begin{definition}[WeightFiltration]
+  \label{def:weight-filtration}
+  \lean{MR4792069ThePwConjectureForGln.WeightFiltration}
+  \uses{def:character-variety}
+  % SOURCE: [Maulik--Shen], arXiv:2209.02568, §0.1, p.1 (read from references/pw-gln-maulik-shen.tex)
+  % SOURCE QUOTE: "It is an affine variety whose mixed Hodge structure admits a nontrivial
+  % weight filtration
+  % \[
+  % W_0 H^*(M_B, \BQ) \subset W_1H^*(M_B, \BQ) \subset \cdots \subset H^*(M_B, \BQ).
+  % \]"
+  \textit{Source: Maulik--Shen, arXiv:2209.02568, §0.1.}
+  Since $M_B$ (\cref{def:character-variety}) is a smooth affine complex algebraic variety,
+  its cohomology $H^*(M_B, \mathbb{Q})$ carries a mixed Hodge structure (Deligne).  The
+  \emph{weight filtration} is the increasing filtration
+  \[
+    W_0 H^*(M_B, \mathbb{Q}) \subset W_1 H^*(M_B, \mathbb{Q})
+    \subset \cdots \subset H^*(M_B, \mathbb{Q}),
+  \]
+  satisfying $W_{-1} H^* = 0$ and $W_{2m} H^m = H^m(M_B, \mathbb{Q})$.  This definition
+  requires mixed Hodge theory (Deligne), which is not yet in Mathlib.
+\end{definition}
+
+\begin{theorem}[$P=W$ for $\mathrm{GL}_n$]
+  \label{thm:pw-main}
+  \lean{MR4792069ThePwConjectureForGln.PEqualsW}
+  \uses{def:character-variety, def:perverse-filtration, def:weight-filtration}
+  % SOURCE: [Maulik--Shen], arXiv:2209.02568, Conjecture~0.1 / Theorem~0.2, p.1--2
+  %         (read from references/pw-gln-maulik-shen.tex)
+  % SOURCE QUOTE: "\begin{conj}\label{conj}[The P=W conjecture for $\mathrm{GL}_n$,
+  % \cite{dCHM1}] For any $k,m\in \BZ_{\geq 0}$, we have
+  % \[
+  % P_kH^m(M_{\mathrm{Dol}}, \BQ) = W_{2k}H^m(M_{B}, \BQ) = W_{2k+1}H^m(M_B, \BQ).
+  % \]
+  % \end{conj}"
+  % SOURCE QUOTE (continued): "\begin{thm}\label{thm}
+  %     Conjecture \ref{conj} holds.
+  % \end{thm}"
+  \textit{Source: Maulik--Shen, arXiv:2209.02568, Theorem~0.2.}
+  Let $C$ be a smooth projective curve of genus $g \geq 2$ over $\mathbb{C}$
+  (\cref{def:smooth-projective-curve}), and let $n \geq 1$ be a positive integer with
+  $\gcd(n, d) = 1$.  Then for all $k, m \geq 0$,
+  \[
+    P_k H^m(M_B(C, \mathrm{GL}_n), \mathbb{Q})
+    \;=\; W_{2k} H^m(M_B(C, \mathrm{GL}_n), \mathbb{Q})
+    \;=\; W_{2k+1} H^m(M_B(C, \mathrm{GL}_n), \mathbb{Q}),
+  \]
+  where $P_\bullet$ is the perverse filtration (\cref{def:perverse-filtration}) and
+  $W_\bullet$ is the weight filtration (\cref{def:weight-filtration}).
+\end{theorem}
+
+\begin{proof}
+  \uses{def:strong-perversity, def:hitchin-fibration, def:dolbeault-moduli}
+  The proof has two main steps.
+
+  \textit{Step~(a): \(W_{2k} \subseteq P_k\).}  By the theorem of Markman and Shende, the
+  tautological classes $\mathrm{ch}_k(\mathcal{U})$ of the universal family generate
+  $H^*(M_{\mathrm{Dol}}, \mathbb{Q})$ and each $\mathrm{ch}_k(\mathcal{U})$ lies in the
+  Hodge piece ${}^k\mathrm{Hdg}^*(M_B)$.  If each $\mathrm{ch}_k(\mathcal{U})$ has strong
+  perversity $k$ (\cref{def:strong-perversity}) with respect to the Hitchin map, then every
+  product of tautological classes $\prod_i \mathrm{ch}_{k_i}(\mathcal{U})$ lies in
+  $P_{\sum k_i} H^*(M_{\mathrm{Dol}}, \mathbb{Q})$.  This yields
+  $W_{2k} H^* \subseteq P_k H^*$.
+
+  \textit{Step~(b): Equality via curious Hard Lefschetz.}  Since $W_{2k} = W_{2k+1}$ (by
+  Markman--Shende), the inclusion $W_{2k} \subseteq P_k$ and Mellit's curious Hard Lefschetz
+  theorem together force $W_{2k} = P_k$ (using that both filtrations terminate at the same
+  degree and the Hard Lefschetz symmetry makes the inclusion an equality).
+
+  \textit{Step~(c): Strong perversity (Theorem~2.7).}  The strong perversity of
+  $\mathrm{ch}_k$ with respect to the Hitchin map is Theorem~2.7 of the paper
+  (\cref{thm:strong-perversity-chern}).  Its proof uses:
+  \begin{enumerate}
+    \item[(i)] Vanishing cycle techniques (§2) reduce to $\mathcal{L}$-twisted Hitchin systems
+      for an effective line bundle $\mathcal{L}$ of sufficiently large degree.
+    \item[(ii)] Global Springer theory (§3, Yun) provides the symmetry over the elliptic locus
+      of the Hitchin base.
+    \item[(iii)] The parabolic support theorem (§4, Theorem~3.2) extends this symmetry to the
+      full Hitchin base.
+  \end{enumerate}
+\end{proof}
+
+\begin{corollary}[$P=W$ for $\mathrm{SL}_p$, $p$ prime]
+  \label{cor:pw-slp}
+  \lean{MR4792069ThePwConjectureForGln.PEqualsWSLp}
+  \uses{thm:pw-main, def:smooth-projective-curve}
+  % SOURCE: [Maulik--Shen], arXiv:2209.02568, §0.1, p.2 (second theorem)
+  %         (read from references/pw-gln-maulik-shen.tex)
+  % SOURCE QUOTE: "In the special case when $n=p$ a prime number, \cite[Theorem 0.2]{SLn}
+  % implies that the $P=W$ conjecture for $\mathrm{GL}_p$, $\mathrm{SL}_p$, and $\mathrm{PGL}_p$
+  % are all equivalent. In particular, we have the following immediate consequence of
+  % Theorem \ref{thm}, which generalizes the result of \cite{dCHM1} for $\mathrm{SL}_2$."
+  % SOURCE QUOTE (continued): "\begin{thm}
+  % The $P=W$ conjecture holds for a curve $C$ of any genus at least two and $\mathrm{SL}_p$
+  % with $p$ a prime number.
+  % \end{thm}"
+  \textit{Source: Maulik--Shen, arXiv:2209.02568, §0.1.}
+  Let $C$ be a smooth projective curve of any genus $g \geq 2$
+  (\cref{def:smooth-projective-curve}), and let $p$ be a prime number.  Then the $P=W$
+  conjecture holds for $\mathrm{SL}_p$.  This is an immediate consequence of the main theorem
+  (\cref{thm:pw-main}): when $n = p$ is prime, the $P=W$ conjectures for $\mathrm{GL}_p$,
+  $\mathrm{SL}_p$, and $\mathrm{PGL}_p$ are all equivalent (by Theorem~0.2 of de Cataldo--Maulik--Shen--Zhang
+  on the $\mathrm{SL}_n$ case), so $P=W$ for $\mathrm{GL}_p$ implies $P=W$ for $\mathrm{SL}_p$.
+  This generalizes the $\mathrm{SL}_2$ result of de Cataldo--Hausel--Migliorini.
+\end{corollary}
+
+\begin{remark}[Proof structure overview]
+  \label{rem:proof-structure}
+  The proof of \cref{thm:pw-main} is organized as follows.
+  \begin{itemize}
+    \item \textbf{Section~1} introduces the perverse filtration and strong perversity, and
+      establishes compatibility of strong perversity with vanishing cycle functors
+      (Proposition~1.4).
+    \item \textbf{Section~2} reduces $P=W$ to the strong perversity of Chern classes
+      $\mathrm{ch}_k(\mathcal{U})$ of the universal family (Theorem~2.7), using Markman,
+      Shende, and Mellit's curious Hard Lefschetz theorem; it then reduces Theorem~2.7 from
+      the standard Hitchin system to $\mathcal{L}$-twisted Hitchin systems via vanishing
+      cycles.
+    \item \textbf{Section~3} develops global Springer theory for the stable locus over the
+      full Hitchin base, assuming a parabolic support theorem (Theorem~3.2), and deduces
+      Theorem~2.7.
+    \item \textbf{Section~4} proves the parabolic support theorem (Theorem~3.2) via the
+      theory of weak abelian fibrations and a relative dimension bound (Proposition~4.1).
+  \end{itemize}
+\end{remark}
+
+\section{Perverse filtrations and vanishing cycles}
+
+\begin{definition}[PerverseFiltration]
+  \label{def:perverse-filtration}
+  \lean{MR4792069ThePwConjectureForGln.PerverseFiltration}
+  \uses{def:hitchin-fibration, def:character-variety}
+  % SOURCE: [Maulik--Shen], arXiv:2209.02568, §1.1, p.4 (read from references/pw-gln-maulik-shen.tex)
+  % SOURCE QUOTE: "The perverse filtration
+  % \[
+  % P_0H^m(X, \BQ) \subset P_1H^m(X, \BQ) \subset \dots \subset H^m(X, \BQ)
+  % \]
+  % is an increasing filtration on the cohomology of $X$ governed by the topology of the
+  % morphism $f$; it is defined to be
+  % \[
+  % P_iH^m(X, \BQ) := \mathrm{Im}\left\{ H^{m-a+r}(Y, {^\mathbf{p}\tau_{\leq i}}
+  % (Rf_* \BQ_X[a-r])) \to H^m(X, \BQ)\right\}
+  % \]
+  % where $^\mathbf{p}\tau_{\leq * }$ is the perverse truncation functor \cite{BBD}."
+  \textit{Source: Maulik--Shen, arXiv:2209.02568, §1.1.}
+  Given the Hitchin map $h_B \colon M_B \to A$ (\cref{def:hitchin-fibration}), the
+  \emph{perverse filtration} on $H^m(M_B, \mathbb{Q})$ is the increasing filtration
+  \[
+    P_0 H^m(M_B, \mathbb{Q}) \subset P_1 H^m(M_B, \mathbb{Q})
+    \subset \cdots \subset H^m(M_B, \mathbb{Q})
+  \]
+  defined, for $\dim M_B = a$ and $\dim A = b$, by
+  \[
+    P_i H^m(M_B, \mathbb{Q}) \;:=\;
+    \mathrm{Im}\!\Bigl(
+      H^{m-a+r}\!\bigl(A,\; {{}^{\mathbf{p}}\tau_{\leq i}}
+      (R h_{B*}\, \mathbb{Q}_{M_B}[a-r])\bigr)
+      \to H^m(M_B, \mathbb{Q})
+    \Bigr),
+  \]
+  where $r = \dim M_B \times_A M_B - \dim M_B$ is the defect of semismallness of $h_B$, and
+  ${}^{\mathbf{p}}\tau_{\leq i}$ denotes the perverse truncation in the perverse $t$-structure
+  on the derived category of constructible sheaves on $A$ (BBD).  This definition requires
+  the formalism of perverse sheaves and the decomposition theorem, which are not yet in
+  Mathlib.
+\end{definition}
+
+\begin{definition}[StrongPerversity]
+  \label{def:strong-perversity}
+  \lean{MR4792069ThePwConjectureForGln.StrongPerversity}
+  \uses{def:perverse-filtration}
+  % SOURCE: [Maulik--Shen], arXiv:2209.02568, §1.1, p.5 (read from references/pw-gln-maulik-shen.tex)
+  % SOURCE QUOTE: "For an integer $c\geq 0$, we say that $\gamma \in H^l(X, \BQ)$ has
+  % \emph{strong perversity} $c$ with respect to $f$ if its induced morphism (\ref{induced})
+  % satisfies
+  % \begin{equation}\label{assumption}
+  % \gamma \left({^\mathbf{p}\tau_{\leq i} Rf_* \BQ_X}\right) \subset
+  % {^\mathbf{p}\tau_{\leq i+(c-l)}} \left(Rf_* \BQ_X  [l] \right), \quad \forall i;
+  % \end{equation}
+  % more precisely, the condition (\ref{assumption}) says that the composition
+  % \[
+  % {^\mathbf{p}\tau_{\leq i} Rf_* \BQ_X} \hookrightarrow Rf_* \BQ_X \xrightarrow{\gamma}
+  % Rf_* \BQ_X [l]
+  % \]
+  % factors through ${^\mathbf{p}\tau_{\leq i+(c-l)}} \left(Rf_* \BQ_X  [l] \right)
+  % \hookrightarrow Rf_* \BQ_X  [l]$ for any $i$.  Notice that $\gamma$ automatically has
+  % strong perversity $l$, so this condition is interesting only when $c < l$."
+  \textit{Source: Maulik--Shen, arXiv:2209.02568, §1.1.}
+  Let $f \colon X \to Y$ be a proper morphism between irreducible nonsingular quasi-projective
+  varieties, with $\dim X = a$ and defect of semismallness $r$.  For an integer $c \geq 0$,
+  a cohomology class $\gamma \in H^l(X, \mathbb{Q})$ has \emph{strong perversity} $c$ with
+  respect to $f$ if the induced morphism $\gamma \colon Rf_* \mathbb{Q}_X \to Rf_* \mathbb{Q}_X[l]$
+  satisfies
+  \[
+    \gamma\bigl({{}^{\mathbf{p}}\tau_{\leq i}}\, Rf_*\, \mathbb{Q}_X\bigr)
+    \;\subset\;
+    {{}^{\mathbf{p}}\tau_{\leq i+(c-l)}}\bigl(Rf_*\, \mathbb{Q}_X[l]\bigr)
+    \quad \forall\, i,
+  \]
+  where ${}^{\mathbf{p}}\tau_{\leq i}$ is the perverse truncation functor (\cref{def:perverse-filtration}).
+  Equivalently, cup product with $\gamma$ sends $P_i H^m(X, \mathbb{Q})$ to
+  $P_{i+c} H^{m+l}(X, \mathbb{Q})$.  Since every class automatically has strong perversity
+  $l$, this notion is interesting only for $c < l$.
+\end{definition}
+
+\section{Strong perversity for Chern classes}
+
+\begin{theorem}[Strong perversity of tautological Chern classes]
+  \label{thm:strong-perversity-chern}
+  \lean{MR4792069ThePwConjectureForGln.StrongPerversityChern}
+  \uses{def:strong-perversity}
+  % SOURCE: [Maulik--Shen], arXiv:2209.02568, Theorem~2.7 (label conj2.7), §2.2, p.9
+  %         (read from references/pw-gln-maulik-shen.tex)
+  % SOURCE QUOTE: "\begin{thm}\label{conj2.7}
+  % There exists an effective line bundle $\CL$ such that the class
+  % \[
+  % \mathrm{ch}_k(\CU^\CL) \in H^{2k}(C\times \widehat{M}^\CL_{\mathrm{Dol}}, \BQ)
+  % \]
+  % has strong perversity $k$ with respect to
+  % \[
+  % \mathbf{h}^\CL: = \mathrm{id} \times \widehat{h}^\CL:C\times
+  % \widehat{M}^\CL_{\mathrm{Dol}} \to C\times \widehat{A}^\CL.
+  % \]
+  % Here $\CU^\CL$ is the universal $\mathrm{PGL}_n$-bundle over
+  % $C\times \widehat{M}^\CL_{\mathrm{Dol}}$.
+  % \end{thm}"
+  \textit{Source: Maulik--Shen, arXiv:2209.02568, Theorem~2.7.}
+  This is the sheaf-theoretic enhancement of $P=W$ that is the technical heart of the proof.
+  There exists an effective line bundle $\mathcal{L}$ on $C$ such that the Chern character
+  class
+  \[
+    \mathrm{ch}_k(\mathcal{U}^{\mathcal{L}})
+    \in H^{2k}\bigl(C \times \widehat{M}^{\mathcal{L}}_{\mathrm{Dol}}, \mathbb{Q}\bigr)
+  \]
+  of the universal $\mathrm{PGL}_n$-bundle $\mathcal{U}^{\mathcal{L}}$ over
+  $C \times \widehat{M}^{\mathcal{L}}_{\mathrm{Dol}}$ (the $\mathcal{L}$-twisted $\mathrm{PGL}_n$
+  Dolbeault moduli space) has \emph{strong perversity} $k$ (\cref{def:strong-perversity}) with
+  respect to the map
+  \[
+    \mathbf{h}^{\mathcal{L}} \;:=\; \mathrm{id} \times \widehat{h}^{\mathcal{L}}
+    \colon C \times \widehat{M}^{\mathcal{L}}_{\mathrm{Dol}}
+    \to C \times \widehat{A}^{\mathcal{L}},
+  \]
+  where $\widehat{h}^{\mathcal{L}}$ is the $\mathcal{L}$-twisted $\mathrm{PGL}_n$ Hitchin map.
+  The perversity bound $k$ here is strictly stronger than the trivial bound $2k$; this
+  statement implies the $P=W$ conjecture (\cref{thm:pw-main}) and is proved in Sections~3--4 of
+  the paper via global Springer theory and the parabolic support theorem.
+\end{theorem}

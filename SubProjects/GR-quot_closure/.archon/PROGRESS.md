@@ -2,94 +2,85 @@
 
 ## Current Stage
 
-prover
+prover  (GR-seed cone DELIVERED iter-001; SNAP-S0 graded-section residue ACTIVE iter-006)
 
 ## Stages
 - [x] init
 - [x] autoformalize
-- [ ] prover
-- [ ] polish
+- [ ] prover — GR-seed cone delivered (iter-001). SNAP-S0 residue (9 sorries in
+      `SectionGradedRing.lean`) now ACTIVE (iter-006, user-directed). χ-blocked nodes remain
+      DEFERRED (need a cohomology engine absent here).
+- [ ] polish — after SNAP residue closes.
 
 ## End-state overview
 
-**Zero inline `sorry` in the dependency cone of the seeds + kernel-only axioms** — modulo the
-two χ-blocked nodes and the shared SNAP nodes, which are sourced from sibling legs at merge
-(see below). This is the **GR-quot closure** extracted from *Quot-Foundations*: the
-representability of the relative Grassmannian (Nitsure §1/§5; FGA Explained Ch. 5). Full arc in
-`.archon/STRATEGY.md`.
+**ACHIEVED (iter-001):** the goal seed `AlgebraicGeometry.Grassmannian.represents` is sorry-free
+and axiom-clean (`#print axioms` = `[propext, Classical.choice, Quot.sound]`, NO `sorryAx`). The
+GR-quot representability cone (Nitsure §1/§5; FGA Explained Ch. 5) is delivered and merge-ready.
 
-**Seeds:** `thm:grassmannian_representable`, `def:grassmannian_scheme`,
-`lem:tautologicalQuotient_epi` (cone = 287 blueprint nodes, 9 sorries).
-
-## The 9 cone sorries, by disposition
-
-1. **GR-quot — closable here (3).** `def:grassmannian_scheme`, `lem:tautologicalQuotient_epi`,
-   `thm:grassmannian_representable`. The rank-`d` Grassmannian is a χ-free construction
-   (constant Hilbert polynomial `Φ=d`); its own Lean decls do not need higher cohomology.
-2. **SNAP — shared with sibling `FBC-B_SNAP-chain` (4).** `def:sectionsCast`,
-   `lem:sectionsCast_refl`, `lem:gradedMonoid_eq_of_cast`, `lem:sectionMul_coherent` (+ the
-   `gcommSemiring`/`gmodule` graded-assembly lemmas). H⁰ graded ring `Γ_*(X,L)`,
-   Čech-independent. **Per user hint: keep as sorry here OR import the sibling's finished
-   proofs — do not diverge the encoding.**
-3. **χ-blocked — fill from cohomology leg (2).** `def:quot_functor`, `def:hilbert_polynomial`.
-   In-cone via `grassmannian_scheme \uses quot_functor \uses hilbert_polynomial`, but
-   `Scheme.hilbertPolynomial` is **χ-semantic** (verified: `Φ(m)=χ=Σᵢ(-1)ⁱ dim Hⁱ`, body
-   `sorry` needing graded-Euler-characteristic infra). This i=0 leg has no cohomology engine →
-   **keep both as sorry; never fabricate an H⁰ `Φ_s` under the χ label.**
+**ACTIVE (iter-006):** the SNAP-S0 H⁰ section graded ring `Γ_*(X,L)=⊕_{n≥0}Γ(X,L^{⊗n})`
+(Stacks 01CV) residue. Foundations (`tensorPow`, `sectionsMul`, `tensorObjAssoc`, `tensorPowAdd`)
+already proved axiom-clean in-leg. Strategy-critic confirmed (iter-006) the four coherence laws are
+sound graded-monoid laws and that closing them only removes `sorryAx` — it cannot add a `\uses`
+edge into the delivered seed cone (disjointness preserved).
 
 ## Current Objectives
 
-The closable frontier is GR-quot + SNAP (SNAP only if not importing the sibling's proofs).
-**NEVER positional `rw`/`simp`/`erw` under the `X.Modules`/Scheme-cat diamond**; use term-mode
-(`.trans`/`congrArg`/applied `map_smul`) + the `change`-to-nested-application lever.
+1. **`AlgebraicJacobian/Picard/SectionGradedRing.lean`** — Fill the 9 SNAP-S0 residue sorries, in
+   dependency order:
+   - `sectionsCast` (L1841) — `def`. Image under `Γ(X,−)` of the canonical `L^{⊗i}≅L^{⊗j}` along
+     `h:i=j` via `tensorPow`. Refl-case collapses via `eqToIso_refl`+`map_id`.
+   - `sectionsCast_refl` (L1847) — `= LinearEquiv.refl` (mirrors `TensorPower.cast_refl`).
+   - `gradedMonoid_eq_of_cast` (L1854) — repackage a transport-mediated component equality into an
+     equality of dependent pairs (mirrors Mathlib `gradedMonoid_eq_of_cast`).
+   - `GradedMonoid.GMul (sectionDeg L)` instance (L1861) — `mul a b =
+     (tensorPowAdd L i j).hom.val.app (op ⊤) ∘ sectionsMul (tensorPow L i) (tensorPow L j)` on `a⊗ₜb`.
+   - `GradedMonoid.GOne (sectionDeg L)` instance (L1866) — image of `1∈Γ(X,𝒪_X)` in `sectionDeg L 0`.
+   - `sectionsMul_one_mul` (L1872), `sectionsMul_mul_one` (L1880), `sectionsMul_mul_assoc` (L1887),
+     `sectionsMul_mul_comm` (L1897) — the four `lem:sectionMul_coherent` component laws, mirroring
+     `TensorPower.{one_mul,mul_one,mul_assoc,mul_comm}`. Reduce to the presheaf level where eval at
+     the top open `op ⊤` is STRICT monoidal; ride the sheafification unit η through
+     `tensorObjAssoc`/`tensorObjUnitIso`/`tensorPowAdd`. Pass each through `gradedMonoid_eq_of_cast`.
 
-1. **`AlgebraicJacobian/Picard/GrassmannianQuot.lean`** — GR-quot endgame.
-   - `tautologicalQuotient_epi` (`lem:tautologicalQuotient_epi`): epi of the tautological
-     quotient via joint reflection across the chart cover; precondition
-     `isIso_glueRestrictionHom` is sorry-free. Closing this → GrassmannianQuot route complete
-     (`represents` already done).
-   - Blueprint: `chapters/Picard_GrassmannianQuot.tex`. [prover-mode: prove]
+   Blueprint: `chapters/Picard_SectionGradedRing.tex` — `def:sectionsCast`, `lem:sectionsCast_refl`,
+   `lem:gradedMonoid_eq_of_cast`, `def:sectionGradedGMul`, `def:sectionGradedGOne`,
+   `lem:sectionMul_coherent` (gate-cleared complete+correct, iter-006).
+   References (standing directive — reference-driven proofs):
+   - `Γ_*(X,L)` graded ring: Stacks **01CV** (`references/stacks-modules.tex`, §17.25, line 4269);
+     tensor product `F⊗G` & bilinearity: Stacks **01CA** (§17.16, line 2271).
+   - Cast/coherence idiom: Mathlib `Mathlib.LinearAlgebra.TensorPower.Basic`
+     (`TensorPower.cast`, `cast_refl`, `gradedMonoid_eq_of_cast`, `one_mul`, `mul_one`, `mul_assoc`,
+     `mul_comm`) — the section-level analogues being formalized here.
 
-2. **`AlgebraicJacobian/Picard/SectionGradedRing.lean`** — SNAP graded assembly (ONLY if not
-   importing sibling proofs; coordinate with `FBC-B_SNAP-chain` first).
-   - Fill bottom-up: `sectionsCast`, `sectionsCast_refl`, `gradedMonoid_eq_of_cast`, then the 4
-     cast-mediated coherence Eqs `sectionsMul_{one_mul,mul_one,mul_assoc,mul_comm}` =
-     `lem:sectionMul_coherent`; then the `GCommSemiring`/`Gmodule` instances mirroring
-     `Mathlib.LinearAlgebra.TensorPower.Basic` field-for-field.
-   - Recipe: `analogies/snap-gcomm.md`, `analogies/snap-assoc.md`, blueprint proofs.
-   - Blueprint: `chapters/Picard_SectionGradedRing.tex`. [prover-mode: prove]
+   Hazard (ARCHON_MEMORY): value-`ModuleCat` diamond — never positional `rw`/`simp`/`erw`; use
+   term-mode (`.trans`/`congrArg`/applied `map_smul`) + `change`-to-nested-application; after a `rw`
+   yielding syntactic `X = X`, append explicit `rfl`. `sectionMul_coherent` = FOUR cast-mediated
+   component Eqs, NOT one `GradedMonoid` Eq/HEq. Merge discipline: do NOT rename kept decls/labels;
+   reuse byte-identical sibling signatures so the `FBC-B_SNAP-chain` merge is a dedup.
+   [prover-mode: prove]
 
-## Blocked / merge-sourced (do not dispatch a prover)
+## Deferred (NOT objectives this iter)
 
-- **`def:quot_functor`, `def:hilbert_polynomial`** — χ-blocked (see above). Fill from the
-  cohomology leg at merge-back; keep the `sorry` bodies here.
-- **SNAP nodes** — if the decision is to import the sibling's proofs, treat these as
-  merge-sourced too rather than re-proving.
+- **χ-blocked (`QuotScheme.lean`, 4 sorries):** `hilbertPolynomial` (χ-semantic
+  `Φ(m)=χ=Σᵢ(-1)ⁱ dim Hⁱ`), `QuotFunctor`, `Grassmannian` functor. Need a higher-cohomology engine
+  this i=0 leg lacks; filled from the cohomology leg at merge. NEVER fabricate an H⁰ `Φ_s` under the
+  χ label. (Genuine mathematical gap — no in-leg informal proof route; not blind-formalizable.)
+- **`RelativeSpec.lean`:** Route-A (relative Picard) sibling chapter, no phase in this leg's
+  STRATEGY; its real sorries are gated on `structureMorphism` being a typed sorry. Out of scope.
+- **Out-of-cone debt:** weak `Scheme.Grassmannian.representable` skeleton; the goal does not rely on it.
 
-## Tracked (non-blocking blueprint debt)
+## Blueprint health (non-gating, deferred to merge-back)
 
-- `Picard_QuotScheme.tex` `\lean{Grassmannian.representable}` UNDER-DELIVERS (weakened existence
-  skeleton, omits smoothness/properness/rel-dim/tautological-quotient); strengthen or split the
-  label before claiming the full representability statement.
-- `Picard_QuotScheme.tex` `def:hilbert_polynomial` ENCODING comment claims an **H⁰** encoding;
-  this is inconsistent with the actual **χ** Lean decl (`QuotScheme.lean` docstring). The Lean
-  source governs — do not act on the H⁰ comment.
+blueprint-reviewer (iter-006) flagged dangling refs in DEFERRED chapters: `Cohomology_FlatBaseChange.tex`
+(15 refs + covers 2 non-existent files), `QuotScheme.tex` (13 crefs), `GlueDescent.tex` (2 sublemma
+wire-up blocks). All target labels outside the active SNAP cone — extraction artifacts that resolve at
+merge-back. Do NOT edit (byte-identical-to-parent discipline). The active chapter is clean.
 
 ## Standing notes
 
 - **Prover model:** `opus`.
-- **Import architecture:** root `AlgebraicJacobian.lean` imports each leaf; provers add decls to
-  EXISTING files. `GrassmannianQuot` imports `GrassmannianCells` + `QuotScheme` + `GlueDescent`.
-- **Cold-build validation:** `lake build AlgebraicJacobian.Picard.GrassmannianQuot` /
-  `…SectionGradedRing` (LSP hides `(kernel) deterministic timeout`); do NOT add `maxHeartbeats 1e6`.
+- **Cold-build validation:** `lake build AlgebraicJacobian.Picard.SectionGradedRing` (LSP hides
+  `(kernel) deterministic timeout`); do NOT add `maxHeartbeats 1e6`.
 - **No LLM API key in env** — use blueprint + Mathlib search + the analogist subagent.
-- **GR-quot do-not-retry:** `(unit R).sections` has NO AddCommGroup/Module instance — use
-  biproducts. Value-ModuleCat diamond: `comp_apply`/`hom_comp` spellings ALL fail asymmetrically
-  → `change`-to-nested-application; spell `@CategoryTheory.inv _ _ _ _ (...) hinst`; build
-  composites with `IsIso.comp_isIso'`.
-- **SNAP do-not-retry:** full `MonoidalCategory (SheafOfModules)` / strong-monoidal
-  sheafification NOT needed; the crux is CLOSED. Stalkwise + "presheaf+Γ-at-end" routes are DEAD.
-  Carrier: `AddCommGrpCat` NOT `AddCommGrp`; `P ⊗ Q` must spell
-  `MonoidalCategory.tensorObj (C := MonoidalPresheaf X) P Q`. `sectionMul_coherent` = FOUR
-  cast-mediated component Eqs (NOT one GradedMonoid Eq, NOT a raw HEq).
-- **Merge-back discipline:** never rename kept decls/labels/paths; never add `\leanok` by hand.
+- **Merge-back discipline (load-bearing):** never rename kept decls/labels/paths; never add `\leanok`
+  by hand. Lean names byte-identical to parent + sibling so SNAP merge is a dedup.

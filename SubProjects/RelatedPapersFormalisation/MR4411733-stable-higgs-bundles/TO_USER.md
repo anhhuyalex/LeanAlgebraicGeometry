@@ -1,0 +1,1 @@
+- Blueprint complete (iter 001): 33 declarations, 75 edges, 0 ∞-nodes; strategy adopts axiom-first approach for moduli space M/h/N (unavailable in Mathlib). Prover loop begins with three parallel lanes: BB theory, character formula, and moduli axioms — no user action needed.

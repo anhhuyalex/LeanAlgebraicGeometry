@@ -1,0 +1,609 @@
+\chapter{Background on parabolic bundles}
+\label{chap:parabolic}
+
+% archon:covers MR4736527GeometricLocalSystemsOnVeryGeneralCurvesAndIsomonodromy/Parabolic.lean
+
+% Chapter-local macros (report to plan agent for promotion to common.tex):
+%   \sheafhom, \sheafend, \colim
+\providecommand{\sheafhom}{\mathop{\mathscr{H}\!om}}
+\providecommand{\sheafend}{\mathop{\mathscr{E}\!nd}}
+\providecommand{\colim}{\operatorname{colim}}
+
+Throughout this chapter $C$ is a smooth proper curve and $D \subset C$ a reduced
+divisor; we write $D = x_1 + \cdots + x_n$ with the $x_j$ distinct.
+Loosely speaking, a parabolic bundle is a vector bundle on $C$ together with a
+filtration of the fibres over the points of $D$, weighted by an increasing
+sequence of real numbers in $[0,1)$. We follow the notation of
+\cite[\S2.3]{BHH:parabolic}, with
+\cite[Part 3, \S1]{seshadri:fibres-vectoriels-sur-les-courbes-algebriques},
+\cite{yokogawa:infinitesimal-deformation}, and
+\cite{bodenY:moduli-spaces-of-parabolic-higgs-bundles} as further references.
+
+\section{Definition of parabolic bundles}
+\label{sec:definition-parabolic}
+
+\begin{definition}[Parabolic bundle]
+  \label{def:parabolic-bundle}
+  \lean{LandesmanLitt.ParabolicBundle}
+  % SOURCE: [Landesman--Litt], "Geometric local systems on very general curves
+  % and isomonodromy" (arXiv:2202.00039), \S2.3, Definition (parabolic bundle)
+  % (read from references/MR4736527-local-systems-isomonodromy.tex)
+  % SOURCE QUOTE: "Let $E$ be a vector bundle over a curve $C$.
+  % Let $D = x_1 + \cdots + x_n \subset C$ denote a divisor, with the $x_i$ distinct.
+  % A {\em quasiparabolic structure} on $E$ over $D$ is a strictly decreasing
+  % filtration of subspaces
+  % \begin{align*}
+  %   E_{x_j} = E_j^1 \supsetneq E_j^2 \supsetneq \cdots \supsetneq E_j^{n_j+1} = 0
+  % \end{align*}
+  % for each $1 \leq j \leq n$.
+  % A {\em parabolic structure} on $E$ over $D$ is a quasiparabolic
+  % structure together with $n$ sequences of real numbers
+  % \begin{align*}
+  %   0 \leq \alpha^1_j < \alpha^2_j \cdots < \alpha^{n_j}_j < 1
+  % \end{align*}
+  % for $1 \leq j \leq n$.
+  % A {\em parabolic bundle} is a vector bundle with a parabolic structure.
+  % The collection $\{\alpha^i_j\}$ are called the {\em weights} of the
+  % parabolic bundle."
+  \textit{Source: Landesman--Litt, \S2.3.}
+  Let $E$ be a vector bundle over $C$. A \emph{quasiparabolic structure} on $E$
+  over $D$ is, for each $1 \leq j \leq n$, a strictly decreasing filtration of
+  subspaces of the fibre $E_{x_j}$
+  \[
+    E_{x_j} = E_j^1 \supsetneq E_j^2 \supsetneq \cdots \supsetneq E_j^{n_j+1} = 0 .
+  \]
+  A \emph{parabolic structure} on $E$ over $D$ is a quasiparabolic structure
+  together with, for each $1 \leq j \leq n$, a strictly increasing sequence of
+  \emph{weights}
+  \[
+    0 \leq \alpha^1_j < \alpha^2_j < \cdots < \alpha^{n_j}_j < 1 .
+  \]
+  A \emph{parabolic bundle} is a vector bundle equipped with a parabolic
+  structure. We say it has \emph{rational weights} if all $\alpha^i_j \in \Q$.
+  We abbreviate the data $(E, \{E^i_j\}, \{\alpha^i_j\})$ as $E_\star$.
+\end{definition}
+
+\begin{definition}[Bundle degree on a curve]
+  \label{def:bundle-degree}
+  \lean{LandesmanLitt.ParabolicBundle.deg}
+  % Mathlib status: no faithful anchor located for the degree of a vector
+  % bundle on a smooth proper curve; left as a project obligation (NOT
+  % \mathlibok). Flagged for the plan agent.
+  For a vector bundle $E$ on the smooth proper curve $C$, $\deg E \in \Z$ denotes
+  its degree, i.e.\ the degree of the line bundle $\det E = \bigwedge^{\rk E} E$.
+  It is additive in short exact sequences: $\deg E = \deg F + \deg Q$ whenever
+  $0 \to F \to E \to Q \to 0$ is exact.
+\end{definition}
+
+\begin{definition}[Parabolic degree]
+  \label{def:par-degree}
+  \lean{LandesmanLitt.parDeg}
+  \uses{def:parabolic-bundle, def:bundle-degree}
+  % SOURCE: [Landesman--Litt] (arXiv:2202.00039), \S2.3, Definition (parabolic
+  % degree and slope)
+  % (read from references/MR4736527-local-systems-isomonodromy.tex)
+  % SOURCE QUOTE: "Let $E_\star := (E, \{E^i_j\}, \{\alpha^i_j\})$. We define the {\em
+  % parabolic degree} of $E_\star$ as
+  % \begin{align*}
+  %   \on{par-deg}(E_\star) := \deg(E) + \sum_{j=1}^n \sum_{i=1}^{n_j}
+  %   \alpha^i_j \dim(E_j^i/E_j^{i+1}).
+  % \end{align*}"
+  \textit{Source: Landesman--Litt, \S2.3.}
+  For a parabolic bundle $E_\star = (E, \{E^i_j\}, \{\alpha^i_j\})$, the
+  \emph{parabolic degree} is
+  \[
+    \pardeg(E_\star) := \deg(E) + \sum_{j=1}^n \sum_{i=1}^{n_j}
+      \alpha^i_j \, \dim\!\left(E_j^i / E_j^{i+1}\right).
+  \]
+\end{definition}
+
+\begin{definition}[Parabolic slope]
+  \label{def:par-slope}
+  \lean{LandesmanLitt.parSlope}
+  \uses{def:par-degree}
+  % SOURCE: [Landesman--Litt] (arXiv:2202.00039), \S2.3, Definition (parabolic
+  % degree and slope)
+  % (read from references/MR4736527-local-systems-isomonodromy.tex)
+  % SOURCE QUOTE: "We define the {\em parabolic slope} as $\mu_\star(E_\star) :=
+  % \on{par-deg}(E_\star)/\rk(E_\star)$."
+  \textit{Source: Landesman--Litt, \S2.3.}
+  The \emph{parabolic slope} of a parabolic bundle $E_\star$ is
+  \[
+    \mu_\star(E_\star) := \frac{\pardeg(E_\star)}{\rk(E_\star)} .
+  \]
+\end{definition}
+
+\section{Definition of parabolic sheaves}
+\label{sec:parabolic-sheaf}
+
+In order to apply Serre duality later we will need not only parabolic bundles
+but also coparabolic bundles, which are examples of \emph{parabolic sheaves};
+these are defined next, following
+\cite{yokogawa:infinitesimal-deformation} and
+\cite{bodenY:moduli-spaces-of-parabolic-higgs-bundles}.
+
+\begin{definition}[$\R$-filtered $\sO_X$-module]
+  \label{def:filtered-OX-module}
+  \lean{LandesmanLitt.FilteredModule}
+  % SOURCE: [Landesman--Litt] (arXiv:2202.00039), \S2.3, Definition (filtered
+  % O_X-module)
+  % (read from references/MR4736527-local-systems-isomonodromy.tex)
+  % SOURCE QUOTE: "Let $X$ be a scheme and $D \subset X$ an effective Cartier divisor.
+  % Let $\mathbb R$ denote the category whose objects are real numbers with
+  % a single morphism $i^{\alpha,\beta}:\alpha\to\beta$ if $\alpha \geq \beta$ and no
+  % morphisms otherwise.
+  % Let $\mathscr M_X$ denote the category of sheaves of $\mathscr{O}_X$-modules.
+  % A {\em $\mathbb R$-filtered $\mathscr O_X$-module} is a functor $E: \mathbb R \to \mathscr M_X$.
+  % Notationally, we use $E_\star$ to denote the functor $E$, so $E_\alpha := E(\alpha)$.
+  % We write $i_E^{\alpha,\beta} := E(i^{\alpha,\beta})$."
+  \textit{Source: Landesman--Litt, \S2.3.}
+  Let $X$ be a scheme and $D \subset X$ an effective Cartier divisor. Regard
+  $\R$ as a category with a single morphism $i^{\alpha,\beta}:\alpha\to\beta$
+  exactly when $\alpha \geq \beta$, and let $\sM_X$ be the category of sheaves of
+  $\sO_X$-modules. An \emph{$\R$-filtered $\sO_X$-module} is a functor
+  $E_\star : \R \to \sM_X$; we write $E_\alpha := E_\star(\alpha)$ and
+  $i_E^{\alpha,\beta} := E_\star(i^{\alpha,\beta})$ for the transition maps.
+  For $\alpha \in \R$ the shifted module $E[\alpha]_\star$ is defined by
+  $E[\alpha]_\beta := E_{\alpha+\beta}$, with transition maps inherited from $E$.
+\end{definition}
+
+\begin{definition}[Parabolic sheaf]
+  \label{def:parabolic-sheaf}
+  \lean{LandesmanLitt.ParabolicSheaf}
+  \uses{def:filtered-OX-module}
+  % SOURCE: [Landesman--Litt] (arXiv:2202.00039), \S2.3, Definition (parabolic sheaf)
+  % (read from references/MR4736527-local-systems-isomonodromy.tex)
+  % SOURCE QUOTE: "A {\em parabolic sheaf} on $X$ with respect to $D$ is
+  % a $\mathbb R$-filtered $\mathscr O_X$-module $E_\star$ equipped with an isomorphism
+  % \begin{align*}
+  %   j_E : E_\star \otimes \mathscr O_X(-D) \overset{\sim}{\to} E[1]_\star
+  % \end{align*}
+  %  such that $i_E^{[1,0]} \circ j_E = \on{id}_{E_\star}
+  % \otimes i_D: E_\star \otimes \mathscr O_X(-D) \to E_\star$, where $i_D: \mathscr{O}_X(-D)\to \mathscr{O}_X$ is the natural inclusion."
+  \textit{Source: Landesman--Litt, \S2.3.}
+  A \emph{parabolic sheaf} on $X$ with respect to $D$ is an $\R$-filtered
+  $\sO_X$-module $E_\star$ together with an isomorphism
+  \[
+    j_E : E_\star \otimes \sO_X(-D) \xrightarrow{\;\sim\;} E[1]_\star
+  \]
+  satisfying $i_E^{[1,0]} \circ j_E = \mathrm{id}_{E_\star} \otimes i_D$, where
+  $i_D : \sO_X(-D) \to \sO_X$ is the natural inclusion. A \emph{parabolic
+  morphism} $f : E_\star \to F_\star$ is a natural transformation commuting with
+  the structure isomorphisms $j_E, j_F$. We write $\Hom(E_\star, F_\star)$ for
+  the set of parabolic morphisms and $\sheafhom(E_\star, F_\star)$ for the
+  associated sheaf-Hom; the parabolic sheaf $\sheafhom(E_\star, F_\star)_\star$
+  has $\sheafhom(E_\star, F_\star)_\alpha := \sheafhom(E_\star, F[\alpha]_\star)$.
+  We set $\End(E_\star) := \Hom(E_\star, E_\star)$ and
+  $\sheafend(E_\star) := \sheafhom(E_\star, E_\star)$.
+\end{definition}
+
+\begin{definition}[Parabolic sheaf of a parabolic bundle]
+  \label{def:parabolic-bundle-sheaf}
+  \lean{LandesmanLitt.ParabolicBundle.toParabolicSheaf}
+  \uses{def:parabolic-bundle, def:parabolic-sheaf}
+  % SOURCE: [Landesman--Litt] (arXiv:2202.00039), \S2.3, Example (parabolic
+  % vector bundle as parabolic sheaf)
+  % (read from references/MR4736527-local-systems-isomonodromy.tex)
+  % SOURCE QUOTE: "Any parabolic vector bundle $(E, \{E^i_j\}, \{\alpha^i_j\})$ defines a
+  % parabolic sheaf as follows. For $0 \leq \alpha < 1$, define
+  % \begin{align*}
+  % E_\alpha := \cap_{j=1}^n \ker(E \to E_{x_j}/E^{\beta(\alpha, j)}_j).
+  % \end{align*}
+  % where $\beta(\alpha, j)=\min(i: \alpha^i_j\geq \alpha),$ for $\alpha\leq \max_i(\alpha^i_j)$ and taking $\beta(\alpha, j)=n_j+1$ for $1>\alpha>\max_i(\alpha^i_j)$.
+  % For $n\in \mathbb{Z}$ set $E_{x+n} := E_x(-nD)$ and take $i^{\alpha,\beta}_E$ as the
+  % natural inclusions."
+  \textit{Source: Landesman--Litt, \S2.3.}
+  Every parabolic bundle $E_\star = (E, \{E^i_j\}, \{\alpha^i_j\})$ determines a
+  parabolic sheaf: for $0 \leq \alpha < 1$ set
+  \[
+    E_\alpha := \bigcap_{j=1}^n \ker\!\left(E \to E_{x_j}/E^{\beta(\alpha,j)}_j\right),
+  \]
+  where $\beta(\alpha,j) = \min\{ i : \alpha^i_j \geq \alpha\}$ for
+  $\alpha \leq \max_i \alpha^i_j$, and $\beta(\alpha,j) = n_j+1$ for
+  $\max_i \alpha^i_j < \alpha < 1$; extend by $E_{\alpha+m} := E_\alpha(-mD)$ for
+  $m \in \Z$, with the natural inclusions as transition maps. We identify a
+  parabolic bundle with its associated parabolic sheaf.
+\end{definition}
+
+The coparabolic bundles we need are built from this construction. Whereas the
+parabolic sheaf of a parabolic bundle is constant on intervals
+$(\alpha^i, \alpha^{i+1}]$ (lower semicontinuity), a coparabolic bundle is
+constant on intervals $[\alpha^i, \alpha^{i+1})$ (upper semicontinuity); see
+\cite[Figure 1]{bodenY:moduli-spaces-of-parabolic-higgs-bundles}.
+
+\begin{definition}[Coparabolic bundle]
+  \label{def:coparabolic-bundle}
+  \lean{LandesmanLitt.CoparabolicBundle}
+  \uses{def:parabolic-bundle, def:parabolic-sheaf, def:parabolic-bundle-sheaf}
+  % SOURCE: [Landesman--Litt] (arXiv:2202.00039), \S2.3, Definition 2.3 (coparabolic
+  % vector bundles), attributed to [Boden--Yokogawa, Definition 2.3]
+  % (read from references/MR4736527-local-systems-isomonodromy.tex)
+  % SOURCE QUOTE: "Let $E_\star$ denote a parabolic vector bundle, viewed as a parabolic
+  % sheaf.
+  % The associated {\em coparabolic vector bundle}, denoted
+  % $\widehat{E}_\star$, is the parabolic sheaf defined by
+  %   $$\widehat{E}_\alpha :=
+  %     \on{colim}_{\beta > \alpha} E_{\beta} $$
+  % The colimit above is the union taken over the inclusions given by
+  % $i^{\alpha,\beta}_E$."
+  \textit{Source: Landesman--Litt, \S2.3 (after Boden--Yokogawa).}
+  Let $E_\star$ be a parabolic bundle, viewed as a parabolic sheaf via
+  \cref{def:parabolic-bundle-sheaf}. The associated \emph{coparabolic bundle}
+  $\widehat{E}_\star$ is the parabolic sheaf with
+  \[
+    \widehat{E}_\alpha := \colim_{\beta > \alpha} E_\beta ,
+  \]
+  the colimit (union) taken over the transition inclusions $i^{\alpha,\beta}_E$.
+\end{definition}
+
+\begin{definition}[Coparabolic degree and slope]
+  \label{def:copar-degree}
+  \lean{LandesmanLitt.coparDeg}
+  \uses{def:coparabolic-bundle, def:par-degree, def:par-slope}
+  % SOURCE: [Landesman--Litt] (arXiv:2202.00039), \S2.3, Definition (coparabolic
+  % degree and slope)
+  % (read from references/MR4736527-local-systems-isomonodromy.tex)
+  % SOURCE QUOTE: "If $F_\star$ is a coparabolic bundle of the form $F_\star = \widehat{E}_\star$,
+  % for $E_\star$ a parabolic vector bundle, then the {\em coparabolic degree} of
+  % $F_\star$ is defined by $\on{copar-deg}(F_\star) := \on{par-deg}(E_\star)$ and the
+  % coparabolic slope of $F_\star$ is defined by $\mu_\star(F_\star) := \mu_\star(E_\star)$."
+  \textit{Source: Landesman--Litt, \S2.3.}
+  For a coparabolic bundle $F_\star = \widehat{E}_\star$ with $E_\star$ a
+  parabolic bundle, the \emph{coparabolic degree} and \emph{slope} are
+  $\copardeg(F_\star) := \pardeg(E_\star)$ and
+  $\mu_\star(F_\star) := \mu_\star(E_\star)$.
+\end{definition}
+
+\section{Induced subbundles and quotient bundles}
+\label{sec:induced-subbundle}
+
+\begin{definition}[Induced parabolic structure on a subbundle]
+  \label{def:induced-subbundle}
+  \lean{LandesmanLitt.inducedSub}
+  \uses{def:parabolic-bundle}
+  % SOURCE: [Landesman--Litt] (arXiv:2202.00039), \S2.3, induced parabolic
+  % structure on a subbundle, after [Seshadri, Part 3, \S1.A, Definition 4]
+  % (read from references/MR4736527-local-systems-isomonodromy.tex)
+  % SOURCE QUOTE: "Any subbundle $F \subset E$ has an induced parabolic structure $F_\star$ as
+  % follows, see
+  % \cite[Part 3, \S1.A, Definition 4]{seshadri:fibres-vectoriels-sur-les-courbes-algebriques}.
+  % The quasiparabolic structure over $x_j$ on $F$ is obtained
+  % from the filtration $$F_{x_j} = E^1_j \cap F_{x_j} \supset E^2_j \cap
+  % F_{x_j} \supset \cdots \supset E^{n_j+1}_j \cap F_{x_j} = 0$$
+  % by removing redundancies. For the weight associated to $F^i_j \subset
+  % F_{x_j}$ one takes $$\max_{\substack{k, 1 \leq k \leq n_j}} \{ \alpha^k_j : F^i_j = E^k_j \cap
+  % F_{x_j}\}.$$"
+  \textit{Source: Landesman--Litt, \S2.3 (after Seshadri).}
+  Let $E_\star = (E, \{E^i_j\}, \{\alpha^i_j\})$ be a parabolic bundle and
+  $F \subset E$ a subbundle. The \emph{induced parabolic structure} $F_\star$ has
+  quasiparabolic filtration over $x_j$ obtained from
+  \[
+    F_{x_j} = E^1_j \cap F_{x_j} \supset E^2_j \cap F_{x_j} \supset \cdots
+      \supset E^{n_j+1}_j \cap F_{x_j} = 0
+  \]
+  by deleting repetitions, and the weight of a step $F^i_j \subset F_{x_j}$ is
+  $\max\{ \alpha^k_j : 1 \leq k \leq n_j,\ F^i_j = E^k_j \cap F_{x_j}\}$.
+\end{definition}
+
+\begin{definition}[Induced parabolic structure on a quotient]
+  \label{def:induced-quotient}
+  \lean{LandesmanLitt.inducedQuot}
+  \uses{def:parabolic-bundle}
+  % SOURCE: [Landesman--Litt] (arXiv:2202.00039), \S2.3, induced parabolic
+  % structure on a quotient bundle
+  % (read from references/MR4736527-local-systems-isomonodromy.tex)
+  % SOURCE QUOTE: "Similarly, any quotient $E \to Q$ with kernel $F$ has an induced parabolic structure
+  % given as follows.
+  % The quasiparabolic structure over $x_j$ on $Q$ is obtained from
+  % $$Q_{x_j} = (E^1_j+F_{x_j})/F_{x_j} \supset (E^2_j+F_{x_j})/F_{x_j}\supset\cdots\supset
+  % (E^{n_j+1}_j+F_{x_j})/F_{x_j} = 0$$
+  % by removing redundancies. For the weight associated to a subspace $Q^i_j \subset
+  % Q_{x_j}$ one takes $$\max_{\substack{k, 1 \leq k \leq n_j}} \{ \alpha^k_j : Q^i_j = (E^k_j + F_{x_j})
+  % /F_{x_j}\}.$$"
+  \textit{Source: Landesman--Litt, \S2.3.}
+  Let $E \to Q$ be a quotient bundle with kernel $F$. The \emph{induced
+  parabolic structure} $Q_\star$ has quasiparabolic filtration over $x_j$
+  obtained from
+  \[
+    Q_{x_j} = (E^1_j + F_{x_j})/F_{x_j} \supset (E^2_j + F_{x_j})/F_{x_j} \supset
+      \cdots \supset (E^{n_j+1}_j + F_{x_j})/F_{x_j} = 0
+  \]
+  by deleting repetitions, and the weight of a step $Q^i_j \subset Q_{x_j}$ is
+  $\max\{ \alpha^k_j : 1 \leq k \leq n_j,\ Q^i_j = (E^k_j + F_{x_j})/F_{x_j}\}$.
+\end{definition}
+
+\section{Stability of parabolic and coparabolic bundles}
+\label{sec:stability-parabolic}
+
+\begin{definition}[Parabolic (semi)stability]
+  \label{def:parabolic-stability}
+  \lean{LandesmanLitt.ParabolicSemistable}
+  \uses{def:par-slope, def:induced-subbundle}
+  % SOURCE: [Landesman--Litt] (arXiv:2202.00039), \S2.3, Definition (parabolic
+  % stability)
+  % (read from references/MR4736527-local-systems-isomonodromy.tex)
+  % SOURCE QUOTE: "A parabolic vector bundle $E_\star$ is {\em parabolically semistable}
+  % (respectively, parabolically stable) if $\mu_\star(F_\star) \leq
+  % \mu_\star(E_\star)$ (respectively $\mu_\star(F_\star)< \mu_\star(E_\star)$) for all parabolic subbundles $F_\star \subset E_\star$ (with the
+  % induced parabolic structure as described above)."
+  \textit{Source: Landesman--Litt, \S2.3.}
+  A parabolic bundle $E_\star$ is \emph{parabolically semistable}
+  (respectively \emph{stable}) if $\mu_\star(F_\star) \leq \mu_\star(E_\star)$
+  (respectively $\mu_\star(F_\star) < \mu_\star(E_\star)$) for every parabolic
+  subbundle $F_\star \subset E_\star$, with the induced parabolic structure of
+  \cref{def:induced-subbundle}.
+\end{definition}
+
+\begin{definition}[Coparabolic (semi)stability]
+  \label{def:coparabolic-stability}
+  \lean{LandesmanLitt.CoparabolicSemistable}
+  \uses{def:coparabolic-bundle, def:parabolic-stability}
+  % SOURCE: [Landesman--Litt] (arXiv:2202.00039), \S2.3, Definition 2.x
+  % (coparabolic stability)
+  % (read from references/MR4736527-local-systems-isomonodromy.tex)
+  % SOURCE QUOTE: "A coparabolic bundle $E_\star$ is {\em coparabolically semistable}
+  % if $E_\star$ is of the form $\widehat{F}_\star$ for $F$ a semistable
+  % parabolic bundle."
+  \textit{Source: Landesman--Litt, \S2.3.}
+  A coparabolic bundle $E_\star$ is \emph{coparabolically semistable} if it is of
+  the form $E_\star = \widehat{F}_\star$ for a (parabolically) semistable
+  parabolic bundle $F_\star$. Thus parabolic and coparabolic stability are both
+  defined in terms of parabolic bundles.
+\end{definition}
+
+\begin{lemma}[Degree additivity and the quotient criterion]
+  \label{lem:quotient-semistable}
+  \lean{LandesmanLitt.parDeg_quotient}
+  \uses{def:par-degree, def:par-slope, def:induced-subbundle, def:induced-quotient, def:parabolic-stability}
+  % SOURCE: [Landesman--Litt] (arXiv:2202.00039), \S2.3, Lemma (quotient
+  % semistability)
+  % (read from references/MR4736527-local-systems-isomonodromy.tex)
+  % SOURCE QUOTE: "Suppose $E_\star$ is a parabolic bundle and $F_\star \subset E_\star$ is
+  % a parabolic subbundle with the induced subbundle structure. If $Q_\star
+  % = E_\star/F_\star$ then $\on{par-deg}(E_\star) = \on{par-deg}(Q_\star) +
+  % \on{par-deg}(F_\star)$.
+  % In particular, a parabolic bundle $E_\star$ is semistable (respectively,
+  % stable) if and only if for every quotient
+  % bundle $Q_\star$, $\mu_\star(E_\star) \leq \mu_\star(Q_\star)$, (respectively $<
+  % \mu_\star(Q_\star)$)."
+  \textit{Source: Landesman--Litt, \S2.3.}
+  Let $E_\star$ be a parabolic bundle, $F_\star \subset E_\star$ a parabolic
+  subbundle with the induced structure, and $Q_\star = E_\star/F_\star$ with the
+  induced quotient structure. Then
+  \[
+    \pardeg(E_\star) = \pardeg(F_\star) + \pardeg(Q_\star) .
+  \]
+  Consequently $E_\star$ is parabolically semistable (respectively stable) if and
+  only if $\mu_\star(E_\star) \leq \mu_\star(Q_\star)$ (respectively
+  $\mu_\star(E_\star) < \mu_\star(Q_\star)$) for every parabolic quotient
+  bundle $Q_\star$.
+\end{lemma}
+
+% SOURCE QUOTE PROOF: "The second statement follows from the first, because
+% $\frac{\on{par-deg}(F_\star)}{\rk(F_\star)} <
+% \frac{\on{par-deg}(E_\star)}{\rk(E_\star)}$
+% is equivalent to
+% $\frac{\on{par-deg}(E_\star)- \on{par-deg}(F_\star)}{\rk(E_\star) -
+% \rk(F_\star)} >
+% \frac{\on{par-deg}(E_\star)}{\rk(E_\star)}$, and similarly where one
+% replaces the inequalities with equalities.
+% The first statement is stated in
+% \cite[Part 3, \S1.A, p. 69, Remark
+% 3]{seshadri:fibres-vectoriels-sur-les-courbes-algebriques},
+% together with the definition of exact sequence of parabolic bundles
+% \cite[Part 3, \S1.A, p. 68]{seshadri:fibres-vectoriels-sur-les-courbes-algebriques}."
+\begin{proof}
+  \uses{def:par-degree, def:par-slope, def:induced-subbundle, def:induced-quotient}
+  The degree-additivity statement is \cite[Part 3, \S1.A, p.~69, Remark
+  3]{seshadri:fibres-vectoriels-sur-les-courbes-algebriques}, together with the
+  notion of an exact sequence of parabolic bundles \cite[Part 3, \S1.A,
+  p.~68]{seshadri:fibres-vectoriels-sur-les-courbes-algebriques}: on underlying
+  bundles $\deg E = \deg F + \deg Q$, and a point-by-point comparison of the
+  induced sub- and quotient filtrations shows the weighted correction terms add,
+  so $\pardeg(E_\star) = \pardeg(F_\star) + \pardeg(Q_\star)$.
+  The quotient criterion follows formally: writing $r = \rk E_\star$,
+  $s = \rk F_\star$ and $d = \pardeg E_\star$, $e = \pardeg F_\star$, the
+  inequality $\tfrac{e}{s} < \tfrac{d}{r}$ for the subbundle is equivalent to
+  $\tfrac{d-e}{r-s} > \tfrac{d}{r}$ for the complementary quotient (and likewise
+  with $\leq$ in place of $<$, or with equalities). Hence the slope condition on
+  all subbundles is equivalent to the reversed slope condition on all quotients.
+\end{proof}
+
+\section{Harder--Narasimhan filtrations}
+\label{sec:harder-narasimhan-parabolic}
+
+\begin{definition}[Parabolic Harder--Narasimhan filtration]
+  \label{def:parabolic-HN}
+  \lean{LandesmanLitt.parabolicHN}
+  \uses{def:parabolic-bundle, def:par-slope, def:parabolic-stability}
+  % SOURCE: [Landesman--Litt] (arXiv:2202.00039), \S2.3, Harder--Narasimhan
+  % filtrations, after [Seshadri, Part 3, \S1.B, Theorem 8]
+  % (read from references/MR4736527-local-systems-isomonodromy.tex)
+  % SOURCE QUOTE: "It is a standard fact that parabolic vector bundles have a Harder-Narasimhan
+  % filtration, and its proof is similar to the construction of Harder-Narasimhan
+  % filtrations of vector bundles, see
+  % \cite[Part 3, \S1.B, Theorem 8]{seshadri:fibres-vectoriels-sur-les-courbes-algebriques}."
+  \textit{Source: Landesman--Litt, \S2.3 (after Seshadri).}
+  Every parabolic bundle $E_\star$ admits a unique \emph{Harder--Narasimhan
+  filtration}: a filtration by parabolic subbundles
+  $0 = E^{(0)}_\star \subsetneq E^{(1)}_\star \subsetneq \cdots \subsetneq
+  E^{(\ell)}_\star = E_\star$ (with induced structures) whose successive
+  quotients $E^{(k)}_\star / E^{(k-1)}_\star$ are parabolically semistable with
+  strictly decreasing parabolic slopes
+  $\mu_\star(E^{(1)}_\star/E^{(0)}_\star) > \cdots >
+  \mu_\star(E^{(\ell)}_\star/E^{(\ell-1)}_\star)$. Existence and uniqueness are
+  proved as for ordinary vector bundles \cite[Part 3, \S1.B, Theorem
+  8]{seshadri:fibres-vectoriels-sur-les-courbes-algebriques}.
+\end{definition}
+
+\section{Serre duality}
+\label{sec:serre-duality-parabolic}
+
+For a parabolic sheaf $E_\star$ on $X$ one sets
+$H^0(X, E_\star) := \Hom(\sO_X, E_\star) = \Gamma(X, E_0)$ and defines higher
+cohomology by deriving, as in \cite[p.~130]{yokogawa:infinitesimal-deformation};
+in general $H^i(X, E_\star) = H^i(X, E_0)$. Stating Serre duality requires the
+parabolic dual and tensor product.
+
+\begin{definition}[Parabolic dualization]
+  \label{def:parabolic-dual}
+  \lean{LandesmanLitt.parabolicDual}
+  \uses{def:parabolic-sheaf}
+  % SOURCE: [Landesman--Litt] (arXiv:2202.00039), \S2.3, Definition (dualization)
+  % (read from references/MR4736527-local-systems-isomonodromy.tex)
+  % SOURCE QUOTE: "For $F_\star$ a parabolic sheaf, define $F^\vee_\star :=
+  % \sheafhom(F_\star, \mathscr O_X)_\star$."
+  \textit{Source: Landesman--Litt, \S2.3.}
+  For a parabolic sheaf $F_\star$, the \emph{parabolic dual} is
+  $F^\vee_\star := \sheafhom(F_\star, \sO_X)_\star$.
+\end{definition}
+
+\begin{lemma}[Parabolic dualization formula]
+  \label{lem:parabolic-dual-formula}
+  \lean{LandesmanLitt.parabolicDual_formula}
+  \uses{def:parabolic-dual, def:coparabolic-bundle}
+  % SOURCE: [Landesman--Litt] (arXiv:2202.00039), \S2.3, Lemma (parabolic
+  % dualization), cf. [Yokogawa (3.1)]
+  % (read from references/MR4736527-local-systems-isomonodromy.tex)
+  % SOURCE QUOTE: "If $F_\star$ arises from a parabolic vector bundle, we have
+  % $F^\vee_\alpha \simeq (\widehat{F}_{-\alpha})^\vee (-D)$."
+  \textit{Source: Landesman--Litt, \S2.3 (cf. Yokogawa (3.1)).}
+  If $F_\star$ arises from a parabolic vector bundle, then for every $\alpha$
+  \[
+    F^\vee_\alpha \simeq \left(\widehat{F}_{-\alpha}\right)^\vee(-D) .
+  \]
+\end{lemma}
+
+% SOURCE QUOTE PROOF: (no proof given in the source; stated as the useful
+% alternate description of parabolic dualization, cf. \cite[(3.1)]{yokogawa:infinitesimal-deformation})
+\begin{proof}
+  \uses{def:parabolic-dual, def:coparabolic-bundle}
+  This is the description of parabolic dualization recorded in
+  \cite[(3.1)]{yokogawa:infinitesimal-deformation}: unwinding
+  $\sheafhom(F_\star, \sO_X)_\alpha = \sheafhom(F_\star, \sO_X[\alpha]_\star)$ and
+  the structure isomorphism of the parabolic sheaf $\sO_X$ identifies the
+  $\alpha$-piece of $F^\vee_\star$ with the ordinary dual of the coparabolic
+  piece $\widehat{F}_{-\alpha}$, twisted by $-D$.
+\end{proof}
+
+\begin{definition}[Parabolic tensor product]
+  \label{def:parabolic-tensor}
+  \lean{LandesmanLitt.parabolicTensor}
+  \uses{def:parabolic-sheaf}
+  % SOURCE: [Landesman--Litt] (arXiv:2202.00039), \S2.3, Definition (parabolic
+  % tensor product), cf. [Yokogawa, Example 3.2]
+  % (read from references/MR4736527-local-systems-isomonodromy.tex)
+  % SOURCE QUOTE: "Let $\tau: X - D \to X$ denote the inclusion.
+  % Suppose $E_\star, F_\star$ are both parabolic modules so that each $F_\alpha$
+  % and $E_\alpha$ is locally free,
+  % define $(E_\star \otimes F_\star)_\alpha := \sum_{\alpha_1 + \alpha_2 =
+  % \alpha} E_{\alpha_1} \otimes F_{\alpha_2}$, viewed as a subbundle of
+  % $\tau_* \tau^*(E \otimes F)$. We take $i^{\alpha,\beta}_{E_\star \otimes F_\star}$ to be the natural inclusion map."
+  \textit{Source: Landesman--Litt, \S2.3 (cf. Yokogawa, Example 3.2).}
+  Let $\tau : X - D \to X$ be the inclusion. For parabolic modules
+  $E_\star, F_\star$ with each $E_\alpha$ and $F_\alpha$ locally free, the
+  \emph{parabolic tensor product} is
+  \[
+    (E_\star \otimes F_\star)_\alpha := \sum_{\alpha_1 + \alpha_2 = \alpha}
+      E_{\alpha_1} \otimes F_{\alpha_2} ,
+  \]
+  viewed as a subbundle of $\tau_* \tau^*(E \otimes F)$, with the natural
+  inclusions as transition maps.
+\end{definition}
+
+\begin{lemma}[Degree of duals and tensor products]
+  \label{lem:degree-in-duals}
+  \lean{LandesmanLitt.parDeg_dual_tensor}
+  \uses{def:parabolic-tensor, def:parabolic-dual, def:par-degree, lem:parabolic-dual-formula}
+  % SOURCE: [Landesman--Litt] (arXiv:2202.00039), \S2.3, Lemma (degree in duals)
+  % (read from references/MR4736527-local-systems-isomonodromy.tex)
+  % SOURCE QUOTE: "For $E_\star$ and $F_\star$ two parabolic bundles, $\deg E_\star \otimes
+  % F_\star= \deg E_\star \rk F_\star + \deg F_\star \rk E_\star$ and $\deg
+  % E_\star^\vee = - \deg E_\star$."
+  \textit{Source: Landesman--Litt, \S2.3.}
+  For parabolic bundles $E_\star$ and $F_\star$,
+  \[
+    \pardeg(E_\star \otimes F_\star) = \pardeg(E_\star)\,\rk(F_\star) +
+      \pardeg(F_\star)\,\rk(E_\star), \qquad
+    \pardeg(E^\vee_\star) = -\pardeg(E_\star) .
+  \]
+\end{lemma}
+
+% SOURCE QUOTE PROOF: "The next lemma states that parabolic tensor products and duals interact in the usual way with degree.
+% We omit the proof, which is a matter of unwinding definitions."
+\begin{proof}
+  \uses{lem:parabolic-dual-formula, def:par-degree}
+  Both identities are obtained by unwinding the definitions; the source omits the
+  computation. The tensor formula is the parabolic analogue of the classical
+  $\deg(E \otimes F) = \deg E \cdot \rk F + \deg F \cdot \rk E$, the weighted
+  correction terms adding accordingly. For the dual,
+  \cref{lem:parabolic-dual-formula} expresses $E^\vee_\star$ through
+  $\widehat{E}_{-\alpha}$ and a twist by $-D$; writing
+  $E^\vee_\star = (E^\vee_0, \{F^i_j\}, \{\beta^i_j\})$ one finds
+  $\beta^i_j = 1 - \alpha^{n_j+1-i}_j$ with matching jumps, and summing the
+  weighted contributions against $\deg(E^\vee_0(-D))$ yields
+  $\pardeg(E^\vee_\star) = -\pardeg(E_\star)$.
+\end{proof}
+
+\begin{proposition}[Parabolic Serre duality]
+  \label{prop:serre-duality}
+  \lean{LandesmanLitt.serreDuality}
+  \uses{def:parabolic-dual, def:parabolic-tensor, def:coparabolic-bundle, lem:parabolic-dual-formula}
+  % SOURCE: [Landesman--Litt] (arXiv:2202.00039), \S2.3, Proposition (Serre
+  % duality), after [Yokogawa, Proposition 3.7]
+  % (read from references/MR4736527-local-systems-isomonodromy.tex)
+  % SOURCE QUOTE: "Suppose $X$ is a smooth projective $n$-dimensional variety over an
+  % algebraically closed field $k$ and let $\omega_X$ denote the dualizing
+  % sheaf on $X$. For all parabolic vector bundles $E_\star$, we have a canonical isomorphism
+  % \begin{align*}
+  %   H^i(X, E_\star) \simeq H^{n-i}(X, \widehat{E_\star^\vee} \otimes
+  %   \omega_X(D))^\vee.
+  % \end{align*}"
+  \textit{Source: Landesman--Litt, \S2.3 (after Yokogawa, Proposition 3.7).}
+  Let $X$ be a smooth projective variety of dimension $n$ over an algebraically
+  closed field $k$, with dualizing sheaf $\omega_X$. For every parabolic vector
+  bundle $E_\star$ there is a canonical isomorphism
+  \[
+    H^i(X, E_\star) \simeq H^{n-i}\!\left(X,\ \widehat{E^\vee_\star} \otimes
+      \omega_X(D)\right)^{\vee} .
+  \]
+\end{proposition}
+
+% SOURCE QUOTE PROOF: "The version in \cite[Proposition
+% 3.7]{yokogawa:infinitesimal-deformation} states
+% $\on{Ext}^i_X(E_\star, F_\star \otimes \omega_X(D)) \simeq
+% \on{Ext}^{n-i}_X(F_\star, \widehat{E}_\star)^\vee.$
+% Using \cite[Lemma 3.6]{yokogawa:infinitesimal-deformation}, and taking
+% $E_\star = \mathscr O_X$, we find
+% $H^i(X, F_\star \otimes \omega_X(D)) \simeq H^{n-i}( F_\star^\vee
+%   \otimes
+% \widehat{\mathscr O_X})^\vee \simeq H^{n-i}(X, \widehat{F_\star^\vee})^\vee$.
+% Now, taking $E_\star$ as in the statement to be
+% $F_\star \otimes \omega_X(D)$, we find $F_\star^\vee = E_\star^\vee
+% \otimes \omega_X(D)$ and so
+% $H^i(X, E_\star) \simeq H^{n-i}(X, \reallywidehat{E_\star^\vee \otimes
+% \omega_X(D)})^\vee \simeq
+% H^{n-i}(X, \widehat{F_\star^\vee} \otimes
+% \omega_X(D))^\vee.$"
+\begin{proof}
+  \uses{def:parabolic-dual, def:parabolic-tensor, def:coparabolic-bundle, lem:parabolic-dual-formula}
+  The general statement is \cite[Proposition
+  3.7]{yokogawa:infinitesimal-deformation}, namely the natural isomorphism
+  \[
+    \mathrm{Ext}^i_X(E_\star,\ F_\star \otimes \omega_X(D)) \simeq
+      \mathrm{Ext}^{n-i}_X(F_\star,\ \widehat{E}_\star)^{\vee} .
+  \]
+  Specializing $E_\star = \sO_X$ and using \cite[Lemma
+  3.6]{yokogawa:infinitesimal-deformation} gives
+  \[
+    H^i(X, F_\star \otimes \omega_X(D)) \simeq
+      H^{n-i}(X, F^\vee_\star \otimes \widehat{\sO_X})^{\vee} \simeq
+      H^{n-i}(X, \widehat{F^\vee_\star})^{\vee} .
+  \]
+  Finally, applying this with $E_\star := F_\star \otimes \omega_X(D)$, so that
+  $F^\vee_\star = E^\vee_\star \otimes \omega_X(D)$, yields
+  \[
+    H^i(X, E_\star) \simeq H^{n-i}\!\left(X,\ \widehat{E^\vee_\star} \otimes
+      \omega_X(D)\right)^{\vee} . \qedhere
+  \]
+\end{proof}

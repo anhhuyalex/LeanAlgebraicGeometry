@@ -1,0 +1,221 @@
+% archon:future-covers MR4689373HigherSiegelWeilFormulaForUnitaryGroupsTheNonSingularTerms/WdRepresentations.lean
+\chapter{\texorpdfstring{$W_d$}{Wd} Representation Theory}
+\label{chap:wd-representations}
+
+This chapter formalizes Phase~P3c of the project: the elementary representation theory of
+the Weyl group \(W_d = (\mathbf{Z}/2\mathbf{Z})^d \rtimes S_d\) that is needed to compare
+\(\cK_d^{\mathrm{Eis}}\) and \(\cK_d^{\mathrm{Int}}\) as direct summands of
+\(\mathrm{Spr}^{\mathrm{Herm}}_{2d}\). Phase~P3c is independent of P3a and P3b at the
+level of abstract group theory, requiring only the definition of \(W_d\) (available from P0).
+We follow \S\S4, 13, 15 of Feng--Yun--Zhang [MR4689373].
+
+\section{Springer theory for Hermitian torsion sheaves}
+
+\begin{definition}[Weyl group \texorpdfstring{$W_d$}{Wd}]
+  \label{def:W-d-group}
+  \lean{HSW.WdGroup}
+  \uses{def:base-curve}
+  % SOURCE: FYZ-HigherSiegelWeil.tex, §3.1, §4.1
+  % SOURCE QUOTE: "The Weyl group of type \(B_d/C_d\) is
+  %   \(W_d=(\BZ/2\BZ)^d\rtimes S_d\)"
+  \textit{Source: Feng--Yun--Zhang [MR4689373], \S3.1, \S4.1.}
+  For \(d \geq 0\), the \emph{Weyl group of type \(B_d\)/\(C_d\)} is
+  \[
+    W_d = (\mathbf{Z}/2\mathbf{Z})^d \rtimes S_d,
+  \]
+  where \(S_d\) acts on \((\mathbf{Z}/2\mathbf{Z})^d\) by permuting coordinates.
+  Concretely, elements of \(W_d\) are pairs \((\varepsilon, \sigma)\) with
+  \(\varepsilon \in \{0,1\}^d\) and \(\sigma \in S_d\), with group law
+  \((\varepsilon_1, \sigma_1) \cdot (\varepsilon_2, \sigma_2) =
+  (\varepsilon_1 + \sigma_1(\varepsilon_2),\; \sigma_1 \sigma_2)\).
+  The group \(W_d\) has order \(2^d \cdot d!\); it is the Weyl group of the
+  symplectic group \(\mathrm{Sp}_{2d}\) and of the unitary group
+  \(\U(d,d)\) acting on \(\Herm_{2d}(X'/X)\).
+\end{definition}
+
+\begin{definition}[Graded virtual representation ring]
+  \label{def:wd-rep-ring}
+  \lean{HSW.WdRepRing}
+  \uses{def:W-d-group}
+  % SOURCE: FYZ-HigherSiegelWeil.tex, §4.1
+  % SOURCE QUOTE: "graded virtual representation ring of \(W_d\)"
+  \textit{Source: Feng--Yun--Zhang [MR4689373], \S4.1.}
+  The \emph{graded virtual representation ring} of \(W_d\) is
+  \[
+    R(W_d) := K_0(\Rep_{\Ql}(W_d)) \otimes_{\mathbf{Z}} \mathbf{Z}[t],
+  \]
+  the Grothendieck ring of finite-dimensional \(\Ql\)-representations of \(W_d\),
+  tensored with the polynomial ring in a formal grading variable \(t\). An element
+  of \(R(W_d)\) is a formal \(\mathbf{Z}\)-linear combination
+  \(\sum_{i \geq 0} [V_i]\, t^i\) of virtual representations \([V_i]\) graded by
+  cohomological degree.
+  As a \(\mathbf{Z}\)-module, \(K_0(\Rep_{\Ql}(W_d))\) is free on the set of
+  irreducible \(\Ql\)-representations of \(W_d\).
+\end{definition}
+
+\begin{definition}[Irreducible representations of \texorpdfstring{$W_d$}{Wd}]
+  \label{def:wd-irr-chars}
+  \lean{HSW.WdIrrChars}
+  \uses{def:wd-rep-ring, def:W-d-group}
+  % SOURCE: FYZ-HigherSiegelWeil.tex, §4.2
+  % SOURCE QUOTE: "irreducible representations of \(W_d\) are parametrized by
+  %   bipartitions \((\lambda,\mu)\) with \(|\lambda|+|\mu|=d\)"
+  \textit{Source: Feng--Yun--Zhang [MR4689373], \S4.2; Geck--Pfeiffer, Ch.~5.}
+  The irreducible \(\Ql\)-representations of \(W_d\) are parameterized by
+  \emph{bipartitions} \((\lambda, \mu)\) of \(d\): ordered pairs of partitions with
+  \(|\lambda| + |\mu| = d\). For each such bipartition, there is an irreducible
+  representation
+  \[
+    \rho_{\lambda,\mu} \in \mathrm{Irr}(W_d)
+  \]
+  of dimension \(\binom{d}{|\lambda|} \dim V_\lambda \cdot \dim V_\mu\),
+  where \(V_\lambda\) and \(V_\mu\) are the Specht modules for \(S_{|\lambda|}\)
+  and \(S_{|\mu|}\) respectively. The representation \(\rho_{\lambda,\mu}\) is
+  induced from the subgroup \(S_{|\lambda|} \times (\mathbf{Z}/2\mathbf{Z})^{|\mu|}
+  \times S_{|\mu|} \leq W_d\) via appropriate sign characters; the full character
+  table is determined by Clifford theory.
+\end{definition}
+
+\section{Matching of sheaves}
+
+\begin{lemma}[\texorpdfstring{$W_d$}{Wd}-formula for \texorpdfstring{$\cK_d^{\mathrm{Eis}}$}{K-Eis}]
+  \label{lem:wd-eis-formula}
+  \lean{HSW.wdEisFormula}
+  \uses{def:wd-irr-chars, def:K-Eis, def:springer-sheaf-herm, thm:springer-decomp,
+        thm:cho-yamauchi, thm:trace-Eis}
+  % SOURCE: FYZ-HigherSiegelWeil.tex, Def. (def: K_Eis); proof of matching Prop. (eq. \r_{\cK_d^\Eis})
+  % SOURCE QUOTE: "\(\r_{\cK_{d}^{\Eis}}(T)=\sum_{i=0}^{d} \sum_{j=0}^{i}(-1)^j\Ind_{S_{i-j} \times W_j \times W_{d-i}}^{W_d} (\one \bt \ol{\sgn}_{j} \bt \one ) T^{i}\)"
+  \textit{Source: Feng--Yun--Zhang [MR4689373], Def.~``K\_Eis''; proof of the matching proposition.}
+  Under Springer theory, the graded perverse sheaf
+  \(\cK_d^{\mathrm{Eis}}(T)\) (Definition~\ref{def:K-Eis}) corresponds to an explicit
+  graded virtual \(W_d\)-representation. Expanding the definition
+  \(\cK^{\Eis}_{d}(T)=\bigoplus_{i=0}^{d} R\overleftarrow{f}_{i,!}R\overrightarrow{f}^{*}_{i}
+  (\Ql \cdot T^{i} \boxtimes \mathfrak{P}_{d-i}(T))\) through the dictionary
+  (\(R\overleftarrow{f}_{i,!}R\overrightarrow{f}^{*}_{i}\) corresponds to
+  \(\Ind_{W_{d-i}\times S_i}^{W_d}\), and
+  \(\mathfrak{P}_{d-i}(T)\) to
+  \(\sum_{j=0}^{d-i}(-1)^j \Ind_{W_j\times W_{d-i-j}}^{W_{d-i}}(\sgn_j\boxtimes\mathbf{1})T^j\)),
+  one obtains, after re-indexing,
+  \[
+    \rho_{\cK_d^{\mathrm{Eis}}}(T)
+    \;=\;
+    \sum_{i=0}^{d} \sum_{j=0}^{i} (-1)^j\,
+      \Ind_{S_{i-j} \times W_j \times W_{d-i}}^{W_d}
+      \bigl(\mathbf{1} \boxtimes \overline{\sgn}_{j} \boxtimes \mathbf{1}\bigr)\, T^{i}
+    \;\in\; R(W_d),
+  \]
+  expressed via the decomposition
+  \(\mathrm{Spr}^{\mathrm{Herm}}_{2d} \cong \bigoplus_\chi V_\chi \otimes \mathrm{IC}_\chi\)
+  of Theorem~\ref{thm:springer-decomp}. Here \(\overline{\sgn}_j\) is the sign character
+  of \(W_j\) restricted along \(S_j \hookrightarrow W_j\), and the Cho--Yamauchi formula
+  (Theorem~\ref{thm:cho-yamauchi}) is the input for the local density expansion that
+  defines \(\mathfrak{P}_{d-i}(T)\).
+\end{lemma}
+
+\begin{proof}
+  \uses{def:K-Eis, def:wd-irr-chars, thm:trace-Eis}
+  By Theorem~\ref{thm:trace-Eis} (Chapter~\ref{chap:perverse-sheaves-K}), the Frobenius
+  trace of \(\cK_d^{\mathrm{Eis}}(q^{-2s})\) at \(\cQ\) equals the normalized Fourier
+  coefficient \(\widetilde{E}_a(m(\cE), s, \Phi)\), which by the Cho--Yamauchi formula
+  (Theorem~\ref{thm:cho-yamauchi}) is the local Siegel-series density polynomial
+  \(\Den(q^{-2s}, \cQ)\). Unwinding the definition of \(\cK_d^{\mathrm{Eis}}(T)\) as a
+  combination of induced isotypical summands of \(\mathrm{Spr}^{\mathrm{Herm}}_{2d}\)
+  and translating through Springer theory yields the stated graded virtual
+  \(W_d\)-representation \(\rho_{\cK_d^{\mathrm{Eis}}}(T)\).
+\end{proof}
+
+\begin{lemma}[\texorpdfstring{$W_d$}{Wd}-formula for \texorpdfstring{$\cK_d^{\mathrm{Int}}$}{K-Int}]
+  \label{lem:wd-int-formula}
+  \lean{HSW.wdIntFormula}
+  \uses{def:wd-irr-chars, def:K-Int, def:springer-sheaf-herm, def:virtual-class-full,
+        thm:trace-Int}
+  % SOURCE: FYZ-HigherSiegelWeil.tex, Def. (def:Kd); proof of matching Prop. (\r_{\cK_d^\Int})
+  % SOURCE QUOTE: "\(\r_{\cK_{d}^{\Int}}(T)=\sum_{i=0}^{d} \Ind_{W_i \times W_{d-i}}^{W_d} (\chi_i \boxtimes 1) T^{i}\)"
+  \textit{Source: Feng--Yun--Zhang [MR4689373], Def.~``Kd''; proof of the matching proposition.}
+  Under Springer theory, the graded perverse sheaf \(\cK_d^{\mathrm{Int}}(T)
+  = \bigoplus_{i=0}^d \mathrm{Spr}^{\mathrm{Herm}}_{2d}[\rho_i]\,T^i\)
+  (Definition~\ref{def:K-Int}) corresponds to the graded virtual
+  \(W_d\)-representation
+  \[
+    \rho_{\cK_d^{\mathrm{Int}}}(T)
+    \;=\;
+    \sum_{i=0}^{d} \Ind_{W_i \times W_{d-i}}^{W_d}
+      \bigl(\chi_i \boxtimes \mathbf{1}\bigr)\, T^{i}
+    \;\in\; R(W_d),
+  \]
+  where \(\chi_i\) is the virtual character of \(W_i\) given by the matching identity
+  \(\chi_i = \sum_{j=0}^{i}(-1)^j \Ind_{S_{i-j}\times W_j}^{W_i}
+  (\mathbf{1}\boxtimes\overline{\sgn}_j)\).
+\end{lemma}
+
+\begin{proof}
+  \uses{def:K-Int, def:wd-irr-chars, def:virtual-class-full, thm:trace-Int}
+  By Theorem~\ref{thm:trace-Int} (Chapter~\ref{chap:perverse-sheaves-K}), the Frobenius
+  trace of \(\cK_d^{\mathrm{Int}}(q^{-2s})\) at \(\cQ\) recovers (via the \(r\)-th
+  derivative at \(s=0\)) the degree \(\deg[\cZ_{\cE}^r(a)]\) of the virtual fundamental
+  class of Definition~\ref{def:virtual-class-full}. By construction
+  (Definition~\ref{def:K-Int}), \(\cK_d^{\mathrm{Int}}(T)\) is a graded combination
+  \(\bigoplus_i \mathrm{Spr}^{\mathrm{Herm}}_{2d}[\rho_i]\,T^i\) of isotypical summands of
+  the Hermitian Springer sheaf, which under Springer theory corresponds to the stated
+  graded virtual \(W_d\)-representation \(\rho_{\cK_d^{\mathrm{Int}}}(T)\).
+\end{proof}
+
+\begin{theorem}[\texorpdfstring{$W_d$}{Wd} representation identity]
+  \label{thm:wd-rep-identity}
+  \lean{HSW.wdRepIdentity}
+  \uses{lem:wd-eis-formula, lem:wd-int-formula, def:wd-rep-ring}
+  % SOURCE: FYZ-HigherSiegelWeil.tex, §15.1
+  % SOURCE QUOTE: "the identity \([\cK_d^\Eis]=[\cK_d^\Int]\in R(W_d)\)"
+  \textit{Source: Feng--Yun--Zhang [MR4689373], \S15.1.}
+  The two elements \([\cK_d^{\mathrm{Eis}}]\) and \([\cK_d^{\mathrm{Int}}]\) are equal
+  in the graded virtual representation ring:
+  \[
+    [\cK_d^{\mathrm{Eis}}] = [\cK_d^{\mathrm{Int}}] \in R(W_d).
+  \]
+  Equivalently, the two graded virtual \(W_d\)-representations of
+  Lemmas~\ref{lem:wd-eis-formula} and~\ref{lem:wd-int-formula} coincide:
+  \(\rho_{\cK_d^{\mathrm{Eis}}}(T) = \rho_{\cK_d^{\mathrm{Int}}}(T)\).
+\end{theorem}
+
+\begin{proof}
+  \uses{lem:wd-eis-formula, lem:wd-int-formula}
+  By Lemmas~\ref{lem:wd-eis-formula} and~\ref{lem:wd-int-formula}, the two elements
+  correspond under Springer theory to the explicit graded virtual representations
+  \(\rho_{\cK_d^{\mathrm{Eis}}}(T)\) and \(\rho_{\cK_d^{\mathrm{Int}}}(T)\). Comparing
+  coefficient by coefficient in \(T\) reduces the equality to the virtual-representation
+  identity of \(W_d\)
+  \[
+    \chi_d = \sum_{j=0}^{d} (-1)^j
+      \Ind_{S_{d-j}\times W_j}^{W_d}\bigl(\mathbf{1}\boxtimes\overline{\sgn}_j\bigr),
+  \]
+  proved in the matching lemma of the paper by comparing the trace of an arbitrary
+  element \(g\in W_d\). Since the irreducible characters form a basis of
+  \(K_0(\Rep_{\Ql}(W_d))\), the equality of these virtual representations gives the
+  identity in \(R(W_d)\).
+\end{proof}
+
+\begin{corollary}[Isomorphism of perverse sheaves]
+  \label{cor:K-Eis-iso-K-Int}
+  \lean{HSW.KEdIsIsomorphicKInt}
+  \uses{thm:wd-rep-identity, def:springer-sheaf-herm, thm:springer-decomp, def:K-Eis, def:K-Int}
+  % SOURCE: FYZ-HigherSiegelWeil.tex, §15.2
+  % SOURCE QUOTE: "\(\cK_d^\Eis\cong\cK_d^\Int\) as graded perverse sheaves on
+  %   \(\Herm_{2d}(X'/X)\)"
+  \textit{Source: Feng--Yun--Zhang [MR4689373], \S15.2.}
+  There is a canonical isomorphism of graded perverse sheaves on \(\Herm_{2d}(X'/X)\):
+  \[
+    \cK_d^{\mathrm{Eis}} \;\cong\; \cK_d^{\mathrm{Int}}.
+  \]
+\end{corollary}
+
+\begin{proof}
+  \uses{thm:wd-rep-identity, def:springer-sheaf-herm, thm:springer-decomp}
+  By Theorem~\ref{thm:springer-decomp} (Chapter~\ref{chap:hermitian-springer}), both
+  \(\cK_d^{\mathrm{Eis}}\) and \(\cK_d^{\mathrm{Int}}\) are direct summands of
+  \(\mathrm{Spr}^{\mathrm{Herm}}_{2d} \cong \bigoplus_\chi V_\chi \otimes \mathrm{IC}_\chi\)
+  with \(W_d\)-module structures.  The decomposition is canonical: the isotypical summand
+  corresponding to \(\chi\) is the unique \(W_d\)-equivariant direct factor
+  \(V_\chi \otimes \mathrm{IC}_\chi\), determined by its \(W_d\)-character. Since
+  \([\cK_d^{\mathrm{Eis}}] = [\cK_d^{\mathrm{Int}}]\) in \(R(W_d)\) (Theorem~\ref{thm:wd-rep-identity}),
+  they pick out the same collection of isotypical factors, giving a canonical isomorphism.
+\end{proof}

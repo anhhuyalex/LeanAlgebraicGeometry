@@ -1,0 +1,1 @@
+- DAG phase complete (iter-001): 14-declaration blueprint for Section 2 of Lin–Shinder (arXiv:2207.07389) is done — HARD GATE passed, 0 isolated nodes, 0 ∞-effort, strategy STRATEGY.md updated. Next step: provers begin Phase 2a (BirationalMap) + 2b (TruncatedGrothendieckGroup) in parallel.

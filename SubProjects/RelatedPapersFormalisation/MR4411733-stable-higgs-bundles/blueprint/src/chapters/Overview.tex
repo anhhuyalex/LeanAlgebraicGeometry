@@ -3,4 +3,833 @@
 
 % archon:covers MR4411733VeryStableHiggsBundlesEquivariantMultiplicityAndMirrorSymmetry.lean MR4411733VeryStableHiggsBundlesEquivariantMultiplicityAndMirrorSymmetry/Basic.lean
 
-This is the auto-bootstrapped blueprint for MR4411733: Very stable Higgs bundles, equivariant multiplicity and mirror symmetry.
+This chapter formalises the main results of Hausel--Hitchin (2021), ``Very stable Higgs bundles,
+equivariant multiplicity and mirror symmetry'' (MR4411733, arXiv:2101.08583).  The primary
+targets are the multiplicity formula (\cref{thm:multiplicity_formula}), its explicit computation
+(\cref{cor:explicit_multiplicity}), and the mirror-symmetry theorems
+(\cref{thm:fourier_mukai_mirror,thm:euler_pairing_agreement}), reached via the foundational
+Bialynicki-Birula theory and the classification of very stable Higgs bundles.
+
+Throughout, \(C\) denotes a smooth complex projective curve of genus \(g > 1\), \(K\) the
+canonical line bundle of \(C\), \(n \in \Z_{>1}\), \(d \in \Z\), and \(\T := \mathbb{T}\) the
+multiplicative group \(\C^{\times}\).
+
+% ---------------------------------------------------------------------------
+\section{Introduction}
+% ---------------------------------------------------------------------------
+
+% SOURCE: [HH21], §1 (Introduction), definition of very stable Higgs bundle
+%   (read from references/MR4411733-stable-higgs-bundles.tex)
+% SOURCE QUOTE: We define a $\T$-fixed stable Higgs bundle $\calE\in \M^{s\T}$ to be a
+% {\em very stable Higgs bundle} if the only Higgs bundle $(E^\prime,\Phi^\prime)\in W^+_\calE$
+% with nilpotent Higgs field is $\calE$.
+\begin{definition}[Very stable Higgs bundle]
+  \label{def:very_stable_Higgs}
+  \lean{VeryStableHiggsBundles.TODO.VeryStableHiggs}
+  \uses{def:upward_flow, def:T_action_moduli}
+  \textit{Source: [HH21], §1.}
+  A \(\T\)-fixed stable Higgs bundle \(\cE = (E, \Phi) \in \cM^{s\T}\) is \emph{very stable} if
+  the only Higgs bundle \((E', \Phi') \in W^+_{\cE}\) with nilpotent Higgs field \(\Phi'\) is
+  \(\cE\) itself.
+\end{definition}
+
+% SOURCE: [HH21], §1, Hitchin map
+%   (read from references/MR4411733-stable-higgs-bundles.tex)
+% SOURCE QUOTE: We recall the Hitchin map \cite{hitchin-stable}
+% $$\begin{array}{cccc} h:&\M&\to &\calA=\oplus_{i=1}^n  H^0(C;K^i)\\
+% &(E,\Phi)&\mapsto & \det(\Phi-x)\end{array} $$ given by the characteristic polynomial.
+% It is a proper completely integrable system \cite{nitsure,hitchin-stable,simpson} with respect
+% to a natural symplectic structure on $\M$.
+\begin{definition}[Hitchin map]
+  \label{def:Hitchin_map}
+  \lean{VeryStableHiggsBundles.TODO.HitchinMap}
+  \uses{def:moduli_Higgs}
+  \textit{Source: [HH21], §1.}
+  The \emph{Hitchin map} is
+  \[
+    h : \cM \longrightarrow \cA := \bigoplus_{i=1}^n H^0(C;\, K^i),
+    \qquad (E, \Phi) \mapsto \det(\Phi - x),
+  \]
+  defined by the characteristic polynomial.  It is a proper, completely integrable Hamiltonian
+  system; the generic fibre is isomorphic to a Jacobian of a spectral curve.
+  \(\cA\) is called the \emph{Hitchin base}.
+\end{definition}
+
+% SOURCE: [HH21], §1, nilpotent cone definition and component labelling
+%   (read from references/MR4411733-stable-higgs-bundles.tex)
+% SOURCE QUOTE: the most singular fibre $N:=h^{-1}(0)$, the so-called {\em nilpotent cone}, is
+% non-reduced as a subscheme. ... Thus each component $N_F$ of the nilpotent cone $N$ is labelled
+% by $F\in \pi_0(\M^{\T})$ and its reduction is isomorphic to ${N_F}_{red}\cong\overline{W^-_F}$.
+% We denote by $m_F:=\ell(\calO_{N,N_F})$ the multiplicity of the component $N_F\subset N$.
+\begin{definition}[Nilpotent cone]
+  \label{def:nilpotent_cone}
+  \lean{VeryStableHiggsBundles.TODO.NilpotentCone}
+  \uses{def:Hitchin_map, def:attractor, def:downward_flow}
+  \textit{Source: [HH21], §1.}
+  The \emph{nilpotent cone} is the scheme-theoretic fibre \(N := h^{-1}(0) \subset \cM\).  It is
+  non-reduced; its irreducible components are labelled by \(F \in \pi_0(\cM^{\T})\) with
+  reductions \((N_F)_\mathrm{red} \cong \overline{W^-_F}\).  The core of \(\cM\) is
+  \(\mathcal{C} := \bigcup_{F \in \pi_0(\cM^{\T})} W^-_F \cong N_\mathrm{red}\).
+\end{definition}
+
+% SOURCE: [HH21], §1, multiplicity notation m_F
+%   (read from references/MR4411733-stable-higgs-bundles.tex)
+% SOURCE QUOTE: We denote by $m_F:=\ell(\calO_{N,N_F})$ the multiplicity of the component
+% $N_F\subset N$.
+\begin{definition}[Component multiplicity]
+  \label{def:component_multiplicity}
+  \lean{VeryStableHiggsBundles.TODO.ComponentMultiplicity}
+  \uses{def:nilpotent_cone}
+  \textit{Source: [HH21], §1.}
+  The \emph{multiplicity} of the component \(N_F \subset N\) is
+  \(m_F := \ell(\cO_{N, N_F})\), the length of the local ring of \(N\) at the generic point
+  of \(N_F\).
+\end{definition}
+
+\begin{definition}[Positive \(\T\)-module]
+  \label{def:T_pos_module}
+  \lean{VeryStableHiggsBundles.TODO.TPositiveModule}
+  \uses{}
+  A \emph{positive \(\T\)-module} is a finite-dimensional \(\T\)-representation \(V\) with weight
+  space decomposition \(V = \bigoplus_{\lambda > 0} V_\lambda\) (all weights strictly positive).
+\end{definition}
+
+% SOURCE: [HH21], §1, T-character of symmetric algebra
+%   (read from references/MR4411733-stable-higgs-bundles.tex)
+% SOURCE QUOTE: for a positive $\T$-module $V$ with weight space decomposition $V=\oplus_{\lambda>0}
+% V_\lambda$ we have denoted the  $\T$-character of its symmetric algebra by
+% \bes\chi_\T({\Sym(V^*)})= \sum_{\lambda\leq 0} \dim(\Sym(V^*)_\lambda)t^{-\lambda}=
+% \prod_{\lambda>0}\frac{1}{( 1- t^{\lambda})^{\dim(V_\lambda)}} \in \Z[[t]],\ees
+% where $t$ denotes the $\T$-character of weight $-1$.
+\begin{definition}[\(\T\)-character of the symmetric algebra]
+  \label{def:T_char_sym}
+  \lean{VeryStableHiggsBundles.TODO.TCharSymAlgebra}
+  \uses{def:T_pos_module}
+  \textit{Source: [HH21], §1.}
+  For a positive \(\T\)-module \(V = \bigoplus_{\lambda > 0} V_\lambda\), the
+  \(\T\)-\emph{character of its symmetric algebra} is
+  \[
+    \chi_{\T}\!\bigl(\Sym(V^*)\bigr)
+    := \sum_{\lambda \leq 0} \dim\!\bigl(\Sym(V^*)_\lambda\bigr)\, t^{-\lambda}
+    = \prod_{\lambda > 0} \frac{1}{(1 - t^{\lambda})^{\dim V_\lambda}}
+    \;\in\; \Z[[t]],
+  \]
+  where \(t\) denotes the \(\T\)-character of weight \(-1\).
+\end{definition}
+
+% SOURCE: [HH21], §1, virtual multiplicity
+%   (read from references/MR4411733-stable-higgs-bundles.tex)
+% SOURCE QUOTE: for any $\calE\in \M^{s\T}$ we introduce the {\em virtual multiplicity}
+% \beq\label{virmul}m_\calE(t):={ \chi_\T(\Sym(T^{+*}_\calE))\over \chi_\T(\Sym(\calA^*))}\eeq
+% which is a priori  a rational function in $t$.
+\begin{definition}[Virtual multiplicity]
+  \label{def:virtual_multiplicity}
+  \lean{VeryStableHiggsBundles.TODO.VirtualMultiplicity}
+  \uses{def:T_char_sym, def:weight_decomp, def:T_action_moduli}
+  \textit{Source: [HH21], §1.}
+  For \(\cE \in \cM^{s\T}\), the \emph{virtual multiplicity} is the a priori rational function
+  in \(t\)
+  \[
+    m_{\cE}(t)
+    := \frac{\chi_{\T}\!\bigl(\Sym(T^{+*}_{\cE}\cM)\bigr)}
+            {\chi_{\T}\!\bigl(\Sym(\cA^*)\bigr)},
+  \]
+  where \(T^{+*}_{\cE}\cM\) is the dual of the positive part of the tangent space at \(\cE\)
+  and \(\cA^* = \bigoplus_{i=1}^n H^0(C;K^i)^*\) is the dual of the Hitchin base.
+\end{definition}
+
+% SOURCE: [HH21], §1, equivariant multiplicity
+%   (read from references/MR4411733-stable-higgs-bundles.tex)
+% SOURCE QUOTE: In the course of proving Theorem~\ref{mainmulti} we find that for a very stable
+% $\calE$ the pushforward $h_*(\calO_{W^+_\calE})$ is a $\T$-equivariant vector bundle on
+% $\calA$, with  $\T$-equivariant fibre at $0$ satisfying
+% $\chi_\T(h_*(\calO_{W^+_\calE})_0)=m_\calE(t)$. In particular, for a very stable $\calE$ the
+% quantity $m_\calE(t)$ is a polynomial in $t$, which we call the {\em equivariant multiplicity}.
+% SOURCE: [HH21], §4, Corollary eqmult (properties of the equivariant multiplicity)
+%   (read from references/MR4411733-stable-higgs-bundles.tex)
+% SOURCE QUOTE: When $\calE\in \M^{s\T}$ is very stable $m_{\calE}(t)$ is a palindromic and monic
+% polynomial with non-negative integer coefficients, such that $m_{\calE}(1)=m_{F_\calE}$ is the
+% multiplicity of the component $N_{F_\calE}\subset N$ in the nilpotent cone.
+\begin{definition}[Equivariant multiplicity]
+  \label{def:equivariant_multiplicity}
+  \lean{VeryStableHiggsBundles.TODO.EquivariantMultiplicity}
+  \uses{def:virtual_multiplicity, def:very_stable_Higgs, def:component_multiplicity}
+  \textit{Source: [HH21], §1 and §4.}
+  For a very stable \(\cE \in \cM^{s\T}\), the virtual multiplicity \(m_{\cE}(t)\) is in fact a
+  polynomial in \(t\) (proved in \cref{thm:multiplicity_formula}).  This polynomial is called the
+  \emph{equivariant multiplicity} of \(\cE\).  It is a \emph{palindromic} and \emph{monic}
+  polynomial with non-negative integer coefficients.  Its value at \(t = 1\) equals the
+  multiplicity \(m_{F_{\cE}}\) of the corresponding nilpotent cone component
+  \(N_{F_{\cE}} \subset N\).
+\end{definition}
+
+% SOURCE: [HH21], Theorem 1.2 (label maintype111), §3.1 Example, type-(1,...,1) bundles
+%   (read from references/MR4411733-stable-higgs-bundles.tex)
+% SOURCE QUOTE: Let $$E=L_0\oplus \dots \oplus L_{n-1}$$ be a direct sum of line bundles $L_i$
+% on $C$. Furthermore, let the Higgs field be given by $$\Phi|_{L_{i-1}}=b_i : L_{i-1}\to
+% L_{i}K\subset EK$$ where $$b_i\in \Hom(L_{i-1},L_{i}K)=H^0(C;L_{i-1}^*L_{i}K).$$
+\begin{definition}[Type-\((1,\ldots,1)\) Higgs bundle]
+  \label{def:type_one_one_bundle}
+  \lean{VeryStableHiggsBundles.TODO.TypeOneOneBundle}
+  \uses{def:Higgs_bundle, def:T_fixed_type}
+  \textit{Source: [HH21], §1 and §3.1.}
+  A \emph{type-\((1,\ldots,1)\) Higgs bundle} is a \(\T\)-fixed Higgs bundle
+  \((E, \Phi)\) with \(E = L_0 \oplus \cdots \oplus L_{n-1}\) a direct sum of line bundles and
+  Higgs field components
+  \[
+    b_i := \Phi|_{L_{i-1}} \in H^0(C;\, L_{i-1}^* L_i K), \quad i = 1, \ldots, n-1.
+  \]
+  The \emph{composed section} is \(b := b_{n-1} \circ \cdots \circ b_1 \in H^0(C;\, L_0^* L_{n-1} K^{n-1})\).
+  The isomorphism class depends only on the divisors \(\delta_i = \operatorname{div}(b_i)\) and
+  the line bundle \(L_0\); we write \(\cE_\delta\) for the Higgs bundle associated to divisor
+  data \(\delta = (\delta_0, \delta_1, \ldots, \delta_{n-1})\) with \(L_0 = \cO_C(\delta_0)\).
+\end{definition}
+
+% SOURCE: [HH21], §1, canonical uniformising Higgs bundle
+%   (read from references/MR4411733-stable-higgs-bundles.tex)
+% SOURCE QUOTE: the {\em canonical uniformising Higgs bundle}
+% \beq\label{canuni} \calE_0:=(\calO_C\oplus K^{-1}\oplus \dots \oplus K^{-n+1},
+% \Phi|_{K^{-i+1}}=1:K^{-i+1}\to K^{-i}\otimes K).\eeq
+\begin{definition}[Canonical uniformising Higgs bundle]
+  \label{def:canonical_uniformising}
+  \lean{VeryStableHiggsBundles.TODO.CanonicalUniformisingBundle}
+  \uses{def:type_one_one_bundle}
+  \textit{Source: [HH21], §1.}
+  The \emph{canonical uniformising Higgs bundle} is the type-\((1,\ldots,1)\) Higgs bundle
+  \[
+    \cE_0 := \bigl(\cO_C \oplus K^{-1} \oplus \cdots \oplus K^{-n+1},\;
+    \Phi|_{K^{-i+1}} = 1 : K^{-i+1} \to K^{-i} \otimes K\bigr).
+  \]
+  Its upward flow \(W^+_{\cE_0}\) is a Hitchin section, hence closed in \(\cM\), showing that
+  \(\cE_0\) is very stable.
+\end{definition}
+
+\begin{lemma}[Product formula for the \(\T\)-character]
+  \label{lem:T_char_product}
+  \lean{VeryStableHiggsBundles.TODO.TCharProduct}
+  \uses{def:T_char_sym}
+  For a positive \(\T\)-module \(V = \bigoplus_{\lambda > 0} V_\lambda\), the formal identity
+  \[
+    \chi_{\T}\!\bigl(\Sym(V^*)\bigr)
+    = \prod_{\lambda > 0} \frac{1}{(1 - t^\lambda)^{\dim V_\lambda}}
+  \]
+  holds in \(\Z[[t]]\).
+\end{lemma}
+
+\begin{proof}
+  \uses{def:T_char_sym}
+  The symmetric algebra splits over weight spaces: \(\Sym(V^*) = \bigotimes_{\lambda > 0} \Sym(V^*_\lambda)\).
+  The weight-\(\mu\) piece of \(\Sym(V^*_\lambda)\) is the degree-\((-\mu/\lambda)\) part of
+  the polynomial ring in \(\dim V_\lambda\) variables of weight \(-\lambda\), giving the factor
+  \(1/(1-t^\lambda)^{\dim V_\lambda}\) in the Hilbert series.  The result follows from
+  multiplicativity of Poincaré series over tensor products.
+\end{proof}
+
+% SOURCE: [HH21], Theorem 1.3(1) (label mainmulti), proof in §5
+%   (read from references/MR4411733-stable-higgs-bundles.tex)
+% SOURCE QUOTE: the pushforward $h_*(\calO_{W^+_\calE})$ is a locally free sheaf on $\calA$
+\begin{lemma}[Pushforward is locally free]
+  \label{lem:pushforward_locally_free}
+  \lean{VeryStableHiggsBundles.TODO.PushforwardLocallyFree}
+  \uses{def:very_stable_Higgs, def:Hitchin_map, prop:BB_theory}
+  \textit{Source: [HH21], Theorem 1.3(1).}
+  Let \(\cE \in \cM^{s\T}\) be very stable.  The pushforward
+  \(h_*(\cO_{W^+_{\cE}})\) is a locally free sheaf on \(\cA\).
+\end{lemma}
+
+\begin{proof}
+  \uses{def:very_stable_Higgs, def:Hitchin_map, prop:BB_theory, thm:very_stable_closed}
+  By \cref{thm:very_stable_closed}, very stability implies \(W^+_{\cE}\) is a closed subvariety
+  of \(\cM\).  By \cref{prop:BB_theory}, \(W^+_{\cE} \cong T^+_{\cE}\cM\) as varieties, hence
+  \(W^+_{\cE}\) is a vector space (affine space), so \(\cO_{W^+_{\cE}}\) has no higher direct
+  images under \(h\).  Properness of \(h\) and the vanishing of higher direct images then
+  force \(h_*(\cO_{W^+_{\cE}})\) to be locally free on \(\cA\) by the cohomology-and-base-change
+  theorem together with flatness considerations.
+\end{proof}
+
+% SOURCE: [HH21], Theorem 1.1 (label mainclosed)
+%   (read from references/MR4411733-stable-higgs-bundles.tex)
+% SOURCE QUOTE: $\calE\in \M^{s\T}$ is very stable if and only if $W^+_{\calE}\subset \M$ is closed.
+\begin{theorem}[Very stable iff closed upward flow]
+  \label{thm:very_stable_closed}
+  \lean{VeryStableHiggsBundles.TODO.VeryStableClosed}
+  \uses{def:very_stable_Higgs, prop:BB_theory, def:Hitchin_map, def:nilpotent_cone, def:attractor}
+  \textit{Source: [HH21], Theorem 1.1.}
+  \(\cE \in \cM^{s\T}\) is very stable if and only if \(W^+_{\cE} \subset \cM\) is closed.
+\end{theorem}
+
+% SOURCE QUOTE PROOF: If $\alpha$ is not very stable then there exists  $\beta\neq\alpha \in
+% W^+_\alpha\cap \calC$ in the upward flow of $\alpha$. Then $\lim_{\lambda\to \infty}(\lambda\cdot
+% \beta)\in M^\T$ is fixed by the $\T$-action. Moreover a linearized $\T$-action on a very ample
+% line bundle on $M$ ... embeds it equivariantly in some projective space $M\subset {\mathbb P}^N$
+% with linear $\T$-action, where the closure of every non-trivial $\T$-orbit is linear, thus has
+% two distinct $\T$-fixed points. Consequently,
+% $$\lim_{\lambda\to \infty}(\lambda\cdot \beta)\neq\lim_{\lambda\to 0}(\lambda\cdot \beta)=\alpha$$
+% and thus $W^+_\alpha$ is not closed.
+\begin{proof}
+  \uses{def:very_stable_Higgs, prop:BB_theory, def:Hitchin_map, def:nilpotent_cone, def:attractor}
+  \textit{Forward direction (Proposition 4.1 of the paper).}
+  Suppose \(\cE\) is very stable, so \(W^+_{\cE} \cap \mathcal{C} = \{\cE\}\).  Embed \(\cM\)
+  equivariantly in a projective space via a linearised \(\T\)-action on a very ample line
+  bundle; then every non-trivial \(\T\)-orbit has two distinct fixed points in its closure.
+  Consider the compactification \(\overline{\cM} = (\cM \times \C) /\!/ \T\); the projectivisation
+  \(\mathbb{P}(W^+_{\cE} \times \C)\) is a projective (hence closed) subscheme of
+  \(\overline{\cM}\), and all its boundary points lie on the divisor at infinity.  Hence
+  \(W^+_{\cE}\) is closed in \(\cM\).
+  \textit{Converse.}  If \(W^+_{\cE}\) is closed in \(\cM\), then any
+  \(\beta \in W^+_{\cE} \cap \mathcal{C}\) with \(\beta \neq \cE\) would satisfy
+  \(\lim_{\lambda \to \infty} \lambda \cdot \beta \neq \cE\), giving two distinct limit points
+  of the \(\T\)-orbit of \(\beta\) in the closure \(W^+_{\cE}\), contradicting closedness
+  (the two limit points would be different fixed points of the closed orbit).
+  Hence \(W^+_{\cE} \cap \mathcal{C} = \{\cE\}\), i.e.\ \(\cE\) is very stable.
+\end{proof}
+
+% SOURCE: [HH21], Theorem 1.2 (label maintype111)
+%   (read from references/MR4411733-stable-higgs-bundles.tex)
+% SOURCE QUOTE: Let $$E=L_0\oplus \dots \oplus L_{n-1}$$ be a direct sum of line bundles $L_i$
+% on $C$. Furthermore, let the Higgs field be given by $$\Phi|_{L_{i-1}}=b_i : L_{i-1}\to
+% L_{i}K\subset EK$$ where $$b_i\in \Hom(L_{i-1},L_{i}K)=H^0(C;L_{i-1}^*L_{i}K).$$ Assume
+% that $(E,\Phi)$ is stable. Then $(E,\Phi)$ is very stable if and only if
+% $$b=b_{n-1}\circ \dots \circ b_1\in H^0(C;L_0^*L_{n-1}K^{n-1})$$ has no repeated zero.
+\begin{theorem}[Classification of type-\((1,\ldots,1)\) very stable bundles]
+  \label{thm:type_one_one_classification}
+  \lean{VeryStableHiggsBundles.TODO.TypeOneOneClassification}
+  \uses{def:type_one_one_bundle, def:very_stable_Higgs, def:canonical_uniformising,
+        thm:very_stable_closed}
+  \textit{Source: [HH21], Theorem 1.2.}
+  Let \((E, \Phi)\) be a stable type-\((1,\ldots,1)\) Higgs bundle with
+  \(E = L_0 \oplus \cdots \oplus L_{n-1}\) and \(b_i = \Phi|_{L_{i-1}}\).  Then \((E, \Phi)\)
+  is very stable if and only if the composed section
+  \(b = b_{n-1} \circ \cdots \circ b_1 \in H^0(C;\, L_0^* L_{n-1} K^{n-1})\)
+  has no repeated zero.
+\end{theorem}
+
+% SOURCE QUOTE PROOF: The proof of this proceeds by first verifying it in the case when $b$ has
+% no zeroes. The corresponding Higgs bundle is called a uniformising Higgs bundle, the upward flow
+% from which is nothing but a Hitchin section \cite{hitchin-lie}, which was already observed to be
+% closed in \cite{hitchin-lie}. ... Then we apply Hecke transformations at points of the curve to
+% these Hitchin sections, and observe that we can reach all type $(1,\dots,1)$ upward flows with
+% subsequent Hecke transformations, and can infer Theorem~\ref{maintype111} in turn.
+\begin{proof}
+  \uses{def:type_one_one_bundle, def:canonical_uniformising, thm:very_stable_closed}
+  \textit{Base case.}  When \(b\) has no zeroes, \((E, \Phi)\) is a uniformising Higgs bundle;
+  its upward flow is a Hitchin section, which is closed in \(\cM\) (Hitchin), hence very stable
+  by \cref{thm:very_stable_closed}.
+  \textit{General case via Hecke transformations.}  Starting from a Hitchin section, apply Hecke
+  transformations at points of \(C\) to modify the divisors \(\delta_i\) one zero at a time.
+  Each Hecke transform preserves the stability and very-stability properties as long as the
+  resulting divisor \(\delta_1 + \cdots + \delta_{n-1}\) remains reduced (i.e.\ \(b\) has only
+  simple zeros).  Introducing a double zero at a Hecke step yields a wobbly (not very stable)
+  bundle.  One verifies that every type-\((1,\ldots,1)\) upward flow can be reached in this way,
+  completing the classification.
+\end{proof}
+
+% SOURCE: [HH21], Theorem 1.3 (label mainmulti)
+%   (read from references/MR4411733-stable-higgs-bundles.tex)
+% SOURCE QUOTE: Let $\calE\in \M^{s\T}$ be a very stable Higgs bundle. Denote by
+% $T^+_\calE<T_\calE\M$ the positive part of the $\T$-module $T_\calE\M$ and by $F_\calE$ the
+% $\T$-fixed point component containing $\calE$. We have
+% \begin{enumerate}
+% \item the pushforward $h_*(\calO_{W^+_\calE})$ is a locally free sheaf on $\calA$
+% \item the multiplicity of the corresponding component $N_{F_\calE}$ of the nilpotent cone equals
+% \beq \label{multi} m_{F_\calE}=\rank(h_*(\calO_{W^+_\calE}))=\left. { \chi_\T(\Sym(T^{+*}_\calE))
+% \over \chi_\T(\Sym(\calA^*))}\right|_{t=1}\eeq
+% \item for generic $a\in \calA$ the intersection $W^+_\calE\cap h^{-1}(a)$ is transversal and
+% has cardinality $m_{F_\calE}$.
+% \end{enumerate}
+\begin{theorem}[Multiplicity formula]
+  \label{thm:multiplicity_formula}
+  \lean{VeryStableHiggsBundles.TODO.MultiplicityFormula}
+  \uses{def:very_stable_Higgs, def:virtual_multiplicity, def:equivariant_multiplicity,
+        def:component_multiplicity,
+        lem:pushforward_locally_free, prop:BB_theory, lem:T_char_product, def:Hitchin_map}
+  \textit{Source: [HH21], Theorem 1.3.}
+  Let \(\cE \in \cM^{s\T}\) be very stable, \(T^+_{\cE}\cM\) the positive part of the tangent
+  space, and \(F_{\cE} \in \pi_0(\cM^{\T})\) the fixed-point component containing \(\cE\).
+  Then:
+  \begin{enumerate}
+    \item The pushforward \(h_*(\cO_{W^+_{\cE}})\) is locally free on \(\cA\).
+    \item The multiplicity satisfies
+          \[
+            m_{F_{\cE}}
+            = \rank\bigl(h_*(\cO_{W^+_{\cE}})\bigr)
+            = \left.\frac{\chi_{\T}\!\bigl(\Sym(T^{+*}_{\cE}\cM)\bigr)}
+                         {\chi_{\T}\!\bigl(\Sym(\cA^*)\bigr)}\right|_{t=1}.
+          \]
+    \item For generic \(a \in \cA\), the intersection \(W^+_{\cE} \cap h^{-1}(a)\) is
+          transversal with cardinality \(m_{F_{\cE}}\).
+  \end{enumerate}
+  In particular, the virtual multiplicity \(m_{\cE}(t)\) is a polynomial in \(t\) for very stable
+  \(\cE\) (i.e.\ \(\cE\) has an equivariant multiplicity in the sense of
+  \cref{def:equivariant_multiplicity}).
+\end{theorem}
+
+\begin{proof}
+  \uses{lem:pushforward_locally_free, prop:BB_theory, lem:T_char_product,
+        def:very_stable_Higgs, def:virtual_multiplicity, def:component_multiplicity}
+  Part (1) is \cref{lem:pushforward_locally_free}.
+  For part (2): by \cref{prop:BB_theory}, \(W^+_{\cE} \cong T^+_{\cE}\cM\) as \(\T\)-equivariant
+  varieties, so \(\cO_{W^+_{\cE}} \cong \Sym(T^{+*}_{\cE}\cM)\) as \(\T\)-modules via the
+  isomorphism of coordinate rings.  The \(\T\)-equivariant fibre of \(h_*(\cO_{W^+_{\cE}})\) at
+  \(0 \in \cA\) has \(\T\)-character
+  \(\chi_{\T}(h_*(\cO_{W^+_{\cE}})_0) = m_{\cE}(t)\).  Since \(h_*(\cO_{W^+_{\cE}})\) is
+  locally free (part (1)), its \(\T\)-character is a polynomial in \(t\); evaluating at \(t=1\)
+  yields \(\rank(h_*(\cO_{W^+_{\cE}})) = m_{\cE}(1) = m_{F_{\cE}}\) using the identification of
+  the fibre at \(0\) with the entire stalk (by equivariant localization and the
+  \(\T\)-equivariant structure on \(\cA\)).
+  Part (3) follows because \(h_*(\cO_{W^+_{\cE}})\) is locally free of rank \(m_{F_{\cE}}\),
+  so for generic \(a\) the fibre \(W^+_{\cE} \cap h^{-1}(a)\) is a finite reduced scheme of
+  degree \(m_{F_{\cE}}\), which is exactly a transversal intersection of that cardinality.
+\end{proof}
+
+% SOURCE: [HH21], Corollary 1.4 (label maincor)
+%   (read from references/MR4411733-stable-higgs-bundles.tex)
+% SOURCE QUOTE: The multiplicity of $\calN$, the moduli space of semi-stable rank $n$ degree $d$
+% bundles, in the nilpotent cone is  $$m_\calN=2^{3g-3}3^{5g-5}\dots n^{(2n-1)(g-1)}.$$ Moreover
+% let $N_{F_\calE}$ be the component of the nilpotent cone for a type $(1,\dots,1)$ Higgs bundle
+% $\calE\in \M^{s\T}$ as in Theorem~\ref{maintype111}. Let $m_i=\deg(b_i)$. Then its multiplicity
+% in the nilpotent cone is $$m_{F_{\calE}}=\prod_{i=1}^{n-1}{n\choose n-i}^{m_i}.$$
+\begin{corollary}[Explicit multiplicities]
+  \label{cor:explicit_multiplicity}
+  \lean{VeryStableHiggsBundles.TODO.ExplicitMultiplicity}
+  \uses{thm:multiplicity_formula, def:canonical_uniformising, def:type_one_one_bundle,
+        thm:type_one_one_classification}
+  \textit{Source: [HH21], Corollary 1.4.}
+  \begin{enumerate}
+    \item The multiplicity of \(\cN\) (the moduli space of semi-stable rank-\(n\) degree-\(d\)
+          vector bundles) in the nilpotent cone is
+          \[
+            m_{\cN} = 2^{3g-3} \cdot 3^{5g-5} \cdots n^{(2n-1)(g-1)}.
+          \]
+    \item For a type-\((1,\ldots,1)\) very stable Higgs bundle \(\cE_\delta \in \cM^{s\T}\) as
+          in \cref{thm:type_one_one_classification} with \(m_i = \deg(b_i)\), the multiplicity is
+          \[
+            m_{F_{\cE_\delta}} = \prod_{i=1}^{n-1} \binom{n}{n-i}^{m_i}.
+          \]
+  \end{enumerate}
+\end{corollary}
+
+\begin{proof}
+  \uses{thm:multiplicity_formula, def:canonical_uniformising, def:type_one_one_bundle,
+        lem:T_char_product}
+  \textit{Part (1).}  Apply \cref{thm:multiplicity_formula} to the canonical uniformising Higgs
+  bundle \(\cE_0\) (\cref{def:canonical_uniformising}).  The weight spaces of \(T^+_{\cE_0}\cM\)
+  are computed via the deformation complex at \(\cE_0\); one finds that the weight-\(j-i\) spaces
+  for \(j > i\) have dimension \(\dim H^0(C; K^{j-i}) = (j-i)(2g-2) - g + 1\) when
+  \(j > i\) (by Riemann-Roch), giving the product formula
+  \(m_{\cN} = \prod_{1 \leq i < j \leq n} (j-i)^{2g-2-1}\), which simplifies to the stated
+  formula.
+  \textit{Part (2).}  For \(\cE_\delta\) of type \((1,\ldots,1)\) with divisors of degrees
+  \(m_i = \deg(\delta_i)\), the positive tangent space \(T^+_{\cE_\delta}\cM\) decomposes
+  according to the \(m_i\) sections \(b_i\); each \(b_i\) contributes a weight-\(i\) block of
+  dimension \(m_i \cdot \binom{n}{n-i}\) to the character formula, yielding the stated product
+  via \cref{lem:T_char_product}.
+\end{proof}
+
+% SOURCE: [HH21], §1, structure sheaf of upward flow
+%   (read from references/MR4411733-stable-higgs-bundles.tex)
+% SOURCE QUOTE: Then $W^+_{\calE_\delta}\subset \M$ is a closed Lagrangian, and we denote its
+% structure sheaf $$\calL_\delta:=\calO_{W^+_{\calE_\delta}}.$$
+\begin{definition}[Structure sheaf of the upward flow]
+  \label{def:structure_sheaf_upward_flow}
+  \lean{VeryStableHiggsBundles.TODO.StructureSheafUpwardFlow}
+  \uses{def:very_stable_Higgs, def:upward_flow, def:type_one_one_bundle, thm:very_stable_closed}
+  \textit{Source: [HH21], §1.}
+  For a very stable type-\((1,\ldots,1)\) Higgs bundle \(\cE_\delta \in \cM^{s\T}\), the
+  upward flow \(W^+_{\cE_\delta} \subset \cM\) is a closed Lagrangian subvariety.  Its
+  structure sheaf is denoted \(\cL_\delta := \cO_{W^+_{\cE_\delta}}\).
+\end{definition}
+
+% SOURCE: [HH21], §1, mirror bundle Lambda
+%   (read from references/MR4411733-stable-higgs-bundles.tex)
+% SOURCE QUOTE: We construct
+% \beq\label{lambdaintro}\Lambda_\delta:= \bigotimes_{i=0}^{n-1}\bigotimes_{j=0}^{m_i}
+% \Lambda^{n-i}(\bE_{c_{ij}}),\eeq using a certain (twisted by a gerbe and appropriately
+% normalised) universal Higgs bundle $(\bE,\bPhi)$ on $C\times \M^s$ and denote
+% $\bE_{c_{ij}}=\bE|_{\M^s\times{\{c_{ij}\}}}$ when $c_{ij}\in C$ and
+% $\bE_{c_{0j}}=\bE^*|_{\M^s\times{\{-c_{0j}\}}}$, when $-c_{0j}\in C$.
+\begin{definition}[Mirror bundle \(\Lambda_\delta\)]
+  \label{def:mirror_bundle_Lambda}
+  \lean{VeryStableHiggsBundles.TODO.MirrorBundleLambda}
+  \uses{def:structure_sheaf_upward_flow, def:type_one_one_bundle}
+  \textit{Source: [HH21], §1.}
+  Let \(\bE\) be a gerbe-twisted, normalised universal Higgs bundle on \(C \times \cM^s\), and
+  let \(\bE_{c} = \bE|_{\cM^s \times \{c\}}\) for \(c \in C\).  For divisor data
+  \(\delta = (\delta_0, \delta_1, \ldots, \delta_{n-1})\) with \(\delta_i = c_{i1} + \cdots + c_{im_i}\),
+  the \emph{mirror bundle} is
+  \[
+    \Lambda_\delta
+    := \bigotimes_{i=0}^{n-1}\, \bigotimes_{j=1}^{m_i} \Lambda^{n-i}(\bE_{c_{ij}}),
+  \]
+  a vector bundle on \(\cM^s\) of rank \(m_{F_{\cE_\delta}}\) (when \(n \mid \sum_{i=1}^{n-1}(n-i)m_i\)).
+\end{definition}
+
+% SOURCE: [HH21], §1, relative Poincaré bundle
+%   (read from references/MR4411733-stable-higgs-bundles.tex)
+% SOURCE QUOTE: For $\M^\#:=h^{-1}(\calA^\#)$ we  construct a relative Poincar\'e bundle
+% $\tilde{\bP}$ on the fibre product $\M^\#\times_{\calA^\#}\M^\#$, which has fibre
+% $J(C_a)\times J(C_a)$ over $a\in \calA^\#$.
+\begin{definition}[Relative Poincaré bundle]
+  \label{def:relative_Poincare}
+  \lean{VeryStableHiggsBundles.TODO.RelativePoincare}
+  \uses{def:Hitchin_map}
+  \textit{Source: [HH21], §1.}
+  Let \(\cA^{\#} \subset \cA\) denote the locus of points \(a \in \cA\) for which the spectral
+  curve \(C_a\) is smooth, and set \(\cM^{\#} := h^{-1}(\cA^{\#})\).  For generic
+  \(a \in \cA^{\#}\) the fibre \(h^{-1}(a) \cong J(C_a)\) is a Jacobian, so the fibre product
+  \(\cM^{\#} \times_{\cA^{\#}} \cM^{\#}\) has fibres \(J(C_a) \times J(C_a)\).  There exists a
+  \emph{relative Poincaré bundle} \(\widetilde{\mathbf{P}}\) on
+  \(\cM^{\#} \times_{\cA^{\#}} \cM^{\#}\) restricting to the Poincaré line bundle of
+  \(J(C_a)\) on each fibre.
+\end{definition}
+
+% SOURCE: [HH21], §1, equivariant Euler pairing
+%   (read from references/MR4411733-stable-higgs-bundles.tex)
+% SOURCE QUOTE: To formalise this for two $\T$-equivariant coherent sheaves $\calF_1$ and
+% $\calF_2$ on $\M$ we denote the {\em equivariant Euler pairing} as
+% $$\chi_\T(\M;\calF_1,\calF_2)=\sum_{k,l} \dim(H^k({ R} {H\!om}(\calF_1,\calF_2))_l) (-1)^k
+% t^{-l},$$ which on a semi-projective variety like $\M$ we expect to be a Laurent series in
+% $\Z((t))$.
+\begin{definition}[Equivariant Euler pairing]
+  \label{def:equivariant_euler_pairing}
+  \lean{VeryStableHiggsBundles.TODO.EquivariantEulerPairing}
+  \uses{def:T_action_moduli}
+  \textit{Source: [HH21], §1.}
+  For two \(\T\)-equivariant coherent sheaves \(\mathcal{F}_1, \mathcal{F}_2\) on \(\cM\), the
+  \emph{equivariant Euler pairing} is
+  \[
+    \chi_{\T}(\cM;\, \mathcal{F}_1, \mathcal{F}_2)
+    := \sum_{k,\ell} \dim\!\bigl(H^k(R\mathcal{H}om(\mathcal{F}_1, \mathcal{F}_2))_\ell\bigr)
+       (-1)^k t^{-\ell}
+    \;\in\; \Z((t)).
+  \]
+\end{definition}
+
+% SOURCE: [HH21], Theorem 1.5 (label mainmirror)
+%   (read from references/MR4411733-stable-higgs-bundles.tex)
+% SOURCE QUOTE: Let $\calE_\delta\in \M^{s\T}$ be a very stable Higgs bundle of type $(1,\dots,1)$
+% and degree $-n(n-1)(g-1)$.  The relative Fourier-Mukai transform over $\calA^\#$ satisfies
+% $$S(\calL_\delta|_{\M^\#})=(\pi_2)_*(\pi_1^*(\calL_\delta|_{\M^\#})\otimes \tilde{\bP})=
+% \Lambda_\delta|_{\M^\#}$$
+% and  $$S(\Lambda_\delta|_{\M^\#})=\calL_{\delta^\iota}[-n^2(g-1)-1]|_{\M^\#}$$
+% Moreover,   $\Lambda_\delta$ extends to  a  vector bundle with a hyperholomorphic connection
+% on $\M^s$.
+\begin{theorem}[Fourier-Mukai mirror symmetry]
+  \label{thm:fourier_mukai_mirror}
+  \lean{VeryStableHiggsBundles.TODO.FourierMukaiMirror}
+  \uses{def:structure_sheaf_upward_flow, def:mirror_bundle_Lambda, def:fourier_mukai_transform,
+        def:relative_Poincare, thm:very_stable_closed, thm:multiplicity_formula,
+        def:type_one_one_bundle, cor:explicit_multiplicity}
+  \textit{Source: [HH21], Theorem 1.5.}
+  Let \(\cE_\delta \in \cM^{s\T}\) be a very stable type-\((1,\ldots,1)\) Higgs bundle of degree
+  \(d = -n(n-1)(g-1)\).  The relative Fourier-Mukai transform over \(\cA^{\#}\) satisfies
+  \[
+    S\!\bigl(\cL_\delta|_{\cM^{\#}}\bigr) = \Lambda_\delta|_{\cM^{\#}}
+    \quad \text{and} \quad
+    S\!\bigl(\Lambda_\delta|_{\cM^{\#}}\bigr)
+      = \cL_{\delta^{\iota}}[-n^2(g-1)-1]\big|_{\cM^{\#}},
+  \]
+  where \(\delta^{\iota} = (-\delta_{n-1} - \cdots - \delta_0,\, \delta_{n-1}, \ldots, \delta_1)\).
+  Moreover, \(\Lambda_\delta\) extends to a vector bundle with hyperholomorphic connection on
+  \(\cM^s\).
+\end{theorem}
+
+\begin{proof}
+  \uses{def:structure_sheaf_upward_flow, def:mirror_bundle_Lambda, def:fourier_mukai_transform,
+        def:relative_Poincare, thm:multiplicity_formula}
+  The first equality \(S(\cL_\delta|_{\cM^{\#}}) = \Lambda_\delta|_{\cM^{\#}}\) is proved in
+  Section 6 of the paper by explicit computation of the relative FM transform via the
+  Bialynicki-Birula isomorphism \(W^+_{\cE_\delta} \cong T^+_{\cE_\delta}\cM\): one identifies
+  the fibre of the pushforward over a generic \(a \in \cA^{\#}\) with the restriction of
+  \(\Lambda_\delta\) to \(h^{-1}(a)\) using the decomposition of the exterior algebra
+  \(\Lambda^{n-i}(\bE_{c_{ij}})\) on the spectral Jacobian.  The second equality then follows
+  by applying \(S\) again and using the involution \(\iota\) on the Jacobian fibres together with
+  the shift \(-n^2(g-1)-1\).  The hyperholomorphic extension of \(\Lambda_\delta\) to \(\cM^s\)
+  is proved in Section 7 using the twistor space construction of the hyperkähler moduli space;
+  the universal bundle at each point \(c \in C\) acquires a hyperholomorphic connection by the
+  \(\cO_C(c)\)-twist construction.
+\end{proof}
+
+% SOURCE: [HH21], Theorem 1.6 (label maineuler)
+%   (read from references/MR4411733-stable-higgs-bundles.tex)
+% SOURCE QUOTE: Let $\calE_\delta,\calE_{\delta^\prime}\in \M^{s\T}$ be two type $(1,\dots,1)$
+% very stable Higgs bundles of degree $-n(n-1)(g-1)$. Then there exist $\T$-equivariant
+% structures on all coherent sheaves of the form $\calL_\delta$ and $\Lambda_\delta$ such that
+% $$\chi_\T\left(\M;\calL_{\delta^\prime},\Lambda_{\delta}\right)=\chi_\T(\det(\C_{1}
+% \otimes\calA^*)) \chi_\T\left(\M;\Lambda_{\delta^\prime},\calL_{\delta^\iota}[-n^2(g-1)-1]
+% \right).$$
+\begin{theorem}[Equivariant Euler pairing agreement]
+  \label{thm:euler_pairing_agreement}
+  \lean{VeryStableHiggsBundles.TODO.EulerPairingAgreement}
+  \uses{def:equivariant_euler_pairing, def:structure_sheaf_upward_flow,
+        def:mirror_bundle_Lambda, thm:fourier_mukai_mirror}
+  \textit{Source: [HH21], Theorem 1.6.}
+  Let \(\cE_\delta, \cE_{\delta'} \in \cM^{s\T}\) be two type-\((1,\ldots,1)\) very stable
+  Higgs bundles of degree \(-n(n-1)(g-1)\).  There exist \(\T\)-equivariant structures on
+  \(\cL_\delta\) and \(\Lambda_\delta\) such that
+  \[
+    \chi_{\T}\!\bigl(\cM;\, \cL_{\delta'}, \Lambda_\delta\bigr)
+    = \chi_{\T}\!\bigl(\det(\C_1 \otimes \cA^*)\bigr)\,
+      \chi_{\T}\!\bigl(\cM;\, \Lambda_{\delta'}, \cL_{\delta^{\iota}}[-n^2(g-1)-1]\bigr),
+  \]
+  where \(\C_1\) denotes the weight-\(1\) \(\T\)-character.
+\end{theorem}
+
+\begin{proof}
+  \uses{def:equivariant_euler_pairing, def:structure_sheaf_upward_flow,
+        def:mirror_bundle_Lambda, def:fourier_mukai_transform, def:relative_Poincare,
+        thm:multiplicity_formula}
+  This is proved in Section 6 of the paper by a global Euler characteristic computation on
+  \(\cM\) using the \(\T\)-equivariant structures on \(\cL_\delta\) and \(\Lambda_\delta\)
+  constructed in the proof of \cref{thm:fourier_mukai_mirror}.  One applies the
+  Grothendieck-Riemann-Roch theorem to the relative FM transform, expressing both sides as
+  integrals over the spectral Jacobians.  The factor \(\chi_{\T}(\det(\C_1 \otimes \cA^*))\)
+  arises from the shift in the \(\T\)-equivariant structure and the determinant of the
+  cotangent complex of the Hitchin map.  The agreement up to this \(q\)-power factor provides
+  global evidence for the mirror equivalence of categories.
+\end{proof}
+
+% ---------------------------------------------------------------------------
+\section{Bialynicki-Birula partition and decomposition}
+% ---------------------------------------------------------------------------
+
+\subsection{Bialynicki-Birula theory for semi-projective varieties}
+
+% SOURCE: [HH21], §2.1, Definition of semi-projective variety, p. 6
+%   (read from references/MR4411733-stable-higgs-bundles.tex)
+% SOURCE QUOTE: Let $M$ be a normal, complex, semi-projective algebraic variety.  Semi-projective
+% means that $M$ is quasi-projective and we have a $\T:=\C^\times$ action on $M$  such that  the
+% fixed point locus $M^{\T}$ is projective and   for every $x\in M$ there is a $p\in M^\T$ such
+% that $\lim_{\lambda\to 0}  \lambda x=p$. By the latter we mean that there exists a
+% $\T$-equivariant morphism $g:\A^1\to M$ with $g(1)=x$ and $g(0)=p$, where $\T$ acts on $\A^1$
+% in the standard way.
+\begin{definition}[Semi-projective variety]
+  \label{def:semi_proj_variety}
+  \lean{VeryStableHiggsBundles.TODO.SemiProjectiveVariety}
+  \uses{}
+  \textit{Source: [HH21], §2.1.}
+  A \emph{semi-projective variety} is a normal complex quasi-projective algebraic variety \(M\)
+  equipped with a \(\T\)-action such that:
+  \begin{enumerate}
+    \item the fixed-point locus \(M^{\T}\) is projective, and
+    \item for every \(x \in M\) there exists \(p \in M^{\T}\) such that
+          \(\lim_{\lambda \to 0} \lambda \cdot x = p\), meaning there is a \(\T\)-equivariant
+          morphism \(g : \A^1 \to M\) with \(g(1) = x\) and \(g(0) = p\), where \(\T\) acts on
+          \(\A^1\) by the standard multiplication.
+  \end{enumerate}
+  Examples include cotangent bundles of smooth projective varieties, moduli spaces of Higgs
+  bundles, and Nakajima quiver varieties.
+\end{definition}
+
+% SOURCE: [HH21], §2.1, Definitions of upward and downward flow
+%   (read from references/MR4411733-stable-higgs-bundles.tex)
+% SOURCE QUOTE: For every $\alpha\in M^{\T}$ denote by
+% $$W^+_\alpha:= \{ x\in M | \lim_{\lambda\to 0}  \lambda x = \alpha\}$$
+% the {\em upward flow} from $\alpha$
+\begin{definition}[Upward flow]
+  \label{def:upward_flow}
+  \lean{VeryStableHiggsBundles.TODO.UpwardFlow}
+  \uses{def:semi_proj_variety}
+  \textit{Source: [HH21], §2.1.}
+  Let \(M\) be a semi-projective variety and \(\alpha \in M^{\T}\) a fixed point.  The
+  \emph{upward flow} from \(\alpha\) is
+  \[
+    W^+_\alpha := \{ x \in M \mid \lim_{\lambda \to 0} \lambda \cdot x = \alpha \}.
+  \]
+\end{definition}
+
+% SOURCE: [HH21], §2.1, Definition of downward flow
+%   (read from references/MR4411733-stable-higgs-bundles.tex)
+% SOURCE QUOTE: $$W^-_\alpha:= \{ x\in M | \lim_{\lambda\to \infty}  \lambda x = \alpha\}$$
+% the {\em downward flow} from $\alpha$.
+\begin{definition}[Downward flow]
+  \label{def:downward_flow}
+  \lean{VeryStableHiggsBundles.TODO.DownwardFlow}
+  \uses{def:semi_proj_variety}
+  \textit{Source: [HH21], §2.1.}
+  The \emph{downward flow} from \(\alpha \in M^{\T}\) is
+  \[
+    W^-_\alpha := \{ x \in M \mid \lim_{\lambda \to \infty} \lambda \cdot x = \alpha \}.
+  \]
+\end{definition}
+
+% SOURCE: [HH21], §2.1, Attractor and repeller
+%   (read from references/MR4411733-stable-higgs-bundles.tex)
+% SOURCE QUOTE: We also define for connected components $F\in \pi_0(M^{\T})$ of the fixed point
+% locus $$W^+_F:=\cup_{\alpha\in F} W^+_\alpha$$ the {\em attractor} of $F$
+% and $$W^-_F:=\cup_{\alpha\in F} W^-_\alpha.$$ the {\em repeller} of $F$.
+\begin{definition}[Attractor and repeller]
+  \label{def:attractor}
+  \lean{VeryStableHiggsBundles.TODO.Attractor}
+  \uses{def:upward_flow, def:downward_flow}
+  \textit{Source: [HH21], §2.1.}
+  For a connected component \(F \in \pi_0(M^{\T})\) of the fixed-point locus, the
+  \emph{attractor} (resp.\ \emph{repeller}) of \(F\) is
+  \[
+    W^+_F := \bigcup_{\alpha \in F} W^+_\alpha
+    \qquad \text{(resp.\ } W^-_F := \bigcup_{\alpha \in F} W^-_\alpha \text{)}.
+  \]
+  The \emph{core} of \(M\) is \(\mathcal{C} := \coprod_{F \in \pi_0(M^{\T})} W^-_F\).
+\end{definition}
+
+% SOURCE: [HH21], §2.1, Weight decomposition at a smooth fixed point
+%   (read from references/MR4411733-stable-higgs-bundles.tex)
+% SOURCE QUOTE: Let $M^s\subset M$ denote the smooth locus of $M$. Let $\alpha\in M^{s\T}$ be a
+% smooth fixed point.  Then $\T$ acts linearly on the tangent space $T_\alpha M$. We can decompose
+% this representation into weight spaces $T_\alpha M\cong \oplus_{k\in \Z} (T_\alpha M)_k$,
+% where $(T_\alpha M)_k<T_\alpha M$ denotes the isotypical component, where $\lambda\in \T$ acts
+% as multiplication by $\lambda^k$. We will denote by $T^+_\alpha M = \oplus_{k>0}(T_\alpha M)_k$
+% the positive and by $T^-_\alpha M = \oplus_{k<0}(T_\alpha M)_k$ the negative part of this
+% decomposition. Let  $T^0_\alpha M=(T_\alpha M)_0$ denote the zero weight component then we have
+% the decomposition $$T_\alpha M \cong  T^+_\alpha M \oplus T^0_\alpha M \oplus T^-_\alpha M.$$
+\begin{definition}[Weight decomposition of the tangent space]
+  \label{def:weight_decomp}
+  \lean{VeryStableHiggsBundles.TODO.WeightDecomposition}
+  \uses{def:semi_proj_variety}
+  \textit{Source: [HH21], §2.1.}
+  Let \(\alpha \in M^{s\T}\) be a smooth fixed point.  The \(\T\)-action on the tangent space
+  \(T_\alpha M\) splits into weight spaces \(T_\alpha M \cong \bigoplus_{k \in \Z} (T_\alpha M)_k\),
+  where \(\lambda \in \T\) acts on \((T_\alpha M)_k\) by multiplication by \(\lambda^k\).
+  Define
+  \[
+    T^+_\alpha M := \bigoplus_{k > 0} (T_\alpha M)_k, \qquad
+    T^-_\alpha M := \bigoplus_{k < 0} (T_\alpha M)_k, \qquad
+    T^0_\alpha M := (T_\alpha M)_0,
+  \]
+  giving the decomposition \(T_\alpha M \cong T^+_\alpha M \oplus T^0_\alpha M \oplus T^-_\alpha M\).
+\end{definition}
+
+% SOURCE: [HH21], Proposition 2.1 (label bbprop in the TeX source)
+%   (read from references/MR4411733-stable-higgs-bundles.tex)
+% SOURCE QUOTE: For a smooth fixed point $\alpha\in M^{s\T}$ the upward and downward flows
+% $W^+_\alpha$ and $W^-_\alpha$ are $\T$-invariant locally closed subvarieties in $M$.
+% Furthermore we have $W^+_\alpha \cong T^+_\alpha M$ and $W^-_\alpha\cong T^-_\alpha M$ as
+% varieties with $\T$-action.
+\begin{proposition}[Bialynicki-Birula]
+  \label{prop:BB_theory}
+  \lean{VeryStableHiggsBundles.TODO.BialynickiBirula}
+  \uses{def:semi_proj_variety, def:upward_flow, def:downward_flow, def:weight_decomp}
+  \textit{Source: [HH21], Proposition 2.1.}
+  For a smooth fixed point \(\alpha \in M^{s\T}\) in a semi-projective variety \(M\), the upward
+  flow \(W^+_\alpha\) and downward flow \(W^-_\alpha\) are \(\T\)-invariant locally closed
+  subvarieties of \(M\), and there are \(\T\)-equivariant isomorphisms
+  \(W^+_\alpha \cong T^+_\alpha M\) and \(W^-_\alpha \cong T^-_\alpha M\) as varieties.
+\end{proposition}
+
+% SOURCE QUOTE PROOF: This is proved in \cite{bialynicki-birula} for a smooth complete $M$. The
+% statement above could be reduced to that case by equivariantly compactifying $M$ (see below or
+% \cite[Theorem 3]{sumihiro}) and equivariantly resolving the singularities of the compactification
+% (\cite[Corollary 7.6.3]{villamayor}). For completeness, and to prepare the ground for the proof
+% of Proposition~\ref{lagrangian}, we present a proof inspired by the approach of
+% \cite[Lemma 2.2]{bellamy-etal} see also \cite[\S 1]{drinfeld3}.
+\begin{proof}
+  \uses{def:semi_proj_variety, def:upward_flow, def:downward_flow, def:weight_decomp}
+  Take a \(\T\)-invariant open affine neighbourhood \(U\) of \(\alpha\) in the smooth locus
+  (which exists by Sumihiro's theorem).  The \(\T\)-action on \(U\) induces a \(\Z\)-grading
+  \(\C[U] = A = A_- \oplus A_0 \oplus A_+\) by non-negative, zero, and non-positive degrees.
+  The attractor locus satisfies \(\C[W^+_F] = A/(A_-)\): a point \(p \in U\) lies in
+  \(W^+_F\) if and only if all negatively-graded functions vanish at \(p\).  Computing tangent
+  spaces via the dual basis \(\{\partial_i\}\) of a homogeneous coordinate system, one shows
+  \(T_p W^+_\alpha = \operatorname{span}\{\partial_i|_p \mid \deg(x_i) > 0\}\).
+  The map \(f_\alpha : W^+_\alpha \to T^+_\alpha M\) sending \(p \mapsto \sum_{\deg(x_i)>0} x_i(p)\,\partial_i\)
+  is an étale \(\T\)-equivariant morphism whose image is an open \(\T\)-invariant subset of the
+  contractible space \(T^+_\alpha M\) containing the origin; simple-connectivity forces it to be
+  an isomorphism.  The downward case follows by inverting the \(\T\)-action.
+\end{proof}
+
+% ---------------------------------------------------------------------------
+\section{Bialynicki-Birula theory on the moduli space of Higgs bundles}
+% ---------------------------------------------------------------------------
+
+% SOURCE: [HH21], §3 (label bbhiggs), definition of Higgs bundle
+%   (read from references/MR4411733-stable-higgs-bundles.tex)
+% SOURCE QUOTE: Fix $C$ a smooth complex projective curve of genus $g>1$.
+% Similarly, a Higgs bundle $(E,\Phi)$ where $\Phi\in H^0(\End(E)\otimes K)$, is stable
+% (resp. semi-stable) if \eqref{stable} holds for $\Phi$-invariant proper subbundles $F\subset E$.
+\begin{definition}[Higgs bundle]
+  \label{def:Higgs_bundle}
+  \lean{VeryStableHiggsBundles.TODO.HiggsBundle}
+  \uses{}
+  \textit{Source: [HH21], §3.}
+  Fix a smooth complex projective curve \(C\) of genus \(g > 1\).  A \emph{Higgs bundle} on
+  \(C\) is a pair \((E, \Phi)\) where \(E\) is a rank-\(n\) degree-\(d\) vector bundle on \(C\)
+  and \(\Phi \in H^0(C;\, \End(E) \otimes K)\) is a \emph{Higgs field} (\(K\) the canonical
+  bundle of \(C\)).  The pair is \emph{stable} (resp.\ \emph{semi-stable}) if for every
+  \(\Phi\)-invariant proper subbundle \(F \subset E\) one has
+  \(\deg(F)/\rank(F) < \deg(E)/\rank(E)\) (resp.\ \(\leq\)).
+\end{definition}
+
+% SOURCE: [HH21], §3, moduli space construction
+%   (read from references/MR4411733-stable-higgs-bundles.tex)
+% SOURCE QUOTE: The moduli space of semistable Higgs bundles $\M:=\M_{n}^{d}$ of rank $n$ and
+% degree $d$ was constructed by \cite{hitchin} by gauge-theoretic and by \cite{nitsure} and
+% \cite{simpson1} by algebraic geometric methods.  At its smooth points it carries a
+% hyperk\"ahler metric, in particular an algebraic symplectic structure. It is  a normal
+% \cite[Corollary 11.7]{simpson1b} quasi-projective variety. The open subset $\M^s\subset \M$
+% of stable points is precisely the smooth locus.
+\begin{definition}[Moduli space of Higgs bundles]
+  \label{def:moduli_Higgs}
+  \lean{VeryStableHiggsBundles.TODO.ModuliHiggsBundles}
+  \uses{def:Higgs_bundle}
+  \textit{Source: [HH21], §3.}
+  The \emph{moduli space} \(\cM := \cM^d_n\) is the GIT moduli space of semi-stable rank-\(n\)
+  degree-\(d\) Higgs bundles on \(C\).  It is a normal quasi-projective algebraic variety; at its
+  smooth points (the stable locus \(\cM^s \subset \cM\)) it carries a hyperkähler metric and in
+  particular an algebraic symplectic structure.  We assume \(g > 1\) throughout.
+\end{definition}
+
+% SOURCE: [HH21], §3, T-action on M
+%   (read from references/MR4411733-stable-higgs-bundles.tex)
+% SOURCE QUOTE: The moduli space $\M$ carries a $\C^\times$-action defined by
+% $(E,\Phi)\mapsto (E,\lambda\Phi)$ for $\lambda\in \C^\times$. If we let $\C^\times$ act
+% with weight $i$ on $H^0(C;K^i)$ then $h$ becomes $\C^\times$-equivariant. As $h$ is proper
+% and all the weights on $\oplus_{i=1}^n  H^0(C;K^i)$ are positive, we deduce that $\M$ is
+% semi-projective with respect to this $\T$-action.
+\begin{definition}[\(\T\)-action on the moduli space]
+  \label{def:T_action_moduli}
+  \lean{VeryStableHiggsBundles.TODO.TActionOnModuli}
+  \uses{def:moduli_Higgs, def:semi_proj_variety}
+  \textit{Source: [HH21], §3.}
+  The group \(\T\) acts on \(\cM\) by scaling the Higgs field:
+  \(\lambda \cdot (E, \Phi) = (E, \lambda\Phi)\) for \(\lambda \in \T\).
+  Under this action \(\cM\) is semi-projective; the Hitchin map is \(\T\)-equivariant
+  (weight \(i\) on \(H^0(C; K^i)\)).
+\end{definition}
+
+\subsection{Fixed points of the \(\T\)-action \(\M^{s\T}\)}
+
+% SOURCE: [HH21], §3.1, type of a T-fixed Higgs bundle
+%   (read from references/MR4411733-stable-higgs-bundles.tex)
+% SOURCE QUOTE: We call the ordered partition $(\rank(L_0),...,\rank(L_k))$ of $n$ the {\em
+% type} of the fixed point $(E,\Phi)\in \M^{s\T}$.
+\begin{definition}[Type of a \(\T\)-fixed Higgs bundle]
+  \label{def:T_fixed_type}
+  \lean{VeryStableHiggsBundles.TODO.TFixedType}
+  \uses{def:T_action_moduli}
+  \textit{Source: [HH21], §3.1.}
+  A semi-stable Higgs bundle \((E, \Phi) \in \cM^{\T}\) fixed by the \(\T\)-action decomposes
+  as \(E = L_0 \oplus \cdots \oplus L_k\) with the weight-space decomposition of the induced
+  \(\T\)-action on \(E\), and \(\Phi(L_i) \subset L_{i+1} \otimes K\).  The \emph{type} of
+  \((E,\Phi)\) is the ordered partition \((\rank(L_0), \ldots, \rank(L_k))\) of \(n\).
+\end{definition}
+
+% ---------------------------------------------------------------------------
+\section{Mirror of upward flows}
+% ---------------------------------------------------------------------------
+
+% SOURCE: [HH21], Theorem 1.5 (label mainmirror), Fourier-Mukai transform definition
+%   (read from references/MR4411733-stable-higgs-bundles.tex)
+% SOURCE QUOTE: $S(\calL_\delta|_{\M^\#})=(\pi_2)_*(\pi_1^*(\calL_\delta|_{\M^\#})\otimes
+% \tilde{\bP})= \Lambda_\delta|_{\M^\#}$
+\begin{definition}[Relative Fourier-Mukai transform]
+  \label{def:fourier_mukai_transform}
+  \lean{VeryStableHiggsBundles.TODO.FourierMukaiTransform}
+  \uses{def:relative_Poincare}
+  \textit{Source: [HH21], §6.}
+  The \emph{relative Fourier-Mukai transform} over \(\cA^{\#}\) is the functor
+  \[
+    S(\mathcal{F}) := (\pi_2)_*\!\bigl(\pi_1^*(\mathcal{F}) \otimes \widetilde{\mathbf{P}}\bigr),
+  \]
+  where \(\pi_1, \pi_2 : \cM^{\#} \times_{\cA^{\#}} \cM^{\#} \to \cM^{\#}\) are the two
+  projections.
+\end{definition}

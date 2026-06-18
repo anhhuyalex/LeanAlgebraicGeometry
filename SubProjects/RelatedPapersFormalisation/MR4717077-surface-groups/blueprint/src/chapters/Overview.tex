@@ -3,4 +3,766 @@
 
 % archon:covers MR4717077CanonicalRepresentationsOfSurfaceGroups.lean MR4717077CanonicalRepresentationsOfSurfaceGroups/Basic.lean
 
-This is the auto-bootstrapped blueprint for MR4717077: Canonical representations of surface groups.
+This chapter is the comprehensive blueprint for the formalization of
+Landesman--Litt, \emph{Canonical representations of surface groups}
+(MR4717077, arXiv:2205.15352).
+The central result is \cref{thm:finite-image}: any MCG-finite representation
+$\rho\colon \pi_1(\Sigma_{g,n}) \to \GL_r(\mathbb{C})$ with $r < \sqrt{g+1}$
+has finite image.
+The proof has three steps: (1)~the unitary case
+(\cref{prop:unitary-case}), using cohomological vanishing and integrality of
+cohomologically rigid local systems; (2)~the semisimple case
+(\cref{thm:semisimple-case}), reducing to unitary via non-abelian Hodge
+theory; (3)~the general case, using \cref{lem:semisimplicity} to reduce to
+the semisimple case via the asymptotic Putman--Wieland theorem
+(\cref{thm:putman-wieland-asymptotic}).
+Throughout, the key analytic engine is the cohomological rank bound
+(\cref{thm:rank-bound-subsystem}), proved via period map analysis
+(\cref{thm:period-map}).
+
+% The section structure below mirrors the section structure (titles and order)
+% of the reference paper Landesman--Litt, "Canonical representations of surface
+% groups" (references/MR4717077-surface-groups.tex). Items are grouped under the
+% paper section they originate from (per their SOURCE provenance comments).
+
+\section{Introduction}
+
+% ---------------------------------------------------------------------------
+% Definitions
+% ---------------------------------------------------------------------------
+
+\begin{definition}[Surface group]
+  \label{def:surface-group}
+  \lean{MR4717077CanonicalRepresentationsOfSurfaceGroups.SurfaceGroup}
+  Fix non-negative integers $g, n$ with $\Sigma_{g,n}$ hyperbolic, i.e.\
+  $n \geq 1$ if $g = 1$ and $n \geq 3$ if $g = 0$.
+  The \emph{surface group} $\pi_1(\Sigma_{g,n})$ is the fundamental group of
+  an orientable topological surface of genus $g$ with $n$ punctures.
+  For $n = 0$ it has the standard presentation
+  \[
+    \langle a_1, b_1, \ldots, a_g, b_g \mid
+      [a_1,b_1]\cdots[a_g,b_g] = 1 \rangle.
+  \]
+  For $n \geq 1$ the group $\pi_1(\Sigma_{g,n})$ is free on $2g + n - 1$
+  generators.
+\end{definition}
+
+\begin{definition}[Mapping class group]
+  \label{def:mapping-class-group}
+  \lean{MR4717077CanonicalRepresentationsOfSurfaceGroups.MappingClassGroup}
+  % SOURCE: [Landesman--Litt], §1.1 notation, (read from references/MR4717077-surface-groups.tex)
+  % SOURCE QUOTE: "We will use $\on{Mod}_{g,n}$ to denote the mapping class group of an orientable surface of genus $g$ with $n$ punctures, and $\on{PMod}_{g,n}=\pi_1(\mathscr{M}_{g,n})$ (see \autoref{lemma:mgn-fundamental-group}) to denote pure mapping class group, i.e.~the subgroup of $\on{Mod}_{g,n}$ of index $n!$ preserving the punctures pointwise."
+  \textit{Source: Landesman--Litt, §1.1 notation.}
+  The \emph{mapping class group} $\Mod_{g,n} = \pi_0(\mathrm{Homeo}^+(\Sigma_{g,n}))$
+  is the group of isotopy classes of orientation-preserving homeomorphisms of
+  $\Sigma_{g,n}$ fixing the set of punctures setwise.
+  It acts on $\pi_1(\Sigma_{g,n})$ via an outer action induced by the
+  homeomorphism action.
+  The \emph{pure mapping class group}
+  $\PMod_{g,n} = \pi_1(\mathcal{M}_{g,n})$
+  is the index-$n!$ subgroup of $\Mod_{g,n}$ preserving each puncture
+  pointwise, where $\mathcal{M}_{g,n}$ is the Deligne--Mumford moduli stack
+  of $n$-pointed genus-$g$ smooth proper curves.
+\end{definition}
+
+\begin{definition}[MCG-finite representation]
+  \label{def:mcg-finite}
+  \lean{MR4717077CanonicalRepresentationsOfSurfaceGroups.MCGFinite}
+  \uses{def:surface-group, def:mapping-class-group}
+  % SOURCE: [Landesman--Litt], Definition 1.1.1 (definition:mcg-finite), (read from references/MR4717077-surface-groups.tex)
+  % SOURCE QUOTE: "For $g,n,r \geq 0$, a representation $\rho: \pi_1(\Sigma_{g,n},x) \to \on{GL}_r(\mathbb C)$ is {\em MCG-finite} if the conjugacy class of $\rho$ has finite orbit under the action of $\on{Mod}_{g,n}$."
+  \textit{Source: Landesman--Litt, Definition 1.1.1.}
+  For $g, n, r \geq 0$, a representation
+  $\rho\colon \pi_1(\Sigma_{g,n}, x) \to \GL_r(\mathbb{C})$ is
+  \emph{MCG-finite} if its conjugacy class has finite orbit under the action
+  of $\Mod_{g,n}$ on conjugacy classes of representations.
+\end{definition}
+
+% ---------------------------------------------------------------------------
+% Corollaries stated in the introduction (§1.2, §1.3, §1.6)
+% ---------------------------------------------------------------------------
+
+\begin{corollary}[Isomonodromy application]
+  \label{cor:isomonodromy}
+  \lean{MR4717077CanonicalRepresentationsOfSurfaceGroups.isomonodromy_iff_finiteMonodromy}
+  \uses{thm:finite-image}
+  % SOURCE: [Landesman--Litt], Corollary 1.2.3, (read from references/MR4717077-surface-groups.tex)
+  % SOURCE QUOTE: "Let $C$ be a smooth projective curve of genus $g$, and let $D\subset C$ be a reduced effective divisor. Let $({E},\nabla)$ be a semisimple flat vector bundle on $C$ with regular singularities along $D$, with $\rk {E}<\sqrt{g+1}$. Suppose that the eigenvalues of the residue matrices of $({E},\nabla)$ have real parts in $[0,1)$. Then $({E},\nabla)$ has an algebraic universal isomonodromic deformation if and only if $({E},\nabla)$ has finite monodromy."
+  \textit{Source: Landesman--Litt, Corollary 1.2.3.}
+  Let $C$ be a smooth projective curve of genus $g$, $D \subset C$ a reduced
+  effective divisor, and $(E,\nabla)$ a semisimple flat vector bundle on $C$
+  with regular singularities along $D$, $\rk E < \sqrt{g+1}$, and eigenvalues
+  of the residue matrices with real parts in $[0,1)$.
+  Then $(E,\nabla)$ has an algebraic universal isomonodromic deformation if
+  and only if $(E,\nabla)$ has finite monodromy.
+\end{corollary}
+
+\begin{proof}
+  \uses{thm:finite-image}
+  By Cousin--Heu (Theorem~A of \cite{CH:isomonodromic}), algebraic
+  isomonodromic deformations correspond exactly to MCG-finite semisimple
+  monodromy representations.
+  Apply \cref{thm:finite-image} to deduce finite monodromy; the converse is
+  immediate since finite monodromy gives a finite (hence MCG-finite) conjugacy
+  class.
+\end{proof}
+
+\begin{corollary}[Local systems on versal families]
+  \label{cor:versal-families}
+  \lean{MR4717077CanonicalRepresentationsOfSurfaceGroups.finiteMonodromy_versalFamily}
+  \uses{thm:finite-image, prop:mcg-finite-family}
+  % SOURCE: [Landesman--Litt], Corollary 1.3.1, (read from references/MR4717077-surface-groups.tex)
+  % SOURCE QUOTE: "Suppose $\pi^\circ: \mathscr C^\circ \to \mathscr M$ is a punctured versal family of genus $g$ curves, and $\mathbb V$ is a local system on $\mathscr C^\circ$ of rank $< \sqrt{g+1}$. For any fiber $C^\circ$ of $\pi^\circ$, the local system $\mathbb V|_{C^\circ}$ has finite monodromy."
+  \textit{Source: Landesman--Litt, Corollary 1.3.1.}
+  Let $\pi^\circ\colon \mathcal{C}^\circ \to \mathcal{M}$ be a punctured versal
+  family of genus-$g$ curves, and $\mathbb{V}$ a local system on
+  $\mathcal{C}^\circ$ of rank $r < \sqrt{g+1}$.
+  For any fiber $C^\circ$ of $\pi^\circ$, the restriction $\mathbb{V}|_{C^\circ}$
+  has finite monodromy.
+\end{corollary}
+
+\begin{proof}
+  \uses{prop:mcg-finite-family, thm:finite-image}
+  By \cref{prop:mcg-finite-family}, $\mathbb{V}|_{C^\circ}$ is MCG-finite.
+  Apply \cref{thm:finite-image} with $r < \sqrt{g+1}$.
+\end{proof}
+
+\begin{corollary}[Free groups]
+  \label{cor:free-groups}
+  \lean{MR4717077CanonicalRepresentationsOfSurfaceGroups.freeGroup_finiteImage}
+  \uses{thm:finite-image, def:surface-group}
+  % SOURCE: [Landesman--Litt], Corollary 1.6.1 (corollary:free-groups), (read from references/MR4717077-surface-groups.tex)
+  % SOURCE QUOTE: "Let $F_N$ be a free group on $N$ generators, with $N=2g$ or $N=2g+1$. Let $$\rho: F_N\to \on{GL}_r(\mathbb{C})$$ be a representation whose conjugacy class has finite orbit under $\on{Out}(F_N)$. If $r<\sqrt{g+1}$, then $\rho$ has finite image."
+  \textit{Source: Landesman--Litt, Corollary 1.6.1.}
+  Let $F_N$ be a free group on $N$ generators with $N = 2g$ or $N = 2g+1$.
+  Let $\rho\colon F_N \to \GL_r(\mathbb{C})$ be a representation whose
+  conjugacy class has finite orbit under $\Out(F_N)$.
+  If $r < \sqrt{g+1}$, then $\rho$ has finite image.
+\end{corollary}
+
+% SOURCE QUOTE PROOF: "If $N$ is even, choose an isomorphism $F_N\simeq \pi_1(\Sigma_{g,1})$ and if $N$ is odd choose $F_N\simeq \pi_1(\Sigma_{g,2})$. Any representation of $F_N$ with finite orbit under $\on{Out}(F_N)$ yields a representation of a genus $g$ surface group with finite orbit under the mapping class group. Such a representation has finite image by \autoref{theorem:finite-image}."
+\begin{proof}
+  \uses{thm:finite-image, def:surface-group}
+  For $N = 2g$, choose an isomorphism $F_N \cong \pi_1(\Sigma_{g,1})$; for
+  $N = 2g+1$, choose $F_N \cong \pi_1(\Sigma_{g,2})$ (see
+  \cref{def:surface-group}).
+  Any representation of $F_N$ with finite orbit under $\Out(F_N)$ yields,
+  under this identification, an MCG-finite representation of a genus-$g$
+  surface group.
+  Apply \cref{thm:finite-image}.
+\end{proof}
+
+\section{Representation-theoretic preliminaries}
+
+% ---------------------------------------------------------------------------
+% Group-theoretic preliminaries
+% ---------------------------------------------------------------------------
+
+\begin{lemma}[Birman exact sequence]
+  \label{lem:birman-exact-sequence}
+  \lean{MR4717077CanonicalRepresentationsOfSurfaceGroups.BirmanExactSequence}
+  \uses{def:mapping-class-group, def:surface-group}
+  % SOURCE: [Landesman--Litt], Lemma 2.0.1 (lemma:mgn-fundamental-group), (read from references/MR4717077-surface-groups.tex)
+  % SOURCE QUOTE: "For $m \in \mathscr M_{g,n}$ a basepoint and $m'\in \mathscr M_{g, n+1}$ a lift of $m$, there are isomorphisms $\pi_1(\mathscr M_{g,n}, m) \simeq \on{PMod}_{g,n}$, $\pi_1(\mathscr M_{g,n+1}, m') \simeq \on{PMod}_{g,n}$ such that the diagram commutes, where the vertical maps are given by these isomorphisms, the top row is the exact sequence of homotopy groups induced by the forgetful map $\mathscr{M}_{g,n+1}\to \mathscr{M}_{g,n}$, and the bottom row is the Birman exact sequence \cite[p.~98]{farbM:a-primer}."
+  \textit{Source: Landesman--Litt, Lemma 2.0.1.}
+  For basepoints $m \in \mathcal{M}_{g,n}$ and $m' \in \mathcal{M}_{g,n+1}$
+  lifting $m$, there are isomorphisms
+  $\pi_1(\mathcal{M}_{g,n+1}, m') \cong \PMod_{g,n+1}$ and
+  $\pi_1(\mathcal{M}_{g,n}, m) \cong \PMod_{g,n}$
+  fitting into the Birman exact sequence
+  \[
+    1 \to \pi_1(\Sigma_{g,n}) \to \PMod_{g,n+1} \to \PMod_{g,n} \to 1,
+  \]
+  where the inclusion $\pi_1(\Sigma_{g,n}) \hookrightarrow \PMod_{g,n+1}$
+  is the point-pushing subgroup.
+\end{lemma}
+
+\begin{proof}
+  \uses{def:mapping-class-group, def:surface-group}
+  % SOURCE QUOTE PROOF: "This follows from the contractibility of the universal cover of $\mathscr{M}_{g, n}$, and the fact that $\mathscr{M}_{g,n}$ is the quotient of its universal cover by the properly discontinuous action of $\on{PMod}_{g,n}$. See \cite[\S10.6.3 and p. 353]{farbM:a-primer}."
+  This follows from the contractibility of the universal cover of
+  $\mathcal{M}_{g,n}$ and the fact that $\mathcal{M}_{g,n}$ is the quotient
+  of its universal cover by the properly discontinuous action of $\PMod_{g,n}$;
+  see Farb--Margalit \S10.6.3 and p.~353.
+\end{proof}
+
+\begin{proposition}[Basic properties of MCG-finite representations]
+  \label{prop:mcg-finite-basic}
+  \lean{MR4717077CanonicalRepresentationsOfSurfaceGroups.mcgFinite_directSum}
+  \uses{def:mcg-finite}
+  % SOURCE: [Landesman--Litt], Proposition 2.1.1 (proposition:basic-properties), (read from references/MR4717077-surface-groups.tex)
+  % SOURCE QUOTE: "The direct sum and tensor product of two MCG-finite representations of $\pi_1(\Sigma_{g,n})$ is MCG-finite. Any semisimple subquotient of an MCG-finite representation is MCG-finite."
+  \textit{Source: Landesman--Litt, Proposition 2.1.1.}
+  The direct sum and tensor product of two MCG-finite representations of
+  $\pi_1(\Sigma_{g,n})$ is MCG-finite.
+  Any semisimple subquotient of an MCG-finite representation is MCG-finite.
+\end{proposition}
+
+\begin{proof}
+  \uses{def:mcg-finite}
+  % SOURCE QUOTE PROOF: "The first statement, about direct sums and tensor products, is clear. The second is immediate from \cite[Lemma 2.2.1]{lawrence2019representations}."
+  The claim about direct sums and tensor products is clear from the definition.
+  The claim about semisimple subquotients follows since the stabilizer of any
+  irreducible subquotient has finite index in the stabilizer of the original
+  representation (Lawrence, Lemma 2.2.1).
+\end{proof}
+
+\begin{proposition}[MCG-finite from family of curves]
+  \label{prop:mcg-finite-family}
+  \lean{MR4717077CanonicalRepresentationsOfSurfaceGroups.mcgFinite_of_localSystem}
+  \uses{def:mcg-finite, def:mapping-class-group, lem:birman-exact-sequence}
+  % SOURCE: [Landesman--Litt], Proposition 2.1.3 (proposition:MCG-finite-family-of-curves), (read from references/MR4717077-surface-groups.tex)
+  % SOURCE QUOTE: "Let $\pi^\circ: \mathscr{C}^\circ\to \mathscr{M}$ be a punctured versal family of $n$-pointed genus $g$ curves, as in \autoref{notation:versal-family}. In particular, $\mathscr M \to \mathscr M_{g,n}$ is dominant and \'etale. Let $C^\circ$ be a fiber of $\pi^\circ$. If $$\rho:\pi_1(\mathscr{C}^\circ)\to \on{GL}_r(\mathbb{C})$$ is a representation, $\rho|_{\pi_1(C^\circ)}$ is MCG-finite."
+  \textit{Source: Landesman--Litt, Proposition 2.1.3.}
+  Let $\pi^\circ\colon \mathcal{C}^\circ \to \mathcal{M}$ be a punctured versal
+  family of $n$-pointed genus-$g$ curves, i.e.\ the map
+  $\mathcal{M} \to \mathcal{M}_{g,n}$ is dominant \'{e}tale.
+  If $\mathbb{V}$ is a local system on $\mathcal{C}^\circ$ and $C^\circ$ is any
+  fiber of $\pi^\circ$, then $\mathbb{V}|_{C^\circ}$ is MCG-finite.
+\end{proposition}
+
+\begin{proof}
+  \uses{def:mcg-finite, lem:birman-exact-sequence}
+  The fibration sequence for $\mathcal{C}^\circ \to \mathcal{M}$ induces an
+  outer action of $\pi_1(\mathcal{M})$ on $\pi_1(C^\circ)$, which factors
+  through the outer action of $\PMod_{g,n}$ on $\pi_1(C^\circ)$ from the
+  Birman exact sequence (\cref{lem:birman-exact-sequence}).
+  Since $\mathcal{M} \to \mathcal{M}_{g,n}$ is dominant \'{e}tale, the image
+  of $\pi_1(\mathcal{M}) \to \PMod_{g,n}$ has finite index.
+  Any element of $\pi_1(\mathcal{C}^\circ)$ above such a class conjugates the
+  restriction, preserving its conjugacy class; hence the stabilizer of the
+  conjugacy class of $\mathbb{V}|_{C^\circ}$ has finite index in $\Mod_{g,n}$.
+\end{proof}
+
+\begin{lemma}[Tensor product decomposition for unitary local systems]
+  \label{lem:tensor-product-unitary}
+  \lean{MR4717077CanonicalRepresentationsOfSurfaceGroups.tensorDecomp_unitary}
+  \uses{def:mcg-finite, prop:mcg-finite-basic, prop:mcg-finite-family}
+  % SOURCE: [Landesman--Litt], Lemma 2.4.2 (lemma:unitary-direct-sum), (read from references/MR4717077-surface-groups.tex)
+  % SOURCE QUOTE: "Let $A$ be an Artin local $\mathbb{C}$-algebra with residue field $\mathbb{C}$. Suppose $\mathbb V$ is a local system of free $A$-modules on $\mathscr C^\circ$ such that $\mathbb V|_{\mathscr C^\circ_m}$ is a constant deformation of a unitary local system, i.e.~there exists a unitary $\mathbb{C}$-local system $\mathbb{V}_0$ on $\mathscr C^\circ_m$ such that $\mathbb V|_{\mathscr C^\circ_m}\simeq \mathbb{V}_0\otimes_\mathbb{C} A$. There is a dominant \'etale map $\mathscr M' \to \mathscr M$, with $\mathscr{C}'=\mathscr{M}'\times_\mathscr{M}\mathscr{C}$ and ${\pi'}^\circ: {\mathscr{C}'}^\circ\to \mathscr{M}'$ the associated family of punctured curves, over which $\mathbb V|_{ {\mathscr{C}'}^\circ} \simeq \oplus_{i=1}^s \mathbb U_i \otimes ({\pi'}^\circ)^* \mathbb W_i$, where the $\mathbb W_i$ are locally constant sheaves of free $A$-modules on $\mathscr M'$ and the $\mathbb U_i$ are unitary local systems on ${\mathscr{C}'}^\circ$."
+  \textit{Source: Landesman--Litt, Lemma 2.4.2.}
+  Let $\mathbb{V}$ be a local system on $\mathcal{C}^\circ$ whose restriction
+  to a fiber $C^\circ$ is unitary.
+  After replacing $\mathcal{M}$ by a dominant \'{e}tale cover $\mathcal{M}'$,
+  there is a decomposition
+  \[
+    \mathbb{V}|_{\mathcal{C}'^\circ}
+    \cong \bigoplus_{i=1}^s \mathbb{U}_i \otimes (\pi'^\circ)^* \mathbb{W}_i,
+  \]
+  where each $\mathbb{U}_i$ is an irreducible unitary local system on
+  $\mathcal{C}'^\circ$ and each $\mathbb{W}_i$ is a local system on
+  $\mathcal{M}'$.
+\end{lemma}
+
+\begin{proof}
+  \uses{def:mcg-finite, prop:mcg-finite-basic, prop:mcg-finite-family}
+  Decompose the unitary fibral monodromy as a direct sum of irreducibles
+  $\mathbb{V}_0 \cong \bigoplus_i \mathbb{S}_i^{n_i}$.
+  Each $\mathbb{S}_i$ is MCG-finite by \cref{prop:mcg-finite-basic,prop:mcg-finite-family};
+  lift each to a unitary local system $\mathbb{U}_i$ on a suitable finite
+  \'{e}tale cover.
+  Set $\mathbb{W}_i = \pi'^\circ_* \mathrm{Hom}(\mathbb{U}_i, \mathbb{V})$;
+  the evaluation map $\bigoplus_i (\pi'^\circ)^* \mathbb{W}_i \otimes \mathbb{U}_i
+  \to \mathbb{V}$ is an isomorphism fiberwise by Schur's lemma.
+\end{proof}
+
+\section{Hodge-theoretic preliminaries}
+
+% ---------------------------------------------------------------------------
+% Non-abelian Hodge theory input (§4.3 Consequences of non-abelian Hodge theory)
+% ---------------------------------------------------------------------------
+
+\begin{theorem}[Non-abelian Hodge unitarity]
+  \label{thm:nah-unitarity}
+  \lean{MR4717077CanonicalRepresentationsOfSurfaceGroups.nah_unitarity}
+  \uses{thm:cohomologically-rigid-integral}
+  % SOURCE: [Landesman--Litt 2022], Theorem 1.2.12 ([LL22]), cited in §1.9.1 and §1.9.2 of MR4717077, (read from references/MR4717077-surface-groups.tex)
+  % SOURCE QUOTE: "these $\rho\otimes_{\mathcal O_{K,\iota}}\mathbb{C}$ underlie complex polarizable variations of Hodge structure for any complex structure on $\Sigma_{g,n}$. Hence, given their low rank, these local systems are unitary by \cite[Theorem 1.2.12]{LL22}."
+  \textit{Source: Landesman--Litt [LL22], Theorem 1.2.12 (cited in MR4717077, §§1.9.1–1.9.2).}
+  Let $\mathbb{V}$ be a semisimple, cohomologically rigid local system of rank
+  $r < \sqrt{g+1}$ on a curve $C^\circ$ that underlies a complex polarizable
+  variation of Hodge structure (i.e.\ is defined over $\mathcal{O}_K$ and each
+  Galois conjugate is a VHS).
+  Then $\mathbb{V}$ is unitary: its monodromy representation factors through
+  the unitary group $U(r)$.
+  (Axiom: relies on non-abelian Hodge theory developed in [LL22]; not yet
+  available in Mathlib.)
+\end{theorem}
+
+\begin{proof}
+  Proved in Landesman--Litt (arXiv:2202.05190), Theorem 1.2.12, using the
+  Corlette--Simpson correspondence and the assumption that the local system is
+  defined over a number ring with all Galois conjugates giving VHS.
+  Since every complex polarizable VHS of rank $r < \sqrt{g+1}$ on a curve has
+  unitary monodromy, the integrality from \cref{thm:cohomologically-rigid-integral}
+  combined with the VHS property forces unitarity.
+  Introduced as an axiom here pending formalization of non-abelian Hodge theory.
+\end{proof}
+
+\section{The period map associated to a unitary representation}
+
+% ---------------------------------------------------------------------------
+% Period map (§5.1) and bilinear pairing (§5.2)
+% ---------------------------------------------------------------------------
+
+\begin{theorem}[Period map derivative]
+  \label{thm:period-map}
+  \lean{MR4717077CanonicalRepresentationsOfSurfaceGroups.periodMap_derivative}
+  % SOURCE: [Landesman--Litt], Theorem 5.1.6 (theorem:period-map-computation), (read from references/MR4717077-surface-groups.tex)
+  % SOURCE QUOTE: "Under the identifications above, the map $dP^\vee_b$ factors as [diagram with $H^0(C, {E}\otimes \Omega^1_C(\log D))\otimes H^0(C, {E}^\vee \otimes \omega_C) \ar[r]^-{dP^\vee_b} \ar[d]^{\otimes} & \Omega^1_{\mathscr{B},b}$ and $H^0(C, {E}\otimes {E}^\vee \otimes \omega_C^{\otimes 2}(D)) \ar[r]^-{\on{tr}} & H^0(C, \omega_C^{\otimes 2}(D)) \ar[u]^{c^*_b}$] where the left vertical map $\otimes$ is the tensor product of global sections, and the bottom map $\on{tr}$ is induced by the trace pairing ${E}\otimes {E}^\vee\to \mathscr{O}_C$. Moreover, $dP^\vee_b$ is adjoint to $\overline \nabla_b$."
+  \textit{Source: Landesman--Litt, Theorem 5.1.6 (proved in Appendix~A).}
+  Let $C$ be a smooth projective curve with boundary divisor $D$, and let
+  $E$ be the Mehta--Seshadri vector bundle on $C$ associated to a unitary
+  local system on $C \setminus D$.
+  The derivative of the period map associated to the mixed Hodge structure on
+  $R^1\pi^\circ_* \mathbb{V}$ is identified with the natural multiplication map
+  \[
+    H^0(E \otimes \omega_C(D)) \otimes H^0(E^\vee \otimes \omega_C)
+    \xrightarrow{\otimes}
+    H^0(E \otimes E^\vee \otimes \omega_C^{\otimes 2}(D))
+    \xrightarrow{\mathrm{tr}}
+    H^0(\omega_C^{\otimes 2}(D)),
+  \]
+  where $\mathrm{tr}$ is induced by the trace pairing
+  $E \otimes E^\vee \to \mathcal{O}_C$.
+  (Introduced as an axiom pending Hodge theory infrastructure in Mathlib.)
+\end{theorem}
+
+\begin{proof}
+  Proved in Appendix~A of Landesman--Litt (arXiv:2205.15352) via an explicit
+  computation of the Kodaira--Spencer class and its interaction with the
+  Mehta--Seshadri correspondence.  Introduced as an axiom in the Lean
+  formalization, as the required mixed Hodge theory is not yet available in
+  Mathlib.
+\end{proof}
+
+\begin{proposition}[Bilinear pairing rank bound]
+  \label{proposition:pairing-result}
+  \lean{MR4717077CanonicalRepresentationsOfSurfaceGroups.pairingResult}
+  \uses{thm:period-map}
+  % SOURCE: [Landesman--Litt], §5.2 (proposition:pairing-result), (read from references/MR4717077-surface-groups.tex)
+  % SOURCE QUOTE: "Let $E_\star$ be a semistable parabolic bundle on $(C,D)$ of parabolic degree zero, with underlying vector bundle $E$. Let $v\in H^0(C, E\otimes \omega_C(D))$ be a nonzero global section, and suppose the map $H^0(C, B_E(v,-)): H^0(C, E^\vee \otimes \omega_C) \rightarrow H^0(C, \omega_C^{\otimes 2}(D))$, $u \mapsto B_E(v,u)$ has rank $r$. Then $\on{rk}(E)\geq g-r.$"
+  \textit{Source: Landesman--Litt, §5.2 (proposition:pairing-result).}
+  Let $C$ be a smooth proper connected curve of genus $g$, $D \subset C$ a
+  reduced divisor, and $B_E\colon (E \otimes \omega_C(D)) \times
+  (E^\vee \otimes \omega_C) \to \omega_C^{\otimes 2}(D)$ the natural perfect
+  pairing obtained by tensoring and applying the trace pairing
+  $E \otimes E^\vee \to \mathcal{O}_C$.
+  Let $E_\star$ be a semistable parabolic bundle on $(C, D)$ of parabolic
+  degree zero with underlying vector bundle $E$.
+  Let $v \in H^0(C, E \otimes \omega_C(D))$ be a nonzero global section, and
+  suppose the induced map
+  \[
+    H^0(C, B_E(v, -))\colon H^0(C, E^\vee \otimes \omega_C)
+    \to H^0(C, \omega_C^{\otimes 2}(D)),
+    \qquad u \mapsto B_E(v, u),
+  \]
+  has rank $r$.
+  Then $\rk(E) \geq g - r$.
+\end{proposition}
+
+\begin{proof}
+  \uses{thm:period-map}
+  % SOURCE QUOTE PROOF: "The idea is to apply \autoref{proposition:generic-parabolic-global-generation}(II) with $c =1$ and $\delta = r$, and we now set up notation to do so. Set $n=\deg D$. Let $f_v: E^\vee\otimes \omega_C\to \omega_C^{\otimes 2}(D)$ be the map of vector bundles induced by $B_E(v, -)$, and set $U=\ker(f_v)$. As $B_E$ is a perfect pairing and $v$ is nonzero by assumption, $U$ has corank one in $E^\vee\otimes \omega_C$. We conclude by applying \autoref{proposition:generic-parabolic-global-generation}(II) to the parabolic bundle $(E_\star)^\vee \otimes \omega_C(D)$."
+  Let $f_v\colon E^\vee \otimes \omega_C \to \omega_C^{\otimes 2}(D)$ be the map
+  of vector bundles induced by $B_E(v, -)$, and set $U = \ker(f_v)$.
+  Since $B_E$ is a perfect pairing and $v$ is nonzero, $U$ has corank one in
+  $E^\vee \otimes \omega_C$.
+  Applying the generic global generation result for semistable parabolic
+  bundles (Landesman--Litt--Sawin, [LL:geometric-local-systems] Prop.~6.3.6),
+  case~(II), with $c = 1$ and $\delta = r$, to the Serre-dual parabolic bundle
+  $(E_\star)^\vee \otimes \omega_C(D)$ yields $\rk(E) \geq g - r$.
+\end{proof}
+
+\section{The main cohomological results}
+
+% ---------------------------------------------------------------------------
+% Rank bound (§6.1) and vanishing result (§6.2)
+% ---------------------------------------------------------------------------
+
+\begin{theorem}[Cohomological rank bound]
+  \label{thm:rank-bound-subsystem}
+  \lean{MR4717077CanonicalRepresentationsOfSurfaceGroups.rankBound_subsystem}
+  \uses{thm:period-map, proposition:pairing-result}
+  % SOURCE: [Landesman--Litt], Theorem 1.7.1 (theorem:rank-bound-subsystem), (read from references/MR4717077-surface-groups.tex)
+  % SOURCE QUOTE: "Let $\pi:\mathscr{C}\to \mathscr{M}$ be a smooth proper family of $n$-pointed curves of genus $g$ with geometrically connected fibers, so that the associated map $\mathscr{M}\to \mathscr{M}_{g,n}$ is dominant \'etale. Let $\pi^\circ: \mathscr{C}^\circ\to \mathscr{M}$ be the associated family of punctured curves. Let $\mathbb{V}$ be a unitary local system on $\mathscr{C}^\circ$. Then any nonzero sub-local system of $R^1\pi_*^\circ \mathbb{V}$ has rank at least $2g-2\rk\mathbb{V}$."
+  \textit{Source: Landesman--Litt, Theorem 1.7.1.}
+  Let $\pi\colon \mathcal{C} \to \mathcal{M}$ be a smooth proper family of
+  $n$-pointed genus-$g$ curves with geometrically connected fibers such that
+  $\mathcal{M} \to \mathcal{M}_{g,n}$ is dominant \'{e}tale.
+  Let $\mathbb{V}$ be a unitary local system on the associated family of
+  punctured curves $\mathcal{C}^\circ$.
+  Then any nonzero sub-local system of $R^1\pi^\circ_* \mathbb{V}$ has rank
+  at least $2g - 2\rk \mathbb{V}$.
+  In particular, $H^0(\mathcal{M},\, R^1\pi^\circ_* \mathbb{V}) = 0$ whenever
+  $g > \rk \mathbb{V}$.
+\end{theorem}
+
+\begin{proof}
+  \uses{thm:period-map, proposition:pairing-result}
+  A sub-local system of $R^1\pi^\circ_* \mathbb{V}$ of rank below
+  $2g - 2\rk\mathbb{V}$ would, by the theorem of the fixed part, force the
+  derivative of the period map to have a kernel.
+  By \cref{thm:period-map}, that derivative is the multiplication map on
+  global sections induced by the bilinear pairing $B_E$ on
+  $E \otimes \omega_C(D)$ versus $E^\vee \otimes \omega_C$.
+  Such a kernel produces a nonzero $v$ for which the rank of $B_E(v, -)$ is
+  small; \cref{proposition:pairing-result} then forces $\rk(E) = \rk\mathbb{V}$
+  to be large, yielding the required rank bound.
+\end{proof}
+
+\begin{theorem}[Cohomological vanishing]
+  \label{thm:cohomological-vanishing}
+  \lean{MR4717077CanonicalRepresentationsOfSurfaceGroups.cohomologicalVanishing}
+  \uses{thm:rank-bound-subsystem, lem:tensor-product-unitary}
+  % SOURCE: [Landesman--Litt], Theorem 6.2.1 (theorem:unitary-rigid), (read from references/MR4717077-surface-groups.tex)
+  % SOURCE QUOTE: "With notation as in \autoref{notation:versal-family}, let $\pi^\circ: \mathscr{C}^\circ\to \mathscr{M}$ be a punctured versal family of genus $g$ curves. Let $m\in \mathscr{M}$ be a point and set $C^\circ = \mathscr C^\circ_m$. Let $A$ be a local Artin $\mathbb{C}$-algebra with residue field $\mathbb{C}$, and let $\mathbb V$ be a locally constant sheaf of free $A$-modules on $\mathscr C^\circ$ such that (1) $\mathbb V|_{C^\circ}$ is a constant deformation of a unitary local system, i.e. there exists a unitary complex local system $\mathbb{V}_0$ on $C^\circ$ and an isomorphism $\mathbb V|_{C^\circ}\simeq \mathbb{V}_0\otimes A$, and (2) $\rk_A \mathbb V < g$. Then $H^0(\mathscr M, R^1 \pi^\circ_* \mathbb V) = 0$."
+  \textit{Source: Landesman--Litt, Theorem 6.2.1.}
+  Let $\pi^\circ\colon \mathcal{C}^\circ \to \mathcal{M}$ be a punctured versal
+  family of genus-$g$ curves.
+  Let $\mathbb{V}$ be a local system on $\mathcal{C}^\circ$ whose restriction
+  to a fiber $C^\circ$ is unitary, with $\rk \mathbb{V} < g$.
+  Then $H^0(\mathcal{M},\, R^1\pi^\circ_* \mathbb{V}) = 0$.
+  In particular, $R^1\pi^\circ_* \mathbb{V}$ has no nonzero unitary
+  sub-local systems.
+\end{theorem}
+
+\begin{proof}
+  \uses{thm:rank-bound-subsystem, lem:tensor-product-unitary}
+  By \cref{lem:tensor-product-unitary}, after a dominant \'{e}tale base change
+  write $\mathbb{V} \cong \bigoplus_i \mathbb{U}_i \otimes (\pi^\circ)^* \mathbb{W}_i$
+  with $\mathbb{U}_i$ unitary.
+  A nonzero global section of $R^1\pi^\circ_*(\mathbb{U}_i \otimes (\pi^\circ)^* \mathbb{W}_i)
+  = (R^1\pi^\circ_* \mathbb{U}_i) \otimes \mathbb{W}_i$ yields a nonzero map
+  $\mathbb{W}_i^\vee \to R^1\pi^\circ_* \mathbb{U}_i$, i.e.\ a sub-local system
+  of rank $\rk\mathbb{W}_i$.
+  Since $\mathbb{U}_i$ is unitary, \cref{thm:rank-bound-subsystem} gives
+  $\rk\mathbb{W}_i \geq 2g - 2\rk\mathbb{U}_i$, so
+  $\rk\mathbb{V} \geq \rk\mathbb{U}_i \cdot \rk\mathbb{W}_i \geq g$,
+  contradicting $\rk\mathbb{V} < g$.
+\end{proof}
+
+\section{The asymptotic Putman-Wieland conjecture}
+
+% ---------------------------------------------------------------------------
+% Putman--Wieland (§7.2 Our results)
+% ---------------------------------------------------------------------------
+
+\begin{theorem}[Asymptotic Putman--Wieland]
+  \label{thm:putman-wieland-asymptotic}
+  \lean{MR4717077CanonicalRepresentationsOfSurfaceGroups.putmanWieland_asymptotic}
+  \uses{thm:rank-bound-subsystem, lem:tensor-product-unitary}
+  % SOURCE: [Landesman--Litt], Theorem 7.2.1 (theorem:asymptotic-putman-wieland), (read from references/MR4717077-surface-groups.tex)
+  % SOURCE QUOTE: "With notation as in \autoref{notation:prym}, let $\rho$ be an irreducible complex $H$-representation and $\Gamma' \subset \Gamma$ be a finite-index subgroup. Then $H^1(\Sigma_{g',b',p'},\mathbb C)^\rho$ has no nonzero $\Gamma'$-invariant subrepresentations of dimension strictly less than $2g - 2\dim \rho$. The same holds for $H_1(\Sigma_{g'},\mathbb C)^\rho$ in place of $H^1(\Sigma_{g',b',p'},\mathbb C)^\rho$."
+  \textit{Source: Landesman--Litt, Theorem 7.2.1.}
+  With notation as in the higher Prym setup
+  (finite Galois cover $\Sigma_{g',b',p'} \to \Sigma_{g,b,p}$ with Galois group
+  $H$, corresponding to a surjection
+  $\phi\colon \pi_1(\Sigma_{g,b,p}) \twoheadrightarrow H$ with kernel $K$, and
+  $\Gamma \subset \PMod_{g,b,p+1}$ the finite-index subgroup preserving $\phi$
+  up to conjugacy), let $\rho$ be an irreducible complex $H$-representation and
+  $\Gamma' \subset \Gamma$ a finite-index subgroup.
+  Then the $\rho$-isotypic component $H^1(\Sigma_{g',b',p'}, \mathbb{C})^\rho$
+  has no nonzero $\Gamma'$-invariant subrepresentation of dimension strictly
+  less than $2g - 2\dim\rho$.
+  The same holds for $H_1(\Sigma_{g'}, \mathbb{C})^\rho$ in place of
+  $H^1(\Sigma_{g',b',p'}, \mathbb{C})^\rho$.
+\end{theorem}
+
+\begin{proof}
+  \uses{thm:rank-bound-subsystem, lem:tensor-product-unitary}
+  The $H$-cover produces finite-monodromy (hence unitary) local systems
+  $\mathbb{U}_\rho$ on $\mathcal{C}^\circ$ with monodromy given by the
+  irreducible representations of $H$.
+  After passing to a finite \'{e}tale cover to trivialize $\mathbb{W}_\rho$
+  (via \cref{lem:tensor-product-unitary}), a $\Gamma$-stable subspace of
+  $H_1(\Sigma_{g'})^\rho$ of dimension less than $2g - 2\dim\rho$ would yield
+  a sub-local system of $R^1\pi^\circ_* \mathbb{U}_\rho$ of rank below
+  $2g - 2\rk\mathbb{U}_\rho$, contradicting \cref{thm:rank-bound-subsystem}.
+\end{proof}
+
+\begin{corollary}[Putman--Wieland for small $|H|$]
+  \label{cor:putman-wieland-small-H}
+  \lean{MR4717077CanonicalRepresentationsOfSurfaceGroups.putmanWieland_smallH}
+  \uses{thm:putman-wieland-asymptotic}
+  % SOURCE: [Landesman--Litt], Corollary 7.2.4 (corollary:asymptotic-putman-wieland), (read from references/MR4717077-surface-groups.tex)
+  % SOURCE QUOTE: "For fixed $g, b, p \geq 0$, $\PW_{g,b,p}^H$ holds for every group $H$ with $\# H < g^2$."
+  \textit{Source: Landesman--Litt, Corollary 7.2.4.}
+  For fixed $g, b, p \geq 0$ and any finite group $H$ with $\#H < g^2$, the
+  statement $\PW_{g,b,p}^H$ holds: for any surjection
+  $\phi\colon \pi_1(\Sigma_{g,b,p}) \twoheadrightarrow H$ with kernel $K$, every
+  nonzero vector in $V_K = H_1(\Sigma_{g'}, \mathbb{C})$ has infinite orbit
+  under $\Gamma$.
+\end{corollary}
+
+\begin{proof}
+  \uses{thm:putman-wieland-asymptotic}
+  Since $\#H < g^2$ and $\#H$ equals the sum of squares of dimensions of
+  irreducible representations of $H$, every irreducible $\rho$ of $H$
+  satisfies $\dim\rho < g$.
+  Apply \cref{thm:putman-wieland-asymptotic}: any $\Gamma$-stable subspace of
+  $H_1(\Sigma_{g'})^\rho$ has dimension at least $2g - 2\dim\rho > 0$, so
+  no nonzero invariant vector exists.
+\end{proof}
+
+\section{Proof of the main theorem on MCG-finite representations}
+
+% ---------------------------------------------------------------------------
+% Background on cohomological rigidity (§8.1) and integrality
+% ---------------------------------------------------------------------------
+
+\begin{theorem}[Cohomologically rigid implies integral]
+  \label{thm:cohomologically-rigid-integral}
+  \lean{MR4717077CanonicalRepresentationsOfSurfaceGroups.cohomRigid_isIntegral}
+  An irreducible cohomologically rigid local system on a smooth complex variety
+  with quasi-unipotent local monodromy around boundary components of a good
+  compactification is defined over the ring of integers $\mathcal{O}_K$ of some
+  number field $K$.
+  (Axiom: main result of Esnault--Groechenig \cite{esnault2018cohomologically}
+  and Klevdal--Patrikis \cite{klevdalP:g-rigid-local-systems-are-integral};
+  not yet available in Mathlib.)
+\end{theorem}
+
+\begin{proof}
+  Proved by Esnault--Groechenig (arXiv:1711.06427) and, in the generality
+  needed here, by Klevdal--Patrikis.  The argument combines $p$-adic Hodge
+  theory and de Rham cohomology to extract an integral structure from
+  cohomological rigidity.  Introduced as an axiom in the Lean formalization;
+  the relevant $p$-adic Hodge theory infrastructure is not yet in Mathlib.
+\end{proof}
+
+\begin{proposition}[Isomonodromy rigidity]
+  \label{lem:isomonodromy-rigidity}
+  \lean{MR4717077CanonicalRepresentationsOfSurfaceGroups.isomonodromy_rigidity}
+  \uses{thm:cohomologically-rigid-integral}
+  % SOURCE: [Landesman--Litt], Proposition 8.2.1 (proposition:cohomologically-rigid), (read from references/MR4717077-surface-groups.tex)
+  % SOURCE QUOTE: "Let $\mathbb{V}$ be a $\on{GL}_r$ (respectively, ~$\on{PGL}_r$)-local system on $\mathscr{C}^\circ$ with $r<\sqrt{g+1}$. Suppose that for $m\in \mathscr{M}$, $\mathbb{V}|_{{C}^\circ}$ is (respectively, is the projectivization of) an irreducible, unitary local system. Then $\mathbb{V}$ is strongly cohomologically rigid. In particular, $\mathbb V$ is cohomologically rigid."
+  \textit{Source: Landesman--Litt, Proposition 8.2.1.}
+  Let $\mathbb{V}$ be an irreducible $\GL_r$-local system on $\mathcal{C}^\circ$
+  with $r < \sqrt{g+1}$, whose restriction to a fiber $C^\circ$ is unitary.
+  Then $\mathbb{V}$ is strongly cohomologically rigid; in particular, it is
+  cohomologically rigid and its isomonodromic deformations are algebraic.
+\end{proposition}
+
+\begin{proof}
+  \uses{thm:cohomological-vanishing, thm:cohomologically-rigid-integral}
+  Strong cohomological rigidity requires $H^1(\mathcal{C}^\circ, \mathrm{ad}\,\mathbb{V}) = 0$.
+  By the Leray spectral sequence, it suffices to show
+  $H^0(\mathcal{M}, R^1\pi^\circ_* \mathrm{ad}\,\mathbb{V}) = 0$ and
+  $H^1(\mathcal{M}, \pi^\circ_* \mathrm{ad}\,\mathbb{V}) = 0$.
+  The first vanishes by \cref{thm:cohomological-vanishing} since
+  $\rk(\mathrm{ad}\,\mathbb{V}) = r^2-1 < g$ (because $r < \sqrt{g+1}$) and
+  $\mathrm{ad}\,\mathbb{V}|_{C^\circ}$ is unitary.
+  The second vanishes by Schur's lemma since $\mathbb{V}|_{C^\circ}$ is
+  irreducible.
+  By \cref{thm:cohomologically-rigid-integral}, the cohomological rigidity
+  implies $\mathbb{V}$ is defined over $\mathcal{O}_K$, so isomonodromic
+  deformations are algebraic.
+\end{proof}
+
+% ---------------------------------------------------------------------------
+% Unitary case (§8.4), semisimple case (§8.5), semisimplicity (§8.6),
+% completion of the main theorem (§8)
+% ---------------------------------------------------------------------------
+
+\begin{proposition}[Unitary case]
+  \label{prop:unitary-case}
+  \lean{MR4717077CanonicalRepresentationsOfSurfaceGroups.finiteImage_unitary}
+  \uses{thm:cohomologically-rigid-integral, thm:cohomological-vanishing, thm:nah-unitarity}
+  % SOURCE: [Landesman--Litt], Proposition 8.4.1 (proposition:unitary-implies-finite), (read from references/MR4717077-surface-groups.tex)
+  % SOURCE QUOTE: "Let  $$\rho:\pi_1(\Sigma_{g,n})\to \on{GL}_r(\mathbb{C})$$ be a unitary MCG-finite representation with $r<\sqrt{g+1}$. Then $\rho$ has finite image."
+  \textit{Source: Landesman--Litt, Proposition 8.4.1.}
+  Let $\rho\colon \pi_1(\Sigma_{g,n}) \to \GL_r(\mathbb{C})$ be a unitary
+  MCG-finite representation with $r < \sqrt{g+1}$.
+  Then $\rho$ has finite image.
+\end{proposition}
+
+\begin{proof}
+  \uses{lem:isomonodromy-rigidity, thm:cohomologically-rigid-integral, prop:mcg-finite-basic, thm:nah-unitarity}
+  By \cref{prop:mcg-finite-basic} it suffices to treat the irreducible case.
+  By \cref{lem:isomonodromy-rigidity}, $\rho$ is cohomologically rigid.
+  By \cref{thm:cohomologically-rigid-integral} (Klevdal--Patrikis), $\rho$ is
+  defined over $\mathcal{O}_K$ for some number field $K$.
+  For each embedding $\tau\colon \mathcal{O}_K \hookrightarrow \mathbb{C}$,
+  the twist $\rho_\tau = \rho \otimes_{\mathcal{O}_K,\tau} \mathbb{C}$ is also
+  cohomologically rigid, irreducible, and MCG-finite; by
+  \cref{thm:nah-unitarity} each $\rho_\tau$ is unitary.
+  Since $\rho$ takes values in $\GL_r(\mathcal{O}_K)$ with every embedding
+  giving a unitary representation, compactness of $U(r)$ and discreteness of
+  $\mathcal{O}_K$ give finite image.
+\end{proof}
+
+\begin{theorem}[Semisimple case]
+  \label{thm:semisimple-case}
+  \lean{MR4717077CanonicalRepresentationsOfSurfaceGroups.finiteImage_semisimple}
+  \uses{thm:cohomological-vanishing, prop:unitary-case, lem:isomonodromy-rigidity, prop:mcg-finite-basic, prop:mcg-finite-family, thm:nah-unitarity}
+  % SOURCE: [Landesman--Litt], Theorem 8.5.3 (theorem:finite-image-semisimple), (read from references/MR4717077-surface-groups.tex)
+  % SOURCE QUOTE: "Let $$\rho: \pi_1(\Sigma_{g,n})\to \on{GL}_r(\mathbb{C})$$ be a semisimple MCG-finite representation, and suppose $r<\sqrt{g+1}$. Then $\rho$ has finite image."
+  \textit{Source: Landesman--Litt, Theorem 8.5.3.}
+  Let $\rho\colon \pi_1(\Sigma_{g,n}) \to \GL_r(\mathbb{C})$ be a semisimple
+  MCG-finite representation with $r < \sqrt{g+1}$.
+  Then $\rho$ has finite image.
+\end{theorem}
+
+\begin{proof}
+  \uses{prop:mcg-finite-basic, prop:mcg-finite-family, prop:unitary-case, thm:cohomological-vanishing}
+  By \cref{prop:mcg-finite-basic} it suffices to treat the irreducible case.
+  Lift $\rho$ to a local system $\mathbb{V}$ on a punctured versal family
+  $\pi^\circ\colon \mathcal{C}^\circ \to \mathcal{M}$ (converse of
+  \cref{prop:mcg-finite-family}).
+  By non-abelian Hodge theory, deform $\mathbb{V}$ (with constant determinant)
+  to $\mathbb{V}_0$ underlying a complex polarizable variation of Hodge
+  structure.
+  Since $r < 2\sqrt{g+1}$, Landesman--Litt [LL22] Theorem~1.2.12 gives that
+  $\mathbb{V}_0|_{C^\circ}$ is unitary; it is MCG-finite by
+  \cref{prop:mcg-finite-family}; hence by \cref{prop:unitary-case} it has
+  finite image.
+  Finally, $\mathbb{V}|_{C^\circ} = \mathbb{V}_0|_{C^\circ}$: the unitary
+  fibral monodromy of $\mathbb{V}_0$ admits no nontrivial MCG-finite
+  deformations by \cref{thm:cohomological-vanishing} (applied as in
+  Lemma~8.3.2 of the paper), so the deformation was trivial on fibers.
+\end{proof}
+
+\begin{lemma}[Semisimplicity of low-rank MCG-finite representations]
+  \label{lem:semisimplicity}
+  \lean{MR4717077CanonicalRepresentationsOfSurfaceGroups.mcgFinite_isSemisimple}
+  \uses{thm:putman-wieland-asymptotic}
+  % SOURCE: [Landesman--Litt], Lemma 8.6.1 (lemma:semisimplicity), (read from references/MR4717077-surface-groups.tex)
+  % SOURCE QUOTE: "Let $\rho$ be an MCG-finite representation of $\pi_1(\Sigma_{g,n})$, and let $\rho_1\subset\rho$ be a semisimple, characteristic subrepresentation of $\rho$. Let $\rho_2=\rho/\rho_1$, and suppose $\rho_2$ is semisimple as well. If $\rho_1, \rho_2$ have finite image and $\rk\rho<\sqrt{g+1}$, then $\rho$ has finite image as well, i.e.~the extension of $\rho_2$ by $\rho_1$ splits."
+  \textit{Source: Landesman--Litt, Lemma 8.6.1.}
+  Let $\rho$ be an MCG-finite representation of $\pi_1(\Sigma_{g,n})$ with
+  $\rk\rho < \sqrt{g+1}$.
+  Let $\rho_1 \subset \rho$ be a semisimple characteristic subrepresentation,
+  $\rho_2 = \rho/\rho_1$ semisimple, with $\rho_1, \rho_2$ both of finite
+  image.
+  Then $\rho$ has finite image, i.e.\ the extension of $\rho_2$ by $\rho_1$
+  splits.
+  In particular, every MCG-finite representation of $\pi_1(\Sigma_{g,n})$
+  with $\rk < \sqrt{g+1}$ is semisimple.
+\end{lemma}
+
+\begin{proof}
+  \uses{thm:putman-wieland-asymptotic}
+  Pass to a finite Galois cover $\Sigma_{g',n'} \to \Sigma_{g,n}$ (Galois
+  group $H$) trivializing $\rho_1$ and $\rho_2$.
+  The extension class lies in
+  $\Ext^1_{\pi_1(\Sigma_{g',n'})}(\rho_2, \rho_1)
+  = \mathrm{Hom}(\pi_1(\Sigma_{g',n'}), \mathrm{Hom}(\rho_2,\rho_1))$,
+  which factors through $H_1(\Sigma_{g',n'})$.
+  Decompose $\rho_2^\vee \otimes \rho_1 = \bigoplus_i \sigma_i^{n_i}$
+  irreducibly; since $\rk\rho < \sqrt{g+1}$, the AM-GM inequality gives
+  $n_i \dim\sigma_i < (g+1)/4$, so $\dim\sigma_i < g$.
+  The projection of the extension class onto the $\sigma_i$-isotypic part of
+  $H_1(\Sigma_{g',n'})$ gives a $\Gamma$-stable subspace of rank at most
+  $(g+1)/4$.
+  But \cref{thm:putman-wieland-asymptotic} shows any nonzero such subspace has
+  rank at least $2g - 2\dim\sigma_i > (g+1)/4$, so each projection is zero
+  and $\rho$ has finite image.
+\end{proof}
+
+\begin{theorem}[Finite image of MCG-finite representations]
+  \label{thm:finite-image}
+  \lean{MR4717077CanonicalRepresentationsOfSurfaceGroups.finiteImage_of_mcgFinite}
+  \uses{def:mcg-finite, thm:semisimple-case, lem:semisimplicity, prop:mcg-finite-basic}
+  % SOURCE: [Landesman--Litt], Theorem 1.2.1 (theorem:finite-image), (read from references/MR4717077-surface-groups.tex)
+  % SOURCE QUOTE: "For $g, n, r\geq 0$, let $$\rho: \pi_1(\Sigma_{g,n})\to \on{GL}_r(\mathbb{C})$$ be a MCG-finite representation. If $r<\sqrt{g+1}$, then $\rho$ has finite image."
+  \textit{Source: Landesman--Litt, Theorem 1.2.1.}
+  For $g, n, r \geq 0$, let
+  $\rho\colon \pi_1(\Sigma_{g,n}) \to \GL_r(\mathbb{C})$ be a MCG-finite
+  representation.
+  If $r < \sqrt{g+1}$, then $\rho$ has finite image.
+\end{theorem}
+
+\begin{proof}
+  \uses{thm:semisimple-case, lem:semisimplicity, prop:mcg-finite-basic}
+  By induction on the Jordan--H\"older length of $\rho$.
+  By \cref{prop:mcg-finite-basic}, each Jordan--H\"older factor is MCG-finite
+  with rank less than $\sqrt{g+1}$, hence has finite image by
+  \cref{thm:semisimple-case} applied inductively.
+  \cref{lem:semisimplicity} then shows that successive extensions split, so
+  $\rho$ has finite image.
+\end{proof}
+
+\section{Consequences for arithmetic representations}
+
+% ---------------------------------------------------------------------------
+% Relative Fontaine--Mazur (§9.1) and lifting residual representations (§9.2)
+% ---------------------------------------------------------------------------
+
+\begin{theorem}[Arithmetic consequence: relative Fontaine--Mazur]
+  \label{theorem:arithmetic-consequence}
+  \lean{MR4717077CanonicalRepresentationsOfSurfaceGroups.arithmetic_finiteImage}
+  \uses{thm:finite-image}
+  % SOURCE: [Landesman--Litt], §9.1 (theorem:arithmetic-consequence), (read from references/MR4717077-surface-groups.tex)
+  % SOURCE QUOTE: "Let $K$ be a finitely-generated field of characteristic zero and $(C, x_1, \cdots, x_n)$ a smooth $n$-pointed geometrically connected curve of genus $g$ over $K$, such that the corresponding map $\on{Spec}(K)\to \mathscr{M}_{g,n, \mathbb{Q}}$ factors through the generic point. If $r<\sqrt{g+1}$, any continuous arithmetic representation $\rho: \pi_1^{\text{\'et}}(C_{\overline{K}}\setminus\{x_1, \cdots, x_n\})\to \on{GL}_r(\overline{\mathbb{Q}}_\ell)$ has finite image."
+  \textit{Source: Landesman--Litt, §9.1 (theorem:arithmetic-consequence).}
+  Let $K$ be a finitely-generated field of characteristic zero and
+  $(C, x_1, \ldots, x_n)$ a smooth $n$-pointed geometrically connected curve of
+  genus $g$ over $K$ such that the corresponding map
+  $\mathrm{Spec}(K) \to \mathcal{M}_{g,n,\mathbb{Q}}$ factors through the
+  generic point.
+  If $r < \sqrt{g+1}$, then any continuous arithmetic representation
+  \[
+    \rho\colon \pi_1^{\text{\'et}}(C_{\overline{K}} \setminus \{x_1, \ldots, x_n\})
+    \to \GL_r(\overline{\mathbb{Q}}_\ell)
+  \]
+  has finite image.
+  (Here $\rho$ is \emph{arithmetic} if its conjugacy class has finite orbit
+  under the action of $\mathrm{Gal}(\overline{K}/K)$ on isomorphism classes of
+  $\pi_1^{\text{\'et}}(C_{\overline{K}} \setminus \{x_1, \ldots, x_n\})$-representations.)
+\end{theorem}
+
+\begin{proof}
+  \uses{thm:finite-image, prop:mcg-finite-family}
+  % SOURCE QUOTE PROOF: "The two exact sequences in (map-of-birman-exact-sequences) induce compatible outer actions of $\pi_1(\on{Spec} K)$ and $\pi_1(\mathscr M_{g,n,\mathbb Q})$... Because $\on{Spec} K \to \mathscr M_{g,n,\mathbb Q}$ is dominant, the induced map $\pi_1(\on{Spec} K) \to \pi_1(\mathscr M_{g,n,\mathbb Q})$ has image of finite index... Hence $\rho|_{\pi_1((\mathscr{C}^\circ)^{\text{an}})}$ is MCG-finite, and hence has finite image by \autoref{theorem:finite-image}, which may be applied after choosing an isomorphism between $\overline{\mathbb{Q}}_\ell$ and $\mathbb{C}$. But $\pi_1( (\mathscr{C}^\circ)^{\text{an}})$ is dense in $\pi_1^{\text{\'et}}(\mathscr{C}^\circ_{\overline{K}})$, so $\rho$ also has finite image."
+  Comparing the homotopy exact sequence of $C^\circ_{\overline{K}} \to
+  \mathrm{Spec}\,K$ with the Birman-type sequence for the universal punctured
+  curve over $\mathcal{M}_{g,n,\mathbb{Q}}$, the outer action of
+  $\pi_1(\mathrm{Spec}\,K)$ on $\pi_1^{\text{\'et}}(C^\circ_{\overline{K}})$
+  factors through $\pi_1^{\text{\'et}}(\mathcal{M}_{g,n,\mathbb{Q}})$.
+  Since $\mathrm{Spec}\,K \to \mathcal{M}_{g,n,\mathbb{Q}}$ is dominant, this map
+  has image of finite index, so the conjugacy class of $\rho$ has finite orbit
+  under $\pi_1^{\text{\'et}}(\mathcal{M}_{g,n,\overline{\mathbb{Q}}})$.
+  Choosing an embedding $\overline{K} \hookrightarrow \mathbb{C}$ and an
+  isomorphism $\mathbb{C} \cong \overline{\mathbb{Q}}_\ell$, the standard
+  comparison theorems show $\rho$ restricted to the topological fundamental
+  group of the associated Riemann surface is MCG-finite; hence it has finite
+  image by \cref{thm:finite-image}.
+  Since the topological fundamental group is dense in the \'etale one, $\rho$
+  itself has finite image.
+\end{proof}
+
+\begin{corollary}[No arithmetic lifts of residual representations]
+  \label{corollary:lifting-and-geometric-origin}
+  \lean{MR4717077CanonicalRepresentationsOfSurfaceGroups.noArithmeticLift}
+  \uses{theorem:arithmetic-consequence}
+  % SOURCE: [Landesman--Litt], §9.2 (corollary:lifting-and-geometric-origin), (read from references/MR4717077-surface-groups.tex)
+  % SOURCE QUOTE: "Let $K, (C, x_1, \cdots, x_n)$ be as in \autoref{theorem:arithmetic-consequence}. Then for $1<r<\sqrt{g+1}$ and $p\gg_r 0$, no surjective representation $\rho: \pi_1^{\text{\'et}}(C_{\overline{K}}\setminus\{x_1, \cdots, x_n\})\to \on{GL}_r(\mathbb{F}_p)$ admits an arithmetic lift to characteristic zero. In particular no such representation is of geometric origin."
+  \textit{Source: Landesman--Litt, §9.2 (corollary:lifting-and-geometric-origin).}
+  Let $K, (C, x_1, \ldots, x_n)$ be as in
+  \cref{theorem:arithmetic-consequence}.
+  Then for $1 < r < \sqrt{g+1}$ and $p \gg_r 0$, no surjective representation
+  \[
+    \rho\colon \pi_1^{\text{\'et}}(C_{\overline{K}} \setminus \{x_1, \ldots, x_n\})
+    \to \GL_r(\mathbb{F}_p)
+  \]
+  admits an arithmetic lift to characteristic zero.
+  In particular, no such representation is of geometric origin.
+\end{corollary}
+
+\begin{proof}
+  \uses{theorem:arithmetic-consequence}
+  % SOURCE QUOTE PROOF: "Suppose to the contrary that it did admit an arithmetic lift $\xi$; by \autoref{theorem:arithmetic-consequence}, $\xi$ would have finite image. Thus it suffices to show that for $Q$ a finite, totally ramified extension of $\mathbb{Q}_p$, there do not exist any finite subgroups of $\on{GL}_r(\mathscr{O}_Q)$ surjecting onto $\on{GL}_r(\mathbb{F}_p)$ if $p\gg_r 0$. This follows from Jordan's theorem on finite subgroups of $\on{GL}_r(Q)$..."
+  A residual representation of geometric origin lifts to one of geometric
+  origin over $\overline{\mathbb{Q}}_p$, and such lifts are arithmetic, so it
+  suffices to rule out arithmetic lifts.
+  By \cref{theorem:arithmetic-consequence}, any arithmetic lift $\xi$ would have
+  finite image, hence land in a finite subgroup of $\GL_r(\mathcal{O}_Q)$ for
+  some finite totally ramified extension $Q/\mathbb{Q}_p$.
+  By Jordan's theorem, such a finite subgroup contains an abelian normal
+  subgroup of index dividing a constant $n(r)$; explicit unipotent generators
+  $\overline{g_1}, \overline{g_2} \in \GL_r(\mathbb{F}_p)$ violate the resulting
+  commutation relation whenever $p \nmid n(r)$.
+  Thus for $p \gg_r 0$ no finite subgroup of $\GL_r(\mathcal{O}_Q)$ surjects
+  onto $\GL_r(\mathbb{F}_p)$, so no such $\rho$ admits an arithmetic lift.
+\end{proof}

@@ -17,6 +17,36 @@ prover
 **pointed vs. unpointed**. 0 project axioms. Operative posture: option (c)
 under the USER ROUTE C PAUSE. Full framing in STRATEGY.md.
 
+## Merge note — 2026-06-18 (Cech-Cohomology enrich merge)
+
+The **A.2.c-engine `Rⁱf_*` Čech lane** (previously the dominant open pole; the
+target's `Cohomology/CechHigherDirectImage.lean` was an *orphaned*, un-imported
+roadmap file with a `sorry` `CechNerve`) now carries the **Čech-cohomology
+development imported from the `Cech-Cohomology` subproject** (21 Lean files,
+~600 declarations, wired into the aggregator). `CechNerve` is genuinely closed
+(via `pushPullFunctor` + `pushPullMap_comp`), and the bulk of the development —
+including all of `CechSectionIdentification`, `CechAugmentedResolution`, and the
+relative Čech complex machinery — is now **kernel-verified by `lake build`**.
+
+**Honest build state (2026-06-18): `lake build` is green, with 8 documented
+`sorry`s.** Crucially, the source `Cech-Cohomology` project's *own* `lake build`
+never produced oleans for the `CechSectionIdentificationLeg → … →
+CechToHigherDirectImage` chain — its `\leanok` marks came from Archon's LSP check,
+which is weaker than the kernel. The merge surfaced this: the headline
+`cech_computes_higherDirectImage` is **not** kernel-verified end-to-end. The
+unverifiable proofs are `sorry`-ed (full proofs preserved in `MERGE-STUB-PROOF` /
+`MERGE NOTE` comments), namely:
+- `pushPull_interLegHom_sections` — kernel deterministic timeout (tested to 64M heartbeats).
+- `coreIso_comm_leg/coface/sum/comm` — stubbed as a group (≥1 is a blow-up; not individually isolated).
+- `isoOfComponents` naturality (CechToHigherDirectImage) — `rfl` genuinely fails (incomplete proof).
+- `cechAugmented_to_acyclicResolutionInput` — whnf blow-up (tested to 1.6M heartbeats).
+- `cech_flatBaseChange` — the target-local roadmap node reinstated in `CechHigherDirectImageUnconditional.lean`.
+
+These are genuine defects inherited from the source, not merge artifacts. Fixing
+them needs term-shrinking proof rewrites (e.g. replacing defeq/`rfl` on giant
+`eqToHom` coherence terms with explicit rewrite lemmas), not more `maxHeartbeats`.
+DAG: blueprint nodes 932→1235, proved 622→738, 0 broken `\uses`.
+
 ## Iter-303 — RESUME prover after the iter-272–302 DAG/blueprint pass · 4 lanes
 
 **Context.** Iters 272–302 ran NO prover phase — they fleshed out and fully connected the

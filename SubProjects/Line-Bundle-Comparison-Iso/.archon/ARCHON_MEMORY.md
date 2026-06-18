@@ -12,7 +12,9 @@
      Bad candidates: things already obvious from the code or PROGRESS.md,
      current sorry counts, task-specific details that change every iter.
 -->
-- `exists_tensorObj_inverse` is import-cycle gated; do not finish it inside `TensorObjSubstrate.lean`.
-- D3′ cocycle `sheafificationCompPullback_comp_tail`: NatTrans-level via `conjugateEquiv_comp`, template `pullbackObjUnitToUnit_comp`; never splice a `.app P` δ-square. (`d3cocycle006`)
-- DUAL `sliceDualTransport`/`sliceDualTransportInv` + ring-swap helpers in `DualInverse/SliceTransport.lean`; forward `sliceDualTransport` naturality CLOSED, 3 sorries left (inv-naturality root L444 + left/right_inv). Never apply `inv ε`/`dualUnitRingSwap` pointwise (whnf→timeout); rotate via `IsIso.inv_comp_eq`→forward ε-square through `appIso_hom_naturality_apply`+`dualUnitRingSwap_apply`. (`dualnat006`)
+- `exists_tensorObj_inverse` import-cycle gated (needs `dual_isLocallyTrivial`); close by MOVING the decl downstream of DualInverse (RelPicFunctor = sole code consumer), never in `TensorObjSubstrate.lean`.
+- D3′ cocycle: NatTrans-level via `conjugateEquiv_comp`; never splice a `.app P` δ-square. (`d3cocycle006`)
+- DUAL route COMPLETE (iter-015); if reopening DualInverse: `inv ε` whnf-times-out, use shallow `_naturality_apply` lemma + `exact`. (`dualnat006`)
+- Top-level extraction of monoidal-carried content FAILS: `MonoidalCategoryStruct (PresheafOfModules X.ringCatSheaf.obj)` not globally synthesizable — keep reductions IN-PROOF (letI/unification). Killed `pullbackTensorMap_restrict_core` iter-018; same wall kills `Functor.Monoidal.transport` for open-immersion δ-iso (K1) — instead mirror closed `tensorObj_restrict_iso` (H1∘H2 in-proof) + `Adjunction.IsMonoidal.leftAdjoint_μ` mate.
+- Cancel across defeq-but-not-syntactic `SheafOfModules` instances: state a generic single-`[Category C]` lemma, apply by `exact` (defeq). `rw [Category.assoc]` won't key-match; `erw` mate-whnf-bombs. (`comp_cancel_mid`, iter-015)
 - AJC `extendScalars`/`pullback0`/`pullbackLanDecomposition` Lan block is DEAD code — do NOT port.

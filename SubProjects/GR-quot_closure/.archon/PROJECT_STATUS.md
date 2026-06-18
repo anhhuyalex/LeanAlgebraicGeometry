@@ -8,6 +8,58 @@
 
 ### Proof Patterns (reusable across targets)
 
+- **Sheaf-unitor coherence at `op ⊤` via `erw`-through-adjunction-naturality (iter-006,
+  SectionGradedRing SNAP-S0).** For `Γ(unitor) ∘ sectionsMul` identities (`tensorObjUnitIso_hom_sectionsMul`,
+  `tensorObjRightUnitor_hom_sectionsMul`, base case of `tensorPowAdd_zero_right`):
+  `have e1 : (iso).hom.val = (SheafOfModules.forget ⋙ restrictScalars (𝟙)).map (sheafification.map _ ≫ counit) := rfl`
+  → `Functor.map_comp` → `erw [adj.unit_naturality_assoc, adj.right_triangle_components, Category.comp_id]`
+  → evaluate at `op ⊤` on the element via `congrArg (fun φ => (φ.app (op ⊤)).hom z)`. Plain `rw` FAILS
+  here: the adjunction right adjoint is `forget ⋙ restrictScalars (𝟙)` (NOT `.val`/`forget`), and the
+  unit object is `(toP).obj (unitModule X)` (NOT `𝟙_`) — `erw` defeq-matches these *morphism-level*
+  structural gaps. NOTE: distinct from the value-level ModuleCat *element* diamond where `erw` itself
+  fails (use `change`-to-nested-application there).
+- **Graded-mul `⊗ₜ` ring annotation must be the CommRing composition form (iter-006).** In the
+  `GradedMonoid.GMul (sectionDeg L)` body, write `a ⊗ₜ[(X.sheaf.obj ⋙ forget₂ CommRingCat RingCat).obj (op ⊤)] b`,
+  NOT `a ⊗ₜ[↥(X.ringCatSheaf.obj.obj (op ⊤))] b` — the `TensorProduct` `CommSemiring`/`CommRing`
+  instance is keyed to the composition form; the `ringCatSheaf` form gives `failed to synthesize
+  CommSemiring`. The `GOne.one := (1 : ↥(X.ringCatSheaf.obj.obj (op ⊤)))` is defeq-accepted
+  (`tensorPow L 0 = unitModule X`; `gOne_one_eq := rfl` witnesses).
+- **Index-cast (`sectionsCast`) cancellation mirrors `TensorPower.cast` (iter-006).** `sectionsCast`
+  = image of `eqToIso (congrArg (tensorPow L) h)` under `evaluation (op ⊤)`, `.toLinearEquiv`;
+  `sectionsCast_refl := by ext x; rfl` (mapIso of `eqToIso rfl` is pure defeq — do NOT reach for a
+  `congrArg_refl` simp lemma, it does not exist). `gradedMonoid_eq_of_cast` =
+  `obtain pairs; obtain rfl := h; simp only [sectionsCast_refl, LinearEquiv.refl_apply] at h2; subst h2; rfl`.
+- **sync_leanok misses anonymous `instance` `\lean{}` targets (iter-006).** An `instance` declared
+  without an explicit name (`instance (L) : GradedMonoid.GMul (sectionDeg L)`) compiles to an
+  auto-generated name (`instGMulNatSectionDeg`); `sync_leanok` did NOT mark its blueprint block even
+  though `lean_verify` confirms the name resolves and is axiom-clean. The review agent manually adds
+  `\leanok` after `lean_verify`. (If ever renamed for clarity, a `\lean{}` correction follows — but
+  merge-discipline keeps the auto-names stable.)
+
+- **Post-`rw` diamond `X = X` → append explicit `rfl`; the bogus "calc `Trans Eq Eq ?m`" is a
+  misdiagnosed `rfl` gap, NOT a toolchain bug (iter-001, GrassmannianQuot, closed
+  `presentedMatrix_rqPullback` + `grPointOfRankQuotient_rqPullback_tautological`).** Under the
+  value-`ModuleCat` diamond, a `by rw [h₁, h₂]` step that leaves a syntactically-identical goal
+  `X = X` will NOT auto-close: `rw`'s reducible-transparency auto-`rfl` misses the proof-irrelevant /
+  instance-path hidden args. The step proof stays a metavar and `calc` then surfaces
+  `failed to synthesize Trans Eq Eq ?m`. **Fix: append explicit full-transparency `rfl`
+  (`rw [h₁, h₂]; rfl`), or phrase the chain as explicit `have s1…sN` + `.trans` so each step's `rfl`
+  is forced.** Two prior FIXME comments in this file blamed a "calc-`Trans` toolchain bug" and left
+  `sorry`; both were false — the sorries were fully closable. **Planner rule: a FIXME claiming a
+  calc/Trans toolchain bug under the diamond is a red flag to re-attempt, not a blocker.**
+- **`epi_comp'` (explicit `Epi` args) over `epi_comp` under the value-`ModuleCat` diamond (iter-001,
+  `tautologicalQuotient_epi`).** The instance-implicit `epi_comp` FAILS to synthesize
+  `Epi (chartQuotientMap …)` / `Epi (iso.hom ≫ chartQuotientMap)` through the diamond even with a
+  `haveI` in scope (instance keys mismatch); `refine epi_comp ?_ ?_` leaves `Epi ?m` metavar-stuck.
+  Feed split-epi facts by defeq:
+  `epi_comp' (epi_comp' inferInstance (chartQuotientMap_epi d r I.1 I.2)) inferInstance`. Global epi of
+  a glued morphism then follows from `Scheme.Modules.pullback_map_jointly_faithful` (the
+  `lem:gr_modules_glue_unique` engine): `cancel_epi` the chart-epi on the left after `Functor.map_comp`.
+  Companion: `congrArg h |>.trans` over `rw [h]` when `h`'s LHS carries an `IsIso`/instance argument
+  (e.g. a `presentedMatrix … hcI`) — `rw` needs a syntactic hit, `.trans` only `isDefEq`. And
+  `toSpecΓ_naturality` reduces `(glueData).U I` to its defeq `Spec (CommRingCat.of MP)`, breaking
+  `U I`-stated lemmas (`hunit`) and explicit-arg `Category.assoc ρ` — finish via the `Spec R`-form
+  underlying lemma (`toSpecΓ_SpecMap_ΓSpecIso_inv`) + argument-free `Category.assoc`.
 - **Triple-overlap C2 collapse via abstract-category folds (iter-080, GlueDescent keystone
   `glueChartComponent_leg_compat`).** The closing move for the conjugated-cocycle keystone: fold EACH leg of
   the fully-transposed component equation over the triple overlap `V_ipq` to a canonical N-factor `≫`-chain
@@ -1721,6 +1773,31 @@
 
 ### Known Blockers (do not retry without a structural change)
 
+- **SNAP-S0 coherence inductions gated on possibly-non-canonical `tensorObjAssoc` (iter-006,
+  `SectionGradedRing.lean`).** The 3 open sorries — `tensorPowAdd_zero_right` succ (L2031, sheaf
+  triangle identity), `sectionsMul_mul_assoc` (L2091, pentagon analog), `sectionsMul_mul_comm`
+  (L2107, hexagon analog) — are coherence inductions through `sheafification`. Mathlib's `coherence`
+  tactic does NOT apply: the participating isos (`tensorObjAssoc`/`tensorBraiding`/unitors) are
+  bespoke `sheafification`-defined, NOT a registered `MonoidalCategory` instance. **Structural risk
+  (lean-auditor iter-006):** `tensorObjAssoc` (L1610) builds the associator via a *double-braiding*
+  detour — valid type but possibly non-canonical vs Mac Lane, so the pentagon may not hold. Before
+  re-assigning `mul_assoc`, run a mathlib-analogist probe on the associator construction; if
+  non-canonical it is a STRATEGY item (rebuild `tensorObjAssoc`), not a prover retry. The
+  `tensorPowAdd_zero_right` succ step (triangle) is the cheapest entry (unlocks `sectionsMul_mul_one`
+  for free) and uses only the proven `erw`-through-naturality template — try it first.
+
+- **[GR-quot CLOSED iter-001 — the primary deliverable is DONE.]** `GrassmannianQuot.lean` 3→0; goal
+  seed `AlgebraicGeometry.Grassmannian.represents` is sorry-free AND axiom-clean
+  (`[propext, Classical.choice, Quot.sound]`, no `sorryAx`). No GR-quot prover work remains. The two
+  former FIXME "calc-Trans toolchain bug" stubs were misdiagnosed diamond-`rfl` gaps (see Proof
+  Patterns) and are now genuinely closed (lean-auditor + lean-vs-blueprint-checker both PASS).
+- **χ-blocked (do NOT retry here): `QuotScheme.lean` `def:hilbert_polynomial` / `def:quot_functor`.**
+  χ-semantic (`Φ(m)=χ=Σᵢ(-1)ⁱ dim Hⁱ`, verified against the Lean decl); need a higher-cohomology engine
+  this i=0 leg lacks. Keep as `sorry`; fill from the cohomology leg at merge. NEVER build an H⁰ `Φ_s`
+  under the χ label (the blueprint ENCODING comment claiming H⁰ is wrong; Lean governs).
+- **SNAP (`SectionGradedRing.lean`, ~10 sorries) — DEFERRED, shared with sibling `FBC-B_SNAP-chain`.**
+  Stalkwise route DEAD. Do NOT prove locally from scratch; import the sibling's finished proofs so the
+  two encodings do not diverge. No prover payoff while deferred.
 - **INFRA: prover phase instant-death (iters 068–077) — `roles.prover` was `fable` (no entitlement on this
   login) → every prover died on `401 Invalid authentication credentials` BEFORE any session log was written.**
   Fingerprint: `meta.json prover.durationSecs:0`, `parallel.jsonl` = `failed:N`, `logs/iter-NNN/provers/` dir
@@ -2394,7 +2471,34 @@
   enforced corrective is a mathlib-analogist consult on the reframing keystone, not a prove round.
 
 ## Last Updated
-2026-06-13T (iter-080 review) — global real sorry 12→9, 0 axioms, both lanes green.
+2026-06-18T (iter-006 review) — **First prover lane since iter-001.** SNAP-S0 activated (user hint
+"start proving now"). `SectionGradedRing.lean` sorry 9→3, axiom-clean, cold build green (2439 jobs).
+Solved `sectionsCast`/`_refl`/`gradedMonoid_eq_of_cast`/GMul/GOne instances/`sectionsMul_one_mul`;
+3 reduced coherence sorries remain (`tensorPowAdd_zero_right` succ, `mul_assoc`, `mul_comm`). Added 4
+proof patterns + 1 blocker to KB; manual `\leanok` on GMul/GOne blocks (sync missed anonymous
+instances). See `iter/iter-006/review.md`.
+
+(prior) 2026-06-18T (iter-004 review) — **No prover lane (4th consecutive).** Mechanical hard-gate skip: 0
+closable in-leg sorries (all 26 deferred-by-directive or out-of-cone). No `.lean` edits; `sync_leanok`
+0 deltas (iter=4, sha `af87e1f`); no new Knowledge Base entries. NEW negative result: directive's
+"`Grassmannian.representable` χ-free-closable here" tested against `QuotScheme.lean` and found
+χ-coupled-as-encoded (chain bottoms out in `hilbertPolynomial` sorry) — KEEP sorry, do NOT re-probe.
+SNAP sibling still 9 sorries + 844-line divergence, import NOT actionable. Terminal merge-pending.
+Blueprint-doctor findings = extraction artifacts deferred-to-merge (not edited). Narrative →
+`iter/iter-003/review.md`.
+
+2026-06-18T (iter-001 review) — **GR-quot lane DELIVERED.** GrassmannianQuot 3→0; goal seed
+`represents` sorry-free + axiom-clean (no `sorryAx`, disjointness invariant holds). Closed
+`tautologicalQuotient_epi`, `presentedMatrix_rqPullback`,
+`grPointOfRankQuotient_rqPullback_tautological` — the latter two were false-FIXME "calc-Trans"
+stubs (misdiagnosed diamond-`rfl` gaps). lean-auditor CLEAN (0 crit/major), lean-vs-blueprint-checker
+PASS. Added 2 patterns (post-`rw` diamond `rfl`; `epi_comp'`). Remaining out-of-scope: χ-blocked
+(QuotScheme, 2) + SNAP (SectionGradedRing, ~10, deferred/shared). Blueprint-doctor: ref-hygiene debt
+in GlueDescent/QuotScheme/SectionGradedRing + orphan Cohomology_FlatBaseChange chapter (see iter-001
+review.md / recommendations.md). Full session narrative → `iter/iter-001/review.md`.
+
+---
+### Prior: 2026-06-13T (iter-080 review) — global real sorry 12→9, 0 axioms, both lanes green.
 GlueDescent 1→0 (KEYSTONE `glueChartComponent_leg_compat` CLOSED via triple-overlap C2 collapse;
 `glueRestrictionIso` fully realized). GrassmannianQuot 3→1 (`represents` both inverse laws closed +
 `universalQuotient_isLocallyFreeOfRank`; residual `tautologicalQuotient_epi` now UNBLOCKED). FBC-B DIRECT

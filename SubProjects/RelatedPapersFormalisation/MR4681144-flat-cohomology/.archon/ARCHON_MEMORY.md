@@ -12,3 +12,10 @@
      Bad candidates: things already obvious from the code or PROGRESS.md,
      current sorry counts, task-specific details that change every iter.
 -->
+
+- **No Lean decls yet**: all \lean{} names are `.TODO.` placeholders; unmatched_lean=17 is expected until Lean scaffolding runs.
+- **Confirmed missing from Mathlib 4.30.0**: `CompleteIntersectionLocalRing`, fppf flat cohomology with supports, `GroupScheme` typeclass, `PerfectoidRing`, arc topology, prismatic Dieudonné theory.
+- **Partials in Mathlib**: module-theoretic `LocalCohomology` exists but fppf sheaf-version must be built; `WittVector` exists; `AlgebraicGeometry.Sites` (étale, fpqc) exists.
+- **Two-track strategy**: Track A = char-p case (crystalline Dieudonné, no arc/animated rings); Track B = full theorem (adds perfectoid rings, arc topology, simplicial rings, prismatic Dieudonné).
+- **Animated rings encoding**: use simplicial commutative rings directly, not ∞-categories.
+- **Arc covers**: algebraically defined as maps where every rank-1 valuation ring over any point lifts.

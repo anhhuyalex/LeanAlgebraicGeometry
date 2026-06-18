@@ -240,8 +240,136 @@ noncomputable def pullbackGroundRingAlg {X : Scheme.{u}} (B : Type u) [CommRing 
       (Spec.map (CommRingCat.ofHom (algebraMap (groundRing X) B)))).appTop).hom.comp
     (Scheme.ΓSpecIso (CommRingCat.of B)).inv.hom
 
+/-- **Base change of the finite equalizer diagram** (`lem:base_changed_equalizer_diagram`).
+
+For `F : X.Modules`, a cover `U` of `X` (`⨆ i, U i = ⊤`) and a flat `A`-algebra `B`
+(`A = groundRing X`), the equalizer locus of the *base-changed* restriction legs
+`id_B ⊗ leftRes`, `id_B ⊗ rightRes` of `F` is `B`-linearly isomorphic to the equalizer
+locus of the restriction legs `leftRes F' U'`, `rightRes F' U'` of the pulled-back module
+`F' = (g')^* F` over the base-changed cover `U' i = (g')⁻¹(U i)` of
+`X' = X ×_{Spec A} Spec B`, regarded as a `B`-module by restriction of scalars along
+`pullbackGroundRingAlg B`.
+
+This is the concrete (Čech-free) realization of Stacks Tag 02KH's relation
+`Č•(𝒰_B, F_B) = Č•(𝒰, F) ⊗_A B`: each fork term is the sections of `F_B = (g')^*F` over an
+*affine* piece `(U_i)_B` (resp. `(U_{ij})_B`), and the concrete affine pullback dictionary
+`pullback_spec_tilde_iso` (Stacks 01I9, `(Spec φ)^* M̃ ≅ (B ⊗_A M)~`) supplies the per-chart
+isomorphism `Γ((U_i)_B, F_B) ≅ Γ(U_i, F) ⊗_A B` *at the module level* — no abstract base-change
+map, no flatness, no mate identification, since every piece is affine. These tilde isomorphisms
+are natural in restriction, so they intertwine `leftRes`/`rightRes`; finally `- ⊗_A B` commutes
+with the *finite* products `∏ᵢ`, `∏ᵢⱼ` (so the base-changed fork is literally `(- ⊗_A B)` of the
+original fork).
+
+The remaining `sorry` is exactly that per-chart `pullback_spec_tilde_iso` identification together
+with the finite-product/tensor commutation; constructing it requires the restriction-compatibility
+of the pullback dictionary over each affine chart of the (a priori non-affine) `X`. This is the
+single genuine gap of the direct route. It is consumed by `baseChangeEqLocusToPullbackGamma`. -/
+noncomputable def _root_.AlgebraicGeometry.baseChange_sheafConditionFork_tensorIso
+    {X : Scheme.{u}} (F : X.Modules) (B : Type u) [CommRing B]
+    [Algebra (groundRing X) B] [Module.Flat (groundRing X) B]
+    {ι : Type u} (U : ι → X.Opens) (hU : iSup U = ⊤) :
+    LinearMap.eqLocus (TensorProduct.AlgebraTensorModule.lTensor B B (leftRes F U))
+        (TensorProduct.AlgebraTensorModule.lTensor B B (rightRes F U)) ≃ₗ[B]
+      (ModuleCat.restrictScalars (pullbackGroundRingAlg B)).obj
+        (ModuleCat.of (groundRing (pullback X.toSpecΓ
+            (Spec.map (CommRingCat.ofHom (algebraMap (groundRing X) B))))) (LinearMap.eqLocus
+          (leftRes ((Scheme.Modules.pullback (pullback.fst X.toSpecΓ
+              (Spec.map (CommRingCat.ofHom (algebraMap (groundRing X) B))))).obj F)
+            (fun i => (TopologicalSpace.Opens.map (pullback.fst X.toSpecΓ
+              (Spec.map (CommRingCat.ofHom (algebraMap (groundRing X) B)))).base).obj (U i)))
+          (rightRes ((Scheme.Modules.pullback (pullback.fst X.toSpecΓ
+              (Spec.map (CommRingCat.ofHom (algebraMap (groundRing X) B))))).obj F)
+            (fun i => (TopologicalSpace.Opens.map (pullback.fst X.toSpecΓ
+              (Spec.map (CommRingCat.ofHom (algebraMap (groundRing X) B)))).base).obj (U i))))) :=
+  -- GENUINE GAP: the per-chart `pullback_spec_tilde_iso` (Stacks 01I9) identification of the
+  -- base-changed legs `id_B ⊗ leftRes/rightRes` with `leftRes F' U'`, `rightRes F' U'`, plus the
+  -- finite-product/tensor commutation `B ⊗ ∏ᵢ (-) ≅ ∏ᵢ (B ⊗ -)`. Constructing the forward map
+  -- needs the restriction-compatibility of the affine pullback dictionary over each chart of `X`.
+  sorry
+
+/-- **Per-chart base-change core of `thm:fbcb_global_direct`.** For a cover `U` of `X`
+(`⨆ i, U i = ⊤`), the equalizer locus of the *base-changed* restriction legs
+`id_B ⊗ leftRes`, `id_B ⊗ rightRes` of `F` is `B`-linearly isomorphic to the global
+sections `Γ(X', F')` of the pulled-back module `F' = (g')^* F` over
+`X' = X ×_{Spec A} Spec B`, viewed as a `B`-module by restriction of scalars along
+`pullbackGroundRingAlg B`.
+
+This is the single remaining ingredient of the direct (Čech-free) route: it packages the
+per-chart pullback dictionary `pullback_spec_tilde_iso` (Stacks 01I9,
+`(Spec φ)^* M̃ ≅ (B ⊗_A M)~`, giving `Γ((U_i)_B, F') ≅ Γ(U_i, F) ⊗_A B`) and the affine
+base change of the overlaps (`affineBaseChange_pushforward_iso`) with the `X'`-side
+equalizer-locus presentation `gammaTopEquivEqLocus` applied to `F'` and the base-changed
+cover `U' i = (g')⁻¹(U i)`.
+
+The `gammaTopEquivEqLocus`-half of the route (the `X'`-side presentation `eX'`) is
+constructed below; the genuine gap is the per-chart identification of the base-changed
+legs with the restriction legs of `U'`, which additionally needs the base-changed cover to
+be *finite* (so `B ⊗ -` commutes with the product over the index set), i.e. `X`
+quasi-compact + quasi-separated — a hypothesis the current signature of
+`baseChangeGammaPullbackEquiv` does not carry. See `task_results` for the precise blockers. -/
+noncomputable def baseChangeEqLocusToPullbackGamma {X : Scheme.{u}} (F : X.Modules)
+    (B : Type u) [CommRing B] [Algebra (groundRing X) B] [Module.Flat (groundRing X) B]
+    {ι : Type u} (U : ι → X.Opens) (hU : iSup U = ⊤) :
+    LinearMap.eqLocus (TensorProduct.AlgebraTensorModule.lTensor B B (leftRes F U))
+        (TensorProduct.AlgebraTensorModule.lTensor B B (rightRes F U)) ≃ₗ[B]
+      (ModuleCat.restrictScalars (pullbackGroundRingAlg B)).obj
+        (gammaModA ((Scheme.Modules.pullback
+            (pullback.fst X.toSpecΓ
+              (Spec.map (CommRingCat.ofHom (algebraMap (groundRing X) B))))).obj F) ⊤) := by
+  -- The base-changed scheme `X' = X ×_{Spec A} Spec B` and its projection `g' : X' ⟶ X`.
+  -- The pulled-back module `F' = (g')^* F` over `X'`.
+  -- The base-changed cover `U' i = (g')⁻¹(U i)` of `X'`: preimages of the `U i`.
+  have hU' : iSup (fun i => (TopologicalSpace.Opens.map
+      (pullback.fst X.toSpecΓ
+        (Spec.map (CommRingCat.ofHom (algebraMap (groundRing X) B)))).base).obj (U i)) = ⊤ := by
+    have hmap := TopologicalSpace.Opens.map_iSup
+      (pullback.fst X.toSpecΓ
+        (Spec.map (CommRingCat.ofHom (algebraMap (groundRing X) B)))).base U
+    rw [hU, TopologicalSpace.Opens.map_top] at hmap
+    exact hmap.symm
+  -- The `X'`-side equalizer-locus presentation of `Γ(X', F')` (over `groundRing X'`):
+  -- `gammaModA F' ⊤ ≃ₗ[groundRing X'] eqLocus (leftRes F' U') (rightRes F' U')`.
+  -- This realises the second half of the composite route (`gammaTopEquivEqLocus` at `F'`).
+  have eX' := gammaTopEquivEqLocus
+    ((Scheme.Modules.pullback (pullback.fst X.toSpecΓ
+      (Spec.map (CommRingCat.ofHom (algebraMap (groundRing X) B))))).obj F)
+    (fun i => (TopologicalSpace.Opens.map
+      (pullback.fst X.toSpecΓ
+        (Spec.map (CommRingCat.ofHom (algebraMap (groundRing X) B)))).base).obj (U i))
+    hU'
+  -- REMAINING GAP (the per-chart base-change core + `B`-linear restriction-of-scalars
+  -- transport of `eX'`):
+  --   (a) per chart `i`: `Γ((U_i)_B, F') ≅ Γ(U_i, F) ⊗_A B` via `pullback_spec_tilde_iso`
+  --       (Stacks 01I9), and likewise on overlaps via `affineBaseChange_pushforward_iso`
+  --       (currently `sorry` in FlatBaseChange.lean) — these intertwine the base-changed
+  --       legs `id_B ⊗ leftRes/rightRes` with `leftRes F' U'`, `rightRes F' U'`;
+  --   (b) `B ⊗ ∏_i (-) ≅ ∏_i (B ⊗ -)` needs `ι` finite (X qcqs), absent from this signature;
+  --   (c) restriction of scalars of `eX'.symm` along `pullbackGroundRingAlg B` to land in the
+  --       stated `ModuleCat B` codomain.
+  -- (c) Transport `eX'` to a `B`-linear equivalence by restriction of scalars along
+  -- `pullbackGroundRingAlg B`, using the ModuleCat `restrictScalars` *functor* (there is no
+  -- `IsScalarTower B (groundRing X') _` instance, so `LinearEquiv.restrictScalars` is unavailable):
+  -- `(restrictScalars φ).obj (Γ(X',F')-as-eqLocus) ≃ₗ[B] (restrictScalars φ).obj (gammaModA F' ⊤)`.
+  have transportC := (((ModuleCat.restrictScalars (pullbackGroundRingAlg B)).mapIso
+      eX'.symm.toModuleIso).toLinearEquiv)
+  -- It remains (the genuine gap, (a)+(b)): the per-chart identification of the base-changed legs
+  -- with `leftRes F' U'`, `rightRes F' U'`. This is now the named blueprint lemma
+  -- `baseChange_sheafConditionFork_tensorIso` (`lem:base_changed_equalizer_diagram`), whose
+  -- codomain is exactly `transportC`'s domain.
+  exact baseChange_sheafConditionFork_tensorIso F B U hU ≪≫ₗ transportC
+
 /-- `thm:fbcb_global_direct` — `Γ(X,F) ⊗_A B ≃ₗ[B] Γ(X', F')`, `A = groundRing X`,
-`X' = X ×_{Spec A} Spec B`, `F' = (g')^* F`. -/
+`X' = X ×_{Spec A} Spec B`, `F' = (g')^* F`.
+
+Assembled as the direct (Čech-free) composite of:
+* `baseChangeGammaEquiv F U hU B` — flat base change past the finite `H⁰` equalizer:
+  `B ⊗_A Γ(X,F) ≃ₗ[B] eqLocus (id_B ⊗ leftRes, id_B ⊗ rightRes)`; and
+* `baseChangeEqLocusToPullbackGamma` — the per-chart identification of that base-changed
+  equalizer locus with `Γ(X', F')`.
+
+The cover `U` is the canonical affine open cover `X.affineCover` (any cover with
+`⨆ U i = ⊤` makes the first leg typecheck; the second leg's proof additionally wants it
+finite, i.e. `X` qcqs). -/
 noncomputable def baseChangeGammaPullbackEquiv {X : Scheme.{u}} (F : X.Modules)
     (B : Type u) [CommRing B] [Algebra (groundRing X) B] [Module.Flat (groundRing X) B] :
     let sp := Spec.map (CommRingCat.ofHom (algebraMap (groundRing X) B))
@@ -249,14 +377,95 @@ noncomputable def baseChangeGammaPullbackEquiv {X : Scheme.{u}} (F : X.Modules)
     TensorProduct (groundRing X) B (gammaModA F (⊤ : X.Opens)) ≃ₗ[B]
       (ModuleCat.restrictScalars (pullbackGroundRingAlg B)).obj
         (gammaModA ((Scheme.Modules.pullback g').obj F) ⊤) :=
-  sorry
-
-/- TODO: flatBaseChange_isIso_iff_gammaTensorComparison (lem:flat_base_change_reduce_global_sections):
-   `IsIso` of sheaf-level `pushforwardBaseChangeMap` ↔ underlying map of `baseChangeGammaPullbackEquiv`
-   `IsIso`. Signature design deferred — needs reconciling abstract-square parametrization of
-   `AlgebraicGeometry.pushforwardBaseChangeMap` with the direct-`B` parametrization of
-   `baseChangeGammaPullbackEquiv`. -/
+  baseChangeGammaEquiv F (fun i => (X.affineCover.f i).opensRange)
+      X.affineCover.iSup_opensRange B ≪≫ₗ
+    baseChangeEqLocusToPullbackGamma F B (fun i => (X.affineCover.f i).opensRange)
+      X.affineCover.iSup_opensRange
 
 end Modules
+
+/-! ## The IsIso chain: separated case, Mayer–Vietoris, and the global-sections bridge
+
+The three lemmas below are the sheaf-morphism-level legs of the `H⁰` flat-base-change
+chain. They are phrased at the *section-over-`⊤`* level of the base-change map
+`pushforwardBaseChangeMap` over an affine base `S' = Spec B`: the top-section map
+`(pushforwardBaseChangeMap …).app ⊤` is the concrete comparison
+`Γ(X, F) ⊗_A B → Γ(X_B, F_B)` of the blueprint, and the bridge
+`flatBaseChange_isIso_iff_gammaTensorComparison` upgrades its being an isomorphism to the
+full sheaf-morphism isomorphism (using quasi-coherence of the pushforward + tilde
+full-faithfulness over the affine base).  The concrete module isomorphism realizing this
+top-section comparison is `Modules.baseChangeGammaPullbackEquiv` (built, modulo the single
+gap `baseChange_sheafConditionFork_tensorIso`); the residual to connect it is the naturality
+square identifying `(pushforwardBaseChangeMap …).app ⊤` with that equivalence. -/
+
+/-- **Flat base change, separated case** (`lem:flat_base_change_separated`).
+For `g` flat, `f` quasi-compact and separated, `F` quasi-coherent, over affine bases
+`S = Spec A`, `S' = Spec B`, the top-section comparison map
+`Γ(X, F) ⊗_A B → Γ(X_B, F_B)` (`= (pushforwardBaseChangeMap …).app ⊤`) is an isomorphism.
+
+Blueprint proof: `Γ(X,F)` and `Γ(X_B,F_B)` are the equalizers of the finite forks of a
+finite affine cover `𝒰` and its base change `𝒰_B`
+(`Modules.gammaIsLimitSheafConditionFork`); by `baseChange_sheafConditionFork_tensorIso`
+the `X_B`-fork is the `X`-fork with `- ⊗_A B` applied; flatness commutes `- ⊗_A B` past the
+finite equalizer (`LinearMap.tensorEqLocusEquiv`, packaged in
+`Modules.baseChangeGammaEquiv`). The composite is `Modules.baseChangeGammaPullbackEquiv`. -/
+theorem flatBaseChange_pushforward_isIso_of_isSeparated
+    {S S' X X' : Scheme.{u}} {f : X ⟶ S} {g : S' ⟶ S} {f' : X' ⟶ S'} {g' : X' ⟶ X}
+    (h : IsPullback g' f' f g) [Flat g] [QuasiCompact f] [IsSeparated f]
+    [IsAffine S] [IsAffine S'] (F : X.Modules) [F.IsQuasicoherent] :
+    IsIso ((pushforwardBaseChangeMap f g f' g' h.w F).app (⊤ : S'.Opens)) :=
+  -- The top-section map is the comparison `Γ(X,F) ⊗_A B → Γ(X_B,F_B)`, an isomorphism by
+  -- `Modules.baseChangeGammaPullbackEquiv` (flat past the finite equalizer ∘
+  -- `baseChange_sheafConditionFork_tensorIso`). Residual: identify `.app ⊤` with that equiv.
+  sorry
+
+/-- **Flat base change, Mayer–Vietoris reduction of the quasi-separated case**
+(`lem:flat_base_change_mayer_vietoris`). For `g` flat, `f` quasi-compact and
+quasi-separated, `F` quasi-coherent, over affine bases, the top-section comparison map is an
+isomorphism.
+
+Blueprint proof: choose a finite affine cover `X = U_1 ∪ … ∪ U_t` and induct on `t`. `t = 1`
+is the affine case (`pullback_spec_tilde_iso`); for `t > 1` use the two-member cover
+`{U_1 ∪ … ∪ U_{t-1}, U_t}`, whose intersection is separated (so the separated case
+`flatBaseChange_pushforward_isIso_of_isSeparated` applies), and flatness preserves the finite
+Mayer–Vietoris equalizer. -/
+theorem flatBaseChange_pushforward_mayerVietoris
+    {S S' X X' : Scheme.{u}} {f : X ⟶ S} {g : S' ⟶ S} {f' : X' ⟶ S'} {g' : X' ⟶ X}
+    (h : IsPullback g' f' f g) [Flat g] [QuasiCompact f] [QuasiSeparated f]
+    [IsAffine S] [IsAffine S'] (F : X.Modules) [F.IsQuasicoherent] :
+    IsIso ((pushforwardBaseChangeMap f g f' g' h.w F).app (⊤ : S'.Opens)) :=
+  -- Mayer–Vietoris induction on the size of a finite affine cover, base case the separated
+  -- lemma above; each inductive step uses flat-preserves-finite-equalizer. Heaviest leg;
+  -- scaffolded this iter.
+  sorry
+
+/-- **Reduction of the base-change map to the global-sections comparison** (the bridge,
+`lem:flat_base_change_reduce_global_sections`). Over affine bases `S = Spec A`,
+`S' = Spec B` with `g` flat and `f` quasi-compact quasi-separated, the sheaf-level base-change
+map `g^*(f_*F) → f'_*(g')^*F` is an isomorphism **iff** its top-section comparison map
+`Γ(X,F) ⊗_A B → Γ(X_B,F_B)` is.
+
+Blueprint proof: being an isomorphism is local on `S'`; `f_*F` is quasi-coherent (qcqs `f`),
+hence the tilde of the `A`-module `Γ(X,F)`, and likewise `f'_*F'` is the tilde of
+`Γ(X_B,F_B)`; under the tilde-equivalence the sheaf map is the tilde of the top-section
+comparison, and `~(-)` is fully faithful on quasi-coherent modules, so one is an isomorphism
+iff the other is. The forward direction is the elementary "a section of an isomorphism is an
+isomorphism"; the reverse is the tilde full-faithfulness content. -/
+theorem flatBaseChange_isIso_iff_gammaTensorComparison
+    {S S' X X' : Scheme.{u}} {f : X ⟶ S} {g : S' ⟶ S} {f' : X' ⟶ S'} {g' : X' ⟶ X}
+    (h : IsPullback g' f' f g) [Flat g] [QuasiCompact f] [QuasiSeparated f]
+    [IsAffine S] [IsAffine S'] (F : X.Modules) [F.IsQuasicoherent] :
+    IsIso (pushforwardBaseChangeMap f g f' g' h.w F) ↔
+      IsIso ((pushforwardBaseChangeMap f g f' g' h.w F).app (⊤ : S'.Opens)) := by
+  constructor
+  · -- Forward: the sections-over-`⊤` functor preserves isomorphisms
+    -- (`Scheme.Modules.Hom.isIso_iff_isIso_app`).
+    intro hiso
+    haveI := hiso
+    infer_instance
+  · -- Reverse: tilde full-faithfulness over the affine base `S' = Spec B` upgrades an
+    -- isomorphism on global sections to a sheaf-morphism isomorphism. Scaffolded this iter.
+    intro hsec
+    sorry
 
 end AlgebraicGeometry

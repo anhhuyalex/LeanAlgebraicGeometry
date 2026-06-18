@@ -261,6 +261,13 @@ noncomputable def pullbackFreeIso {T' T : Scheme.{u}} (φ : T' ⟶ T) (I : Type 
 /-- The free-pullback comparison is natural in the base morphism: equal morphisms give
 `pullbackFreeIso`s related by the `eqToHom` transport of their (differing) sources.
 Project-local — used for the bundle-transition self-identity. -/
+lemma pullbackFreeIso_eqToHom {T' T : Scheme.{u}} {φ ψ : T' ⟶ T} (h : φ = ψ) (I : Type u) :
+    eqToHom (congrArg
+        (fun α => (Scheme.Modules.pullback α).obj (SheafOfModules.free (R := T.ringCatSheaf) I)) h)
+        ≫ (pullbackFreeIso ψ I).hom
+      = (pullbackFreeIso φ I).hom := by
+  subst h; simp
+
 /-- Iso-level free-pullback cancellation: for equal base morphisms `φ = ψ`, the composite
 `pullbackFreeIso φ ≪≫ (pullbackFreeIso ψ).symm` is the `eqToIso` transport between the
 (differing) pullback sources. Proved generically (`φ`, `ψ` variables, `subst`), so applying
@@ -615,8 +622,29 @@ concrete immersion (the `pullbackFreeIso_trans_symm_eqToIso` discipline). -/
 
 /-- Closed zig-zag: `Q_φ⁻¹ ≫ pullbackCongr(h).app ≫ Q_ψ = 𝟙` for equal base morphisms
 `φ = ψ`. Project-local helper for the C2 endpoint alignment. -/
+@[reassoc]
+lemma pullbackFreeIso_inv_congr_hom {T' T : Scheme.{u}} {φ ψ : T' ⟶ T} (h : φ = ψ)
+    (I : Type u) :
+    (pullbackFreeIso φ I).inv ≫
+        ((Scheme.Modules.pullbackCongr h).app
+          (SheafOfModules.free (R := T.ringCatSheaf) I)).hom ≫
+        (pullbackFreeIso ψ I).hom
+      = 𝟙 _ := by
+  subst h
+  simp [Scheme.Modules.pullbackCongr]
+
 /-- Left absorption: `pullbackCongr(h).app ≫ Q_ψ = Q_φ` for equal base morphisms `φ = ψ`.
 Project-local helper for the C2 endpoint alignment (source bridge). -/
+@[reassoc]
+lemma pullbackCongr_hom_app_free {T' T : Scheme.{u}} {φ ψ : T' ⟶ T} (h : φ = ψ)
+    (I : Type u) :
+    ((Scheme.Modules.pullbackCongr h).app
+        (SheafOfModules.free (R := T.ringCatSheaf) I)).hom ≫
+        (pullbackFreeIso ψ I).hom
+      = (pullbackFreeIso φ I).hom := by
+  subst h
+  simp [Scheme.Modules.pullbackCongr]
+
 /-- Right absorption: `Q_φ⁻¹ ≫ pullbackCongr(h).app = Q_ψ⁻¹` for equal base morphisms
 `φ = ψ`. Project-local helper for the C2 endpoint alignment (target bridge). -/
 @[reassoc]
@@ -633,10 +661,32 @@ lemma pullbackFreeIso_inv_congr {T' T : Scheme.{u}} {φ ψ : T' ⟶ T} (h : φ =
 `pullbackCongr(h).inv.app ≫ Q_φ = Q_ψ` for equal base morphisms `φ = ψ`. Generic-`subst`
 companion of `pullbackCongr_hom_app_free`. Project-local helper for the tautological
 quotient overlap. -/
+@[reassoc]
+lemma pullbackCongr_inv_app_free {T' T : Scheme.{u}} {φ ψ : T' ⟶ T} (h : φ = ψ)
+    (I : Type u) :
+    (Scheme.Modules.pullbackCongr h).inv.app
+        (SheafOfModules.free (R := T.ringCatSheaf) I) ≫
+        (pullbackFreeIso φ I).hom
+      = (pullbackFreeIso ψ I).hom := by
+  subst h
+  simp [Scheme.Modules.pullbackCongr]
+
 /-- Cancellation of the pseudofunctor-composition cast against the pulled-back source
 comparison: `(pullbackComp b a).inv.app (free) ≫ (pullback b).map Q_a = Q_{b≫a} ≫ Q_b⁻¹`.
 Direct consequence of the free coherence `pullbackFreeIso_comp`. Project-local helper for
 the tautological quotient overlap. -/
+@[reassoc]
+lemma pullbackComp_inv_app_free_map {V U X : Scheme.{u}} (b : V ⟶ U) (a : U ⟶ X)
+    (I : Type u) :
+    (Scheme.Modules.pullbackComp b a).inv.app
+        (SheafOfModules.free (R := X.ringCatSheaf) I) ≫
+        (Scheme.Modules.pullback b).map (pullbackFreeIso a I).hom
+      = (pullbackFreeIso (b ≫ a) I).hom ≫ (pullbackFreeIso b I).inv := by
+  rw [Iso.eq_comp_inv, Category.assoc]
+  -- `erw` (defeq matching) to fire the free coherence through the `X.Modules` diamond
+  erw [← pullbackFreeIso_comp a b I]
+  exact Iso.inv_hom_id_app_assoc (Scheme.Modules.pullbackComp b a) _ _
+
 /-! ### Adjunction transposition of the descent-equalizer legs
 
 The overlap condition consumed by `glueLift` is an equation between composites of adjoint
@@ -1080,6 +1130,12 @@ content is `glueData_preimage_image_eq`; morphisms are proof-irrelevant in the o
 preorder. This is the site-level heart of the overlap base-change comparison
 `ι_i^* ∘ (ι_j)_* ≅ (f_ij)_* ∘ (t_ij ≫ f_ji)^*` consumed by
 `isIso_glueRestrictionHom`. Project-local. -/
+lemma glueData_overlap_opensFunctor_eq (D : Scheme.GlueData.{0}) (i j : D.J) :
+    (D.ι i).opensFunctor ⋙ TopologicalSpace.Opens.map (D.ι j).base
+      = TopologicalSpace.Opens.map (D.f i j).base ⋙ (D.t i j ≫ D.f j i).opensFunctor :=
+  CategoryTheory.Functor.ext (fun V => glueData_preimage_image_eq D i j V)
+    (fun _ _ _ => Subsingleton.elim _ _)
+
 /-- `appLE` transport along an equality of morphisms: for equal `f = g` the induced
 section maps `Γ(B, U) ⟶ Γ(A, W)` agree (the open-inequality witnesses are
 proof-irrelevant). Generic `subst` helper for the overlap structure-sheaf
@@ -1151,6 +1207,47 @@ over the chart cover `{ι_i}`: sections of the target sheaf are detected on the
 chart-image opens `ι_i''(ι_i⁻¹ O)`, which cover any open `O` by the joint
 surjectivity of the chart immersions. Engine for `tautologicalQuotient_epi`
 (a morphism out of the glued sheaf is determined chart-locally). Project-local. -/
+lemma pullback_map_jointly_faithful (D : Scheme.GlueData.{0}) {W W' : D.glued.Modules}
+    {u v : W ⟶ W'}
+    (h : ∀ i, (Scheme.Modules.pullback (D.ι i)).map u
+        = (Scheme.Modules.pullback (D.ι i)).map v) :
+    u = v := by
+  -- transfer the hypothesis to the site-level restriction functor, whose sections
+  -- are concrete (`Γ(restrict W, V) = Γ(W, ι_i''V)`)
+  have hres : ∀ i, (restrictFunctor (D.ι i)).map u = (restrictFunctor (D.ι i)).map v := by
+    intro i
+    calc (restrictFunctor (D.ι i)).map u
+        = (restrictFunctorIsoPullback (D.ι i)).hom.app W ≫
+            (Scheme.Modules.pullback (D.ι i)).map u ≫
+            (restrictFunctorIsoPullback (D.ι i)).inv.app W' :=
+          (NatIso.naturality_2 (restrictFunctorIsoPullback (D.ι i)) u).symm
+      _ = (restrictFunctorIsoPullback (D.ι i)).hom.app W ≫
+            (Scheme.Modules.pullback (D.ι i)).map v ≫
+            (restrictFunctorIsoPullback (D.ι i)).inv.app W' := by rw [h i]
+      _ = (restrictFunctor (D.ι i)).map v :=
+          NatIso.naturality_2 (restrictFunctorIsoPullback (D.ι i)) v
+  ext O x
+  -- sheaf separation of the target over the cover `{ι_i''(ι_i⁻¹ O)}` of `O`
+  refine TopCat.Sheaf.eq_of_locally_eq'
+    (⟨W'.presheaf, W'.isSheaf⟩ : TopCat.Sheaf Ab D.glued)
+    (fun i => (D.ι i) ''ᵁ ((D.ι i) ⁻¹ᵁ O)) O
+    (fun i => homOfLE ((D.ι i).image_preimage_le O)) ?_ _ _ ?_
+  · intro pt hpt
+    obtain ⟨i, y, rfl⟩ := D.ι_jointly_surjective pt
+    exact TopologicalSpace.Opens.mem_iSup.mpr ⟨i, y, hpt, rfl⟩
+  · intro i
+    -- naturality moves the restriction inside `u.app`/`v.app`; the chart-image
+    -- agreement is `hres i` evaluated on sections (defeq through `restrict_obj`)
+    have hu := congr($(u.mapPresheaf.naturality
+      (homOfLE ((D.ι i).image_preimage_le O)).op) x)
+    have hv := congr($(v.mapPresheaf.naturality
+      (homOfLE ((D.ι i).image_preimage_le O)).op) x)
+    have hres_app := congr($(congrArg
+      (fun (m : (restrictFunctor (D.ι i)).obj W ⟶ (restrictFunctor (D.ι i)).obj W') =>
+        Scheme.Modules.Hom.app m ((D.ι i) ⁻¹ᵁ O)) (hres i))
+      ((W.presheaf.map (homOfLE ((D.ι i).image_preimage_le O)).op) x))
+    exact hu.symm.trans (hres_app.trans hv)
+
 /-- **Sections of the overlap base change**: on sections over `V ⊆ U_i`, the inverse
 of `β_ij` is the restriction map of `N` along the opens identity
 `ι_j⁻¹(ι_i''V) = (t_ij ≫ f_ji)''(f_ij⁻¹V)` (`glueData_preimage_image_eq`). All four
@@ -1246,6 +1343,13 @@ as "down to the triple overlap along `q = fst ≫ f_ip` and across along
 `τ = t'_ipq ≫ fst`". Object-level content is `glueData_preimage_image_eq₃`; morphisms
 are proof-irrelevant in the opens preorder. Triple analogue of
 `glueData_overlap_opensFunctor_eq`. Project-local. -/
+lemma glueData_triple_opensFunctor_eq (D : Scheme.GlueData.{0}) (i p q : D.J) :
+    (D.ι i).opensFunctor ⋙ TopologicalSpace.Opens.map (D.f p q ≫ D.ι p).base
+      = TopologicalSpace.Opens.map (pullback.fst (D.f i p) (D.f i q) ≫ D.f i p).base ⋙
+          (D.t' i p q ≫ pullback.fst (D.f p q) (D.f p i)).opensFunctor :=
+  CategoryTheory.Functor.ext (fun V => glueData_preimage_image_eq₃ D i p q V)
+    (fun _ _ _ => Subsingleton.elim _ _)
+
 /-- **Structure-sheaf compatibility of the triple-overlap square**: the two composite
 section maps `Γ(U_i, V) ⟶ Γ(V_pq, τ ''ᵁ (q ⁻¹ᵁ V))` — "through the glued scheme" and
 "through the triple overlap" — coincide. Both are the `appLE` of the two (equal)
@@ -1302,6 +1406,27 @@ noncomputable def glueTripleBaseChangeIso (D : Scheme.GlueData.{0}) (i p q : D.J
 /-- Sections of the triple-overlap base change, inverse side: on sections over
 `V ⊆ U_i`, the inverse of `β_ipq` is the restriction map of `N` along the opens
 identity `glueData_preimage_image_eq₃`. Project-local. -/
+lemma glueTripleBaseChangeIso_inv_app_app (D : Scheme.GlueData.{0}) (i p q : D.J)
+    (N : (D.V (p, q)).Modules) (V : (D.U i).Opens) :
+    (((glueTripleBaseChangeIso D i p q).inv.app N).app V :
+        Γ(N, (D.t' i p q ≫ pullback.fst (D.f p q) (D.f p i)) ''ᵁ
+            ((pullback.fst (D.f i p) (D.f i q) ≫ D.f i p) ⁻¹ᵁ V))
+          ⟶ Γ(N, (D.f p q ≫ D.ι p) ⁻¹ᵁ ((D.ι i) ''ᵁ V)))
+      = N.presheaf.map (eqToHom (glueData_preimage_image_eq₃ D i p q V)).op := by
+  ext x
+  rfl
+
+/-- Hom-side companion of `glueTripleBaseChangeIso_inv_app_app`. Project-local. -/
+lemma glueTripleBaseChangeIso_hom_app_app (D : Scheme.GlueData.{0}) (i p q : D.J)
+    (N : (D.V (p, q)).Modules) (V : (D.U i).Opens) :
+    (((glueTripleBaseChangeIso D i p q).hom.app N).app V :
+        Γ(N, (D.f p q ≫ D.ι p) ⁻¹ᵁ ((D.ι i) ''ᵁ V))
+          ⟶ Γ(N, (D.t' i p q ≫ pullback.fst (D.f p q) (D.f p i)) ''ᵁ
+            ((pullback.fst (D.f i p) (D.f i q) ≫ D.f i p) ⁻¹ᵁ V)))
+      = N.presheaf.map (eqToHom (glueData_preimage_image_eq₃ D i p q V).symm).op := by
+  ext x
+  rfl
+
 /-! ### Bridges between the geometric and the site-level adjunction
 
 `Scheme.Modules.pullbackPushforwardAdjunction f` (the geometric adjunction, with the
@@ -1740,6 +1865,12 @@ section CastCoherence
 
 /-- Generic 4-factor rearrangement: solve an iso-chain equation for its last factor.
 Project-local helper for the solved forms of the associativity cocycle. -/
+private lemma comp4_solve_last {𝒞 : Type*} [Category 𝒞] {a b c d e : 𝒞}
+    (A : a ≅ b) (B : b ≅ c) (Cc : c ≅ d) {D : d ⟶ e} {E : a ⟶ e}
+    (hE : A.hom ≫ B.hom ≫ Cc.hom ≫ D = E) :
+    D = Cc.inv ≫ B.inv ≫ A.inv ≫ E := by
+  rw [← hE]; simp
+
 /-- Generic 4-factor rearrangement: solve an iso-chain equation for its middle pair.
 Project-local. -/
 private lemma comp4_solve_mid {𝒞 : Type*} [Category 𝒞] {a b c d e : 𝒞}
@@ -1787,6 +1918,19 @@ lemma pullbackComp_assoc_app {X' Y' Z' T' : Scheme.{u}} (f : X' ⟶ Y') (g : Y' 
 /-- Solved form of the associativity cocycle at a composite first leg: the regrouping
 comparison `((f ≫ g) ≫ h)^*` factors through the two inner comparisons and the
 associativity cast. Project-local. -/
+@[reassoc]
+lemma pullbackComp_comp_fst_hom_app {X' Y' Z' T' : Scheme.{u}} (f : X' ⟶ Y')
+    (g : Y' ⟶ Z') (h : Z' ⟶ T') (M : T'.Modules) :
+    (Scheme.Modules.pullbackComp (f ≫ g) h).hom.app M
+      = (Scheme.Modules.pullbackComp f g).inv.app ((Scheme.Modules.pullback h).obj M) ≫
+        (Scheme.Modules.pullback f).map ((Scheme.Modules.pullbackComp g h).hom.app M) ≫
+        (Scheme.Modules.pullbackComp f (g ≫ h)).hom.app M ≫
+        (Scheme.Modules.pullbackCongr (Category.assoc f g h).symm).hom.app M :=
+  comp4_solve_last ((Scheme.Modules.pullbackComp f (g ≫ h)).app M).symm
+    ((Scheme.Modules.pullback f).mapIso ((Scheme.Modules.pullbackComp g h).app M)).symm
+    ((Scheme.Modules.pullbackComp f g).app ((Scheme.Modules.pullback h).obj M))
+    (pullbackComp_assoc_app f g h M)
+
 /-- Solved form of the associativity cocycle for the middle pair: pulling back the
 inner regrouping inverse and regrouping the outer pair equals the comparison at the
 composite second leg, the associativity cast, and the ungrouping at the composite

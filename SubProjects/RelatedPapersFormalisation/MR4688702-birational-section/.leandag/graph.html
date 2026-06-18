@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Blueprint dependency graph</title>
+<link rel="stylesheet" href="https://unpkg.com/katex@0.16.9/dist/katex.min.css">
+<script src="https://unpkg.com/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
+<style>
+:root {
+  --sidebar-bg: #0f172a;
+  --toolbar-bg: #1e293b;
+  --surface:    #1a2744;
+  --border:     #1e3a5f;
+  --text:       #e2e8f0;
+  --muted:      #64748b;
+  --accent:     #60a5fa;
+  --green:      #4ade80;
+  --green-bg:   rgba(74,222,128,.12);
+  --red:        #f87171;
+  --red-bg:     rgba(248,113,113,.12);
+  --orange:     #fb923c;
+  --orange-bg:  rgba(251,146,60,.12);
+  --code-bg:    #090d16;
+  --radius:     7px;
+  --mono: 'JetBrains Mono','Fira Code','Cascadia Code','Consolas','Monaco',monospace;
+  --sans: -apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;
+}
+
+html { margin:0; padding:0; height:100%; overflow:hidden; }
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:var(--sans); display:flex; flex-direction:column;
+       height:100%; background:#f8fafc; color:var(--text); }
+
+/* ── Toolbar ─────────────────────────────────────────────────── */
+#toolbar {
+  background:var(--toolbar-bg); height:44px; padding:0 16px;
+  display:flex; align-items:center; gap:14px; flex-shrink:0;
+  border-bottom:1px solid #263045;
+}
+.brand { font-size:13px; font-weight:700; color:#f1f5f9; letter-spacing:.03em; }
+.stat  { font-size:12px; color:#64748b; white-space:nowrap; }
+.legend { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+.leg-dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
+.leg-bar {
+  width:54px; height:8px; border-radius:4px; display:inline-block;
+  background:linear-gradient(90deg,#facc15,#f59e0b,#f97316);
+}
+.leg-txt { font-size:10px; font-weight:600; color:#94a3b8; }
+.sym-legend { padding-left:10px; margin-left:4px; border-left:1px solid #334155; gap:8px; }
+.hint { margin-left:auto; font-size:11px; color:#334155; white-space:nowrap; }
+
+/* ── Controls bar ────────────────────────────────────────────── */
+#controls {
+  background:#16233b; min-height:40px; padding:6px 16px;
+  display:flex; align-items:center; gap:10px; flex-shrink:0;
+  border-bottom:1px solid #263045; flex-wrap:wrap;
+}
+#controls input[type=text], #controls select {
+  background:#0f1f3d; color:var(--text); border:1px solid #1e3a5f;
+  border-radius:5px; font-size:12px; padding:5px 8px;
+  font-family:var(--sans); outline:none;
+}
+#controls input[type=text] { width:200px; }
+#controls input[type=text]:focus, #controls select:focus { border-color:var(--accent); }
+#controls select { max-width:260px; cursor:pointer; }
+#controls .chk { font-size:12px; color:#94a3b8; display:flex; align-items:center; gap:5px; cursor:pointer; user-select:none; }
+.btn {
+  background:#1e293b; color:#cbd5e1; border:1px solid #334155;
+  border-radius:5px; font-size:12px; padding:5px 12px; cursor:pointer;
+}
+.btn:hover { background:#263045; }
+.pill {
+  display:inline-flex; align-items:center; gap:7px;
+  background:#172554; color:#93c5fd; border:1px solid #1e3a8a;
+  border-radius:12px; font-size:11px; padding:3px 4px 3px 11px; cursor:pointer;
+  max-width:280px;
+}
+.pill .lbl { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.pill .x { font-weight:700; padding:0 6px; border-radius:9px; }
+.pill:hover .x { background:#1e3a8a; }
+
+/* ── Main layout ─────────────────────────────────────────────── */
+#main  { display:flex; flex:1; overflow:hidden; min-height:0; position:relative; }
+#graph { flex:1; min-height:0; background:#f8fafc; }
+
+/* ── Project-stats overlay ───────────────────────────────────── */
+#stats-panel {
+  position:absolute; top:12px; left:12px; z-index:5;
+  background:rgba(15,23,42,.9); border:1px solid #1e3a5f; border-radius:8px;
+  padding:10px 12px; min-width:188px; backdrop-filter:blur(3px);
+  font-size:11px; color:#cbd5e1; box-shadow:0 4px 16px rgba(0,0,0,.25);
+}
+#stats-panel h4 {
+  font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+  color:#64748b; margin-bottom:7px;
+}
+#stats-panel .row { display:flex; justify-content:space-between; gap:14px; line-height:1.7; }
+#stats-panel .row .v { font-family:var(--mono); color:#f1f5f9; }
+#stats-panel .v.done { color:var(--green); }
+#stats-panel .v.work { color:var(--orange); }
+#stats-panel .v.inf  { color:var(--red); }
+#stats-panel .bar {
+  height:6px; border-radius:3px; background:#1e293b; margin:7px 0 3px; overflow:hidden;
+}
+#stats-panel .bar > span { display:block; height:100%; background:var(--green); }
+#stats-panel .sep { border-top:1px solid #1e3a5f; margin:7px 0; }
+#graph canvas { display:block; }
+
+/* ── File-view colour legend ─────────────────────────────────── */
+#file-legend {
+  position:absolute; bottom:12px; left:12px; z-index:5;
+  background:rgba(15,23,42,.9); border:1px solid #1e3a5f; border-radius:8px;
+  padding:9px 11px; max-width:280px; max-height:42%; overflow-y:auto;
+  backdrop-filter:blur(3px); font-size:11px; color:#cbd5e1;
+  box-shadow:0 4px 16px rgba(0,0,0,.25);
+}
+#file-legend::-webkit-scrollbar { width:4px; }
+#file-legend::-webkit-scrollbar-thumb { background:#1e3a5f; border-radius:2px; }
+#file-legend h4 {
+  font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+  color:#64748b; margin-bottom:7px;
+}
+#file-legend .fl-row { display:flex; align-items:center; gap:7px; line-height:1.9; }
+#file-legend .fl-sw { width:11px; height:11px; border-radius:3px; flex-shrink:0;
+  border:1px solid rgba(255,255,255,.18); }
+#file-legend .fl-name {
+  font-family:var(--mono); font-size:10px; color:#cbd5e1;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;
+}
+#file-legend .fl-n { font-family:var(--mono); font-size:10px; color:#64748b; }
+#file-legend .fl-empty { font-style:italic; color:#475569; }
+
+/* ── Sidebar ─────────────────────────────────────────────────── */
+#sidebar {
+  width:340px; flex-shrink:0;
+  background:var(--sidebar-bg);
+  border-left:1px solid #1e293b;
+  display:flex; flex-direction:column; overflow:hidden;
+}
+#sidebar-empty {
+  flex:1; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:10px;
+}
+#sidebar-empty svg { opacity:.2; }
+#sidebar-empty p { font-size:13px; color:#334155; }
+#sidebar-content {
+  flex:1; overflow-y:auto; padding:10px;
+  display:flex; flex-direction:column; gap:8px;
+}
+#sidebar-content::-webkit-scrollbar { width:4px; }
+#sidebar-content::-webkit-scrollbar-thumb { background:#1e3a5f; border-radius:2px; }
+
+/* ── Cards ───────────────────────────────────────────────────── */
+.card {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius); padding:12px;
+}
+.card-title {
+  font-size:10px; font-weight:700; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--muted); margin-bottom:10px;
+}
+.btn-focus {
+  width:100%; margin-top:10px; background:#172554; color:#93c5fd;
+  border:1px solid #1e3a8a; border-radius:5px; font-size:11px;
+  font-weight:600; padding:7px; cursor:pointer; letter-spacing:.02em;
+}
+.btn-focus:hover { background:#1e3a8a; color:#bfdbfe; }
+
+/* ── Header card ─────────────────────────────────────────────── */
+.node-badges { display:flex; gap:5px; flex-wrap:wrap; margin-bottom:8px; }
+.badge {
+  display:inline-block; padding:2px 8px; border-radius:10px;
+  font-size:10px; font-weight:700; letter-spacing:.04em;
+}
+.badge-type    { background:#172554; color:#93c5fd; border:1px solid #1e3a8a44; }
+.badge-proved  { background:var(--green-bg);  color:var(--green);  border:1px solid rgba(74,222,128,.25); }
+.badge-sorry   { background:var(--orange-bg); color:var(--orange); border:1px solid rgba(251,146,60,.25); }
+.badge-unproved{ background:var(--red-bg);    color:var(--red);    border:1px solid rgba(248,113,113,.25); }
+.node-title   { font-size:15px; font-weight:600; color:#f1f5f9; line-height:1.35; margin-bottom:5px; }
+.node-id      { font-family:var(--mono); font-size:11px; color:#475569; }
+.node-chapter { font-size:11px; color:#334155; margin-top:3px; }
+.lean-ref     { font-size:11px; color:var(--muted); margin-top:6px; }
+.lean-ref code{ font-family:var(--mono); color:var(--accent); }
+
+/* ── Structure card ──────────────────────────────────────────── */
+.degrees { display:flex; gap:20px; margin-bottom:10px; }
+.degree  { display:flex; flex-direction:column; align-items:center; gap:2px; }
+.degree-val   { font-size:22px; font-weight:700; color:#f1f5f9; line-height:1; }
+.degree-label { font-size:10px; color:var(--muted); text-align:center; }
+.deps-list  { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:8px; }
+.deps-sub   { font-size:10px; color:var(--muted); margin:6px 0 4px; letter-spacing:.03em; }
+.dep-chip {
+  font-family:var(--mono); font-size:10px; padding:3px 7px;
+  background:#0f1f3d; border:1px solid #1e3a5f;
+  border-radius:4px; color:var(--accent); cursor:pointer; transition:background .15s;
+}
+.dep-chip:hover { background:#172554; }
+.no-deps { font-size:12px; color:var(--muted); font-style:italic; }
+
+/* ── Metrics card ────────────────────────────────────────────── */
+.metrics-grid {
+  display:grid; grid-template-columns:auto 1fr 1fr;
+  gap:5px 10px; align-items:center;
+}
+.col-head { font-size:10px; color:#334155; text-align:right; font-weight:600; }
+.m-label  { font-size:11px; color:var(--muted); }
+.m-val    { font-family:var(--mono); font-size:12px; color:#94a3b8; text-align:right; }
+.m-done   { color:var(--green); font-weight:700; }
+.m-inf    { color:var(--red);   font-weight:700; }
+.m-work   { color:var(--orange); }
+
+/* ── Section header ──────────────────────────────────────────── */
+.sec-hdr {
+  display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;
+}
+.chars-pair { font-family:var(--mono); font-size:10px; color:#334155; }
+.chars-inf  { color:var(--red); }
+.chars-val  { color:#475569; }
+
+/* ── LaTeX rendered block ────────────────────────────────────── */
+.latex-rendered {
+  font-family:var(--sans); font-size:13px; line-height:1.7;
+  color:#94a3b8; overflow-x:auto; min-height:1.5em;
+}
+.latex-rendered .katex-display { margin:6px 0; overflow-x:auto; }
+.latex-rendered em { font-style:italic; color:#cbd5e1; }
+.latex-rendered strong { font-weight:600; color:#cbd5e1; }
+.latex-rendered.empty { color:#1e3a5f; font-style:italic; }
+
+/* ── Lean code block ─────────────────────────────────────────── */
+.code-block {
+  font-family:var(--mono); font-size:11px; line-height:1.6;
+  background:var(--code-bg); color:#abb2bf;
+  border:1px solid #1a2744; border-radius:5px;
+  padding:10px 12px; white-space:pre; overflow:auto;
+  max-height:220px;
+}
+.code-block::-webkit-scrollbar { width:4px; height:4px; }
+.code-block::-webkit-scrollbar-thumb { background:#1e3a5f; border-radius:2px; }
+.code-block.empty { color:#1e3a5f; font-style:italic; white-space:normal; }
+
+/* ── Lean syntax colours (One Dark palette) ──────────────────── */
+.hl-kw      { color:#c678dd; }
+.hl-tactic  { color:#61afef; }
+.hl-type    { color:#e5c07b; }
+.hl-comment { color:#5c6370; font-style:italic; }
+.hl-str     { color:#98c379; }
+.hl-num     { color:#d19a66; }
+</style>
+</head>
+<body>
+<div id="toolbar">
+  <span class="brand">Blueprint DAG</span>
+  <span class="stat" id="stat">38 nodes &middot; 66 edges</span>
+  <span class="legend"><span class="leg-dot" style="background:#22c55e"></span><span class="leg-txt">done</span><span class="leg-dot" style="background:#3b82f6"></span><span class="leg-txt">mathlib</span><span class="leg-bar"></span><span class="leg-txt">more effort</span><span class="leg-dot" style="background:#ef4444"></span><span class="leg-txt">∞ no proof</span></span>
+  <span class="legend sym-legend">
+    <span class="leg-txt">✓ Lean proof</span>
+    <span class="leg-txt">⚠ sorry</span>
+    <span class="leg-txt">ⓜ mathlib</span>
+    <span class="leg-txt">λ Lean decl</span>
+    <span class="leg-txt">★ LaTeX proof</span>
+    <span class="leg-txt">§ statement</span>
+  </span>
+  <span class="hint">click = highlight cone &middot; double-click = focus &middot; ctrl+scroll = zoom</span>
+</div>
+<div id="controls">
+  <input id="search" type="text" list="node-ids" placeholder="Search node id…" autocomplete="off" spellcheck="false">
+  <datalist id="node-ids"></datalist>
+  <select id="nodeset" title="Which declarations to include">
+    <option value="union">All declarations</option>
+    <option value="blueprint">Blueprint only</option>
+    <option value="lean">Lean only</option>
+  </select>
+  <select id="component"><option value="">All components</option></select>
+  <select id="chapter"><option value="">All chapters</option></select>
+  <select id="fileview" title="Tint the background by source file">
+    <option value="off">File view: off</option>
+    <option value="lean">File view: Lean files</option>
+    <option value="tex">File view: LaTeX files</option>
+  </select>
+  <label class="chk"><input type="checkbox" id="orphans"> show isolated <span id="iso-count"></span></label>
+  <span id="focus-pill" class="pill" style="display:none" title="Clear focus">
+    <span class="lbl"></span><span class="x">&times;</span>
+  </span>
+  <button id="reset" class="btn">Reset view</button>
+</div>
+<div id="main">
+  <div id="graph"></div>
+  <div id="stats-panel"></div>
+  <div id="file-legend" style="display:none"></div>
+  <aside id="sidebar">
+    <div id="sidebar-empty">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none"
+           stroke="#334155" stroke-width="1.2" stroke-linecap="round">
+        <path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/>
+        <line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="13" y2="13"/>
+      </svg>
+      <p>Click a node to inspect it</p>
+    </div>
+    <div id="sidebar-content" style="display:none"></div>
+  </aside>
+</div>
+
+<script>
+const graphData = {"nodes": [{"id": "def:galois-section", "label": "galois-section\n§", "shape": "dot", "size": 11, "color": {"background": "#de9c39", "border": "#9b6c26", "highlight": {"background": "#de9c39", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "def:geometric-section", "label": "geometric-section\n§", "shape": "dot", "size": 11, "color": {"background": "#dead39", "border": "#9b7726", "highlight": {"background": "#dead39", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "def:cuspidal-section", "label": "cuspidal-section\n§", "shape": "dot", "size": 11, "color": {"background": "#dea739", "border": "#9b7326", "highlight": {"background": "#dea739", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "def:birl", "label": "birl\n§", "shape": "dot", "size": 11, "color": {"background": "#dea939", "border": "#9b7526", "highlight": {"background": "#dea939", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "def:tbirl", "label": "tbirl\n§", "shape": "dot", "size": 11, "color": {"background": "#dea639", "border": "#9b7326", "highlight": {"background": "#dea639", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "def:section-conjecture", "label": "section-conjecture\n§", "shape": "dot", "size": 11, "color": {"background": "#dea439", "border": "#9b7226", "highlight": {"background": "#dea439", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "def:bsc", "label": "bsc\n§", "shape": "dot", "size": 11, "color": {"background": "#dea439", "border": "#9b7126", "highlight": {"background": "#dea439", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "def:cuspidalization", "label": "cuspidalization\n§", "shape": "dot", "size": 11, "color": {"background": "#dea239", "border": "#9b7026", "highlight": {"background": "#dea239", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "def:etale-fund-gerbe", "label": "etale-fund-gerbe\n§", "shape": "dot", "size": 11, "color": {"background": "#de9c39", "border": "#9b6c26", "highlight": {"background": "#de9c39", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "lem:families", "label": "families\n★", "shape": "dot", "size": 11, "color": {"background": "#de9439", "border": "#9b6626", "highlight": {"background": "#de9439", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "def:rel-fund-gerbe", "label": "rel-fund-gerbe\n§", "shape": "dot", "size": 11, "color": {"background": "#de9439", "border": "#9b6626", "highlight": {"background": "#de9439", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "lem:rel-gerbe-limit", "label": "rel-gerbe-limit\n★", "shape": "dot", "size": 11, "color": {"background": "#de9c39", "border": "#9b6c26", "highlight": {"background": "#de9c39", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "def:infinite-root-stack", "label": "infinite-root-stack\n§", "shape": "dot", "size": 11, "color": {"background": "#de9539", "border": "#9b6726", "highlight": {"background": "#de9539", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "prop:prorootval", "label": "prorootval\n★", "shape": "dot", "size": 11, "color": {"background": "#dea539", "border": "#9b7226", "highlight": {"background": "#dea539", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "def:spec-loop", "label": "spec-loop\n§", "shape": "dot", "size": 11, "color": {"background": "#de9939", "border": "#9b6a26", "highlight": {"background": "#de9939", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "lem:unique-loop-torus", "label": "unique-loop-torus\n★", "shape": "dot", "size": 11, "color": {"background": "#de9c39", "border": "#9b6c26", "highlight": {"background": "#de9c39", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "lem:unique-loop-curve", "label": "unique-loop-curve\n★", "shape": "dot", "size": 11, "color": {"background": "#de9739", "border": "#9b6926", "highlight": {"background": "#de9739", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "lem:fin-etale-divisor", "label": "fin-etale-divisor\n★", "shape": "dot", "size": 11, "color": {"background": "#de9439", "border": "#9b6626", "highlight": {"background": "#de9439", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "cor:cut", "label": "cut\n★", "shape": "dot", "size": 11, "color": {"background": "#deae39", "border": "#9b7826", "highlight": {"background": "#deae39", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "lem:spec-birl", "label": "spec-birl\n★", "shape": "dot", "size": 11, "color": {"background": "#de9b39", "border": "#9b6b26", "highlight": {"background": "#de9b39", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "cor:tbirl-birl", "label": "tbirl-birl\n★", "shape": "dot", "size": 11, "color": {"background": "#dea739", "border": "#9b7426", "highlight": {"background": "#dea739", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "lem:spec-tbirl", "label": "spec-tbirl\n★", "shape": "dot", "size": 11, "color": {"background": "#dea039", "border": "#9b6e26", "highlight": {"background": "#dea039", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "lem:morph-birl", "label": "morph-birl\n★", "shape": "dot", "size": 11, "color": {"background": "#dead39", "border": "#9b7826", "highlight": {"background": "#dead39", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "cor:morph-tbirl", "label": "morph-tbirl\n★", "shape": "dot", "size": 11, "color": {"background": "#dea039", "border": "#9b6f26", "highlight": {"background": "#dea039", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "lem:nf-lift", "label": "nf-lift\n★", "shape": "dot", "size": 11, "color": {"background": "#de8739", "border": "#9b5d26", "highlight": {"background": "#de8739", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "prop:simple", "label": "simple\n★", "shape": "dot", "size": 11, "color": {"background": "#de7b39", "border": "#9b5526", "highlight": {"background": "#de7b39", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "def:quasi-tbirl", "label": "quasi-tbirl\n§", "shape": "dot", "size": 11, "color": {"background": "#dea039", "border": "#9b6e26", "highlight": {"background": "#dea039", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "lem:spec-quasi", "label": "spec-quasi\n★", "shape": "dot", "size": 11, "color": {"background": "#dea339", "border": "#9b7126", "highlight": {"background": "#dea339", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "lem:quasi-nf", "label": "quasi-nf\n★", "shape": "dot", "size": 11, "color": {"background": "#de9f39", "border": "#9b6e26", "highlight": {"background": "#de9f39", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "prop:tamagawa", "label": "tamagawa\n★", "shape": "dot", "size": 11, "color": {"background": "#deb039", "border": "#9b7a26", "highlight": {"background": "#deb039", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "prop:nffg", "label": "nffg\n★", "shape": "dot", "size": 11, "color": {"background": "#de9039", "border": "#9b6326", "highlight": {"background": "#de9039", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "lem:cusp-bl", "label": "cusp-bl\n★", "shape": "dot", "size": 11, "color": {"background": "#dea339", "border": "#9b7126", "highlight": {"background": "#dea339", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "cor:cusp-bl2", "label": "cusp-bl2\n★", "shape": "dot", "size": 11, "color": {"background": "#de9e39", "border": "#9b6d26", "highlight": {"background": "#de9e39", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "lem:hilbert-sections", "label": "hilbert-sections\n★", "shape": "dot", "size": 11, "color": {"background": "#de9d39", "border": "#9b6d26", "highlight": {"background": "#de9d39", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "lem:bireq", "label": "bireq\n★", "shape": "dot", "size": 11, "color": {"background": "#de9a39", "border": "#9b6b26", "highlight": {"background": "#de9a39", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "thm:main-A", "label": "main-A\n★", "shape": "dot", "size": 11, "color": {"background": "#de8939", "border": "#9b5e26", "highlight": {"background": "#de8939", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "thm:main-B", "label": "main-B\n★", "shape": "dot", "size": 11, "color": {"background": "#deb439", "border": "#9b7d26", "highlight": {"background": "#deb439", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "thm:main-C", "label": "main-C\n★", "shape": "dot", "size": 11, "color": {"background": "#de8539", "border": "#9b5c26", "highlight": {"background": "#de8539", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}], "edges": [{"from": "def:galois-section", "to": "def:geometric-section", "arrows": "to"}, {"from": "def:galois-section", "to": "def:cuspidal-section", "arrows": "to"}, {"from": "def:galois-section", "to": "def:birl", "arrows": "to"}, {"from": "def:galois-section", "to": "def:tbirl", "arrows": "to"}, {"from": "def:birl", "to": "def:tbirl", "arrows": "to"}, {"from": "def:galois-section", "to": "def:section-conjecture", "arrows": "to"}, {"from": "def:geometric-section", "to": "def:section-conjecture", "arrows": "to"}, {"from": "def:cuspidal-section", "to": "def:section-conjecture", "arrows": "to"}, {"from": "def:galois-section", "to": "def:bsc", "arrows": "to"}, {"from": "def:cuspidal-section", "to": "def:bsc", "arrows": "to"}, {"from": "def:galois-section", "to": "def:cuspidalization", "arrows": "to"}, {"from": "def:galois-section", "to": "def:etale-fund-gerbe", "arrows": "to"}, {"from": "def:etale-fund-gerbe", "to": "def:rel-fund-gerbe", "arrows": "to"}, {"from": "lem:families", "to": "def:rel-fund-gerbe", "arrows": "to"}, {"from": "def:rel-fund-gerbe", "to": "lem:rel-gerbe-limit", "arrows": "to"}, {"from": "lem:rel-gerbe-limit", "to": "prop:prorootval", "arrows": "to"}, {"from": "def:infinite-root-stack", "to": "prop:prorootval", "arrows": "to"}, {"from": "prop:prorootval", "to": "def:spec-loop", "arrows": "to"}, {"from": "def:etale-fund-gerbe", "to": "lem:unique-loop-torus", "arrows": "to"}, {"from": "lem:unique-loop-torus", "to": "lem:unique-loop-curve", "arrows": "to"}, {"from": "lem:fin-etale-divisor", "to": "cor:cut", "arrows": "to"}, {"from": "cor:cut", "to": "lem:spec-birl", "arrows": "to"}, {"from": "prop:prorootval", "to": "lem:spec-birl", "arrows": "to"}, {"from": "def:birl", "to": "lem:spec-birl", "arrows": "to"}, {"from": "lem:spec-birl", "to": "cor:tbirl-birl", "arrows": "to"}, {"from": "def:tbirl", "to": "cor:tbirl-birl", "arrows": "to"}, {"from": "lem:spec-birl", "to": "lem:spec-tbirl", "arrows": "to"}, {"from": "def:tbirl", "to": "lem:spec-tbirl", "arrows": "to"}, {"from": "def:birl", "to": "lem:morph-birl", "arrows": "to"}, {"from": "lem:morph-birl", "to": "cor:morph-tbirl", "arrows": "to"}, {"from": "def:tbirl", "to": "cor:morph-tbirl", "arrows": "to"}, {"from": "cor:tbirl-birl", "to": "lem:nf-lift", "arrows": "to"}, {"from": "lem:unique-loop-curve", "to": "lem:nf-lift", "arrows": "to"}, {"from": "prop:prorootval", "to": "lem:nf-lift", "arrows": "to"}, {"from": "lem:unique-loop-curve", "to": "prop:simple", "arrows": "to"}, {"from": "def:tbirl", "to": "def:quasi-tbirl", "arrows": "to"}, {"from": "def:birl", "to": "def:quasi-tbirl", "arrows": "to"}, {"from": "def:quasi-tbirl", "to": "lem:spec-quasi", "arrows": "to"}, {"from": "lem:spec-birl", "to": "lem:spec-quasi", "arrows": "to"}, {"from": "lem:spec-tbirl", "to": "lem:spec-quasi", "arrows": "to"}, {"from": "def:quasi-tbirl", "to": "lem:quasi-nf", "arrows": "to"}, {"from": "lem:nf-lift", "to": "lem:quasi-nf", "arrows": "to"}, {"from": "lem:quasi-nf", "to": "prop:nffg", "arrows": "to"}, {"from": "prop:tamagawa", "to": "prop:nffg", "arrows": "to"}, {"from": "lem:spec-quasi", "to": "prop:nffg", "arrows": "to"}, {"from": "lem:morph-birl", "to": "prop:nffg", "arrows": "to"}, {"from": "def:galois-section", "to": "lem:cusp-bl", "arrows": "to"}, {"from": "def:birl", "to": "lem:cusp-bl", "arrows": "to"}, {"from": "lem:cusp-bl", "to": "cor:cusp-bl2", "arrows": "to"}, {"from": "def:cuspidalization", "to": "cor:cusp-bl2", "arrows": "to"}, {"from": "lem:rel-gerbe-limit", "to": "lem:hilbert-sections", "arrows": "to"}, {"from": "def:birl", "to": "lem:bireq", "arrows": "to"}, {"from": "def:bsc", "to": "lem:bireq", "arrows": "to"}, {"from": "def:tbirl", "to": "thm:main-A", "arrows": "to"}, {"from": "def:geometric-section", "to": "thm:main-A", "arrows": "to"}, {"from": "def:cuspidal-section", "to": "thm:main-A", "arrows": "to"}, {"from": "def:galois-section", "to": "thm:main-A", "arrows": "to"}, {"from": "thm:main-A", "to": "thm:main-B", "arrows": "to"}, {"from": "cor:cusp-bl2", "to": "thm:main-B", "arrows": "to"}, {"from": "lem:bireq", "to": "thm:main-C", "arrows": "to"}, {"from": "lem:hilbert-sections", "to": "thm:main-C", "arrows": "to"}, {"from": "prop:simple", "to": "thm:main-C", "arrows": "to"}, {"from": "lem:unique-loop-curve", "to": "thm:main-C", "arrows": "to"}, {"from": "lem:spec-birl", "to": "thm:main-C", "arrows": "to"}, {"from": "cor:cusp-bl2", "to": "thm:main-C", "arrows": "to"}, {"from": "prop:prorootval", "to": "thm:main-C", "arrows": "to"}]};
+const allNodes  = {"def:galois-section": {"id": "def:galois-section", "type": "definition", "title": "GaloisSection", "chapter": "Overview", "statement": "\\textit{Source: Bresciani, arXiv:2108.13397, Introduction.}\n  Let \\(X\\) be a geometrically connected smooth curve over a field \\(k\\) with absolute\n  Galois group \\(\\gal(k)\\). A \\emph{Galois section} of \\(X\\) is an element of\n  \\(\\GalSec{X}{k}\\), the set of sections of \\(\\pi_1(X) \\to \\gal(k)\\) modulo conjugation\n  by \\(\\pi_1(X_{\\bar{k}})\\). Equivalently, in the language of the étale fundamental\n  gerbe, it is an isomorphism class in \\(\\FundGerbe{X}{k}(k)\\).", "uses": [], "lean_name": "BSC.TODO.GaloisSection", "proved": false, "mathlib_ok": false, "proof_tex": "", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 0, "rdep_count": 10, "descendant_count": 32, "proof_size_tex": null, "effort_local": 460, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 460}, "def:geometric-section": {"id": "def:geometric-section", "type": "definition", "title": "GeometricSection", "chapter": "Overview", "statement": "\\textit{Source: Bresciani, arXiv:2108.13397, Introduction.}\n  A Galois section \\(s \\in \\GalSec{X}{k}\\) is \\emph{geometric} if it is associated\n  with a \\(k\\)-rational point of \\(X\\).", "uses": ["def:galois-section"], "lean_name": "BSC.TODO.GeometricSection", "proved": false, "mathlib_ok": false, "proof_tex": "", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 1, "rdep_count": 2, "descendant_count": 3, "proof_size_tex": null, "effort_local": 182, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 642}, "def:cuspidal-section": {"id": "def:cuspidal-section", "type": "definition", "title": "CuspidalSection", "chapter": "Overview", "statement": "\\textit{Source: Bresciani, arXiv:2108.13397, Introduction.}\n  A Galois section \\(s \\in \\GalSec{X}{k}\\) is \\emph{cuspidal} if it is associated\n  with a \\(k\\)-rational point in the boundary \\(\\bar{X} \\setminus X\\), where\n  \\(\\bar{X}\\) is the smooth completion of \\(X\\).", "uses": ["def:galois-section"], "lean_name": "BSC.TODO.CuspidalSection", "proved": false, "mathlib_ok": false, "proof_tex": "", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 1, "rdep_count": 3, "descendant_count": 6, "proof_size_tex": null, "effort_local": 267, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 727}, "def:birl": {"id": "def:birl", "type": "definition", "title": "BiratLiftable", "chapter": "Overview", "statement": "\\textit{Source: Bresciani, arXiv:2108.13397, Introduction.}\n  A Galois section \\(s \\in \\GalSec{X}{k}\\) is \\emph{birationally liftable} (\\(\\BL\\))\n  if it lies in the image of the natural map \\(\\GalSec{k(X)}{k} \\to \\GalSec{X}{k}\\).", "uses": ["def:galois-section"], "lean_name": "BSC.TODO.BiratLiftable", "proved": false, "mathlib_ok": false, "proof_tex": "", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 1, "rdep_count": 6, "descendant_count": 17, "proof_size_tex": null, "effort_local": 229, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 689}, "def:tbirl": {"id": "def:tbirl", "type": "definition", "title": "TBiratLiftable", "chapter": "Overview", "statement": "\\textit{Source: Bresciani, arXiv:2108.13397, Introduction.}\n  Let \\(t\\) be an indeterminate. A Galois section \\(s \\in \\GalSec{X}{k}\\) is\n  \\emph{\\(t\\)-birationally liftable} (\\(\\TBL\\)) if the base change\n  \\(s_{k(t)} \\in \\GalSec{X_{k(t)}}{k(t)}\\) is birationally liftable.", "uses": ["def:galois-section", "def:birl"], "lean_name": "BSC.TODO.TBiratLiftable", "proved": false, "mathlib_ok": false, "proof_tex": "", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 2, "rdep_count": 5, "descendant_count": 10, "proof_size_tex": null, "effort_local": 272, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 961}, "def:section-conjecture": {"id": "def:section-conjecture", "type": "definition", "title": "SectionConjecture", "chapter": "Overview", "statement": "\\textit{Source: Bresciani, arXiv:2108.13397, Introduction (Section Conjecture).}\n  The \\emph{Section Conjecture} asserts: for every smooth, geometrically connected\n  hyperbolic curve \\(X\\) over a field \\(k\\) finitely generated over \\(\\Q\\), every\n  Galois section of \\(X\\) is either geometric or cuspidal.", "uses": ["def:galois-section", "def:geometric-section", "def:cuspidal-section"], "lean_name": "BSC.TODO.SectionConjecturePred", "proved": false, "mathlib_ok": false, "proof_tex": "", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 3, "rdep_count": 0, "descendant_count": 0, "proof_size_tex": null, "effort_local": 304, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 1213}, "def:bsc": {"id": "def:bsc", "type": "definition", "title": "BiratSectionConj", "chapter": "Overview", "statement": "\\textit{Source: Bresciani, arXiv:2108.13397, Introduction (Birational Section Conjecture).}\n  The \\emph{Birational Section Conjecture} (BSC) asserts: for every smooth,\n  geometrically connected curve \\(X\\) over a field \\(k\\) finitely generated over\n  \\(\\Q\\), every birational Galois section of \\(X\\) is cuspidal.", "uses": ["def:galois-section", "def:cuspidal-section"], "lean_name": "BSC.TODO.BiratSectionConjPred", "proved": false, "mathlib_ok": false, "proof_tex": "", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 2, "rdep_count": 1, "descendant_count": 2, "proof_size_tex": null, "effort_local": 312, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 1039}, "def:cuspidalization": {"id": "def:cuspidalization", "type": "definition", "title": "CuspidalizationConj", "chapter": "Overview", "statement": "\\textit{Source: Bresciani, arXiv:2108.13397, Introduction (Cuspidalization Conjecture).}\n  The \\emph{Cuspidalization Conjecture} asserts: for every smooth, geometrically\n  connected hyperbolic curve \\(X\\) over \\(k\\) finitely generated over \\(\\Q\\) and\n  every non-empty open \\(U \\subset X\\), the map \\(\\GalSec{U}{k} \\to \\GalSec{X}{k}\\)\n  is surjective.", "uses": ["def:galois-section"], "lean_name": "BSC.TODO.CuspidalizationConjPred", "proved": false, "mathlib_ok": false, "proof_tex": "", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 1, "rdep_count": 1, "descendant_count": 3, "proof_size_tex": null, "effort_local": 351, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 811}, "def:etale-fund-gerbe": {"id": "def:etale-fund-gerbe", "type": "definition", "title": "EtaleFundGerbe", "chapter": "Overview", "statement": "\\textit{Source: Bresciani, arXiv:2108.13397, Section 1.}\n  \n  For \\(X\\) geometrically connected over \\(k\\), the \\emph{étale fundamental gerbe}\n  \\(\\FundGerbe{X}{k}\\) is a profinite étale stack over \\(k\\) equipped with a morphism\n  \\(X \\to \\FundGerbe{X}{k}\\) that is universal among morphisms to finite étale stacks\n  over \\(k\\). The set \\(\\GalSec{X}{k}\\) of Galois sections is in natural bijection with\n  the set of isomorphism classes of \\(\\FundGerbe{X}{k}(k)\\).", "uses": ["def:galois-section"], "lean_name": "BSC.TODO.EtaleFundGerbe", "proved": false, "mathlib_ok": false, "proof_tex": "", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 1, "rdep_count": 2, "descendant_count": 16, "proof_size_tex": null, "effort_local": 463, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 923}, "lem:families": {"id": "lem:families", "type": "lemma", "title": "FamiliesExactSeq", "chapter": "Overview", "statement": "\\textit{Source: Bresciani, arXiv:2108.13397, Lemma 1 (families).}\n  Let \\(k\\) be a field of characteristic \\(0\\) and \\(A\\) a ring which is a localization\n  of a \\(1\\)-dimensional regular domain \\(\\tilde{A}\\) of finite type over \\(k\\), write\n  \\(C = \\spec A\\). If \\(X \\to C\\) is a family of curves and \\(F\\) is a geometric fiber,\n  then\n  \\[1 \\to \\pi_1(F) \\to \\pi_1(X) \\to \\pi_1(C) \\to 1\\]\n  is exact.", "uses": [], "lean_name": "BSC.TODO.FamiliesExactSeq", "proved": false, "mathlib_ok": false, "proof_tex": "\n  Reduce to \\(k = \\mathbb{C}\\) by invariance of étale fundamental groups under base\n  change of algebraically closed fields (SGA1, Exp.\\ X, Cor.\\ 1.8). For \\(k = \\mathbb{C}\\),\n  the sequence of topological fundamental groups is exact since \\(\\pi_2(C) = 0\\) (as\n  \\(C\\) is an affine curve), and the profinite completion preserves this exactness\n  (Anderson; Geraghty-Johansson-Zhu). For a localization of a finite-type domain,\n  write \\(\\pi_1(C) \\cong \\varprojlim_U \\pi_1(U)\\) over open \\(U \\supset C\\) in\n  \\(\\tilde{C} = \\spec \\tilde{A}\\), take the projective limit of the short exact\n  sequences, using that the left term \\(\\pi_1(F)\\) is constant.\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 0, "rdep_count": 1, "descendant_count": 13, "proof_size_tex": 646, "effort_local": 646, "proof_size_tex_total": 646, "proof_size_lean_total": null, "effort_total": 646}, "def:rel-fund-gerbe": {"id": "def:rel-fund-gerbe", "type": "definition", "title": "RelFundGerbe", "chapter": "Overview", "statement": "\\textit{Source: Bresciani, arXiv:2108.13397, Section 1.1.}\n  Let \\(X \\to C\\) be a family of curves as in \\cref{lem:families}. The\n  \\emph{relative fundamental gerbe} \\(\\FundGerbe{X}{C}\\) is defined by the\n  \\(2\\)-Cartesian diagram\n  \\[\n    \\begin{array}{ccc}\n      \\FundGerbe{X}{C} & \\to & \\FundGerbe{X}{k} \\\\\n      \\downarrow & & \\downarrow \\\\\n      C & \\to & \\FundGerbe{C}{k},\n    \\end{array}\n  \\]\n  equipped with a structural morphism \\(X \\to \\FundGerbe{X}{C}\\) over \\(C\\). For\n  every field extension \\(k'/k\\) and point \\(c : \\spec k' \\to C\\), the induced\n  morphism \\(\\FundGerbe{X_c}{k'} \\to \\FundGerbe{X}{C} \\times_C \\spec k'\\) is an\n  isomorphism.", "uses": ["def:etale-fund-gerbe", "lem:families"], "lean_name": "BSC.TODO.RelFundGerbe", "proved": false, "mathlib_ok": false, "proof_tex": "", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 2, "rdep_count": 1, "descendant_count": 12, "proof_size_tex": null, "effort_local": 654, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 2223}, "lem:rel-gerbe-limit": {"id": "lem:rel-gerbe-limit", "type": "lemma", "title": "RelGerbeLimit", "chapter": "Overview", "statement": "\\textit{Source: Bresciani, arXiv:2108.13397, Lemma 2.}\n  The relative fundamental gerbe \\(\\FundGerbe{X}{C} \\to C\\) is a projective limit\n  \\(\\varprojlim \\Phi_i\\) of proper, étale morphisms \\(\\Phi_i \\to C\\) which are gerbes\n  over \\(C\\).", "uses": ["def:rel-fund-gerbe"], "lean_name": "BSC.TODO.RelGerbeLimit", "proved": false, "mathlib_ok": false, "proof_tex": "\n  \\uses{def:etale-fund-gerbe}\n  Write \\(\\FundGerbe{X}{k} = \\varprojlim_i \\Psi_i\\) and \\(\\FundGerbe{C}{k} = \\varprojlim_i \\Lambda_i\\)\n  as projective limits of finite étale gerbes over \\(k\\) (Bresciani-Vistoli, Prop.\\ 3.9).\n  Geometric connectedness of the fibers of \\(X \\to C\\) implies\n  \\(\\FundGerbe{X}{k} \\to \\FundGerbe{C}{k}\\) is locally full, so each\n  \\(\\Psi_i \\to \\Lambda_i\\) is a proper étale relative gerbe. Set\n  \\(\\Phi_i = \\Psi_i \\times_{\\Lambda_i} C\\).\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 1, "rdep_count": 2, "descendant_count": 11, "proof_size_tex": 461, "effort_local": 461, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 2684}, "def:infinite-root-stack": {"id": "def:infinite-root-stack", "type": "definition", "title": "InfRootStack", "chapter": "Overview", "statement": "\\textit{Source: Bresciani, arXiv:2108.13397, Section 2.}\n  \n  For \\(R\\) a DVR with uniformizing parameter \\(\\pi\\), the \\emph{\\(n\\)-th root stack}\n  \\(\\sqrt[n]{\\spec R}\\) is the quotient stack \\([\\spec R(\\sqrt[n]{\\pi})/\\mu_n]\\)\n  (independent of the choice of \\(\\pi\\)). The \\emph{infinite root stack} is\n  \\(\\sqrt[\\infty]{\\spec R} = \\varprojlim_n \\sqrt[n]{\\spec R}\\). Its closed fiber\n  \\(S^1_c\\) (with reduced structure) is non-canonically isomorphic to the classifying\n  stack \\(\\cB_k \\hz(1)\\); there is a non-canonical bijection between isomorphism\n  classes of \\(S^1_c(k)\\) and \\(\\hat{k^*} = \\varprojlim_n k^*/k^{*n}\\).", "uses": [], "lean_name": "BSC.TODO.InfRootStack", "proved": false, "mathlib_ok": false, "proof_tex": "", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 0, "rdep_count": 1, "descendant_count": 10, "proof_size_tex": null, "effort_local": 622, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 622}, "prop:prorootval": {"id": "prop:prorootval", "type": "proposition", "title": "ProrootValCrit", "chapter": "Overview", "statement": "\\textit{Source: Bresciani, arXiv:2108.13397, Proposition 1.}\n  Let \\(X \\to C\\) be a family of curves as in \\cref{lem:families}, \\(c \\in C\\) a\n  closed point with local ring \\(R\\), and \\(z : \\spec K \\to \\FundGerbe{X}{C}\\) a\n  generic Galois section (\\(K\\) = fraction field of \\(C\\)). Then \\(z\\) extends\n  uniquely (up to unique isomorphism) to a morphism \\(\\sqrt[\\infty]{\\spec R} \\to \\FundGerbe{X}{C}\\)\n  compatible with \\(\\spec K \\hookrightarrow \\sqrt[\\infty]{\\spec R}\\) and the map\n  \\(\\spec R \\to C\\). An extension \\(\\spec R \\to \\FundGerbe{X}{C}\\) exists if and only\n  if the induced specializing loop \\(S^1_c \\to \\FundGerbe{X_c}{k(c)}\\) is constant.", "uses": ["lem:rel-gerbe-limit", "def:infinite-root-stack"], "lean_name": "BSC.TODO.ProrootValCrit", "proved": false, "mathlib_ok": false, "proof_tex": "\n  \\uses{lem:rel-gerbe-limit, def:infinite-root-stack}\n  By \\cref{lem:rel-gerbe-limit}, \\(\\FundGerbe{X}{C} \\to C\\) is a projective limit of\n  proper morphisms; the claim then follows from the valuative criterion for pro-finite\n  proper stacks (Bresciani-Vistoli, arXiv:1404.7475, Theorem 3.1).\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 2, "rdep_count": 4, "descendant_count": 9, "proof_size_tex": 290, "effort_local": 290, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 3596}, "def:spec-loop": {"id": "def:spec-loop", "type": "definition", "title": "SpecLoop", "chapter": "Overview", "statement": "\\textit{Source: Bresciani, arXiv:2108.13397, Definition 1.}\n  With notation as in \\cref{prop:prorootval}, the \\emph{specializing loop} of \\(z\\)\n  at \\(c\\) is the induced morphism \\(\\gamma_z(c) : S^1_c \\to \\FundGerbe{X_c}{k(c)}\\).\n  A \\emph{specialization} of \\(z\\) at \\(c\\) is any Galois section of \\(X_c/k(c)\\) in\n  the essential image of \\(\\gamma_z(c)(k(c)) : S^1_c(k(c)) \\to \\FundGerbe{X_c}{k(c)}(k(c))\\).\n  A specialization always exists but need not be unique; it is unique precisely when\n  \\(\\gamma_z(c)\\) is constant.", "uses": ["prop:prorootval"], "lean_name": "BSC.TODO.SpecLoop", "proved": false, "mathlib_ok": false, "proof_tex": "", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 1, "rdep_count": 0, "descendant_count": 0, "proof_size_tex": null, "effort_local": 524, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 4120}, "lem:unique-loop-torus": {"id": "lem:unique-loop-torus", "type": "lemma", "title": "UniqueLoopTorus", "chapter": "Overview", "statement": "\\textit{Source: Bresciani, arXiv:2108.13397, Lemma 3.}\n  Let \\(T\\) be a torus over \\(k\\) with surjective valuation \\(\\nu : k^* \\to \\Z\\),\n  and let \\(\\gamma : \\cB_k \\hz(1) \\to \\FundGerbe{T}{k}\\) be a morphism of gerbes.\n  If the image of \\(\\cB_k \\hz(1)(k)\\) in \\(\\FundGerbe{T}{k}(k_\\nu)\\) has finitely\n  many isomorphism classes, then \\(\\gamma\\) is constant.", "uses": ["def:etale-fund-gerbe"], "lean_name": "BSC.TODO.UniqueLoopTorus", "proved": false, "mathlib_ok": false, "proof_tex": "\n  Choose a finite extension \\(k'/k\\) splitting \\(T\\), so \\(T_{k'} \\cong \\Gm^n\\) and\n  \\(\\pi_1(T_{\\bar{k}}) \\cong \\hz^n(1)\\). The surjective valuation \\(\\nu\\) induces a\n  surjection \\(H^1(k, \\hz(1)) \\to \\hz\\). Finiteness of the image forces the composite\n  \\(H^1(k, \\hz(1)) \\xrightarrow{f} H^1(k_\\nu, \\pi_1(T_{\\bar{k}}))\\) to have finite\n  image, hence the map \\(\\hz \\to \\hz^n\\) given by \\(rf\\) is zero. Since \\(r \\neq 0\\)\n  and \\(\\hz\\) is torsion-free, \\(f = 0\\).\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 1, "rdep_count": 1, "descendant_count": 6, "proof_size_tex": 461, "effort_local": 461, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 1384}, "lem:unique-loop-curve": {"id": "lem:unique-loop-curve", "type": "lemma", "title": "UniqueLoopCurve", "chapter": "Overview", "statement": "\\textit{Source: Bresciani, arXiv:2108.13397, Lemma 4.}\n  Let \\(k\\) be a number field, \\(\\nu\\) a finite place, \\(X\\) a curve over \\(k\\), and\n  \\(\\gamma : \\cB_k \\hz(1) \\to \\FundGerbe{X}{k}\\) a morphism of gerbes. If the image\n  of \\(\\cB_k \\hz(1)(k)\\) in \\(\\FundGerbe{X}{k}(k_\\nu)\\) has finitely many isomorphism\n  classes, then \\(\\gamma\\) is constant.", "uses": ["lem:unique-loop-torus"], "lean_name": "BSC.TODO.UniqueLoopCurve", "proved": false, "mathlib_ok": false, "proof_tex": "\n  \\uses{lem:unique-loop-torus}\n  If \\(\\gamma\\) is non-constant, pass to a finite étale cover and assume the\n  abelianization \\(\\cB_k \\hz(1) \\to \\FundGerbe{X}{k}^{\\mathrm{ab}} = \\FundGerbe{J}{k}\\)\n  is non-constant, where \\(J\\) is the semi-abelian Jacobian. By weight reasons\n  \\(\\hz(1) \\to TJ\\) factors through the torus part \\(TT\\). By Mattuck's theorem\n  \\(A(k_\\nu)\\) has finite torsion, so \\(H^1(k_\\nu, TT) \\to H^1(k_\\nu, TJ)\\) is\n  injective. The finiteness hypothesis then forces \\(\\hz(1) \\to TT\\) to be trivial\n  by \\cref{lem:unique-loop-torus}, a contradiction.\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 1, "rdep_count": 3, "descendant_count": 5, "proof_size_tex": 566, "effort_local": 566, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 1950}, "lem:fin-etale-divisor": {"id": "lem:fin-etale-divisor", "type": "lemma", "title": "FinEtaleDivisor", "chapter": "Overview", "statement": "\\textit{Source: Bresciani, arXiv:2108.13397, Section 3, first lemma.}\n  Let \\(R\\) be a DVR, \\(X \\to \\spec R\\) a family of curves, and \\(p \\in X\\) a closed\n  point in the closed fiber. There exists a non-empty divisor \\(D \\subset X\\) finite\n  étale over \\(R\\) with \\(p \\in D\\).", "uses": [], "lean_name": "BSC.TODO.FinEtaleDivisor", "proved": false, "mathlib_ok": false, "proof_tex": "\n  Embed \\(\\bar{X} \\subset \\PP^n_R\\) and choose a generic \\((n-2)\\)-dimensional linear\n  subspace \\(L_k \\subset \\PP^n_k\\) not meeting \\(\\bar{X}_k\\), such that the\n  hyperplane \\(H_i\\) spanned by \\(L_k\\) and each geometric point \\(p_i\\) over \\(p\\)\n  meets \\(\\bar{X}_{\\bar{k}}\\) transversally and avoids \\(D_0\\). The projection from\n  \\(L\\) gives \\(f : \\bar{X} \\to \\PP^1_R\\) étale near \\(f(p)\\). Since\n  \\(k(p) \\cong k[x]/\\bar{q}(x)\\) for a separable \\(\\bar{q}\\), lift to\n  \\(R' = R[x]/q(x)\\) (a DVR, finite étale over \\(R\\)); choose a point\n  \\(E \\subset \\PP^1_R\\) finite étale over \\(R\\) through \\(f(p)\\); then\n  \\(f^{-1}(E)\\) is the desired divisor.\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 0, "rdep_count": 1, "descendant_count": 9, "proof_size_tex": 647, "effort_local": 647, "proof_size_tex_total": 647, "proof_size_lean_total": null, "effort_total": 647}, "cor:cut": {"id": "cor:cut", "type": "corollary", "title": "CutLemma", "chapter": "Overview", "statement": "\\textit{Source: Bresciani, arXiv:2108.13397, Corollary 1.}\n  Let \\(R\\) be a DVR and \\(X \\to \\spec R\\) a family of curves. There exists a direct\n  system \\((D_i)_i\\) of divisors finite étale over \\(R\\) such that\n  \\(X_k \\setminus \\bigcup_i D_i\\) contains only the generic point of \\(X_k\\).", "uses": ["lem:fin-etale-divisor"], "lean_name": "BSC.TODO.CutLemma", "proved": false, "mathlib_ok": false, "proof_tex": "\n  \\uses{lem:fin-etale-divisor}\n  Apply \\cref{lem:fin-etale-divisor} to each closed point of \\(X_k\\); the resulting\n  direct system of divisors exhausts all closed points.\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 1, "rdep_count": 1, "descendant_count": 8, "proof_size_tex": 168, "effort_local": 168, "proof_size_tex_total": 815, "proof_size_lean_total": null, "effort_total": 815}, "lem:spec-birl": {"id": "lem:spec-birl", "type": "lemma", "title": "SpecBirat", "chapter": "Overview", "statement": "\\textit{Source: Bresciani, arXiv:2108.13397, Lemma 5.}\n  Specializations of \\(\\BL\\) sections are \\(\\BL\\). More precisely: let\n  \\(X \\to \\spec R\\) be a family of curves and \\(z \\in \\FundGerbe{X_K}{K}(K)\\) a\n  generic \\(\\BL\\) Galois section. Then every specialization of \\(z\\) is \\(\\BL\\).", "uses": ["cor:cut", "prop:prorootval", "def:birl"], "lean_name": "BSC.TODO.SpecBirat", "proved": false, "mathlib_ok": false, "proof_tex": "\n  \\uses{cor:cut, prop:prorootval}\n  Let \\((D_i)\\) be as in \\cref{cor:cut}; set \\(X_i = X \\setminus D_i\\) and\n  \\(X_\\infty = \\varprojlim_i X_i\\), whose closed fiber is \\(\\spec k(X_k)\\).\n  Since \\(z\\) is \\(\\BL\\), it lifts to \\(z' \\in \\FundGerbe{X_{\\infty,K}}{K}(K)\\).\n  By a limit argument with \\cref{prop:prorootval}, the specializing loops of \\(z'\\)\n  induce \\(\\gamma_{z'} : S^1_c \\to \\FundGerbe{k(X_k)}{k}\\). Every specialization of\n  \\(z\\) thus lifts to \\(\\spec k(X_k)\\), so it is \\(\\BL\\).\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 3, "rdep_count": 4, "descendant_count": 7, "proof_size_tex": 489, "effort_local": 489, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 5129}, "cor:tbirl-birl": {"id": "cor:tbirl-birl", "type": "corollary", "title": "TBiratBirat", "chapter": "Overview", "statement": "\\textit{Source: Bresciani, arXiv:2108.13397, Corollary 2.}\n  Every \\(\\TBL\\) Galois section is \\(\\BL\\).", "uses": ["lem:spec-birl", "def:tbirl"], "lean_name": "BSC.TODO.TBiratBirat", "proved": false, "mathlib_ok": false, "proof_tex": "\n  \\uses{lem:spec-birl}\n  Write \\(R = k[t]_{(t)}\\); then \\(s_{k(t)}\\) is a generic section of\n  \\(\\FundGerbe{X_R}{R}\\) and \\(s\\) is a specialization of \\(s_{k(t)}\\). Since\n  \\(s_{k(t)}\\) is \\(\\BL\\) by hypothesis, \\cref{lem:spec-birl} gives that \\(s\\) is\n  \\(\\BL\\).\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 2, "rdep_count": 1, "descendant_count": 3, "proof_size_tex": 261, "effort_local": 261, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 5662}, "lem:spec-tbirl": {"id": "lem:spec-tbirl", "type": "lemma", "title": "SpecTBirat", "chapter": "Overview", "statement": "\\textit{Source: Bresciani, arXiv:2108.13397, Lemma 6.}\n  Specializations of \\(\\TBL\\) sections are \\(\\TBL\\). Precisely: let\n  \\(X \\to \\spec R\\) be a family of curves, \\(z\\) a generic \\(\\TBL\\) section, and\n  \\(s\\) a specialization of \\(z\\). Then \\(s\\) is \\(\\TBL\\).", "uses": ["lem:spec-birl", "def:tbirl"], "lean_name": "BSC.TODO.SpecTBirat", "proved": false, "mathlib_ok": false, "proof_tex": "\n  \\uses{lem:spec-birl}\n  Let \\(R'\\) be the local ring of the generic point of \\(\\A^1_k \\subset \\A^1_R\\); it\n  is a DVR with fraction field \\(K(t)\\) and residue field \\(k(t)\\). In the family\n  \\(X_{R'} \\to \\spec R'\\), the base change \\(z_{K(t)}\\) is \\(\\BL\\) by hypothesis.\n  Then \\(s_{k(t)}\\) is a specialization of \\(z_{K(t)}\\), hence \\(\\BL\\) by\n  \\cref{lem:spec-birl}, so \\(s\\) is \\(\\TBL\\).\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 2, "rdep_count": 1, "descendant_count": 2, "proof_size_tex": 389, "effort_local": 389, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 5790}, "lem:morph-birl": {"id": "lem:morph-birl", "type": "lemma", "title": "MorphBirat", "chapter": "Overview", "statement": "\\textit{Source: Bresciani, arXiv:2108.13397, Lemma 7.}\n  Let \\(f : Y \\to X\\) be a dominant morphism of curves over \\(k\\) and\n  \\(s \\in \\FundGerbe{Y}{k}(k)\\) a Galois section. If \\(s\\) is \\(\\BL\\), then\n  \\(f(s) \\in \\FundGerbe{X}{k}(k)\\) is \\(\\BL\\). If \\(f\\) is finite étale, the\n  converse holds.", "uses": ["def:birl"], "lean_name": "BSC.TODO.MorphBirat", "proved": false, "mathlib_ok": false, "proof_tex": "\n  The forward direction is immediate. For the converse when \\(f\\) is finite étale,\n  use the fibre product identity\n  \\(\\gal(k(Y)) = \\pi_1(Y) \\times_{\\pi_1(X)} \\gal(k(X))\\).\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 1, "rdep_count": 2, "descendant_count": 2, "proof_size_tex": 171, "effort_local": 171, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 860}, "cor:morph-tbirl": {"id": "cor:morph-tbirl", "type": "corollary", "title": "MorphTBirat", "chapter": "Overview", "statement": "\\textit{Source: Bresciani, arXiv:2108.13397, Corollary 3.}\n  Same as \\cref{lem:morph-birl} with \\(\\BL\\) replaced by \\(\\TBL\\): if \\(f\\) is\n  dominant and \\(s\\) is \\(\\TBL\\), then \\(f(s)\\) is \\(\\TBL\\); if \\(f\\) is finite\n  étale, the converse holds.", "uses": ["lem:morph-birl", "def:tbirl"], "lean_name": "BSC.TODO.MorphTBirat", "proved": false, "mathlib_ok": false, "proof_tex": "\n  \\uses{lem:morph-birl}\n  Base-change to \\(k(t)\\): \\(s\\) is \\(\\TBL\\) iff \\(s_{k(t)}\\) is \\(\\BL\\).\n  Applying \\cref{lem:morph-birl} to \\(f_{k(t)}\\) and \\(s_{k(t)}\\) gives\n  \\(f(s_{k(t)}) = f(s)_{k(t)}\\) is \\(\\BL\\), hence \\(f(s)\\) is \\(\\TBL\\).\n  If \\(f\\) is finite étale, the converse follows by the same base-change argument\n  using the converse direction of \\cref{lem:morph-birl}.\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 2, "rdep_count": 0, "descendant_count": 0, "proof_size_tex": 378, "effort_local": 378, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 1510}, "lem:nf-lift": {"id": "lem:nf-lift", "type": "lemma", "title": "NFLift", "chapter": "Overview", "statement": "\\textit{Source: Bresciani, arXiv:2108.13397, Lemma 8.}\n  Let \\(X\\) be a curve over a number field \\(k\\), \\(U \\subseteq X\\) a non-empty open\n  subset, and \\(s \\in \\FundGerbe{X}{k}(k)\\) a \\(\\TBL\\) Galois section. There exists\n  a \\(\\TBL\\) section of \\(U\\) which lifts \\(s\\).", "uses": ["cor:tbirl-birl", "lem:unique-loop-curve", "prop:prorootval"], "lean_name": "BSC.TODO.NFLift", "proved": false, "mathlib_ok": false, "proof_tex": "\n  \\uses{cor:tbirl-birl, lem:unique-loop-curve, prop:prorootval, lem:spec-birl}\n  Assume \\(X\\) non-parabolic and \\(s\\) not geometric/cuspidal. By hypothesis,\n  \\(s_{k(t)}\\) lifts to a \\(\\BL\\) section \\(r_0\\) of \\(U_{k(t)}\\). For each closed\n  point \\(c \\in \\A^1\\) with residue field \\(k'\\), choose a finite place \\(\\nu\\) of\n  \\(k\\) with \\(k' \\subset k_\\nu\\) and \\(x_\\nu \\in U\\) (possible by Stix's Theorem~B,\n  which gives density~1). Any specialization \\(r_{0,c}\\) is \\(\\BL\\) by\n  \\cref{lem:spec-birl} and maps to \\(s\\); over \\(k_\\nu\\) it is the geometric section\n  at \\(x_\\nu \\in U \\setminus \\{c\\}\\). By \\cref{lem:unique-loop-curve}, the\n  specializing loop of \\(r_0\\) at \\(c\\) is constant, so \\(r_0\\) extends over\n  \\(\\mathcal{O}_c\\) by \\cref{prop:prorootval}. Doing this for every closed point and\n  using that \\(\\FundGerbe{U \\times \\A^1}{\\A^1} \\cong \\FundGerbe{U}{k} \\times_k \\A^1\\)\n  (Bresciani, arXiv:2003.04649, Cor.\\ A.3), we get \\(r_0 = r_{k(t)}\\) for a\n  \\(\\TBL\\) section \\(r\\) of \\(U\\) lifting \\(s\\).\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 3, "rdep_count": 1, "descendant_count": 2, "proof_size_tex": 1009, "effort_local": 1009, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 7698}, "prop:simple": {"id": "prop:simple", "type": "proposition", "title": "SimpleProp", "chapter": "Overview", "statement": "\\textit{Source: Bresciani, arXiv:2108.13397, Proposition 2.}\n  Let \\(k\\) be a number field, \\(\\nu\\) a finite place, and \\(U = \\A^1 \\setminus \\{1,2\\}\\).\n  Let \\(s \\in \\FundGerbe{U}{k}(k)\\) be a \\(\\BL\\) Galois section and\n  \\(x_\\nu \\in \\PP^1(k_\\nu)\\) the unique associated local point. Let\n  \\(\\delta : \\spec k(t) \\to \\A^1\\) be the diagonal (generic) point, and assume that\n  \\(s_{k(t)}\\) lifts to a section of\n  \\(\\spec k(\\A^1) \\otimes_k k(t) \\setminus \\{\\delta\\}\\) (e.g.\\ if \\(s\\) is \\(\\TBL\\)).\n  Then \\(x_\\nu\\) is \\(k\\)-rational.", "uses": ["lem:unique-loop-curve"], "lean_name": "BSC.TODO.SimpleProp", "proved": false, "mathlib_ok": false, "proof_tex": "\n  \\uses{lem:unique-loop-curve}\n  \\textbf{Step 1 (Specializations of \\(r\\)).}\n  Let \\(r_0\\) be the lifting and \\(r\\) its image in \\(U_{k(t)} \\setminus \\{\\delta\\}\\).\n  For each \\(k\\)-rational \\(c \\in U(k)\\) with \\(c \\neq x_\\nu\\), any specialization\n  \\(r_c\\) of \\(r\\) at \\(c\\) is \\(\\BL\\) and maps to \\(s\\); over \\(k_\\nu\\) it must be\n  the geometric section at \\(x_\\nu \\in U \\setminus \\{c\\}\\). By\n  \\cref{lem:unique-loop-curve}, the specializing loop at \\(c\\) is constant.\n\n  \\textbf{Step 2 (Change of coordinates).}\n  The automorphism \\(\\phi : y \\mapsto t - y\\) sends \\(U_{k(t)} \\xrightarrow{\\sim} V\\)\n  where \\(V = \\A^1_{k(t)} \\setminus \\{t-1, t-2\\}\\). Then\n  \\(\\phi(r) \\in \\FundGerbe{V \\setminus \\{0\\}}{}(k(t)) \\hookrightarrow \\hat{k(t)^*}\\)\n  gives \\(z = \\lambda \\cdot q^e \\cdot (t-1)^{e_1} \\cdot (t-2)^{e_2}\\) where \\(q\\) is\n  the minimal polynomial of \\(x_\\nu\\), \\(e, e_1, e_2 \\in \\hz\\), \\(\\lambda \\in \\hat{k^*}\\).\n  Step 1 and \\cref{example:gm-loop} force \\(e_c = 0\\) for all closed \\(c \\neq x_\\nu, 1, 2\\).\n\n  \\textbf{Step 3 (Specializations of \\(z\\)).}\n  Fix a finite extension \\(K\\) splitting \\(q\\) and extension \\(\\eta\\) of \\(\\nu\\).\n  Taking sequences \\(c_i \\to 1\\) and \\(c_i \\to 2\\) forces \\(e_1 = e_2 = 0\\).\n  Taking \\(c_i \\to x_\\eta\\) forces \\(e = 1\\). If \\(\\deg q \\geq 2\\), taking\n  \\(c_i \\to y_j\\) (a conjugate of \\(x_\\nu\\)) gives a contradiction, so\n  \\(\\deg q = 1\\) and \\(x_\\nu \\in k\\).\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 1, "rdep_count": 1, "descendant_count": 1, "proof_size_tex": 1398, "effort_local": 1398, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 3348}, "def:quasi-tbirl": {"id": "def:quasi-tbirl", "type": "definition", "title": "QuasiTBirat", "chapter": "Overview", "statement": "\\textit{Source: Bresciani, arXiv:2108.13397, Section 4.}\n  Let \\(X\\) be a geometrically connected curve over \\(k\\). A Galois section \\(s\\) of\n  \\(X\\) is \\emph{quasi-\\(\\TBL\\)} if there exists an open subset \\(U \\subseteq X\\),\n  a lifting \\(s'\\) of \\(s\\) to \\(U\\), and a dominant map \\(f : U \\to Y\\) with \\(Y\\)\n  a non-parabolic curve, such that \\(s'\\) is \\(\\BL\\) and \\(f(s')\\) is \\(\\TBL\\).", "uses": ["def:tbirl", "def:birl"], "lean_name": "BSC.TODO.QuasiTBirat", "proved": false, "mathlib_ok": false, "proof_tex": "", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 2, "rdep_count": 2, "descendant_count": 3, "proof_size_tex": null, "effort_local": 388, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 1349}, "lem:spec-quasi": {"id": "lem:spec-quasi", "type": "lemma", "title": "SpecQuasi", "chapter": "Overview", "statement": "\\textit{Source: Bresciani, arXiv:2108.13397, Lemma 9.}\n  Let \\(C\\) be a curve with fraction field \\(K\\), \\(X \\to C\\) a family of curves, and\n  \\(s \\in \\FundGerbe{X_K}{K}(K)\\) a generic quasi-\\(\\TBL\\) section. There exists a\n  non-empty open \\(U \\subseteq C\\) such that the specializations of \\(X|_U \\to U\\) are\n  quasi-\\(\\TBL\\).", "uses": ["def:quasi-tbirl", "lem:spec-birl", "lem:spec-tbirl"], "lean_name": "BSC.TODO.SpecQuasi", "proved": false, "mathlib_ok": false, "proof_tex": "\n  \\uses{lem:spec-birl, lem:spec-tbirl}\n  Shrink \\(C\\) and \\(X\\) to arrange a non-parabolic family \\(Y \\to C\\) and\n  quasi-finite \\(f : X \\to Y\\) with \\(f(s)\\) \\(\\TBL\\). Specializations of \\(f(s)\\)\n  are \\(\\TBL\\) by \\cref{lem:spec-tbirl}; specializations of \\(s\\) are \\(\\BL\\) by\n  \\cref{lem:spec-birl}; hence they are quasi-\\(\\TBL\\).\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 3, "rdep_count": 1, "descendant_count": 1, "proof_size_tex": 330, "effort_local": 330, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 6508}, "lem:quasi-nf": {"id": "lem:quasi-nf", "type": "lemma", "title": "QuasiNF", "chapter": "Overview", "statement": "\\textit{Source: Bresciani, arXiv:2108.13397, Lemma 10.}\n  Let \\(k\\) be a number field. If every \\(\\TBL\\) section over \\(k\\) is geometric or\n  cuspidal, then every quasi-\\(\\TBL\\) section over \\(k\\) is geometric or cuspidal.", "uses": ["def:quasi-tbirl", "lem:nf-lift"], "lean_name": "BSC.TODO.QuasiNF", "proved": false, "mathlib_ok": false, "proof_tex": "\n  \\uses{lem:nf-lift}\n  Let \\(s\\) be quasi-\\(\\TBL\\) with dominant \\(f : X \\to Y\\) (\\(Y\\) non-parabolic) and\n  \\(f(s)\\) \\(\\TBL\\). Since \\(f(s)\\) is \\(\\TBL\\), there is a unique \\(k\\)-rational\n  point \\(y \\in \\bar{Y}(k)\\) with \\(f(x_\\nu) = y\\) for every finite place \\(\\nu\\).\n  Any \\(\\BL\\) lifting of \\(s\\) to \\(X \\setminus f^{-1}(y)\\) is cuspidal by Stix's\n  Theorem~B; hence \\(s\\) is geometric or cuspidal.\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 2, "rdep_count": 1, "descendant_count": 1, "proof_size_tex": 402, "effort_local": 402, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 8488}, "prop:tamagawa": {"id": "prop:tamagawa", "type": "proposition", "title": "TamagawaLem", "chapter": "Overview", "statement": "\\textit{Source: Bresciani, arXiv:2108.13397, Proposition 3 (Tamagawa).}\n  Let \\(X\\) be a hyperbolic curve over \\(k\\) finitely generated over \\(\\Q\\) and\n  \\(s \\in \\FundGerbe{X}{k}(k)\\) a Galois section. If \\(s\\) is neither geometric nor\n  cuspidal, there exists a curve \\(Y\\) of genus \\(\\geq 2\\) with \\(\\bar{Y}(k) = \\emptyset\\),\n  a finite étale morphism \\(Y \\to X\\), and a lifting \\(r \\in \\FundGerbe{Y}{k}(k)\\) of\n  \\(s\\).", "uses": [], "lean_name": "BSC.TODO.TamagawaLem", "proved": false, "mathlib_ok": false, "proof_tex": "\n  This is Tamagawa (1997), Proposition 2.8(iv); see also Stix's Lemma 53 in\n  \\textit{Rational Points and Arithmetic of Fundamental Groups} (2013).\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 0, "rdep_count": 1, "descendant_count": 1, "proof_size_tex": 145, "effort_local": 145, "proof_size_tex_total": 145, "proof_size_lean_total": null, "effort_total": 145}, "prop:nffg": {"id": "prop:nffg", "type": "proposition", "title": "NFFG", "chapter": "Overview", "statement": "\\textit{Source: Bresciani, arXiv:2108.13397, Proposition 4.}\n  Assume that \\(\\TBL\\) sections of curves over number fields are geometric or cuspidal.\n  Then quasi-\\(\\TBL\\) sections of curves over fields of finite type over \\(\\Q\\) are\n  geometric or cuspidal.", "uses": ["lem:quasi-nf", "prop:tamagawa", "lem:spec-quasi", "lem:morph-birl"], "lean_name": "BSC.TODO.NFFG", "proved": false, "mathlib_ok": false, "proof_tex": "\n  \\uses{lem:quasi-nf, prop:tamagawa, lem:spec-quasi, lem:morph-birl}\n  Induct on \\(\\mathrm{trdeg}(k/\\Q)\\). The base case \\(n = 0\\) is \\cref{lem:quasi-nf}.\n  For \\(n \\geq 1\\): assume \\(s\\) is not geometric/cuspidal; by \\cref{prop:tamagawa}\n  and \\cref{lem:morph-birl} pass to \\(Y\\) with \\(\\bar{Y}(k) = \\emptyset\\); choose an\n  elliptic curve \\(E/h\\) (\\(h\\) the algebraic closure of \\(\\Q\\) in \\(k\\), trdeg\n  \\(n-1\\)) and a finite morphism \\(Y \\to E_k\\); take \\(C/h\\) affine with \\(k(C) = k\\)\n  and spread \\(s\\) to \\(\\tilde{s} : C \\to \\FundGerbe{\\tilde{X}}{C}\\) (Bresciani,\n  arXiv:2003.04649, Cor.\\ 3.4); specializations are geometric by \\cref{lem:spec-quasi}\n  and the inductive hypothesis; conclude \\(s\\) is geometric by \\textit{ibid.}\\ Cor.\\ 4.9.\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 4, "rdep_count": 0, "descendant_count": 0, "proof_size_tex": 745, "effort_local": 745, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 10268}, "lem:cusp-bl": {"id": "lem:cusp-bl", "type": "lemma", "title": "CuspBL", "chapter": "Overview", "statement": "\\textit{Source: Bresciani, arXiv:2108.13397, Lemma 11.}\n  Let \\(X\\) be a curve over a countable field \\(k\\). The following are equivalent:\n  \\begin{enumerate}\n    \\item For every pair of non-empty open subsets \\(V \\subset U \\subset X\\), the map\n      \\(\\GalSec{V}{k} \\to \\GalSec{U}{k}\\) is surjective.\n    \\item For every non-empty open subset \\(U \\subset X\\), every Galois section of\n      \\(U\\) is birationally liftable.\n  \\end{enumerate}", "uses": ["def:galois-section", "def:birl"], "lean_name": "BSC.TODO.CuspBL", "proved": false, "mathlib_ok": false, "proof_tex": "\n  (2) \\(\\Rightarrow\\) (1) is clear. For (1) \\(\\Rightarrow\\) (2): since \\(k\\) is\n  countable, \\(X'\\) has countably many open subsets; since\n  \\(\\GalSec{k(X')}{k} \\cong \\varprojlim_U \\GalSec{U}{k}\\) (Stix, Lemma 259) and the\n  transition maps are surjective, the limit map \\(\\GalSec{k(X')}{k} \\to \\GalSec{X'}{k}\\)\n  is surjective.\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 2, "rdep_count": 1, "descendant_count": 3, "proof_size_tex": 326, "effort_local": 326, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 1015}, "cor:cusp-bl2": {"id": "cor:cusp-bl2", "type": "corollary", "title": "CuspBL2", "chapter": "Overview", "statement": "\\textit{Source: Bresciani, arXiv:2108.13397, Corollary 4.}\n  The Cuspidalization Conjecture is equivalent to: for every smooth, geometrically\n  connected hyperbolic curve \\(X\\) over \\(k\\) finitely generated over \\(\\Q\\), every\n  Galois section of \\(X\\) is birationally liftable.", "uses": ["lem:cusp-bl", "def:cuspidalization"], "lean_name": "BSC.TODO.CuspBL2", "proved": false, "mathlib_ok": false, "proof_tex": "\n  \\uses{lem:cusp-bl, def:cuspidalization}\n  The Cuspidalization Conjecture is exactly Condition~(1) of \\cref{lem:cusp-bl}:\n  for every pair \\(V \\subset U \\subset X\\), the map \\(\\GalSec{V}{k} \\to \\GalSec{U}{k}\\)\n  is surjective. By \\cref{lem:cusp-bl}, this is equivalent to Condition~(2): every\n  Galois section of every non-empty open subset \\(U \\subset X\\) is birationally\n  liftable. Taking \\(U = X\\) gives the equivalence stated.\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 2, "rdep_count": 2, "descendant_count": 2, "proof_size_tex": 430, "effort_local": 430, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 1796}, "lem:hilbert-sections": {"id": "lem:hilbert-sections", "type": "lemma", "title": "HilbertSections", "chapter": "Overview", "statement": "\\textit{Source: Bresciani, arXiv:2108.13397, Lemma 12.}\n  Let \\(k\\) be a Hilbertian field, \\(V\\) an open subset of \\(\\A^1\\),\n  \\(X \\to V\\) a family of curves, and \\(s_1, s_2 \\in \\FundGerbe{X}{V}(V)\\) two\n  sections. If \\(s_1\\) and \\(s_2\\) have isomorphic specializations at all \\(k\\)-rational\n  points of \\(V\\), then \\(s_1 \\cong s_2\\).", "uses": ["lem:rel-gerbe-limit"], "lean_name": "BSC.TODO.HilbertSections", "proved": false, "mathlib_ok": false, "proof_tex": "\n  \\uses{lem:rel-gerbe-limit}\n  Write \\(\\FundGerbe{X}{V} = \\varprojlim \\Phi_i\\) by \\cref{lem:rel-gerbe-limit}.\n  Set \\(W_i = V \\times_{\\Phi_i} V\\) (the isom-sheaf); each \\(W_i \\to V\\) is finite\n  étale. The hypothesis forces \\(W_i(k) \\to V(k)\\) surjective; since \\(k\\) is\n  Hilbertian, each \\(W_i(V) \\neq \\emptyset\\). A projective limit of finite nonempty\n  sets is nonempty, so \\(\\underline{\\mathrm{Isom}}(s_1, s_2)(V) \\neq \\emptyset\\).\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 1, "rdep_count": 1, "descendant_count": 1, "proof_size_tex": 434, "effort_local": 434, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 3118}, "lem:bireq": {"id": "lem:bireq", "type": "lemma", "title": "BiratEquiv", "chapter": "Overview", "statement": "\\textit{Source: Bresciani, arXiv:2108.13397, Lemma 13.}\n  The following are equivalent:\n  \\begin{enumerate}\n    \\item The BSC holds.\n    \\item For every curve \\(X\\) over \\(k\\) finitely generated over \\(\\Q\\), every\n      \\(\\BL\\) Galois section of \\(X\\) is geometric or cuspidal.\n  \\end{enumerate}", "uses": ["def:birl", "def:bsc"], "lean_name": "BSC.TODO.BiratEquiv", "proved": false, "mathlib_ok": false, "proof_tex": "\n  (1) \\(\\Rightarrow\\) (2) is clear. For (2) \\(\\Rightarrow\\) (1): let\n  \\(s \\in \\GalSec{k(X)}{k}\\) be birational; for every open \\(U \\subset X\\),\n  \\(\\iota_U(s)\\) is \\(\\BL\\), hence cuspidal by hypothesis. By Stix, Theorem 17(2),\n  there is a unique \\(x \\in \\bar{X}(k)\\) associated with \\(\\iota_X(s)\\). Since\n  \\(\\GalSec{k(X)}{k} \\cong \\varprojlim_U \\GalSec{U}{k}\\) and \\(\\iota_U(s) \\in \\mathcal{P}_{U,x}\\)\n  for every \\(U\\), we get \\(s \\in \\varprojlim_U \\mathcal{P}_{U,x}\\), so \\(s\\) is\n  cuspidal.\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 2, "rdep_count": 1, "descendant_count": 1, "proof_size_tex": 495, "effort_local": 495, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 1763}, "thm:main-A": {"id": "thm:main-A", "type": "theorem", "title": "TheoremA", "chapter": "Overview", "statement": "\\textit{Source: Bresciani, arXiv:2108.13397, Theorem A.}\n  Let \\(X\\) be a smooth curve over a field \\(k\\) finitely generated over \\(\\Q\\). A\n  Galois section of \\(X\\) is geometric or cuspidal if and only if it is \\(\\TBL\\).", "uses": ["def:tbirl", "def:geometric-section", "def:cuspidal-section", "def:galois-section"], "lean_name": "BSC.TODO.TheoremA", "proved": false, "mathlib_ok": false, "proof_tex": "\n  \\uses{prop:nffg, lem:nf-lift, prop:tamagawa, cor:morph-tbirl, prop:simple}\n  By \\cref{prop:nffg} reduce to \\(k\\) a number field. Suppose \\(s\\) is \\(\\TBL\\) but\n  not geometric/cuspidal. By \\cref{lem:nf-lift}, assume \\(X\\) hyperbolic. By\n  \\cref{prop:tamagawa} and \\cref{cor:morph-tbirl}, pass to an étale neighborhood with\n  \\(\\bar{X}(k) = \\emptyset\\) and \\(\\mathrm{genus}(X) \\geq 2\\). Fix a finite place\n  \\(\\nu\\) and local point \\(x_\\nu \\in \\bar{X}(k_\\nu)\\). Embed \\(\\bar{X} \\subset \\PP^n\\)\n  with \\(x_\\nu \\in \\A^n\\), let \\(U = \\A^n \\cap X\\), and lift \\(s\\) to a \\(\\TBL\\)\n  section \\(s'\\) of \\(U\\) via \\cref{lem:nf-lift}. Since \\(\\bar{X}(k) = \\emptyset\\),\n  some coordinate \\(c : \\A^n \\to \\A^1\\) has \\(c(x_\\nu)\\) non-\\(k\\)-rational. Shrink\n  \\(U\\) so \\(c(U) \\subseteq \\A^1 \\setminus \\{1, 2\\}\\); then \\(c(s')\\) is a \\(\\TBL\\)\n  section of \\(\\A^1 \\setminus \\{1, 2\\}\\) whose local point is non-\\(k\\)-rational,\n  contradicting \\cref{prop:simple}.\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 4, "rdep_count": 1, "descendant_count": 1, "proof_size_tex": 942, "effort_local": 942, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 2352}, "thm:main-B": {"id": "thm:main-B", "type": "theorem", "title": "TheoremB", "chapter": "Overview", "statement": "\\textit{Source: Bresciani, arXiv:2108.13397, Theorem B.}\n  Let \\(X\\) be a hyperbolic curve over \\(k\\) finitely generated over \\(\\Q\\). The\n  following are equivalent:\n  \\begin{enumerate}\n    \\item For every finitely generated extension \\(K/k\\), every Galois section of\n      \\(X_K\\) is geometric or cuspidal.\n    \\item For every finitely generated extension \\(K/k\\), every Galois section of\n      \\(X_K\\) is birationally liftable.\n  \\end{enumerate}\n  As a consequence, the Section Conjecture is equivalent to the Cuspidalization\n  Conjecture.", "uses": ["thm:main-A", "cor:cusp-bl2"], "lean_name": "BSC.TODO.TheoremB", "proved": false, "mathlib_ok": false, "proof_tex": "\n  \\uses{thm:main-A, cor:cusp-bl2}\n  Follows directly from \\cref{thm:main-A} and \\cref{cor:cusp-bl2}.\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 2, "rdep_count": 0, "descendant_count": 0, "proof_size_tex": 98, "effort_local": 98, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 3557}, "thm:main-C": {"id": "thm:main-C", "type": "theorem", "title": "TheoremC", "chapter": "Overview", "statement": "\\textit{Source: Bresciani, arXiv:2108.13397, Theorem C.}\n  The following are equivalent:\n  \\begin{enumerate}\n    \\item The BSC holds.\n    \\item For every number field \\(k\\), every \\(z \\in \\GalSec{k(\\PP^1)}{k}\\), and\n      every open \\(U \\subseteq \\PP^1\\), there exists an open \\(V \\subseteq U\\) and a\n      \\(\\pi_1\\)-section \\(r\\) of \\(U \\times V \\setminus \\Delta \\to V\\) such that the\n      specialization \\(r_v = \\iota_{U \\setminus \\{v\\}}(z)\\) for every \\(v \\in V(k)\\).\n  \\end{enumerate}", "uses": ["lem:bireq", "lem:hilbert-sections", "prop:simple", "lem:unique-loop-curve", "lem:spec-birl", "cor:cusp-bl2", "prop:prorootval"], "lean_name": "BSC.TODO.TheoremC", "proved": false, "mathlib_ok": false, "proof_tex": "\n  \\uses{lem:bireq, lem:hilbert-sections, prop:simple, lem:unique-loop-curve, lem:spec-birl, prop:prorootval}\n  By \\cref{lem:bireq}, use the alternative formulation. \\textbf{(1) \\(\\Rightarrow\\) (2):}\n  Assume the BSC and let \\(z, U\\) be given. Then \\(z\\) is cuspidal at a unique\n  \\(p \\in \\PP^1(k)\\); if \\(p \\in U\\) take \\(V = U \\setminus \\{p\\}\\) and define \\(r\\)\n  via the diagonal. If \\(p \\notin U\\), note \\(\\iota_U(z)\\) is cuspidal, lift to a\n  cuspidal \\(z'\\) of \\(U_{k(t)} \\setminus \\{\\delta\\}\\); all specializing loops at\n  rational \\(v\\) are constant by \\cref{lem:unique-loop-curve}, so \\(z'\\) extends to\n  the desired \\(\\pi_1\\)-section by \\cref{prop:prorootval} and \\(\\cref{lem:hilbert-sections}\\).\n  \\textbf{(2) \\(\\Rightarrow\\) (1):} By Saidí-Tyler (Theorem~C), reduce to number\n  fields; for \\(b.l.\\)\\ \\(s\\) with lifting \\(z\\) and place \\(\\nu\\), pass to the limit\n  over open subsets using \\cref{lem:hilbert-sections} to get a section of\n  \\(\\spec k(\\A^1) \\otimes_k k(t) \\setminus \\{\\delta\\}\\) lifting \\(s_{k(t)}\\); then\n  \\(x_\\nu \\in k\\) by \\cref{prop:simple}.\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 7, "rdep_count": 0, "descendant_count": 0, "proof_size_tex": 1068, "effort_local": 1068, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 11237}};
+const katexMacros = {"\\C": "\\mathbb{C}", "\\PP": "\\mathbb{P}", "\\K": "\\mathrm{K}", "\\Sym": "\\mathrm{Sym}", "\\Pic": "\\mathrm{Pic}", "\\Gr": "\\mathrm{Gr}", "\\cO": "\\mathcal{O}", "\\cM": "\\mathcal{M}", "\\cS": "\\mathcal{S}", "\\cG": "\\mathcal{G}", "\\cZ": "\\mathcal{Z}", "\\Q": "\\mathbb{Q}", "\\Z": "\\mathbb{Z}", "\\N": "\\mathbb{N}", "\\A": "\\mathbb{A}", "\\Gm": "\\mathbb{G}_{\\mathrm{m}}", "\\hz": "\\hat{\\mathbb{Z}}", "\\on": "\\operatorname", "\\gal": "\\operatorname{Gal}", "\\mc": "\\mathcal", "\\mf": "\\mathfrak", "\\spec": "\\operatorname{Spec}", "\\proj": "\\operatorname{Proj}", "\\cB": "\\mathcal{B}", "\\FundGerbe": "\\Pi_{#1/#2}", "\\GalSec": "\\mathcal{S}_{#1/#2}", "\\BL": "\\mathrm{b.l.}", "\\TBL": "\\mathrm{t\\text{-}b.l.}"};   // blueprint-defined \newcommand etc.
+
+const $ = id => document.getElementById(id);
+
+// ── Graph structure: adjacency, degree, components ──────────────────────────
+
+const succ = {}, pred = {}, deg = {};
+for (const id in allNodes) { succ[id] = []; pred[id] = []; deg[id] = 0; }
+for (const e of graphData.edges) {
+  if (succ[e.from]) succ[e.from].push(e.to);
+  if (pred[e.to])   pred[e.to].push(e.from);
+  deg[e.from] = (deg[e.from] || 0) + 1;
+  deg[e.to]   = (deg[e.to]   || 0) + 1;
+}
+const isOrphan = id => !(deg[id] > 0);
+
+// weakly-connected components via union-find (orphans excluded)
+const parent = {};
+function find(x) { while (parent[x] !== x) x = parent[x] = parent[parent[x]]; return x; }
+for (const id in allNodes) parent[id] = id;
+for (const e of graphData.edges)
+  if (parent[e.from] !== undefined && parent[e.to] !== undefined)
+    parent[find(e.from)] = find(e.to);
+
+const compMembers = {};
+for (const id in allNodes) {
+  if (isOrphan(id)) continue;
+  const r = find(id);
+  (compMembers[r] = compMembers[r] || []).push(id);
+}
+const components = Object.values(compMembers).sort((a, b) => b.length - a.length);
+const compOf = {};
+components.forEach((m, i) => m.forEach(id => compOf[id] = i));
+
+// Isolated nodes are kept out of the force simulation (they'd only drift under
+// repulsion); layoutOrphans() grid-places them after each settle instead.
+for (const vn of graphData.nodes) if (isOrphan(vn.id)) vn.physics = false;
+
+// Surface the isolated-node count right on the toggle, so it's obvious how many
+// there are (and that they exist) without having to switch the view on.
+const _isoCount = Object.keys(allNodes).filter(isOrphan).length;
+$("iso-count").textContent = `(${_isoCount})`;
+if (!_isoCount) $("orphans").disabled = true;
+
+// ── Project-stats overlay ────────────────────────────────────────────────────
+
+// A node needs no more work if it's leanok, in mathlib, or already has a Lean
+// proof (effort 0).
+const isDone = n => n.proved || n.mathlib_ok || n.effort_local === 0;
+
+function renderStats() {
+  const vals = Object.values(allNodes);
+  const bp   = vals.filter(n => n.type !== "lean_aux");
+  const proved  = bp.filter(n => n.proved).length;
+  const mathlib = bp.filter(n => n.mathlib_ok).length;
+  const sorry  = vals.filter(n => n.has_sorry).length;
+  const doneIds = new Set(vals.filter(isDone).map(n => n.id));
+  const ready = bp.filter(n => !isDone(n) &&
+                  n.uses.every(d => !(d in allNodes) || doneIds.has(d))).length;
+  const gaps   = bp.filter(n => !n.lean_name && !n.mathlib_ok).length;
+  const leanok = bp.filter(n => !n.proved && !n.mathlib_ok && n.effort_local === 0).length;
+  const isolated   = vals.filter(n => isOrphan(n.id)).length;
+  const isolatedBp = bp.filter(n => isOrphan(n.id)).length;
+
+  let done = 0, remLower = 0, infNodes = 0;
+  for (const n of vals) {
+    if (n.proof_size_lean != null) done += n.proof_size_lean;
+    if (n.effort_local == null) infNodes++; else remLower += n.effort_local;
+  }
+  const pct = bp.length ? Math.round(100 * proved / bp.length) : 0;
+  const fmt = v => v.toLocaleString();
+
+  $("stats-panel").innerHTML = `
+    <h4>Project</h4>
+    <div class="row"><span>Proved (leanok)</span><span class="v done">${proved}/${bp.length} · ${pct}%</span></div>
+    <div class="bar"><span style="width:${pct}%"></span></div>
+    ${mathlib ? `<div class="row"><span>Mathlib-backed</span><span class="v done">${mathlib}</span></div>` : ''}
+    <div class="row"><span>With sorry</span><span class="v ${sorry ? 'inf' : ''}">${sorry}</span></div>
+    <div class="row"><span>Ready to formalize</span><span class="v">${ready}</span></div>
+    <div class="row"><span>Needs \\lean{}</span><span class="v">${gaps}</span></div>
+    <div class="row"><span>Needs \\leanok</span><span class="v">${leanok}</span></div>
+    <div class="row" title="Declarations with no \\uses{} in or out — never linked into the graph"><span>Isolated</span><span class="v ${isolated ? 'inf' : ''}">${isolated}${isolatedBp !== isolated ? ` (${isolatedBp} bp)` : ''}</span></div>
+    <div class="sep"></div>
+    <h4>Effort (chars)</h4>
+    <div class="row"><span>Done</span><span class="v done">${fmt(done)}</span></div>
+    <div class="row"><span>Remaining ≥</span><span class="v work">${fmt(remLower)}</span></div>
+    <div class="row"><span>∞ nodes</span><span class="v inf">${infNodes}</span></div>
+  `;
+}
+renderStats();
+
+// a human label for each component: its highest-degree member
+function compRepr(members) {
+  let best = members[0];
+  for (const id of members) if ((deg[id] || 0) > (deg[best] || 0)) best = id;
+  return best.split(":").pop();
+}
+
+const chapters = [...new Set(
+  Object.values(allNodes).map(n => n.chapter).filter(Boolean)
+)].sort();
+
+// ── Populate controls ───────────────────────────────────────────────────────
+
+$("node-ids").innerHTML =
+  Object.keys(allNodes).sort().map(id => `<option value="${id}">`).join("");
+
+$("component").insertAdjacentHTML("beforeend",
+  components.map((m, i) =>
+    `<option value="${i}">#${i + 1} · ${m.length} nodes · ${compRepr(m)}</option>`
+  ).join(""));
+
+$("chapter").insertAdjacentHTML("beforeend",
+  chapters.map(c => `<option value="${c.replace(/"/g, "&quot;")}">${c}</option>`).join(""));
+
+// ── Visible-set state & computation ─────────────────────────────────────────
+
+const state = { showOrphans: false, focus: null, component: null, chapter: null,
+                nodeset: "union", fileview: "off" };
+
+// Which universe a node belongs to. A node "has Lean" if it carries Lean source
+// (lean_aux nodes always do; blueprint nodes do once their \lean{} resolved).
+const hasLean    = n => n.type === "lean_aux" || !!(n.lean_source && n.lean_source.length);
+const inBlueprint = n => n.type !== "lean_aux";
+function inNodeset(id) {
+  const n = allNodes[id];
+  if (state.nodeset === "blueprint") return inBlueprint(n);
+  if (state.nodeset === "lean")      return hasLean(n);
+  return true;                                   // union
+}
+
+function coneOf(id) {
+  const out = new Set([id]);
+  const walk = (adj, start) => {
+    const st = [start];
+    while (st.length) {
+      const x = st.pop();
+      for (const y of (adj[x] || [])) if (!out.has(y)) { out.add(y); st.push(y); }
+    }
+  };
+  walk(pred, id);   // everything this node (transitively) depends on
+  walk(succ, id);   // everything that (transitively) depends on it
+  return out;
+}
+
+// all transitive predecessors of id (its full upstream dependency set)
+function ancestorsOf(id) {
+  const out = new Set();
+  const st = [...(pred[id] || [])];
+  while (st.length) {
+    const x = st.pop();
+    if (!out.has(x)) { out.add(x); for (const y of (pred[x] || [])) st.push(y); }
+  }
+  return out;
+}
+
+function visibleSet() {
+  if (state.focus && allNodes[state.focus]) {
+    return new Set([...coneOf(state.focus)].filter(inNodeset));
+  }
+  let ids = Object.keys(allNodes).filter(inNodeset);
+  if (!state.showOrphans)      ids = ids.filter(id => !isOrphan(id));
+  if (state.component !== null) ids = ids.filter(id => compOf[id] === state.component);
+  if (state.chapter)            ids = ids.filter(id => allNodes[id].chapter === state.chapter);
+  return new Set(ids);
+}
+
+// ── Network ─────────────────────────────────────────────────────────────────
+
+const nodesDS = new vis.DataSet();
+const edgesDS = new vis.DataSet();
+
+// Force-directed layout: connected nodes attract, so each declaration settles
+// next to what it depends on. Direction is conveyed by the arrows, not columns.
+const N_TOTAL = graphData.nodes.length;
+const PHYSICS_OPTS = {
+  enabled: true,
+  solver: "forceAtlas2Based",
+  forceAtlas2Based: {
+    gravitationalConstant: -45, centralGravity: 0.012,
+    springLength: 85, springConstant: 0.08,
+    damping: 0.45, avoidOverlap: 0.7,
+  },
+  stabilization: { enabled: true, iterations: 300, updateInterval: 25, fit: false },
+  minVelocity: 0.75, maxVelocity: 30,
+};
+
+const network = new vis.Network(
+  $("graph"),
+  { nodes: nodesDS, edges: edgesDS },
+  {
+    // physics does the placement; improvedLayout seeds it (skip on huge graphs)
+    layout: { improvedLayout: N_TOTAL <= 250 },
+    physics: { enabled: false },   // enabled per-apply, then frozen once settled
+    edges: {
+      smooth: { enabled: false },
+      color: { color: "#cbd5e1", highlight: "#64748b" },
+      arrows: { to: { scaleFactor: .55 } },
+      width: 1,
+    },
+    nodes: { shape: "dot" },
+    interaction: { hover: true, tooltipDelay: 150, zoomView: false },
+  }
+);
+
+// Once a settle finishes, freeze the simulation (so the view is stable and
+// draggable) and frame the result.
+network.on("stabilizationIterationsDone", () => {
+  network.setOptions({ physics: false });
+  layoutOrphans();
+  fitFloored();
+});
+
+// ── Isolated-node layout ──────────────────────────────────────────────────────
+// Isolated nodes (no edges) are excluded from the force simulation — under pure
+// repulsion they'd drift to the far edges and vanish at fit-zoom. Instead they
+// are parked on a tidy grid beside the connected graph so they stay visible.
+
+function layoutOrphans() {
+  if (state.focus || !state.showOrphans) return;
+  const ids = nodesDS.getIds().filter(id => isOrphan(id));
+  if (!ids.length) return;
+  const pos  = network.getPositions();
+  const conn = nodesDS.getIds().filter(id => !isOrphan(id));
+  const spacing = 46;
+  const cols = Math.max(1, Math.ceil(Math.sqrt(ids.length)));
+  const gridW = (cols - 1) * spacing;
+  let centerX, topY;
+  if (conn.length) {
+    const xs = conn.map(id => pos[id].x), ys = conn.map(id => pos[id].y);
+    centerX = (Math.min(...xs) + Math.max(...xs)) / 2;
+    topY    = Math.max(...ys) + 120;     // a tidy block just below the cluster
+  } else { centerX = 0; topY = 0; }
+  const startX = centerX - gridW / 2;    // centred, so a full fit frames it all
+  ids.sort();
+  ids.forEach((id, i) =>
+    network.moveNode(id, startX + (i % cols) * spacing,
+                         topY + Math.floor(i / cols) * spacing));
+}
+
+// ── File-view background ──────────────────────────────────────────────────────
+// An optional, subtle background tint that groups nodes by their source file.
+// Each node seeds its file's colour; every background pixel takes the colour of
+// the nearest node — an exact Voronoi map (spatial-hash accelerated) rendered at
+// high resolution for clean, anti-aliased borders, then drawn behind the graph
+// and extended to the whole viewport. Nodes keep their effort colours on top.
+
+const fileOf = (n, mode) => mode === "lean" ? (n.lean_file || "") : (n.tex_file || "");
+
+// A curated, perceptually-distinct palette (d3 category20-style). A file's
+// colour is chosen by hashing its *name*, so it is stable no matter how the
+// graph is filtered, focused or re-laid out — and adjacent files stay easy to
+// tell apart. Projects with more files than the palette wrap to a darker /
+// lighter tier so the wrapped entries remain distinguishable.
+const FILE_PALETTE = [
+  [31,119,180],[255,127,14],[44,160,44],[214,39,40],[148,103,189],
+  [140,86,75],[227,119,194],[188,189,34],[23,190,207],[127,205,187],
+  [174,199,232],[255,187,120],[152,223,138],[255,152,150],[197,176,213],
+  [196,156,148],[247,182,210],[252,146,114],[219,219,141],[158,218,229],
+];
+function hashStr(s) {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+const _SLOTS = FILE_PALETTE.length * 3;          // 20 hues × 3 lightness tiers
+function slotColor(slot) {
+  const base = FILE_PALETTE[slot % FILE_PALETTE.length];
+  const tier = Math.floor(slot / FILE_PALETTE.length) % 3;   // 0 normal · 1 dark · 2 light
+  return tier === 1 ? base.map(v => Math.round(v * 0.68))
+       : tier === 2 ? base.map(v => Math.round(v + (255 - v) * 0.45))
+       : base.slice();
+}
+// Per-mode slot assignment: each file's preferred slot is its name-hash; exact
+// collisions within the same mode are bumped to the next free slot. So every
+// file in a mode gets a distinct colour (up to _SLOTS files), the colour is
+// driven by the name, and it never shifts under focus/reset/filtering (the file
+// set is fixed for the session, and the map is cached).
+const _fileSlots = {};
+function ensureFileSlots(mode) {
+  if (_fileSlots[mode]) return _fileSlots[mode];
+  const files = Object.keys(fileCounts(mode)).sort();
+  const used = new Set(), map = {};
+  for (const f of files) {
+    let slot = hashStr(f) % _SLOTS, t = 0;
+    while (used.has(slot) && t < _SLOTS) { slot = (slot + 1) % _SLOTS; t++; }
+    used.add(slot); map[f] = slot;
+  }
+  return (_fileSlots[mode] = map);
+}
+function colorRGB(file) {
+  const map = ensureFileSlots(state.fileview);
+  const slot = (file in map) ? map[file] : hashStr(file) % _SLOTS;
+  return slotColor(slot);
+}
+
+function fileCounts(mode) {
+  const counts = {};
+  for (const id in allNodes) {
+    const f = fileOf(allNodes[id], mode);
+    if (f) counts[f] = (counts[f] || 0) + 1;
+  }
+  return counts;
+}
+
+let fileBg = null;            // {canvas, minX, minY, w, h, W, H} in graph coords
+
+function rebuildFileBg(quick) {
+  const mode = state.fileview;
+  if (mode === "off") { fileBg = null; network.redraw(); renderFileLegend(); return; }
+
+  const pos = network.getPositions();
+  const ids = Object.keys(pos).filter(id => allNodes[id] && fileOf(allNodes[id], mode));
+  if (!ids.length) { fileBg = null; network.redraw(); renderFileLegend(); return; }
+
+  const xs = ids.map(id => pos[id].x), ys = ids.map(id => pos[id].y);
+  const pad = 70;
+  const minX = Math.min(...xs) - pad, maxX = Math.max(...xs) + pad;
+  const minY = Math.min(...ys) - pad, maxY = Math.max(...ys) + pad;
+  const wG = Math.max(1, maxX - minX), hG = Math.max(1, maxY - minY);
+
+  // High-res grid → straight, finely anti-aliased borders; a coarser grid is
+  // used for the live updates while nodes are still moving, for speed.
+  const target = quick ? 224 : 512;
+  const scale  = target / Math.max(wG, hG);
+  const W = Math.max(1, Math.round(wG * scale)), H = Math.max(1, Math.round(hG * scale));
+
+  const seeds = ids.map(id => {
+    const [r, g, b] = colorRGB(fileOf(allNodes[id], mode));
+    return { x: pos[id].x, y: pos[id].y, r, g, b };
+  });
+
+  // Bucket the seeds so each pixel's nearest-seed search is ~O(1).
+  const gcols = Math.max(1, Math.round(Math.sqrt(seeds.length)));
+  const grows = gcols;
+  const cw = wG / gcols, ch = hG / grows;
+  const buckets = Array.from({ length: gcols * grows }, () => []);
+  const clampC = (v, hi) => Math.min(hi, Math.max(0, v));
+  for (const s of seeds) {
+    const cx = clampC(Math.floor((s.x - minX) / cw), gcols - 1);
+    const cy = clampC(Math.floor((s.y - minY) / ch), grows - 1);
+    buckets[cy * gcols + cx].push(s);
+  }
+  const cellMin = Math.min(cw, ch), maxR = Math.max(gcols, grows);
+  function nearest(wx, wy) {
+    const cx = clampC(Math.floor((wx - minX) / cw), gcols - 1);
+    const cy = clampC(Math.floor((wy - minY) / ch), grows - 1);
+    let best = Infinity, bs = seeds[0];
+    for (let r = 0; r <= maxR; r++) {
+      const x0 = Math.max(0, cx - r), x1 = Math.min(gcols - 1, cx + r);
+      const y0 = Math.max(0, cy - r), y1 = Math.min(grows - 1, cy + r);
+      for (let yy = y0; yy <= y1; yy++) {
+        const edgeRow = (yy === cy - r || yy === cy + r);
+        for (let xx = x0; xx <= x1; xx++) {
+          if (r > 0 && !edgeRow && xx !== cx - r && xx !== cx + r) continue;
+          for (const s of buckets[yy * gcols + xx]) {
+            const dx = s.x - wx, dy = s.y - wy, d = dx * dx + dy * dy;
+            if (d < best) { best = d; bs = s; }
+          }
+        }
+      }
+      // Stop once the closest hit is nearer than any not-yet-scanned ring.
+      if (best < Infinity && Math.sqrt(best) <= r * cellMin) break;
+    }
+    return bs;
+  }
+
+  const cv = document.createElement("canvas");
+  cv.width = W; cv.height = H;
+  const ctx = cv.getContext("2d");
+  const img = ctx.createImageData(W, H), data = img.data;
+  for (let gy = 0; gy < H; gy++) {
+    const wy = minY + (gy + 0.5) / H * hG;
+    for (let gx = 0; gx < W; gx++) {
+      const wx = minX + (gx + 0.5) / W * wG;
+      const s = nearest(wx, wy);
+      const o = (gy * W + gx) * 4;
+      data[o] = s.r; data[o + 1] = s.g; data[o + 2] = s.b; data[o + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  fileBg = { canvas: cv, minX, minY, w: wG, h: hG, W, H };
+  network.redraw();
+  renderFileLegend();
+}
+
+// beforeDrawing runs in graph coordinates, so the cached bitmap pans and zooms
+// with the view automatically. The seed bbox is filled with the Voronoi map, and
+// the colours of its edge pixels are extended outward to cover the *whole*
+// viewport — so the tint follows the nearest-node rule everywhere, not just a
+// central square.
+network.on("beforeDrawing", ctx => {
+  if (!fileBg) return;
+  const c = fileBg.canvas, W = fileBg.W, H = fileBg.H;
+  const x0 = fileBg.minX, y0 = fileBg.minY, x1 = x0 + fileBg.w, y1 = y0 + fileBg.h;
+  const tl = network.DOMtoCanvas({ x: 0, y: 0 });
+  const br = network.DOMtoCanvas({ x: $("graph").clientWidth, y: $("graph").clientHeight });
+  const L = Math.min(tl.x, br.x), R = Math.max(tl.x, br.x);
+  const T = Math.min(tl.y, br.y), B = Math.max(tl.y, br.y);
+
+  ctx.save();
+  ctx.globalAlpha = 0.32;                 // visible but still a background tint
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(c, x0, y0, fileBg.w, fileBg.h);                          // centre
+  if (L < x0) ctx.drawImage(c, 0, 0, 1, H, L, y0, x0 - L, fileBg.h);     // left
+  if (R > x1) ctx.drawImage(c, W - 1, 0, 1, H, x1, y0, R - x1, fileBg.h);// right
+  if (T < y0) ctx.drawImage(c, 0, 0, W, 1, x0, T, fileBg.w, y0 - T);     // top
+  if (B > y1) ctx.drawImage(c, 0, H - 1, W, 1, x0, y1, fileBg.w, B - y1);// bottom
+  if (L < x0 && T < y0) ctx.drawImage(c, 0, 0, 1, 1, L, T, x0 - L, y0 - T);
+  if (R > x1 && T < y0) ctx.drawImage(c, W - 1, 0, 1, 1, x1, T, R - x1, y0 - T);
+  if (L < x0 && B > y1) ctx.drawImage(c, 0, H - 1, 1, 1, L, y1, x0 - L, B - y1);
+  if (R > x1 && B > y1) ctx.drawImage(c, W - 1, H - 1, 1, 1, x1, y1, R - x1, B - y1);
+  ctx.restore();
+});
+
+function renderFileLegend() {
+  const panel = $("file-legend"), mode = state.fileview;
+  if (mode === "off") { panel.style.display = "none"; return; }
+  panel.style.display = "block";
+  const label = mode === "lean" ? "Lean" : "LaTeX";
+  const counts = fileCounts(mode);
+  const files = Object.keys(counts).sort();
+  if (!files.length) {
+    panel.innerHTML = `<h4>${label} files</h4>` +
+      `<div class="fl-empty">no ${label} file info available</div>`;
+    return;
+  }
+  panel.innerHTML = `<h4>${label} files · ${files.length}</h4>` + files.map(f => {
+    const [r, g, b] = colorRGB(f);
+    return `<div class="fl-row">` +
+      `<span class="fl-sw" style="background:rgb(${r},${g},${b})"></span>` +
+      `<span class="fl-name" title="${esc(f)}">${esc(f)}</span>` +
+      `<span class="fl-n">${counts[f]}</span></div>`;
+  }).join("");
+}
+
+// Recompute the tint *while* the layout changes, so the regions move with the
+// nodes rather than snapping only once at the end: throttled coarse rebuilds
+// during stabilization and dragging, then a final full-resolution pass.
+let _liveLast = 0;
+function liveFileBg() {
+  if (state.fileview === "off") return;
+  const now = Date.now();
+  if (now - _liveLast < 110) return;
+  _liveLast = now;
+  rebuildFileBg(true);
+}
+network.on("stabilizationProgress", liveFileBg);
+network.on("dragging", liveFileBg);
+network.on("dragEnd", () => { if (state.fileview !== "off") rebuildFileBg(); });
+
+// ── Navigation: swipe = pan · Ctrl+scroll / pinch = zoom ─────────────────────
+
+let ZOOM_MIN = 0.05;
+const ZOOM_MAX = 3.0;
+const FIT_FLOOR = 0.34;          // never auto-zoom below this — keeps nodes legible
+let graphBounds = null;
+
+function recomputeBounds() {
+  const pts = Object.values(network.getPositions());
+  if (pts.length) {
+    const pad = 200;
+    graphBounds = {
+      left:   Math.min(...pts.map(p => p.x)) - pad,
+      right:  Math.max(...pts.map(p => p.x)) + pad,
+      top:    Math.min(...pts.map(p => p.y)) - pad,
+      bottom: Math.max(...pts.map(p => p.y)) + pad,
+    };
+  } else graphBounds = null;
+}
+
+function fitFloored() {
+  network.fit({ animation: false });
+  const fitScale = network.getScale();
+  // The most-zoomed-out limit tracks the graph's actual extent — a little past
+  // the scale at which everything fits — instead of a fixed floor. So a small
+  // graph can't be shrunk to a speck, and a huge one can still reach overview.
+  ZOOM_MIN = Math.max(0.02, Math.min(fitScale * 0.7, ZOOM_MAX));
+  // For very large graphs `fit` is sub-pixel; don't *start* there (keeps nodes
+  // legible) but still allow zooming out to it. When isolated nodes are shown we
+  // fully fit instead, so their (potentially large) block is actually visible.
+  if (!state.showOrphans && fitScale < FIT_FLOOR)
+    network.moveTo({ scale: FIT_FLOOR, animation: false });
+  recomputeBounds();
+  rebuildFileBg();   // node positions just changed — refresh the file tint
+}
+
+$("graph").addEventListener("wheel", e => {
+  e.preventDefault();
+  e.stopPropagation();
+  const pos = network.getViewPosition();
+  const sc  = network.getScale();
+  if (e.ctrlKey) {
+    const f        = e.deltaY > 0 ? 0.9 : 1 / 0.9;
+    const newScale = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, sc * f));
+    network.moveTo({ scale: newScale, animation: false });
+  } else {
+    let nx = pos.x + e.deltaX / sc;
+    let ny = pos.y + e.deltaY / sc;
+    if (graphBounds) {
+      nx = Math.max(graphBounds.left, Math.min(graphBounds.right,  nx));
+      ny = Math.max(graphBounds.top,  Math.min(graphBounds.bottom, ny));
+    }
+    network.moveTo({ position: { x: nx, y: ny }, animation: false });
+  }
+}, { capture: true, passive: false });
+
+// ── Apply current filter state to the canvas ────────────────────────────────
+
+function apply() {
+  const vis   = visibleSet();
+  const nodes = graphData.nodes.filter(n => vis.has(n.id));
+  const edges = graphData.edges.filter(e => vis.has(e.from) && vis.has(e.to));
+
+  nodesDS.clear(); edgesDS.clear();
+  nodesDS.add(nodes); edgesDS.add(edges);
+
+  $("stat").innerHTML =
+    `${nodes.length} / ${graphData.nodes.length} nodes &middot; ${edges.length} edges`;
+
+  const pill = $("focus-pill");
+  if (state.focus) {
+    pill.style.display = "inline-flex";
+    pill.querySelector(".lbl").textContent = "focus: " + state.focus.split(":").pop();
+  } else {
+    pill.style.display = "none";
+  }
+
+  // Re-settle the now-visible subset; the stabilization handler freezes and
+  // fits when it finishes. With nothing to simulate (a lone node, or only
+  // isolated nodes — which are physics:false) we lay out and fit directly.
+  const anyPhysics = nodes.some(n => n.physics !== false);
+  if (nodes.length > 1 && anyPhysics) {
+    network.setOptions({ physics: PHYSICS_OPTS });
+  } else {
+    setTimeout(() => { layoutOrphans(); fitFloored(); }, 0);
+  }
+}
+
+function syncControls() {
+  $("orphans").checked  = state.showOrphans;
+  $("nodeset").value    = state.nodeset;
+  $("fileview").value   = state.fileview;
+  $("component").value  = state.component === null ? "" : String(state.component);
+  $("chapter").value    = state.chapter || "";
+}
+
+// ── Reveal-aware navigation ─────────────────────────────────────────────────
+
+function goTo(id) {
+  if (!allNodes[id]) return;
+  if (!visibleSet().has(id)) {            // relax filters until the node is shown
+    state.focus = null;
+    state.component = null;
+    state.chapter = null;
+    if (!inNodeset(id)) state.nodeset = "union";
+    if (isOrphan(id)) state.showOrphans = true;
+    syncControls();
+    apply();
+  }
+  setTimeout(() => jumpTo(id), 70);
+}
+
+function jumpTo(id) {
+  if (!allNodes[id]) return;
+  network.selectNodes([id]);
+  network.focus(id, { scale: 1.2, animation: { duration: 400, easingFunction: "easeInOutQuad" } });
+  renderNode(id);
+  highlightCone(id);
+}
+
+function setFocus(id) {
+  if (!allNodes[id]) return;
+  state.focus = id;
+  apply();
+  renderNode(id);
+  setTimeout(() => jumpTo(id), 70);
+}
+
+function clearFocus() { state.focus = null; apply(); }
+
+function resetView() {
+  state.showOrphans = false;
+  state.focus = null;
+  state.component = null;
+  state.chapter = null;
+  state.nodeset = "union";
+  $("search").value = "";
+  syncControls();
+  apply();
+}
+
+// ── Control wiring ──────────────────────────────────────────────────────────
+
+$("orphans").addEventListener("change", e => {
+  state.showOrphans = e.target.checked; state.focus = null; apply();
+});
+$("nodeset").addEventListener("change", e => {
+  state.nodeset = e.target.value; state.focus = null; apply();
+});
+$("component").addEventListener("change", e => {
+  state.component = e.target.value === "" ? null : Number(e.target.value);
+  state.focus = null; apply();
+});
+$("chapter").addEventListener("change", e => {
+  state.chapter = e.target.value || null; state.focus = null; apply();
+});
+$("fileview").addEventListener("change", e => {
+  state.fileview = e.target.value; rebuildFileBg();
+});
+$("search").addEventListener("change", e => {
+  const v = e.target.value.trim();
+  if (allNodes[v]) goTo(v);
+});
+$("reset").addEventListener("click", resetView);
+$("focus-pill").addEventListener("click", clearFocus);
+
+// ── Lean syntax highlighter ─────────────────────────────────────────────────
+
+function esc(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+const _KW      = /\b(def|lemma|theorem|instance|class|structure|inductive|abbrev|noncomputable|private|protected|section|namespace|end|open|variable|where|do|let|have|show|suffices|calc|if|then|else|return|for|in|fun|match|with|by|sorry)\b/g;
+const _TACTIC  = /\b(simp|ext|rfl|exact|intro|intros|apply|refine|constructor|use|rw|rewrite|rcases|rintro|obtain|push_neg|norm_num|ring|group|linarith|omega|decide|trivial|assumption|congr|tauto|aesop|cases|induction|revert|clear|next|all_goals|repeat|try|first|solve|fin_cases|positivity|gcongr|field_simp)\b/g;
+const _TYPE    = /\b(Nat|Int|Bool|String|List|Array|Option|Type|Prop|Sort|True|False|And|Or|Not|Iff|Eq|Subgroup|Group|Ring|Field|Fintype|Finite)\b/g;
+const _NUM     = /\b(\d+)\b/g;
+const _STR     = /("(?:[^"\\]|\\.)*")/g;
+
+function highlightLean(raw) {
+  return raw.split('\n').map(line => {
+    let commentAt = -1;
+    let inStr = false;
+    for (let i = 0; i < line.length - 1; i++) {
+      if (line[i] === '"' && (i === 0 || line[i-1] !== '\\')) inStr = !inStr;
+      if (!inStr && line[i] === '-' && line[i+1] === '-') { commentAt = i; break; }
+    }
+    const code    = commentAt >= 0 ? line.slice(0, commentAt) : line;
+    const comment = commentAt >= 0 ? line.slice(commentAt)    : '';
+    let h = esc(code);
+    h = h.replace(_STR,    m => `<span class="hl-str">${m}</span>`);
+    h = h.replace(_KW,     m => `<span class="hl-kw">${m}</span>`);
+    h = h.replace(_TACTIC, m => `<span class="hl-tactic">${m}</span>`);
+    h = h.replace(_TYPE,   m => `<span class="hl-type">${m}</span>`);
+    h = h.replace(_NUM,    m => `<span class="hl-num">${m}</span>`);
+    const commentHtml = comment ? `<span class="hl-comment">${esc(comment)}</span>` : '';
+    return h + commentHtml;
+  }).join('\n');
+}
+
+// ── LaTeX renderer ───────────────────────────────────────────────────────────
+
+function processNonMath(s) {
+  return esc(s)
+    .replace(/\\emph\{([^}]*)\}/g,   '<em>$1</em>')
+    .replace(/\\textbf\{([^}]*)\}/g, '<strong>$1</strong>')
+    .replace(/\\textit\{([^}]*)\}/g, '<em>$1</em>')
+    .replace(/\\text\{([^}]*)\}/g,   '$1');
+}
+
+function renderLatex(el, text) {
+  if (!text || !text.trim()) {
+    el.classList.add('empty'); el.textContent = '—'; return;
+  }
+  // Match every math delimiter style leanblueprint uses: $$…$$ and \[…\]
+  // (display) and \(…\) and $…$ (inline). $$ and \[ \] come first so the
+  // single-$ branch can't grab a $$ opener.
+  const re = /(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\)|\$(?:[^$\\]|\\.)+?\$)/g;
+  let html = '', last = 0, m;
+  while ((m = re.exec(text)) !== null) {
+    html += processNonMath(text.slice(last, m.index));
+    const raw = m[0];
+    let disp, math;
+    if      (raw.startsWith('$$'))  { disp = true;  math = raw.slice(2, -2); }
+    else if (raw.startsWith('\\[')) { disp = true;  math = raw.slice(2, -2); }
+    else if (raw.startsWith('\\(')) { disp = false; math = raw.slice(2, -2); }
+    else                            { disp = false; math = raw.slice(1, -1); }
+    if (window.katex) {
+      try {
+        html += katex.renderToString(math, {
+          displayMode: disp, throwOnError: false, macros: katexMacros,
+        });
+      }
+      catch (_) { html += esc(raw); }
+    } else {
+      html += `<span style="color:#94a3b8">${esc(raw)}</span>`;
+    }
+    last = re.lastIndex;
+  }
+  html += processNonMath(text.slice(last));
+  el.innerHTML = html;
+}
+
+// ── Sidebar rendering ────────────────────────────────────────────────────────
+
+function charVal(v) {
+  if (v === null || v === undefined) return '<span class="m-val m-inf">∞</span>';
+  return `<span class="m-val">${v.toLocaleString()}</span>`;
+}
+function workVal(v) {
+  if (v === null || v === undefined) return '<span class="m-val m-inf">∞</span>';
+  if (v === 0) return '<span class="m-val m-done">0 ✓</span>';
+  return `<span class="m-val m-work">${v.toLocaleString()}</span>`;
+}
+function charsPair(rel, cum) {
+  const f = v => (v === null || v === undefined)
+    ? '<span class="chars-inf">∞</span>'
+    : `<span class="chars-val">${v}</span>`;
+  return `<span class="chars-pair">ℓ<sub>local</sub>=${f(rel)} &nbsp; ℓ<sub>total</sub>=${f(cum)}</span>`;
+}
+
+function renderNode(id) {
+  const n = allNodes[id];
+  if (!n) return;
+
+  $("sidebar-empty").style.display = "none";
+  const content = $("sidebar-content");
+  content.style.display = "flex";
+
+  const statusBadge = n.proved
+    ? '<span class="badge badge-proved">✓ leanok</span>'
+    : (n.mathlib_ok
+        ? '<span class="badge badge-proved">ⓜ mathlib</span>'
+        : (n.has_sorry
+            ? '<span class="badge badge-sorry">sorry</span>'
+            : '<span class="badge badge-unproved">unproved</span>'));
+
+  const mkChip = u => `<span class="dep-chip" onclick="goTo('${esc(u)}')">${esc(u)}</span>`;
+  const depsHtml = n.uses.length
+    ? n.uses.map(mkChip).join('')
+    : '<span class="no-deps">none — axiom</span>';
+
+  // full transitive upstream, with the direct deps split out
+  const anc       = ancestorsOf(id);
+  const directSet = new Set(n.uses);
+  const indirect  = [...anc].filter(x => !directSet.has(x)).sort();
+  const transHtml = indirect.length
+    ? indirect.map(mkChip).join('')
+    : '<span class="no-deps">none beyond the direct ones</span>';
+
+  const focusLabel = state.focus === id ? 'Clear focus' : 'Focus dependency cone';
+  const focusCall  = state.focus === id ? 'clearFocus()' : `setFocus('${esc(id)}')`;
+
+  content.innerHTML = `
+    <div class="card">
+      <div class="node-badges">
+        <span class="badge badge-type">${n.type.toUpperCase()}</span>${statusBadge}
+      </div>
+      <div class="node-title">${esc(n.title || n.id)}</div>
+      <div class="node-id">${esc(n.id)}</div>
+      ${n.chapter   ? `<div class="node-chapter">§ ${esc(n.chapter)}</div>` : ''}
+      ${n.lean_name ? `<div class="lean-ref">Lean: <code>${esc(n.lean_name)}</code></div>` : ''}
+      ${n.tex_file  ? `<div class="lean-ref">tex: <code>${esc(n.tex_file)}</code></div>` : ''}
+      ${n.lean_file ? `<div class="lean-ref">file: <code>${esc(n.lean_file)}</code></div>` : ''}
+      <button class="btn-focus" onclick="${focusCall}">⊙ ${focusLabel}</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Structure</div>
+      <div class="degrees">
+        <div class="degree">
+          <span class="degree-val">${n.dep_count}</span>
+          <span class="degree-label">direct deps</span>
+        </div>
+        <div class="degree">
+          <span class="degree-val">${anc.size}</span>
+          <span class="degree-label">total upstream</span>
+        </div>
+        <div class="degree">
+          <span class="degree-val">${n.rdep_count}</span>
+          <span class="degree-label">used by</span>
+        </div>
+      </div>
+      <div class="deps-sub">direct dependencies</div>
+      <div class="deps-list">${depsHtml}</div>
+      <div class="deps-sub">indirect (transitive) dependencies</div>
+      <div class="deps-list">${transHtml}</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Complexity</div>
+      <div class="metrics-grid">
+        <span></span>
+        <span class="col-head">local</span>
+        <span class="col-head">total</span>
+        <span class="m-label">LaTeX ℓ</span>${charVal(n.proof_size_tex)}${charVal(n.proof_size_tex_total)}
+        <span class="m-label">Lean ℓ</span>${charVal(n.proof_size_lean)}${charVal(n.proof_size_lean_total)}
+        <span class="m-label">Effort</span>${workVal(n.effort_local)}${workVal(n.effort_total)}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="sec-hdr"><span class="card-title" style="margin:0">LaTeX statement</span></div>
+      <div class="latex-rendered" id="latex-stmt"></div>
+    </div>
+
+    <div class="card">
+      <div class="sec-hdr">
+        <span class="card-title" style="margin:0">LaTeX proof</span>
+        ${charsPair(n.proof_size_tex, n.proof_size_tex_total)}
+      </div>
+      <div class="latex-rendered" id="latex-proof"></div>
+    </div>
+
+    <div class="card">
+      <div class="sec-hdr">
+        <span class="card-title" style="margin:0">Lean code</span>
+        ${charsPair(n.proof_size_lean, n.proof_size_lean_total)}
+      </div>
+      <pre class="code-block" id="lean-code"></pre>
+    </div>
+  `;
+
+  renderLatex($('latex-stmt'),  n.statement);
+  renderLatex($('latex-proof'), n.proof_tex ? n.proof_tex.trim() : '');
+
+  const leanEl = $('lean-code');
+  if (n.lean_source) {
+    leanEl.innerHTML = highlightLean(n.lean_source);
+  } else {
+    leanEl.classList.add('empty');
+    leanEl.textContent = 'declaration not found';
+  }
+}
+
+// ── Cone highlighting on click ───────────────────────────────────────────────
+// Selecting a node lights up its WHOLE transitive cone — every ancestor and
+// descendant and the edges between them — while everything else fades back.
+
+const baseNodeById = {};
+for (const vn of graphData.nodes) baseNodeById[vn.id] = vn;
+
+const EDGE_BASE = { color: "#cbd5e1", highlight: "#64748b" };
+
+function highlightCone(id) {
+  const cone = coneOf(id);   // {id} ∪ ancestors ∪ descendants
+  nodesDS.update(nodesDS.getIds().map(nid =>
+    cone.has(nid)
+      ? baseNodeById[nid]                                   // full styling
+      : { id: nid, color: { background: "#e5e7eb", border: "#d1d5db" },
+          font: { color: "#cbd5e1" } }                      // faded
+  ));
+  edgesDS.update(edgesDS.get().map(e => {
+    const on = cone.has(e.from) && cone.has(e.to);
+    return { id: e.id,
+             color: on ? { color: "#475569", highlight: "#334155" } : { color: "#edf0f4" },
+             width: on ? 2.5 : 1 };
+  }));
+}
+
+function clearHighlight() {
+  nodesDS.update(nodesDS.getIds().map(nid => baseNodeById[nid]));
+  edgesDS.update(edgesDS.get().map(e => ({ id: e.id, color: EDGE_BASE, width: 1 })));
+}
+
+network.on("click", params => {
+  if (params.nodes.length) { renderNode(params.nodes[0]); highlightCone(params.nodes[0]); }
+  else                     { clearHighlight(); }
+});
+network.on("doubleClick", params => { if (params.nodes.length) setFocus(params.nodes[0]); });
+
+// ── Initial render ───────────────────────────────────────────────────────────
+
+apply();
+</script>
+</body>
+</html>

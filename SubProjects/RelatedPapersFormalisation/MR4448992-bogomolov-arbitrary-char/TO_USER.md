@@ -1,0 +1,3 @@
+- **Blueprint complete** (iter-001): 40 declarations, 75 dependency edges, 0 isolated nodes, 0 ∞-effort. Prover loop may begin; see PROGRESS.md for Phase 1 objectives.
+- **Three external axioms admitted**: Manin–Mumford, Zhang–Gubler inequality, and Yamaki's reduction theorem are marked `sorry` by design. Everything else must be proved.
+- **Major new infrastructure needed**: no Mathlib support for Chow groups, abelian schemes, or canonical heights — Phase 1 + 2 build these from scratch (~36 iters total estimated).

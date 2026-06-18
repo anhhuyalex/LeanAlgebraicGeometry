@@ -4,11 +4,9 @@
      HARD LIMITS: max 10 bullets · ~600 chars total.
      Prune before adding. Only keep what would surprise an agent reading
      the code fresh. Do NOT duplicate things obvious from the codebase.
-
-     Good candidates: dead-end tactics, files not to touch, Mathlib gap
-     coordinates, protected invariants, per-file hazards, standing routes
-     to avoid, axioms that must not be accepted.
-
-     Bad candidates: things already obvious from the code or PROGRESS.md,
-     current sorry counts, task-specific details that change every iter.
 -->
+
+- All infrastructure (perverse sheaves, MHS, non-abelian Hodge, moduli of Higgs bundles) is absent from Mathlib — use `noncomputable def ... := sorry`, NOT bare `axiom`.
+- Both Lean files are scaffolding targets; all 22 declarations go in `Basic.lean` under namespace `MR4433080HitchinFibrationsAbelianSurfacesAndThePwConjecture` (abbreviate `HitchinPW` in discussion only; Lean uses the full name).
+- The four main theorem lanes (PW_genus2, PW_even, oddTautPerversity, PW_iff_multiplicativity) are mutually independent once the common type scaffold exists — dispatch them as parallel provers.
+- Reference source: `references/MR4433080-hitchin-pw.tex` is the definitive citation source; its line ranges 200–800 cover all main results.

@@ -8,7 +8,7 @@ work package carved from Christian Merten's Jacobian challenge
 108-node cone, with zero inline `sorry` in each seed's cone and kernel-only axioms:
 
 - `lem:pullback_tensor_iso_loctriv` — `Modules.pullbackTensorIsoOfLocallyTrivial`:
-  loc-triv comparison iso `f^*(M⊗N) ≅ f^*M ⊗ f^*N` (D3′ route).
+  loc-triv comparison iso `f^*(M⊗N) ≅ f^*M ⊗ f^*N` (D4′ chart-chase over the D3′ substrate).
 - `lem:dual_isLocallyTrivial` — `Modules.dual_isLocallyTrivial`: dual of a
   loc-triv module is loc-triv (DUAL route).
 - `thm:rel_pic_addcommgroup_via_tensorobj` — `PicSharp.addCommGroup_via_tensorObj`:
@@ -18,52 +18,58 @@ work package carved from Christian Merten's Jacobian challenge
 
 | Phase | Status | Iters left | LOC | Key Mathlib needs | Risks |
 |-------|--------|-----------|-----|-------------------|-------|
-| DUAL dual-inverse (`DualInverse/SliceTransport.lean`) | ACTIVE | ~1–3 | ~60–150 | `IsIso.inv_comp_eq`, `ModuleCat.restrictScalars_η`, `restrictScalarsComp'App` | 3 sorries left (inv-naturality root + left/right_inv; forward naturality closed) — rotate `inv ε` morphism-level, never pointwise |
-| D3′ comparison iso (`TensorObjSubstrate.lean`) | ACTIVE | ~3–5 | ~120–300 | `conjugateEquiv` (Mates); Sq3 `sheafifyTensorUnitIso` + Sq4 `pullbackValIso` coherences | Sq3/Sq4 decomposed into 3 \uses-linked bricks; D4′ chart-chase after |
-| Coverage + file-split cleanup | NEXT | ~1–2 | ~0 (tex/private) | — | ~97 `lean_aux` isolated nodes; split `TensorObjSubstrate.lean` (3152 LOC, GREEN) next |
-| Consumer assembly (`RelPicFunctor.lean`) | BLOCKED | ~1–2 | ~30–80 | — | gated on both routes closing (`exists_tensorObj_inverse`) |
+| D4′ seed-1 `pullbackTensorIsoOfLocallyTrivial` (`TensorObjSubstrate.lean`) | **ACTIVE** | ~1–2 | ~30–60 | K1 presheaf-δ iso (in-proof) | Chart-chase closed; sole residual = brick K1 (`pullbackTensorMap` iso for open immersion, arbitrary M,N). Route in `### D4′` below. Risk: mate calculus; partial committable. |
+| Terminal `exists_tensorObj_inverse` close (architectural) | NEXT | ~2–3 | ~30–80 | `homOfLocalCompat` (A-bridge) | The project's SOLE bare `sorry`. Import-cycle-gated in `TensorObjSubstrate.lean` (needs `dual_isLocallyTrivial` from DualInverse, which imports TOS). RESOLUTION: refactor-MOVE the decl to a file downstream of DualInverse (only consumer is RelPicFunctor `neg`/`neg_add_cancel` → repoint its import), then close the gluing proof (bridges C+B done, A = SheafOfModules morphism descent). Standing directive lists this as one of the six required closures. |
+| Consumer seed-3 (`RelPicFunctor.lean`) | BLOCKED | ~1–2 | ~30–80 | — | `addCommGroup_via_tensorObj`; gated on seed-1 (map_add ← comparison iso) + `exists_tensorObj_inverse` (group inverse). |
+| Coverage + file-split cleanup | DEFERRED | ~1–2 | ~0 (tex/private) | — | bulk ~99 `lean_aux` isolated nodes + `TensorObjSubstrate.lean` (>3600 LOC) split; defer until active seed-1 lane lands. |
+
+## Completed
+
+| Phase | Iters (done@ · used) | LOC | Files | Key results | Reusable techniques | Pitfalls |
+|-------|----------------------|-----|-------|-------------|---------------------|----------|
+| DUAL dual-inverse | 015 · ~6 | ~250 | `DualInverse/SliceTransport.lean`, `DualInverse.lean` | `sliceDualTransport` (+`Inv`) sorry-free; seed `dual_isLocallyTrivial` delivered | leg-B `inv ε` rotated morphism-level (`IsIso.inv_comp_eq`), never pointwise (whnf timeout); `appIso_inv/hom_naturality_apply` ring-level pastes; `set_option maxHeartbeats 1600000` for inline 6-field `≃ₗ` | pointwise `inv ε` heartbeat-bombs; `rw [ModuleCat.restrictScalars.map_apply]` no-match — use defeq `erw [hφ]`; import-race green→red when sibling lane edits the shared dep (isolate via HEAD worktree) |
+| D3′ base-change substrate (`pullbackTensorMap_restrict`) | 019 · ~9 (005–019) | ~600 | `TensorObjSubstrate.lean` | full base-change cone sorry-free, axiom-clean; substrate for seed-1 | generic single-`[Category C]` lemmas applied by `exact` cross the `SheafOfModules`↔`Scheme.Modules` defeq-but-not-syntactic instance wall (`comp_cancel_mid` family); `conjugateEquiv_comp` for Sq1 cocycle at NatTrans level; **unit-naturality factor-out** collapses the Sq4 leaf to a sheaf-level cocycle | `rw/erw [Category.assoc]` whnf-bombs on the carrier; top-level extraction of monoidal-carried content fails (`MonoidalCategoryStruct` not synthesizable) — keep IN-PROOF; metavar `reassoc_of% δ_natural` whnf-times-out → concrete fully-applied `have` |
 
 ## Routes
 
 The relative Picard substrate needs two isomorphisms on locally trivial line
-bundles; the two are independent and run in parallel.
+bundles. Completed routes (D3′ base-change substrate, DUAL dual-inverse) are recorded in
+`## Completed`; the live routes are below.
 
-### D3′ — the comparison iso
-Substrate prerequisite `IsInvertible.pullback` reduces to `f^*(M⊗N)≅f^*M⊗f^*N`
-on loc-triv pairs: δ (`pullbackTensorMap`, ✓) upgraded to an iso via
-`isIso_of_isIso_restrict` over `{f⁻¹(Uᵢ)}`, each chart reducing to the unit pair
-via `pullbackUnitIso` (✓). D1′/D2′/Sq1/Sq2/Sq2b CLOSED (Sq1 =
-`sheafificationCompPullback_comp_tail`, closed via `conjugateEquiv_comp` at the NatTrans level).
-Remaining: the `pullbackTensorMap_restrict` final paste — the Sq3/Sq4 coherence interleave, which
-needs project sub-lemmas that do not exist yet. Decomposed into three bricks
-(`lem:sheafify_pullbackcomp_hom_inv_cancel`, Sq3 `lem:sheafify_tensor_unit_iso_comp`, Sq4
-`lem:pullback_val_iso_comp`) + a `comp_δ`-split assembly. Then D4′ chart-chase. All region rewrites
-need `erw` (carrier-spelling mismatch). Recipe: `analogies/d3cocycle006.md`.
+### D4′ — seed-1 `pullbackTensorIsoOfLocallyTrivial` (the comparison ISO) — ACTIVE
+The chart-chase is assembled and sorry-free: promote δ_sheaf=`pullbackTensorMap` to an iso via
+`isIso_of_isIso_restrict` over `{f⁻¹Uᵢ}`; on each chart the two `pullbackTensorMap_restrict`
+(base-change) splits of `j' ; f = g ; j` isolate the comparison, closed by the trivial-base case K2
+(`pullbackTensorMap_natural` + `pullbackTensorMap_unit_isIso`). Isolating the restriction factor from
+the four-fold base-change composite needs the FLANKING open-immersion comparisons `δ^{j'}, δ^{j}`
+invertible — the sole residual brick **K1** (`lem:pullback_tensor_map_isiso_open_immersion`):
+`pullbackTensorMap` iso for an OPEN immersion, arbitrary M,N. Route for K1: the functor-level
+`Functor.Monoidal.transport` is blocked by the non-synthesizable monoidal-carrier (see Pitfalls).
+Instead enter via `isIso_pullbackTensorMap_of_isIso_sheafifyDelta`, reduce to the presheaf
+`IsIso (δ (pullback φ'))`, and close it IN-PROOF mirroring the CLOSED `tensorObj_restrict_iso` (H1 =
+`pushforward β ≅ pullback φ'` via `leftAdjointUniq`; H2 = `restrictScalarsMonoidalOfBijective`) plus the
+adjunction-mate compatibility `Adjunction.IsMonoidal` (its `leftAdjoint_μ` field expresses the right
+adjoint's `μ` through the left adjoint's oplax `δ`). Reference: Stacks `lemma-tensor-product-pullback`.
+The OnProduct-specialisation `pullback_tensorObj_iso` (`lem:pullback_compatible_with_tensorobj`) lands
+downstream once seed-1 closes.
 
-### DUAL — the dual-inverse (RPF group inverse)
-`exists_tensorObj_inverse` (the relative-Picard group inverse) takes route-2:
-dual-content via `sliceDualTransport` sectionwise = leg-A slice-Hom base-change
-(`.map` reindex across `f.opensFunctor`) ∘ leg-B unit ε-iso
-`inv (ε (restrictScalars g))`, `g` at the `CommRingCat` level
-(`analogies/ma-legb262.md`). The single `dual_restrict_iso` closes the whole
-remaining inverse chain once the A-bridge `homOfLocalCompat` glues the local
-contractions to the global morphism (the C-bridge / dual-transport part is in
-`dual_restrict_iso`, the B-bridge is `isIso_of_isIso_restrict`). ROOT-CAUSE fix for the
-`sliceDualTransport` naturality churn: leg-B is `inv ε`; NEVER
-apply it pointwise (that forces `whnf` on the deep composite → heartbeat timeout). Rotate the
-iso edge morphism-level via `IsIso.inv_comp_eq` → forward ε-square, close with `restrictScalars_η`/
-`restrictScalarsComp'App`. Recipe: `analogies/dualnat006.md`. The `sliceDualTransport`/
-`sliceDualTransportInv` + ring-swap machinery lives in its own file `DualInverse/SliceTransport.lean`;
-the forward `sliceDualTransport` naturality is closed via this recipe — the open work is the
-remaining 3 sorries (inv-naturality root, then left/right_inv round-trips). The dual returns a
-**loc-triv** witness `∃ Linv, IsLocallyTrivial Linv ∧ Nonempty (L⊗Linv≅𝒪)`, so
-group closure stays in the carrier. Split across `DualInverse.lean` + `DualInverse/SliceTransport.lean`.
+### Terminal `exists_tensorObj_inverse` — architectural close — NEXT
+The project's last bare `sorry` and one of the six standing-directive closures. It needs
+`dual_isLocallyTrivial` (C-bridge, DONE in DualInverse.lean) but DualInverse imports
+TensorObjSubstrate, so the decl cannot close where it sits. PLAN: dispatch the `refactor` subagent
+to MOVE `exists_tensorObj_inverse` (not protected) to a file downstream of DualInverse (a new
+`TensorObjInverse.lean`, or into DualInverse), and repoint `RelPicFunctor.lean` — verified the SOLE
+code consumer (`neg`/`neg_add_cancel`, lines 357–447) — to import that file (chain stays acyclic:
+RelPicFunctor → {new file} → DualInverse → SliceTransport → TensorObjSubstrate). Then a prover closes
+the gluing proof: bridges B (`isIso_of_isIso_restrict`, done) + C (`dual_isLocallyTrivial`, done) +
+A (`homOfLocalCompat`, SheafOfModules morphism descent gluing the local `(L⊗dual L)|_{Uᵢ}≅𝒪_{Uᵢ}`).
+Decomposition in `informal/exists_tensorObj_inverse.md` + `analogies/ts226descent.md`. Do this AFTER
+seed-1 lands to keep the warm file stable (both touch TensorObjSubstrate.lean).
 
-### Consumer (third seed)
-`PicSharp.addCommGroup_via_tensorObj` (`RelPicFunctor.lean`) builds the group on
-loc-triv iso-classes: `map_add` ← D3′ comparison iso; `map_zero` ←
-`pullbackUnitIso`; inverse ← `exists_tensorObj_inverse` (DUAL). Gated on both
-routes. Carrier = `IsLocallyTrivial`; `map_add` consumes the comparison ISO.
+### Consumer seed-3 `PicSharp.addCommGroup_via_tensorObj` (`RelPicFunctor.lean`) — BLOCKED
+Builds the group on loc-triv iso-classes: `map_add` ← seed-1 comparison iso; `map_zero` ←
+`pullbackUnitIso`; inverse ← `exists_tensorObj_inverse`. Carrier = `IsLocallyTrivial`; `map_add`
+consumes the comparison ISO (not just additivity-of-pullback). Gated on seed-1 + the terminal close.
 
 ## Open strategic questions
 
@@ -95,6 +101,9 @@ Gaps to fill:
 - A-bridge `homOfLocalCompat` — glues compatible local `𝒪_X`-module morphisms to a
   global morphism via `homLocalSection`, `topSectionToHom`, and `homMk`.
 - D3′ — upgrade δ (`pullbackTensorMap`) to iso via `isIso_of_isIso_restrict`.
+- K1 (seed-1 residual) — presheaf-level `IsIso (δ (pullback φ'))` for an open immersion: build in-proof from
+  the closed `tensorObj_restrict_iso` H1∘H2 model + the leftAdjointUniq monoidal-mate compatibility
+  (`Adjunction.IsMonoidal`). NOT the functor-level `Functor.Monoidal.transport` (carrier diamond).
 
 New project material:
 - By-hand `AddCommGroup` on loc-triv iso-classes (Mathlib `Sheaf.monoidalCategory`

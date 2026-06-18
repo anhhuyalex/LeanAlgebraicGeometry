@@ -1,0 +1,1 @@
+- **Blueprint complete (iter-001).** 47-block blueprint written for MR4419629. The prover loop will begin Phase 1 (statements-first: write theorem stubs that typecheck with sorry, then fill definitions bottom-up). Override via USER_HINTS.md if you want a different ordering or want to narrow scope (e.g. drop Corollaries 1.3–1.4 from the goal).

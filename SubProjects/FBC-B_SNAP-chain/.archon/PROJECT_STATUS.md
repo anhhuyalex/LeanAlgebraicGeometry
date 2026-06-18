@@ -8,6 +8,107 @@
 
 ### Proof Patterns (reusable across targets)
 
+- **Localized-monoidal synonym wiring (iter-004, SNAP, axiom-clean).** To get a symmetric monoidal
+  structure on a localization `E` of a symmetric monoidal `D` (when a direct instance on `E` collides),
+  instantiate Mathlib `CategoryTheory.LocalizedMonoidal L W ε`. Load-bearing engineering facts:
+  (1) the bare presheaf-of-modules form does NOT synthesize `MonoidalCategory` — only the
+  `PresheafOfModules (R ⋙ forget₂ …)` form does; add private `inferInstanceAs` re-export instances
+  (`pshModMonoidal`/`Braided`/`Symmetric`). (2) `L`/`W` fed to `LocalizedMonoidal` must be the **literal**
+  `PresheafOfModules.sheafification (𝟙 …)` / `inverseImage` class — wrapping in an `abbrev` (or
+  domain-ascribing `L`) breaks the `IsLocalization` discr-tree key. (3) the synonym lives at `Type (u+1)`.
+  (4) `ε` = `sheafificationCounitIso (unitModule X)` works because the unit module's underlying presheaf
+  is the presheaf monoidal unit by `rfl`. (5) the only project obligation is `W.IsMonoidal`, got from the
+  proved `ztensor_whisker_localIso` (whiskerRight) + braiding conjugation (whiskerLeft) via
+  `isMonoidal_of_braided_whiskerRight`. CAVEAT: the synonym's `⊗` is NOT defeq to a hand-built
+  `sheafification.obj(F.toPr ⊗_p G.toPr)` — transferring coherences needs explicit μ-transport bridge
+  lemmas (object iso `tensorObj F G ≅ F ⊗_loc G`), not just `rw`.
+- **Index-0 tensor-power rewriting (iter-004, SNAP).** `rw [show tensorPow L 0 = unitModule X from rfl]`
+  FAILS "motive not type correct" (object in a dependent iso type); use a leading whole-goal
+  `show … unitModule X …` (defeq) BEFORE any `rw`. `eqToIso` Nat-reindexers close by `congr 1` (proof
+  irrelevance); blind `simp [← eqToIso_trans]` hits max-recursion. `β_{𝟙,𝟙}=𝟙` via
+  `braiding_tensorUnit_left`+`MonoidalCategory.unitors_equal` then `sheafification.mapIso` = `Iso.refl`.
+- **Crux-extraction to break a CHURNING monolith (iter-004, FBC).** When a frontier theorem churns
+  (PARTIAL across iters, sorry won't shrink), move its post-`Iso.ext` residual into its own
+  blueprint-pinned lemma and close the host by `exact <newlemma> args`. The host becomes sorry-free
+  (transitively backed) AND the next prover gets a smaller named frontier target. The 2-categorical
+  `pullback_spec_tilde_iso` naturality reduces via: `Iso.ext` → `.hom` cleanup → `Iso.eq_comp_inv` →
+  `pullbackPushforwardAdjunction.homEquiv.injective` → `Adjunction.homEquiv_unit`; the deep tail is the
+  per-leg identification of the dictionary's transpose with `gammaPushforwardNatIso` via
+  `unit_conjugateEquiv` — effort-break it, don't re-run the monolith.
+- **Per-chart base-change iso = `pullback_spec_tilde_iso` + reuse of `base_change_mate_regroupEquiv`, NOT bare
+  `cancelBaseChange` (iter-003, FBC `baseChange_chart_tensorIso`, axiom-clean).** To build
+  `Γ(V_B,F_B) ≅ Γ(V,F)⊗_A B` on an affine chart `V=Spec R` over `A`: step1 reads `Γ(V_B,F_B)≅(R⊗_AB)⊗_RM`
+  via `(restrictScalars includeRight).mapIso (moduleSpecΓFunctor.mapIso (pullback_spec_tilde_iso ι M) ≪≫
+  (tilde.toTildeΓNatIso.app _).symm)`; step2 cancels the base change B-linearly to `B⊗_AM` via
+  `≪≫ base_change_mate_regroupEquiv ψ φ M`. TWO traps: (i) `tilde.toTildeΓNatIso.app N : N ≅ Γ(tilde N)`
+  so the unit needs `.symm`; (ii) `TensorProduct.AlgebraTensorModule.cancelBaseChange` does NOT apply
+  directly to `(R⊗_AB)⊗_RM → B⊗_AM` (it cancels the *second* tensor arg and forces `[Algebra A B]`; no
+  `R→B` map exists) — route through `regroupEquiv`'s proved `comm ≫ cancelBaseChange ≫ comm`. Reuse (don't
+  re-derive) the mate-region deliverable even though it sits below the use site.
+- **`simp only [gMul_def]` unfolds nested graded-mult where positional `rw [gMul_def a b, …]` FAILS (iter-003,
+  SNAP `sectionsMul_mul_assoc`).** Positional `rw [gMul_def a b]` errors "Did not find an occurrence of
+  `GMul.mul ?m ?b`" on a doubly-nested `GMul.mul (GMul.mul a b) c`; `simp only [gMul_def]` unfolds all
+  occurrences at once. Braiding rewrites: `rw [← Hbraid]` on the goal FAILS (TensorProduct instance mismatch
+  CommRing-base vs RingCat-base) — use `Hel.symm.trans (congrArg (sectionsMul G F).hom Hbraid)`;
+  `erw [ModuleCat.MonoidalCategory.braiding_hom_apply]` raises a spurious `CommRing ringCatSheaf` synth
+  failure — the braiding-on-tmul is just `rfl` after `rw [happ]`. The μ-branch+section-core template
+  (`rw [gMul_def, tensorPowAdd_<branch>, Iso.trans_hom]; show <N-app form>; sectionsCast_eqToIso_cancel;
+  exact <section-core>`) reliably wires `sectionsMul_mul_one`/`_mul_comm` once the `tensorPowAdd_*` branch exists.
+- **Adjunction-transpose section core — closes `Γ(structural-iso)(η(elementary tensor)) = …` (iter-002,
+  SNAP `unitor_sectionsMul`, the engine that closed `sectionsMul_one_mul` axiom-clean).** For a sheaf-of-
+  modules structural iso built as `sheafification.map (presheaf-iso) ≫ counitIso` (unitor/associator/
+  braiding), proving its `Γ`-image sends the section multiplication `η(x⊗y)` to the expected value reduces
+  to a transpose identity. Idiom: `have H := (adj.homEquiv _ _).apply_eq_iff_eq_symm_apply.mpr
+  (Adjunction.homEquiv_counit adj _ _ _).symm` — the `homEquiv.symm` form **IS** the composite
+  `map(presheaf-iso)^# ≫ ε`, and the `.mpr`'s defeq check silently absorbs `sheafification = adj.left` and
+  `sheafificationCounitIso.hom = adj.counit.app G` (do NOT `rw [show … from rfl]` — it fails to match under
+  `homEquiv`). Then `rw [Adjunction.homEquiv_unit] at H`; `congrArg (fun m => (m.app ⊤).hom (x⊗y)) H`
+  (annotate the lambda's morphism type); `exact Hel.trans Hunit`. The presheaf-iso value at `⊤` is pinned by
+  a `happ := rfl` over the **CommRingCat** ring `X.sheaf.obj.obj ⊤` (NOT the RingCat `X.ringCatSheaf`), then
+  `erw [ModuleCat.MonoidalCategory.leftUnitor_hom_apply, one_smul]`. GOTCHA: `Adjunction.homEquiv_counit`
+  takes `(adj X Y g)` EXPLICITLY — `(Adjunction.homEquiv_counit).symm` fails. The braiding case is simpler
+  (unit-naturality only, no counit/triangle). This SUPERSEDES the iter-001 `:= rfl` whnf-timeout dead end.
+- **`show` (default transparency) splits `Γ(f≫g)(x)` AND realigns elements where `rw` can't (iter-002,
+  SNAP `sectionsMul_one_mul` outer reduction).** Under the `tensorObj`/`sheafification.obj` diamond,
+  positional `rw [SheafOfModules.comp_val, PresheafOfModules.comp_app]` binds `?x` at reducible
+  transparency and fails ("Did not find pattern `(?f ≫ ?g).val`"); `rw [show tensorPow L 0 = unitModule X
+  from rfl, …]` on a unit index gives "motive is not type correct". FIX: a single `show` at default
+  transparency that both splits the composite application `Γ(A≪≫B)(s) = Γ(B)(Γ(A)(s))` and realigns the
+  element to its `unitModule`/`(1:ring)` form; then `rw [sectionsCast_eqToIso_cancel]` cancels the reindex
+  (proof-irrelevance makes `(zero_add n).symm` defeq the def's `(Nat.zero_add n).symm`). `val_app_top_comp`
+  (term-mode `rfl`) is the standalone split lemma if needed.
+- **FBC: wrap an `eqLocus` codomain in `ModuleCat.of <explicit groundRing carrier> (…)` (iter-002,
+  `baseChange_sheafConditionFork_tensorIso` wiring).** Slotting a `≃ₗ` whose codomain is a
+  `LinearMap.eqLocus` (a `Submodule`) into a `(ModuleCat.restrictScalars φ).obj (…)` fails "failed to
+  synthesize AddCommMonoid" if you write `ModuleCat.of _ (eqLocus …)`; supply the carrier explicitly
+  (`ModuleCat.of (groundRing (pullback X.toSpecΓ (Spec.map …))) (LinearMap.eqLocus …)`).
+
+- **Value-ModuleCat tmul-bilinearity diamond — `← map_add; congr 2; exact tmul_lemma` (iter-001, SNAP
+  SectionGradedRing GSemiring fields).** The section graded mult is `Γ(μ)(sectionsMul (a ⊗ₜ[CommRingCat ↑(X.sheaf.obj.obj ⊤)] b))`.
+  The tmul scalar ring MUST be the **CommRingCat** carrier (only it has `CommSemiring`, needed by `TensorProduct`),
+  but the `Module` instance on `sectionDeg L i` is keyed to the **RingCat** carrier (defeq, different keys). So
+  standalone `TensorProduct.add_tmul/tmul_add/tmul_zero/zero_tmul` rewrites FAIL (`rw` leaves ring as `?m`; `simp only`
+  "made no progress"; a `have` of the equality can't synth `Module (CommRingCat-ring) (sectionDeg L i)`). WORKING IDIOM:
+  peel the two `ModuleCat.Hom.hom` maps with `← map_add`/`← map_zero`, then `congr 2`, then
+  `exact TensorProduct.add_tmul a b c` (expected-type-driven elaboration binds the goal's bundled instances,
+  sidestepping fresh synthesis). For zero fields, first expose RHS `0 = f (g 0)` via
+  `conv_rhs => rw [← map_zero …, ← map_zero …]`. Closes all 4 bilinearity + 2 zero `GSemiring` fields. See [[snap-section-tmul-diamond]].
+- **`ModuleCat.restrictScalars` FUNCTOR as B-linear transport when no scalar tower (iter-001, FBC
+  `baseChangeEqLocusToPullbackGamma`).** To transport a `≃ₗ[groundRing X']`-equiv `eX'` to `≃ₗ[B]` when B acts only
+  through a ring hom `φ = pullbackGroundRingAlg B` (so there is NO `IsScalarTower B (groundRing X') _` and
+  `LinearEquiv.restrictScalars B` is "typeclass instance problem is stuck"): use the functor
+  `((ModuleCat.restrictScalars φ).mapIso eX'.symm.toModuleIso).toLinearEquiv`. `ModuleCat.of R ↑M` is defeq `M`, so
+  no `ofSelfIso` (absent this pin) is needed — the `.toModuleIso ≫ restrictScalars`-functor route lands on the
+  bundled object directly.
+- **Base-changed cover `iSup = ⊤` via FORWARD `Opens.map_iSup` (iter-001, FBC).** `rw [← TopologicalSpace.Opens.map_iSup]`
+  fails HO-matching the `∘`-form. Instead: `have hmap := TopologicalSpace.Opens.map_iSup f.base U; rw [hU, TopologicalSpace.Opens.map_top] at hmap; exact hmap.symm`.
+- **`:= rfl` split of `Γ((A ≪≫ B).hom)(s)` whnf-TIMEOUTS — do-not-retry (iter-001, SNAP `sectionsMul_one_mul`).**
+  Stating `Γ(A≪≫B)(s) = Γ(B)(Γ(A)(s))` at `.val.app ⊤` as `:= rfl` unfolds `tensorPowAdd`'s match through the whole
+  sheafification composite → `(deterministic) timeout at whnf` (200000 hb), build-verified. Use explicit
+  `Iso.trans_hom` + `SheafOfModules.comp_val` (`Sheaf.lean:61`, rfl) + `NatTrans.comp_app` + term-mode ModuleCat
+  comp-apply (the value-ModuleCat diamond). The companion `sectionsCast_eqToIso_cancel` (reindex cancellation) IS
+  proven by `subst; rfl` and is reusable for all 4 coherence Eqs.
+
 - **Triple-overlap C2 collapse via abstract-category folds (iter-080, GlueDescent keystone
   `glueChartComponent_leg_compat`).** The closing move for the conjugated-cocycle keystone: fold EACH leg of
   the fully-transposed component equation over the triple overlap `V_ipq` to a canonical N-factor `≫`-chain
@@ -1721,6 +1822,82 @@
 
 ### Known Blockers (do not retry without a structural change)
 
+- **SNAP 6 coherence sorries (iter-004): gated on 4 unbuilt bridge lemmas, NOT on hand-proofs.**
+  `tensorPowAdd_{rightUnit,braiding}`(succ), `tensorPowAdd_assoc`, `sectionMul_assoc_core`,
+  `sectionsMul_mul_assoc` ALL reduce to one obstacle: the hand-built `tensorObj F G =
+  sheafification.obj(F.toPr ⊗_p G.toPr)` is NOT definitionally the localized `F ⊗_loc G =
+  ((tensorBifunctor L W ε).obj F).obj G`. Do NOT re-attempt as direct Mac Lane hand-proofs (STUCK ≥3
+  iters before the iter-004 pivot). Build the 4 bridge lemmas (`tensorObjAssoc_eq_localizedAssociator`,
+  `tensorBraiding_eq_localizedBraiding`, `tensorObjUnitIso_eq_localizedLeftUnitor`,
+  `tensorObjRightUnitor_eq_localizedRightUnitor`) via μ-transport (Mathlib `Localization.Monoidal.{μ,
+  associator_hom_app, leftUnitor_hom_app, rightUnitor_hom_app, braidingNatIso_hom_app,
+  μ_natural_left/right}`), then `rw` hand-built→localized + invoke `pentagon`/`triangle`/`hexagon`.
+  Fallback Option A = rewire hand-built defs onto the synonym's `⊗` (refactor).
+- **FBC dead `base_change_mate_*` apparatus (iter-001…004): DEAD route, DELETE — do not prove.** The MATE
+  route is abandoned (memory; goal closure has 0 mate riders per iter-002 leandag).
+  `base_change_mate_gstar_transpose`'s sorry body (FlatBaseChange.lean ~1460) contains FALSE
+  documentation: it cites three lemmas that exist nowhere (`base_change_mate_unit_value`,
+  `base_change_mate_fstar_reindex_legs_unitExpand`, `base_change_mate_extendScalars_inner_value_counit`)
+  and an out-of-bounds `@~1999` pointer (file is 1666 lines). Plus dead `set_option maxHeartbeats
+  4000000 in` on a `/-!` comment (1312-1315) and 4 `/-!` planning blocks for never-written lemmas. Route
+  to the `refactor` subagent for deletion (confirm rider-only via `dag-query ancestors` first); NEVER a
+  prover. Flagged audit003 + audit004.
+- **FBC `baseChangeGammaPullbackEquiv`/`baseChangeEqLocusToPullbackGamma` (iter-001): NOT provable as typed.**
+  Missing `[CompactSpace X] [QuasiSeparatedSpace X]` (qcqs); sub-piece (b) `B ⊗ ∏ ≅ ∏ (B ⊗ −)` needs a FINITE
+  cover. Structural fix required before any prover re-send: add the two instance args + switch cover to
+  `Scheme.exists_finite_affineCover_inter_isQuasiCompact`. Also gated on `affineBaseChange_pushforward_iso`
+  (still `sorry` in FlatBaseChange.lean). Neither decl is protected.
+- **SNAP `sectionsMul_one_mul` via `:= rfl` Γ-of-iso-composite split (iter-001): DEAD.** whnf 200000-hb timeout,
+  build-verified. Only retry via the explicit functor-composition lemma (`Iso.trans_hom` + `SheafOfModules.comp_val`
+  + term-mode ModuleCat comp-apply). The cancellation half `sectionsCast_eqToIso_cancel` is already proven.
+  **RESOLVED iter-002** — closed via the `show`-split + adjunction-transpose core (see Proof Patterns).
+- **SNAP 3 remaining coherences `sectionsMul_mul_one`/`_mul_assoc`/`_mul_comm` via the `one_mul` template
+  (iter-002): WON'T transfer.** `one_mul` only worked because `tensorPowAdd L 0 n` iota-reduces on the
+  literal `0` (`tensorPowAdd_zero`, rfl); the other three match a VARIABLE index and are the right-unitor/
+  associator/braiding coherences of the recursive `tensorPowAdd`. Structural prerequisite (do this FIRST,
+  by induction on the `tensorPowAdd` recursion): `tensorPowAdd_succ_zero`/right-unitor (→ mul_one),
+  `tensorPowAdd_assoc` (→ mul_assoc), `tensorPowAdd_braiding` (→ mul_comm). Then the section level closes
+  fast via the adjunction-transpose template. Do NOT re-dispatch a prover at the coherences directly.
+  **UPDATE iter-003:** the section-level wiring works — `sectionsMul_mul_one`/`_mul_comm` now have sorry-free
+  bodies (template confirmed), `_mul_assoc` is unfolded. BUT all 5 residual sorry-bearing decls
+  (`tensorPowAdd_rightUnit` succ, `tensorPowAdd_braiding`, `tensorPowAdd_assoc`, `sectionMul_assoc_core`,
+  `sectionsMul_mul_assoc`) reduce to ONE obstacle: **Mac Lane symmetric-monoidal coherence
+  (triangle/hexagon/pentagon) transferred from `PresheafOfModules.monoidalCategory` to `X.Modules` through the
+  `isIso_sheafification_whiskerRight_unit` comparison isos baked into the 5-segment `tensorObjAssoc` composite.**
+  No sheaf-level monoidal coherence API exists in file (~hundreds of LOC). This is now a STRUCTURAL decision,
+  NOT a helper round: before re-dispatching, run mathlib-analogist (does Mathlib have a "transport monoidal
+  coherence across a comparison iso / equivalence" idiom — `Monoidal.transport`/`Equivalence` family — or does
+  `X.Modules` inherit a monoidal structure from Mathlib more directly?). SNAP sorry went 3→8 raw this iter
+  purely from this decomposition — do NOT mistake further helper-splitting for progress. The
+  `tensorPowAdd_rightUnit` base case is separately gated on `tensorBraiding 𝟙 𝟙 = Iso.refl` (Mathlib name
+  unknown; `BraidedCategory.braiding_tensorUnit_left` does NOT exist; try `β_𝟙 𝟙 = λ_𝟙 ≪≫ ρ_𝟙.symm` +
+  `unitors_equal`). `sectionsMul_mul_assoc` also needs `sectionsMul_whiskerRight/_whiskerLeft_naturality`
+  bricks (mirror `sectionMul_braiding_core`'s η-naturality template) — independently addable.
+- **FBC `baseChange_sheafConditionFork_tensorIso` / separated / mayerVietoris (iter-002): blocked on
+  per-chart infra, no in-file shortcut.** `baseChange_sheafConditionFork_tensorIso` is the IRREDUCIBLE
+  module-level base-change content (proven ⇔ `baseChangeGammaPullbackEquiv`). It needs the per-chart
+  `pullback_spec_tilde_iso` (Stacks 01I9) restriction-compatibility over a finite cover of non-affine `X`
+  + tensor-commutes-with-finite-products — the SAME multi-hundred-LOC Mathlib-absent infra
+  `affineBaseChange_pushforward_iso` is blocked on. Separated + MV transitively need it. Scope an infra
+  lane (dag-walker/effort-breaker on `lem:base_changed_equalizer_diagram`) BEFORE any prover attempt. The
+  one ready FBC node is the bridge REVERSE direction (forward already proven) — but verify
+  qcqs-pushforward-quasicoherent exists in Mathlib first.
+- **FBC `pullback_spec_tilde_iso_restriction_naturality` crux (iter-003): scaffolding done, ONE residual sorry.**
+  All bricks proved sorry-free (`chartBaseChangeGeometricComparison`, `chartBaseChange_ring_square` (b1),
+  `chartBaseChangeModuleReassoc` (b2-alg)); after `apply Iso.ext` the residual is the naturality of the OPAQUE
+  `pullback_spec_tilde_iso` (= `conjugateIsoEquiv` of `gammaPushforwardNatIso`) across the base-change ring
+  square. `rfl`/`aesop_cat`/`simp only [chart…]` do NOT close it (verified). Route (not a dead end): naturality
+  of `gammaPushforwardNatIso` under the ring square transported through `conjugateEquiv`/`conjugateIsoEquiv`
+  naturality. This is the live FBC frontier — consider effort-breaker into (i) gammaPushforwardNatIso ring-square
+  naturality, (ii) conjugateIsoEquiv transport.
+- **FBC `base_change_mate_gstar_transpose` (iter-003 caveat): OFF-PATH, do not dispatch — despite a "viable
+  route" Lean read.** lean-auditor (no-strategic-bias by design) flags this sorry as the open residual of a
+  "viable conjugate-counit route", NOT a dead end, and disputes the "DEAD" label. That is a LOCAL-Lean judgment
+  only. Strategically the whole MATE route is dead (Archon memory) and OFF the goal-closure cone (iter-002
+  leandag: goal closure = 22 nodes, ZERO mate riders; the concrete-tilde chain replaces it). Its sorry comment
+  also carries STALE cross-refs to lemmas/line-numbers that no longer exist (`…fstar_reindex_legs_unitExpand`,
+  `base_change_mate_unit_value`, `…inner_value_counit @~1999` past EOF). Do NOT revive it.
+
 - **INFRA: prover phase instant-death (iters 068–077) — `roles.prover` was `fable` (no entitlement on this
   login) → every prover died on `401 Invalid authentication credentials` BEFORE any session log was written.**
   Fingerprint: `meta.json prover.durationSecs:0`, `parallel.jsonl` = `failed:N`, `logs/iter-NNN/provers/` dir
@@ -2394,7 +2571,36 @@
   enforced corrective is a mathlib-analogist consult on the reframing keystone, not a prove round.
 
 ## Last Updated
-2026-06-13T (iter-080 review) — global real sorry 12→9, 0 axioms, both lanes green.
+2026-06-18T (iter-004 review, this subproject) — project sorry 16→14. SNAP `SectionGradedRing` 8→6: the
+LocalizedMonoidal pivot LANDED axiom-clean (`W_isMonoidal`, `localizedMonoidalUnitIso`,
+`modulesLocalizedMonoidal` instantiate Mathlib `LocalizedMonoidal L W ε` synonym; Symm/Braided/Monoidal
+all resolve), + 2 base cases closed (`tensorPowAdd_{rightUnit,braiding}`). 6 residual sorries gated on 4
+unbuilt μ-transport bridge lemmas (see Known Blockers). FBC `FlatBaseChange` 4→4: CLOSED
+`pullback_spec_tilde_iso_restriction_naturality` by extracting + delegating to new pinned lemma
+`pullback_spec_tilde_iso_ring_square_natural` (PARTIAL — verified 4-step transpose reduction, deep
+conjugate-identity tail remains). Global untouched (4). Subagents: audit004 (15 must-fix mostly
+strategy-known sorries; NEW = false-doc in dead `base_change_mate_gstar_transpose` → route to refactor),
+lvbc fbc004 + snap004 both PASS 0-must-fix. No manual markers (sync +11). See iter/iter-004/review.md.
+
+### Prior: 2026-06-18T (iter-003 review, this subproject) — FlatBaseChange sorry 3→4: CLOSED new deliverable
+`baseChange_chart_tensorIso` (a) axiom-clean + 5 sorry-free chart helpers; ADDED 1 new crux
+`pullback_spec_tilde_iso_restriction_naturality` (b) — all scaffolding proved, lone residual = naturality
+of opaque `pullback_spec_tilde_iso` across the ring square. SectionGradedRing sorry 3→8: CLOSED 2 of 3 targets
+sorry-free (`sectionsMul_mul_one`/`_mul_comm`), residual decomposed into 5 named coherence helpers all reducing
+to the ONE Mac Lane coherence transfer through `tensorObjAssoc` (structural, not a helper round — see Known
+Blockers). FlatBaseChangeGlobal untouched (4 sorries). Both files build green, 0 new axioms. Subagents:
+lean-auditor SOUND (0 must-fix, 2 major hygiene), lvbc fbc003 + snap003 both faithful (0 deceptive red flags;
+FBC coverage gap = 5 chart helpers need blueprint blocks). Manual marker: `% NOTE:` on
+`lem:pushforward_base_change_mate_sections_direct` (dead-mate `\lean{}` target absent). Coverage debt: 6 new
+`lean_aux` helpers need blueprint entries (5 FBC chart + `tensorObjRightUnitor_hom`).
+
+---
+### Prior: 2026-06-18T (iter-002 review) — SectionGradedRing sorry 4→3 (closed `sectionsMul_one_mul`
+axiom-clean via adjunction-transpose core `unitor_sectionsMul`; de-privatized 2 defs; deleted ~255 stale lines);
+3 coherences blocked on missing `tensorPowAdd`-coherence prerequisites. FlatBaseChangeGlobal sorry 1→4
+(materialized 4 concrete-chain pins as typed decls; central gap = irreducible `baseChange_sheafConditionFork_tensorIso`;
+bridge FORWARD direction proven). Both files build green. 0 new axioms. Manual marker: removed transitively-sorry
+proof-block `\leanok` on `sectionGradedRing_gcommSemiring`.
 GlueDescent 1→0 (KEYSTONE `glueChartComponent_leg_compat` CLOSED via triple-overlap C2 collapse;
 `glueRestrictionIso` fully realized). GrassmannianQuot 3→1 (`represents` both inverse laws closed +
 `universalQuotient_isLocallyFreeOfRank`; residual `tautologicalQuotient_epi` now UNBLOCKED). FBC-B DIRECT

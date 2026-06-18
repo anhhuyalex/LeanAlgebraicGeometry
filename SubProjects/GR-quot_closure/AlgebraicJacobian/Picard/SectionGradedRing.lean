@@ -157,6 +157,13 @@ private noncomputable def tensorObjUnitIso (G : X.Modules) :
 product: the presheaf right unitor `ρ_` descended through sheafification, composed
 with the counit iso `sheafificationCounitIso`.  Axiom-clean (no monoidal structure
 on `X.Modules` is required). -/
+noncomputable def tensorObjRightUnitor (G : X.Modules) :
+    tensorObj G (unitModule X) ≅ G :=
+  sheafification.mapIso
+      (MonoidalCategory.rightUnitor (C := MonoidalPresheaf X)
+        ((toPresheafOfModules X).obj G)) ≪≫
+    sheafificationCounitIso G
+
 /-- The braiding isomorphism `F ⊗ G ≅ G ⊗ F` of the sheaf tensor product,
 descended through sheafification from the symmetric braiding on
 `X.PresheafOfModules` (`PresheafOfModules.monoidalCategory`).  Axiom-clean: the
@@ -254,6 +261,11 @@ after sheafifying).  Obtained by feeding `localIso_toPresheaf_map_unit` through 
 localization criterion `isIso_sheafification_map_iff`.  Project-local: the `m = 0`
 launching pad and the un-whiskered special case of
 `isIso_sheafification_whiskerRight_unit`. -/
+lemma isIso_sheafification_map_unit (P : X.PresheafOfModules) :
+    IsIso (sheafification.map ((PresheafOfModules.sheafificationAdjunction (𝟙 X.ringCatSheaf.obj)).unit.app P)) := by
+  rw [isIso_sheafification_map_iff]
+  exact localIso_toPresheaf_map_unit _
+
 /-! ## Project-local Mathlib supplement — relative tensor product as a coequalizer
 
 This section builds the **objectwise** content of `lem:relativeTensor_as_coequalizer`
@@ -1828,49 +1840,270 @@ abbrev sectionDeg (L : X.Modules) (m : ℕ) : Type u :=
 Section-level analogue of `TensorPower.cast` from `Mathlib.LinearAlgebra.TensorPower.Basic`. -/
 noncomputable def sectionsCast (L : X.Modules) {i j : ℕ} (h : i = j) :
     sectionDeg L i ≃ₗ[↥(X.ringCatSheaf.obj.obj (Opposite.op ⊤))] sectionDeg L j :=
-  sorry
+  ((toPresheafOfModules X ⋙ PresheafOfModules.evaluation X.ringCatSheaf.obj
+    (Opposite.op ⊤)).mapIso (eqToIso (congrArg (tensorPow L) h))).toLinearEquiv
 
 /-- The transport along the reflexive equality `rfl : i = i` equals the identity automorphism
 (`lem:sectionsCast_refl`).  Section-level analogue of `TensorPower.cast_refl`. -/
 @[simp] lemma sectionsCast_refl (L : X.Modules) (i : ℕ) :
-    sectionsCast L (rfl : i = i) = LinearEquiv.refl _ (sectionDeg L i) :=
-  sorry
+    sectionsCast L (rfl : i = i) = LinearEquiv.refl _ (sectionDeg L i) := by
+  ext x
+  rfl
 
 /-- Cast-mediated equality in the graded sigma type: if `a.fst = b.fst` and the section-component
 transport maps `a.snd` to `b.snd`, then `a = b` as dependent pairs (`lem:gradedMonoid_eq_of_cast`).
 Section-level analogue of `gradedMonoid_eq_of_cast` from `TensorPower.Basic` (line 123 there). -/
 lemma gradedMonoid_eq_of_cast (L : X.Modules) {a b : GradedMonoid (sectionDeg L)}
-    (h : a.1 = b.1) (h2 : sectionsCast L h a.2 = b.2) : a = b :=
-  sorry
+    (h : a.1 = b.1) (h2 : sectionsCast L h a.2 = b.2) : a = b := by
+  obtain ⟨i, x⟩ := a
+  obtain ⟨j, y⟩ := b
+  obtain rfl : i = j := h
+  simp only [sectionsCast_refl, LinearEquiv.refl_apply] at h2
+  subst h2
+  rfl
 
 /-- Degreewise graded multiplication on section components:
 `sectionDeg L i × sectionDeg L j → sectionDeg L (i+j)`, defined as the composition
 `Γ(μ_{i,j}) ∘ sectionsMul` applied to `a ⊗ₜ b`.  Required for the coherence lemma signatures. -/
 noncomputable instance (L : X.Modules) : GradedMonoid.GMul (sectionDeg L) where
-  mul {i j} (a : sectionDeg L i) (b : sectionDeg L j) := sorry
+  mul {i j} (a : sectionDeg L i) (b : sectionDeg L j) :=
+    ((tensorPowAdd L i j).hom.val.app (Opposite.op ⊤)).hom
+      ((sectionsMul (tensorPow L i) (tensorPow L j)).hom
+        (a ⊗ₜ[(X.sheaf.obj ⋙ forget₂ CommRingCat RingCat).obj (Opposite.op ⊤)] b))
 
 /-- Graded unit in degree 0: the image of `1 ∈ Γ(X,𝒪_X)` in `sectionDeg L 0 = Γ(X, L^{⊗0})`
 via the canonical `Γ𝒪`-module isomorphism.  Required for the coherence lemma signatures. -/
 noncomputable instance (L : X.Modules) : GradedMonoid.GOne (sectionDeg L) where
-  one := sorry
+  one := (1 : ↥(X.ringCatSheaf.obj.obj (Opposite.op ⊤)))
+
+/-- Definitional unfolding of the graded multiplication, as a clean rewrite handle for the
+coherence proofs: `a · b = Γ(μ_{i,j})(sectionsMul (a ⊗ₜ b))`. -/
+private lemma gMul_mul_apply (L : X.Modules) {i j : ℕ}
+    (a : sectionDeg L i) (b : sectionDeg L j) :
+    (GradedMonoid.GMul.mul a b : sectionDeg L (i + j))
+      = ((tensorPowAdd L i j).hom.val.app (Opposite.op ⊤)).hom
+          ((sectionsMul (tensorPow L i) (tensorPow L j)).hom
+            (a ⊗ₜ[(X.sheaf.obj ⋙ forget₂ CommRingCat RingCat).obj (Opposite.op ⊤)] b)) :=
+  rfl
+
+/-- Definitional unfolding of the graded unit. -/
+private lemma gOne_one_eq (L : X.Modules) :
+    (GradedMonoid.GOne.one : sectionDeg L 0)
+      = (1 : ↥(X.ringCatSheaf.obj.obj (Opposite.op ⊤))) :=
+  rfl
+
+/-- Definitional unfolding of the section transport applied to an element. -/
+private lemma sectionsCast_apply (L : X.Modules) {i j : ℕ} (h : i = j) (y : sectionDeg L i) :
+    sectionsCast L h y
+      = ((eqToIso (congrArg (tensorPow L) h)).hom.val.app (Opposite.op ⊤)).hom y :=
+  rfl
+
+/-- Two index transports along inverse equalities cancel. -/
+private lemma sectionsCast_sectionsCast (L : X.Modules) {i j : ℕ} (h₁ : i = j) (h₂ : j = i)
+    (x : sectionDeg L i) : sectionsCast L h₂ (sectionsCast L h₁ x) = x := by
+  obtain rfl := h₁
+  rw [Subsingleton.elim h₂ rfl]
+  simp only [sectionsCast_refl, LinearEquiv.refl_apply]
+
+/-- The transport along a reflexive index equality is the identity (on elements). -/
+private lemma sectionsCast_self (L : X.Modules) {i : ℕ} (h : i = i) (x : sectionDeg L i) :
+    sectionsCast L h x = x := by
+  rw [Subsingleton.elim h rfl, sectionsCast_refl, LinearEquiv.refl_apply]
+
+/-- The core left-unit identity at the presheaf top open: the left unitor of the sheaf tensor
+product post-composed with the section multiplication `sectionsMul (unit) G` sends `1 ⊗ₜ a` to `a`.
+This is the lax-monoidal unit law, proved by riding the sheafification unit `η` through the
+presheaf left unitor (strict-monoidal at the top open) via `η`-naturality, the `ModuleCat`
+left-unitor formula `r ⊗ₜ m ↦ r • m`, and the adjunction right-triangle identity. -/
+private lemma tensorObjUnitIso_hom_sectionsMul (G : X.Modules)
+    (a : ↥(G.val.obj (Opposite.op ⊤))) :
+    ((tensorObjUnitIso G).hom.val.app (Opposite.op ⊤)).hom
+        ((sectionsMul (unitModule X) G).hom
+          ((1 : ↥(X.ringCatSheaf.obj.obj (Opposite.op ⊤)))
+            ⊗ₜ[(X.sheaf.obj ⋙ forget₂ CommRingCat RingCat).obj (Opposite.op ⊤)] a)) = a := by
+  -- The presheaf-morphism identity `η ≫ Γ(unitIso) = λ_` (left unitor), via η-naturality
+  -- and the adjunction right-triangle identity, then evaluate at the top open on `1 ⊗ₜ a`.
+  have hmor :
+      (PresheafOfModules.sheafificationAdjunction (𝟙 X.ringCatSheaf.obj)).unit.app
+          (MonoidalCategory.tensorObj (C := MonoidalPresheaf X)
+            ((toPresheafOfModules X).obj (unitModule X)) ((toPresheafOfModules X).obj G))
+        ≫ (tensorObjUnitIso G).hom.val
+      = (MonoidalCategory.leftUnitor (C := MonoidalPresheaf X)
+          ((toPresheafOfModules X).obj G)).hom := by
+    have e1 : (tensorObjUnitIso G).hom.val
+        = (SheafOfModules.forget X.ringCatSheaf
+              ⋙ PresheafOfModules.restrictScalars (𝟙 X.ringCatSheaf.obj)).map
+            ((PresheafOfModules.sheafification (𝟙 X.ringCatSheaf.obj)).map
+              (MonoidalCategory.leftUnitor (C := MonoidalPresheaf X)
+                ((toPresheafOfModules X).obj G)).hom
+            ≫ (PresheafOfModules.sheafificationAdjunction (𝟙 X.ringCatSheaf.obj)).counit.app G) :=
+      rfl
+    rw [e1, Functor.map_comp]
+    erw [(PresheafOfModules.sheafificationAdjunction (𝟙 X.ringCatSheaf.obj)).unit_naturality_assoc,
+      (PresheafOfModules.sheafificationAdjunction (𝟙 X.ringCatSheaf.obj)).right_triangle_components,
+      Category.comp_id]
+  -- the left unitor of `ModuleCat` sends `1 ⊗ₜ a ↦ 1 • a = a`
+  have hlam : ((MonoidalCategory.leftUnitor (C := MonoidalPresheaf X)
+        ((toPresheafOfModules X).obj G)).hom.app (Opposite.op ⊤)).hom
+        ((1 : ↥(X.ringCatSheaf.obj.obj (Opposite.op ⊤)))
+          ⊗ₜ[(X.sheaf.obj ⋙ forget₂ CommRingCat RingCat).obj (Opposite.op ⊤)] a) = a := by
+    change (1 : ↥(X.ringCatSheaf.obj.obj (Opposite.op ⊤))) • a = a
+    rw [one_smul]
+  -- evaluate the morphism identity `hmor` at the top open on `1 ⊗ₜ a`
+  have key := congrArg
+    (fun (φ : MonoidalCategory.tensorObj (C := MonoidalPresheaf X)
+          ((toPresheafOfModules X).obj (unitModule X)) ((toPresheafOfModules X).obj G)
+        ⟶ (toPresheafOfModules X).obj G) =>
+      (φ.app (Opposite.op ⊤)).hom
+        ((1 : ↥(X.ringCatSheaf.obj.obj (Opposite.op ⊤)))
+          ⊗ₜ[(X.sheaf.obj ⋙ forget₂ CommRingCat RingCat).obj (Opposite.op ⊤)] a)) hmor
+  exact key.trans hlam
+
+/-- The core right-unit identity at the presheaf top open: the right unitor of the sheaf tensor
+product post-composed with the section multiplication `sectionsMul G (unit)` sends `a ⊗ₜ 1` to `a`.
+Mirror of `tensorObjUnitIso_hom_sectionsMul`, via the same η-naturality + right-triangle argument
+and the `ModuleCat` right-unitor formula `m ⊗ₜ r ↦ r • m`. -/
+private lemma tensorObjRightUnitor_hom_sectionsMul (G : X.Modules)
+    (a : ↥(G.val.obj (Opposite.op ⊤))) :
+    ((tensorObjRightUnitor G).hom.val.app (Opposite.op ⊤)).hom
+        ((sectionsMul G (unitModule X)).hom
+          (a ⊗ₜ[(X.sheaf.obj ⋙ forget₂ CommRingCat RingCat).obj (Opposite.op ⊤)]
+            (1 : ↥(X.ringCatSheaf.obj.obj (Opposite.op ⊤))))) = a := by
+  have hmor :
+      (PresheafOfModules.sheafificationAdjunction (𝟙 X.ringCatSheaf.obj)).unit.app
+          (MonoidalCategory.tensorObj (C := MonoidalPresheaf X)
+            ((toPresheafOfModules X).obj G) ((toPresheafOfModules X).obj (unitModule X)))
+        ≫ (tensorObjRightUnitor G).hom.val
+      = (MonoidalCategory.rightUnitor (C := MonoidalPresheaf X)
+          ((toPresheafOfModules X).obj G)).hom := by
+    have e1 : (tensorObjRightUnitor G).hom.val
+        = (SheafOfModules.forget X.ringCatSheaf
+              ⋙ PresheafOfModules.restrictScalars (𝟙 X.ringCatSheaf.obj)).map
+            ((PresheafOfModules.sheafification (𝟙 X.ringCatSheaf.obj)).map
+              (MonoidalCategory.rightUnitor (C := MonoidalPresheaf X)
+                ((toPresheafOfModules X).obj G)).hom
+            ≫ (PresheafOfModules.sheafificationAdjunction (𝟙 X.ringCatSheaf.obj)).counit.app G) :=
+      rfl
+    rw [e1, Functor.map_comp]
+    erw [(PresheafOfModules.sheafificationAdjunction (𝟙 X.ringCatSheaf.obj)).unit_naturality_assoc,
+      (PresheafOfModules.sheafificationAdjunction (𝟙 X.ringCatSheaf.obj)).right_triangle_components,
+      Category.comp_id]
+  have hrho : ((MonoidalCategory.rightUnitor (C := MonoidalPresheaf X)
+        ((toPresheafOfModules X).obj G)).hom.app (Opposite.op ⊤)).hom
+        (a ⊗ₜ[(X.sheaf.obj ⋙ forget₂ CommRingCat RingCat).obj (Opposite.op ⊤)]
+          (1 : ↥(X.ringCatSheaf.obj.obj (Opposite.op ⊤)))) = a := by
+    change (1 : ↥(X.ringCatSheaf.obj.obj (Opposite.op ⊤))) • a = a
+    rw [one_smul]
+  have key := congrArg
+    (fun (φ : MonoidalCategory.tensorObj (C := MonoidalPresheaf X)
+          ((toPresheafOfModules X).obj G) ((toPresheafOfModules X).obj (unitModule X))
+        ⟶ (toPresheafOfModules X).obj G) =>
+      (φ.app (Opposite.op ⊤)).hom
+        (a ⊗ₜ[(X.sheaf.obj ⋙ forget₂ CommRingCat RingCat).obj (Opposite.op ⊤)]
+          (1 : ↥(X.ringCatSheaf.obj.obj (Opposite.op ⊤))))) hmor
+  exact key.trans hrho
+
+/-- Right-unit coherence of the tensor-power comparison family: the degree-`(n,0)` comparison
+`μ_{n,0}` is the right unitor.  (Uses `tensorPow L 0 = unitModule X` and `n + 0 = n`, both `rfl`, so
+the two sides share the type `tensorObj (tensorPow L n) (unitModule X) ≅ tensorPow L n`.)  Proved by
+induction on `n` mirroring the recursion of `tensorPowAdd`. -/
+private lemma tensorPowAdd_zero_right (L : X.Modules) (n : ℕ) :
+    tensorPowAdd L n 0 = tensorObjRightUnitor (tensorPow L n) := by
+  induction n with
+  | zero =>
+    -- base: `μ_{0,0} = tensorObjUnitIso (unit) ≪≫ eqToIso` and the left unitor of the unit equals
+    -- its right unitor (`MonoidalCategory.unitors_equal`), descended through `sheafification`.
+    change tensorObjUnitIso (tensorPow L 0) ≪≫
+        eqToIso (congrArg (tensorPow L) (Nat.zero_add 0).symm)
+      = tensorObjRightUnitor (tensorPow L 0)
+    rw [Subsingleton.elim (congrArg (tensorPow L) (Nat.zero_add 0).symm)
+        (rfl : tensorPow L 0 = tensorPow L (0 + 0)), eqToIso_refl, Iso.trans_refl]
+    change sheafification.mapIso (MonoidalCategory.leftUnitor (C := MonoidalPresheaf X)
+          ((toPresheafOfModules X).obj (tensorPow L 0))) ≪≫ sheafificationCounitIso (tensorPow L 0)
+        = sheafification.mapIso (MonoidalCategory.rightUnitor (C := MonoidalPresheaf X)
+          ((toPresheafOfModules X).obj (tensorPow L 0))) ≪≫ sheafificationCounitIso (tensorPow L 0)
+    congr 2
+    apply Iso.ext
+    exact MonoidalCategory.unitors_equal
+  | succ k ih =>
+    -- step: the triangle identity relating `tensorObjAssoc`, `tensorBraiding` and the right unitor,
+    -- with `ih` whiskered by `L`; descends from the presheaf-level coherence through sheafification.
+    sorry
 
 /-- Left unitality of the graded section multiplication (`lem:sectionMul_coherent`, left-unit case):
 for `a ∈ Γ(X, L^{⊗n})`, transporting `1 · a` along `0 + n = n` gives `a`.
 Mirrors `TensorPower.one_mul`. -/
+theorem sectionsMul_one_mul (L : X.Modules) {n : ℕ} (a : sectionDeg L n) :
+    sectionsCast L (zero_add n) (GradedMonoid.GMul.mul GradedMonoid.GOne.one a) = a := by
+  rw [gMul_mul_apply, gOne_one_eq]
+  -- `tensorPowAdd L 0 n = tensorObjUnitIso ≪≫ eqToIso`; the inner cast pairs with the outer
+  -- `sectionsCast` and the two cancel (`sectionsCast_sectionsCast`), leaving the left unitor.
+  change sectionsCast L (zero_add n) (sectionsCast L (Nat.zero_add n).symm
+      (((tensorObjUnitIso (tensorPow L n)).hom.val.app (Opposite.op ⊤)).hom
+        ((sectionsMul (tensorPow L 0) (tensorPow L n)).hom
+          ((1 : ↥(X.ringCatSheaf.obj.obj (Opposite.op ⊤)))
+            ⊗ₜ[(X.sheaf.obj ⋙ forget₂ CommRingCat RingCat).obj (Opposite.op ⊤)] a)))) = a
+  rw [sectionsCast_sectionsCast]
+  exact tensorObjUnitIso_hom_sectionsMul (tensorPow L n) a
+
 /-- Right unitality of the graded section multiplication
 (`lem:sectionMul_coherent`, right-unit case):
 for `a ∈ Γ(X, L^{⊗n})`, transporting `a · 1` along `n + 0 = n` gives `a`.
 Mirrors `TensorPower.mul_one`. -/
+theorem sectionsMul_mul_one (L : X.Modules) {n : ℕ} (a : sectionDeg L n) :
+    sectionsCast L (add_zero n) (GradedMonoid.GMul.mul a GradedMonoid.GOne.one) = a := by
+  rw [gMul_mul_apply, gOne_one_eq]
+  -- The right-unit coherence of the comparison family: the degree-`(n,0)` comparison is the
+  -- right unitor.  Both sides have type `tensorObj (L^{⊗n}) (unitModule X) ≅ tensorPow L (n+0)`
+  -- (using `tensorPow L 0 = unitModule X` and `n + 0 = n`).  This is proved by induction on `n`
+  -- mirroring the recursion of `tensorPowAdd` (base = the unit/left–right-unitor coherence on the
+  -- monoidal unit; step = the triangle identity relating the associator, braiding and unitor,
+  -- descended from the presheaf symmetric monoidal coherence through sheafification).  The single
+  -- remaining gap of `sectionsMul_mul_one`.
+  have hμn0 : tensorPowAdd L n 0 = tensorObjRightUnitor (tensorPow L n) :=
+    tensorPowAdd_zero_right L n
+  have hinner : ((tensorPowAdd L n 0).hom.val.app (Opposite.op ⊤)).hom
+      ((sectionsMul (tensorPow L n) (tensorPow L 0)).hom
+        (a ⊗ₜ[(X.sheaf.obj ⋙ forget₂ CommRingCat RingCat).obj (Opposite.op ⊤)]
+          (1 : ↥(X.ringCatSheaf.obj.obj (Opposite.op ⊤))))) = a := by
+    rw [hμn0]
+    exact tensorObjRightUnitor_hom_sectionsMul (tensorPow L n) a
+  rw [hinner]
+  exact sectionsCast_self L (add_zero n) a
+
 /-- Associativity of the graded section multiplication (`lem:sectionMul_coherent`, associativity):
 transporting `(a · b) · c` along `(na + nb) + nc = na + (nb + nc)` gives `a · (b · c)`.
 Mirrors `TensorPower.mul_assoc`. -/
+theorem sectionsMul_mul_assoc (L : X.Modules) {na nb nc : ℕ}
+    (a : sectionDeg L na) (b : sectionDeg L nb) (c : sectionDeg L nc) :
+    sectionsCast L (add_assoc na nb nc)
+      (GradedMonoid.GMul.mul (GradedMonoid.GMul.mul a b) c) =
+      GradedMonoid.GMul.mul a (GradedMonoid.GMul.mul b c) := by
+  -- Unfold the degreewise multiplication on both sides to `Γ(μ) ∘ sectionsMul`.
+  simp only [gMul_mul_apply]
+  -- The remaining content is the *associativity constraint* of the comparison family
+  -- `tensorPowAdd` (`lem:sheafTensorPow_add`): the two bracketings of
+  -- `L^{⊗na} ⊗ L^{⊗nb} ⊗ L^{⊗nc} → L^{⊗(na+nb+nc)}` agree after the associator, together with the
+  -- naturality of the section multiplication `sectionsMul` (the lax-monoidal associativity of `Γ`).
+  -- Both descend from the presheaf-level pentagon (Mac Lane coherence) through sheafification; the
+  -- proof is the associativity induction mirroring `tensorPowAdd`'s recursion (the analogue of
+  -- `hμn0` in `sectionsMul_mul_one`).
+  sorry
+
 /-- Commutativity of the graded section multiplication (`lem:sectionMul_coherent`, commutativity):
 transporting `a · b` along `na + nb = nb + na` gives `b · a`.
 Section-level analogue of the `mul_comm` in `TensorPower.Basic`. -/
 theorem sectionsMul_mul_comm (L : X.Modules) {na nb : ℕ}
     (a : sectionDeg L na) (b : sectionDeg L nb) :
     sectionsCast L (add_comm na nb) (GradedMonoid.GMul.mul a b) =
-    GradedMonoid.GMul.mul b a :=
+    GradedMonoid.GMul.mul b a := by
+  -- Unfold the degreewise multiplication on both sides to `Γ(μ) ∘ sectionsMul`.
+  simp only [gMul_mul_apply]
+  -- The remaining content is the *commutativity constraint* of the comparison family
+  -- `tensorPowAdd` (`lem:sheafTensorPow_add`): `μ_{na,nb}` agrees with `μ_{nb,na}` after the
+  -- braiding, together with the symmetry of `sectionsMul` (`sectionsMul F G (a ⊗ₜ b)` and
+  -- `sectionsMul G F (b ⊗ₜ a)` correspond under the braiding `tensorBraiding`).  Both descend from
+  -- the presheaf-level symmetry (hexagon / Mac Lane coherence) through sheafification.
   sorry
 
 end AlgebraicGeometry.Scheme.Modules

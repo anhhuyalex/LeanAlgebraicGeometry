@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Blueprint dependency graph</title>
+<link rel="stylesheet" href="https://unpkg.com/katex@0.16.9/dist/katex.min.css">
+<script src="https://unpkg.com/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
+<style>
+:root {
+  --sidebar-bg: #0f172a;
+  --toolbar-bg: #1e293b;
+  --surface:    #1a2744;
+  --border:     #1e3a5f;
+  --text:       #e2e8f0;
+  --muted:      #64748b;
+  --accent:     #60a5fa;
+  --green:      #4ade80;
+  --green-bg:   rgba(74,222,128,.12);
+  --red:        #f87171;
+  --red-bg:     rgba(248,113,113,.12);
+  --orange:     #fb923c;
+  --orange-bg:  rgba(251,146,60,.12);
+  --code-bg:    #090d16;
+  --radius:     7px;
+  --mono: 'JetBrains Mono','Fira Code','Cascadia Code','Consolas','Monaco',monospace;
+  --sans: -apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;
+}
+
+html { margin:0; padding:0; height:100%; overflow:hidden; }
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:var(--sans); display:flex; flex-direction:column;
+       height:100%; background:#f8fafc; color:var(--text); }
+
+/* ── Toolbar ─────────────────────────────────────────────────── */
+#toolbar {
+  background:var(--toolbar-bg); height:44px; padding:0 16px;
+  display:flex; align-items:center; gap:14px; flex-shrink:0;
+  border-bottom:1px solid #263045;
+}
+.brand { font-size:13px; font-weight:700; color:#f1f5f9; letter-spacing:.03em; }
+.stat  { font-size:12px; color:#64748b; white-space:nowrap; }
+.legend { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+.leg-dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
+.leg-bar {
+  width:54px; height:8px; border-radius:4px; display:inline-block;
+  background:linear-gradient(90deg,#facc15,#f59e0b,#f97316);
+}
+.leg-txt { font-size:10px; font-weight:600; color:#94a3b8; }
+.sym-legend { padding-left:10px; margin-left:4px; border-left:1px solid #334155; gap:8px; }
+.hint { margin-left:auto; font-size:11px; color:#334155; white-space:nowrap; }
+
+/* ── Controls bar ────────────────────────────────────────────── */
+#controls {
+  background:#16233b; min-height:40px; padding:6px 16px;
+  display:flex; align-items:center; gap:10px; flex-shrink:0;
+  border-bottom:1px solid #263045; flex-wrap:wrap;
+}
+#controls input[type=text], #controls select {
+  background:#0f1f3d; color:var(--text); border:1px solid #1e3a5f;
+  border-radius:5px; font-size:12px; padding:5px 8px;
+  font-family:var(--sans); outline:none;
+}
+#controls input[type=text] { width:200px; }
+#controls input[type=text]:focus, #controls select:focus { border-color:var(--accent); }
+#controls select { max-width:260px; cursor:pointer; }
+#controls .chk { font-size:12px; color:#94a3b8; display:flex; align-items:center; gap:5px; cursor:pointer; user-select:none; }
+.btn {
+  background:#1e293b; color:#cbd5e1; border:1px solid #334155;
+  border-radius:5px; font-size:12px; padding:5px 12px; cursor:pointer;
+}
+.btn:hover { background:#263045; }
+.pill {
+  display:inline-flex; align-items:center; gap:7px;
+  background:#172554; color:#93c5fd; border:1px solid #1e3a8a;
+  border-radius:12px; font-size:11px; padding:3px 4px 3px 11px; cursor:pointer;
+  max-width:280px;
+}
+.pill .lbl { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.pill .x { font-weight:700; padding:0 6px; border-radius:9px; }
+.pill:hover .x { background:#1e3a8a; }
+
+/* ── Main layout ─────────────────────────────────────────────── */
+#main  { display:flex; flex:1; overflow:hidden; min-height:0; position:relative; }
+#graph { flex:1; min-height:0; background:#f8fafc; }
+
+/* ── Project-stats overlay ───────────────────────────────────── */
+#stats-panel {
+  position:absolute; top:12px; left:12px; z-index:5;
+  background:rgba(15,23,42,.9); border:1px solid #1e3a5f; border-radius:8px;
+  padding:10px 12px; min-width:188px; backdrop-filter:blur(3px);
+  font-size:11px; color:#cbd5e1; box-shadow:0 4px 16px rgba(0,0,0,.25);
+}
+#stats-panel h4 {
+  font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+  color:#64748b; margin-bottom:7px;
+}
+#stats-panel .row { display:flex; justify-content:space-between; gap:14px; line-height:1.7; }
+#stats-panel .row .v { font-family:var(--mono); color:#f1f5f9; }
+#stats-panel .v.done { color:var(--green); }
+#stats-panel .v.work { color:var(--orange); }
+#stats-panel .v.inf  { color:var(--red); }
+#stats-panel .bar {
+  height:6px; border-radius:3px; background:#1e293b; margin:7px 0 3px; overflow:hidden;
+}
+#stats-panel .bar > span { display:block; height:100%; background:var(--green); }
+#stats-panel .sep { border-top:1px solid #1e3a5f; margin:7px 0; }
+#graph canvas { display:block; }
+
+/* ── File-view colour legend ─────────────────────────────────── */
+#file-legend {
+  position:absolute; bottom:12px; left:12px; z-index:5;
+  background:rgba(15,23,42,.9); border:1px solid #1e3a5f; border-radius:8px;
+  padding:9px 11px; max-width:280px; max-height:42%; overflow-y:auto;
+  backdrop-filter:blur(3px); font-size:11px; color:#cbd5e1;
+  box-shadow:0 4px 16px rgba(0,0,0,.25);
+}
+#file-legend::-webkit-scrollbar { width:4px; }
+#file-legend::-webkit-scrollbar-thumb { background:#1e3a5f; border-radius:2px; }
+#file-legend h4 {
+  font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+  color:#64748b; margin-bottom:7px;
+}
+#file-legend .fl-row { display:flex; align-items:center; gap:7px; line-height:1.9; }
+#file-legend .fl-sw { width:11px; height:11px; border-radius:3px; flex-shrink:0;
+  border:1px solid rgba(255,255,255,.18); }
+#file-legend .fl-name {
+  font-family:var(--mono); font-size:10px; color:#cbd5e1;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;
+}
+#file-legend .fl-n { font-family:var(--mono); font-size:10px; color:#64748b; }
+#file-legend .fl-empty { font-style:italic; color:#475569; }
+
+/* ── Sidebar ─────────────────────────────────────────────────── */
+#sidebar {
+  width:340px; flex-shrink:0;
+  background:var(--sidebar-bg);
+  border-left:1px solid #1e293b;
+  display:flex; flex-direction:column; overflow:hidden;
+}
+#sidebar-empty {
+  flex:1; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:10px;
+}
+#sidebar-empty svg { opacity:.2; }
+#sidebar-empty p { font-size:13px; color:#334155; }
+#sidebar-content {
+  flex:1; overflow-y:auto; padding:10px;
+  display:flex; flex-direction:column; gap:8px;
+}
+#sidebar-content::-webkit-scrollbar { width:4px; }
+#sidebar-content::-webkit-scrollbar-thumb { background:#1e3a5f; border-radius:2px; }
+
+/* ── Cards ───────────────────────────────────────────────────── */
+.card {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius); padding:12px;
+}
+.card-title {
+  font-size:10px; font-weight:700; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--muted); margin-bottom:10px;
+}
+.btn-focus {
+  width:100%; margin-top:10px; background:#172554; color:#93c5fd;
+  border:1px solid #1e3a8a; border-radius:5px; font-size:11px;
+  font-weight:600; padding:7px; cursor:pointer; letter-spacing:.02em;
+}
+.btn-focus:hover { background:#1e3a8a; color:#bfdbfe; }
+
+/* ── Header card ─────────────────────────────────────────────── */
+.node-badges { display:flex; gap:5px; flex-wrap:wrap; margin-bottom:8px; }
+.badge {
+  display:inline-block; padding:2px 8px; border-radius:10px;
+  font-size:10px; font-weight:700; letter-spacing:.04em;
+}
+.badge-type    { background:#172554; color:#93c5fd; border:1px solid #1e3a8a44; }
+.badge-proved  { background:var(--green-bg);  color:var(--green);  border:1px solid rgba(74,222,128,.25); }
+.badge-sorry   { background:var(--orange-bg); color:var(--orange); border:1px solid rgba(251,146,60,.25); }
+.badge-unproved{ background:var(--red-bg);    color:var(--red);    border:1px solid rgba(248,113,113,.25); }
+.node-title   { font-size:15px; font-weight:600; color:#f1f5f9; line-height:1.35; margin-bottom:5px; }
+.node-id      { font-family:var(--mono); font-size:11px; color:#475569; }
+.node-chapter { font-size:11px; color:#334155; margin-top:3px; }
+.lean-ref     { font-size:11px; color:var(--muted); margin-top:6px; }
+.lean-ref code{ font-family:var(--mono); color:var(--accent); }
+
+/* ── Structure card ──────────────────────────────────────────── */
+.degrees { display:flex; gap:20px; margin-bottom:10px; }
+.degree  { display:flex; flex-direction:column; align-items:center; gap:2px; }
+.degree-val   { font-size:22px; font-weight:700; color:#f1f5f9; line-height:1; }
+.degree-label { font-size:10px; color:var(--muted); text-align:center; }
+.deps-list  { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:8px; }
+.deps-sub   { font-size:10px; color:var(--muted); margin:6px 0 4px; letter-spacing:.03em; }
+.dep-chip {
+  font-family:var(--mono); font-size:10px; padding:3px 7px;
+  background:#0f1f3d; border:1px solid #1e3a5f;
+  border-radius:4px; color:var(--accent); cursor:pointer; transition:background .15s;
+}
+.dep-chip:hover { background:#172554; }
+.no-deps { font-size:12px; color:var(--muted); font-style:italic; }
+
+/* ── Metrics card ────────────────────────────────────────────── */
+.metrics-grid {
+  display:grid; grid-template-columns:auto 1fr 1fr;
+  gap:5px 10px; align-items:center;
+}
+.col-head { font-size:10px; color:#334155; text-align:right; font-weight:600; }
+.m-label  { font-size:11px; color:var(--muted); }
+.m-val    { font-family:var(--mono); font-size:12px; color:#94a3b8; text-align:right; }
+.m-done   { color:var(--green); font-weight:700; }
+.m-inf    { color:var(--red);   font-weight:700; }
+.m-work   { color:var(--orange); }
+
+/* ── Section header ──────────────────────────────────────────── */
+.sec-hdr {
+  display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;
+}
+.chars-pair { font-family:var(--mono); font-size:10px; color:#334155; }
+.chars-inf  { color:var(--red); }
+.chars-val  { color:#475569; }
+
+/* ── LaTeX rendered block ────────────────────────────────────── */
+.latex-rendered {
+  font-family:var(--sans); font-size:13px; line-height:1.7;
+  color:#94a3b8; overflow-x:auto; min-height:1.5em;
+}
+.latex-rendered .katex-display { margin:6px 0; overflow-x:auto; }
+.latex-rendered em { font-style:italic; color:#cbd5e1; }
+.latex-rendered strong { font-weight:600; color:#cbd5e1; }
+.latex-rendered.empty { color:#1e3a5f; font-style:italic; }
+
+/* ── Lean code block ─────────────────────────────────────────── */
+.code-block {
+  font-family:var(--mono); font-size:11px; line-height:1.6;
+  background:var(--code-bg); color:#abb2bf;
+  border:1px solid #1a2744; border-radius:5px;
+  padding:10px 12px; white-space:pre; overflow:auto;
+  max-height:220px;
+}
+.code-block::-webkit-scrollbar { width:4px; height:4px; }
+.code-block::-webkit-scrollbar-thumb { background:#1e3a5f; border-radius:2px; }
+.code-block.empty { color:#1e3a5f; font-style:italic; white-space:normal; }
+
+/* ── Lean syntax colours (One Dark palette) ──────────────────── */
+.hl-kw      { color:#c678dd; }
+.hl-tactic  { color:#61afef; }
+.hl-type    { color:#e5c07b; }
+.hl-comment { color:#5c6370; font-style:italic; }
+.hl-str     { color:#98c379; }
+.hl-num     { color:#d19a66; }
+</style>
+</head>
+<body>
+<div id="toolbar">
+  <span class="brand">Blueprint DAG</span>
+  <span class="stat" id="stat">40 nodes &middot; 75 edges</span>
+  <span class="legend"><span class="leg-dot" style="background:#22c55e"></span><span class="leg-txt">done</span><span class="leg-dot" style="background:#3b82f6"></span><span class="leg-txt">mathlib</span><span class="leg-bar"></span><span class="leg-txt">more effort</span><span class="leg-dot" style="background:#ef4444"></span><span class="leg-txt">∞ no proof</span></span>
+  <span class="legend sym-legend">
+    <span class="leg-txt">✓ Lean proof</span>
+    <span class="leg-txt">⚠ sorry</span>
+    <span class="leg-txt">ⓜ mathlib</span>
+    <span class="leg-txt">λ Lean decl</span>
+    <span class="leg-txt">★ LaTeX proof</span>
+    <span class="leg-txt">§ statement</span>
+  </span>
+  <span class="hint">click = highlight cone &middot; double-click = focus &middot; ctrl+scroll = zoom</span>
+</div>
+<div id="controls">
+  <input id="search" type="text" list="node-ids" placeholder="Search node id…" autocomplete="off" spellcheck="false">
+  <datalist id="node-ids"></datalist>
+  <select id="nodeset" title="Which declarations to include">
+    <option value="union">All declarations</option>
+    <option value="blueprint">Blueprint only</option>
+    <option value="lean">Lean only</option>
+  </select>
+  <select id="component"><option value="">All components</option></select>
+  <select id="chapter"><option value="">All chapters</option></select>
+  <select id="fileview" title="Tint the background by source file">
+    <option value="off">File view: off</option>
+    <option value="lean">File view: Lean files</option>
+    <option value="tex">File view: LaTeX files</option>
+  </select>
+  <label class="chk"><input type="checkbox" id="orphans"> show isolated <span id="iso-count"></span></label>
+  <span id="focus-pill" class="pill" style="display:none" title="Clear focus">
+    <span class="lbl"></span><span class="x">&times;</span>
+  </span>
+  <button id="reset" class="btn">Reset view</button>
+</div>
+<div id="main">
+  <div id="graph"></div>
+  <div id="stats-panel"></div>
+  <div id="file-legend" style="display:none"></div>
+  <aside id="sidebar">
+    <div id="sidebar-empty">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none"
+           stroke="#334155" stroke-width="1.2" stroke-linecap="round">
+        <path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/>
+        <line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="13" y2="13"/>
+      </svg>
+      <p>Click a node to inspect it</p>
+    </div>
+    <div id="sidebar-content" style="display:none"></div>
+  </aside>
+</div>
+
+<script>
+const graphData = {"nodes": [{"id": "def:ProjectiveModel", "label": "ProjectiveModel\n§", "shape": "dot", "size": 11, "color": {"background": "#de9f39", "border": "#9b6e26", "highlight": {"background": "#de9f39", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "def:Polarization", "label": "Polarization\n§", "shape": "dot", "size": 11, "color": {"background": "#dea939", "border": "#9b7526", "highlight": {"background": "#dea939", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "def:IntegralModel", "label": "IntegralModel\n§", "shape": "dot", "size": 11, "color": {"background": "#de9939", "border": "#9b6926", "highlight": {"background": "#de9939", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "def:NaiveHeight", "label": "NaiveHeight\n§", "shape": "dot", "size": 11, "color": {"background": "#de9439", "border": "#9b6626", "highlight": {"background": "#de9439", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "def:CanonicalHeight", "label": "CanonicalHeight\n★", "shape": "dot", "size": 11, "color": {"background": "#de9239", "border": "#9b6526", "highlight": {"background": "#de9239", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "def:SmallPoints", "label": "SmallPoints\n§", "shape": "dot", "size": 11, "color": {"background": "#de9c39", "border": "#9b6c26", "highlight": {"background": "#de9c39", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "def:KkTrace", "label": "KkTrace\n§", "shape": "dot", "size": 11, "color": {"background": "#de9739", "border": "#9b6826", "highlight": {"background": "#de9739", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "def:TorsionSubvariety", "label": "TorsionSubvariety\n§", "shape": "dot", "size": 11, "color": {"background": "#dea939", "border": "#9b7526", "highlight": {"background": "#dea939", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "def:SpecialSubvariety", "label": "SpecialSubvariety\n§", "shape": "dot", "size": 11, "color": {"background": "#dea539", "border": "#9b7226", "highlight": {"background": "#dea539", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "thm:main", "label": "main\n★", "shape": "dot", "size": 11, "color": {"background": "#de9c39", "border": "#9b6c26", "highlight": {"background": "#de9c39", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "def:ChowGroup", "label": "ChowGroup\n§", "shape": "dot", "size": 11, "color": {"background": "#de9f39", "border": "#9b6e26", "highlight": {"background": "#de9f39", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "def:ExcessLocus", "label": "ExcessLocus\n§", "shape": "dot", "size": 11, "color": {"background": "#de9a39", "border": "#9b6b26", "highlight": {"background": "#de9a39", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "def:ProperComponent", "label": "ProperComponent\n§", "shape": "dot", "size": 11, "color": {"background": "#de9739", "border": "#9b6926", "highlight": {"background": "#de9739", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "def:ProperPartIntersection", "label": "ProperPartIntersection\n§", "shape": "dot", "size": 11, "color": {"background": "#dea239", "border": "#9b7026", "highlight": {"background": "#dea239", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "pro:strLeqTot", "label": "strLeqTot\n★", "shape": "dot", "size": 11, "color": {"background": "#de8a39", "border": "#9b5f26", "highlight": {"background": "#de8a39", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "pro:bertini", "label": "bertini\n★", "shape": "dot", "size": 11, "color": {"background": "#de8d39", "border": "#9b6126", "highlight": {"background": "#de8d39", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "lem:cutAmpleEff", "label": "cutAmpleEff\n★", "shape": "dot", "size": 11, "color": {"background": "#dea639", "border": "#9b7326", "highlight": {"background": "#dea639", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "pro:propIntBoundHyp", "label": "propIntBoundHyp\n★", "shape": "dot", "size": 11, "color": {"background": "#de9739", "border": "#9b6926", "highlight": {"background": "#de9739", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "lem:pullbackProper", "label": "pullbackProper\n★", "shape": "dot", "size": 11, "color": {"background": "#de9939", "border": "#9b6a26", "highlight": {"background": "#de9939", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "lem:isoBaseChange", "label": "isoBaseChange\n★", "shape": "dot", "size": 11, "color": {"background": "#dea339", "border": "#9b7126", "highlight": {"background": "#dea339", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "pro:baseChangeDiagram", "label": "baseChangeDiagram\n★", "shape": "dot", "size": 11, "color": {"background": "#de9439", "border": "#9b6626", "highlight": {"background": "#de9439", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "lem:subvarDef", "label": "subvarDef\n★", "shape": "dot", "size": 11, "color": {"background": "#de9b39", "border": "#9b6b26", "highlight": {"background": "#de9b39", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "cor:defField", "label": "defField\n★", "shape": "dot", "size": 11, "color": {"background": "#de9d39", "border": "#9b6c26", "highlight": {"background": "#de9d39", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "pro:lemNonSpecial", "label": "lemNonSpecial\n★", "shape": "dot", "size": 11, "color": {"background": "#de9139", "border": "#9b6426", "highlight": {"background": "#de9139", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "lem:genericHyperplane", "label": "genericHyperplane\n★", "shape": "dot", "size": 11, "color": {"background": "#de8939", "border": "#9b5e26", "highlight": {"background": "#de8939", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "pro:changeField", "label": "changeField\n★", "shape": "dot", "size": 11, "color": {"background": "#de9339", "border": "#9b6526", "highlight": {"background": "#de9339", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "def:MultiSection", "label": "MultiSection\n§", "shape": "dot", "size": 11, "color": {"background": "#dea839", "border": "#9b7426", "highlight": {"background": "#dea839", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "def:TorsionMultiSection", "label": "TorsionMultiSection\n§", "shape": "dot", "size": 11, "color": {"background": "#de9d39", "border": "#9b6c26", "highlight": {"background": "#de9d39", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "def:RigidifiedLineBundle", "label": "RigidifiedLineBundle\n§", "shape": "dot", "size": 11, "color": {"background": "#dea139", "border": "#9b6f26", "highlight": {"background": "#dea139", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "lem:lineBundleProps", "label": "lineBundleProps\n★", "shape": "dot", "size": 11, "color": {"background": "#de9139", "border": "#9b6426", "highlight": {"background": "#de9139", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "pro:numericalEquivalent", "label": "numericalEquivalent\n★", "shape": "dot", "size": 11, "color": {"background": "#de8839", "border": "#9b5e26", "highlight": {"background": "#de8839", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "lem:canonicalHeightGoodReduction", "label": "canonicalHeightGoodReduction\n★", "shape": "dot", "size": 11, "color": {"background": "#dea339", "border": "#9b7126", "highlight": {"background": "#dea339", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "thm:maninMumford", "label": "maninMumford\n★", "shape": "dot", "size": 11, "color": {"background": "#dea939", "border": "#9b7526", "highlight": {"background": "#dea939", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "lem:fundamentalInequality", "label": "fundamentalInequality\n★", "shape": "dot", "size": 11, "color": {"background": "#dea639", "border": "#9b7326", "highlight": {"background": "#dea639", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "thm:yamakiReduction", "label": "yamakiReduction\n★", "shape": "dot", "size": 11, "color": {"background": "#deb839", "border": "#9b7f26", "highlight": {"background": "#deb839", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "lem:northcott", "label": "northcott\n★", "shape": "dot", "size": 11, "color": {"background": "#dea539", "border": "#9b7226", "highlight": {"background": "#dea539", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "def:AdditionMap", "label": "AdditionMap\n§", "shape": "dot", "size": 11, "color": {"background": "#de9d39", "border": "#9b6d26", "highlight": {"background": "#de9d39", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "lem:addition", "label": "addition\n★", "shape": "dot", "size": 11, "color": {"background": "#de8b39", "border": "#9b6026", "highlight": {"background": "#de8b39", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "pro:torsionFiber", "label": "torsionFiber\n★", "shape": "dot", "size": 11, "color": {"background": "#de7d39", "border": "#9b5626", "highlight": {"background": "#de7d39", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}, {"id": "thm:mainEssentialCase", "label": "mainEssentialCase\n★", "shape": "dot", "size": 11, "color": {"background": "#de7b39", "border": "#9b5526", "highlight": {"background": "#de7b39", "border": "#0f172a"}}, "borderWidth": 2, "font": {"size": 11, "multi": false, "face": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "color": "#334155"}, "shapeProperties": {}}], "edges": [{"from": "def:ProjectiveModel", "to": "def:Polarization", "arrows": "to"}, {"from": "def:Polarization", "to": "def:IntegralModel", "arrows": "to"}, {"from": "def:Polarization", "to": "def:NaiveHeight", "arrows": "to"}, {"from": "def:IntegralModel", "to": "def:NaiveHeight", "arrows": "to"}, {"from": "def:NaiveHeight", "to": "def:CanonicalHeight", "arrows": "to"}, {"from": "def:CanonicalHeight", "to": "def:SmallPoints", "arrows": "to"}, {"from": "def:KkTrace", "to": "def:SpecialSubvariety", "arrows": "to"}, {"from": "def:TorsionSubvariety", "to": "def:SpecialSubvariety", "arrows": "to"}, {"from": "def:SmallPoints", "to": "thm:main", "arrows": "to"}, {"from": "def:SpecialSubvariety", "to": "thm:main", "arrows": "to"}, {"from": "thm:mainEssentialCase", "to": "thm:main", "arrows": "to"}, {"from": "pro:changeField", "to": "thm:main", "arrows": "to"}, {"from": "thm:yamakiReduction", "to": "thm:main", "arrows": "to"}, {"from": "def:ChowGroup", "to": "def:ProperComponent", "arrows": "to"}, {"from": "def:ProperComponent", "to": "def:ProperPartIntersection", "arrows": "to"}, {"from": "def:ChowGroup", "to": "def:ProperPartIntersection", "arrows": "to"}, {"from": "def:ChowGroup", "to": "pro:strLeqTot", "arrows": "to"}, {"from": "def:ExcessLocus", "to": "pro:strLeqTot", "arrows": "to"}, {"from": "pro:bertini", "to": "pro:strLeqTot", "arrows": "to"}, {"from": "pro:propIntBoundHyp", "to": "pro:strLeqTot", "arrows": "to"}, {"from": "lem:pullbackProper", "to": "pro:strLeqTot", "arrows": "to"}, {"from": "def:ChowGroup", "to": "lem:cutAmpleEff", "arrows": "to"}, {"from": "def:ProperPartIntersection", "to": "pro:propIntBoundHyp", "arrows": "to"}, {"from": "def:ChowGroup", "to": "pro:propIntBoundHyp", "arrows": "to"}, {"from": "lem:cutAmpleEff", "to": "pro:propIntBoundHyp", "arrows": "to"}, {"from": "def:ExcessLocus", "to": "lem:pullbackProper", "arrows": "to"}, {"from": "lem:isoBaseChange", "to": "pro:baseChangeDiagram", "arrows": "to"}, {"from": "pro:baseChangeDiagram", "to": "cor:defField", "arrows": "to"}, {"from": "lem:subvarDef", "to": "cor:defField", "arrows": "to"}, {"from": "def:SpecialSubvariety", "to": "pro:lemNonSpecial", "arrows": "to"}, {"from": "cor:defField", "to": "pro:lemNonSpecial", "arrows": "to"}, {"from": "def:Polarization", "to": "lem:genericHyperplane", "arrows": "to"}, {"from": "def:CanonicalHeight", "to": "lem:genericHyperplane", "arrows": "to"}, {"from": "pro:lemNonSpecial", "to": "pro:changeField", "arrows": "to"}, {"from": "lem:genericHyperplane", "to": "pro:changeField", "arrows": "to"}, {"from": "def:SpecialSubvariety", "to": "pro:changeField", "arrows": "to"}, {"from": "def:MultiSection", "to": "def:TorsionMultiSection", "arrows": "to"}, {"from": "def:MultiSection", "to": "lem:lineBundleProps", "arrows": "to"}, {"from": "def:TorsionMultiSection", "to": "lem:lineBundleProps", "arrows": "to"}, {"from": "def:RigidifiedLineBundle", "to": "lem:lineBundleProps", "arrows": "to"}, {"from": "lem:lineBundleProps", "to": "pro:numericalEquivalent", "arrows": "to"}, {"from": "def:MultiSection", "to": "pro:numericalEquivalent", "arrows": "to"}, {"from": "def:TorsionMultiSection", "to": "pro:numericalEquivalent", "arrows": "to"}, {"from": "def:RigidifiedLineBundle", "to": "pro:numericalEquivalent", "arrows": "to"}, {"from": "def:ChowGroup", "to": "pro:numericalEquivalent", "arrows": "to"}, {"from": "def:NaiveHeight", "to": "lem:canonicalHeightGoodReduction", "arrows": "to"}, {"from": "def:CanonicalHeight", "to": "lem:canonicalHeightGoodReduction", "arrows": "to"}, {"from": "lem:lineBundleProps", "to": "lem:canonicalHeightGoodReduction", "arrows": "to"}, {"from": "def:RigidifiedLineBundle", "to": "lem:canonicalHeightGoodReduction", "arrows": "to"}, {"from": "def:TorsionSubvariety", "to": "thm:maninMumford", "arrows": "to"}, {"from": "def:KkTrace", "to": "thm:maninMumford", "arrows": "to"}, {"from": "def:SmallPoints", "to": "lem:fundamentalInequality", "arrows": "to"}, {"from": "def:CanonicalHeight", "to": "lem:fundamentalInequality", "arrows": "to"}, {"from": "def:KkTrace", "to": "thm:yamakiReduction", "arrows": "to"}, {"from": "thm:main", "to": "thm:yamakiReduction", "arrows": "to"}, {"from": "def:CanonicalHeight", "to": "lem:northcott", "arrows": "to"}, {"from": "def:KkTrace", "to": "lem:northcott", "arrows": "to"}, {"from": "def:AdditionMap", "to": "lem:addition", "arrows": "to"}, {"from": "def:CanonicalHeight", "to": "lem:addition", "arrows": "to"}, {"from": "def:KkTrace", "to": "lem:addition", "arrows": "to"}, {"from": "lem:northcott", "to": "lem:addition", "arrows": "to"}, {"from": "def:TorsionSubvariety", "to": "lem:addition", "arrows": "to"}, {"from": "def:AdditionMap", "to": "pro:torsionFiber", "arrows": "to"}, {"from": "pro:strLeqTot", "to": "pro:torsionFiber", "arrows": "to"}, {"from": "pro:numericalEquivalent", "to": "pro:torsionFiber", "arrows": "to"}, {"from": "lem:lineBundleProps", "to": "pro:torsionFiber", "arrows": "to"}, {"from": "lem:fundamentalInequality", "to": "pro:torsionFiber", "arrows": "to"}, {"from": "lem:canonicalHeightGoodReduction", "to": "pro:torsionFiber", "arrows": "to"}, {"from": "def:ExcessLocus", "to": "pro:torsionFiber", "arrows": "to"}, {"from": "lem:addition", "to": "thm:mainEssentialCase", "arrows": "to"}, {"from": "pro:torsionFiber", "to": "thm:mainEssentialCase", "arrows": "to"}, {"from": "thm:maninMumford", "to": "thm:mainEssentialCase", "arrows": "to"}, {"from": "lem:northcott", "to": "thm:mainEssentialCase", "arrows": "to"}, {"from": "lem:fundamentalInequality", "to": "thm:mainEssentialCase", "arrows": "to"}, {"from": "def:TorsionSubvariety", "to": "thm:mainEssentialCase", "arrows": "to"}]};
+const allNodes  = {"def:ProjectiveModel": {"id": "def:ProjectiveModel", "type": "definition", "title": "Projective model", "chapter": "Overview", "statement": "\\textit{Source: Xie--Yuan, arXiv:2108.09722, \\S1.1.1.}\n  Let \\(k\\) be an algebraically closed field and \\(K/k\\) a finitely generated field extension\n  of transcendence degree \\(\\trdeg(K/k) \\geq 1\\).\n  A \\emph{projective model of \\(K/k\\)} is a normal projective variety \\(S\\) over \\(k\\)\n  with function field \\(K\\).  In particular \\(\\dim S = \\trdeg(K/k)\\).", "uses": [], "lean_name": "MR4448992.TODO.ProjectiveModel", "proved": false, "mathlib_ok": false, "proof_tex": "", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 0, "rdep_count": 1, "descendant_count": 15, "proof_size_tex": null, "effort_local": 355, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 355}, "def:Polarization": {"id": "def:Polarization", "type": "definition", "title": "Polarization", "chapter": "Overview", "statement": "\\textit{Source: Xie--Yuan, arXiv:2108.09722, \\S1.1.1.}\n  A \\emph{polarization of \\(K/k\\)} is a pair \\((S, \\cM)\\) consisting of a projective model\n  \\(S\\) of \\(K/k\\) and an ample line bundle \\(\\cM\\) over \\(S\\).", "uses": ["def:ProjectiveModel"], "lean_name": "MR4448992.TODO.Polarization", "proved": false, "mathlib_ok": false, "proof_tex": "", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 1, "rdep_count": 3, "descendant_count": 14, "proof_size_tex": null, "effort_local": 209, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 564}, "def:IntegralModel": {"id": "def:IntegralModel", "type": "definition", "title": "Integral model", "chapter": "Overview", "statement": "\\textit{Source: Xie--Yuan, arXiv:2108.09722, \\S1.1.1.}\n  Let \\(A\\) be an abelian variety over \\(K\\) and \\(L\\) a symmetric ample line bundle on \\(A\\).\n  An \\emph{integral model of \\((A,L)\\) over \\(S\\)} is a triple \\((\\cA, \\pi, \\cL)\\) where\n  \\(\\cA\\) is a projective variety over \\(k\\),\n  \\(\\pi\\colon \\cA \\to S\\) is a projective morphism with generic fiber \\(A\\),\n  and \\(\\cL\\) is a line bundle on \\(\\cA\\) extending \\(L\\).\n  We usually abbreviate \\((\\cA,\\pi,\\cL)\\) as \\((\\cA,\\cL)\\).", "uses": ["def:Polarization"], "lean_name": "MR4448992.TODO.IntegralModel", "proved": false, "mathlib_ok": false, "proof_tex": "", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 1, "rdep_count": 1, "descendant_count": 13, "proof_size_tex": null, "effort_local": 480, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 1044}, "def:NaiveHeight": {"id": "def:NaiveHeight", "type": "definition", "title": "Naive height", "chapter": "Overview", "statement": "\\textit{Source: Xie--Yuan, arXiv:2108.09722, \\S1.1.1.}\n  Let \\(X\\) be a closed subvariety of \\(A\\) over \\(K\\), and let \\(\\cX\\) denote its\n  Zariski closure in \\(\\cA\\).\n  The \\emph{naive height} of \\(X\\) with respect to the polarization \\((S,\\cM)\\) and\n  the integral model \\((\\cA,\\cL)\\) is\n  \\[\n    h_{(\\cA,\\cL)}^{\\cM}(X)\n    := \\frac{\\cL^{\\dim X+1} \\cdot (\\pi^*\\cM)^{\\dim S-1} \\cdot \\cX}\n           {(1+\\dim X)\\,\\deg_L(X)},\n  \\]\n  where the numerator is the intersection number in \\(\\cA\\) and\n  \\(\\deg_L(X) = L^{\\dim X} \\cdot X\\) is the intersection number in \\(A\\).", "uses": ["def:Polarization", "def:IntegralModel"], "lean_name": "MR4448992.TODO.NaiveHeight", "proved": false, "mathlib_ok": false, "proof_tex": "", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 2, "rdep_count": 2, "descendant_count": 12, "proof_size_tex": null, "effort_local": 567, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 1611}, "def:CanonicalHeight": {"id": "def:CanonicalHeight", "type": "definition", "title": "Canonical height", "chapter": "Overview", "statement": "\\textit{Source: Xie--Yuan, arXiv:2108.09722, \\S1.1.1.}\n  The \\emph{canonical height} of a closed subvariety \\(X \\subset A_{\\OK}\\) with respect to\n  the polarization \\((S,\\cM)\\) and symmetric ample line bundle \\(L\\) is\n  \\[\n    \\hath_L^{\\cM}(X)\n    := \\lim_{n \\to +\\infty} \\frac{1}{n^2}\\,h_{(\\cA,\\cL)}([n]X),\n  \\]\n  where \\([n]X\\) is the image of \\(X\\) under the multiplication-by-\\(n\\) map \\([n]\\colon A\\to A\\).\n  The limit exists, depends on \\((S,\\cM)\\) and \\(L\\), and is independent of the choice of\n  integral model \\((\\cA,\\cL)\\).  Moreover \\(\\hath_L^{\\cM}(X) \\geq 0\\).\n  When there is no ambiguity we write \\(\\hath(X)\\).", "uses": ["def:NaiveHeight"], "lean_name": "MR4448992.TODO.CanonicalHeight", "proved": false, "mathlib_ok": false, "proof_tex": "\n  The key identity \\(h_{(\\cA,\\cL)}([n]X) = n^2\\,h_{(\\cA,[n]^*\\cL)}(X)\\) together with the\n  fact that \\([n]^*\\cL\\) and \\(n^2\\cL\\) agree on the generic fiber shows the sequence\n  \\(\\frac{1}{n^2}h_{(\\cA,\\cL)}([n]X)\\) is eventually Cauchy.  Independence of the integral\n  model is proved by comparing two models via their restrictions to the generic fiber;\n  non-negativity follows by choosing an ample model.\n  See Gubler (2007), Theorem 3.6.\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 1, "rdep_count": 6, "descendant_count": 11, "proof_size_tex": 438, "effort_local": 624, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 2235}, "def:SmallPoints": {"id": "def:SmallPoints", "type": "definition", "title": "Small points", "chapter": "Overview", "statement": "\\textit{Source: Xie--Yuan, arXiv:2108.09722, \\S1.1.1.}\n  For any subvariety \\(X \\subset A_{\\OK}\\) and any \\(\\epsilon > 0\\), set\n  \\(X(\\epsilon) := \\{ x \\in X(\\OK) \\mid \\hath(x) < \\epsilon \\}\\).\n  We say \\(X\\) \\emph{contains a dense set of small points of \\(A/K/k\\)} if \\(X(\\epsilon)\\)\n  is Zariski dense in \\(X\\) for all \\(\\epsilon > 0\\).\n  This notion is independent of the choice of \\(L\\) and \\((S,\\cM)\\).", "uses": ["def:CanonicalHeight"], "lean_name": "MR4448992.TODO.SmallPoints", "proved": false, "mathlib_ok": false, "proof_tex": "", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 1, "rdep_count": 2, "descendant_count": 5, "proof_size_tex": null, "effort_local": 407, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 2642}, "def:KkTrace": {"id": "def:KkTrace", "type": "definition", "title": "\\(\\OK/k\\)-trace", "chapter": "Overview", "statement": "\\textit{Source: Xie--Yuan, arXiv:2108.09722, \\S1.1.1.}\n  Let \\(A\\) be an abelian variety over \\(K\\).\n  The \\emph{\\(\\OK/k\\)-trace} of \\(A_{\\OK}\\) is the pair \\((A^{\\OK/k}, \\ATrace)\\) that is\n  the final object of the category of pairs \\((C,f)\\) where \\(C\\) is an abelian variety\n  over \\(k\\) and \\(f\\colon C \\otimes_k \\OK \\to A_{\\OK}\\) is a morphism.\n  When \\(\\operatorname{char}(k)=0\\), the map \\(\\ATrace\\) is a closed immersion;\n  when \\(\\operatorname{char}(k)>0\\), it is a purely inseparable isogeny to its image.", "uses": [], "lean_name": "MR4448992.TODO.KkTrace", "proved": false, "mathlib_ok": false, "proof_tex": "", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 0, "rdep_count": 5, "descendant_count": 9, "proof_size_tex": null, "effort_local": 515, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 515}, "def:TorsionSubvariety": {"id": "def:TorsionSubvariety", "type": "definition", "title": "Torsion subvariety", "chapter": "Overview", "statement": "\\textit{Source: Xie--Yuan, arXiv:2108.09722, \\S1.1.1.}\n  A \\emph{torsion subvariety} of \\(A_{\\OK}\\) is a translate \\(a+C\\) of an abelian subvariety\n  \\(C \\subset A_{\\OK}\\) by a torsion point \\(a \\in A_{\\OK}\\).", "uses": [], "lean_name": "MR4448992.TODO.TorsionSubvariety", "proved": false, "mathlib_ok": false, "proof_tex": "", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 0, "rdep_count": 4, "descendant_count": 8, "proof_size_tex": null, "effort_local": 209, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 209}, "def:SpecialSubvariety": {"id": "def:SpecialSubvariety", "type": "definition", "title": "Special subvariety", "chapter": "Overview", "statement": "\\textit{Source: Xie--Yuan, arXiv:2108.09722, \\S1.1.1.}\n  A closed subvariety \\(X\\) of \\(A_{\\OK}\\) is \\emph{special} if\n  \\[\n    X = \\ATrace(Y \\otimes_k \\OK) + T\n  \\]\n  for some torsion subvariety \\(T\\) of \\(A_{\\OK}\\) and some subvariety \\(Y\\) of\n  \\(A^{\\OK/k}\\).", "uses": ["def:KkTrace", "def:TorsionSubvariety"], "lean_name": "MR4448992.TODO.SpecialSubvariety", "proved": false, "mathlib_ok": false, "proof_tex": "", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 2, "rdep_count": 3, "descendant_count": 4, "proof_size_tex": null, "effort_local": 262, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 986}, "thm:main": {"id": "thm:main", "type": "theorem", "title": "Geometric Bogomolov conjecture", "chapter": "Overview", "statement": "\\textit{Source: Xie--Yuan, arXiv:2108.09722, Theorem 1.1.}\n  Let \\(k\\) be an algebraically closed field, \\(K/k\\) a finitely generated extension of\n  transcendence degree at least \\(1\\), \\(A\\) an abelian variety over \\(K\\), and \\(X\\) a\n  closed subvariety of \\(A_{\\OK}\\).  If \\(X\\) contains a dense set of small points of\n  \\(A/K/k\\), then \\(X\\) is special.", "uses": ["def:SmallPoints", "def:SpecialSubvariety", "thm:mainEssentialCase", "pro:changeField", "thm:yamakiReduction"], "lean_name": "MR4448992.TODO.main", "proved": false, "mathlib_ok": false, "proof_tex": "\n  \\uses{pro:changeField, thm:yamakiReduction, thm:mainEssentialCase}\n  By \\cref{pro:changeField}, one reduces to the case \\(\\trdeg(K/k)=1\\).\n  Then \\cref{thm:yamakiReduction} (Yamaki's reduction theorem) reduces to the essential case\n  that \\(A\\) has good reduction everywhere over the unique smooth projective model \\(S\\) of\n  \\(K/k\\) and trivial \\(\\OK/k\\)-trace.\n  The essential case is \\cref{thm:mainEssentialCase}.\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 5, "rdep_count": 1, "descendant_count": 2, "proof_size_tex": 416, "effort_local": 416, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 19378}, "def:ChowGroup": {"id": "def:ChowGroup", "type": "definition", "title": "Chow group with rational coefficients", "chapter": "Overview", "statement": "\\textit{Source: Xie--Yuan, arXiv:2108.09722, \\S2.}\n  For every \\(i\\)-cycle \\(Z\\) with \\(\\mathbb{Q}\\)-coefficients on a smooth projective variety\n  \\(B\\), denote by \\([Z]\\) its class in the Chow group \\(\\CH_i(B)_{\\mathbb{Q}}\\).\n  Write \\(\\alpha \\geq 0\\) for \\(\\alpha \\in \\CH_i(B)_{\\mathbb{Q}}\\) if \\(\\alpha\\) can be\n  represented by an effective \\(i\\)-cycle.", "uses": [], "lean_name": "MR4448992.TODO.ChowGroup", "proved": false, "mathlib_ok": false, "proof_tex": "", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 0, "rdep_count": 6, "descendant_count": 10, "proof_size_tex": null, "effort_local": 357, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 357}, "def:ExcessLocus": {"id": "def:ExcessLocus", "type": "definition", "title": "Excess locus", "chapter": "Overview", "statement": "\\textit{Source: Xie--Yuan, arXiv:2108.09722, \\S2.3.}\n  Let \\(f \\colon X \\to Y\\) be a surjective morphism of projective varieties with\n  \\(e := \\dim X - \\dim Y\\).\n  For every integer \\(l \\geq e\\), the \\emph{excess locus at level \\(l\\)} is the closed subset\n  \\[\n    Y_l := \\{ y \\in Y \\mid \\dim f^{-1}(y) \\geq l \\}.\n  \\]\n  We have \\(Y_{l+1} \\subseteq Y_l\\), \\(Y_e = Y\\), and for \\(l \\geq e+1\\) the bound\n  \\(\\dim Y_l + l \\leq \\dim X - 1\\) holds.", "uses": [], "lean_name": "MR4448992.TODO.ExcessLocus", "proved": false, "mathlib_ok": false, "proof_tex": "", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 0, "rdep_count": 3, "descendant_count": 6, "proof_size_tex": null, "effort_local": 443, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 443}, "def:ProperComponent": {"id": "def:ProperComponent", "type": "definition", "title": "Proper component of an intersection", "chapter": "Overview", "statement": "\\textit{Source: Xie--Yuan, arXiv:2108.09722, \\S2.2.}\n  Let \\(B\\) be a smooth projective variety, \\(H_1,\\dots,H_m\\) Cartier divisors, and \\(X \\subset B\\)\n  a subvariety.\n  A \\emph{proper component} of \\(H_1 \\cap \\cdots \\cap H_m \\cap X\\) is an irreducible component\n  of the underlying topological space \\(H_1 \\cap \\cdots \\cap H_m \\cap X\\) of dimension\n  \\(\\dim X - m\\).\n  Write \\(m(Z, H_1 \\cap \\cdots \\cap H_m \\cap X)\\) for the multiplicity of such a component\n  \\(Z\\), defined via the Serre tor-formula.", "uses": ["def:ChowGroup"], "lean_name": "MR4448992.TODO.ProperComponent", "proved": false, "mathlib_ok": false, "proof_tex": "", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 1, "rdep_count": 1, "descendant_count": 7, "proof_size_tex": null, "effort_local": 503, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 860}, "def:ProperPartIntersection": {"id": "def:ProperPartIntersection", "type": "definition", "title": "Proper part of an intersection", "chapter": "Overview", "statement": "\\textit{Source: Xie--Yuan, arXiv:2108.09722, \\S2.2.}\n  With the notation of \\cref{def:ProperComponent}, define\n  \\[\n    (H_1 \\cdots H_m \\cdot X)^{\\prop}\n    := \\sum_Z m(Z,\\, H_1 \\cap \\cdots \\cap H_m \\cap X)\\,[Z],\n  \\]\n  where the sum runs over all proper components \\(Z\\) of \\(H_1 \\cap \\cdots \\cap H_m \\cap X\\).", "uses": ["def:ProperComponent", "def:ChowGroup"], "lean_name": "MR4448992.TODO.ProperPartIntersection", "proved": false, "mathlib_ok": false, "proof_tex": "", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 2, "rdep_count": 1, "descendant_count": 6, "proof_size_tex": null, "effort_local": 311, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 1171}, "pro:strLeqTot": {"id": "pro:strLeqTot", "type": "proposition", "title": "Main comparison inequality", "chapter": "Overview", "statement": "\\textit{Source: Xie--Yuan, arXiv:2108.09722, Proposition 2.1.}\n  Let \\(g\\colon B \\to Y\\) be a flat morphism between smooth projective varieties, and let\n  \\(X \\subset B\\) be a closed subvariety such that \\(f = g|_X\\colon X \\to Y\\) is surjective.\n  Set \\(e = \\dim X - \\dim Y\\).\n  Let \\(V \\subset Y\\) be a closed subvariety not contained in\n  \\(Y_{e+1} = \\{y \\in Y \\mid \\dim f^{-1}(y) \\geq e+1\\}\\), and assume \\(V \\cap Y_{e+1}\\) is\n  finite and contained in \\(V^{\\rm sm}\\).\n  Let \\(Z_1,\\dots,Z_n\\) be the irreducible components of \\(f^{-1}(V)\\) satisfying\n  \\(f(Z_i)=V\\); then \\(\\dim Z_i = \\dim V + e\\).\n  Then\n  \\[\n    \\sum_{i=1}^n m_i [Z_i] \\leq g^*[V] \\cdot [X]\n    \\quad\\text{in}\\quad \\CH_{\\dim V+e}(B)_{\\mathbb{Q}},\n  \\]\n  where \\(m_i\\) is the multiplicity of \\(Z_i\\) in \\(f^{-1}(V)\\).", "uses": ["def:ChowGroup", "def:ExcessLocus", "pro:bertini", "pro:propIntBoundHyp", "lem:pullbackProper"], "lean_name": "MR4448992.TODO.strLeqTot", "proved": false, "mathlib_ok": false, "proof_tex": "\n  \\uses{pro:bertini, lem:pullbackProper, pro:propIntBoundHyp, def:ChowGroup}\n  Set \\(r = \\dim Y - \\dim V\\).\n  By \\cref{pro:bertini}, choose very ample divisors \\(H_1,\\dots,H_r\\) on \\(Y\\) with\n  \\(H_1 \\cdots H_r = V + W\\), \\(V \\not\\subseteq \\operatorname{Supp}W\\), and each\n  \\(W \\cap Y_l\\) a proper intersection for \\(l \\geq e+1\\).\n  By \\cref{lem:pullbackProper}, \\(\\dim f^{-1}(W) = \\dim V + e\\), so \\(f^{-1}(W)\\) is a\n  proper intersection.\n  One identifies \\([f^{-1}(W)] = g^*[W] \\cdot [X]\\) over \\(B \\setminus g^{-1}(V)\\) by\n  comparing local rings.\n  The closure \\(\\overline{f^{-1}(V) \\cap f^{-1}(Y \\setminus Y_{e+1})}\\) contributes\n  \\(\\sum m_i[Z_i] + g^*[W] \\cdot [X]\\).\n  Applying \\cref{pro:propIntBoundHyp} (proper part \\(\\leq\\) total intersection for globally\n  generated pullbacks) gives the result.\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 5, "rdep_count": 1, "descendant_count": 4, "proof_size_tex": 807, "effort_local": 807, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 4382}, "pro:bertini": {"id": "pro:bertini", "type": "proposition", "title": "Bertini-type hyperplane sections through \\(V\\)", "chapter": "Overview", "statement": "\\textit{Source: Xie--Yuan, arXiv:2108.09722, Proposition 2.2.}\n  Let \\(Y\\) be a projective variety over an algebraically closed field \\(k\\).\n  Let \\(V \\subset Y\\) be a closed subvariety of codimension \\(r \\geq 1\\) such that \\(Y\\) is\n  smooth at \\(\\eta_V\\).\n  Let \\(Z_1,\\dots,Z_m\\) be irreducible subvarieties of \\(Y\\) with\n  \\((\\bigcup_i Z_i) \\cap V\\) finite and contained in \\(Y^{\\rm sm} \\cap V^{\\rm sm}\\).\n  Let \\(H\\) be a Cartier divisor such that \\(\\mathcal{O}_Y(H) \\otimes I_V\\) is generated by\n  global sections.\n  Then for general \\((s_1,\\dots,s_r) \\in H^0(\\mathcal{O}_Y(H) \\otimes I_V)^r\\), the divisors\n  \\(H_{s_i} \\in |H|\\) satisfy: (a) \\(H_{s_1} \\cap \\cdots \\cap H_{s_r}\\) is a proper\n  intersection in \\(Y\\), and (b) \\(H_{s_1} \\cdots H_{s_r} = V + W\\) with \\(W\\) effective\n  and \\(V \\not\\subseteq \\operatorname{Supp}W\\), and each \\(W \\cap Z_i\\) a proper intersection.", "uses": [], "lean_name": "MR4448992.TODO.bertini", "proved": false, "mathlib_ok": false, "proof_tex": "\n  Since \\(\\mathcal{O}_Y(H) \\otimes I_V\\) is globally generated and the \\(s_i\\) are general,\n  the intersection \\((H_{s_1} \\setminus V) \\cap \\cdots \\cap (H_{s_r} \\setminus V)\\) is proper\n  in \\(Y \\setminus V\\).  Since each \\(s_i \\in H^0(\\mathcal{O}_Y(H) \\otimes I_V)\\) vanishes\n  along \\(V\\), we have \\(V \\subseteq H_{s_i}\\), so \\(H_{s_1} \\cap \\cdots \\cap H_{s_r}\\) is\n  pure of codimension \\(r\\) and hence a proper intersection in \\(Y\\).\n  At any point \\(x \\in V^{\\rm sm} \\cap Y^{\\rm sm}\\), a local basis of sections shows\n  \\(H_{s_1} \\cap \\cdots \\cap H_{s_r}\\) agrees with \\(V\\) locally, so \\(V\\) does not appear\n  in the residual cycle \\(W\\).\n  The proper intersection condition on \\(W \\cap Z_i\\) follows from generality of \\(s_i\\)\n  away from \\(V\\).\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 0, "rdep_count": 1, "descendant_count": 5, "proof_size_tex": 750, "effort_local": 750, "proof_size_tex_total": 750, "proof_size_lean_total": null, "effort_total": 750}, "lem:cutAmpleEff": {"id": "lem:cutAmpleEff", "type": "lemma", "title": "Cutting by globally generated divisor preserves non-negativity", "chapter": "Overview", "statement": "\\textit{Source: Xie--Yuan, arXiv:2108.09722, Lemma 2.3.}\n  Let \\(B\\) be a smooth projective variety and \\(H\\) a Cartier divisor on \\(B\\) such that\n  \\(\\mathcal{O}_B(H)\\) is globally generated.\n  Then for \\(\\alpha \\in \\CH_i(B)_{\\mathbb{Q}}\\) with \\(\\alpha \\geq 0\\),\n  we have \\(\\alpha \\cdot [H] \\geq 0\\).", "uses": ["def:ChowGroup"], "lean_name": "MR4448992.TODO.cutAmpleEff", "proved": false, "mathlib_ok": false, "proof_tex": "\n  Write \\(\\alpha = [Z]\\) with \\(Z\\) an effective integral subvariety.\n  Since \\(\\mathcal{O}_B(H)\\) is globally generated, a general element of \\(|H|\\) meets \\(Z\\)\n  properly, giving an effective intersection cycle.  Thus \\(\\alpha \\cdot [H] \\geq 0\\).\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 1, "rdep_count": 1, "descendant_count": 6, "proof_size_tex": 247, "effort_local": 247, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 604}, "pro:propIntBoundHyp": {"id": "pro:propIntBoundHyp", "type": "proposition", "title": "Proper part bounded by total intersection", "chapter": "Overview", "statement": "\\textit{Source: Xie--Yuan, arXiv:2108.09722, Proposition 2.4.}\n  Let \\(H_1,\\dots,H_r\\) be effective Cartier divisors on \\(B\\) whose sheaves\n  \\(\\mathcal{O}_B(H_i)\\) are globally generated, and let \\(X \\subset B\\) be a subvariety.\n  Then\n  \\[\n    (H_1 \\cdots H_r \\cdot X)^{\\prop} \\leq H_1 \\cdots H_r \\cdot X\n    \\quad\\text{in}\\quad \\CH_{\\dim X - r}(B)_{\\mathbb{Q}}.\n  \\]", "uses": ["def:ProperPartIntersection", "def:ChowGroup", "lem:cutAmpleEff"], "lean_name": "MR4448992.TODO.propIntBoundHyp", "proved": false, "mathlib_ok": false, "proof_tex": "\n  \\uses{lem:cutAmpleEff}\n  By induction on \\(r\\), using \\cref{lem:cutAmpleEff}: the base case \\(r=1\\) is immediate.\n  For \\(r \\geq 2\\), let \\(X_1,\\dots,X_l\\) be the components of\n  \\(H_1 \\cap \\cdots \\cap H_{r-1} \\cap X\\) passing through the proper components of the full\n  intersection.  By induction \\(\\sum_j n_j X_j \\leq H_1 \\cdots H_{r-1} \\cdot X\\), and the\n  resulting cycle meets \\(H_r\\) in the proper components.\n  Applying \\cref{lem:cutAmpleEff} to this non-negative cycle completes the induction.\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 3, "rdep_count": 1, "descendant_count": 5, "proof_size_tex": 502, "effort_local": 502, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 1920}, "lem:pullbackProper": {"id": "lem:pullbackProper", "type": "lemma", "title": "Dimension of preimage under properness condition", "chapter": "Overview", "statement": "\\textit{Source: Xie--Yuan, arXiv:2108.09722, Lemma 2.5.}\n  Let \\(f\\colon X \\to Y\\) be a surjective morphism of projective varieties with\n  \\(e = \\dim X - \\dim Y\\).\n  Let \\(W \\subset Y\\) be a subvariety such that \\(W \\cap Y_l\\) is a proper intersection for\n  every \\(l \\geq e+1\\).\n  Then \\(\\dim f^{-1}(W) = \\dim W + e\\), and every irreducible component \\(Z\\) of \\(f^{-1}(W)\\)\n  with \\(\\dim Z = \\dim W + e\\) satisfies \\(f(Z) = W\\).", "uses": ["def:ExcessLocus"], "lean_name": "MR4448992.TODO.pullbackProper", "proved": false, "mathlib_ok": false, "proof_tex": "\n  Stratify \\(W = \\bigsqcup_{l \\geq e} W \\cap (Y_l \\setminus Y_{l+1})\\).\n  For \\(l \\geq e+1\\), the dimension bound \\(\\dim Y_l \\leq \\dim X - l - 1\\) gives\n  \\(\\dim f^{-1}(W \\cap (Y_l \\setminus Y_{l+1})) \\leq \\dim W + e - 1\\).\n  Since \\(W \\cap Y_{e+1}\\) is proper, \\(W \\setminus Y_{e+1} \\neq \\emptyset\\), and the fiber\n  dimension is exactly \\(e\\) on this open stratum, giving \\(\\dim f^{-1}(W) = \\dim W + e\\).\n  The surjectivity claim follows by comparing dimensions.\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 1, "rdep_count": 1, "descendant_count": 5, "proof_size_tex": 462, "effort_local": 462, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 905}, "lem:isoBaseChange": {"id": "lem:isoBaseChange", "type": "lemma", "title": "Isogeny descends from \\(K\\) to \\(k\\)", "chapter": "Overview", "statement": "\\textit{Source: Xie--Yuan, arXiv:2108.09722, Lemma 3.3.}\n  Let \\(A_1, A_2\\) be abelian varieties over an algebraically closed field \\(k\\), and let\n  \\(K/k\\) be any field extension.\n  If \\(A_1 \\otimes_k K \\sim A_2 \\otimes_k K\\) (isogenous over \\(K\\)), then \\(A_1 \\sim A_2\\).", "uses": [], "lean_name": "MR4448992.TODO.isoBaseChange", "proved": false, "mathlib_ok": false, "proof_tex": "\n  The isogeny \\(\\Phi\\colon A_1 \\otimes_k K \\to A_2 \\otimes_k K\\) is defined over a finitely\n  generated subfield \\(K' \\subset K\\).  Spreading \\(\\Phi\\) over a \\(k\\)-variety \\(S\\) with\n  \\(k(S) = K'\\) and specializing to any \\(k\\)-point of \\(S\\) yields an isogeny\n  \\(A_1 \\to A_2\\) over \\(k\\).\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 0, "rdep_count": 1, "descendant_count": 6, "proof_size_tex": 289, "effort_local": 289, "proof_size_tex_total": 289, "proof_size_lean_total": null, "effort_total": 289}, "pro:baseChangeDiagram": {"id": "pro:baseChangeDiagram", "type": "proposition", "title": "Unique abelian variety over \\(k\\) compatible with \\(A_1\\) and \\(A_2\\)", "chapter": "Overview", "statement": "\\textit{Source: Xie--Yuan, arXiv:2108.09722, Proposition 3.2.}\n  Let \\(k\\) be algebraically closed, \\(K/k\\) a finitely generated extension,\n  \\(k_1, k_2\\) algebraically closed intermediate fields with \\(k_1 \\cap k_2 = k\\), and\n  \\(A_1, A_2\\) abelian varieties over \\(k_1, k_2\\) respectively.\n  If \\(A_1 \\otimes_{k_1} K \\sim A_2 \\otimes_{k_2} K\\), then there exists an abelian variety\n  \\(A\\) over \\(k\\), unique up to isogeny, such that \\(A_1 \\sim A \\otimes_k k_1\\) and\n  \\(A_2 \\sim A \\otimes_k k_2\\).", "uses": ["lem:isoBaseChange"], "lean_name": "MR4448992.TODO.baseChangeDiagram", "proved": false, "mathlib_ok": false, "proof_tex": "\n  \\uses{lem:isoBaseChange}\n  Uniqueness is \\cref{lem:isoBaseChange}.\n  For existence it suffices to descend \\(A_1\\) (and symmetrically \\(A_2\\)) to \\(k\\) up to\n  isogeny.  The isogeny \\(A_1 \\otimes_{k_1} K \\sim A_2 \\otimes_{k_2} K\\) is realized over a\n  flat quasi-finite cover \\(U \\to S_1 \\times S_2\\); picking a \\(k\\)-point \\((s_1,s_2)\\)\n  and restricting to \\(S_1 \\times \\{s_2\\}\\) gives a family over \\(S_1\\) whose generic fiber\n  is isogenous to \\(A_1\\) and whose fiber at \\(s_1\\) is \\(\\mathcal{A}_{2,s_2}\\), an abelian\n  variety over \\(k\\).  Hence \\(A_1\\) descends to \\(k\\).\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 1, "rdep_count": 1, "descendant_count": 5, "proof_size_tex": 576, "effort_local": 576, "proof_size_tex_total": 865, "proof_size_lean_total": null, "effort_total": 865}, "lem:subvarDef": {"id": "lem:subvarDef", "type": "lemma", "title": "Descent of subvariety via two subfields", "chapter": "Overview", "statement": "\\textit{Source: Xie--Yuan, arXiv:2108.09722, Lemma 3.6.}\n  Let \\(k_1, k_2\\) be intermediate fields of a field extension \\(K/k\\) with\n  \\(k_1 \\cap k_2 = k\\), and let \\(Y\\) be a variety over \\(k\\).\n  Let \\(X \\subset Y_K = Y \\otimes_k K\\) be a closed subvariety defined over both \\(k_1\\) and\n  \\(k_2\\) (as a subvariety of \\(Y_K\\)).  Then \\(X\\) is defined over \\(k\\).", "uses": [], "lean_name": "MR4448992.TODO.subvarDef", "proved": false, "mathlib_ok": false, "proof_tex": "\n  Reduce to the affine case: the ideal of \\(X\\) in \\(R_0 \\otimes_k K\\) must be spanned by\n  \\(I_0 \\otimes_k K\\) for \\(I_0 = I \\cap R_0\\).  This follows from a linear algebra fact:\n  if a \\(K\\)-subspace of \\(V_0 \\otimes_k K\\) descends to both \\(k_1\\) and \\(k_2\\) (with\n  \\(k_1 \\cap k_2 = k\\)), its reduced row echelon form over \\(K\\) equals the forms over\n  \\(k_1\\) and \\(k_2\\), forcing all coefficients to lie in \\(k_1 \\cap k_2 = k\\).\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 0, "rdep_count": 1, "descendant_count": 5, "proof_size_tex": 432, "effort_local": 432, "proof_size_tex_total": 432, "proof_size_lean_total": null, "effort_total": 432}, "cor:defField": {"id": "cor:defField", "type": "corollary", "title": "Two cases of field of definition", "chapter": "Overview", "statement": "\\textit{Source: Xie--Yuan, arXiv:2108.09722, Corollary 3.7.}\n  Let \\(K/k\\) be an extension of algebraically closed fields.\n  \\begin{enumerate}\n    \\item For any abelian variety \\(A\\) over \\(K\\), there is an algebraically closed\n          intermediate field \\(k_A\\) of \\(K/k\\) with \\(\\trdeg(k_A/k) < \\infty\\) such that\n          for every algebraically closed intermediate field \\(k'\\) of \\(K/k\\),\n          \\(A\\) is defined over \\(k'\\) up to isogeny if and only if \\(k_A \\subseteq k'\\).\n    \\item For any variety \\(Y\\) over \\(k\\) and subvariety \\(X \\subset Y_K\\), there is an\n          algebraically closed intermediate field \\(k_{X \\subseteq Y_K}\\) of \\(K/k\\) such\n          that \\(X\\) is defined over \\(k'\\) if and only if \\(k_{X \\subseteq Y_K} \\subseteq k'\\).\n  \\end{enumerate}", "uses": ["pro:baseChangeDiagram", "lem:subvarDef"], "lean_name": "MR4448992.TODO.defField", "proved": false, "mathlib_ok": false, "proof_tex": "\n  \\uses{pro:baseChangeDiagram, lem:subvarDef}\n  For (i): among all algebraically closed \\(k'\\) over which \\(A\\) is defined up to isogeny,\n  choose \\(k_A\\) with minimal transcendence degree.  For any other such \\(k'\\), apply\n  \\cref{pro:baseChangeDiagram} to \\(k_A \\cap k'\\) to conclude \\(k_A \\subseteq k'\\).\n  Part (ii) is analogous, using \\cref{lem:subvarDef} in place of \\cref{pro:baseChangeDiagram}.\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 2, "rdep_count": 1, "descendant_count": 4, "proof_size_tex": 400, "effort_local": 400, "proof_size_tex_total": 1697, "proof_size_lean_total": null, "effort_total": 1697}, "pro:lemNonSpecial": {"id": "pro:lemNonSpecial", "type": "proposition", "title": "Characterization of special via \\(k_{A,X}\\)", "chapter": "Overview", "statement": "\\textit{Source: Xie--Yuan, arXiv:2108.09722, Proposition 3.8.}\n  Let \\(K/k\\) be a field extension with \\(k\\) algebraically closed in \\(K\\), \\(A\\) an\n  abelian variety over \\(K\\), and \\(X \\subset A_{\\OK}\\) a subvariety.\n  There is a unique \\(k_{A,X} \\in I(K/k)\\) (the set of algebraically closed intermediate\n  fields) such that for every \\(k' \\in I(K/k)\\), \\(X\\) is special for \\(A/K/k'\\) if and\n  only if \\(k_{A,X} \\subseteq k'\\).", "uses": ["def:SpecialSubvariety", "cor:defField"], "lean_name": "MR4448992.TODO.lemNonSpecial", "proved": false, "mathlib_ok": false, "proof_tex": "\n  \\uses{cor:defField}\n  After quotienting by the identity component \\(\\Stab^0(X)\\) of the stabilizer of \\(X\\) and\n  replacing \\((A,X)\\) by \\((T_X - a, X - a)\\) for the minimal torsion subvariety \\(T_X\\),\n  assume \\(\\Stab^0(X) = 0\\) and \\(T_X = A\\).\n  Case 1: \\(\\ATrace(A^{K/k})_K \\neq A\\).  Then \\cref{cor:defField}(i) gives \\(k_A\\) such\n  that \\(\\ATrace(A^{K/k'})_K = A\\) iff \\(k_A \\subseteq k'\\); set \\(k_{A,X} = k_A\\).\n  Case 2: \\(\\ATrace(A^{K/k})_K = A\\).  Pass to the isogenous model with \\(A\\) defined over\n  \\(k\\); then \\(X\\) is special iff \\(X\\) is defined over \\(k'\\), so \\cref{cor:defField}(ii)\n  gives \\(k_{A,X} = k_{X \\subseteq A}\\).\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 2, "rdep_count": 1, "descendant_count": 3, "proof_size_tex": 643, "effort_local": 643, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 3326}, "lem:genericHyperplane": {"id": "lem:genericHyperplane", "type": "lemma", "title": "Generic hyperplane with height inequality", "chapter": "Overview", "statement": "\\textit{Source: Xie--Yuan, arXiv:2108.09722, Lemma 3.9.}\n  Let \\(k\\) be algebraically closed and \\(K/k\\) finitely generated with\n  \\(\\trdeg(K/k) > 1\\).  Let \\((S,\\cM)\\) be a polarization of \\(K/k\\) with \\(\\cM\\) very\n  ample.  Then there are infinitely many intermediate fields \\(k'\\) algebraically closed in\n  \\(K\\) with \\(\\trdeg(k'/k)=1\\), each equipped with a geometrically integral divisor\n  \\(H \\subset S_{k'}\\) linearly equivalent to \\(\\cM_{k'}\\) and inducing an isomorphism on\n  generic points \\(H \\to S\\).  Moreover, for any abelian variety \\(A\\) over \\(K\\) with\n  symmetric ample \\(L\\) and any subvariety \\(X \\subset A_{\\OK}\\),\n  \\[\n    \\hath_L^{\\cM}(X) \\geq \\hath_L^{\\cM_{k'}|_H}(X).\n  \\]", "uses": ["def:Polarization", "def:CanonicalHeight"], "lean_name": "MR4448992.TODO.genericHyperplane", "proved": false, "mathlib_ok": false, "proof_tex": "\n  Take a general section \\(s_0 \\in \\Gamma(S,\\cM)\\) giving a geometrically integral \\(H_0\\)\n  by Bertini.  Fix another section \\(s_1\\) independent of \\(s_0\\), forming a pencil.\n  Blowing up the base locus \\(H_0 \\cap H_1\\) yields a flat morphism\n  \\(\\psi\\colon \\widetilde{S} \\to \\mathbb{P}^1_k\\); its generic fiber \\(H' \\to \\operatorname{Spec}k'\\)\n  (where \\(k' = k(\\mathbb{P}^1_k)\\)) is geometrically integral, making \\(k'\\) algebraically\n  closed in \\(K\\).  The image \\(H\\) of \\(H'\\) in \\(S_{k'}\\) satisfies conditions (1) and (2).\n  For the height inequality: after base change from \\(k\\) to \\(k'\\), the naive height over\n  \\((S,\\cM)\\) equals the intersection on \\(\\mathcal{A}_{k'}\\), which dominates the naive\n  height over \\((H, \\cM_{k'}|_H)\\) because the Zariski closure of \\(X\\) in \\(\\mathcal{A}_{k'}\\)\n  dominates its trace in \\(\\mathcal{A}_H\\).\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 2, "rdep_count": 1, "descendant_count": 3, "proof_size_tex": 849, "effort_local": 849, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 3084}, "pro:changeField": {"id": "pro:changeField", "type": "proposition", "title": "Reduction to transcendence degree one", "chapter": "Overview", "statement": "\\textit{Source: Xie--Yuan, arXiv:2108.09722, Proposition 3.1.}\n  Let \\(k\\) be algebraically closed, \\(K/k\\) finitely generated of transcendence degree at\n  least \\(2\\), and \\(A\\) an abelian variety over \\(K\\).\n  There are two intermediate fields \\(k_1, k_2\\) of \\(K/k\\), algebraically closed in \\(K\\)\n  and each of transcendence degree \\(1\\) over \\(k\\), such that for any closed subvariety\n  \\(X \\subset A_{\\OK}\\), the geometric Bogomolov conjecture holds for \\((A/K/k,X)\\) if it\n  holds for \\((A_{K\\ok_i}/K\\ok_i/\\ok_i, X)\\) for \\(i=1,2\\).\n  Applying this proposition repeatedly reduces to the case \\(\\trdeg(K/k)=1\\).", "uses": ["pro:lemNonSpecial", "lem:genericHyperplane", "def:SpecialSubvariety"], "lean_name": "MR4448992.TODO.changeField", "proved": false, "mathlib_ok": false, "proof_tex": "\n  \\uses{lem:genericHyperplane, pro:lemNonSpecial}\n  Choose two distinct generic hyperplanes \\((H_1,k_1),(H_2,k_2)\\) from\n  \\cref{lem:genericHyperplane}.\n  If \\(X\\) has dense small points for \\((A/K/k)\\), then the height inequality gives dense\n  small points for \\((A/K/k_i)\\) for each \\(i\\); by hypothesis \\(X\\) is special for\n  \\(A/K/k_i\\).\n  If \\(X\\) were not special for \\(A/K/k\\), then \\cref{pro:lemNonSpecial} gives \\(k_{A,X} \\neq k\\).\n  Since each \\(k_i\\) has transcendence degree \\(1\\) over \\(k\\), at least one satisfies\n  \\(k_{A,X} \\not\\subseteq k_i\\), contradicting \\(X\\) being special for \\(A/K/k_i\\).\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 3, "rdep_count": 1, "descendant_count": 2, "proof_size_tex": 609, "effort_local": 609, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 7019}, "def:MultiSection": {"id": "def:MultiSection", "type": "definition", "title": "Multi-section", "chapter": "Overview", "statement": "\\textit{Source: Xie--Yuan, arXiv:2108.09722, \\S4.1.}\n  A \\emph{multi-section} of \\(\\pi\\colon \\cA \\to S\\) is a closed integral subscheme\n  \\(\\cT \\subset \\cA\\) such that the induced morphism \\(\\cT \\to S\\) is finite and flat.", "uses": [], "lean_name": "MR4448992.TODO.MultiSection", "proved": false, "mathlib_ok": false, "proof_tex": "", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 0, "rdep_count": 3, "descendant_count": 8, "proof_size_tex": null, "effort_local": 222, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 222}, "def:TorsionMultiSection": {"id": "def:TorsionMultiSection", "type": "definition", "title": "Torsion multi-section", "chapter": "Overview", "statement": "\\textit{Source: Xie--Yuan, arXiv:2108.09722, \\S4.1.}\n  A multi-section \\(\\cT\\) of \\(\\pi\\colon \\cA \\to S\\) is \\emph{torsion} if its corresponding\n  element in the abelian group \\(\\cA_{\\cT}(\\cT)\\) is torsion.\n  The \\emph{order} of a torsion multi-section \\(\\cT\\) is the order of this element.\n  Any torsion multi-section is the Zariski closure of a torsion point of \\(A(\\OK)_{\\rm tor}\\)\n  in \\(\\cA\\).", "uses": ["def:MultiSection"], "lean_name": "MR4448992.TODO.TorsionMultiSection", "proved": false, "mathlib_ok": false, "proof_tex": "", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 1, "rdep_count": 2, "descendant_count": 7, "proof_size_tex": null, "effort_local": 398, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 620}, "def:RigidifiedLineBundle": {"id": "def:RigidifiedLineBundle", "type": "definition", "title": "Rigidified line bundle", "chapter": "Overview", "statement": "\\textit{Source: Xie--Yuan, arXiv:2108.09722, \\S4.1.}\n  A line bundle \\(\\cL\\) on \\(\\cA\\) is \\emph{symmetric} if \\([-1]^*\\cL \\cong \\cL\\);\n  \\emph{anti-symmetric} if \\([-1]^*\\cL \\cong \\cL^\\vee\\); and\n  \\emph{rigidified} if it carries an isomorphism \\(e^*\\cL \\cong \\mathcal{O}_S\\) via the\n  identity section \\(e\\colon S \\to \\cA\\).", "uses": [], "lean_name": "MR4448992.TODO.RigidifiedLineBundle", "proved": false, "mathlib_ok": false, "proof_tex": "", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 0, "rdep_count": 3, "descendant_count": 7, "proof_size_tex": null, "effort_local": 326, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 326}, "lem:lineBundleProps": {"id": "lem:lineBundleProps", "type": "lemma", "title": "Properties of rigidified line bundles", "chapter": "Overview", "statement": "\\textit{Source: Xie--Yuan, arXiv:2108.09722, Lemma 4.1.}\n  Let \\(\\cL\\) be a rigidified line bundle on \\(\\cA\\).\n  \\begin{enumerate}\n    \\item If \\(\\cL\\) is symmetric, then \\([m]^*\\cL \\cong m^2\\cL\\) for all \\(m \\in \\mathbb{Z}\\);\n          if anti-symmetric, then \\([m]^*\\cL \\cong m\\cL\\).\n    \\item For any torsion multi-section \\(\\cT \\subset \\cA\\), the restriction \\(\\cL|_{\\cT}\\)\n          is torsion in \\(\\operatorname{Pic}(\\cT)\\).\n    \\item If \\(\\cL\\) is symmetric and \\(\\pi\\)-ample, then \\(\\cL\\) is nef over \\(\\cA\\).\n    \\item If \\(\\cL\\) is symmetric and \\(\\pi\\)-ample, and \\(\\cL'\\) is another symmetric\n          rigidified line bundle, then there exists a positive integer \\(a\\) such that\n          \\(a\\cL - \\cL'\\) is nef over \\(\\cA\\).\n  \\end{enumerate}", "uses": ["def:MultiSection", "def:TorsionMultiSection", "def:RigidifiedLineBundle"], "lean_name": "MR4448992.TODO.lineBundleProps", "proved": false, "mathlib_ok": false, "proof_tex": "\n  For (1): \\([m]^*\\cL - m^2\\cL\\) is trivial on each fiber of \\(\\pi\\), hence lies in\n  \\(\\pi^*\\operatorname{Pic}(S)\\); the rigidification \\(e^*\\cL \\cong \\mathcal{O}_S\\) forces it to be trivial.\n  For (2): let \\(m\\) be the order of \\(\\cT\\); the base change of \\([m]\\) by \\(e\\) gives\n  \\(\\cA[m] \\to S\\), and the rigidification makes \\(([m]^*\\cL)|_{\\cA[m]}\\) trivial; part (1)\n  then yields \\(\\cL|_{\\cT}\\) torsion.\n  For (3): choose ample \\(\\cL''\\) on \\(S\\) so \\(\\cL + \\pi^*\\cL''\\) is ample; the limit\n  \\(\\lim_{m\\to\\infty}({\\cL + m^{-2}\\pi^*\\cL''})\\) is \\(\\cL\\), which is thus nef.\n  For (4): \\(a\\cL - \\cL'\\) is \\(\\pi\\)-ample for large \\(a\\), then apply (3).\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 3, "rdep_count": 3, "descendant_count": 6, "proof_size_tex": 653, "effort_local": 653, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 1599}, "pro:numericalEquivalent": {"id": "pro:numericalEquivalent", "type": "proposition", "title": "Torsion multi-section numerically equivalent to self-intersection", "chapter": "Overview", "statement": "\\textit{Source: Xie--Yuan, arXiv:2108.09722, Proposition 4.2.}\n  Let \\(\\cL\\) be symmetric and rigidified on \\(\\cA\\), and \\(\\cT\\) a torsion multi-section.\n  Then there is a numerical equivalence of \\(1\\)-cycles on \\(\\cA\\):\n  \\[\n    [\\cL]^g \\equiv \\frac{\\deg(\\cL_\\eta)}{\\deg(\\cT/S)}\\,[\\cT].\n  \\]", "uses": ["lem:lineBundleProps", "def:MultiSection", "def:TorsionMultiSection", "def:RigidifiedLineBundle", "def:ChowGroup"], "lean_name": "MR4448992.TODO.numericalEquivalent", "proved": false, "mathlib_ok": false, "proof_tex": "\n  \\uses{lem:lineBundleProps}\n  It suffices to show \\(\\cL^g \\cdot \\mathcal{M} = \\frac{\\deg(\\cL_\\eta)}{\\deg(\\cT/S)} \\cT \\cdot \\mathcal{M}\\)\n  for any line bundle \\(\\mathcal{M}\\) on \\(\\cA\\).\n  If \\(\\mathcal{M}\\) is rigidified: the right side is zero by \\cref{lem:lineBundleProps}(2);\n  the left side is zero by the projection formula and the identity\n  \\([m]^*\\cL \\cong m^2\\cL\\), which gives \\(m^{2g+i}\\cL^g\\cdot\\mathcal{M} = m^{2g}\\cL^g\\cdot\\mathcal{M}\\)\n  (for \\(i=1\\) or \\(2\\)), forcing \\(\\cL^g \\cdot \\mathcal{M}=0\\).\n  For general \\(\\mathcal{M}\\), write \\(\\mathcal{M} = (\\mathcal{M} - \\pi^*e^*\\mathcal{M}) + \\pi^*e^*\\mathcal{M}\\);\n  the first summand is canonically rigidified, handled above.\n  For \\(\\mathcal{M} = \\pi^*\\mathcal{N}\\), both sides equal \\(\\deg(\\cL_\\eta)\\deg(\\mathcal{N})\\) and\n  \\(\\deg(\\cT/S)\\deg(\\mathcal{N})\\) respectively, giving the ratio.\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 5, "rdep_count": 1, "descendant_count": 4, "proof_size_tex": 857, "effort_local": 857, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 2813}, "lem:canonicalHeightGoodReduction": {"id": "lem:canonicalHeightGoodReduction", "type": "lemma", "title": "Canonical height equals naive height for good reduction", "chapter": "Overview", "statement": "\\textit{Source: Xie--Yuan, arXiv:2108.09722, \\S4.3.}\n  Let \\(S\\) be a smooth projective curve with function field \\(K=k(S)\\), and let \\(A/K\\)\n  have everywhere good reduction over \\(S\\).\n  Let \\(\\pi\\colon \\cA \\to S\\) be the N\\'eron model and \\(\\cL\\) a symmetric rigidified\n  extension of a symmetric ample \\(L\\) on \\(A\\).\n  For any closed subvariety \\(X \\subset A\\) with Zariski closure \\(\\cX \\subset \\cA\\),\n  \\[\n    \\hath(X) = h_{\\cL}(X)\n    := \\frac{\\cL^{\\dim X+1} \\cdot \\cX}{(\\dim X+1)\\deg_L(X)}.\n  \\]\n  That is, the naive height already equals the canonical height.", "uses": ["def:NaiveHeight", "def:CanonicalHeight", "lem:lineBundleProps", "def:RigidifiedLineBundle"], "lean_name": "MR4448992.TODO.canonicalHeightGoodReduction", "proved": false, "mathlib_ok": false, "proof_tex": "\n  \\uses{lem:lineBundleProps}\n  By \\cref{lem:lineBundleProps}(1), \\([n]^*\\cL \\cong n^2\\cL\\).\n  The projection formula gives\n  \\(h_{\\cL}([n]X) = n^2\\,h_{\\cL}(X)\\).\n  Since the Tate limit is \\(\\lim_{n\\to\\infty}\\frac{1}{n^2}h_{\\cL}([n]X)\\), the limit\n  stabilizes to \\(h_{\\cL}(X)\\) immediately.\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 4, "rdep_count": 1, "descendant_count": 4, "proof_size_tex": 288, "effort_local": 288, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 4122}, "thm:maninMumford": {"id": "thm:maninMumford", "type": "theorem", "title": "Manin--Mumford conjecture (Raynaud--Hrushovski)", "chapter": "Overview", "statement": "\\textit{Source: Xie--Yuan, arXiv:2108.09722, Theorem 5.1.}\n  Let \\(K\\) be a finitely generated field over an algebraically closed field \\(k\\),\n  \\(A\\) an abelian variety over \\(K\\) with trivial \\(\\OK/k\\)-trace, and \\(X\\) a closed\n  subvariety of \\(A_{\\OK}\\).\n  If \\(X(\\OK) \\cap A(\\OK)_{\\rm tor}\\) is Zariski dense in \\(X\\), then \\(X\\) is a torsion\n  subvariety of \\(A_{\\OK}\\).", "uses": ["def:TorsionSubvariety", "def:KkTrace"], "lean_name": "MR4448992.TODO.maninMumford", "proved": false, "mathlib_ok": false, "proof_tex": "\n  Used as external result.\n  Proved by Raynaud (char~0, \\cite{Raynaud1983}) and Hrushovski (arbitrary char,\n  \\cite{Hrushovski2001}); an algebraic-geometry proof is given by Pink--R\\\"{o}ssler\n  \\cite{Pink2002a}.\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 2, "rdep_count": 1, "descendant_count": 3, "proof_size_tex": 209, "effort_local": 209, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 933}, "lem:fundamentalInequality": {"id": "lem:fundamentalInequality", "type": "lemma", "title": "Zhang--Gubler fundamental inequality", "chapter": "Overview", "statement": "\\textit{Source: Xie--Yuan, arXiv:2108.09722, Lemma 5.2.}\n  Let \\(\\trdeg(K/k) = 1\\), \\(A\\) an abelian variety over \\(K\\), \\(L\\) symmetric and ample\n  on \\(A\\), and \\(X \\subset A_{\\OK}\\) a closed subvariety.\n  If \\(X\\) contains a dense set of small points of \\(A/K/k\\), then \\(\\hath_L(X) = 0\\).", "uses": ["def:SmallPoints", "def:CanonicalHeight"], "lean_name": "MR4448992.TODO.fundamentalInequality", "proved": false, "mathlib_ok": false, "proof_tex": "\n  Used as external result.\n  By the fundamental inequality \\(\\sup_{U \\subset X}\\inf_{x \\in U(\\OK)}\\hath_L(x) \\geq \\hath_L(X)\\),\n  if \\(X\\) has dense small points then the left side is \\(0\\).\n  Proved in the function field case by Gubler (2007), Lemma 4.1.\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 2, "rdep_count": 2, "descendant_count": 4, "proof_size_tex": 253, "effort_local": 253, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 2895}, "thm:yamakiReduction": {"id": "thm:yamakiReduction", "type": "theorem", "title": "Yamaki's reduction theorem", "chapter": "Overview", "statement": "\\textit{Source: Xie--Yuan, arXiv:2108.09722, \\S5 (citing Yamaki 2016a, Theorem 1.5).}\n  Let \\(\\trdeg(K/k)=1\\), \\(S\\) the unique smooth projective model, and suppose \\(A\\) has\n  semi-stable reduction over \\(S\\).\n  Denote by \\(A'\\) the maximal abelian subvariety of \\(A\\) with everywhere good reduction.\n  The geometric Bogomolov conjecture holds for \\(A/K/k\\) if and only if it holds for\n  \\(A'/\\ATrace(A^{K/k} \\otimes_k K)\\).\n  In particular, one may reduce to the case that \\(A\\) has good reduction everywhere and\n  trivial \\(\\OK/k\\)-trace.", "uses": ["def:KkTrace", "thm:main"], "lean_name": "MR4448992.TODO.yamakiReduction", "proved": false, "mathlib_ok": false, "proof_tex": "\n  Used as external result; see Yamaki (2016a), Theorem 1.5.\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 2, "rdep_count": 1, "descendant_count": 2, "proof_size_tex": 57, "effort_local": 57, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 19378}, "lem:northcott": {"id": "lem:northcott", "type": "lemma", "title": "Northcott property for canonical heights", "chapter": "Overview", "statement": "\\textit{Source: Xie--Yuan, arXiv:2108.09722, \\S5 (citing Conrad, Theorem 9.15).}\n  Let \\(K/k\\) be a function field of transcendence degree \\(1\\) over an algebraically closed\n  field \\(k\\), and let \\(A\\) be an abelian variety over \\(K\\) with trivial \\(\\OK/k\\)-trace.\n  If \\(t \\in A(K)\\) satisfies \\(\\hath(t) = 0\\), then \\(t\\) is a torsion point of \\(A(K)\\).\n  More generally, for any \\(x \\in A(\\OK)\\), \\(\\hath(x)=0\\) and trivial trace imply \\(x\\) is\n  torsion.", "uses": ["def:CanonicalHeight", "def:KkTrace"], "lean_name": "MR4448992.TODO.northcott", "proved": false, "mathlib_ok": false, "proof_tex": "\n  Used as external result; see Conrad, Theorem 9.15.\n  The key point is that in the function field setting with trivial trace, the canonical height\n  is a positive definite quadratic form on \\(A(\\OK)/A(\\OK)_{\\rm tor}\\), so its vanishing\n  forces a torsion element.\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 2, "rdep_count": 2, "descendant_count": 4, "proof_size_tex": 262, "effort_local": 262, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 3012}, "def:AdditionMap": {"id": "def:AdditionMap", "type": "definition", "title": "Addition map and its image", "chapter": "Overview", "statement": "\\textit{Source: Xie--Yuan, arXiv:2108.09722, \\S5.1.}\n  For \\(X \\subset A_{\\OK}\\) a closed subvariety and any integer \\(m \\geq 1\\), define\n  \\(X_m \\subset A\\) as the image of the addition morphism\n  \\(f_m\\colon X^m \\to A,\\quad (x_1,\\dots,x_m) \\mapsto x_1+\\cdots+x_m\\).\n  Set \\(X_0 = \\{0\\}\\).\n  The sequence of dimensions satisfies\n  \\(\\dim X_{m-1} \\leq \\dim X_m \\leq \\dim X_{m-1} + \\dim X\\).", "uses": [], "lean_name": "MR4448992.TODO.AdditionMap", "proved": false, "mathlib_ok": false, "proof_tex": "", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 0, "rdep_count": 2, "descendant_count": 5, "proof_size_tex": null, "effort_local": 390, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 390}, "lem:addition": {"id": "lem:addition", "type": "lemma", "title": "Addition stabilizes to a torsion subvariety", "chapter": "Overview", "statement": "\\textit{Source: Xie--Yuan, arXiv:2108.09722, Lemma 5.3.}\n  Assume conditions (a)--(d) of the main proof hold: \\(\\trdeg(K/k)=1\\), \\(A\\) has good\n  reduction everywhere, and \\(A\\) has trivial \\(\\OK/k\\)-trace.\n  Assume further that \\(X \\subset A\\) contains a dense set of small points.\n  Then there is a unique integer \\(r \\geq 1\\) such that \\(\\dim X_{r-1} < \\dim X_r\\) and\n  \\(X_r\\) is a torsion subvariety of \\(A\\).", "uses": ["def:AdditionMap", "def:CanonicalHeight", "def:KkTrace", "lem:northcott", "def:TorsionSubvariety"], "lean_name": "MR4448992.TODO.addition", "proved": false, "mathlib_ok": false, "proof_tex": "\n  \\uses{lem:northcott, def:CanonicalHeight}\n  Fix \\(x_0 \\in X(K)\\) (replacing \\(K\\) by a finite extension if needed).\n  The translates \\(X_m' = X_m - mx_0\\) form an increasing sequence of subvarieties, which\n  stabilizes to some \\(B = X_r'\\) for a unique \\(r\\).\n  The stabilization gives a morphism \\(B \\times B \\to B\\), from which one shows \\(B\\) is an\n  abelian subvariety of \\(A\\).\n  Thus \\(X_r = B + rx_0\\); set \\(C = A/B\\) and let \\(t'\\) be the image of \\(rx_0\\) in \\(C\\).\n  Since small points of \\(X\\) transfer to \\(X_r\\), the subvariety \\(B + t'\\) has dense small\n  points in \\(C\\), forcing \\(\\hath_{L_2}(t')=0\\) (with \\(L_2\\) a symmetric ample on \\(C\\)).\n  By the trivial trace assumption and \\cref{lem:northcott}, \\(t' \\in C(K)_{\\rm tor}\\), so\n  \\(X_r = B + rx_0\\) is a torsion subvariety.\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 5, "rdep_count": 1, "descendant_count": 3, "proof_size_tex": 796, "effort_local": 796, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 4407}, "pro:torsionFiber": {"id": "pro:torsionFiber", "type": "proposition", "title": "Fibers of addition map have canonical height zero", "chapter": "Overview", "statement": "\\textit{Source: Xie--Yuan, arXiv:2108.09722, Proposition 5.4.}\n  Let \\(A'\\) denote the abelian subvariety \\(X_r\\) from \\cref{lem:addition}, and let\n  \\(f\\colon X_{r-1} \\times X \\to A'\\) be the restriction of the summation map.\n  Set \\(e = \\dim X_{r-1} + \\dim X - \\dim A'\\) (the relative dimension of \\(f\\)).\n  For any torsion point \\(t \\in A'(\\OK)_{\\rm tor} \\setminus A'_{e+1}(\\OK)\\), every\n  irreducible component of the fiber \\(f^{-1}(t)\\) in \\((X_{r-1} \\times X)_{\\OK}\\) has\n  canonical height \\(0\\) in \\((A \\times A)_{\\OK}\\).", "uses": ["def:AdditionMap", "pro:strLeqTot", "pro:numericalEquivalent", "lem:lineBundleProps", "lem:fundamentalInequality", "lem:canonicalHeightGoodReduction", "def:ExcessLocus"], "lean_name": "MR4448992.TODO.torsionFiber", "proved": false, "mathlib_ok": false, "proof_tex": "\n  \\uses{pro:strLeqTot, pro:numericalEquivalent, lem:lineBundleProps,\n        lem:fundamentalInequality, lem:canonicalHeightGoodReduction}\n  Let \\(\\cA'\\) (resp.\\ \\(\\cB\\)) be the Zariski closure of \\(A'\\) (resp.\\ of the preimage of\n  \\(A'\\) in \\(A \\times A\\)) in the N\\'eron models; let \\(\\cY\\) be the closure of\n  \\(Y = X_{r-1} \\times X\\) in \\(\\cA \\times_S \\cA\\).\n  Fix a torsion multi-section \\(\\cT\\) of \\(\\cA' \\to S\\) whose generic fiber \\(T\\) avoids\n  \\(A'_{e+1}\\).\n  Applying \\cref{pro:strLeqTot} to the map \\(\\cY \\to \\cA'\\) and the subvariety \\(\\cT\\) gives\n  \\(\\sum_i m_i[\\mathcal{Z}_i] \\leq h^*[\\cT]\\cdot[\\cY]\\) in \\(\\CH_{e+1}(\\cB)_{\\mathbb{Q}}\\).\n  By \\cref{pro:numericalEquivalent}, \\([\\cT] \\equiv a\\,[\\cL_{\\cA'}]^{\\dim A'}\\) for some\n  \\(a > 0\\), so the right side is \\(\\leq a\\,b^{\\dim A'}[\\cL_{\\cB}]^{\\dim \\cY}\\cdot[\\cY]\\)\n  (using the nef bound \\(b\\cL_{\\cB} - h^*\\cL_{\\cA'} \\geq 0\\) from \\cref{lem:lineBundleProps}(4)).\n  Since \\(Y\\) has dense small points (inherited from \\(X\\)), \\cref{lem:fundamentalInequality}\n  and \\cref{lem:canonicalHeightGoodReduction} give \\([\\cY]\\cdot[\\cL_{\\cB}]^{\\dim\\cY}=0\\),\n  forcing each \\(\\mathcal{Z}_i\\cdot[\\cL_{\\cB}]^{e+1}=0\\), i.e.\\ \\(\\hath(Z_i)=0\\).\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 7, "rdep_count": 1, "descendant_count": 3, "proof_size_tex": 1193, "effort_local": 1193, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 11604}, "thm:mainEssentialCase": {"id": "thm:mainEssentialCase", "type": "theorem", "title": "Bogomolov conjecture in the essential case", "chapter": "Overview", "statement": "\\textit{Source: Xie--Yuan, arXiv:2108.09722, \\S5.3.}\n  Under assumptions (a)--(d) (transcendence degree \\(1\\), good reduction, trivial trace),\n  if \\(X \\subset A\\) is a closed subvariety containing a dense set of small points of\n  \\(A/K/k\\), then \\(X\\) is a torsion subvariety of \\(A\\).", "uses": ["lem:addition", "pro:torsionFiber", "thm:maninMumford", "lem:northcott", "lem:fundamentalInequality", "def:TorsionSubvariety"], "lean_name": "MR4448992.TODO.mainEssentialCase", "proved": false, "mathlib_ok": false, "proof_tex": "\n  \\uses{lem:northcott, pro:torsionFiber, thm:maninMumford, lem:addition}\n  Induction on \\(\\dim X\\).\n\n  \\emph{Base case \\(\\dim X = 0\\):} Dense small points force \\(\\hath(X)=0\\), so \\(X\\) is a\n  single torsion point by \\cref{lem:northcott}.\n\n  \\emph{Inductive step \\(\\dim X > 0\\):}\n  By \\cref{lem:addition}, choose \\(r\\) such that \\(A' = X_r\\) is a torsion abelian\n  subvariety and \\(e = \\dim X_{r-1} + \\dim X - \\dim A' < \\dim X\\).\n  Replacing \\(A\\) by \\(A'\\) and \\(X\\) by \\(X - rx_0\\), assume \\(A' = A\\).\n  Let \\(f\\colon X_{r-1}\\times X \\to A\\) be the summation map.\n  For any torsion \\(t \\in A(\\OK)_{\\rm tor} \\setminus A_{e+1}(\\OK)\\), every component of\n  \\(f^{-1}(t)\\) has canonical height \\(0\\) by \\cref{pro:torsionFiber} and dimension \\(e < \\dim X\\).\n  By induction, each component is a torsion subvariety of \\(A \\times A\\), hence\n  \\(f^{-1}(t)\\) contains a Zariski dense set of torsion points.\n  Since \\(A(\\OK)_{\\rm tor} \\setminus A_{e+1}(\\OK)\\) is dense in \\(A\\), the product\n  \\(X_{r-1}\\times X\\) contains a dense set of torsion points.\n  By the Manin--Mumford conjecture (\\cref{thm:maninMumford}),\n  \\(X_{r-1}\\times X\\) is a torsion subvariety of \\(A\\times A\\).\n  Hence \\(X\\) is torsion in \\(A\\), as the image under \\(p_2\\colon A\\times A\\to A\\).\n", "lean_source": "", "proof_size_lean": null, "has_sorry": false, "tex_file": "chapters/Overview.tex", "lean_file": "", "dep_count": 6, "rdep_count": 1, "descendant_count": 2, "proof_size_tex": 1250, "effort_local": 1250, "proof_size_tex_total": null, "proof_size_lean_total": null, "effort_total": 14845}};
+const katexMacros = {"\\C": "\\mathbb{C}", "\\PP": "\\mathbb{P}", "\\K": "\\mathrm{K}", "\\Sym": "\\mathrm{Sym}", "\\Pic": "\\mathrm{Pic}", "\\Gr": "\\mathrm{Gr}", "\\cO": "\\mathcal{O}", "\\cM": "\\mathcal{M}", "\\cS": "\\mathcal{S}", "\\cG": "\\mathcal{G}", "\\cZ": "\\mathcal{Z}", "\\cA": "\\mathcal{A}", "\\cL": "\\mathcal{L}", "\\cX": "\\mathcal{X}", "\\cT": "\\mathcal{T}", "\\cBB": "\\mathcal{B}", "\\cY": "\\mathcal{Y}", "\\OK": "\\overline{K}", "\\ok": "\\overline{k}", "\\trdeg": "\\operatorname{trdeg}", "\\CH": "\\operatorname{CH}", "\\ATrace": "\\operatorname{tr}", "\\prop": "\\mathrm{prop}", "\\hath": "\\hat{h}", "\\Stab": "\\operatorname{Stab}"};   // blueprint-defined \newcommand etc.
+
+const $ = id => document.getElementById(id);
+
+// ── Graph structure: adjacency, degree, components ──────────────────────────
+
+const succ = {}, pred = {}, deg = {};
+for (const id in allNodes) { succ[id] = []; pred[id] = []; deg[id] = 0; }
+for (const e of graphData.edges) {
+  if (succ[e.from]) succ[e.from].push(e.to);
+  if (pred[e.to])   pred[e.to].push(e.from);
+  deg[e.from] = (deg[e.from] || 0) + 1;
+  deg[e.to]   = (deg[e.to]   || 0) + 1;
+}
+const isOrphan = id => !(deg[id] > 0);
+
+// weakly-connected components via union-find (orphans excluded)
+const parent = {};
+function find(x) { while (parent[x] !== x) x = parent[x] = parent[parent[x]]; return x; }
+for (const id in allNodes) parent[id] = id;
+for (const e of graphData.edges)
+  if (parent[e.from] !== undefined && parent[e.to] !== undefined)
+    parent[find(e.from)] = find(e.to);
+
+const compMembers = {};
+for (const id in allNodes) {
+  if (isOrphan(id)) continue;
+  const r = find(id);
+  (compMembers[r] = compMembers[r] || []).push(id);
+}
+const components = Object.values(compMembers).sort((a, b) => b.length - a.length);
+const compOf = {};
+components.forEach((m, i) => m.forEach(id => compOf[id] = i));
+
+// Isolated nodes are kept out of the force simulation (they'd only drift under
+// repulsion); layoutOrphans() grid-places them after each settle instead.
+for (const vn of graphData.nodes) if (isOrphan(vn.id)) vn.physics = false;
+
+// Surface the isolated-node count right on the toggle, so it's obvious how many
+// there are (and that they exist) without having to switch the view on.
+const _isoCount = Object.keys(allNodes).filter(isOrphan).length;
+$("iso-count").textContent = `(${_isoCount})`;
+if (!_isoCount) $("orphans").disabled = true;
+
+// ── Project-stats overlay ────────────────────────────────────────────────────
+
+// A node needs no more work if it's leanok, in mathlib, or already has a Lean
+// proof (effort 0).
+const isDone = n => n.proved || n.mathlib_ok || n.effort_local === 0;
+
+function renderStats() {
+  const vals = Object.values(allNodes);
+  const bp   = vals.filter(n => n.type !== "lean_aux");
+  const proved  = bp.filter(n => n.proved).length;
+  const mathlib = bp.filter(n => n.mathlib_ok).length;
+  const sorry  = vals.filter(n => n.has_sorry).length;
+  const doneIds = new Set(vals.filter(isDone).map(n => n.id));
+  const ready = bp.filter(n => !isDone(n) &&
+                  n.uses.every(d => !(d in allNodes) || doneIds.has(d))).length;
+  const gaps   = bp.filter(n => !n.lean_name && !n.mathlib_ok).length;
+  const leanok = bp.filter(n => !n.proved && !n.mathlib_ok && n.effort_local === 0).length;
+  const isolated   = vals.filter(n => isOrphan(n.id)).length;
+  const isolatedBp = bp.filter(n => isOrphan(n.id)).length;
+
+  let done = 0, remLower = 0, infNodes = 0;
+  for (const n of vals) {
+    if (n.proof_size_lean != null) done += n.proof_size_lean;
+    if (n.effort_local == null) infNodes++; else remLower += n.effort_local;
+  }
+  const pct = bp.length ? Math.round(100 * proved / bp.length) : 0;
+  const fmt = v => v.toLocaleString();
+
+  $("stats-panel").innerHTML = `
+    <h4>Project</h4>
+    <div class="row"><span>Proved (leanok)</span><span class="v done">${proved}/${bp.length} · ${pct}%</span></div>
+    <div class="bar"><span style="width:${pct}%"></span></div>
+    ${mathlib ? `<div class="row"><span>Mathlib-backed</span><span class="v done">${mathlib}</span></div>` : ''}
+    <div class="row"><span>With sorry</span><span class="v ${sorry ? 'inf' : ''}">${sorry}</span></div>
+    <div class="row"><span>Ready to formalize</span><span class="v">${ready}</span></div>
+    <div class="row"><span>Needs \\lean{}</span><span class="v">${gaps}</span></div>
+    <div class="row"><span>Needs \\leanok</span><span class="v">${leanok}</span></div>
+    <div class="row" title="Declarations with no \\uses{} in or out — never linked into the graph"><span>Isolated</span><span class="v ${isolated ? 'inf' : ''}">${isolated}${isolatedBp !== isolated ? ` (${isolatedBp} bp)` : ''}</span></div>
+    <div class="sep"></div>
+    <h4>Effort (chars)</h4>
+    <div class="row"><span>Done</span><span class="v done">${fmt(done)}</span></div>
+    <div class="row"><span>Remaining ≥</span><span class="v work">${fmt(remLower)}</span></div>
+    <div class="row"><span>∞ nodes</span><span class="v inf">${infNodes}</span></div>
+  `;
+}
+renderStats();
+
+// a human label for each component: its highest-degree member
+function compRepr(members) {
+  let best = members[0];
+  for (const id of members) if ((deg[id] || 0) > (deg[best] || 0)) best = id;
+  return best.split(":").pop();
+}
+
+const chapters = [...new Set(
+  Object.values(allNodes).map(n => n.chapter).filter(Boolean)
+)].sort();
+
+// ── Populate controls ───────────────────────────────────────────────────────
+
+$("node-ids").innerHTML =
+  Object.keys(allNodes).sort().map(id => `<option value="${id}">`).join("");
+
+$("component").insertAdjacentHTML("beforeend",
+  components.map((m, i) =>
+    `<option value="${i}">#${i + 1} · ${m.length} nodes · ${compRepr(m)}</option>`
+  ).join(""));
+
+$("chapter").insertAdjacentHTML("beforeend",
+  chapters.map(c => `<option value="${c.replace(/"/g, "&quot;")}">${c}</option>`).join(""));
+
+// ── Visible-set state & computation ─────────────────────────────────────────
+
+const state = { showOrphans: false, focus: null, component: null, chapter: null,
+                nodeset: "union", fileview: "off" };
+
+// Which universe a node belongs to. A node "has Lean" if it carries Lean source
+// (lean_aux nodes always do; blueprint nodes do once their \lean{} resolved).
+const hasLean    = n => n.type === "lean_aux" || !!(n.lean_source && n.lean_source.length);
+const inBlueprint = n => n.type !== "lean_aux";
+function inNodeset(id) {
+  const n = allNodes[id];
+  if (state.nodeset === "blueprint") return inBlueprint(n);
+  if (state.nodeset === "lean")      return hasLean(n);
+  return true;                                   // union
+}
+
+function coneOf(id) {
+  const out = new Set([id]);
+  const walk = (adj, start) => {
+    const st = [start];
+    while (st.length) {
+      const x = st.pop();
+      for (const y of (adj[x] || [])) if (!out.has(y)) { out.add(y); st.push(y); }
+    }
+  };
+  walk(pred, id);   // everything this node (transitively) depends on
+  walk(succ, id);   // everything that (transitively) depends on it
+  return out;
+}
+
+// all transitive predecessors of id (its full upstream dependency set)
+function ancestorsOf(id) {
+  const out = new Set();
+  const st = [...(pred[id] || [])];
+  while (st.length) {
+    const x = st.pop();
+    if (!out.has(x)) { out.add(x); for (const y of (pred[x] || [])) st.push(y); }
+  }
+  return out;
+}
+
+function visibleSet() {
+  if (state.focus && allNodes[state.focus]) {
+    return new Set([...coneOf(state.focus)].filter(inNodeset));
+  }
+  let ids = Object.keys(allNodes).filter(inNodeset);
+  if (!state.showOrphans)      ids = ids.filter(id => !isOrphan(id));
+  if (state.component !== null) ids = ids.filter(id => compOf[id] === state.component);
+  if (state.chapter)            ids = ids.filter(id => allNodes[id].chapter === state.chapter);
+  return new Set(ids);
+}
+
+// ── Network ─────────────────────────────────────────────────────────────────
+
+const nodesDS = new vis.DataSet();
+const edgesDS = new vis.DataSet();
+
+// Force-directed layout: connected nodes attract, so each declaration settles
+// next to what it depends on. Direction is conveyed by the arrows, not columns.
+const N_TOTAL = graphData.nodes.length;
+const PHYSICS_OPTS = {
+  enabled: true,
+  solver: "forceAtlas2Based",
+  forceAtlas2Based: {
+    gravitationalConstant: -45, centralGravity: 0.012,
+    springLength: 85, springConstant: 0.08,
+    damping: 0.45, avoidOverlap: 0.7,
+  },
+  stabilization: { enabled: true, iterations: 300, updateInterval: 25, fit: false },
+  minVelocity: 0.75, maxVelocity: 30,
+};
+
+const network = new vis.Network(
+  $("graph"),
+  { nodes: nodesDS, edges: edgesDS },
+  {
+    // physics does the placement; improvedLayout seeds it (skip on huge graphs)
+    layout: { improvedLayout: N_TOTAL <= 250 },
+    physics: { enabled: false },   // enabled per-apply, then frozen once settled
+    edges: {
+      smooth: { enabled: false },
+      color: { color: "#cbd5e1", highlight: "#64748b" },
+      arrows: { to: { scaleFactor: .55 } },
+      width: 1,
+    },
+    nodes: { shape: "dot" },
+    interaction: { hover: true, tooltipDelay: 150, zoomView: false },
+  }
+);
+
+// Once a settle finishes, freeze the simulation (so the view is stable and
+// draggable) and frame the result.
+network.on("stabilizationIterationsDone", () => {
+  network.setOptions({ physics: false });
+  layoutOrphans();
+  fitFloored();
+});
+
+// ── Isolated-node layout ──────────────────────────────────────────────────────
+// Isolated nodes (no edges) are excluded from the force simulation — under pure
+// repulsion they'd drift to the far edges and vanish at fit-zoom. Instead they
+// are parked on a tidy grid beside the connected graph so they stay visible.
+
+function layoutOrphans() {
+  if (state.focus || !state.showOrphans) return;
+  const ids = nodesDS.getIds().filter(id => isOrphan(id));
+  if (!ids.length) return;
+  const pos  = network.getPositions();
+  const conn = nodesDS.getIds().filter(id => !isOrphan(id));
+  const spacing = 46;
+  const cols = Math.max(1, Math.ceil(Math.sqrt(ids.length)));
+  const gridW = (cols - 1) * spacing;
+  let centerX, topY;
+  if (conn.length) {
+    const xs = conn.map(id => pos[id].x), ys = conn.map(id => pos[id].y);
+    centerX = (Math.min(...xs) + Math.max(...xs)) / 2;
+    topY    = Math.max(...ys) + 120;     // a tidy block just below the cluster
+  } else { centerX = 0; topY = 0; }
+  const startX = centerX - gridW / 2;    // centred, so a full fit frames it all
+  ids.sort();
+  ids.forEach((id, i) =>
+    network.moveNode(id, startX + (i % cols) * spacing,
+                         topY + Math.floor(i / cols) * spacing));
+}
+
+// ── File-view background ──────────────────────────────────────────────────────
+// An optional, subtle background tint that groups nodes by their source file.
+// Each node seeds its file's colour; every background pixel takes the colour of
+// the nearest node — an exact Voronoi map (spatial-hash accelerated) rendered at
+// high resolution for clean, anti-aliased borders, then drawn behind the graph
+// and extended to the whole viewport. Nodes keep their effort colours on top.
+
+const fileOf = (n, mode) => mode === "lean" ? (n.lean_file || "") : (n.tex_file || "");
+
+// A curated, perceptually-distinct palette (d3 category20-style). A file's
+// colour is chosen by hashing its *name*, so it is stable no matter how the
+// graph is filtered, focused or re-laid out — and adjacent files stay easy to
+// tell apart. Projects with more files than the palette wrap to a darker /
+// lighter tier so the wrapped entries remain distinguishable.
+const FILE_PALETTE = [
+  [31,119,180],[255,127,14],[44,160,44],[214,39,40],[148,103,189],
+  [140,86,75],[227,119,194],[188,189,34],[23,190,207],[127,205,187],
+  [174,199,232],[255,187,120],[152,223,138],[255,152,150],[197,176,213],
+  [196,156,148],[247,182,210],[252,146,114],[219,219,141],[158,218,229],
+];
+function hashStr(s) {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+const _SLOTS = FILE_PALETTE.length * 3;          // 20 hues × 3 lightness tiers
+function slotColor(slot) {
+  const base = FILE_PALETTE[slot % FILE_PALETTE.length];
+  const tier = Math.floor(slot / FILE_PALETTE.length) % 3;   // 0 normal · 1 dark · 2 light
+  return tier === 1 ? base.map(v => Math.round(v * 0.68))
+       : tier === 2 ? base.map(v => Math.round(v + (255 - v) * 0.45))
+       : base.slice();
+}
+// Per-mode slot assignment: each file's preferred slot is its name-hash; exact
+// collisions within the same mode are bumped to the next free slot. So every
+// file in a mode gets a distinct colour (up to _SLOTS files), the colour is
+// driven by the name, and it never shifts under focus/reset/filtering (the file
+// set is fixed for the session, and the map is cached).
+const _fileSlots = {};
+function ensureFileSlots(mode) {
+  if (_fileSlots[mode]) return _fileSlots[mode];
+  const files = Object.keys(fileCounts(mode)).sort();
+  const used = new Set(), map = {};
+  for (const f of files) {
+    let slot = hashStr(f) % _SLOTS, t = 0;
+    while (used.has(slot) && t < _SLOTS) { slot = (slot + 1) % _SLOTS; t++; }
+    used.add(slot); map[f] = slot;
+  }
+  return (_fileSlots[mode] = map);
+}
+function colorRGB(file) {
+  const map = ensureFileSlots(state.fileview);
+  const slot = (file in map) ? map[file] : hashStr(file) % _SLOTS;
+  return slotColor(slot);
+}
+
+function fileCounts(mode) {
+  const counts = {};
+  for (const id in allNodes) {
+    const f = fileOf(allNodes[id], mode);
+    if (f) counts[f] = (counts[f] || 0) + 1;
+  }
+  return counts;
+}
+
+let fileBg = null;            // {canvas, minX, minY, w, h, W, H} in graph coords
+
+function rebuildFileBg(quick) {
+  const mode = state.fileview;
+  if (mode === "off") { fileBg = null; network.redraw(); renderFileLegend(); return; }
+
+  const pos = network.getPositions();
+  const ids = Object.keys(pos).filter(id => allNodes[id] && fileOf(allNodes[id], mode));
+  if (!ids.length) { fileBg = null; network.redraw(); renderFileLegend(); return; }
+
+  const xs = ids.map(id => pos[id].x), ys = ids.map(id => pos[id].y);
+  const pad = 70;
+  const minX = Math.min(...xs) - pad, maxX = Math.max(...xs) + pad;
+  const minY = Math.min(...ys) - pad, maxY = Math.max(...ys) + pad;
+  const wG = Math.max(1, maxX - minX), hG = Math.max(1, maxY - minY);
+
+  // High-res grid → straight, finely anti-aliased borders; a coarser grid is
+  // used for the live updates while nodes are still moving, for speed.
+  const target = quick ? 224 : 512;
+  const scale  = target / Math.max(wG, hG);
+  const W = Math.max(1, Math.round(wG * scale)), H = Math.max(1, Math.round(hG * scale));
+
+  const seeds = ids.map(id => {
+    const [r, g, b] = colorRGB(fileOf(allNodes[id], mode));
+    return { x: pos[id].x, y: pos[id].y, r, g, b };
+  });
+
+  // Bucket the seeds so each pixel's nearest-seed search is ~O(1).
+  const gcols = Math.max(1, Math.round(Math.sqrt(seeds.length)));
+  const grows = gcols;
+  const cw = wG / gcols, ch = hG / grows;
+  const buckets = Array.from({ length: gcols * grows }, () => []);
+  const clampC = (v, hi) => Math.min(hi, Math.max(0, v));
+  for (const s of seeds) {
+    const cx = clampC(Math.floor((s.x - minX) / cw), gcols - 1);
+    const cy = clampC(Math.floor((s.y - minY) / ch), grows - 1);
+    buckets[cy * gcols + cx].push(s);
+  }
+  const cellMin = Math.min(cw, ch), maxR = Math.max(gcols, grows);
+  function nearest(wx, wy) {
+    const cx = clampC(Math.floor((wx - minX) / cw), gcols - 1);
+    const cy = clampC(Math.floor((wy - minY) / ch), grows - 1);
+    let best = Infinity, bs = seeds[0];
+    for (let r = 0; r <= maxR; r++) {
+      const x0 = Math.max(0, cx - r), x1 = Math.min(gcols - 1, cx + r);
+      const y0 = Math.max(0, cy - r), y1 = Math.min(grows - 1, cy + r);
+      for (let yy = y0; yy <= y1; yy++) {
+        const edgeRow = (yy === cy - r || yy === cy + r);
+        for (let xx = x0; xx <= x1; xx++) {
+          if (r > 0 && !edgeRow && xx !== cx - r && xx !== cx + r) continue;
+          for (const s of buckets[yy * gcols + xx]) {
+            const dx = s.x - wx, dy = s.y - wy, d = dx * dx + dy * dy;
+            if (d < best) { best = d; bs = s; }
+          }
+        }
+      }
+      // Stop once the closest hit is nearer than any not-yet-scanned ring.
+      if (best < Infinity && Math.sqrt(best) <= r * cellMin) break;
+    }
+    return bs;
+  }
+
+  const cv = document.createElement("canvas");
+  cv.width = W; cv.height = H;
+  const ctx = cv.getContext("2d");
+  const img = ctx.createImageData(W, H), data = img.data;
+  for (let gy = 0; gy < H; gy++) {
+    const wy = minY + (gy + 0.5) / H * hG;
+    for (let gx = 0; gx < W; gx++) {
+      const wx = minX + (gx + 0.5) / W * wG;
+      const s = nearest(wx, wy);
+      const o = (gy * W + gx) * 4;
+      data[o] = s.r; data[o + 1] = s.g; data[o + 2] = s.b; data[o + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  fileBg = { canvas: cv, minX, minY, w: wG, h: hG, W, H };
+  network.redraw();
+  renderFileLegend();
+}
+
+// beforeDrawing runs in graph coordinates, so the cached bitmap pans and zooms
+// with the view automatically. The seed bbox is filled with the Voronoi map, and
+// the colours of its edge pixels are extended outward to cover the *whole*
+// viewport — so the tint follows the nearest-node rule everywhere, not just a
+// central square.
+network.on("beforeDrawing", ctx => {
+  if (!fileBg) return;
+  const c = fileBg.canvas, W = fileBg.W, H = fileBg.H;
+  const x0 = fileBg.minX, y0 = fileBg.minY, x1 = x0 + fileBg.w, y1 = y0 + fileBg.h;
+  const tl = network.DOMtoCanvas({ x: 0, y: 0 });
+  const br = network.DOMtoCanvas({ x: $("graph").clientWidth, y: $("graph").clientHeight });
+  const L = Math.min(tl.x, br.x), R = Math.max(tl.x, br.x);
+  const T = Math.min(tl.y, br.y), B = Math.max(tl.y, br.y);
+
+  ctx.save();
+  ctx.globalAlpha = 0.32;                 // visible but still a background tint
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(c, x0, y0, fileBg.w, fileBg.h);                          // centre
+  if (L < x0) ctx.drawImage(c, 0, 0, 1, H, L, y0, x0 - L, fileBg.h);     // left
+  if (R > x1) ctx.drawImage(c, W - 1, 0, 1, H, x1, y0, R - x1, fileBg.h);// right
+  if (T < y0) ctx.drawImage(c, 0, 0, W, 1, x0, T, fileBg.w, y0 - T);     // top
+  if (B > y1) ctx.drawImage(c, 0, H - 1, W, 1, x0, y1, fileBg.w, B - y1);// bottom
+  if (L < x0 && T < y0) ctx.drawImage(c, 0, 0, 1, 1, L, T, x0 - L, y0 - T);
+  if (R > x1 && T < y0) ctx.drawImage(c, W - 1, 0, 1, 1, x1, T, R - x1, y0 - T);
+  if (L < x0 && B > y1) ctx.drawImage(c, 0, H - 1, 1, 1, L, y1, x0 - L, B - y1);
+  if (R > x1 && B > y1) ctx.drawImage(c, W - 1, H - 1, 1, 1, x1, y1, R - x1, B - y1);
+  ctx.restore();
+});
+
+function renderFileLegend() {
+  const panel = $("file-legend"), mode = state.fileview;
+  if (mode === "off") { panel.style.display = "none"; return; }
+  panel.style.display = "block";
+  const label = mode === "lean" ? "Lean" : "LaTeX";
+  const counts = fileCounts(mode);
+  const files = Object.keys(counts).sort();
+  if (!files.length) {
+    panel.innerHTML = `<h4>${label} files</h4>` +
+      `<div class="fl-empty">no ${label} file info available</div>`;
+    return;
+  }
+  panel.innerHTML = `<h4>${label} files · ${files.length}</h4>` + files.map(f => {
+    const [r, g, b] = colorRGB(f);
+    return `<div class="fl-row">` +
+      `<span class="fl-sw" style="background:rgb(${r},${g},${b})"></span>` +
+      `<span class="fl-name" title="${esc(f)}">${esc(f)}</span>` +
+      `<span class="fl-n">${counts[f]}</span></div>`;
+  }).join("");
+}
+
+// Recompute the tint *while* the layout changes, so the regions move with the
+// nodes rather than snapping only once at the end: throttled coarse rebuilds
+// during stabilization and dragging, then a final full-resolution pass.
+let _liveLast = 0;
+function liveFileBg() {
+  if (state.fileview === "off") return;
+  const now = Date.now();
+  if (now - _liveLast < 110) return;
+  _liveLast = now;
+  rebuildFileBg(true);
+}
+network.on("stabilizationProgress", liveFileBg);
+network.on("dragging", liveFileBg);
+network.on("dragEnd", () => { if (state.fileview !== "off") rebuildFileBg(); });
+
+// ── Navigation: swipe = pan · Ctrl+scroll / pinch = zoom ─────────────────────
+
+let ZOOM_MIN = 0.05;
+const ZOOM_MAX = 3.0;
+const FIT_FLOOR = 0.34;          // never auto-zoom below this — keeps nodes legible
+let graphBounds = null;
+
+function recomputeBounds() {
+  const pts = Object.values(network.getPositions());
+  if (pts.length) {
+    const pad = 200;
+    graphBounds = {
+      left:   Math.min(...pts.map(p => p.x)) - pad,
+      right:  Math.max(...pts.map(p => p.x)) + pad,
+      top:    Math.min(...pts.map(p => p.y)) - pad,
+      bottom: Math.max(...pts.map(p => p.y)) + pad,
+    };
+  } else graphBounds = null;
+}
+
+function fitFloored() {
+  network.fit({ animation: false });
+  const fitScale = network.getScale();
+  // The most-zoomed-out limit tracks the graph's actual extent — a little past
+  // the scale at which everything fits — instead of a fixed floor. So a small
+  // graph can't be shrunk to a speck, and a huge one can still reach overview.
+  ZOOM_MIN = Math.max(0.02, Math.min(fitScale * 0.7, ZOOM_MAX));
+  // For very large graphs `fit` is sub-pixel; don't *start* there (keeps nodes
+  // legible) but still allow zooming out to it. When isolated nodes are shown we
+  // fully fit instead, so their (potentially large) block is actually visible.
+  if (!state.showOrphans && fitScale < FIT_FLOOR)
+    network.moveTo({ scale: FIT_FLOOR, animation: false });
+  recomputeBounds();
+  rebuildFileBg();   // node positions just changed — refresh the file tint
+}
+
+$("graph").addEventListener("wheel", e => {
+  e.preventDefault();
+  e.stopPropagation();
+  const pos = network.getViewPosition();
+  const sc  = network.getScale();
+  if (e.ctrlKey) {
+    const f        = e.deltaY > 0 ? 0.9 : 1 / 0.9;
+    const newScale = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, sc * f));
+    network.moveTo({ scale: newScale, animation: false });
+  } else {
+    let nx = pos.x + e.deltaX / sc;
+    let ny = pos.y + e.deltaY / sc;
+    if (graphBounds) {
+      nx = Math.max(graphBounds.left, Math.min(graphBounds.right,  nx));
+      ny = Math.max(graphBounds.top,  Math.min(graphBounds.bottom, ny));
+    }
+    network.moveTo({ position: { x: nx, y: ny }, animation: false });
+  }
+}, { capture: true, passive: false });
+
+// ── Apply current filter state to the canvas ────────────────────────────────
+
+function apply() {
+  const vis   = visibleSet();
+  const nodes = graphData.nodes.filter(n => vis.has(n.id));
+  const edges = graphData.edges.filter(e => vis.has(e.from) && vis.has(e.to));
+
+  nodesDS.clear(); edgesDS.clear();
+  nodesDS.add(nodes); edgesDS.add(edges);
+
+  $("stat").innerHTML =
+    `${nodes.length} / ${graphData.nodes.length} nodes &middot; ${edges.length} edges`;
+
+  const pill = $("focus-pill");
+  if (state.focus) {
+    pill.style.display = "inline-flex";
+    pill.querySelector(".lbl").textContent = "focus: " + state.focus.split(":").pop();
+  } else {
+    pill.style.display = "none";
+  }
+
+  // Re-settle the now-visible subset; the stabilization handler freezes and
+  // fits when it finishes. With nothing to simulate (a lone node, or only
+  // isolated nodes — which are physics:false) we lay out and fit directly.
+  const anyPhysics = nodes.some(n => n.physics !== false);
+  if (nodes.length > 1 && anyPhysics) {
+    network.setOptions({ physics: PHYSICS_OPTS });
+  } else {
+    setTimeout(() => { layoutOrphans(); fitFloored(); }, 0);
+  }
+}
+
+function syncControls() {
+  $("orphans").checked  = state.showOrphans;
+  $("nodeset").value    = state.nodeset;
+  $("fileview").value   = state.fileview;
+  $("component").value  = state.component === null ? "" : String(state.component);
+  $("chapter").value    = state.chapter || "";
+}
+
+// ── Reveal-aware navigation ─────────────────────────────────────────────────
+
+function goTo(id) {
+  if (!allNodes[id]) return;
+  if (!visibleSet().has(id)) {            // relax filters until the node is shown
+    state.focus = null;
+    state.component = null;
+    state.chapter = null;
+    if (!inNodeset(id)) state.nodeset = "union";
+    if (isOrphan(id)) state.showOrphans = true;
+    syncControls();
+    apply();
+  }
+  setTimeout(() => jumpTo(id), 70);
+}
+
+function jumpTo(id) {
+  if (!allNodes[id]) return;
+  network.selectNodes([id]);
+  network.focus(id, { scale: 1.2, animation: { duration: 400, easingFunction: "easeInOutQuad" } });
+  renderNode(id);
+  highlightCone(id);
+}
+
+function setFocus(id) {
+  if (!allNodes[id]) return;
+  state.focus = id;
+  apply();
+  renderNode(id);
+  setTimeout(() => jumpTo(id), 70);
+}
+
+function clearFocus() { state.focus = null; apply(); }
+
+function resetView() {
+  state.showOrphans = false;
+  state.focus = null;
+  state.component = null;
+  state.chapter = null;
+  state.nodeset = "union";
+  $("search").value = "";
+  syncControls();
+  apply();
+}
+
+// ── Control wiring ──────────────────────────────────────────────────────────
+
+$("orphans").addEventListener("change", e => {
+  state.showOrphans = e.target.checked; state.focus = null; apply();
+});
+$("nodeset").addEventListener("change", e => {
+  state.nodeset = e.target.value; state.focus = null; apply();
+});
+$("component").addEventListener("change", e => {
+  state.component = e.target.value === "" ? null : Number(e.target.value);
+  state.focus = null; apply();
+});
+$("chapter").addEventListener("change", e => {
+  state.chapter = e.target.value || null; state.focus = null; apply();
+});
+$("fileview").addEventListener("change", e => {
+  state.fileview = e.target.value; rebuildFileBg();
+});
+$("search").addEventListener("change", e => {
+  const v = e.target.value.trim();
+  if (allNodes[v]) goTo(v);
+});
+$("reset").addEventListener("click", resetView);
+$("focus-pill").addEventListener("click", clearFocus);
+
+// ── Lean syntax highlighter ─────────────────────────────────────────────────
+
+function esc(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+const _KW      = /\b(def|lemma|theorem|instance|class|structure|inductive|abbrev|noncomputable|private|protected|section|namespace|end|open|variable|where|do|let|have|show|suffices|calc|if|then|else|return|for|in|fun|match|with|by|sorry)\b/g;
+const _TACTIC  = /\b(simp|ext|rfl|exact|intro|intros|apply|refine|constructor|use|rw|rewrite|rcases|rintro|obtain|push_neg|norm_num|ring|group|linarith|omega|decide|trivial|assumption|congr|tauto|aesop|cases|induction|revert|clear|next|all_goals|repeat|try|first|solve|fin_cases|positivity|gcongr|field_simp)\b/g;
+const _TYPE    = /\b(Nat|Int|Bool|String|List|Array|Option|Type|Prop|Sort|True|False|And|Or|Not|Iff|Eq|Subgroup|Group|Ring|Field|Fintype|Finite)\b/g;
+const _NUM     = /\b(\d+)\b/g;
+const _STR     = /("(?:[^"\\]|\\.)*")/g;
+
+function highlightLean(raw) {
+  return raw.split('\n').map(line => {
+    let commentAt = -1;
+    let inStr = false;
+    for (let i = 0; i < line.length - 1; i++) {
+      if (line[i] === '"' && (i === 0 || line[i-1] !== '\\')) inStr = !inStr;
+      if (!inStr && line[i] === '-' && line[i+1] === '-') { commentAt = i; break; }
+    }
+    const code    = commentAt >= 0 ? line.slice(0, commentAt) : line;
+    const comment = commentAt >= 0 ? line.slice(commentAt)    : '';
+    let h = esc(code);
+    h = h.replace(_STR,    m => `<span class="hl-str">${m}</span>`);
+    h = h.replace(_KW,     m => `<span class="hl-kw">${m}</span>`);
+    h = h.replace(_TACTIC, m => `<span class="hl-tactic">${m}</span>`);
+    h = h.replace(_TYPE,   m => `<span class="hl-type">${m}</span>`);
+    h = h.replace(_NUM,    m => `<span class="hl-num">${m}</span>`);
+    const commentHtml = comment ? `<span class="hl-comment">${esc(comment)}</span>` : '';
+    return h + commentHtml;
+  }).join('\n');
+}
+
+// ── LaTeX renderer ───────────────────────────────────────────────────────────
+
+function processNonMath(s) {
+  return esc(s)
+    .replace(/\\emph\{([^}]*)\}/g,   '<em>$1</em>')
+    .replace(/\\textbf\{([^}]*)\}/g, '<strong>$1</strong>')
+    .replace(/\\textit\{([^}]*)\}/g, '<em>$1</em>')
+    .replace(/\\text\{([^}]*)\}/g,   '$1');
+}
+
+function renderLatex(el, text) {
+  if (!text || !text.trim()) {
+    el.classList.add('empty'); el.textContent = '—'; return;
+  }
+  // Match every math delimiter style leanblueprint uses: $$…$$ and \[…\]
+  // (display) and \(…\) and $…$ (inline). $$ and \[ \] come first so the
+  // single-$ branch can't grab a $$ opener.
+  const re = /(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\)|\$(?:[^$\\]|\\.)+?\$)/g;
+  let html = '', last = 0, m;
+  while ((m = re.exec(text)) !== null) {
+    html += processNonMath(text.slice(last, m.index));
+    const raw = m[0];
+    let disp, math;
+    if      (raw.startsWith('$$'))  { disp = true;  math = raw.slice(2, -2); }
+    else if (raw.startsWith('\\[')) { disp = true;  math = raw.slice(2, -2); }
+    else if (raw.startsWith('\\(')) { disp = false; math = raw.slice(2, -2); }
+    else                            { disp = false; math = raw.slice(1, -1); }
+    if (window.katex) {
+      try {
+        html += katex.renderToString(math, {
+          displayMode: disp, throwOnError: false, macros: katexMacros,
+        });
+      }
+      catch (_) { html += esc(raw); }
+    } else {
+      html += `<span style="color:#94a3b8">${esc(raw)}</span>`;
+    }
+    last = re.lastIndex;
+  }
+  html += processNonMath(text.slice(last));
+  el.innerHTML = html;
+}
+
+// ── Sidebar rendering ────────────────────────────────────────────────────────
+
+function charVal(v) {
+  if (v === null || v === undefined) return '<span class="m-val m-inf">∞</span>';
+  return `<span class="m-val">${v.toLocaleString()}</span>`;
+}
+function workVal(v) {
+  if (v === null || v === undefined) return '<span class="m-val m-inf">∞</span>';
+  if (v === 0) return '<span class="m-val m-done">0 ✓</span>';
+  return `<span class="m-val m-work">${v.toLocaleString()}</span>`;
+}
+function charsPair(rel, cum) {
+  const f = v => (v === null || v === undefined)
+    ? '<span class="chars-inf">∞</span>'
+    : `<span class="chars-val">${v}</span>`;
+  return `<span class="chars-pair">ℓ<sub>local</sub>=${f(rel)} &nbsp; ℓ<sub>total</sub>=${f(cum)}</span>`;
+}
+
+function renderNode(id) {
+  const n = allNodes[id];
+  if (!n) return;
+
+  $("sidebar-empty").style.display = "none";
+  const content = $("sidebar-content");
+  content.style.display = "flex";
+
+  const statusBadge = n.proved
+    ? '<span class="badge badge-proved">✓ leanok</span>'
+    : (n.mathlib_ok
+        ? '<span class="badge badge-proved">ⓜ mathlib</span>'
+        : (n.has_sorry
+            ? '<span class="badge badge-sorry">sorry</span>'
+            : '<span class="badge badge-unproved">unproved</span>'));
+
+  const mkChip = u => `<span class="dep-chip" onclick="goTo('${esc(u)}')">${esc(u)}</span>`;
+  const depsHtml = n.uses.length
+    ? n.uses.map(mkChip).join('')
+    : '<span class="no-deps">none — axiom</span>';
+
+  // full transitive upstream, with the direct deps split out
+  const anc       = ancestorsOf(id);
+  const directSet = new Set(n.uses);
+  const indirect  = [...anc].filter(x => !directSet.has(x)).sort();
+  const transHtml = indirect.length
+    ? indirect.map(mkChip).join('')
+    : '<span class="no-deps">none beyond the direct ones</span>';
+
+  const focusLabel = state.focus === id ? 'Clear focus' : 'Focus dependency cone';
+  const focusCall  = state.focus === id ? 'clearFocus()' : `setFocus('${esc(id)}')`;
+
+  content.innerHTML = `
+    <div class="card">
+      <div class="node-badges">
+        <span class="badge badge-type">${n.type.toUpperCase()}</span>${statusBadge}
+      </div>
+      <div class="node-title">${esc(n.title || n.id)}</div>
+      <div class="node-id">${esc(n.id)}</div>
+      ${n.chapter   ? `<div class="node-chapter">§ ${esc(n.chapter)}</div>` : ''}
+      ${n.lean_name ? `<div class="lean-ref">Lean: <code>${esc(n.lean_name)}</code></div>` : ''}
+      ${n.tex_file  ? `<div class="lean-ref">tex: <code>${esc(n.tex_file)}</code></div>` : ''}
+      ${n.lean_file ? `<div class="lean-ref">file: <code>${esc(n.lean_file)}</code></div>` : ''}
+      <button class="btn-focus" onclick="${focusCall}">⊙ ${focusLabel}</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Structure</div>
+      <div class="degrees">
+        <div class="degree">
+          <span class="degree-val">${n.dep_count}</span>
+          <span class="degree-label">direct deps</span>
+        </div>
+        <div class="degree">
+          <span class="degree-val">${anc.size}</span>
+          <span class="degree-label">total upstream</span>
+        </div>
+        <div class="degree">
+          <span class="degree-val">${n.rdep_count}</span>
+          <span class="degree-label">used by</span>
+        </div>
+      </div>
+      <div class="deps-sub">direct dependencies</div>
+      <div class="deps-list">${depsHtml}</div>
+      <div class="deps-sub">indirect (transitive) dependencies</div>
+      <div class="deps-list">${transHtml}</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Complexity</div>
+      <div class="metrics-grid">
+        <span></span>
+        <span class="col-head">local</span>
+        <span class="col-head">total</span>
+        <span class="m-label">LaTeX ℓ</span>${charVal(n.proof_size_tex)}${charVal(n.proof_size_tex_total)}
+        <span class="m-label">Lean ℓ</span>${charVal(n.proof_size_lean)}${charVal(n.proof_size_lean_total)}
+        <span class="m-label">Effort</span>${workVal(n.effort_local)}${workVal(n.effort_total)}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="sec-hdr"><span class="card-title" style="margin:0">LaTeX statement</span></div>
+      <div class="latex-rendered" id="latex-stmt"></div>
+    </div>
+
+    <div class="card">
+      <div class="sec-hdr">
+        <span class="card-title" style="margin:0">LaTeX proof</span>
+        ${charsPair(n.proof_size_tex, n.proof_size_tex_total)}
+      </div>
+      <div class="latex-rendered" id="latex-proof"></div>
+    </div>
+
+    <div class="card">
+      <div class="sec-hdr">
+        <span class="card-title" style="margin:0">Lean code</span>
+        ${charsPair(n.proof_size_lean, n.proof_size_lean_total)}
+      </div>
+      <pre class="code-block" id="lean-code"></pre>
+    </div>
+  `;
+
+  renderLatex($('latex-stmt'),  n.statement);
+  renderLatex($('latex-proof'), n.proof_tex ? n.proof_tex.trim() : '');
+
+  const leanEl = $('lean-code');
+  if (n.lean_source) {
+    leanEl.innerHTML = highlightLean(n.lean_source);
+  } else {
+    leanEl.classList.add('empty');
+    leanEl.textContent = 'declaration not found';
+  }
+}
+
+// ── Cone highlighting on click ───────────────────────────────────────────────
+// Selecting a node lights up its WHOLE transitive cone — every ancestor and
+// descendant and the edges between them — while everything else fades back.
+
+const baseNodeById = {};
+for (const vn of graphData.nodes) baseNodeById[vn.id] = vn;
+
+const EDGE_BASE = { color: "#cbd5e1", highlight: "#64748b" };
+
+function highlightCone(id) {
+  const cone = coneOf(id);   // {id} ∪ ancestors ∪ descendants
+  nodesDS.update(nodesDS.getIds().map(nid =>
+    cone.has(nid)
+      ? baseNodeById[nid]                                   // full styling
+      : { id: nid, color: { background: "#e5e7eb", border: "#d1d5db" },
+          font: { color: "#cbd5e1" } }                      // faded
+  ));
+  edgesDS.update(edgesDS.get().map(e => {
+    const on = cone.has(e.from) && cone.has(e.to);
+    return { id: e.id,
+             color: on ? { color: "#475569", highlight: "#334155" } : { color: "#edf0f4" },
+             width: on ? 2.5 : 1 };
+  }));
+}
+
+function clearHighlight() {
+  nodesDS.update(nodesDS.getIds().map(nid => baseNodeById[nid]));
+  edgesDS.update(edgesDS.get().map(e => ({ id: e.id, color: EDGE_BASE, width: 1 })));
+}
+
+network.on("click", params => {
+  if (params.nodes.length) { renderNode(params.nodes[0]); highlightCone(params.nodes[0]); }
+  else                     { clearHighlight(); }
+});
+network.on("doubleClick", params => { if (params.nodes.length) setFocus(params.nodes[0]); });
+
+// ── Initial render ───────────────────────────────────────────────────────────
+
+apply();
+</script>
+</body>
+</html>

@@ -4,6 +4,33 @@ import AlgebraicJacobian.Cohomology.StructureSheafAb
 import AlgebraicJacobian.Cohomology.StructureSheafModuleK
 import AlgebraicJacobian.Cohomology.MayerVietorisCore
 import AlgebraicJacobian.Cohomology.MayerVietorisCover
+-- Čech-cohomology development merged from the Cech-Cohomology subproject
+-- (enrich merge, 2026-06-18). Closes the formerly-orphaned CechNerve / Rⁱf_*
+-- Čech lane: pushPullFunctor + pushPullMap_comp + cech_computes_higherDirectImage.
+import AlgebraicJacobian.Cohomology.HigherDirectImage
+import AlgebraicJacobian.Cohomology.HigherDirectImagePresheaf
+import AlgebraicJacobian.Cohomology.CechHigherDirectImage
+import AlgebraicJacobian.Cohomology.CechAcyclic
+import AlgebraicJacobian.Cohomology.AcyclicResolution
+import AlgebraicJacobian.Cohomology.PresheafCech
+import AlgebraicJacobian.Cohomology.FreePresheafComplex
+import AlgebraicJacobian.Cohomology.CechBridge
+import AlgebraicJacobian.Cohomology.AbsoluteCohomology
+import AlgebraicJacobian.Cohomology.CechToCohomology
+import AlgebraicJacobian.Cohomology.TildeExactness
+import AlgebraicJacobian.Cohomology.AffineSerreVanishing
+import AlgebraicJacobian.Cohomology.QcohRestrictBasicOpen
+import AlgebraicJacobian.Cohomology.QcohTildeSections
+import AlgebraicJacobian.Cohomology.CechSectionIdentificationBase
+import AlgebraicJacobian.Cohomology.CechSectionIdentificationLeg
+import AlgebraicJacobian.Cohomology.CechSectionIdentification
+import AlgebraicJacobian.Cohomology.CechAugmentedResolution
+import AlgebraicJacobian.Cohomology.OpenImmersionPushforward
+import AlgebraicJacobian.Cohomology.CechTermAcyclic
+import AlgebraicJacobian.Cohomology.CechToHigherDirectImage
+-- Target-local roadmap nodes preserved across the merge (unconditional Rⁱf_*
+-- packaging + Čech flat base change, Stacks 02KH) — see file header.
+import AlgebraicJacobian.Cohomology.CechHigherDirectImageUnconditional
 import AlgebraicJacobian.Cotangent.GrpObj
 import AlgebraicJacobian.Cotangent.ChartAlgebra
 import AlgebraicJacobian.Differentials

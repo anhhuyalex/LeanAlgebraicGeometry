@@ -13,7 +13,7 @@
      current sorry counts, task-specific details that change every iter.
 -->
 
-- FBC mate route `base_change_mate_*_legs_conj`/`_gstar_transpose` is ABANDONED; named FBC legs go via FBC-B direct (`baseChangeGammaPullbackEquiv`). Don't re-attempt the mate route.
-- `X.Modules`/value-ModuleCat diamond: positional `rw`/`simp`/`erw`, `comp_apply`, `hom_comp` all fail → term-mode + `change`-to-nested-application.
-- SNAP: carrier `AddCommGrpCat` not `AddCommGrp`; `P⊗Q` = `MonoidalCategory.tensorObj (C := MonoidalPresheaf X) P Q`. Stalkwise DEAD. `sectionsMul_assoc_unit` = FOUR cast-mediated component Eqs (TensorPower.Basic idiom), NOT one GradedMonoid Eq/HEq.
-- Build with `lake build <module>` (LSP hides kernel timeouts); never add `maxHeartbeats 1e6`. No LLM API key in env.
+- FBC: MATE route DEAD; seeds reached via concrete-tilde chain (per-chart 01I9→fork→separated→MV→bridge). Whole mate apparatus (`base_change_mate_{domain,codomain}_read`/`_gstar_transpose`/`_section_identity`/`_generator_trace`/`pushforward_base_change_mate_*`) is COMPILE-DEAD (seeds = bare sorry) — excise in a DEDICATED iter (sync blueprint `\uses` same iter), never alongside an FBC prover. KEEP `base_change_mate_regroupEquiv` (the (a) cancellation `(R⊗_A B)⊗_R M≅B⊗_A M`, NOT `cancelBaseChange` directly) + `base_change_map_affine_local`.
+- `X.Modules`/value-ModuleCat diamond: positional `rw`/`simp`/`erw`/`comp_apply`/`hom_comp` fail → term-mode + `change`-to-nested-application.
+- SNAP: carrier `AddCommGrpCat`; coherence via `Localization.Monoidal` `LocalizedMonoidal L W ε` synonym (full `MonoidalCategory(X.Modules)` DEAD). HAZARD: `⊗_loc` NOT defeq hand-built `tensorObj` → bridges object-iso-CONJUGATED via `tensorObjLocalizedIso=μ⁻¹;counit` (Option B), NOT bare `α=α^loc` (type error); Option A redefine rejected (defeq blast radius). Stalkwise DEAD.
+- Build `lake build <module>` (LSP hides kernel timeouts); never `maxHeartbeats 1e6`. No LLM API key.

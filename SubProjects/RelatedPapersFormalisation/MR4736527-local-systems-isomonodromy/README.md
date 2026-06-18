@@ -5,7 +5,16 @@
 
 ## Project
 
-<!-- One paragraph: what is being formalized and why. -->
+This project formalizes results from "Geometric local systems on very general curves
+and isomonodromy" by Aaron Landesman and Daniel Litt (MR4736527, arXiv:2202.00039).
+The paper proves that the minimum rank of a non-isotrivial local system of geometric
+origin on a suitably general $n$-pointed curve of genus $g$ is at least $2\sqrt{g+1}$,
+resolving conjectures of Esnault–Kerz and Budur–Wang. The main technical input is an
+analysis of the stability properties (Harder–Narasimhan filtration) of flat vector
+bundles with regular singularities under isomonodromic deformation, which also answers
+questions of Biswas, Heu, and Hurtubise. The formalization target spans the
+Hodge-theoretic main results (constraints on variations of Hodge structure on very
+general curves) and the underlying isomonodromy/semistability machinery.
 
 ## References
 

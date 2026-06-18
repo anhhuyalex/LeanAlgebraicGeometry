@@ -1,0 +1,1 @@
+- Blueprint complete (22 declarations, 0 ∞ nodes, fully connected). Five deep analytic inputs are axioms — `thm:period-map`, `thm:rank-bound-subsystem`, `thm:cohomologically-rigid-integral`, `thm:nah-unitarity` ([LL22] Thm 1.2.12), `prop:mcg-finite-family`. Run `archon loop` to begin the autoformalize phase.

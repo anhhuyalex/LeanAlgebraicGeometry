@@ -724,6 +724,17 @@ noncomputable def lastVarAlgHom (r : ℕ) (κ : Type*) [Field κ] :
     lastVarAlgHom r κ (MvPolynomial.C c) = MvPolynomial.C c := by
   simp [lastVarAlgHom]
 
+/-- `lastVarAlgHom` is a left inverse of `rename Fin.castSucc`, hence surjective. -/
+lemma lastVarAlgHom_rename_castSucc (r : ℕ) (q : MvPolynomial (Fin r) κ) :
+    lastVarAlgHom r κ (MvPolynomial.rename Fin.castSucc q) = q := by
+  induction q using MvPolynomial.induction_on with
+  | C a => simp
+  | add p q hp hq => simp [hp, hq]
+  | mul_X p i hp => simp [hp]
+
+lemma lastVarAlgHom_surjective (r : ℕ) : Function.Surjective (lastVarAlgHom r κ) :=
+  fun q => ⟨MvPolynomial.rename Fin.castSucc q, lastVarAlgHom_rename_castSucc r q⟩
+
 instance lastVarAlgHom_ringHomSurjective (r : ℕ) :
     RingHomSurjective (lastVarAlgHom r κ).toRingHom :=
   ⟨lastVarAlgHom_surjective r⟩
@@ -965,6 +976,9 @@ structure SubquotientDatum (r : ℕ) where
 
 /-- The ambient Hilbert function `n ↦ dim_κ(N ⊓ ℳ n) − dim_κ(N' ⊓ ℳ n)` of a subquotient
 datum (`def:graded_subquotientHilb`). -/
+noncomputable def SubquotientDatum.hilb {r : ℕ} (D : SubquotientDatum ℳ r) : ℕ → ℚ :=
+  subquotientHilb ℳ D.N D.N'
+
 /-- The kernel pair's lower module `N ⊓ x⁻¹N'` is stable under every endomorphism of the family
 (needed for the finiteness transfer over the full polynomial ring). -/
 lemma ker_stable_full {r : ℕ} (D : SubquotientDatum ℳ (r + 1)) (i : Fin (r + 1)) :

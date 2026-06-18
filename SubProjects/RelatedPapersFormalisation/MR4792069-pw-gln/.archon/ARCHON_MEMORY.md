@@ -4,11 +4,10 @@
      HARD LIMITS: max 10 bullets · ~600 chars total.
      Prune before adding. Only keep what would surprise an agent reading
      the code fresh. Do NOT duplicate things obvious from the codebase.
-
-     Good candidates: dead-end tactics, files not to touch, Mathlib gap
-     coordinates, protected invariants, per-file hazards, standing routes
-     to avoid, axioms that must not be accepted.
-
-     Bad candidates: things already obvious from the code or PROGRESS.md,
-     current sorry counts, task-specific details that change every iter.
 -->
+
+- `PerverseFiltration` and `WeightFiltration` are permanent sorry-axioms (perverse sheaves / mixed Hodge theory absent from Mathlib).
+- Filtration framework: use `Mathlib.RingTheory.FilteredAlgebra.Basic` (IsModuleFiltration); NOT `Mathlib.Algebra.FilteredRing` (doesn't exist).
+- Singular cohomology H^m(M_B, ℚ) is not in Mathlib; introduce as opaque ℚ-module `CohomologyGroup`.
+- Paper source: `references/pw-gln-maulik-shen.tex` (LaTeX) + `.pdf` (arXiv:2209.02568, Ann. Math. 200 (2024) no. 2).
+- All 8 blueprint declarations are in `blueprint/src/chapters/Overview.tex` (consolidated chapter covers both .lean files).

@@ -11,6 +11,17 @@ the pointing. End-state: zero inline `sorry` in the dependency cone of each prot
 project axioms, kernel-only axioms. Spine: pointed vs. unpointed. Posture **option (c)**: forward
 the Route-A Picard substrate while Riemann–Roch stays frozen by the permanent USER Route-C pause.
 
+**Merge update (2026-06-18).** The **A.2.c-engine `Rⁱf_*` Čech lane** — previously
+flagged here as the DOMINANT pole and rate-limiter (~3400–5500 LOC remaining, the
+Čech sub-development ~800–1200) — has been satisfied by an enrich merge of the
+`Cech-Cohomology` subproject: the full Čech-cohomology library (Čech nerve →
+relative Čech complex → acyclic resolution → `cech_computes_higherDirectImage`) is
+now imported and wired in, replacing the target's orphaned stub. The `pushPullMap_comp`
+"kernel whnf blow-up" blocker noted in the phases table is resolved by the source's
+`rawPushPullMap` reformulation. Remaining engine work: integrate this `Rⁱf_*` into
+Rel Proj / representability (A.2.c) and discharge the residual `coreIso_comm_leg`
+sorry inside the imported development.
+
 ## Phases & estimations
 
 | Phase | Status | Iters left | LOC (rem · /it) | Key Mathlib needs | Risks |

@@ -1,0 +1,1 @@
+- **[Schröer 2021b] needed**: `thm:no-exceptional-over-Z4` (sorry-axiom A1) cites Schröer, "Enriques surfaces without exceptional vector bundles", Thm 7.2. This paper is not in `references/`. To eliminate the sorry, either supply the PDF/TeX (add to `references/` and run `reference-retriever`) or confirm taking Thm 7.2 as a permanent axiom.
