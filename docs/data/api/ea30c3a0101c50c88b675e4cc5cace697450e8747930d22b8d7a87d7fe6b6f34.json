@@ -1,1 +1,105 @@
-[]
+[
+  {
+    "timestamp": "2026-06-19T14:59:58Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate/DualInverse.lean",
+      "theorem": "linearEndo_apply_comm (L219 build-fix) / presheafDualUnitIso_naturality"
+    },
+    "session": {
+      "id": "session_30",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "plan-validate NOOP'd this objective (objectivesNoop in meta.json) — the L219 fix target declarations are sorry-free, and the validator drops files whose assigned target carries no sorry (the iter-026 connector hazard recorded in ARCHON_MEMORY). No prover lane ever ran on this file; L219 unchanged on disk; file still RED. The deterministic one-token fix `← map_smul` → `← LinearMap.map_smul` was specified verbatim in BOTH the iter-029 review and the iter-030 plan/PROGRESS objective but was never executed.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Objective 1 — single-token build fix at L219 inside linearEndo_apply_comm",
+        "code_tried": "rw [← smul_eq_mul, ← LinearMap.map_smul, smul_eq_mul, mul_one]  (planned, never applied)",
+        "line_number": "219",
+        "lean_error": "NOT ATTEMPTED — lane noop'd by plan-validate (target sorry-free)",
+        "goal_before": "g x = x • g 1",
+        "goal_after": "n/a",
+        "result": "failed",
+        "insight": "A build-fix objective on a sorry-free target is auto-dropped by plan-validate. The fix must be routed so the validator does not noop it (bundle with a sorry-carrying target in the same file, or apply it deterministically outside a prover lane)."
+      }
+    ],
+    "next_steps": "Apply the one-token L219 fix deterministically (not via a sorry-gated prover lane). That alone lands presheafDualUnitIso_naturality, hN dualUnitIso_dualIsoOfIso, tensorObj_unit_self_duality_collapse and restores ~29 \\leanok markers. NOTE: it does NOT close exists_tensorObj_inverse (that still rewrites through the sorry'd trivialisation_restrict_compat)."
+  },
+  {
+    "timestamp": "2026-06-19T14:59:58Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "exists_tensorObj_inverse"
+    },
+    "session": {
+      "id": "session_30",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "No green build window all session: DualInverse import RED at L219 (sibling Obj-1 lane never ran). lake build + LSP returned success:false; zero machine-verification capability. Proof typed but hedged `first | <derivation> | sorry`. Additionally gated: the derivation rewrites through the still-sorry trivialisation_restrict_compat, so the lemma cannot earn \\leanok even once DualInverse goes green.",
+      "key_lemmas_used": [
+        "trivialisation_restrict_compat",
+        "tensorObj_unit_self_duality_collapse",
+        "dualIsoOfIso_trans",
+        "tensorObjIsoOfIso_trans",
+        "Iso.self_symm_id",
+        "Iso.trans_symm",
+        "Iso.hom_inv_id_assoc"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Type the paper-validated iso-algebra cocycle reduction; hedge `first | derivation | sorry` so file compiles the moment DualInverse goes green",
+        "code_tried": "simp only [hf_def, he, huι, heN] (drop heM); erw [trivialisation_restrict_compat hVi (eM i), trivialisation_restrict_compat hVj (eM j)]; set eMi/eMj/t; ht via Iso.self_symm_id/Iso.refl_trans; hfact (dual_unit_iso ⪡⪡ .symm = 𝟙 via Iso.ext+simp+Iso.hom_inv_id_assoc); hiso rw[← ht, dualIsoOfIso_trans, Iso.trans_symm, hfact, tensorObjIsoOfIso_trans, Iso.trans_assoc, tensorObj_unit_self_duality_collapse t]; hchain congrArg (R ⪡⪡ ·) hiso",
+        "line_number": "444",
+        "lean_error": "Cannot elaborate — DualInverse import RED (success:false). Sub-steps hfact/hiso/ht/hchain verified abstractly via lean_run_code on Mathlib-only models (all goals:[]). The two boundary firings (erw trivialisation_restrict_compat; final rw hchain) UNVERIFIED.",
+        "goal_before": "sectionwise cocycle overlap goal (two legs differ by restrictIsoUnitOfLE)",
+        "goal_after": "n/a (unverified)",
+        "result": "partial",
+        "insight": "Iso-algebra core is high-confidence (abstract-verified). But lvb + auditor confirm: the hedge is honest (falls to sorry, no shape-mask) yet the derivation rewrites by the sorry'd trivialisation_restrict_compat, so even when fired the lemma carries a sorry-axiom. Cocycle is GATED on trivialisation_restrict_compat, not merely on a green window."
+      }
+    ],
+    "next_steps": "Do NOT treat as verify-and-unwrap. Close trivialisation_restrict_compat FIRST (with a green window + LSP). Then verify the cocycle's first branch and strip the `first | … | sorry` wrapper."
+  },
+  {
+    "timestamp": "2026-06-19T14:59:58Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "trivialisation_restrict_compat"
+    },
+    "session": {
+      "id": "session_30",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "No LSP/green build all session (DualInverse RED). This is the multi-hundred-LOC eqToHom-bookkeeping residual (8 isos pushed through restriction naturality); each leg needs interactive goal inspection — impossible blind. Blueprint sketch (lem:trivialisation_restrict_compat) flagged by lvb as too thin (omits image_preimage_of_le reindexing + restrictFunctorIsoPullback/pullbackUnitIso legs).",
+      "key_lemmas_used": [
+        "restrictIsoUnitOfLE",
+        "restrictFunctorComp",
+        "restrictFunctorCongr",
+        "eqToHom_comp_iff"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Mirror restrictIsoUnitOfLE (TensorObjSubstrate L424) per cocycle-a.md §A",
+        "code_tried": "NOT TYPED — left as sorry @ L211; planned: SheafOfModules.Hom.ext → PresheafOfModules.hom_ext; factor V.ι = resLE ⪰ (U i).ι; conjugate eqToHom via eqToHom_comp_iff + exact-matched naturality (erw, not forward rw)",
+        "line_number": "211",
+        "lean_error": "n/a — verification-blocked (no LSP)",
+        "goal_before": "fOver (U i) eM over V (eqToHom-conjugated through image_preimage_of_le) = fOver V (restrictIsoUnitOfLE hVU eM)",
+        "goal_after": "n/a",
+        "result": "failed",
+        "insight": "Genuinely cannot be developed blind (unlike the cocycle, which had a paper derivation). Needs a green window + LSP AND a thicker blueprint sketch (lvb major)."
+      }
+    ],
+    "next_steps": "Blueprint-writer expand lem:trivialisation_restrict_compat (add image_preimage_of_le reindexing + restrictFunctorIsoPullback/pullbackUnitIso legs) THEN prover with green window. This is the true critical-path blocker — it gates the cocycle."
+  }
+]

@@ -264,6 +264,26 @@ Current scope and live state live in [`PROGRESS.md`](PROGRESS.md) and
   `PresheafOfModules.hom_ext`. (Used: `pushforward_lax_mu_comparison_{rhs,lhs}_tmul`.)
 
 ### Known Blockers (do not retry without a structural change)
+- **⚠ plan-validate NOOPs a build-fix objective whose TARGET DECLARATION is sorry-free (iter-030 — cost a
+  whole iter, twin of the iter-026 connector dispatch bug).** The DualInverse L219 one-token fix
+  (`← map_smul` → `← LinearMap.map_smul`) lives inside `linearEndo_apply_comm` / `presheafDualUnitIso_naturality`,
+  both sorry-free (a *build error*, not a sorry). plan-validate dropped the lane (`meta.json:
+  planValidate.objectivesNoop = [DualInverse.lean]`) even though the file has 9 sorries ELSEWHERE — the
+  validator keys on the assigned-target's sorry status, not the file's. Result: the unblocking lane never ran,
+  the import chain stayed RED a 2nd consecutive iter, ~29 markers stayed stripped. **Do NOT route a
+  deterministic build-fix on a sorry-free target through a plain prover lane** — it WILL be noop'd. Apply it
+  outside a sorry-gated lane (deterministic edit / structural subagent / user) OR bundle it with a target in
+  the same file that carries a sorry. The fix is verified (`goals:[]`) and lands `presheafDualUnitIso_naturality`,
+  hN `dualUnitIso_dualIsoOfIso`, `tensorObj_unit_self_duality_collapse` + ~29 markers — but NOT
+  `exists_tensorObj_inverse` (gated on the sorry'd `trivialisation_restrict_compat`, below).
+- **`trivialisation_restrict_compat` (TensorObjInverse L211) — the TRUE cocycle critical-path blocker
+  (iter-030).** `exists_tensorObj_inverse`'s typed cocycle rewrites THROUGH this lemma, so the cocycle cannot
+  earn `\leanok` even with a green window — the iter-029/030 "verify-and-unwrap the cocycle hedge" framing is
+  WRONG. Untouched (`:= sorry`); the multi-hundred-LOC eqToHom-bookkeeping residual (8 isos through restriction
+  naturality), undevelopable blind. lvb-inverse030: its blueprint sketch `lem:trivialisation_restrict_compat`
+  is too thin (omits the `image_preimage_of_le` reindexing + `restrictFunctorIsoPullback`/`pullbackUnitIso`
+  legs). SEQUENCE: blueprint-writer expand the sketch → prover with a green window (mirror `restrictIsoUnitOfLE`
+  TensorObjSubstrate L424, `analogies/cocycle-a.md` §A) → only then verify+unwrap the cocycle `first|…|sorry`.
 - **K1 `pushforward_lax_mu_comparison` — mate route CIRCULAR (re-confirmed iter-028):** the lemma compares
   the adjunction **mate** `Adjunction.rightAdjointLaxMonoidal hadj'` (LHS) against the **composition**
   structure `presheafPushforwardLaxMonoidal φ'` (RHS) on the SAME functor `pushforward φ'`. Unfolding the
@@ -432,6 +452,20 @@ Current scope and live state live in [`PROGRESS.md`](PROGRESS.md) and
   similarly truncated — worth a one-shot sweep.**
 
 ## Last Updated
+2026-06-19T14:59:58Z (iter-030 review — **ZERO buildable progress; build still RED, ~29 markers still
+stripped (sync +0/−0). PROCESS failure, not math.** The plan was correct & tiny (Obj-1 = the deterministic
+one-token L219 fix that unblocks the whole import chain; Obj-2 = type the cocycle on the green window). But
+**plan-validate NOOP'd Obj-1** because the L219 target declarations are sorry-free (new Known Blocker above) —
+only the TensorObjInverse lane ran, and it spent the session polling for a green window that, by construction,
+never came. It typed `exists_tensorObj_inverse` hedged `first|…|sorry` (sub-steps abstract-verified via
+`lean_run_code`; honest hedge per lvb, no shape-mask) but the cocycle is GATED on the still-sorry
+`trivialisation_restrict_compat` — NOT verify-and-unwrap. L219 unchanged on disk (2nd consecutive iter the
+one-token fix failed to land). Reviewers: lean-auditor iter030 (3 must-fix: L219 build error + cocycle
+laundering-hedge + excuse-comment, NEW DualInverse L199-201 inaccurate comment [subsingleton@L206 closes the
+goal]; 6 major/10 minor), lvb inverse030 (2 must-fix [2 sorries] / 1 major [thin trivialisation_restrict_compat
+sketch]; 12/12 signatures faithful both directions). pc030 verdict CHURNING(TensorObjInverse — PARTIAL→STUCK
+if again)/UNCLEAR-fast-track(DualInverse). Doctor clean, gaps=0, frontier=5, unmatched=105. KB: new plan-validate
+NOOP blocker + trivialisation_restrict_compat-is-the-real-blocker. Narrative → `iter/iter-030/review.md`.)
 2026-06-19T13:45:00Z (iter-029 review — **NET REGRESSION: build went RED, sync_leanok +3/−29.** A single
 unqualified-name bug in the new helper `linearEndo_apply_comm` (DualInverse.lean:219 — `← map_smul` resolves
 to project-local `Scheme.Modules.map_smul`, not `LinearMap.map_smul`, under full imports) broke DualInverse →

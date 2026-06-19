@@ -1700,6 +1700,28 @@ the curve-specific instantiation is taken up in the chapter on universal secant 
   isomorphisms gives the claim.
 \end{proof}
 
+\begin{lemma}[Triviality descends along a scheme isomorphism]
+  \label{found:free_iso_of_restrict_iso}
+  \lean{AlgebraicGeometry.Scheme.Modules.freeIso_of_restrictFunctor_hom_freeIso}
+  \uses{found:restrict_free_iso, mathlib:sheafmod_free}
+  Let \(e:S\cong T\) be an isomorphism of schemes, \(A\) an \(\cO_T\)-module, and
+  \(I\) an index type.  If the restriction of \(A\) along \(e\),
+  \((\mathrm{restrictFunctor}\,e).\mathrm{obj}\,A\), is isomorphic to the free
+  \(\cO_S\)-module \(\mathrm{free}\,I\) (\cref{mathlib:sheafmod_free}), then \(A\) is
+  itself isomorphic to the free \(\cO_T\)-module \(\mathrm{free}\,I\).
+\end{lemma}
+
+\begin{proof}
+  \uses{found:restrict_free_iso, mathlib:sheafmod_free}
+  Restriction along the isomorphism \(e\) is invertible: composing the restriction
+  functors along \(e\) and \(e^{-1}\) is naturally isomorphic to the identity (using
+  the composition and identity coherences of \(\mathrm{restrictFunctor}\) together
+  with \(e^{-1}\circ e=\mathrm{id}\)).  Applying \(\mathrm{restrictFunctor}\,e^{-1}\)
+  to the hypothesis and using \(\mathrm{restrictFunctor}\,e^{-1}(\mathrm{free}\,I)
+  \cong\mathrm{free}\,I\) (\cref{found:restrict_free_iso}, since \(e^{-1}\) is an open
+  immersion) yields \(A\cong\mathrm{free}\,I\).
+\end{proof}
+
 \begin{lemma}\leanok
 [Local freeness is invariant under isomorphism]
   \label{found:locally_free_of_iso}
@@ -1872,11 +1894,15 @@ the curve-specific instantiation is taken up in the chapter on universal secant 
   For a commutative ring \(R\) and an \(R\)-module \(M\), Mathlib provides the
   associated quasicoherent sheaf of \(\cO_{\operatorname{Spec}R}\)-modules
   \(\widetilde M=\mathrm{tilde}\,M\) on \(\operatorname{Spec}R\), the
-  module-to-sheaf construction \(M\mapsto M^{\sim}\).  It is fully faithful
-  (\cref{mathlib:tilde_fullyFaithful}) and exact, so it identifies \(R\)-modules
-  with quasicoherent \(\cO_{\operatorname{Spec}R}\)-modules and carries kernels and
-  short exact sequences of \(R\)-modules to kernels and short exact sequences of
-  sheaves.
+  module-to-sheaf construction \(M\mapsto M^{\sim}\).  Mathlib provides that it is
+  additive and fully faithful (\cref{mathlib:tilde_fullyFaithful}) and is the left
+  adjoint of the global-sections functor; as a left adjoint it preserves coproducts
+  and cokernels, and it identifies \(R\)-modules with quasicoherent
+  \(\cO_{\operatorname{Spec}R}\)-modules.  Mathlib does \emph{not} provide that
+  \(\mathrm{tilde}\) preserves arbitrary kernels (left-exactness); the affine bridge
+  (\cref{lem:kernel_iso_tilde_affine}) avoids needing it by exploiting that the
+  relevant sequence \emph{splits}, on which an additive functor is automatically
+  exact (\cref{mathlib:splitting_map}).
 \end{definition}
 
 \begin{lemma}[Tilde of a finite free module is the free sheaf]
@@ -1911,6 +1937,19 @@ the curve-specific instantiation is taken up in the chapter on universal secant 
   \(0\to X_1\to X_2\to X_3\to 0\) (\cref{mathlib:short_exact}) whose right-hand
   term \(X_3\) is projective admits a splitting; in particular
   \(X_2\cong X_1\oplus X_3\).
+\end{lemma}
+
+\begin{lemma}[An additive functor carries a splitting to a splitting]
+  \label{mathlib:splitting_map}
+  \lean{CategoryTheory.ShortComplex.Splitting.map}
+  \mathlibok
+  \textit{Provided by Mathlib.}
+  If \(s\) is a splitting of a short complex \(S=(X_1\to X_2\to X_3)\) and
+  \(F\) is an additive functor, then \(F\) carries \(s\) to a splitting of the
+  mapped short complex \(F(S)=(FX_1\to FX_2\to FX_3)\).  Consequently \(F(S)\) is
+  short exact (\cref{mathlib:short_exact}) and the mapped first map \(FX_1\to FX_2\)
+  is a kernel of \(FX_2\to FX_3\) — an additive functor is exact on split sequences,
+  with no left-exactness hypothesis on \(F\).
 \end{lemma}
 
 \begin{definition}[Free locus of a module]
@@ -1959,18 +1998,11 @@ the curve-specific instantiation is taken up in the chapter on universal secant 
 % --- Affine reduction sub-lemmas for \cref{found:isLocallyFree_kernel_of_shortExact}.
 %     The Kemeny/Hartshorne source quote lives on that lemma block below. ---
 
-% NOTE (iter-016 review): L1 is formalized & axiom-clean, but the Lean proof's crux is
-% scheme-iso transport via `Scheme.Hom.isoImage` + the new helper
-% `freeIso_of_restrictFunctor_hom_freeIso` (Foundations.lean:1335, UNMATCHED — needs a
-% blueprint node, e.g. `found:free_iso_of_restrict_iso \uses{found:restrict_free_iso}`).
-% The current `\uses`/sketch mis-attribute the transport to `found:locally_free_of_iso`
-% (a same-scheme module iso, NOT what the proof uses). Planner: add the helper node, cite
-% it from this lemma's `\uses`, and expand the sketch to mention the isoImage transport.
 \begin{lemma}\leanok
 [Local freeness is local on the base]
   \label{lem:isLocallyFree_local}
   \lean{AlgebraicGeometry.Scheme.Modules.isLocallyFree_of_isLocallyFree_cover}
-  \uses{found:locally_free, found:locally_free_of_iso}
+  \uses{found:locally_free, found:free_iso_of_restrict_iso}
   Let \(\{U_\alpha\}\) be an open cover of \(X\) and \(\mathcal K\) an
   \(\cO_X\)-module.  If each restriction \(\mathcal K|_{U_\alpha}\) is locally free
   of constant rank \(r\) (\cref{found:locally_free}), then \(\mathcal K\) is locally
@@ -1978,13 +2010,21 @@ the curve-specific instantiation is taken up in the chapter on universal secant 
 \end{lemma}
 
 \begin{proof}
-  \uses{found:locally_free, found:locally_free_of_iso}
+  \uses{found:locally_free, found:free_iso_of_restrict_iso}
   \leanok
   Local freeness of rank \(r\) means \(X\) has an open cover trivialising
   \(\mathcal K\) to \(\mathrm{free}\,I\) with \(|I|=r\) (\cref{found:locally_free}).
-  Each \(U_\alpha\) carries such a cover for \(\mathcal K|_{U_\alpha}\), equivalently
-  for \(\mathcal K\) (\cref{found:locally_free_of_iso}); the union over \(\alpha\)
-  covers \(X\) and trivialises \(\mathcal K\) on the fixed \(I\).
+  Fix \(x\in X\); it lies in some \(U_\alpha\), and the trivialising cover of
+  \(\mathcal K|_{U_\alpha}\) gives an open \(V\subseteq U_\alpha\) with
+  \(x\in V\) and \((\mathcal K|_{U_\alpha})|_V\cong\mathrm{free}\,I\).  Pushing \(V\)
+  forward to its open image \(W=j(V)\subseteq X\) along the open immersion
+  \(j:U_\alpha\hookrightarrow X\) gives a scheme isomorphism \(e:V\cong W\) compatible
+  with the inclusions, so that \((\mathrm{restrictFunctor}\,e)\) carries
+  \(\mathcal K|_W\) to \((\mathcal K|_{U_\alpha})|_V\cong\mathrm{free}\,I\).  By
+  \cref{found:free_iso_of_restrict_iso} this descends to a trivialisation
+  \(\mathcal K|_W\cong\mathrm{free}\,I\) on the \(X\)-open \(W\ni x\).  As \(x\) was
+  arbitrary, these \(W\) form an open cover of \(X\) trivialising \(\mathcal K\) on
+  the fixed \(I\).
 \end{proof}
 
 \begin{lemma}\leanok
@@ -2017,7 +2057,7 @@ the curve-specific instantiation is taken up in the chapter on universal secant 
 \begin{lemma}[Affine bridge: the kernel of a free SES on \(\operatorname{Spec}R\) is a tilde]
   \label{lem:kernel_iso_tilde_affine}
   \lean{AlgebraicGeometry.Scheme.Modules.kernel_iso_tilde_of_free_ses_affine}
-  \uses{mathlib:short_exact, mathlib:tilde, mathlib:tildeFinsupp, mathlib:tilde_fullyFaithful, mathlib:sheafmod_free}
+  \uses{mathlib:short_exact, mathlib:tilde, mathlib:tildeFinsupp, mathlib:tilde_fullyFaithful, mathlib:sheafmod_free, mathlib:splittingOfProjective, mathlib:splitting_map}
   Let \(0\to\mathcal K\to\mathcal G\to\mathcal H\to 0\) be a short exact sequence
   (\cref{mathlib:short_exact}) of \(\cO_{\operatorname{Spec}R}\)-modules with
   \(\mathcal G\cong\mathrm{free}\,m\) and \(\mathcal H\cong\mathrm{free}\,n\)
@@ -2027,15 +2067,30 @@ the curve-specific instantiation is taken up in the chapter on universal secant 
 \end{lemma}
 
 \begin{proof}
-  \uses{mathlib:short_exact, mathlib:tilde, mathlib:tildeFinsupp, mathlib:tilde_fullyFaithful, mathlib:sheafmod_free}
+  \uses{mathlib:short_exact, mathlib:tilde, mathlib:tildeFinsupp, mathlib:tilde_fullyFaithful, mathlib:sheafmod_free, mathlib:splittingOfProjective, mathlib:splitting_map}
   By \cref{mathlib:tildeFinsupp}, \(\mathrm{free}\,m\cong\widetilde{R^m}\) and
-  \(\mathrm{free}\,n\cong\widetilde{R^n}\), so the trivialisations present
-  \(\mathcal G\to\mathcal H\) as a map \(\widetilde{R^m}\to\widetilde{R^n}\).  Full
-  faithfulness (\cref{mathlib:tilde_fullyFaithful}) makes it \(\widetilde\varphi\)
-  for a unique \(R\)-linear \(\varphi:R^m\to R^n\); set \(K=\ker\varphi\), giving
-  \(0\to K\to R^m\to R^n\to 0\) (\cref{mathlib:short_exact}).  Exactness of tilde
-  (\cref{mathlib:tilde}) sends this kernel to \(\ker(\mathcal G\to\mathcal H)=
-  \mathcal K\), so \(\mathcal K\cong\widetilde K\).
+  \(\mathrm{free}\,n\cong\widetilde{R^n}\), so transporting the surjection
+  \(\mathcal G\to\mathcal H\) along these isomorphisms presents it as a map
+  \(\widetilde{R^m}\to\widetilde{R^n}\).  Full faithfulness
+  (\cref{mathlib:tilde_fullyFaithful}) writes this map as \(\widetilde\varphi\) for a
+  unique \(R\)-linear \(\varphi:R^m\to R^n\).  Since \(\mathcal G\to\mathcal H\) is an
+  epimorphism and \(\mathrm{tilde}\) is faithful, hence reflects epimorphisms,
+  \(\varphi\) is surjective; put \(K=\ker\varphi\), giving the \(R\)-module short
+  exact sequence \(0\to K\to R^m\to R^n\to 0\) (\cref{mathlib:short_exact}).
+
+  Crucially we do \emph{not} need \(\mathrm{tilde}\) to preserve kernels in general.
+  The module sequence \emph{splits}: \(R^n\) is free, hence projective, so
+  \(0\to K\to R^m\to R^n\to 0\) admits a splitting \(s\)
+  (\cref{mathlib:splittingOfProjective}).  Because \(\mathrm{tilde}\) is additive,
+  it carries \(s\) to a splitting of \(0\to\widetilde K\to\widetilde{R^m}\to
+  \widetilde{R^n}\to 0\) (\cref{mathlib:splitting_map}); in particular the mapped
+  inclusion \(\widetilde K\to\widetilde{R^m}\) is a kernel of \(\widetilde\varphi\).
+  But \(\mathcal K\to\mathcal G\) is a kernel of \(\mathcal G\to\mathcal H\) (it is
+  the kernel term of the given short exact sequence), and under the trivialising
+  isomorphisms \(\mathcal G\cong\widetilde{R^m}\), \(\mathcal H\cong\widetilde{R^n}\)
+  the map \(\mathcal G\to\mathcal H\) is identified with \(\widetilde\varphi\).  Two
+  kernels of the same morphism are canonically isomorphic, so
+  \(\mathcal K\cong\widetilde K\) (\cref{mathlib:tilde}).
 \end{proof}
 
 \begin{lemma}[Kernel is locally free on an affine trivialising open]
