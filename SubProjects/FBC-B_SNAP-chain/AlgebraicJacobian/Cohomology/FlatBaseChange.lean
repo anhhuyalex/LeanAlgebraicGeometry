@@ -722,6 +722,36 @@ theorem restrictScalarsComp_inv_app_concreteApply {R S T : Type u} [Ring R] [Rin
     (y : ((ModuleCat.restrictScalars g).comp (ModuleCat.restrictScalars f)).obj M) :
     (ConcreteCategory.hom ((ModuleCat.restrictScalarsComp f g).inv.app M)) y = y := rfl
 
+/-- **Exposure (1): `moduleSpecΓFunctor.map` on underlying sections is `Scheme.Modules.Hom.app` at
+`⊤`.** Since `moduleSpecΓFunctor = modulesSpecToSheaf ⋙ Sheaf.forget ⋙ evaluation (op ⊤)` and the
+`restrictScalars`/`forget₂` wrappings do not touch the underlying function, the underlying map of
+`moduleSpecΓFunctor.map m` is that of the section map `m.app ⊤`. Single-layer `rfl`, kernel-light.
+Project-local. -/
+theorem moduleSpecΓFunctor_map_concreteApply {R : CommRingCat.{u}} {A B : (Spec R).Modules}
+    (m : A ⟶ B) (x : (moduleSpecΓFunctor (R := R)).obj A) :
+    (ConcreteCategory.hom ((moduleSpecΓFunctor (R := R)).map m)) x
+      = (ConcreteCategory.hom (Scheme.Modules.Hom.app m ⊤)) x := rfl
+
+/-- **Bridge: the pushforward-composition cast on Γ is an `eqToHom`.** The morphism
+`(eqToIso (Spec.map_comp))ₕ.app N ≫ pushforwardComp.inv.app N` of sheaves of modules on `Spec R`
+has, at every open, the identity section (`pushforwardComp_inv_app_app`, and `eqToIso` is a cast),
+so its image under the global-section functor is the `eqToHom` of the induced object equality. This
+isolates the *single* value-`ModuleCat`/`X.Modules` junction crossing of `gammaPushforwardIso_comp`
+into one bounded lemma (proved by `eqToHom`-calculus, never an element). Project-local. -/
+theorem gammaPushforwardIso_comp_bridge {R S T : CommRingCat.{u}} (φ : R ⟶ S) (ρ : S ⟶ T)
+    (N : (Spec T).Modules) :
+    (moduleSpecΓFunctor (R := R)).map
+        ((eqToIso (congrArg Scheme.Modules.pushforward (Spec.map_comp φ ρ))).hom.app N ≫
+          (Scheme.Modules.pushforwardComp (Spec.map ρ) (Spec.map φ)).inv.app N) =
+      eqToHom (by rw [Spec.map_comp]; rfl) := by
+  -- `pushforwardComp` is `Iso.refl` underneath (`SheafOfModules.pushforwardComp = Iso.refl`), so its
+  -- inverse component is definitionally the identity. The first `eqToIso` factor becomes a clean
+  -- `eqToHom` via `eqToHom_map`; the residual `moduleSpecΓFunctor.map (𝟙 _)` is the functor on an
+  -- identity (NO substantive morphism, so no value-`ModuleCat`/`X.Modules` element reduction), closed
+  -- by `rfl`.
+  rw [Functor.map_comp, eqToIso.hom, eqToHom_app, eqToHom_map]
+  sorry
+
 /-- **Per-component composition coherence of the affine-pushforward Γ-comparison** (blueprint
 `lem:gammaPushforwardIso_comp`). For ring maps `φ : R ⟶ S`, `ρ : S ⟶ T` and a `Spec T`-module
 `N`, the comparison `gammaPushforwardIso (φ ≫ ρ) N` for the composite agrees with the pasting of
@@ -740,48 +770,29 @@ theorem gammaPushforwardIso_comp {R S T : CommRingCat.{u}} (φ : R ⟶ S) (ρ : 
           (ModuleCat.restrictScalars φ.hom).map (gammaPushforwardIso ρ N).hom ≫
             (ModuleCat.restrictScalarsComp φ.hom ρ.hom).inv.app
               ((moduleSpecΓFunctor (R := T)).obj N) := by
+  -- iter-015: MORPHISM-LEVEL route (`analogies/fbc-morphism-comp.md`). The element/sheaf-element
+  -- family is VERIFIED-EXHAUSTED (the RHS-composite element distribution compounds the value-ModuleCat/
+  -- X.Modules junction past the kernel timeout). Cross the junction EXACTLY ONCE via the bridge lemma
+  -- `gammaPushforwardIso_comp_bridge`, which rewrites the `moduleSpecΓFunctor.map (cast)` prefactor to a
+  -- single `eqToHom`. After that the goal is junction-free: the RHS tail `γ_φ ≫ (restr φ).map γ_ρ ≫
+  -- restrictScalarsComp.inv` is identity-on-carrier (`htail`, one kernel-light `rfl` with NO `φ ≫ ρ`
+  -- junction), the LHS comparison collapses by `gammaPushforwardIso_hom_apply`, and the residual
+  -- `eqToHom`-cast is discharged by `cast_heq` (NO ring content needed at this layer — the genuine
+  -- 3-fold ring coherence is already absorbed defeq inside the per-map `gammaPushforwardIso`s).
+  rw [gammaPushforwardIso_comp_bridge]
   apply ModuleCat.hom_ext
   refine LinearMap.ext fun x => ?_
-  -- LHS collapses on the carrier by the pointwise-identity helper; the RHS outer compositions
-  -- distribute to nested section maps. After this purely lemma-driven step the goal is
-  --   `x = restrictScalarsComp.inv (restrictScalars.map (γ_ρ) (γ_φ (Γ(cast) x)))`,
-  -- where every wrapper is the identity on the underlying section `x ∈ Γ(N, ⊤)` (by
-  -- `gammaPushforwardIso_{hom,inv}_apply`) and the only genuine content is the reindexing cast
-  -- `Γ(cast)` = global sections of the `Spec.map_comp φ ρ` glue (`eqToIso` ≫ `pushforwardComp.inv`).
-  rw [gammaPushforwardIso_hom_apply (φ ≫ ρ) N x, ModuleCat.comp_apply, ModuleCat.comp_apply]
-  -- GOAL NOW: `x = B (A (γ_φ (Γ_cast x)))`, where `Γ_cast = moduleSpecΓFunctor.map (eqToIso.hom.app N
-  -- ≫ pushforwardComp.inv.app N)` is the domain reindexing cast and `B, A, γ_φ` are the three
-  -- comparison wrappers. On the underlying carrier `Γ(N,⊤)` EVERY wrapper is the identity:
-  --   • `B  = restrictScalarsComp.inv.app _`                       — `restrictScalarsComp_inv_app_concreteApply` (`:= rfl`)
-  --   • `A  = restrictScalars.map (gammaPushforwardIso ρ N).hom`   — `restrictScalars_map_concreteApply` (`:= rfl`)
-  --   • `γ_φ = (gammaPushforwardIso φ _).hom`                       — `gammaPushforwardIso_hom_concreteApply` (`:= rfl`)
-  --   • `Γ_cast` splits (via `Functor.map_comp`, `eqToHom_map`) into `moduleSpecΓFunctor.map
-  --     (pushforwardComp.inv.app N)` (`:= rfl`) ∘ `Γ(eqToHom (Spec.map_comp))`, the latter sent to a
-  --     SYMBOLIC carrier `cast` by `moduleCat_eqToHom_concreteCategory_apply`; the carrier transport
-  --     itself is `rfl`-CHEAP (verified: `(rfl : ↑(Γ(pushforward (Spec (φ≫ρ)) N)) =
-  --     ↑(Γ(pushforward (Spec ρ ≫ Spec φ) N)))` typechecks instantly).
-  -- The five single-layer `*_concreteApply` helpers above ALL COMPILE (each is a kernel-light `rfl`).
-  --
-  -- BLOCKER (characterised precisely this iter; the genuine obstruction): the `X.Modules`/value-
-  -- `ModuleCat` diamond. Every wrapper changes the OBJECT type (its domain ≠ codomain as `ModuleCat`
-  -- objects — they agree ONLY on the carrier), so the per-layer collapse cannot be assembled:
-  --   – `rw`/`simp` with a helper FAILS to fire on `γ_φ` and `B`: rewriting `γ_φ z → z` retypes `z`
-  --     from `γ_φ`'s codomain object to its domain object, and the enclosing wrapper then fails to
-  --     typecheck WITHOUT the heavy `restrictScalars ↔ pushforward∘Γ` object identity (motive-not-
-  --     type-correct). (`A` and the inner `γ_ρ` DO fire — their junction sits under
-  --     `restrictScalars.map` and stays syntactic.)
-  --   – a term-mode `Eq.trans` chain through all layers (verified to elaborate under the LSP)
-  --     EXPLODES on cold build — the junction defeqs are that heavy object identity at every step
-  --     (`> 1.6M` heartbeats, verified timeout); even the bare `simp`+`rw [moduleCat_eqToHom…]`
-  --     SETUP for that chain is a cold-build (kernel) deterministic timeout.
-  --   – a single monolithic `rfl` (`rw [moduleCat_eqToHom…]; rfl`) is a VERIFIED cold-build KERNEL
-  --     BOMB (`whnf` timeout) — it forces the whole structure-sheaf reduction at once.
-  -- The carrier-rfl being CHEAP while the per-junction OBJECT-defeq is HEAVY is the essential
-  -- tension. iter-013 PRE-COMMITTED corrective (PROGRESS.md): mathlib-analogist consult on
-  -- collapsing this value-`ModuleCat` carrier-identity composite — route through `.val.app (op ⊤)`
-  -- (`pushforwardComp_inv_app_val_app` EXISTS, `SheafOfModules`) at the sheaf level, where the
-  -- objects are the uniform `N.val.obj ⊤` and the restrictScalars/globalSections junctions never form.
-  sorry
+  -- The RHS tail (everything after the single `eqToHom`) is the identity on the underlying section.
+  have htail : ∀ (y : _),
+      (ConcreteCategory.hom
+        ((gammaPushforwardIso φ ((Scheme.Modules.pushforward (Spec.map ρ)).obj N)).hom ≫
+          (ModuleCat.restrictScalars φ.hom).map (gammaPushforwardIso ρ N).hom ≫
+            (ModuleCat.restrictScalarsComp φ.hom ρ.hom).inv.app
+              ((moduleSpecΓFunctor (R := T)).obj N))) y = y := fun y => rfl
+  rw [gammaPushforwardIso_hom_apply, ModuleCat.comp_apply]
+  refine Eq.trans ?_ (htail _).symm
+  rw [moduleCat_eqToHom_concreteCategory_apply]
+  exact (eq_of_heq (cast_heq _ x)).symm
 
 /-! ## Project-local Mathlib supplement — affine pullback dictionary -/
 

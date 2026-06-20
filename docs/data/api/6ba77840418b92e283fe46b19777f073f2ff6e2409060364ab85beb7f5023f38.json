@@ -1,0 +1,102 @@
+[
+  {
+    "timestamp": "2026-06-19T18:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "trivialisation_restrict_compat"
+    },
+    "session": {
+      "id": "session_32",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "S2-S5: the 4 (really 5, incl uι) per-constituent restrict-naturality squares do not exist in the codebase; each constituent (tensorObj_restrict_iso, dual_restrict_iso≫dualIsoOfIso, dual_unit_iso, tensorObj_unit_iso, uι) is a composite iso through pullback+sheafification, so each square is a bespoke multi-step sub-lemma with no precedent. The blueprint sketch treats them as routine and omits uι.",
+      "key_lemmas_used": [
+        "Scheme.Hom.resLE",
+        "image_preimage_of_le"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "subst the V≤U hypothesis to collapse both legs",
+        "code_tried": "subst hVU / rcases hVU with rfl",
+        "line_number": "211",
+        "lean_error": "hVU : V ≤ U is not an equation (V ≠ U in general)",
+        "result": "failed",
+        "insight": "the reindexing must be handled by eqToHom transport, not substitution"
+      },
+      {
+        "attempt": 2,
+        "strategy": "unfold the V-side trivialisation",
+        "code_tried": "simp only [restrictIsoUnitOfLE]",
+        "line_number": "211",
+        "lean_error": "no error but no cancellation: unfolds RHS to its 6-leg pullback chain, goal otherwise unchanged",
+        "result": "failed",
+        "insight": "no off-the-shelf reduction; structure must be chased per constituent"
+      },
+      {
+        "attempt": 3,
+        "strategy": "split into object equality + leg HEqs",
+        "code_tried": "congr 1",
+        "line_number": "211",
+        "lean_error": "produces object equality (=hobjU/hobjV) + two HEq legs that ARE the chart-dependent section maps",
+        "result": "partial",
+        "insight": "congr restates the telescope, no reduction"
+      },
+      {
+        "attempt": 4,
+        "strategy": "rotate to iso/Hom equation",
+        "code_tried": "rw [← Iso.eq_inv_comp]; apply SheafOfModules.Hom.ext",
+        "line_number": "211",
+        "lean_error": "no pattern match (goal already at .val.app section level)",
+        "result": "failed",
+        "insight": "goal is below the iso layer; needs presheaf-section naturality"
+      },
+      {
+        "attempt": 5,
+        "strategy": "build the chart-morphism scaffold (S1)",
+        "code_tried": "set j := Scheme.Hom.resLE (𝟙 X) U V hVU' ; have hjι : j ≫ U.ι = V.ι := by rw [Scheme.Hom.resLE_comp_ι, Category.comp_id] ; have hobjU := image_preimage_of_le U hVU ; have hobjV := image_preimage_of_le V le_rfl",
+        "line_number": "215-223",
+        "lean_error": "none — elaborates green-mod-sorry",
+        "result": "partial",
+        "insight": "S1 closed in-proof: chart morphism j and reindex endpoints proved; but they sit before a terminal sorry so they do not yet contribute to any closed step (auditor flags as dead scaffolding)"
+      }
+    ],
+    "next_steps": "Do NOT re-dispatch a blind prover lane (3rd non-progress). Effort-break lem:trivialisation_restrict_compat in the blueprint: extract 5 named per-constituent restrict-naturality squares (incl the omitted uι constituent) each with its own informal proof, then a telescope assembly. Build the tensorObj_restrict_iso square first as the structural template. This is a sizeable infrastructure sub-project, not a one-tactic gap."
+  },
+  {
+    "timestamp": "2026-06-19T18:30:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "exists_tensorObj_inverse"
+    },
+    "session": {
+      "id": "session_32",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Gated entirely on trivialisation_restrict_compat (L244 sorry). The cocycle hedge `first | <derivation> | sorry` was left untouched; even its protected branch rewrites via trivialisation_restrict_compat, so it is transitively sorry-contaminated and cannot close until L244 closes.",
+      "key_lemmas_used": [
+        "trivialisation_restrict_compat",
+        "tensorObj_unit_self_duality_collapse",
+        "dualIsoOfIso_trans",
+        "tensorObjIsoOfIso_trans"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "verify the cocycle hedge must stay (not prematurely strip)",
+        "code_tried": "inspect L449 goal: legs (U i).ι⁻¹V vs (U j).ι⁻¹V with distinct eM i/eM j",
+        "line_number": "449",
+        "lean_error": "n/a (inspection)",
+        "result": "partial",
+        "insight": "the two erw [trivialisation_restrict_compat …] alone do NOT close the cocycle (legs keep distinct trivialisations); hfact/hiso/hchain genuinely required; the 'never executed' linter notes are first-combinator failed-branch artifacts, not early closure. Correctly left | sorry in place."
+      }
+    ],
+    "next_steps": "Strip the `first | … |` wrapper ONLY after trivialisation_restrict_compat is sorry-free and green, and re-verify the protected branch fires. Until then this target is correctly blocked. lvb confirms the hedge is faithful (no shape-masking)."
+  }
+]

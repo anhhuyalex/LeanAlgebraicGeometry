@@ -1,0 +1,68 @@
+[
+  {
+    "timestamp": "2026-06-19T15:36:23Z",
+    "status": "solved",
+    "target": {
+      "file": "MR4213770UniversalSecantBundlesAndSyzygiesOfCanonicalCurves/Foundations.lean",
+      "theorem": "AlgebraicGeometry.Scheme.Modules.kernel_iso_tilde_of_free_ses_affine"
+    },
+    "session": {
+      "id": "session_17",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "AlgebraicGeometry.tildeFinsupp",
+        "AlgebraicGeometry.tilde.fullyFaithfulFunctor",
+        "CategoryTheory.Functor.FullyFaithful.map_preimage",
+        "CategoryTheory.Functor.epi_of_epi_map",
+        "CategoryTheory.reflectsEpimorphisms_of_faithful",
+        "CategoryTheory.ShortComplex.ShortExact.splittingOfProjective",
+        "CategoryTheory.ShortComplex.Splitting.map",
+        "CategoryTheory.ShortComplex.Splitting.fIsKernel",
+        "CategoryTheory.Limits.KernelFork.isLimitOfIsLimitOfIff",
+        "CategoryTheory.Limits.IsLimit.conePointUniqueUpToIso"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Statement universe pin: bare `SheafOfModules.free m` in hypotheses defaulted index to Type 0, failing to unify with m : Type u.",
+        "code_tried": "(e₂ : S.X₂ ≅ SheafOfModules.free m) (e₃ : S.X₃ ≅ SheafOfModules.free n)  →  (e₂ : S.X₂ ≅ SheafOfModules.free (R := (Spec R).ringCatSheaf) m) (e₃ : ... n)",
+        "line_number": "1417",
+        "lean_error": "Application type mismatch: argument m has type Type u but expected Type",
+        "result": "success",
+        "insight": "Must pin (R := (Spec R).ringCatSheaf) on SheafOfModules.free in the statement so the index type lands in Type u."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Epi of transported map αraw := β.hom ≫ S.g ≫ γ.inv via unfold_let + infer_instance.",
+        "code_tried": "have hαepi : Epi αraw := by unfold_let αraw; infer_instance",
+        "line_number": "~1440",
+        "lean_error": "needed haveI : Epi S.g := hS.epi_g first; later replaced unfold_let with `change Epi (β.hom ≫ S.g ≫ γ.inv); infer_instance`",
+        "result": "success",
+        "insight": "Epi composes through isos; supply Epi S.g via hS.epi_g, then infer_instance closes it. Use `change` not `show` (show-tactic linter warning)."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Transport given kernel S.f to a kernel of (tilde φ) via KernelFork.isLimitOfIsLimitOfIff with iso β.symm and an iff on the zero conditions.",
+        "code_tried": "KernelFork.isLimitOfIsLimitOfIff hS.fIsKernel ((tilde.functor R).map φ) β.symm (fun W ψ => by rw [hφ]; change ψ ≫ S.g = 0 ↔ ψ ≫ β.symm.hom ≫ αraw = 0; rw [β.symm_hom, show β.inv ≫ αraw = S.g ≫ γ.inv by simp only [αraw, Iso.inv_hom_id_assoc]]; rw [← Category.assoc]; constructor; · intro h; rw [h, Limits.zero_comp]; · intro h; rw [← cancel_mono γ.inv, Limits.zero_comp]; exact h)",
+        "line_number": "~1455",
+        "lean_error": "iterated: first `rw [(tilde.functor R).map φ]` pattern-not-found; then `cancel_mono` rw direction wrong (`rwa [cancel_mono]`); fixed to `rw [← cancel_mono γ.inv, Limits.zero_comp]`",
+        "result": "success",
+        "insight": "Cancel the iso γ.inv in the mpr direction with `← cancel_mono γ.inv` then `Limits.zero_comp`; the lhs identification β.inv ≫ αraw = S.g ≫ γ.inv is pure `Iso.inv_hom_id_assoc`."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Split the module SES (R^n projective) and carry the splitting through additive tilde, then kernel-uniqueness.",
+        "code_tried": "haveI : Projective T.X₃ := by change Projective Rn; infer_instance; sp := hTse.splittingOfProjective; (sp.map (tilde.functor R)).fIsKernel; IsLimit.conePointUniqueUpToIso hkerS hkerT",
+        "line_number": "~1465",
+        "lean_error": "none (final)",
+        "result": "success",
+        "insight": "tilde is Additive, so Splitting.map carries the splitting; (sp.map _).fIsKernel gives tilde K as a kernel of tilde φ definitionally; conePointUniqueUpToIso vs the transported S.f kernel yields S.X₁ ≅ tilde T.X₁ (rfl). No PreservesFiniteLimits needed."
+      }
+    ],
+    "next_steps": "Effort-break the new frontier node found:tilde_restrict_basicOpen (tilde compat with localization on D(f); no Mathlib anchor, only IsLocalizedModule.Away seed) BEFORE any prover dispatch, then assemble L4 isLocallyFree_kernel_on_affine + target isLocallyFree_kernel_of_shortExact + rank_kernel_of_shortExact + evalKernel_isLocallyFree + Basic kernelBundle_isLocallyFree."
+  }
+]

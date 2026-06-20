@@ -1,0 +1,155 @@
+[
+  {
+    "timestamp": "2026-06-19T20:50:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/FlatBaseChange.lean",
+      "theorem": "gammaPushforwardIso_comp"
+    },
+    "session": {
+      "id": "session_14",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "kernel bomb is the RHS REDUCTION (compounding value-ModuleCat/X.Modules junction whnf past the deterministic-timeout limit), NOT the residual eqToHom cast — corrects iter-011-013 framing; residual is never reached. Element/sheaf-level family EXHAUSTED.",
+      "key_lemmas_used": [
+        "gammaPushforwardIso_hom_apply"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "PRIMARY (unconditional, gate-exempt): excise the iter-013 kernel-bomb chain that left the file non-compiling, restore clean stub",
+        "code_tried": "apply ModuleCat.hom_ext; refine LinearMap.ext fun x => ?_; sorry",
+        "line_number": "743/776",
+        "lean_error": "(before) error: 743:8: (kernel) deterministic timeout; 816:8 unknown constant gammaPushforwardIso_comp",
+        "goal_before": "(ModuleCat.Hom.hom (gammaPushforwardIso (φ≫ρ) N).hom) x = (ModuleCat.Hom.hom (moduleSpecΓFunctor.map (...) ≫ ...)) x",
+        "goal_after": "x = RHS.hom x",
+        "result": "success",
+        "insight": "Build completed successfully (8318 jobs). Regression repaired; file cold-builds green."
+      },
+      {
+        "attempt": 2,
+        "strategy": "SECONDARY: reduce LHS via gammaPushforwardIso_hom_apply then distribute+drop the 3 outer wrappers via _concreteApply rfl-lemmas to expose the residual cast",
+        "code_tried": "rw [gammaPushforwardIso_hom_apply (φ≫ρ) N x]; simp only [ModuleCat.comp_apply, restrictScalars_map_concreteApply, gammaPushforwardIso_hom_concreteApply, moduleSpecΓFunctor_map_concreteApply]; sorry",
+        "line_number": "758",
+        "lean_error": "error: 743:8: (kernel) deterministic timeout (under lake build; LSP showed goals_after [] cleanly)",
+        "goal_before": "x = RHS.hom x",
+        "goal_after": "(LSP) x = restrictScalarsComp.inv (gammaPushforwardIso φ ... (Hom.app ((eqToIso).hom.app N ≫ pushforwardComp.inv.app N) ⊤) x)",
+        "result": "failed",
+        "insight": "The wrapper-distribution IS the kernel bomb — compounds the junction whnf past the limit; reverted per revert-on-bomb protocol."
+      },
+      {
+        "attempt": 3,
+        "strategy": "localizing probe: reduce ONLY the LHS by the single identity-on-carrier rfl, leave RHS undistributed",
+        "code_tried": "rw [gammaPushforwardIso_hom_apply (φ≫ρ) N x]; sorry",
+        "line_number": "776",
+        "lean_error": "none",
+        "goal_before": "x = RHS.hom x",
+        "goal_after": "x = RHS.hom x (LHS reduced)",
+        "result": "partial",
+        "insight": "Build completed successfully (8318 jobs). A SINGLE heavy identity-on-carrier rfl is kernel-light; committed as cold-build-validated partial (strictly better than bare stub)."
+      }
+    ],
+    "next_steps": "iter-015 ROUTE PIVOT (pre-committed): refactor gammaPushforwardIso to a junction-free construction, or find a Mathlib-native pushforward-composition coherence. Do NOT re-attempt element/sheaf-level reduction — VERIFIED kernel bomb."
+  },
+  {
+    "timestamp": "2026-06-19T20:38:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "tensorObjAssoc_eq_localizedAssociator_hK_rhs"
+    },
+    "session": {
+      "id": "session_14",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "Iso.hom_inv_id_assoc",
+        "MonoidalCategory.tensorHom_comp_tensorHom",
+        "MonoidalCategory.id_tensorHom",
+        "sheafificationAdjunction.left_triangle_components_assoc",
+        "sheafificationCounitIso"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "S1 μ-cancel: apply the analogist-validated recipe (analogies/snap-localized-comp-cancel.md) verbatim after the existing simp only [tensorObj]; erw [Category.assoc] stop",
+        "code_tried": "refine congrArg (fun t => _ ≫ t) ?_; erw [Category.assoc, Iso.hom_inv_id_assoc]",
+        "line_number": "1908",
+        "lean_error": "none",
+        "goal_before": "(μ_{A,B⊗C}.inv ≫ (toMonoidalCategory.obj A ◁ toMonoidalCategory.map η) ≫ (c_A ⊗ₘ c_{(B⊗C)^#}) ≫ ...) = ...",
+        "goal_after": "(L'A ◁ L'η) ≫ (c_A ⊗ₘ c_{(B⊗C)^#}) ≫ A◁(μ_{B,C}.inv ≫ (c_B⊗ₘc_C)) = (L'A ◁ μ_{B,C}.inv) ≫ (c_A ⊗ₘ (c_B⊗ₘc_C))",
+        "result": "success",
+        "insight": "Cancel closed with zero errors; leaving exactly the predicted counit-coherence residual."
+      },
+      {
+        "attempt": 2,
+        "strategy": "S2 residual: merge whiskerings via interchange + adjunction triangle (naive, bare notation)",
+        "code_tried": "simp only [← MonoidalCategory.id_tensorHom]; erw [MonoidalCategory.tensorHom_comp_tensorHom, ...]; congr 1; simp only [sheafificationCounitIso]; erw [...left_triangle_components_assoc]; rfl",
+        "line_number": "1978",
+        "lean_error": "failed to synthesize instance MonoidalCategory X.Modules (line 1978); also (deterministic) timeout at isDefEq when (C := modulesLocalizedMonoidal X)-pinned",
+        "goal_before": "(L'A ◁ L'η) ≫ (c_A ⊗ₘ c_{(B⊗C)^#}) ≫ ... = (L'A ◁ μ_{B,C}.inv) ≫ (c_A ⊗ₘ (c_B⊗ₘc_C))",
+        "goal_after": "n/a",
+        "result": "failed",
+        "insight": "Post-cancel goal is MIXED-instance: ⊗ₘ is modulesLocalizedMonoidal but ≫ is the (defeq) X.Modules comp; interchange/assoc/whisker lemmas refuse to fire — bare erw resolves C:=X.Modules (no monoidal instance), pinned erw whnf-bombs the μ."
+      },
+      {
+        "attempt": 3,
+        "strategy": "S2 residual FIX: re-elaborate the goal into a UNIFORM all-localized form via a single show (explicit MonoidalCategoryStruct.whiskerLeft/tensorHom (C := modulesLocalizedMonoidal X)), then merge with simp (NOT rw)",
+        "code_tried": "show (...whiskerLeft/tensorHom (C := modulesLocalizedMonoidal X)...); simp only [← MonoidalCategory.id_tensorHom]; simp only [MonoidalCategory.tensorHom_comp_tensorHom, Category.id_comp, Category.comp_id]; congr 1; simp only [sheafificationCounitIso]; erw [...left_triangle_components_assoc]; rfl",
+        "line_number": "1908-1978",
+        "lean_error": "none",
+        "goal_before": "mixed-instance residual",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Build completed successfully (2441 jobs). The merge MUST be simp only [tensorHom_comp_tensorHom] not rw (rw isDefEq-times-out on localized instance args even with uniform comp; simp discr-tree matching sidesteps it). REUSABLE for hK_lhs + cascade."
+      }
+    ],
+    "next_steps": "hK_rhs done. Apply the same show-uniform + simp[tensorHom_comp_tensorHom] + congr/triangle finish to hK_lhs once its associator α is brought fully to (L').obj _ form."
+  },
+  {
+    "timestamp": "2026-06-19T20:37:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "tensorObjAssoc_eq_localizedAssociator_hK_lhs"
+    },
+    "session": {
+      "id": "session_14",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "associator exposure step: neither associator_hom_app nor associator_naturality fires on the goal — α_ A B C is over arbitrary X.Modules objects, and c_{A⊗B} is a counit at the COMPOSITE object (not L'A♭⊗L'B♭) while C is not an (L').obj _, so no single naturality makes all three μ's native.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "cold-probe the directive's associator_hom_app route (NOT cold-validated; STOP + surface on stall per pc014 WATCH)",
+        "code_tried": "rw [Localization.Monoidal.associator_hom_app]",
+        "line_number": "1919",
+        "lean_error": "NO MATCH (needs α_ ((L').obj _) ((L').obj _) ((L').obj _); goal has α_ A B C, arbitrary X.Modules)",
+        "goal_before": "(c_{A⊗B} ⊗ₘ c_C) ≫ ((μ_{A,B}.inv ≫ (c_A⊗ₘc_B))▷C) ≫ α_ A B C ; ... = K",
+        "goal_after": "n/a",
+        "result": "failed",
+        "insight": "associator_hom_app LHS pattern requires the three objects to be literally (L').obj _."
+      },
+      {
+        "attempt": 2,
+        "strategy": "cold-probe the forward associator_naturality",
+        "code_tried": "rw [Localization.Monoidal.associator_naturality]",
+        "line_number": "1919",
+        "lean_error": "NO MATCH (needs prefix ((f₁⊗ₘf₂)⊗ₘf₃) ≫ α; goal prefix is (c_{A⊗B}⊗ₘc_C) ≫ ((μ_{A,B}.inv ≫ (c_A⊗ₘc_B))▷C))",
+        "goal_before": "same as above",
+        "goal_after": "n/a",
+        "result": "failed",
+        "insight": "Stopped per directive (do NOT finer-μ-chase). Exposure the iter-015 analogist must map: comp_whiskerRight+tensorHom_id to split (μ.inv≫(c_A⊗ₘc_B))▷C, then associator_naturality c_A c_B (𝟙 C); GENUINE OBSTACLE = c_{A⊗B} composite-object counit + C not an (L').obj _. Once α is fully at (L').obj _, the landed hK_rhs finish applies."
+      }
+    ],
+    "next_steps": "iter-015: 2nd mathlib-analogist on the associator-exposure step (how to relate c_{A⊗B} at the composite object to μ_{A,B}+(c_A⊗ₘc_B), with C not an L'-object). Do NOT re-fire a warm prove lane on the same associator_hom_app route."
+  }
+]

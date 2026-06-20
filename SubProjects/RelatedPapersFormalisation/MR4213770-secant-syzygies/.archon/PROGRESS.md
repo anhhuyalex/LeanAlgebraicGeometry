@@ -14,30 +14,22 @@ autoformalize
 **P0a Foundations substrate COMPLETE** (iters 006–013, axiom-clean): two-tier sheaf-cohomology bridge,
 heavy `IsGrothendieckAbelian X.Modules`, openwise + sheafified `Scheme.Modules.{exteriorPower,symPower}`.
 
-**P0b eval-map / kernel-bundle substrate (iters 014–015):** `Scheme.Modules.{trivialBundle, evalMap,
-evalKernel}`; `Basic.lean` `MR4213770.kernelBundle := evalKernel L` (FIRST genuine paper object);
-Foundations Core 1 `trivialBundle_isLocallyFree` + step 4 `evalShortComplex_shortExact` + 3 helpers.
-`Foundations.lean` ~1260 lines, 0 sorry, axiom-clean.
+**P0b eval-map / kernel-bundle substrate (iters 014–020):** `Scheme.Modules.{trivialBundle, evalMap,
+evalKernel}`; `Basic.lean` `MR4213770.kernelBundle := evalKernel L`. Core-2 affine-reduction chain
+(Hartshorne III Ex 6.5): **L1**+**L2** (016) + **L3** (017) + **tilde-pullback nodes 1–3** (018) +
+**node-4 (c)** localizationTransitivity (019) + **node-4 (d1)** source_isLocalizedModule + stalk-instance
+shims (020) ALL LANDED axiom-clean. `Foundations.lean` ~1783 lines, 0 sorry.
 
-**THIS iter (016) — Core 2 decomposed + the kernel-bundle locally-free chain unblocked:**
-The sole wall was `found:isLocallyFree_kernel_of_shortExact` (Hartshorne III Ex 6.5; no single Mathlib
-anchor). A mathlib-analogist consult FABRICATED a `SheafOfModules.IsLocallyFree` Mathlib API — grep
-DISPROVED it (absent in Mathlib v4.30.0), so the bespoke `Scheme.Modules.IsLocallyFree` is KEPT (the
-must-fix ALIGN verdict is REJECTED). But the analogist's AFFINE/module-level anchors are VERIFIED-REAL
-and Core 2 was effort-broken along an **affine-reduction route** over them into a 4-lemma chain:
-- L1 `lem:isLocallyFree_local` — local freeness is local on the base (gluing trivialising covers).
-- L2 `lem:module_kernel_free_basicOpen_cover` — `0→K→R^m→R^n→0` ⇒ K f.p. projective ⇒ free on a
-  basic-open cover of `Spec R` (pure commutative algebra; fully Mathlib-anchored). **BOTTOM.**
-- L3 `lem:kernel_iso_tilde_affine` — a free SES of `(Spec R).Modules` is `tilde` of an R-module SES,
-  `𝒦 ≅ tilde K` (the affine quasicoherent⇄`ModuleCat R` bridge).
-- L4 `lem:isLocallyFree_kernel_on_affine` — lift L2 through `tilde`; assemble on each affine. (Gated on
-  L2+L3 → DEFERRED.)
-
-HARD GATE GREEN — blueprint-reviewer `r16`: BOTH chapters complete+correct, 0 must-fix; all 8 new
-`\mathlibok` anchors verified-real; leandag clean (0 unknown_uses/conflicts/isolated); blueprint-doctor
-clean. Coverage debt cleared (3 helper nodes blueprinted: `found:restrict_free_iso`,
-`found:locally_free_of_iso`, `found:eval_short_complex`); altitude gap on
-`found:eval_shortexact_of_globally_generated` fixed (hypothesis now honestly `Epi (evalMap F)`).
+**iter-021 — the (a1) "wall" is GONE.** mathlib-analogist `a1-stalk` (HARD result, both anchors
+loogle-verified by planner): (a1) "sheafification of a module presheaf is stalkwise-iso" is **NOT a
+Mathlib gap** — `TopCat.Presheaf.stalkFunctor_map_unit_toSheafify_isIso` (general value category) gives
+it directly at `AddCommGrpCat`. The project already does ALL module-sheaf stalk work at the Ab level via
+`Scheme.Modules.toPresheaf` (`def:peer_module_iso_locality`, `Foundations.lean:53`), so (a1)/(a2) need
+only **Ab** stalk isos — the iter-019/020 `Module ↑R`/ModuleCat-stalk synthesis fears DO NOT apply at
+this layer. Blueprint (a1)/(a2) proofs rewritten with the concrete decl chain; (a2) bridge node added;
+3 coverage-debt blocks cleared; (d1) `\uses` wired. HARD GATE GREEN (blueprint-reviewer `r21`: PASS,
+complete+correct, 0 must-fix; 3 new `\mathlibok` anchors loogle-verified; leandag + doctor clean).
+progress-critic `node4`: CONVERGING (on schedule, 7/4–9 iters; no helper-churn).
 
 Reminder (ARCHON_MEMORY): a mathlib-build lane on a zero-sorry file MUST lead its objective line with
 the literal verb **"Scaffold"** or plan-validate drops it as `failed_all_noop`.
@@ -45,60 +37,88 @@ the literal verb **"Scaffold"** or plan-validate drops it as `failed_all_noop`.
 ## Current Objectives
 
 1. **`MR4213770UniversalSecantBundlesAndSyzygiesOfCanonicalCurves/Foundations.lean`** — **Scaffold** the
-   three ready bottom sub-lemmas of the Core-2 affine-reduction chain INTO the file (currently ZERO open
-   sorries — mathlib-build ADDs axiom-clean decls, NOT a fill-the-sorry task). Work bottom-up, axiom-clean,
-   as far as it goes; NO `sorry` (each step fully proved or absent — clean STOP + handoff if walled).
-   Blueprint: `chapters/Kemeny_PeerDependencies.tex`, the 4-lemma chain under
-   `found:isLocallyFree_kernel_of_shortExact` (HARD GATE GREEN, blueprint-reviewer `r16`).
+   node-4 stalkwise-iso chain (a1)→(a2-bridge)→(a2)→(a)→(d2) INTO the file (file is ZERO-sorry;
+   mathlib-build ADDs axiom-clean decls bottom-up, NOT a fill-the-sorry task). Build as far up as you
+   can; each decl fully proved or absent (no `sorry`, clean STOP/handoff if blocked). Blueprint:
+   `chapters/Kemeny_PeerDependencies.tex` (HARD GATE GREEN, blueprint-reviewer `r21`).
    [prover-mode: mathlib-build]
 
-   Build these three (deps all done; mutually independent — do all three in one lane):
-   1. **L2 — `Scheme.Modules.kernel_module_free_on_basicOpen_cover`** (`lem:module_kernel_free_basicOpen_cover`):
-      a module SES `0 → K → R^m → R^n → 0` (R comm ring) with free quotient ⇒ K finitely-presented
-      projective ⇒ K free on a basic-open cover `D(fᵢ)` of `Spec R`. Pure commutative algebra — the most
-      anchored, attack FIRST. May be stated as a standalone `R`-module lemma and wrapped under
-      `Scheme.Modules.*`. Anchors [verified this iter, Mathlib v4.30.0]:
-      `CategoryTheory.ShortComplex.ShortExact.splittingOfProjective`, `Module.Projective.of_split`,
-      `Module.Projective.of_free`, `Module.freeLocus`, `Module.isOpen_freeLocus`,
-      `Module.freeLocus_eq_univ_iff`, `Module.basicOpen_subset_freeLocus_iff`,
-      `Module.projective_of_localization_maximal`, `Module.free_of_flat_of_isLocalRing`.
-      GUIDANCE (r16): you must supply the `Module.FinitePresentation R K` instance (f.g. projective ⇒
-      f.p.) BEFORE the `freeLocus_*` lemmas fire — they all need `[Module.FinitePresentation R M]`.
-   2. **L3 — `Scheme.Modules.kernel_iso_tilde_of_free_ses_affine`** (`lem:kernel_iso_tilde_affine`): a
-      short exact sequence of `(Spec R).Modules` whose middle and right terms are free (`≅ free m`,
-      `≅ free n`) is `tilde` of an `R`-module SES `0→K→R^m→R^n→0`, with the kernel `𝒦 ≅ tilde K`.
-      Anchors [verified]: `AlgebraicGeometry.tilde`, `AlgebraicGeometry.tildeFinsupp`
-      (`tilde (of R (ι →₀ R)) ≅ SheafOfModules.free ι`), `AlgebraicGeometry.tilde.fullyFaithfulFunctor`.
-      GUIDANCE (r16): the module map `R^m→R^n` is epi because `tilde` is exact + fully faithful (hence
-      conservative) and reflects the epi `𝒢→ℋ`; supply this reflection step.
-   3. **L1 — `Scheme.Modules.isLocallyFree_of_isLocallyFree_cover`** (`lem:isLocallyFree_local`): local
-      freeness is local on the base — if `X` has an open cover on each member of which `𝒦` is locally
-      free of the same finite rank, then `𝒦` is locally free. `\uses{found:locally_free,
-      found:locally_free_of_iso}` (both DONE). GUIDANCE (r16): needs the restrict-restrict iso
-      `(𝒦|_{Uα})|_V ≅ 𝒦|_V` (restrictFunctor composition — Mathlib infra, no blueprint node).
+   **DECISIVE CONTEXT (kills the iter-019/020 stalk-synthesis fears):** the project already performs every
+   module-sheaf-iso check at the `AddCommGrpCat` level through `Scheme.Modules.toPresheaf X`
+   (`Modules.isIso_iff_isIso_stalkFunctor_map`, `Foundations.lean:53`, = `def:peer_module_iso_locality`;
+   it uses `TopCat.Presheaf.isIso_iff_stalkFunctor_map_iso` + `toPresheaf` reflects isos). So (a1)/(a2)
+   only need **Ab** stalk isomorphisms; the structure-sheaf-stalk module structure is recovered at the
+   very end by `toPresheaf`-reflects-isos, never per node. Do NOT synthesize `Module ↑R`/ModuleCat stalk
+   instances at this layer.
 
-   **DO-NOT-USE (FABRICATED — absent in this Mathlib, a prior advisor hallucinated them; grep-confirmed):**
-   `SheafOfModules.IsLocallyFree`, `IsLocallyFreeData`, `instIsLocallyFreeFree`,
-   `ModuleCat.Tilde.stalkIso`, `tildeInModuleCat`, `ModuleCat.tilde`/`ModuleCat.tildeFinsupp` (the real
-   names are in the `AlgebraicGeometry` namespace). Keep the project's bespoke `Scheme.Modules.IsLocallyFree`.
+   **DISPATCH ORDER (bottom-up):**
 
-   **OUT OF SCOPE (gated on L2+L3 — do NOT stub):** L4 `isLocallyFree_kernel_on_affine`, the target
-   `isLocallyFree_kernel_of_shortExact`, `rank_kernel_of_shortExact`, `evalKernel_isLocallyFree`. Any NEW
-   helper beyond the three named is coverage debt — list each with its `\uses` under "## Needs blueprint
-   entry" in your task result.
+   1. **(a1)** `lem:tilde_pullback_stalk_sheafificationStalk` →
+      `tildePullbackComparison_stalk_sheafificationStalkIso`. THE 3-step recipe (analogist `a1-stalk`,
+      anchors planner-verified):
+      (i) reduce to an `AddCommGrpCat` stalk iso via `Scheme.Modules.toPresheaf` /
+      `def:peer_module_iso_locality`; `SheafOfModules.pullbackIso`
+      (`…/ModuleCat/Sheaf/PullbackContinuous.lean`) puts `(SheafOfModules.pullback q_f).obj (tilde M)`
+      into `forget ⋙ presheafPullback ⋙ sheafification` form, so the comparison map IS the sheafification
+      unit (α = `𝟙 R.obj`);
+      (ii) rewrite the underlying-Ab unit to `toSheafify` via
+      `PresheafOfModules.toPresheaf_map_sheafificationAdjunction_unit_app` [verified] — holds by `rfl`
+      (needs `IsLocallyInjective`/`IsLocallySurjective`/`WEqualsLocallyBijective AddCommGrpCat`/
+      `HasWeakSheafify` instances for α = 𝟙 — should be automatic for the identity);
+      (iii) close with `TopCat.Presheaf.stalkFunctor_map_unit_toSheafify_isIso (C := AddCommGrpCat)`
+      [verified].
+   2. **(a2-bridge)** `lem:tilde_pullback_stalk_presheafPullback_toPresheaf_bridge` →
+      `tildePullbackComparison_presheafPullback_toPresheaf_iso`: the underlying-`AddCommGrpCat` presheaf
+      of the `PresheafOfModules`-pullback of `tilde M` along `q_f` ≅ the `TopCat.Presheaf` inverse-image
+      of its underlying Ab presheaf along `q_f.base` (both = left Kan extension along `Opens.map q_f.base`).
+      **CRUX the prover must resolve (was stripped from blueprint as syntactic):** confirm whether
+      `SheafOfModules.pullback`'s inverse image is carried by `PresheafOfModules.pullback φ.hom`
+      (change-of-rings, `…/Sheaf/Pullback.lean:44`) or the continuous functor `F`/`sheafPushforwardContinuous`
+      — this fixes WHICH `TopCat.Presheaf.pullback` instance `stalkPullbackIso` must match. Pin it before
+      stating the iso.
+   3. **(a2)** `lem:tilde_pullback_stalk_presheafPullbackStalk` →
+      `tildePullbackComparison_stalk_presheafPullbackStalkIso`: compose the (a2-bridge) with
+      `TopCat.Presheaf.stalkPullbackIso` [verified, `mathlib:stalkPullbackIso`] to get the presheaf-pullback
+      stalk ≅ `(tilde M)` stalk at the image point `q_f(x)`.
+   4. **(a)** `lem:tilde_pullback_stalk_pullbackStalkIso` →
+      `tildePullbackComparison_stalk_pullbackStalkIso`: compose (a1) ∘ (a2) → `(q_f^* tilde M)_x ≅
+      (tilde M)_{q_f(x)}`.
+   5. **(d2)** `lem:tilde_pullback_stalk_target_isLocalizedModule` →
+      `tildePullbackComparison_stalk_target_isLocalizedModule`: the (d)-analogue of the landed (d1). By
+      (a), `(q_f^* tilde M)_x ≅ (tilde M)_𝔮`; the latter is `IsLocalizedModule 𝔮ᶜ M` via
+      `mathlib:tilde_stalk_localization` (`instIsLocalizedModuleStalkOfTilde`). Transport along the iso
+      (an `IsLocalizedModule` is preserved under a linear iso of the target). The `Module ↑R` structure
+      here IS needed (it is the `(d)` localization claim, not an Ab-only stalk iso) — reuse the iter-020
+      recipe: restricted R-module via `Module.compHom _ φ` + `IsScalarTower.of_algebraMap_smul`.
 
-   **HAZARDS (carried):** universe pins `.{u}` on bundle instances; `Module A N`/`IsScalarTower` do NOT
-   auto-synth on base-changed targets (explicit binders).
+   **If you factor a reusable non-private helper** (e.g. a generic "IsLocalizedModule transports along a
+   linear iso" or an "Ab stalk iso reflects to module iso" lemma), it is coverage debt: list it with its
+   real `\uses` under "## Needs blueprint entry". A `private`/local construction needs no entry.
+
+   **HAZARDS (carried):** `change` not `show`; `← cancel_mono` for iso-cancels; ascribe `(↑s : R)` on
+   submonoid-coe smul; universe-pin ring-sheaf on `tilde`/`free` constructions. **FABRICATED (absent
+   v4.30.0, grep-confirmed):** `SheafOfModules.{IsLocallyFree,stalk}`, `PresheafOfModules.stalk`,
+   `ModuleCat.Tilde.stalkIso`, `tildeInModuleCat`, `ModuleCat.tilde{,Finsupp}`,
+   `TopCat.Presheaf.sheafifyStalkIso` (this last is `Type`-only étale-space — do NOT use for the site
+   sheafification). Keep bespoke `Scheme.Modules.IsLocallyFree`.
+
+   **OUT OF SCOPE (do NOT stub):** (d3) `comparison_commutes` (needs α_M germ-naturality + the
+   `toPresheaf`↔`moduleSpecΓFunctor` germ bridge — defer), node-4 target
+   `found:tilde_pullback_comparison_stalk`, `found:tilde_pullback_iso`, `found:tilde_restrict_basicOpen`,
+   L4 `lem:isLocallyFree_kernel_on_affine`, `found:isLocallyFree_kernel_of_shortExact`,
+   `found:rank_kernel_of_shortExact`, `found:eval_kernel_locally_free`,
+   `MR4213770.kernelBundle_isLocallyFree`.
 
 ## Out of scope this iter
-- **The three deferred `Basic.lean` paper objects** — `lazarsfeldMukaiBundle` (E), `GrassmannPencilMap`,
-  `BNPGen` (`def:kemeny_LM_bundle`, `lem:kemeny_grassmann_pencil_map`, `lem:kemeny_BNP_gen`). Appear
-  "ready" on the leandag frontier but their `\uses` UNDER-DECLARES the real substrate (K3 Picard-rank-one
-  lattice, curve inclusion `i:C↪X`, `g^1_{k+1}` pencils, pushforward `i_*A`, Brill–Noether `W^1_{k+1}`,
-  the Grassmannian) — none built (P2/P3). A formalize prover there would emit fake statements (HARD GATE
-  forbids). The three `opaque` stubs stay until their geometric substrate exists.
-- **`def:kemeny_koszul_cohomology`** (`koszulCohomology`) — needs line-bundle tensor powers `L^q`,
-  `H⁰(L^q)`, and the Koszul differentials; that substrate is a later mathlib-build lane.
-- **Core-2 chain tip** — L4 + target + `rank_kernel_of_shortExact` + `evalKernel_isLocallyFree`: assemble
-  next iter once L2/L3 land. `MR4213770.kernelBundle_isLocallyFree` (`lem:kemeny_kernel_bundle_locally_free`,
-  Basic.lean) waits on the whole chain.
+- **(d3) `tilde_pullback_stalk_comparison_commutes`** — the irreducible (d) step: needs α_M germ-naturality
+  through `stalkFunctor` + the `toPresheaf`↔`moduleSpecΓFunctor` germ bridge. Defer; NEVER state it as
+  `target_map := (α_M)_x ∘ source_map` (circular). With (d1)+(d2) landed, the node-4 target then needs
+  only (d3) + `mathlib:isLocalizedModule_uniqueness`.
+- **The three deferred `Basic.lean` paper objects** — `lazarsfeldMukaiBundle`, `GrassmannPencilMap`,
+  `BNPGen` (`def:kemeny_LM_bundle`, `lem:kemeny_grassmann_pencil_map`, `lem:kemeny_BNP_gen`). `\uses`
+  UNDER-DECLARES the real substrate (K3 Picard-rank-one, curve inclusion, `g^1_{k+1}` pencils, `i_*A`,
+  Brill–Noether `W^1_{k+1}`, Grassmannian) — none built (P2/P3). `opaque` stubs stay.
+- **`def:kemeny_koszul_cohomology`** — needs line-bundle tensor powers `L^q`, `H⁰(L^q)`, Koszul
+  differentials; a later mathlib-build lane.
+- **Core-2 chain tip (gated on node 4):** L4 + `isLocallyFree_kernel_of_shortExact` +
+  `rank_kernel_of_shortExact` + `evalKernel_isLocallyFree`; `MR4213770.kernelBundle_isLocallyFree`.

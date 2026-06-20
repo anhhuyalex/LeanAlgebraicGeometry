@@ -1,0 +1,138 @@
+[
+  {
+    "timestamp": "2026-06-19T18:58:00Z",
+    "status": "solved",
+    "target": {
+      "file": "MR4213770UniversalSecantBundlesAndSyzygiesOfCanonicalCurves/Foundations.lean",
+      "theorem": "tildePullbackComparison_stalk_localizationTransitivity"
+    },
+    "session": {
+      "id": "session_19",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "IsLocalization.map_units",
+        "IsLocalization.surj",
+        "IsLocalizedModule.surj",
+        "IsLocalizedModule.exists_of_eq",
+        "Module.End.isUnit_iff",
+        "IsScalarTower.algebraMap_smul",
+        "LinearMap.map_smul_of_tower",
+        "Ideal.mem_comap",
+        "Ideal.eq_top_of_isUnit_mem"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Planner's T-parametrised sketch: isLocalizedModule_iff_isBaseChange + IsBaseChange.comp + IsLocalization.isLocalization_isLocalization_atPrime_isLocalization",
+        "code_tried": "8-line base-change composition over a local-ring T = (R_f)_𝔭",
+        "line_number": "1590",
+        "lean_error": "compiles, but signature requires Module T N + IsScalarTower Rf T N + Algebra R T on N — caller (d1) cannot supply these for the tilde stalk",
+        "result": "partial",
+        "insight": "T-parametrised version is axiom-clean but UNUSABLE downstream: node (d1)'s N is the tilde stalk carrying only the R_f-module; no free Algebra R (Localization.AtPrime 𝔭)."
+      },
+      {
+        "attempt": 2,
+        "strategy": "T-FREE rewrite: direct 3-field IsLocalizedModule constructor (map_units/surj'/exists_of_eq), conclusion is bare IsLocalizedModule predicate",
+        "code_tried": "refine ⟨fun x => ?_, fun y => ?_, fun {x₁ x₂} heq => ?_⟩ with mem_iff (not_congr Ideal.mem_comap) + powers_compl helpers",
+        "line_number": "1590",
+        "lean_error": "Unknown constant Module.End_isUnit_iff (fixed → Module.End.isUnit_iff); CommSemiring synth fail from `set φ` (fixed → inline algebraMap R Rf); show-linter errors (fixed → change); submonoid coe-smul ambiguity (fixed → ascribe (↑s : R))",
+        "goal_before": "IsLocalizedModule (𝔭.comap (algebraMap R Rf)).primeCompl (h.restrictScalars R ∘ₗ g)",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Direct construction needs only Module R N + IsScalarTower R Rf N from caller. Coe-smul ↑s • x is ambiguous with ring-coe smul — ascribe (↑s : R) on EVERY coe-smul or rw fails to find pattern."
+      }
+    ],
+    "next_steps": "Node (c) done. Blueprint \\uses cites localization_localization_atPrime + isLocalizedModule_uniqueness but landed proof uses NEITHER — planner trim."
+  },
+  {
+    "timestamp": "2026-06-19T18:58:00Z",
+    "status": "solved",
+    "target": {
+      "file": "MR4213770UniversalSecantBundlesAndSyzygiesOfCanonicalCurves/Foundations.lean",
+      "theorem": "pushforward_smul_coherence"
+    },
+    "session": {
+      "id": "session_19",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Un-private cleanup so the blueprint \\lean{} resolves for sync_leanok",
+        "code_tried": "private lemma pushforward_smul_coherence → lemma pushforward_smul_coherence",
+        "line_number": "1505",
+        "lean_error": null,
+        "result": "success",
+        "insight": "Statement/proof unchanged; downstream tilde_pullback_specMap_globalSectionsMap still compiles; axiom-clean. sync_leanok now marks found:pushforward_smul_coherence (clears iter-018 coverage debt)."
+      }
+    ],
+    "next_steps": "Coverage debt cleared (unmatched=0)."
+  },
+  {
+    "timestamp": "2026-06-19T18:58:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "MR4213770UniversalSecantBundlesAndSyzygiesOfCanonicalCurves/Foundations.lean",
+      "theorem": "tildePullbackComparison_stalk_source_isLocalizedModule"
+    },
+    "session": {
+      "id": "session_19",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "tilde-stalk module-instance synthesis: Module ↑R + IsScalarTower ↑R (Localization.Away f) on (tilde Mf).presheaf.stalk x do NOT synthesize; even Module ↑(CommRingCat.of (Localization.Away f)) on the stalk fails inferInstance in a fresh context (entangled with ModuleCat.of/CommRingCat coercions). NOT the (a1) sheafification wall.",
+      "key_lemmas_used": [
+        "IsLocalization.tensorProduct_isLocalizedModule",
+        "tilde.toStalk"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Apply node (c) with g = extendScalars structure map, h = (tilde.toStalk Mf x).hom",
+        "code_tried": "exact tildePullbackComparison_stalk_localizationTransitivity f g x.asIdeal h (after .restrictScalars ↑R)",
+        "line_number": "(not added)",
+        "lean_error": "failed to synthesize Module ↑(CommRingCat.of (Localization.Away f)) ↑(ModuleCat.of … ((tilde Mf).presheaf.stalk x)) — confirmed by 3 lean_run_code tests",
+        "result": "failed",
+        "insight": "Tilde-stalk module structure is not directly usable. Needs a helper producing Module ↑R + IsScalarTower instances on the stalk (via Module.compHom/RestrictScalars over algebraMap ↑R (Localization.Away f)) FIRST. Then (d1) is a one-line (c) application. DO NOT retry bare inferInstance/.restrictScalars route."
+      }
+    ],
+    "next_steps": "Build tilde-stalk-module-structure helper, then (d1) = exact tildePullbackComparison_stalk_localizationTransitivity f g x.asIdeal h."
+  },
+  {
+    "timestamp": "2026-06-19T18:58:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "MR4213770UniversalSecantBundlesAndSyzygiesOfCanonicalCurves/Foundations.lean",
+      "theorem": "tildePullbackComparison_stalk_comparison_commutes"
+    },
+    "session": {
+      "id": "session_19",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Same tilde-stalk Module ↑R infra as (d1), PLUS stalk-level naturality of α_M = tildePullbackComparison (germ action intertwining M → M_f with the canonical map into Γ(Spec R_f, q_f^* tilde M)). Materially harder than (d1); not started beyond confirming shared blocker.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Confirm shared blocker only",
+        "code_tried": "(not started — depends on (d1) infra)",
+        "line_number": "(not added)",
+        "lean_error": null,
+        "result": "failed",
+        "insight": "Gated on (d1)'s tilde-stalk module helper + α_M germ-level naturality. Do NOT dispatch before the (d1) helper exists."
+      }
+    ],
+    "next_steps": "After tilde-stalk-module helper lands and (d1) closes, attempt (d3) with α_M germ naturality."
+  }
+]

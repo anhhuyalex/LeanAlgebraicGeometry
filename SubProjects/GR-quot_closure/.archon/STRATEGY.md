@@ -26,18 +26,24 @@ kernel-only axioms. Names/labels/paths are the parent's so finished work merges 
 | Phase | Status | Iters left | LOC | Key Mathlib needs | Risks |
 |---|---|---|---|---|---|
 | GR-quot / repr — tautological quotient + representability | ACTIVE | 2–5 | ~300–700 | effective descent for `SheafOfModules`; `Functor.RepresentableBy` | Residue = `tautologicalQuotient_epi` (last GR sorry); `represents` DONE |
-| SNAP-S0 — section graded ring | ACTIVE‖ / shared | 2–4 | ~150–350 | `Module.Invertible.tensorProductComm_eq_refl`; `DirectSum.G(Comm)Semiring` | General ring = NON-comm `GSemiring` (assoc+units, ∀L); comm is the invertible-only upgrade (`IsInvertible`). Residue: assoc 4-lemma chain (`tensorObjAssoc_eta_factor` hard) + invertibility-gated comm. SHARED with sibling |
+| SNAP-S0 — section graded ring assoc chain | ACTIVE‖ / shared | 1–3 | ~60–180 | `MonoidalCategory.pentagon`/`hexagon_forward`, `whisker_exchange`; `DirectSum.G(Comm)Semiring` | iter-017 closed ★/B4/B5 + B6 base. Residue: B6 SUCC = BRAIDED coherence (def threads `tensorBraiding`, NOT pure pentagon) + B7 (gated on B6) + invertibility-gated comm (FUTURE, no consumer). SHARED with sibling |
 | χ-blocked nodes | DEFERRED | — | — | higher-cohomology engine (absent here) | `hilbert_polynomial`/`quot_functor` filled from cohomology leg at merge |
 
-## Completed (inherited from the parent, in kept files)
+## Completed
 
-| Phase | LOC | Files | Key results | Reusable techniques | Pitfalls |
-|---|---|---|---|---|---|
-| GR-cells/glue/sep/proper | ~1310 | `GrassmannianCells.lean`, `GlueDescent.lean` | charts, cocycle, `Grassmannian.scheme`, `isSeparated`, `isProper`, keystone `isIso_glueRestrictionHom` (0-sorry) | `IsLocalization.Away.lift`; `ValuativeCriterion`; cocycle telescopes via rotMid; effective descent NOT stalks | `Matrix.det_updateColumn` absent; `Spec.map_comp` rw fails on Scheme-cat diamond |
-| GR-quot inverse + represents | ~? | `GrassmannianQuot.lean` | `grPointOfRankQuotient` (Nitsure §5 inverse), `represents` (DONE) | equivalence-transport; joint reflection across chart cover | value-ModuleCat diamond: never positional rw |
-| SNAP-S2 Hilbert–Serre engine | ~1470 | `QuotScheme.lean`, `GradedHilbertSerre.lean` | `IsRatHilb.ofDiffEq`; `gradedModule_hilbertSeries_rational` (00K1) | Route-2 ambient-subquotient pairs sidestep quotient gradings | bundled `IsInternal` over quotient carrier = hard `isDefEq` dead end |
-| QUOT P1+gap1+gap2 | ~990 | `QuotScheme.lean` | schematic/proper support; `isIso_fromTildeΓ`; `isLocalizedModule_basicOpen` | equivalence-transport beats `IsContinuous`; open-imm pullback-unit IS Final | general-U `_of_cover` unprovable (basic-open only) |
-| SNAP-S0 tensor crux + chain | ~? | `SectionGradedRing.lean` | `isIso_sheafification_whiskerRight_unit`; `tensorObjAssoc`; `tensorPowAdd` (axiom-clean) | `W.whiskerRight`@`ModuleCat (ULift ℤ)` + coequalizer descent (NOT stalks) | instance synth flaky in long `≪≫` — pass `@asIso _ _ _ _ f h` |
+`Iters (done@ · used)` = the iter the phase finished and how many iters it took. `inherited` =
+delivered in the parent before this leg branched (no this-leg iter cost); this-leg phases carry
+their actual iter span.
+
+| Phase | Iters (done@ · used) | LOC | Files | Key results | Reusable techniques | Pitfalls |
+|---|---|---|---|---|---|---|
+| GR-cells/glue/sep/proper | inherited | ~1310 | `GrassmannianCells.lean`, `GlueDescent.lean` | charts, cocycle, `Grassmannian.scheme`, `isSeparated`, `isProper`, keystone `isIso_glueRestrictionHom` (0-sorry) | `IsLocalization.Away.lift`; `ValuativeCriterion`; cocycle telescopes via rotMid; effective descent NOT stalks | `Matrix.det_updateColumn` absent; `Spec.map_comp` rw fails on Scheme-cat diamond |
+| GR-quot inverse | inherited | ~? | `GrassmannianQuot.lean` | `grPointOfRankQuotient` (Nitsure §5 inverse) | equivalence-transport; joint reflection across chart cover | value-ModuleCat diamond: never positional rw |
+| GR-seed `represents` (goal) | 001 · 1 | ~? | `GrassmannianQuot.lean` | `represents` sorry-free + axiom-clean (goal seed DELIVERED) | equivalence-transport across chart cover | disjoint from SNAP/χ — SNAP shape cannot disturb it |
+| SNAP-S2 Hilbert–Serre engine | inherited | ~1470 | `QuotScheme.lean`, `GradedHilbertSerre.lean` | `IsRatHilb.ofDiffEq`; `gradedModule_hilbertSeries_rational` (00K1) | Route-2 ambient-subquotient pairs sidestep quotient gradings | bundled `IsInternal` over quotient carrier = hard `isDefEq` dead end |
+| QUOT P1+gap1+gap2 | inherited | ~990 | `QuotScheme.lean` | schematic/proper support; `isIso_fromTildeΓ`; `isLocalizedModule_basicOpen` | equivalence-transport beats `IsContinuous`; open-imm pullback-unit IS Final | general-U `_of_cover` unprovable (basic-open only) |
+| SNAP-S0 monoidal foundation (crux/associator/`tensorPow` defs/unit law) | 007–009 · 3 | ~? | `SectionGradedRing.lean` | `isIso_sheafification_whiskerRight_unit`; `tensorObjAssoc` (canonical `α_`); `tensorPowAdd` def; `tensorPowAdd_zero_right`→`sectionsMul_mul_one` | inherited Mathlib monoidal-localization + bridge `tensorObjIso`; `W.whiskerRight`@`ModuleCat (ULift ℤ)` coequalizer descent (NOT stalks) | instance synth flaky in long `≪≫` — pass `@asIso _ _ _ _ f h` |
+| SNAP-S0 assoc legs ★/B4/B5 + B6 base | 017 · 7 (013→017) | ~? | `SectionGradedRing.lean` | ★ `tensorObjAssoc_eta_factor_sheaf`; B4 `tensorObjAssoc_eta_factor`; B5 `tensorObjAssoc_hom_sectionsMul`; B6 base | the wall was HEAD-MISALIGNMENT (pin generic `M` to the `LocalizedMonoidal` synonym, `maxRecDepth 4000`); comp-bridge `hc` keyed to explicit `Scheme.Modules.instCategory` | `exact` letting `M` default to native head ⇒ >4M-heartbeat diamond traversal; `repeat erw` 200k timeout |
 
 ## Routes
 
@@ -55,9 +61,14 @@ INVERTIBLE sheaves; commutativity holds iff `L` invertible (`β_{L,L}=𝟙`). So
 is a NON-commutative `DirectSum.GSemiring` (assoc + units only); `GCommSemiring` is the upgrade under a
 project-local `IsInvertible L` (locally-free-rank-1, Stacks 01CR), its proof gated on
 `braiding_eq_id_of_invertible` (Mathlib `Module.Invertible.tensorProductComm_eq_refl`, local-to-global).
-Remaining closable work: the assoc 4-lemma chain (`sectionsMul_whiskerRight/Left_unit`,
-`presheafAssociator_top_apply`, `tensorObjAssoc_eta_factor`) → `tensorObjAssoc_hom_sectionsMul` →
-`tensorPowAdd_assoc` (canonical pentagon) → `sectionsMul_mul_assoc`. comm proof is invertibility-gated
+The assoc 4-lemma chain (B1/B2/B3 + B4 `tensorObjAssoc_eta_factor` via ★) and B5
+`tensorObjAssoc_hom_sectionsMul` CLOSED iter-017. Remaining closable work:
+`tensorPowAdd_assoc` (B6) — base CLOSED iter-017; the SUCC case is a BRAIDED coherence (the
+inductive def of `tensorPowAdd` threads `tensorBraiding L (tensorPow L m')`, so it is NOT pure
+pentagon — closes via telescoping the `tensorObjIso` pairs straddling the braiding, `rw [ih]`, then
+`hexagon_forward`/`pentagon` + `whisker_exchange`, reindexers via a `subst` helper; assoc is true ∀L
+because both bracketings induce the SAME permutation, so no β=id needed — contrast comm). Then B7
+`sectionsMul_mul_assoc` (gated on B6: B5 + B6 + a μ-slide helper). comm proof is invertibility-gated
 future work (no consumer yet — `GCommSemiring` assembly unbuilt). Full `MonoidalCategory(SheafOfModules)`
 NOT needed; stalkwise routes DEAD. **Shared with sibling — prefer importing finished proofs.**
 

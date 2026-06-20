@@ -1,0 +1,107 @@
+[
+  {
+    "timestamp": "2026-06-19T21:47:00Z",
+    "status": "solved",
+    "target": {
+      "file": "MR4213770UniversalSecantBundlesAndSyzygiesOfCanonicalCurves/Foundations.lean",
+      "theorem": "tildePullbackComparison_stalk_sheafificationStalkIso"
+    },
+    "session": {
+      "id": "session_21",
+      "model": "opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "SheafOfModules.pullbackIso",
+        "PresheafOfModules.toPresheaf_map_sheafificationAdjunction_unit_app",
+        "TopCat.Presheaf.stalkFunctor_map_unit_toSheafify_isIso",
+        "def:peer_module_iso_locality"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "node (a1): reduce sheaf-pullback-stalk to AddCommGrpCat via toPresheaf; comparison = sheafification unit; underlying-Ab map = toSheafify; stalkFunctor inverts toSheafify",
+        "code_tried": "(stalkFunctor Ab x).mapIso ((toPresheaf _).mapIso (pullbackIso.app (tilde M))) ≒≓ (asIso (stalkFunctor Ab x .map (toSheafify _ (presheafPullbackTilde f M).presheaf))).symm",
+        "line_number": "1828",
+        "result": "success",
+        "insight": "IsIso (toSheafify) instance must be proved with SPACE inferred from the presheaf (exact stalkFunctor_map_unit_toSheafify_isIso _ AddCommGrpCat (P).presheaf, _ for the point), else x's native PrimeSpectrum.Top space mismatches the presheaf's ↑(Spec R_f) space and asIso fails."
+      },
+      {
+        "attempt": 2,
+        "strategy": "HasWeakSheafify synthesis on Spec R_f site is expensive",
+        "code_tried": "set_option synthInstance.maxHeartbeats 1000000 in",
+        "line_number": "1817",
+        "result": "success",
+        "insight": "regular maxHeartbeats NOT needed, only synthInstance; a comment between two stacked `set_option ... in` is a PARSE ERROR (lint wants comment after the single set_option)."
+      }
+    ],
+    "next_steps": "Standalone landed; now ORPHANED (node (a) bypassed it via restriction route). Planner may retire alongside (a2)/(a2-bridge), or keep as a reusable lemma."
+  },
+  {
+    "timestamp": "2026-06-19T21:47:30Z",
+    "status": "solved",
+    "target": {
+      "file": "MR4213770UniversalSecantBundlesAndSyzygiesOfCanonicalCurves/Foundations.lean",
+      "theorem": "tildePullbackComparison_stalk_pullbackStalkIso"
+    },
+    "session": {
+      "id": "session_21",
+      "model": "opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "SheafOfModules.restrictFunctorIsoPullback",
+        "Scheme.Modules.restrictStalkNatIso",
+        "isOpenImmersion_SpecMap_localizationAway"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "node (a): planned (a1)∘(a2) chain DEVIATED. q_f is an OPEN IMMERSION, so pullback functor ≅ restriction functor; restrictStalkNatIso computes restriction-stalk as stalk at image point. Bypasses the (a2-bridge) Beck-Chevalley blocker entirely.",
+        "code_tried": "(stalkFunctor Ab x).mapIso ((toPresheaf _).mapIso ((restrictFunctorIsoPullback q_f).symm.app (tilde M))) ≒≓ (restrictStalkNatIso q_f x).app (tilde M)",
+        "line_number": "1858",
+        "result": "success",
+        "insight": "must add `haveI : IsOpenImmersion (localizationSpecMap f) := isOpenImmersion_SpecMap_localizationAway f` inside the def body — the instance does not fire through the localizationSpecMap def wrapper during synthesis. STRATEGIC WIN: retires the (a2-bridge) blocker the planner flagged as the crux."
+      },
+      {
+        "attempt": 2,
+        "strategy": "DEAD END recorded: (a2-bridge) via mate of pushforwardCompToPresheaf",
+        "code_tried": "mateEquiv / conjugateEquiv on pushforward ∘ toPresheaf ≅ toPresheaf ∘ whiskeringLeft",
+        "result": "failed",
+        "insight": "the mate of an iso is NOT generally an iso (Mates.lean:268-270); no pullbackCompToPresheaf exists in Mathlib. A hand Beck-Chevalley would be required — made moot by the restriction route."
+      }
+    ],
+    "next_steps": "AddCommGrpCat-level iso landed. Feeds (d2): needs R-linear UPGRADE of this iso, blocked (see (d2))."
+  },
+  {
+    "timestamp": "2026-06-19T21:48:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "MR4213770UniversalSecantBundlesAndSyzygiesOfCanonicalCurves/Foundations.lean",
+      "theorem": "tildePullbackComparison_stalk_target_isLocalizedModule"
+    },
+    "session": {
+      "id": "session_21",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "pullback stalk (q_f^* tilde M)_x carries NO natural R/R_f-module instance; its module structure lives over the unidentified Spec R_f structure-sheaf stalk at x. #synth Module ↑(CommRingCat.of (Localization.Away f)) ((pullback q_f).obj (tilde M)).presheaf.stalk x FAILS. So the AddCommGrpCat iso (a) cannot be upgraded to the R-linear equiv that IsLocalizedModule.of_linearEquiv needs.",
+      "key_lemmas_used": [
+        "IsLocalizedModule.of_linearEquiv",
+        "instIsLocalizedModuleStalkOfTilde"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "node (d2): transport IsLocalizedModule along R-linear equiv (tilde M)_{q_f x} ≃ₗ[R] (q_f^* tilde M)_x via IsLocalizedModule.of_linearEquiv, feeding the tilde-stalk germ instIsLocalizedModuleStalkOfTilde at q_f x",
+        "code_tried": "IsLocalizedModule.of_linearEquiv applied to instIsLocalizedModuleStalkOfTilde, transported along (a)'s iso upgraded to R-linear",
+        "result": "blocked",
+        "insight": "(a) is only an AddCommGrpCat iso; upgrading needs (i) Spec R_f structure-sheaf stalk at x ≅ (R_f)_x (StructureSheaf.stalkIso / Localization.AtPrime); (ii) restricted R-module on (q_f^* tilde M)_x (Module.compHom + IsScalarTower.of_algebraMap_smul, iter-020 recipe); (iii) prove (a) is R-linear w.r.t. that structure — germ-naturality of the module action through restrictStalkNatIso, of the same flavour as deferred (d3). Clean STOP, no sorry."
+      }
+    ],
+    "next_steps": "effort-break (d2) into (i)/(ii)/(iii). (i) is a standard Mathlib structure-sheaf-stalk identification; (iii) is germ-naturality, sharing machinery with the deferred (d3). Do NOT re-dispatch bare (d2)."
+  }
+]

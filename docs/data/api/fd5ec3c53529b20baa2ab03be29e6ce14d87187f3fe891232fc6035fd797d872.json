@@ -1,0 +1,116 @@
+[
+  {
+    "timestamp": "2026-06-19T19:10:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/FlatBaseChange.lean",
+      "theorem": "gammaPushforwardIso_comp"
+    },
+    "session": {
+      "id": "session_13",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "PROVER LANE ERRORED (idle_timeout 900s + MCP connection closed) mid-proof; left file NON-COMPILING. The committed erw chain (simp only [tensorObj-style collapse]; erw [restrictScalarsComp_inv_app_concreteApply, gammaPushforwardIso_hom_concreteApply]; rw [Hom.comp_app, pushforwardComp_inv_app_app]; erw [Category.comp_id]) reduces the LSP goal cleanly but the resulting proof TERM kernel-times-out (kernel deterministic timeout @L743). LSP hid the kernel bomb (documented hazard). Downstream: unknown constant gammaPushforwardIso_comp @L816. sync_leanok consequently stripped ALL 61 \\leanok from the Cohomology chapter.",
+      "key_lemmas_used": [
+        "restrictScalarsComp_inv_app_concreteApply",
+        "gammaPushforwardIso_hom_concreteApply",
+        "moduleSpecΓFunctor_map_concreteApply",
+        "Scheme.Modules.pushforwardComp_inv_app_app",
+        "Category.comp_id"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Route the genuine cast through the section level .app ⊤ via concreteApply exposure lemmas, then comp_id to drop the 𝟙 leg.",
+        "code_tried": "simp only [ModuleCat.comp_apply, restrictScalars_map_concreteApply, gammaPushforwardIso_hom_concreteApply, moduleSpecΓFunctor_map_concreteApply]; erw [restrictScalarsComp_inv_app_concreteApply, gammaPushforwardIso_hom_concreteApply]; rw [Scheme.Modules.Hom.comp_app, Scheme.Modules.pushforwardComp_inv_app_app]; erw [Category.comp_id]; sorry",
+        "line_number": "743-784",
+        "lean_error": "(kernel) deterministic timeout @L743 (LSP showed clean goal `x = hom (Hom.app ((eqToIso E).hom.app N) ⊤) x`; kernel cannot check the erw-produced term)",
+        "goal_before": "x = restrictScalarsComp.inv (restrictScalars.map (γ_ρ) (γ_φ (Γ_cast x)))",
+        "goal_after": "x = ConcreteCategory.hom (Hom.app ((eqToIso ⋯).hom.app N) ⊤) x (LSP-reported; kernel rejects term)",
+        "result": "failed",
+        "insight": "erw chain crosses the value-ModuleCat/X.Modules junction diamond up-to-defeq, producing a term whose kernel-level whnf check times out. Per FBC diamond-collapse analogist (cut off mid-report): close the residual eqToIso cast via eqToHom-calculus lemmas (eqToHom_map, eqToHom_map_comp, eqToHom_trans, eqToHom_app, eqToHom_refl — all confirmed to exist) NOT erw, and isolate genuine ring content in globalSectionsIso_hom_comp3_specMap_appTop."
+      }
+    ],
+    "next_steps": "iter-014 MUST FIRST restore FlatBaseChange.lean to a compiling state (back the erw chain out to the iter-012 committed `simp;sorry` on the fully-exposed `Γ(cast) x = x` goal). THEN close the cast via eqToHom-calculus (per cut-off diamond-collapse analogist), NOT erw/whnf. Re-run the FBC carrier-collapse analogist to a LANDED report first (this iter's 3 FBC consults were all cut off before writing)."
+  },
+  {
+    "timestamp": "2026-06-19T19:10:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "tensorObjAssoc_eq_localizedAssociator_hK_rhs"
+    },
+    "session": {
+      "id": "session_13",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "μ-cancel `μ.hom ≫ μ.inv` will not fire: keystone composite's internal ≫ is the modulesLocalizedMonoidal (localized-synonym) comp; boundary ≫ μ.inv from tensorObjLocalizedIso is the X.Modules comp. Defeq but DISTINCT instance terms. Prover stopped at `simp only [tensorObj]; erw [Category.assoc]` (one boundary crossed, μ intact) — the furthest CLEAN point in its own exploration.",
+      "key_lemmas_used": [
+        "sheafification_whiskerLeft_unit_eq_mu'",
+        "Category.assoc"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "After object-fold (simp only [tensorObj]), cross the comp-instance boundary with a single erw [Category.assoc] keeping μ intact.",
+        "code_tried": "simp only [tensorObj]; erw [Category.assoc]; sorry",
+        "line_number": "1908",
+        "lean_error": "no error (sorry remains); cancel not reached",
+        "goal_before": "α ≫ Φ^R = K (= assocCommonForm A B C), reduced to the μ-cancel",
+        "goal_after": "one outer ≫ reassociated, leading μ.inv pulled out, μ.hom buried in atomic X.Modules tail",
+        "result": "partial",
+        "insight": "Single erw [Category.assoc] crosses ONE boundary (defeq match, μ intact). A SECOND erw [Category.assoc] catastrophically unfolds Localization.Monoidal.μ → Functor.curry.mapIso (Localization.fac …) (verified). Keystone tail (L'a ◁ L'η_{bc}) ≫_loc μ.hom is an atomic X.Modules factor (verified by slice_lhs 2 3) so buried μ.hom is unreachable for Iso.hom_inv_id_assoc."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Cancel directly after object-fold via Iso lemmas (multiple variants).",
+        "code_tried": "simp only [tensorObj]; {erw [Iso.hom_inv_id_assoc] | rw [Category.assoc, Iso.hom_inv_id_assoc] | slice_lhs 3 4 => rw [Iso.hom_inv_id] | double erw [Category.assoc]}",
+        "line_number": "1908",
+        "lean_error": "rw [Category.assoc]: pattern not found (mixed loc/syn ≫ heads); simp only [Category.assoc]: no progress; erw [Iso.hom_inv_id_assoc] (no peel): adjacency not reached; double erw: μ whnf-unfold",
+        "goal_before": "the μ-cancel goal",
+        "goal_after": "no progress / catastrophic unfold",
+        "result": "failed",
+        "insight": "ALL verified dead this iter. CRITICAL: the snap-localized-comp-cancel analogist (api-alignment, dispatched same iter) VALIDATED a WORKING continuation on this exact goal (cold LSP, 0 errors): `erw [Category.assoc]; refine congrArg (fun t => _ ≫ t) ?_  -- mandatory peel; erw [Category.assoc, Iso.hom_inv_id_assoc]` → residual closes by μ_natural_right + counit triangle L'η ≫ c = 𝟙. The prover did NOT apply this validated continuation (it only did step 1, then recommended the comp-unification rewrite instead — which the analogist explicitly refutes as unnecessary)."
+      }
+    ],
+    "next_steps": "iter-014: apply the analogist's VALIDATED erw+congrArg-peel+erw recipe verbatim from analogies/snap-localized-comp-cancel.md to close hK_rhs, THEN hK_lhs (same cancel after associator_naturality+associator_hom_app expose the μ-pairs), THEN assembly is already sorry-free → 5 gated cascade coherences (L2505/2528/2549/2608) unlock. Do NOT pursue the prover's comp-unification/keystone-restatement recommendation — analogist refutes it (no new lemma needed)."
+  },
+  {
+    "timestamp": "2026-06-19T19:10:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "tensorObjAssoc_eq_localizedAssociator_hK_lhs"
+    },
+    "session": {
+      "id": "session_13",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Gated on the same μ-cancel as hK_rhs, reached via a distinct multi-step route (push counit isos c_A,c_B,c_C through (α_ A B C).hom by associator_naturality + tensorHom_id/id_tensorHom so objects become (L').obj _ and associator_hom_app fires).",
+      "key_lemmas_used": [
+        "assocCommonForm",
+        "Localization.Monoidal.associator_naturality",
+        "Localization.Monoidal.associator_hom_app"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Unchanged this iter; left with rw [assocCommonForm]; simp only [...]; sorry + accurate route comment.",
+        "code_tried": "rw [assocCommonForm]; simp only [...]; sorry",
+        "line_number": "1885",
+        "lean_error": "sorry remains",
+        "goal_before": "Φ^L ≫ α^loc = K",
+        "goal_after": "unchanged",
+        "result": "partial",
+        "insight": "Will hit the SAME comp-instance boundary at the final μ-cancel → gated on hK_rhs's fix (the analogist erw+peel recipe applies after associator_hom_app exposes the μ-pairs)."
+      }
+    ],
+    "next_steps": "Close after hK_rhs using the analogist recipe; gated on associator_naturality+associator_hom_app exposure first."
+  }
+]

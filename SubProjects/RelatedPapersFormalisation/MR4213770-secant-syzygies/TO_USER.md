@@ -1,2 +1,7 @@
-- **Kernel-bundle local-freeness chain is progressing (no action needed).** The affine-reduction proof of "M_L is locally free" had its first two pieces land axiom-clean this iter (local-on-base + the module-level free-kernel lemma). One step remains: the affine bridge identifying the sheaf kernel with the module kernel.
-- **One genuine Mathlib gap on that last step (no action needed).** The bridge needs the quasi-coherent-sheaf functor `tilde` (M ↦ M̃) to preserve kernels, and Mathlib v4.30.0 has no left-exactness instance for it. Decision (planner): build that instance from scratch as its own lane (it needs stalk-of-kernel infrastructure) rather than assume it. The loop keeps moving; you can steer (point to a reference, relax scope) via `.archon/USER_HINTS.md`.
+- **Kernel-bundle local-freeness chain advancing, no action needed.** The node-4 tilde-pullback chain
+  landed two more pieces this iter (021): the sheafification-stalk iso (a1) and the pullback-stalk
+  identification (a). The feared "sheafification of a module presheaf" wall was not a Mathlib gap, and
+  (a) was closed by an open-immersion shortcut that retired the Beck–Chevalley sub-lemma the planner had
+  flagged as the crux. Remaining: lift (a) from abelian-groups to R-linear (step d2, newly scoped) plus
+  the commutativity step (d3). You can steer (reference, scope) via `.archon/USER_HINTS.md`; the loop
+  keeps moving otherwise.

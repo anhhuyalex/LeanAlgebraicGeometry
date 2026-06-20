@@ -14,16 +14,15 @@ This file holds the **dual-inverse chain** that feeds `exists_tensorObj_inverse`
 `TensorObjSubstrate.lean`:
 
 1. `dual_restrict_iso` — restriction along an open immersion commutes with the sheaf-level
-   dual (blueprint `lem:dual_restrict_iso`; the C-bridge).  **PARTIAL** (held iter-258): Steps 1–3
+   dual (blueprint `lem:dual_restrict_iso`; the C-bridge).  **CLOSED**: Steps 1–3
    (`restrictFunctorIsoPullback`/`sheafificationCompPullback`/strip) + H1
-   (`pushforwardPushforwardAdj`∘`leftAdjointUniq`) are in place; one `sorry` remains at the
-   identified Step-4 presheaf residual
-   `(pushforward β).obj (dual M.val) ≅ dual ((pushforward β).obj M.val)`,
-   assembled sectionwise from `sliceDualTransport` (see piece 1b below) plus a thin-poset
-   naturality square.
+   (`pushforwardPushforwardAdj`∘`leftAdjointUniq`) are in place; the Step-4 presheaf residual
+   `(pushforward β).obj (dual M.val) ≅ dual ((pushforward β).obj M.val)`
+   is assembled sectionwise from `sliceDualTransport` (see piece 1b below) plus a thin-poset
+   naturality square (closed by `subsingleton`).
 
-   1b. `sliceDualTransport` — the per-`V` `𝒪_Y(V)`-linear iso of the Step-4 residual.  **PARTIAL**
-   (iter-262): the obligation is a `𝒪_Y(V)`-linear equivalence between the two morphism (`Hom`)
+   1b. `sliceDualTransport` — the per-`V` `𝒪_Y(V)`-linear iso of the Step-4 residual.  **CLOSED**:
+   the obligation is a `𝒪_Y(V)`-linear equivalence between the two morphism (`Hom`)
    types `(restr fV' M.val ⟶ restr fV' 𝟙_X)` (restricted along `β.app V`) and
    `(restr V ((pushforward β).obj M.val) ⟶ restr V 𝟙_Y)`, where `fV' = f.opensFunctor.obj V`.
    ROUTE-1 (consume the shared root `Scheme.Modules.overEquivalence`/`restrictOverIso`/`unitOverIso`)
@@ -32,20 +31,15 @@ This file holds the **dual-inverse chain** that feeds `exists_tensorObj_inverse`
    `MonoidalClosed (PresheafOfModules)`.  The genuine close is the direct sectionwise build
    (ROUTE-2, sanctioned iter-261): leg-A reindexes `φ` across `f.opensFunctor` (categorical
    `restrictScalars … |>.map`), leg-B swaps the codomain unit ring via `dualUnitRingSwap`
-   (= `inv (ε (restrictScalars (f.appIso W').inv.hom))`).  **Leg-B is CLOSED (iter-262)** as the named
-   `dualUnitRingSwap` + `isIso_ε_restrictScalars_appIso` (recipe `analogies/ma-legb262.md`); the
-   `codomainMap` hole is filled by defeq.  `map_add'` is CLOSED (iter-263) and `map_smul'` is CLOSED
-   (iter-264, axiom-clean: β-naturality ring identity `s = (β.app W').hom c` via
-   `Scheme.Hom.appIso_inv_naturality` + `𝒪_Y(W')`-linearity of `dualUnitRingSwap.hom` via `map_smul`).
-   REMAINING (typed sorries, 4 of the `≃ₗ`-packaging fields): `naturality`, the reverse `invFun`, and
-   its `left_inv`/`right_inv` round-trips.
+   (= `inv (ε (restrictScalars (f.appIso W').inv.hom))`).  `map_add'` is CLOSED (iter-263) and
+   `map_smul'` is CLOSED (iter-264, axiom-clean: β-naturality ring identity `s = (β.app W').hom c`
+   via `Scheme.Hom.appIso_inv_naturality` + `𝒪_Y(W')`-linearity of `dualUnitRingSwap.hom` via
+   `map_smul`).  `naturality`, `invFun`, `left_inv`, and `right_inv` are all closed.
 2. `dual_isLocallyTrivial` — the dual of a locally-trivial module is locally trivial
-   (blueprint `lem:dual_isLocallyTrivial`).  **TRANSITIVELY PARTIAL** (depends on
-   `dual_restrict_iso` Step-4 `isoMk` naturality sorry at ~L546): the three-step chart-chase
-   `dual_restrict_iso ≪≫ (dualIsoOfIso eL).symm ≪≫ dual_unit_iso` is assembled and compiles, but it
-   inherits the `dual_restrict_iso` residual axiomatically.  The third leg `dual_unit_iso`
-   and its presheaf core `presheafDualUnitIso` (= the §0 `dualUnitIsoGen`, the eval-at-`1`
-   `dual 𝟙_ ≅ 𝟙_`) are built axiom-clean.
+   (blueprint `lem:dual_isLocallyTrivial`).  **CLOSED**: the three-step chart-chase
+   `dual_restrict_iso ≪≫ (dualIsoOfIso eL).symm ≪≫ dual_unit_iso` is assembled and compiles.
+   The third leg `dual_unit_iso` and its presheaf core `presheafDualUnitIso` (= the §0
+   `dualUnitIsoGen`, the eval-at-`1` `dual 𝟙_ ≅ 𝟙_`) are built axiom-clean.
 3. `homOfLocalCompat` — a compatible family of local `𝒪_X`-module morphisms over an open
    cover glues to a unique global morphism (blueprint `lem:sheafofmodules_hom_of_local_compat`;
    the A-bridge).  **CLOSED** (iter-256), axiom-clean; the multi-piece sheaf-of-homs gluing
@@ -196,9 +190,8 @@ noncomputable def dual_restrict_iso {X Y : Scheme.{u}} (f : Y ⟶ X)
   refine (H1.app (PresheafOfModules.dual (R₀ := X.presheaf) M.val)).symm ≪≫ ?_
   -- Residual: `(pushforward β).obj (dual M.val) ≅ dual ((pushforward β).obj M.val)`.
   -- Assemble sectionwise from `sliceDualTransport`.  The `isoMk` naturality square is the
-  -- thin-poset `Opens Y` coherence of the `sliceDualTransport` family; it becomes routine once
-  -- `sliceDualTransport`'s body is concrete (its `.hom` is currently a `sorry`, so the square
-  -- cannot be discharged yet — it is left as the assembly residual, per the planner bar).
+  -- thin-poset `Opens Y` coherence of the `sliceDualTransport` family; it is closed by
+  -- `subsingleton` (the connecting Hom-space in a thin poset is a subsingleton).
   refine PresheafOfModules.isoMk (fun V => sliceDualTransport f M V) ?_
   intro V W g
   -- Outer `isoMk` naturality square over the thin poset `Opens Y`: the connecting Hom-space is a
@@ -216,7 +209,7 @@ endomorphisms of the regular module `𝒪_Y(X)`, and `𝒪_Y(X)` is commutative.
 private lemma linearEndo_apply_comm {S : Type u} [CommRing S] (a b : S →ₗ[S] S) :
     a (b 1) = b (a 1) := by
   have key : ∀ (g : S →ₗ[S] S) (x : S), g x = x * g 1 := fun g x => by
-    rw [← smul_eq_mul, ← map_smul, smul_eq_mul, mul_one]
+    rw [← smul_eq_mul, ← LinearMap.map_smul, smul_eq_mul, mul_one]
   rw [key a (b 1), key b (a 1), mul_comm]
 
 /-- **Presheaf-level: the dual of the monoidal unit is the unit.**

@@ -1,0 +1,107 @@
+[
+  {
+    "timestamp": "2026-06-19T17:11:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "pushforward_mu_appIso_collapse"
+    },
+    "session": {
+      "id": "session_31",
+      "model": "opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "deltaConjOfMuComparison",
+        "pushforward_lax_mu_comparison",
+        "Adjunction.rightAdjointLaxMonoidal",
+        "Adjunction.unit_app_tensor_comp_map_δ",
+        "Adjunction.unit_leftAdjointUniq_hom_app",
+        "Adjunction.leftAdjointUniq_inv_app",
+        "Functor.LaxMonoidal.μ_natural",
+        "MonoidalCategory.tensorHom_comp_tensorHom"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "inline 4-step mate reduction on the K1 lemma directly",
+        "code_tried": "set G/adj₀; htri'; rw [Adjunction.unit_leftAdjointUniq_hom_app]; rw [hLHS]; ...",
+        "line_number": "4506",
+        "lean_error": "rewrite failed: pattern (?f ≫ ?g) ≫ ?h not found; later whnf timeout (200000 heartbeats) at L4403; instance synth failure Category PresheafOfModules",
+        "result": "failed",
+        "insight": "goal terms are zeta-reduced statement-lets (Gβ/φ'/hadj' unfolded); heavy pushforward₀OfCommRingCat sections make erw whnf-explode and plain rw won't key-match"
+      },
+      {
+        "attempt": 2,
+        "strategy": "extract the reduction as an ABSTRACT helper deltaConjOfMuComparison with clean Type* fvars, then exact-apply",
+        "code_tried": "private lemma deltaConjOfMuComparison ... ; exact deltaConjOfMuComparison hadj' (pullbackPushforwardAdjunction φ') A B (pushforward_lax_mu_comparison f A B)",
+        "line_number": "4407/4540",
+        "lean_error": "none (after iterating the helper body)",
+        "result": "success",
+        "insight": "abstract fvars remove let-fold/whnf friction; helper is axiom-clean (propext/Classical.choice/Quot.sound only)"
+      },
+      {
+        "attempt": 3,
+        "strategy": "helper body: transpose via homEquiv injectivity + show + hLHS + simp + conv + congr_arg₂",
+        "code_tried": "apply (adj₁.homEquiv _ _).injective; rw [homEquiv_unit, homEquiv_unit]; show <clean form>; rw [hLHS]; simp [unit_app_tensor_comp_map_δ_assoc]; conv_rhs => rw [← hnat, ← Category.assoc, tensorHom_comp_tensorHom]; exact congr_arg₂ (·≫·) (congr_arg₂ tensorHom (htri' A).symm (htri' B).symm) hμ",
+        "line_number": "4407",
+        "lean_error": "intermediate: rw [hLHS] without `show` fails to key-match; _left/_right μ_natural simp variants don't fire on ⊗ₘ form",
+        "result": "success",
+        "insight": "load-bearing `show` to clean instance form; FULL simp (not simp only) fires @[reassoc(attr:=simp)] _assoc forms only with a ≫?h tail; combined μ_natural fed by hand via conv; final tailless 2-factor contraction via congr_arg₂ (rw/simp silently no-match adjᵢ.unit≫G.map even on abstract fvars)"
+      }
+    ],
+    "next_steps": "Closed. Add blueprint block for deltaConjOfMuComparison (coverage debt)."
+  },
+  {
+    "timestamp": "2026-06-19T17:06:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "pushforward_lax_mu_comparison_lhs_tmul"
+    },
+    "session": {
+      "id": "session_31",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "inner unit value lemma pushforwardPushforwardAdj_unit_app_app_apply does NOT fire via simp only — the hadj' let-binding shadows the pushforwardPushforwardAdj form the lemma keys on",
+      "key_lemmas_used": [
+        "Adjunction.rightAdjointLaxMonoidal_μ",
+        "Adjunction.homEquiv_unit",
+        "PresheafOfModules.comp_app",
+        "ModuleCat.hom_comp",
+        "LinearMap.comp_apply"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "unfold mate tensorator to explicit adjunction form then split sectionwise into three legs",
+        "code_tried": "rw [Adjunction.rightAdjointLaxMonoidal_μ, Adjunction.homEquiv_unit]; rw [PresheafOfModules.comp_app, ModuleCat.hom_comp, LinearMap.comp_apply]; sorry",
+        "line_number": "4362",
+        "lean_error": "none (split fires; residual sorry on the inner unit value)",
+        "result": "partial",
+        "insight": "opaque mate-μ is now the explicit three-leg form (G.map (δ Gβ ≫ (ε⊗ₘε))).app W (unit.app Z .app W (m⊗ₜn)); genuine code advance over the opaque μ. Next: un-let hadj' / show-change to pushforwardPushforwardAdj form so the unit value lemma matches, then reduce δ Gβ/counit legs via restrictScalars_μ_app(_tmul) family mirroring rhs_tmul"
+      }
+    ],
+    "next_steps": "Expose pushforwardPushforwardAdj form (un-let hadj' or local show/change), apply pushforwardPushforwardAdj_unit_app_app_apply to reduce unit to Z.map (counit).op, then δ Gβ/counit legs via restrictScalars-μ family. Do NOT route via hadj'.IsMonoidal (circular)."
+  },
+  {
+    "timestamp": "2026-06-19T17:06:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate/DualInverse/../TensorObjInverse.lean",
+      "theorem": "trivialisation_restrict_compat"
+    },
+    "session": {
+      "id": "session_31",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "not attempted this iter — no prover lane dispatched on TensorObjInverse (single lane = TensorObjSubstrate); multi-hundred-LOC eqToHom residual gating the cocycle; blueprint sketch flagged too thin (iter-030 lvb)"
+    },
+    "attempts": [],
+    "next_steps": "Needs a thicker blueprint sketch before a prover can touch it (iter-030 lvb must-fix). Then a dedicated TensorObjInverse lane. Gates exists_tensorObj_inverse cocycle."
+  }
+]

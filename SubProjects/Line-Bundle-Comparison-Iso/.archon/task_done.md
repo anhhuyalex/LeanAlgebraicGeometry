@@ -1,6 +1,14 @@
 # Done Tasks
 <!-- Resolved items, last-known state only. Per-attempt detail → iter sidecars. -->
 
+- **K1 μ/δ-side `pushforward_mu_appIso_collapse` (`TensorObjSubstrate.lean`) — CLOSED iter-031, axiom-clean.**
+  The circular-mate blocker for iters 026–030. Bypassed by extracting the reduction as a NEW abstract helper
+  `deltaConjOfMuComparison` (`private`, L4423; `Type*` clean fvars dodge the zeta-`let`/whnf friction that
+  killed every inline attempt) + a one-line `exact deltaConjOfMuComparison hadj' (pullbackPushforwardAdjunction
+  φ') A B (pushforward_lax_mu_comparison f A B)`. `lean_verify`: only propext/Classical.choice/Quot.sound.
+  Transitively sorry ONLY via `lhs_tmul` (through `pushforward_lax_mu_comparison`). `deltaConjOfMuComparison`
+  is private → no blueprint block owed (coverage phase). Closes fully once `lhs_tmul` lands.
+
 - **K1 μ-side RHS `pushforward_lax_mu_comparison_rhs_tmul` (`TensorObjSubstrate.lean`) — PROVEN iter-029,
   axiom-clean (green).** The RHS-composition tensorator's pure-tensor value: `(μ (restrictScalars φ') M₁ M₂).app W
   (m⊗ₜn) = m⊗ₜn`, proof `= restrictScalars_μ_app_tmul`. Stated generic/abstract (abstract base-ring functors +

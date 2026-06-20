@@ -1,0 +1,280 @@
+% archon:covers AlgebraicJacobian/Cohomology/StructureSheafModuleK.lean AlgebraicJacobian/Cohomology/StructureSheafModuleK/Carriers.lean AlgebraicJacobian/Cohomology/StructureSheafModuleK/Presheaf.lean AlgebraicJacobian/Cohomology/StructureSheafModuleK/SheafProperty.lean
+\chapter{Sheaves of \(k\)-modules: sheafification, Ext, and the structure sheaf as a sheaf of \(k\)-modules}
+\label{chap:Cohomology_StructureSheafModuleK}
+
+This chapter implements Phase~A step~5: equipping \(H^1(C, \mathcal O_C)\) with a \(k\)-vector-space structure when \(C\) is a scheme over \(\Spec k\). The route is through the linear enrichment of the sheaf category over \(k\), which automatically provides a \(k\)-module structure on \(\Ext\) groups in any \(k\)-linear abelian category. The chapter introduces no protected declarations: every instance and definition here is auxiliary, supporting the construction of \(H^1(C, \mathcal O_C)\) in \cref{def:Scheme_HModule}.
+
+The chapter splits into two parts. \crefrange{sec:moduleK_prereqs}{sec:moduleK_ext} provide the typeclass plumbing: sheafification and \(\Ext\) for sheaves valued in \(k\)-modules. \Cref{sec:scheme_toModuleKSheaf} provides the substantive content: the \(k\)-module-valued structure sheaf for a scheme over \(\Spec k\), built from the algebra map induced by the structure morphism. Together these complete Phase~A step~5; the final remaining piece for an honest definition of genus is Phase~A step~6 (Serre finiteness, multi-iteration).
+
+\section{Sheafification of \(k\)-module-valued sheaves on opens}
+\label{sec:moduleK_prereqs}
+
+\begin{theorem}\leanok
+[Sheafification on the topology of opens, \(k\)-module valued]
+  \label{thm:HasSheafify_Opens_ModuleCatK}
+  \lean{AlgebraicGeometry.Cohomology.instHasSheafify_Opens_ModuleCatK}
+  Let \(k\) be a commutative ring and \(X\) a topological space. Then the Grothendieck topology of opens of \(X\) admits sheafification for sheaves valued in the category of \(k\)-modules.
+\end{theorem}
+
+\begin{proof}
+
+\leanok
+  Mathlib's general sheafification API constructs sheafification whenever weak sheafification holds and the resulting sheafification preserves finite limits. For the topology of opens and the category of \(k\)-modules, both prerequisites are available in Mathlib. The instance is therefore inferable; the formal task is the universe pinning, mirroring the abelian-group analogue (\cref{thm:HasSheafify_Opens_AddCommGrp}).
+\end{proof}
+
+\section{\(\Ext\) for \(k\)-module-valued sheaves on opens}
+\label{sec:moduleK_ext}
+
+\begin{theorem}\leanok
+[\(\Ext\) on the topology of opens, \(k\)-module valued]
+  \label{thm:HasExt_Sheaf_Opens_ModuleCatK}
+  \lean{AlgebraicGeometry.Cohomology.instHasExt_Sheaf_Opens_ModuleCatK}
+  \uses{thm:HasSheafify_Opens_ModuleCatK}
+
+  Let \(k\) be a commutative ring and \(X\) a topological space. Then the category of sheaves of \(k\)-modules on the topology of opens of \(X\) admits \(\Ext\) groups.
+\end{theorem}
+
+\begin{proof}
+
+\leanok
+  The category of \(k\)-modules is abelian. The sheaf category inherits an abelian structure from an abelian value category once sheafification is available (\cref{thm:HasSheafify_Opens_ModuleCatK}). Mathlib's standard construction produces \(\Ext\) from any abelian category. The universe annotation matches the morphism universe of the sheaf category, mirroring the abelian-group analogue (\cref{thm:HasExt_Sheaf_Opens_AddCommGrp}).
+\end{proof}
+
+\subsection{The algebra map from the structure morphism}
+
+For each open \(U \subseteq C\), the structure morphism induces a chain of ring maps
+\[
+  k \xrightarrow{\cong} \Gamma(\Spec k, \top) \xrightarrow{C.\mathrm{hom}} \Gamma(C, C.\mathrm{hom}^{-1}\top) \xrightarrow{\rho} \Gamma(C, U),
+\]
+where \(\rho\) is the restriction along \(U \le C.\mathrm{hom}^{-1}\top = \top\).
+
+\begin{definition}\leanok
+[Algebra map on a section]
+  \label{def:Scheme_kToSection}
+  \lean{AlgebraicGeometry.Scheme.toModuleKSheaf.kToSection}
+  
+  Let \(k\) be a commutative ring and \(C\) a scheme over \(\Spec k\). For any open \(U\) of \(C\), define the ring map \(k \to \Gamma(C, U)\) to be the composition of the inverse of the canonical isomorphism \(\Gamma(\Spec k, \top) \cong k\), the structure morphism map on global sections, and the restriction from \(\top\) to \(U\).
+\end{definition}
+
+\begin{definition}\leanok
+[Algebra structure on a section]
+  \label{def:Scheme_algebraSection}
+  \lean{AlgebraicGeometry.Scheme.toModuleKSheaf.algebraSection}
+  \uses{def:Scheme_kToSection}
+
+  The ring map of \cref{def:Scheme_kToSection} exhibits \(\Gamma(C, U)\) as a \(k\)-algebra.
+\end{definition}
+
+\begin{lemma}\leanok
+[Defining identity for the algebra map]
+  \label{lem:Scheme_algebraMap_eq_kToSection}
+  \lean{AlgebraicGeometry.Scheme.toModuleKSheaf.algebraMap_eq_kToSection}
+  \uses{def:Scheme_algebraSection, def:Scheme_kToSection}
+
+  Under the algebra structure of \cref{def:Scheme_algebraSection}, the structure map \(k \to \Gamma(C, U)\) equals the ring map of \cref{def:Scheme_kToSection}.
+\end{lemma}
+
+\begin{proof}
+  
+  \leanok
+  Definitionally true: converting a ring homomorphism to an algebra structure and extracting the structure map recovers the original homomorphism.
+\end{proof}
+
+\subsection{Naturality of the algebra map}
+
+\begin{lemma}\leanok
+[Restriction is compatible with the algebra map]
+  \label{lem:Scheme_kToSection_naturality}
+  \lean{AlgebraicGeometry.Scheme.toModuleKSheaf.kToSection_naturality}
+  \uses{def:Scheme_kToSection}
+
+  For any inclusion \(V \le U\) of opens in \(C\), the algebra map commutes with restriction: the composition \(k \to \Gamma(C, U) \to \Gamma(C, V)\) equals the direct map \(k \to \Gamma(C, V)\).
+\end{lemma}
+
+\begin{proof}
+  
+  \leanok
+  Both sides factor through the structure morphism map on global sections. The remaining triangle commutes by functoriality of the presheaf on composable inclusions.
+\end{proof}
+
+\begin{lemma}\leanok
+[Algebra-map naturality]
+  \label{lem:Scheme_algebraMap_naturality}
+  \lean{AlgebraicGeometry.Scheme.toModuleKSheaf.algebraMap_naturality}
+  \uses{lem:Scheme_algebraMap_eq_kToSection, lem:Scheme_kToSection_naturality}
+
+  For any inclusion \(V \le U\) of opens in \(C\) and any \(r \in k\), the restriction map sends the image of \(r\) in \(\Gamma(C, U)\) to the image of \(r\) in \(\Gamma(C, V)\).
+\end{lemma}
+
+\begin{proof}
+  
+  \leanok
+  \Cref{lem:Scheme_algebraMap_eq_kToSection} reduces both sides to the underlying ring map of the algebra map; \cref{lem:Scheme_kToSection_naturality} then closes the goal by congruence.
+\end{proof}
+
+\subsection{The presheaf of \(k\)-modules and its sheaf condition}
+
+\begin{definition}\leanok
+[Presheaf of \(k\)-modules from \(\mathcal O_C\)]
+  \label{def:Scheme_toModuleKPresheaf}
+  \lean{AlgebraicGeometry.Scheme.toModuleKPresheaf}
+  \uses{def:Scheme_algebraSection, lem:Scheme_algebraMap_naturality}
+
+  Define the presheaf of \(k\)-modules on \(C\) by sending each open \(U\) to the \(k\)-module \(\Gamma(C, U)\), with the \(k\)-action given by the algebra structure of \cref{def:Scheme_algebraSection}, and on an inclusion \(V \le U\) by the restriction map viewed as a \(k\)-linear map. Functoriality reduces to the presheaf axioms of \(\mathcal O_C\).
+\end{definition}
+
+\begin{theorem}\leanok
+[Sheaf condition]
+  \label{thm:Scheme_toModuleKPresheaf_isSheaf}
+  \lean{AlgebraicGeometry.Scheme.toModuleKPresheaf_isSheaf}
+  \uses{def:Scheme_toModuleKPresheaf}
+
+  The presheaf of \cref{def:Scheme_toModuleKPresheaf} is a sheaf for the Grothendieck topology of opens of \(C\).
+\end{theorem}
+
+\begin{proof}
+  
+  \leanok
+  By the concrete-category criterion, it suffices to show that the underlying presheaf of types is a sheaf. By construction, this composite agrees on objects and morphisms with the structure sheaf viewed as a presheaf of types. The latter is a sheaf because the structure sheaf is a sheaf of commutative rings.
+\end{proof}
+
+\subsection{The structure sheaf as a sheaf of \(k\)-modules}
+
+\begin{definition}\leanok
+[Structure sheaf as a sheaf of \(k\)-modules]
+  \label{def:Scheme_toModuleKSheaf}
+  \lean{AlgebraicGeometry.Scheme.toModuleKSheaf}
+  \uses{def:Scheme_toModuleKPresheaf, thm:Scheme_toModuleKPresheaf_isSheaf}
+
+  Bundle \cref{def:Scheme_toModuleKPresheaf} and \cref{thm:Scheme_toModuleKPresheaf_isSheaf} into the sheaf of \(k\)-modules on \(C\).
+\end{definition}
+
+\section{Sheaf cohomology with \(k\)-module coefficients}
+\label{sec:HModule}
+
+The abstract cohomology API is formulated for sheaves of abelian groups. To obtain a \(k\)-vector-space structure on \(H^n(C, \mathcal O_C)\), we build a parallel sheaf cohomology valued in \(k\)-modules. The sheaf category of \(k\)-modules already has \(\Ext\) (\cref{thm:HasExt_Sheaf_Opens_ModuleCatK}), and \(\Ext\) groups in any \(k\)-linear abelian category carry a canonical \(k\)-module structure.
+
+\begin{definition}\leanok
+[Sheaf cohomology with \(k\)-module coefficients]
+  \label{def:Scheme_HModule}
+  \lean{AlgebraicGeometry.Scheme.HModule}
+  \uses{thm:HasExt_Sheaf_Opens_ModuleCatK, thm:HasSheafify_Opens_ModuleCatK}
+
+  Let \(k\) be a field, \(C\) a Grothendieck site admitting sheafification of \(k\)-modules and \(\Ext\). For a sheaf \(F\) of \(k\)-modules and \(n \in \mathbb N\), define the \(k\)-module-valued sheaf cohomology
+  \[
+    H^n_{\Module}(F) \;:=\; \Ext^n\bigl(\text{constant sheaf at }k,\; F\bigr).
+  \]
+  This automatically carries a \(k\)-module structure.
+\end{definition}
+
+\begin{remark}[Lean implementation]
+  The declaration uses a reducible wrapper (`abbrev` rather than `def`) so that instance synthesis sees through to the underlying \(\Ext\) group and finds both the \(k\)-module and abelian-group structures automatically. Under a non-reducible wrapper, `Module.finrank` would fail to typecheck.
+\end{remark}
+
+\section{The \(H^0\) algebraic bridge}
+\label{sec:HModule_zero}
+
+After \cref{def:Scheme_HModule} the cohomology groups \(H^n_{\Module}(F)\) are well-defined and carry the canonical \(k\)-module structure. The next algebraic preliminary is the identification of the degree-zero piece \(H^0_{\Module}(F)\) with a \(\Hom\) group: the bridge from sheaf cohomology to representable Hom-functors.
+
+\begin{definition}\leanok
+[\(H^0\) as a \(k\)-linear Hom group]
+  \label{def:Scheme_HModule_zero_linearEquiv}
+  \lean{AlgebraicGeometry.Scheme.HModule_zero_linearEquiv}
+  \uses{def:Scheme_HModule}
+
+  Let \(k\) be a field, \(C\) a Grothendieck site admitting sheafification of \(k\)-modules and \(\Ext\), and \(F\) a sheaf of \(k\)-modules. Then there is a canonical \(k\)-linear equivalence
+  \[
+    H^0_{\Module}(F) \;\simeq_k\; \Hom(\text{constant sheaf at }k,\; F).
+  \]
+\end{definition}
+
+\begin{proof}
+  
+  \leanok
+  Direct from Mathlib's \(H^0\) bridge in any \(k\)-linear abelian category, applied to the sheaf category of \(k\)-modules. The \(k\)-linear enrichment is auto-inferable from the sheafification hypothesis.
+\end{proof}
+
+\begin{remark}[Choice of linear equivalence]
+  Mathlib provides three flavours of the \(\Ext^0 \simeq \Hom\) equivalence: plain, additive, and \(k\)-linear. We choose the \(k\)-linear refinement because it is the one consumed downstream: finiteness of \(H^0_{\Module}(F)\) over \(k\) is equivalent to finiteness of the Hom group, via transport along a \(k\)-linear equivalence.
+\end{remark}
+
+\section{Global-sections evaluation isomorphism}
+\label{sec:gammaObj_linearEquiv_top}
+
+To bridge from global sections (a concrete \(k\)-module) to the abstract Hom-from-constant-sheaf form, we lift the natural isomorphism between global sections and evaluation at the terminal object to a \(k\)-linear equivalence.
+
+\begin{theorem}\leanok
+[Global-sections-to-top linear equivalence]
+  \label{thm:Scheme_SheafGammaObj_linearEquiv_top}
+  \lean{AlgebraicGeometry.Scheme.SheafGammaObj_linearEquiv_top}
+  
+  Let \(k\) be a field, \(X\) a topological space, and \(F\) a sheaf of \(k\)-modules on \(X\). Then there is a \(k\)-linear equivalence between the global-sections object of \(F\) and the evaluation of \(F\) at the top open \(\top\).
+\end{theorem}
+
+\section{Producer instance for wholespace Hom-finiteness}
+\label{sec:IsHModuleHomFinite_producer}
+
+We now assemble the chain: constant-sheaf/global-sections adjunction, Hom-from-\(k\) evaluation, and Stein finiteness, to produce the wholespace \(H^0\) Hom-finiteness instance.
+
+\begin{lemma}
+
+\leanok
+[Additivity of the constant functor]
+  \label{lem:Functor_const_additive}
+  \lean{CategoryTheory.Functor.const_additive}
+  Let \(C\) be a category and \(D\) a preadditive category. Then the constant functor
+  \(\Functor.const\, C : D \to (C \to D)\) is additive.
+\end{lemma}
+
+\begin{proof}
+
+\leanok
+  Proved directly in Lean.
+\end{proof}
+
+\begin{lemma}
+
+\leanok
+[\(R\)-linearity of the constant functor]
+  \label{lem:Functor_const_linear}
+  \lean{CategoryTheory.Functor.const_linear}
+  \uses{lem:Functor_const_additive}
+  Let \(C\) be a category, \(R\) a semiring, and \(D\) an \(R\)-linear preadditive category.
+  Then the constant functor \(\Functor.const\, C : D \to (C \to D)\) is \(R\)-linear.
+\end{lemma}
+
+\begin{proof}
+
+\leanok
+  Proved directly in Lean.
+\end{proof}
+
+\begin{lemma}\leanok
+[Linear lifting of adjoint functors]
+  \label{lemma:Adjunction_left_adjoint_linear}
+  \lean{CategoryTheory.Adjunction.left_adjoint_linear}
+  Let \(F \dashv G\) be an adjunction between \(R\)-linear preadditive categories. If \(G\) is \(R\)-linear, then \(F\) is \(R\)-linear.
+\end{lemma}
+
+\begin{lemma}\leanok
+[Right-adjoint version]
+  \label{lemma:Adjunction_right_adjoint_linear}
+  \lean{CategoryTheory.Adjunction.right_adjoint_linear}
+  Dual of \cref{lemma:Adjunction_left_adjoint_linear}: if \(F\) is \(R\)-linear, then \(G\) is \(R\)-linear.
+\end{lemma}
+
+\begin{theorem}\leanok
+[Linear hom-equivalence from an adjunction]
+  \label{def:Adjunction_homLinearEquiv}
+  \lean{CategoryTheory.Adjunction.homLinearEquiv}
+  
+  Let \(F \dashv G\) be an adjunction between \(R\)-linear preadditive categories with \(G\) additive and \(R\)-linear. Then for all objects \(X\) and \(Y\), the additive equivalence of the adjunction upgrades to an \(R\)-linear equivalence between \(\Hom(FX, Y)\) and \(\Hom(X, GY)\).
+\end{theorem}
+
+\begin{theorem}\leanok
+[Constant-sheaf / global-sections linear equivalence]
+  \label{def:Scheme_constantSheafGammaHom_linearEquiv}
+  \lean{AlgebraicGeometry.Scheme.constantSheafGammaHom_linearEquiv}
+  \uses{lemma:Adjunction_left_adjoint_linear, lemma:Adjunction_right_adjoint_linear, def:Adjunction_homLinearEquiv, lem:Functor_const_linear}
+  Let \(k\) be a field, \(C\) a Grothendieck site admitting sheafification of \(k\)-modules, and \(F\) a sheaf of \(k\)-modules. For any \(k\)-module \(X\), there is a \(k\)-linear equivalence between morphisms from the constant sheaf at \(X\) to \(F\), and \(k\)-linear maps from \(X\) to the global sections of \(F\).
+\end{theorem}

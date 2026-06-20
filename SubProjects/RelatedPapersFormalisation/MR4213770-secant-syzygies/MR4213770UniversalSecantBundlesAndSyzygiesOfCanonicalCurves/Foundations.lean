@@ -1385,4 +1385,502 @@ theorem isLocallyFree_of_isLocallyFree_cover {X : Scheme.{u}} (𝒦 : X.Modules)
       (restrictFunctorCongr hj).app 𝒦 ≪≫ iso_j
   exact freeIso_of_restrictFunctor_hom_freeIso e ((restrictFunctor W.ι).obj 𝒦) I hB
 
+/-! ## Project-local Mathlib supplement — affine bridge: a free SES is a tilde
+
+L3 of the Core-2 affine-reduction chain (`lem:kernel_iso_tilde_affine`).  A short
+exact sequence `0 → 𝒦 → 𝒢 → ℋ → 0` of `(Spec R).Modules` whose middle and right
+terms are free (`𝒢 ≅ free m`, `ℋ ≅ free n`) is the `tilde` of an `R`-module short
+exact sequence `0 → K → R^m → R^n → 0`, with `𝒦 ≅ tilde K`.
+
+ROUTE (the splitting sidestep — `tilde` does NOT preserve arbitrary kernels, and we
+do not need it to).  `tildeFinsupp` identifies `free m ≅ tilde R^m`, `free n ≅
+tilde R^n`; full-faithfulness of `tilde.functor R` writes the transported surjection
+`tilde R^m → tilde R^n` as `tilde φ` for a unique `φ : R^m → R^n`; faithfulness
+reflects the epi, so `φ` is surjective and `K := ker φ` gives a module SES which
+splits (`R^n` is free, hence projective).  An additive functor carries a splitting
+to a splitting (`ShortComplex.Splitting.map`), so the mapped inclusion
+`tilde (ker φ) → tilde R^m` is a kernel of `tilde φ` with no left-exactness used; the
+given `𝒦 → 𝒢` is a kernel of the same map (transported along the trivialising isos
+via `KernelFork.isLimitOfIsLimitOfIff`), and kernel uniqueness
+(`IsLimit.conePointUniqueUpToIso`) gives `𝒦 ≅ tilde (ker φ)`. -/
+
+/-- Project-local (`lem:kernel_iso_tilde_affine`), L3 of the Core-2 affine-reduction
+chain.
+
+Let `S : 0 → 𝒦 → 𝒢 → ℋ → 0` be a short exact sequence of `(Spec R).Modules` with
+`𝒢 ≅ free m` and `ℋ ≅ free n`.  Then there is a short exact sequence of `R`-modules
+`T : 0 → K → R^m → R^n → 0` (with `T.X₂ = R^m`, `T.X₃ = R^n` finite free) together
+with an isomorphism `𝒦 ≅ tilde K`.  The middle/right terms of `T` are recorded as
+definitional equalities so a caller can transport the `Module.Free`/`Module.Finite`
+instances of `R^m`, `R^n` onto `T.X₂`, `T.X₃` (the input to
+`kernel_module_free_on_basicOpen_cover`). -/
+theorem kernel_iso_tilde_of_free_ses_affine {R : CommRingCat.{u}}
+    (S : ShortComplex (Spec R).Modules) (hS : S.ShortExact)
+    {m n : Type u}
+    (e₂ : S.X₂ ≅ SheafOfModules.free (R := (Spec R).ringCatSheaf) m)
+    (e₃ : S.X₃ ≅ SheafOfModules.free (R := (Spec R).ringCatSheaf) n) :
+    ∃ (T : ShortComplex (ModuleCat.{u} R)), T.ShortExact ∧
+      T.X₂ = ModuleCat.of ↑R (m →₀ ↑R) ∧ T.X₃ = ModuleCat.of ↑R (n →₀ ↑R) ∧
+      Nonempty (S.X₁ ≅ tilde T.X₁) := by
+  classical
+  haveI : (tilde.functor R).Faithful := tilde.fullyFaithfulFunctor.faithful
+  haveI : Epi S.g := hS.epi_g
+  -- index the free modules and trivialise `𝒢`, `ℋ` as tildes of finite free modules
+  set Rm : ModuleCat.{u} R := ModuleCat.of ↑R (m →₀ ↑R) with hRm
+  set Rn : ModuleCat.{u} R := ModuleCat.of ↑R (n →₀ ↑R) with hRn
+  let β : (tilde.functor R).obj Rm ≅ S.X₂ := tildeFinsupp m ≪≫ e₂.symm
+  let γ : (tilde.functor R).obj Rn ≅ S.X₃ := tildeFinsupp n ≪≫ e₃.symm
+  -- transported surjection and its preimage `φ`
+  let αraw : (tilde.functor R).obj Rm ⟶ (tilde.functor R).obj Rn := β.hom ≫ S.g ≫ γ.inv
+  let φ : Rm ⟶ Rn := tilde.fullyFaithfulFunctor.preimage αraw
+  have hφ : (tilde.functor R).map φ = αraw := tilde.fullyFaithfulFunctor.map_preimage αraw
+  -- `αraw` is epi (composite of an epi with isos); `tilde` reflects it, so `φ` is epi
+  have hαepi : Epi αraw := by
+    change Epi (β.hom ≫ S.g ≫ γ.inv); infer_instance
+  have hφepi : Epi φ := by
+    apply (tilde.functor R).epi_of_epi_map (f := φ)
+    rw [hφ]; exact hαepi
+  -- the module short complex `T = 0 → ker φ → R^m → R^n → 0`
+  let T : ShortComplex (ModuleCat.{u} R) :=
+    ShortComplex.mk (kernel.ι φ) φ (kernel.condition φ)
+  have hTse : T.ShortExact :=
+    { exact := ShortComplex.exact_kernel φ
+      mono_f := by dsimp only [T, ShortComplex.mk]; infer_instance
+      epi_g := hφepi }
+  -- `R^n` is free hence projective, so `T` splits; an additive functor carries the
+  -- splitting, exhibiting `tilde (ker φ) → tilde R^m` as a kernel of `tilde φ`
+  haveI : CategoryTheory.Projective T.X₃ := by
+    change CategoryTheory.Projective Rn; infer_instance
+  let sp : T.Splitting := hTse.splittingOfProjective
+  have hkerT : IsLimit (KernelFork.ofι (T.map (tilde.functor R)).f
+      (T.map (tilde.functor R)).zero) := (sp.map (tilde.functor R)).fIsKernel
+  -- the given kernel `𝒦 → 𝒢`, transported along the trivialising isos, is a kernel
+  -- of the same map `tilde φ`
+  have hkerS := KernelFork.isLimitOfIsLimitOfIff hS.fIsKernel
+      ((tilde.functor R).map φ) β.symm (fun W ψ => by
+    rw [hφ]
+    change ψ ≫ S.g = 0 ↔ ψ ≫ β.symm.hom ≫ αraw = 0
+    rw [β.symm_hom, show β.inv ≫ αraw = S.g ≫ γ.inv by
+      simp only [αraw, Iso.inv_hom_id_assoc]]
+    rw [← Category.assoc]
+    constructor
+    · intro h; rw [h, Limits.zero_comp]
+    · intro h
+      rw [← cancel_mono γ.inv, Limits.zero_comp]
+      exact h)
+  -- kernel uniqueness: both forks are kernels of `tilde φ`
+  refine ⟨T, hTse, rfl, rfl, ⟨IsLimit.conePointUniqueUpToIso hkerS hkerT⟩⟩
+
+/-! ## Project-local Mathlib supplement — tilde-pullback base-change chain
+
+This section decomposes the gap node `found:tilde_restrict_basicOpen`: for a
+commutative ring `R`, `f ∈ R`, and an `R`-module `M`, the restriction of `tilde M`
+to the basic open `D(f)` is the inverse image along `e_f : D(f) ≅ Spec R_f` of the
+tilde over `R_f` of the localized module `M_f`.  The chain bottoms out at the
+genuinely novel core `q_f^* tilde M ≅ tilde M_f` (`tildePullbackSpecMapIso`), proved
+stalkwise.  See blueprint chapter `Kemeny_PeerDependencies.tex`. -/
+
+/-- Project-local (`found:basicOpenIso_hom_specMap`).
+
+The basic-open inclusion `j_f : D(f) ↪ Spec R` factors as `e_f.hom ≫ q_f`, where
+`e_f : D(f) ≅ Spec R_f` is `basicOpenIsoSpecAway f` and
+`q_f := Spec.map (algebraMap R R_f)` is the localization Spec map.  This is the
+defining factorization equation of `basicOpenIsoSpecAway` (an `isoOfRangeEq`). -/
+theorem basicOpenIsoSpecAway_hom_comp_specMap {R : CommRingCat.{u}} (f : R) :
+    (basicOpenIsoSpecAway f).hom ≫
+        Spec.map (CommRingCat.ofHom (algebraMap (↑R) (Localization.Away f)))
+      = Scheme.Opens.ι (X := Spec R) (PrimeSpectrum.basicOpen f) :=
+  IsOpenImmersion.isoOfRangeEq_hom_fac _ _ _
+
+/-- Project-local helper (node 2 linchpin): scalar coherence for the pushforward of a
+sheaf of modules along the localization `Spec` map `q_f : Spec R_f → Spec R`.
+
+For `G` an `𝒪_{Spec R_f}`-module, the `R`-action on the global sections of `q_f_* G`
+(through `moduleSpecΓFunctor` over `R`) equals the `R`-action obtained by restricting,
+along `algebraMap R R_f`, the `R_f`-action on the global sections of `G` (over `R_f`).
+The two carriers are definitionally equal (preimage of `⊤` is `⊤`); the content is the
+ring naturality `Scheme.ΓSpecIso_inv_naturality` of `q_f = Spec.map (algebraMap R R_f)`.
+This is the scalar bridge used to base-change `R`-linear comparison maps to `R_f`-linear
+ones in the tilde-pullback chain. -/
+lemma pushforward_smul_coherence {R : CommRingCat.{u}} (f : R)
+    (G : (Spec (CommRingCat.of (Localization.Away f))).Modules) (r : R)
+    (x : moduleSpecΓFunctor.obj ((Scheme.Modules.pushforward
+      (Spec.map (CommRingCat.ofHom (algebraMap (↑R) (Localization.Away f))))).obj G)) :
+    (r • x) =
+      (((algebraMap (↑R) (Localization.Away f)) r) •
+        (show ((moduleSpecΓFunctor (R := CommRingCat.of (Localization.Away f))).obj G : Type u)
+          from x)) := by
+  erw [ModuleCat.restrictScalars.smul_def, ModuleCat.restrictScalars.smul_def,
+    ModuleCat.restrictScalars.smul_def]
+  congr 1
+  simp only [Limits.IsInitial.to_self, CategoryTheory.Functor.map_id, CategoryTheory.id_apply]
+  exact (congr($(Scheme.ΓSpecIso_inv_naturality
+    (CommRingCat.ofHom (algebraMap (↑R) (Localization.Away f)))) r)).symm
+
+/-- Project-local (`found:tilde_pullback_globalSections`), node 2 of the tilde-pullback
+chain.  The canonical `R_f`-linear comparison map
+`η_M : M_f → Γ(Spec R_f, q_f^* tilde M)`, where `M_f := R_f ⊗_R M` is the base change
+(`ModuleCat.extendScalars`).  No isomorphism is asserted; bijectivity is established
+stalkwise downstream (`tildePullbackComparison_stalk_isIso`).
+
+Construction: the unit of `q_f^* ⊣ (q_f)_*` at `tilde M` gives
+`tilde M → (q_f)_* q_f^* tilde M`; applying `Γ` over `Spec R` and `tilde.isoTop`
+(`Γ(Spec R, tilde M) = M`) yields an `R`-linear `M → Γ(Spec R, (q_f)_* q_f^* tilde M)`.
+By `pushforward_smul_coherence` this lands, as an `R`-linear map, in the restriction of
+scalars of `Γ(Spec R_f, q_f^* tilde M)`; the `extendScalars ⊣ restrictScalars`
+adjunction transposes it to the `R_f`-linear `η_M`. -/
+noncomputable def tilde_pullback_specMap_globalSectionsMap {R : CommRingCat.{u}} (f : R)
+    (M : ModuleCat.{u} R) :
+    (ModuleCat.extendScalars (algebraMap (↑R) (Localization.Away f))).obj M ⟶
+      (moduleSpecΓFunctor (R := CommRingCat.of (Localization.Away f))).obj
+        ((Scheme.Modules.pullback
+          (Spec.map (CommRingCat.ofHom (algebraMap (↑R) (Localization.Away f))))).obj (tilde M)) :=
+  let q := Spec.map (CommRingCat.ofHom (algebraMap (↑R) (Localization.Away f)))
+  let N := (moduleSpecΓFunctor (R := CommRingCat.of (Localization.Away f))).obj
+      ((Scheme.Modules.pullback q).obj (tilde M))
+  let g : M ⟶ moduleSpecΓFunctor.obj ((Scheme.Modules.pushforward q).obj
+      ((Scheme.Modules.pullback q).obj (tilde M))) :=
+    (tilde.isoTop M).hom ≫ moduleSpecΓFunctor.map
+      ((Scheme.Modules.pullbackPushforwardAdjunction q).unit.app (tilde M))
+  let sl : (↑M : Type u) →ₛₗ[algebraMap (↑R) (Localization.Away f)] (↑N : Type u) :=
+    { toFun := fun m => g.hom m
+      map_add' := fun a b => g.hom.map_add a b
+      map_smul' := fun r m => by
+        rw [g.hom.map_smul]
+        exact pushforward_smul_coherence f _ r (g.hom m) }
+  let g' : M ⟶ (ModuleCat.restrictScalars (algebraMap (↑R) (Localization.Away f))).obj N :=
+    ModuleCat.semilinearMapAddEquiv (algebraMap (↑R) (Localization.Away f)) M N sl
+  ((ModuleCat.extendRestrictScalarsAdj
+    (algebraMap (↑R) (Localization.Away f))).homEquiv M N).symm g'
+
+/-- Project-local (`found:tilde_pullback_comparison`), node 3 of the tilde-pullback chain.
+
+The base-change comparison morphism `α_M : tilde M_f ⟶ q_f^* tilde M` over `Spec R_f`,
+where `M_f := R_f ⊗_R M`.  It is the transpose, under the tilde–`Γ` adjunction over
+`R_f` (`tilde.adjunction`), of the canonical `R_f`-linear map `η_M`
+(`tilde_pullback_specMap_globalSectionsMap`).  Its stalkwise invertibility is proved in
+`tildePullbackComparison_stalk_isIso`, upgrading it to the core iso
+`tildePullbackSpecMapIso`. -/
+noncomputable def tildePullbackComparison {R : CommRingCat.{u}} (f : R)
+    (M : ModuleCat.{u} R) :
+    (tilde.functor (CommRingCat.of (Localization.Away f))).obj
+        ((ModuleCat.extendScalars (algebraMap (↑R) (Localization.Away f))).obj M) ⟶
+      (Scheme.Modules.pullback
+        (Spec.map (CommRingCat.ofHom (algebraMap (↑R) (Localization.Away f))))).obj (tilde M) :=
+  ((tilde.adjunction (R := CommRingCat.of (Localization.Away f))).homEquiv _ _).symm
+    (tilde_pullback_specMap_globalSectionsMap f M)
+
+/-! ### Node-4 decomposition: stalkwise iso of the tilde base-change comparison
+
+The READY bottom nodes of the `tildePullbackComparison_stalk_isIso` chain
+(`found:tilde_pullback_comparison_stalk`), built bottom-up.  The remaining nodes
+((a1) sheafification-stalk and its consequences) are gated on a genuine
+infrastructure gap and are deferred. -/
+
+/-- Project-local (`lem:tilde_pullback_stalk_localizationTransitivity`), sub-lemma (c):
+the pure-algebra heart of the node-4 stalk argument.
+
+Localizing an `R`-module `M` first at the powers of `f` (the localization
+`g : M → Mf` landing in the `R_f`-module `Mf`) and then at a prime `𝔭 ⊆ R_f`
+(the localization `h : Mf → N`) exhibits `N` as the localization of `M` at the
+contracted prime `𝔮 = 𝔭 ∩ R`.  This is module-level transitivity of localization
+along the ring tower `R → R_f → (R_f)_𝔭`, packaged through base change
+(`IsBaseChange.comp`) and the ring transitivity
+`IsLocalization.isLocalization_isLocalization_atPrime_isLocalization`. -/
+theorem tildePullbackComparison_stalk_localizationTransitivity
+    {R : Type*} [CommRing R] (f : R)
+    {Rf : Type*} [CommRing Rf] [Algebra R Rf] [IsLocalization.Away f Rf]
+    {M : Type*} [AddCommGroup M] [Module R M]
+    {Mf : Type*} [AddCommGroup Mf] [Module R Mf] [Module Rf Mf] [IsScalarTower R Rf Mf]
+    (g : M →ₗ[R] Mf) [IsLocalizedModule (Submonoid.powers f) g]
+    (𝔭 : Ideal Rf) [𝔭.IsPrime]
+    {N : Type*} [AddCommGroup N] [Module Rf N] [Module R N] [IsScalarTower R Rf N]
+    (h : Mf →ₗ[Rf] N) [IsLocalizedModule 𝔭.primeCompl h] :
+    IsLocalizedModule (𝔭.comap (algebraMap R Rf)).primeCompl
+      (h.restrictScalars R ∘ₗ g) := by
+  -- `r ∈ 𝔮ᶜ ↔ φ r ∈ 𝔭ᶜ`, where `𝔮 = 𝔭.comap φ` and `φ = algebraMap R Rf`.
+  have mem_iff : ∀ {r : R},
+      r ∈ (𝔭.comap (algebraMap R Rf)).primeCompl ↔ algebraMap R Rf r ∈ 𝔭.primeCompl := by
+    intro r; exact not_congr Ideal.mem_comap
+  -- An element of `powers f` maps into `𝔭ᶜ` (it is a unit in `Rf`, hence not in the prime `𝔭`),
+  -- so its contraction lands in `𝔮ᶜ`.
+  have powers_compl : ∀ {s : R}, s ∈ Submonoid.powers f →
+      s ∈ (𝔭.comap (algebraMap R Rf)).primeCompl := by
+    intro s hs
+    rw [mem_iff]
+    exact fun hmem => Ideal.IsPrime.ne_top ‹𝔭.IsPrime›
+      (Ideal.eq_top_of_isUnit_mem _ hmem (IsLocalization.map_units Rf ⟨s, hs⟩))
+  refine ⟨fun x => ?_, fun y => ?_, fun {x₁ x₂} heq => ?_⟩
+  · -- `map_units`: `r ∈ 𝔮ᶜ` acts invertibly on `N`.
+    have hx : algebraMap R Rf ↑x ∈ 𝔭.primeCompl := mem_iff.mp x.2
+    have hu := IsLocalizedModule.map_units h ⟨algebraMap R Rf ↑x, hx⟩
+    rw [Module.End.isUnit_iff] at hu ⊢
+    have hfun : (⇑((algebraMap R (Module.End R N)) ↑x))
+        = ⇑((algebraMap Rf (Module.End Rf N)) (algebraMap R Rf ↑x)) := by
+      funext n
+      change (↑x : R) • n = (algebraMap R Rf (↑x : R)) • n
+      exact (IsScalarTower.algebraMap_smul Rf (↑x : R) n).symm
+    rw [hfun]; exact hu
+  · -- `surj'`.
+    obtain ⟨⟨mf, t⟩, ht⟩ := IsLocalizedModule.surj 𝔭.primeCompl h y
+    obtain ⟨⟨r₁, s₁⟩, hrs₁⟩ := IsLocalization.surj (Submonoid.powers f) (t : Rf)
+    obtain ⟨⟨m, s₂⟩, hms₂⟩ := IsLocalizedModule.surj (Submonoid.powers f) g mf
+    have ht' : (↑t : Rf) • y = h mf := ht
+    have hrs₁' : (↑t : Rf) * algebraMap R Rf (↑s₁ : R) = algebraMap R Rf r₁ := hrs₁
+    have hms₂' : (↑s₂ : R) • mf = g m := hms₂
+    -- `φ r₁ = t * φ s₁ ∈ 𝔭ᶜ`, so `r₁ ∈ 𝔮ᶜ`.
+    have hr₁ : r₁ ∈ (𝔭.comap (algebraMap R Rf)).primeCompl := by
+      rw [mem_iff, ← hrs₁']
+      exact Submonoid.mul_mem _ t.2 (mem_iff.mp (powers_compl s₁.2))
+    refine ⟨⟨(↑s₁ : R) • m, ⟨(↑s₂ : R) * r₁, Submonoid.mul_mem _ (powers_compl s₂.2) hr₁⟩⟩, ?_⟩
+    change ((↑s₂ : R) * r₁) • y = h (g ((↑s₁ : R) • m))
+    -- scale `t • y = h mf` by `s₁` to clear `t`'s denominator: `r₁ • y = h (s₁ • mf)`.
+    have step1 : r₁ • y = h ((↑s₁ : R) • mf) := by
+      have e : algebraMap R Rf r₁ • y = h ((↑s₁ : R) • mf) := by
+        rw [← hrs₁', mul_comm, mul_smul, ht', IsScalarTower.algebraMap_smul Rf,
+          LinearMap.map_smul_of_tower h (↑s₁ : R) mf]
+      rw [← IsScalarTower.algebraMap_smul Rf r₁ y]; exact e
+    rw [mul_smul, step1, ← LinearMap.map_smul_of_tower h (↑s₂ : R) ((↑s₁ : R) • mf),
+      smul_comm (↑s₂ : R) (↑s₁ : R) mf, hms₂', LinearMap.map_smul_of_tower g (↑s₁ : R) m]
+  · -- `exists_of_eq`.
+    have heq' : h (g x₁) = h (g x₂) := heq
+    obtain ⟨c₁, hc₁⟩ := IsLocalizedModule.exists_of_eq (S := 𝔭.primeCompl) (f := h) heq'
+    obtain ⟨⟨r, s⟩, hrs⟩ := IsLocalization.surj (Submonoid.powers f) (c₁ : Rf)
+    have hc₁' : (↑c₁ : Rf) • g x₁ = (↑c₁ : Rf) • g x₂ := hc₁
+    have hrs' : (↑c₁ : Rf) * algebraMap R Rf (↑s : R) = algebraMap R Rf r := hrs
+    have hr : r ∈ (𝔭.comap (algebraMap R Rf)).primeCompl := by
+      rw [mem_iff, ← hrs']
+      exact Submonoid.mul_mem _ c₁.2 (mem_iff.mp (powers_compl s.2))
+    have hg_eq : g (r • x₁) = g (r • x₂) := by
+      have e : algebraMap R Rf r • g x₁ = algebraMap R Rf r • g x₂ := by
+        rw [← hrs', mul_comm (↑c₁ : Rf) (algebraMap R Rf (↑s : R)), mul_smul, mul_smul, hc₁']
+      rw [LinearMap.map_smul_of_tower g r x₁, LinearMap.map_smul_of_tower g r x₂,
+        ← IsScalarTower.algebraMap_smul Rf r (g x₁), ← IsScalarTower.algebraMap_smul Rf r (g x₂)]
+      exact e
+    obtain ⟨c₂, hc₂⟩ := IsLocalizedModule.exists_of_eq (S := Submonoid.powers f) (f := g) hg_eq
+    have hc₂' : (↑c₂ : R) • (r • x₁) = (↑c₂ : R) • (r • x₂) := hc₂
+    refine ⟨⟨(↑c₂ : R) * r, Submonoid.mul_mem _ (powers_compl c₂.2) hr⟩, ?_⟩
+    change ((↑c₂ : R) * r) • x₁ = ((↑c₂ : R) * r) • x₂
+    rw [mul_smul, mul_smul]; exact hc₂'
+
+/-! #### Stalk module-structure enablers (iter-020)
+
+For a tilde over a ring presented as `CommRingCat.of A`, Mathlib's stalk `Module`
+and `IsLocalizedModule` instances (`AlgebraicGeometry.tilde`, Tilde.lean lines
+120/132) do *not* fire by `inferInstance` — the discrimination tree fails on the
+`CommRingCat.of` presentation (the iter-019 blocker; reconfirmed iter-020: even a
+free-variable `Mf : ModuleCat ↑(CommRingCat.of A)` fails).  The underlying
+`moduleStructurePresheaf` / `StructureSheaf.toStalkₗ` forms *do* synthesize, so we
+re-expose them as `CommRingCat.of`-keyed instances.  These are the gap-independent
+enablers for the node-4 source/target stalk localization lemmas, and they are
+definitionally the Mathlib instances (no new module structure, no diamond). -/
+
+/-- Project-local enabler (`mathlib:tilde_stalk_localization` shim): the stalk
+`Module` instance for a tilde over a `CommRingCat.of A` ring.  Definitionally the
+Mathlib instance, re-keyed so it fires on the `CommRingCat.of` presentation. -/
+noncomputable instance instModuleStalkOfTilde {A : Type u} [CommRing A]
+    (N : ModuleCat.{u} ↑(CommRingCat.of A))
+    (x : PrimeSpectrum.Top ↑(CommRingCat.of A)) :
+    Module ↑(CommRingCat.of A) ((tilde N).presheaf.stalk x) :=
+  inferInstanceAs (Module ↑(CommRingCat.of A)
+    ↑(TopCat.Presheaf.stalk (moduleStructurePresheaf ↑(CommRingCat.of A) N).presheaf x))
+
+/-- Project-local enabler (`mathlib:tilde_stalk_localization` shim): the stalk
+`IsLocalizedModule` instance for a tilde over a `CommRingCat.of A` ring.
+Definitionally the Mathlib instance, re-keyed for the `CommRingCat.of`
+presentation. -/
+instance instIsLocalizedModuleStalkOfTilde {A : Type u} [CommRing A]
+    (N : ModuleCat.{u} ↑(CommRingCat.of A))
+    (x : PrimeSpectrum.Top ↑(CommRingCat.of A)) :
+    IsLocalizedModule x.asIdeal.primeCompl (tilde.toStalk N x).hom :=
+  inferInstanceAs (IsLocalizedModule x.asIdeal.primeCompl
+    (StructureSheaf.toStalkₗ ↑(CommRingCat.of A) N x))
+
+/-- Project-local (`lem:tilde_pullback_stalk_source_isLocalizedModule` support):
+the extension-of-scalars unit `M → R_f ⊗_R M` along the localization `R → R_f`
+exhibits `M_f := R_f ⊗_R M` as the localization of `M` at the powers of `f`.
+
+This is `IsLocalization.tensorProduct_isLocalizedModule` transported across the
+canonical identification of the base-change tensor `R_f ⊗_R M` with the carrier of
+`ModuleCat.extendScalars` — whose first tensor factor carries the
+`restrictScalars`/`compHom` `R`-module structure rather than the `Algebra` one, so
+the two tensor presentations are defeq but not syntactically equal.  The bridge is
+the identity-on-carrier `R`-linear equivalence `α` between the two `R`-module
+structures on `R_f`. -/
+theorem extendScalars_unit_isLocalizedModule {R : CommRingCat.{u}} (f : R)
+    (M : ModuleCat.{u} R) :
+    IsLocalizedModule (Submonoid.powers f)
+      ((ModuleCat.extendRestrictScalarsAdj
+        (algebraMap (↑R) (Localization.Away f))).unit.app M).hom := by
+  let φ := algebraMap (↑R) (Localization.Away f)
+  let α : (Localization.Away f) ≃ₗ[↑R]
+      ↑((ModuleCat.restrictScalars φ).obj
+        (ModuleCat.of (Localization.Away f) (Localization.Away f))) :=
+    { toFun := id, invFun := id, left_inv := fun _ => rfl, right_inv := fun _ => rfl,
+      map_add' := fun _ _ => rfl,
+      map_smul' := fun r x => by
+        change (r • x : Localization.Away f) = φ r • x
+        exact Algebra.smul_def r x }
+  let e := TensorProduct.congr α (LinearEquiv.refl (↑R) (↑M))
+  haveI base := IsLocalization.tensorProduct_isLocalizedModule
+    (Submonoid.powers f) (Localization.Away f) (M := (↑M : Type u))
+  have key := IsLocalizedModule.of_linearEquiv
+    (S := Submonoid.powers f)
+    (f := (TensorProduct.mk (↑R) (Localization.Away f) ↑M) 1) (e := e)
+  have heq : (e.toLinearMap ∘ₗ ((TensorProduct.mk (↑R) (Localization.Away f) ↑M) 1))
+      = ((ModuleCat.extendRestrictScalarsAdj φ).unit.app M).hom := by
+    ext m; rfl
+  rw [← heq]; exact key
+
+/-- Project-local (`lem:tilde_pullback_stalk_source_isLocalizedModule`), sub-lemma
+(d1): the source stalk `(M̃_f)_x` of the tilde base-change comparison, together with
+its composite structure map `M → M_f → (M̃_f)_x` (the extension-of-scalars unit
+followed by the tilde-stalk germ, restricted to scalars in `R`), is a localization
+of `M` at the contracted prime `𝔮 = x ∩ R`.
+
+Obtained by feeding the extension-of-scalars localization
+(`extendScalars_unit_isLocalizedModule`) and the tilde-stalk localization
+(`instIsLocalizedModuleStalkOfTilde`) into the transitivity lemma
+`tildePullbackComparison_stalk_localizationTransitivity` (sub-lemma (c)).  The
+structure map is written through the `ModuleCat.restrictScalars` functor so that its
+`R`-module structures synthesize at statement-elaboration time (the bare
+`LinearMap.restrictScalars` form would need the diamond-trap `Module ↑R` instances,
+which are supplied here only inside the proof via `letI`). -/
+theorem tildePullbackComparison_stalk_source_isLocalizedModule
+    {R : CommRingCat.{u}} (f : R) (M : ModuleCat.{u} R)
+    (x : PrimeSpectrum.Top ↑(CommRingCat.of (Localization.Away f))) :
+    IsLocalizedModule
+      (x.asIdeal.comap (algebraMap (↑R) (Localization.Away f))).primeCompl
+      ((ModuleCat.extendRestrictScalarsAdj (algebraMap (↑R) (Localization.Away f))).unit.app M
+          ≫ (ModuleCat.restrictScalars (algebraMap (↑R) (Localization.Away f))).map
+            (tilde.toStalk
+              ((ModuleCat.extendScalars
+                (algebraMap (↑R) (Localization.Away f))).obj M) x)).hom := by
+  let φ := algebraMap (↑R) (Localization.Away f)
+  let Mf : ModuleCat.{u} ↑(CommRingCat.of (Localization.Away f)) :=
+    (ModuleCat.extendScalars φ).obj M
+  letI iMfLoc : Module (Localization.Away f) (↑Mf) :=
+    inferInstanceAs (Module ↑(CommRingCat.of (Localization.Away f)) ↑Mf)
+  letI iMfR : Module (↑R) (↑Mf) := Module.compHom (↑Mf) φ
+  haveI iMfST : IsScalarTower (↑R) (Localization.Away f) (↑Mf) :=
+    IsScalarTower.of_algebraMap_smul (fun _ _ => rfl)
+  let Nstk := (tilde Mf).presheaf.stalk x
+  letI iNLoc : Module (Localization.Away f) Nstk :=
+    inferInstanceAs (Module ↑(CommRingCat.of (Localization.Away f)) Nstk)
+  letI iNR : Module (↑R) Nstk := Module.compHom Nstk φ
+  haveI iNST : IsScalarTower (↑R) (Localization.Away f) Nstk :=
+    IsScalarTower.of_algebraMap_smul (fun _ _ => rfl)
+  let g' : (↑M : Type u) →ₗ[↑R] (↑Mf : Type u) :=
+    ((ModuleCat.extendRestrictScalarsAdj φ).unit.app M).hom
+  haveI hg : IsLocalizedModule (Submonoid.powers f) g' := extendScalars_unit_isLocalizedModule f M
+  let h' : (↑Mf : Type u) →ₗ[Localization.Away f] Nstk := (tilde.toStalk Mf x).hom
+  haveI hh : IsLocalizedModule x.asIdeal.primeCompl h' :=
+    instIsLocalizedModuleStalkOfTilde Mf x
+  have res := tildePullbackComparison_stalk_localizationTransitivity (R := ↑R) f
+    (Rf := Localization.Away f) (g := g') (𝔭 := x.asIdeal) (h := h')
+  convert res using 1
+
+/-! #### Node-4 (a)-chain: stalkwise comparison via sheafification + topological pullback
+
+The base-change comparison `tildePullbackComparison f M : tilde M_f ⟶ q_f^* tilde M`
+is shown stalkwise iso by identifying both stalks with localizations of `M`.  The
+target stalk `(q_f^* tilde M)_x` is computed in two steps:
+
+* (a1) `tildePullbackComparison_stalk_sheafificationStalkIso`: the sheaf-of-modules
+  pullback is the *sheafification* of the presheaf-of-modules pullback `P₀`, so its
+  stalk equals the stalk of `P₀` (sheafification is a stalkwise iso).
+* (a2) the presheaf-pullback stalk equals the stalk of `tilde M` at the image point
+  `q_f x` (topological inverse-image stalk, `TopCat.Presheaf.stalkPullbackIso`).
+
+All stalk computations are performed on the underlying `AddCommGrpCat`-valued
+presheaves (`Scheme.Modules.toPresheaf` / `PresheafOfModules.toPresheaf`); no
+`Module ↑R` synthesis on the stalk is needed at this layer. -/
+
+/-- Project-local helper: the localization `Spec` map `q_f : Spec R_f → Spec R`
+induced by `R → R_f`. -/
+noncomputable def localizationSpecMap {R : CommRingCat.{u}} (f : R) :
+    Spec (CommRingCat.of (Localization.Away f)) ⟶ Spec R :=
+  Spec.map (CommRingCat.ofHom (algebraMap (↑R) (Localization.Away f)))
+
+/-- Project-local helper: the *presheaf*-of-modules pullback of `tilde M` along the
+localization Spec map `q_f`, before sheafification.  Its sheafification is the
+sheaf-of-modules pullback `q_f^* tilde M` (`SheafOfModules.pullbackIso`). -/
+noncomputable def presheafPullbackTilde {R : CommRingCat.{u}} (f : R) (M : ModuleCat.{u} R) :=
+  (PresheafOfModules.pullback (localizationSpecMap f).toRingCatSheafHom.hom).obj
+    ((SheafOfModules.forget _).obj (tilde M))
+
+set_option synthInstance.maxHeartbeats 1000000 in
+-- The `HasWeakSheafify (Opens.grothendieckTopology _) Ab` instance feeding the
+-- `toSheafify`-stalk-iso lemma is expensive to synthesize on the `Spec R_f` site.
+/-- Project-local (`lem:tilde_pullback_stalk_sheafificationStalk`), sub-lemma (a1).
+
+The stalk at `x` of the sheaf-of-modules pullback `q_f^* tilde M` is canonically
+isomorphic to the stalk at `x` of the *presheaf*-of-modules pullback
+`presheafPullbackTilde f M` (its underlying `AddCommGrpCat` presheaf).
+
+Construction: `SheafOfModules.pullbackIso` exhibits `q_f^* tilde M` as the
+sheafification of `presheafPullbackTilde f M`; the comparison map is the
+sheafification-adjunction unit, whose underlying `AddCommGrpCat` map is the
+abelian-group sheafification unit `toSheafify`
+(`PresheafOfModules.toPresheaf_map_sheafificationAdjunction_unit_app`), and the
+stalk functor sends `toSheafify` to an isomorphism
+(`TopCat.Presheaf.stalkFunctor_map_unit_toSheafify_isIso` at `AddCommGrpCat`). -/
+noncomputable def tildePullbackComparison_stalk_sheafificationStalkIso
+    {R : CommRingCat.{u}} (f : R) (M : ModuleCat.{u} R)
+    (x : PrimeSpectrum.Top ↑(CommRingCat.of (Localization.Away f))) :
+    ((Scheme.Modules.pullback (localizationSpecMap f)).obj (tilde M)).presheaf.stalk x ≅
+      (TopCat.Presheaf.stalkFunctor AddCommGrpCat x).obj (presheafPullbackTilde f M).presheaf :=
+  haveI : IsIso ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map
+      (CategoryTheory.toSheafify _ (presheafPullbackTilde f M).presheaf)) := by
+    exact TopCat.Presheaf.stalkFunctor_map_unit_toSheafify_isIso _ AddCommGrpCat
+      (presheafPullbackTilde f M).presheaf
+  (TopCat.Presheaf.stalkFunctor AddCommGrpCat x).mapIso
+      ((Scheme.Modules.toPresheaf _).mapIso
+        ((SheafOfModules.pullbackIso (localizationSpecMap f).toRingCatSheafHom).app (tilde M))) ≪≫
+    (asIso ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map
+      (CategoryTheory.toSheafify _ (presheafPullbackTilde f M).presheaf))).symm
+
+/-- Project-local (`lem:tilde_pullback_stalk_pullbackStalkIso`), sub-lemma (a):
+the combined pullback-stalk identification.
+
+For the localization Spec map `q_f : Spec R_f → Spec R` (an open immersion, as
+`R_f = R_f` is a localization away from `f`) and `x ∈ Spec R_f`, the stalk at `x`
+of the sheaf-of-modules pullback `q_f^* tilde M` is canonically isomorphic (as an
+abelian group) to the stalk of `tilde M` at the image point `q_f x ∈ Spec R`.
+
+ROUTE (more direct than the planned sheafification + topological-pullback chain):
+since `q_f` is an open immersion, the pullback functor is isomorphic to the
+restriction functor (`SheafOfModules.restrictFunctorIsoPullback`), and Mathlib's
+`Scheme.Modules.restrictStalkNatIso` computes the stalk of a restriction along an
+open immersion as the stalk at the image point.  Composing the two yields the
+identification without needing the abstract presheaf-of-modules-pullback /
+topological-inverse-image Beck–Chevalley bridge (sub-lemma (a2)). -/
+noncomputable def tildePullbackComparison_stalk_pullbackStalkIso
+    {R : CommRingCat.{u}} (f : R) (M : ModuleCat.{u} R)
+    (x : ↥(Spec (CommRingCat.of (Localization.Away f)))) :
+    ((Scheme.Modules.pullback (localizationSpecMap f)).obj (tilde M)).presheaf.stalk x ≅
+      (tilde M).presheaf.stalk ((localizationSpecMap f).base x) :=
+  haveI : IsOpenImmersion (localizationSpecMap f) :=
+    isOpenImmersion_SpecMap_localizationAway f
+  (TopCat.Presheaf.stalkFunctor AddCommGrpCat x).mapIso
+      ((Scheme.Modules.toPresheaf _).mapIso
+        ((restrictFunctorIsoPullback (localizationSpecMap f)).symm.app (tilde M))) ≪≫
+    (restrictStalkNatIso (localizationSpecMap f) x).app (tilde M)
+
+/-! #### Node-4 (d2) remains open — see `task_results`.
+
+The target-stalk localized-module claim
+`tildePullbackComparison_stalk_target_isLocalizedModule` needs an `R`-LINEAR
+equivalence `(tilde M)_{q_f x} ≃ₗ[R] (q_f^* tilde M)_x` to transport
+`IsLocalizedModule` (via `IsLocalizedModule.of_linearEquiv`) from the tilde-stalk
+germ.  The pullback stalk `(q_f^* tilde M)_x` carries no natural `R`/`R_f`-module
+instance (its module structure lives over the *structure-sheaf stalk* of `Spec R_f`
+at `x`, which is not identified with a localization of `R_f` at this layer), so the
+abelian-group iso `tildePullbackComparison_stalk_pullbackStalkIso` (sub-lemma (a))
+cannot yet be upgraded to an `R`-linear equivalence.  Closing (d2) requires:
+(i) identifying the `Spec R_f` structure-sheaf stalk at `x` with `(R_f)_x`;
+(ii) endowing `(q_f^* tilde M)_x` with the resulting (restricted) `R`-module
+structure; (iii) proving (a)'s germ-based comparison is `R`-linear — germ
+naturality of the module action, of the same flavour as the deferred (d3). -/
+
 end AlgebraicGeometry.Scheme.Modules

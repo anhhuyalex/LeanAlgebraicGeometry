@@ -20,14 +20,11 @@ Pic^♯_{C/S}(T) := Pic(C ×_S T) / π_T^* Pic(T)
 
 as a functor on `(Sch/S)^op`.
 
-## Status (iter-174 Lane E file-skeleton)
+## Status
 
-This file is the **iter-174 Lane E** file-skeleton: each of the five pinned
-declarations carries the *intended* substantive type signature (matching the
-blueprint `\lean{...}` pin in `chapters/Picard_LineBundlePullback.tex`) with a
-`sorry` body. The bodies are iter-175+ work after the sibling chapters
-`Picard_RelativeSpec.lean` (A.1.a) settles its `QcohAlgebra` body, and after
-`Picard_RelPicFunctor.lean` (A.1.c) lands the étale-sheafification overlay.
+The five pinned declarations carry their substantive type signatures (matching the
+blueprint `\lean{...}` pins in `chapters/Picard_LineBundlePullback.tex`); the
+pullback chase is complete.
 
 The 5 pinned declarations are:
 
@@ -151,8 +148,7 @@ and observes that `f^*` commutes with restriction along open immersions (the
 involves the natural-isomorphism `restrictFunctorIsoPullback` plus the
 preservation of `SheafOfModules.unit` under pullback (Mathlib
 `Mathlib.Algebra.Category.ModuleCat.Sheaf.PullbackFree`'s
-`unitToPushforwardObjUnit`). Iter-187 wraps this chase as a named typed sorry
-(helper-budget = 1); iter-188+ instantiates the chart-chase. -/
+`unitToPushforwardObjUnit`). The chart-chase is complete. -/
 lemma IsLocallyTrivial.pullback {X Y : Scheme.{u}} (f : Y ⟶ X) {M : X.Modules}
     (hM : IsLocallyTrivial M) :
     IsLocallyTrivial ((Scheme.Modules.pullback f).obj M) := by

@@ -12,8 +12,8 @@ import AlgebraicJacobian.Picard.TensorObjSubstrate.StalkTensor
 This file quarantines three sections of the substrate build that are NOT on the
 primary `exists_tensorObj_inverse` closure path but may serve future prover work:
 
-- `FlatWhisker` / `WhiskerOfW` (route-(e) flatness-free whiskering; one open sorry
-  `isLocallyInjective_whiskerLeft_of_W`)
+- `FlatWhisker` / `WhiskerOfW` (route-(e) flatness-free whiskering; axiom-clean,
+  including `isLocallyInjective_whiskerLeft_of_W`)
 - `StalkLinearMap` (route-(e) d.1 ingredient; axiom-clean)
 - `OverSliceSheafEquiv` (the shared root for both ⊗-inverse bridges; axiom-clean)
 

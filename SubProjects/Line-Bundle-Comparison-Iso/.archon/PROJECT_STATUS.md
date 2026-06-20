@@ -262,6 +262,27 @@ Current scope and live state live in [`PROGRESS.md`](PROGRESS.md) and
   `Module`-synth. The K1 application threads through by defeq (`pushforward_μ_eq` is `rfl`). For the LHS mate
   side, package as a per-section morphism COMPARISON with `tensor_ext` inside; the parent assembles via
   `PresheafOfModules.hom_ext`. (Used: `pushforward_lax_mu_comparison_{rhs,lhs}_tmul`.)
+- **Abstract-helper extraction to dodge zeta-`let`/whnf friction (K1 μ/δ-collapse CLOSED iter-031):** when a
+  category-theoretic identity must be proved on a goal whose terms are zeta-reduced statement-`let`s
+  (`Gβ`/`φ'`/`hadj'` fully unfolded) over heavy functor-composition sections (`pushforward₀OfCommRingCat`),
+  inline mate-calculus fails (every `erw` whnf-explodes → 200000-heartbeat timeout; plain `rw` won't
+  key-match the unfolded `≫`). FIX: state the identity as a SEPARATE abstract lemma with clean `Type*`
+  fvars (`deltaConjOfMuComparison`: two adjunctions `adj₁ adj₂ : Fᵢ ⊣ G` sharing a lax `G`, plus a μ
+  comparison hyp → the oplax tensorator of `F₁` = the `leftAdjointUniq`-conjugate of `F₂`'s), prove it on
+  the clean fvars (no friction), and discharge the concrete goal by a one-line `exact helper hadj' adj₀ A B
+  (comparison)`. The mate `μ(rightAdjointLaxMonoidal adj₁)` is forced via a LOCAL
+  `letI := rightAdjointLaxMonoidal adj₁; letI : adj₁.IsMonoidal := inferInstance` (the canonical scoped
+  instance — NON-circular, does NOT reference the consumer's `hadj'.IsMonoidal`). Axiom-clean.
+- **Instance-heavy `adjᵢ.unit ≫ G.map(…)` silent-no-match (iter-031, generalises iter-014):** in an
+  instance-heavy adjunction-mate context, `rw`/`simp`/`simp only`/`erw`/`slice`/`reassoc_of%`/`Category.assoc`
+  ALL silently fail to match `adjᵢ.unit.app x ≫ G.map(…)` — even a char-for-char-identical local `have` with
+  the exact type, and even on FULLY ABSTRACT fvars (so it is NOT a let-fold issue). Workarounds that DO fire:
+  (1) FULL `simp` (not `simp only`) runs `@[reassoc(attr:=simp)]` `_assoc` forms (`unit_leftAdjointUniq_hom_app_assoc`,
+  `unit_app_tensor_comp_map_δ_assoc`) — but ONLY when there is a `≫ ?h` tail; (2) `conv` fires `← μ_natural`
+  (the COMBINED `Functor.LaxMonoidal.μ_natural` — the `@[simp]` `_left`/`_right` whiskering variants never
+  fire on the `⊗ₘ` form), `← Category.assoc`, `tensorHom_comp_tensorHom`; (3) `congr_arg₂ (·≫·) (congr_arg₂
+  tensorHom h₁ h₂) hμ` assembles the final TAILLESS 2-factor equality defeq when neither `rw` nor `simp` can
+  contract it. A load-bearing `show` to the clean instance form is needed before `rw [hLHS]` will key-match.
 
 ### Known Blockers (do not retry without a structural change)
 - **⚠ plan-validate NOOPs a build-fix objective whose TARGET DECLARATION is sorry-free (iter-030 — cost a
@@ -276,14 +297,25 @@ Current scope and live state live in [`PROGRESS.md`](PROGRESS.md) and
   the same file that carries a sorry. The fix is verified (`goals:[]`) and lands `presheafDualUnitIso_naturality`,
   hN `dualUnitIso_dualIsoOfIso`, `tensorObj_unit_self_duality_collapse` + ~29 markers — but NOT
   `exists_tensorObj_inverse` (gated on the sorry'd `trivialisation_restrict_compat`, below).
-- **`trivialisation_restrict_compat` (TensorObjInverse L211) — the TRUE cocycle critical-path blocker
-  (iter-030).** `exists_tensorObj_inverse`'s typed cocycle rewrites THROUGH this lemma, so the cocycle cannot
-  earn `\leanok` even with a green window — the iter-029/030 "verify-and-unwrap the cocycle hedge" framing is
-  WRONG. Untouched (`:= sorry`); the multi-hundred-LOC eqToHom-bookkeeping residual (8 isos through restriction
-  naturality), undevelopable blind. lvb-inverse030: its blueprint sketch `lem:trivialisation_restrict_compat`
-  is too thin (omits the `image_preimage_of_le` reindexing + `restrictFunctorIsoPullback`/`pullbackUnitIso`
-  legs). SEQUENCE: blueprint-writer expand the sketch → prover with a green window (mirror `restrictIsoUnitOfLE`
-  TensorObjSubstrate L424, `analogies/cocycle-a.md` §A) → only then verify+unwrap the cocycle `first|…|sorry`.
+- **`trivialisation_restrict_compat` (TensorObjInverse L244) — the TRUE cocycle critical-path blocker;
+  STUCK, confirmed math/infra not infra (iter-032).** `exists_tensorObj_inverse`'s typed cocycle rewrites
+  THROUGH this lemma, so the cocycle cannot earn `\leanok` even with a green window — the iter-029/030
+  "verify-and-unwrap the cocycle hedge" framing is WRONG. iter-032 gave the route its first clean green-window
+  SOLO lane and it STILL only closed S1 (the reindexing scaffold): chart morphism `j = Scheme.Hom.resLE (𝟙 X)
+  U V` with `hjι : j ≫ U.ι = V.ι`, reindex endpoints `hobjU`/`hobjV` via `image_preimage_of_le` (all proved,
+  but currently DEAD — they sit before the L244 `sorry`). The genuine residual is **5 per-constituent
+  `restrict`-naturality squares** against `j`, each a *composite* iso through `pullback`+`sheafification` with
+  NO codebase precedent: (1) `tensorObj_restrict_iso` (a 4-step chart-chase — the structural template, build
+  FIRST), (2) `dual_restrict_iso ≫ dualIsoOfIso eM`, (3) `dual_unit_iso`, (4) `tensorObj_unit_iso`, (5) the
+  `uι = restrictFunctorIsoPullback ≫ pullbackUnitIso` leg the **blueprint OMITS** (lvb-inverse032; target lands
+  in the *restricted global unit*, so this 5th square is mandatory) — then the telescope. This is a sizeable
+  formalization sub-project, not a tactic gap. SEQUENCE: **effort-break the blueprint into the 5 named squares
+  + telescope** (the sketch still asserts they "commute routinely" — wrong) → prove the `tensorObj_restrict_iso`
+  square first → … → only then verify+unwrap the cocycle `first|…|sorry`. Do NOT re-dispatch a blind prover
+  lane (3 iters non-progress). Dead-ends (do not retry): `subst`/`rcases` on `hVU : V ≤ U` (not an equation);
+  `simp only [restrictIsoUnitOfLE]` (no cancellation); `congr 1`/`Iso.eq_inv_comp`/`SheafOfModules.Hom.ext`
+  (no match — goal already at `.val.app` section level). Mirror `restrictIsoUnitOfLE` (TensorObjSubstrate L424),
+  `analogies/cocycle-a.md` §A.
 - **K1 `pushforward_lax_mu_comparison` — mate route CIRCULAR (re-confirmed iter-028):** the lemma compares
   the adjunction **mate** `Adjunction.rightAdjointLaxMonoidal hadj'` (LHS) against the **composition**
   structure `presheafPushforwardLaxMonoidal φ'` (RHS) on the SAME functor `pushforward φ'`. Unfolding the
@@ -296,10 +328,45 @@ Current scope and live state live in [`PROGRESS.md`](PROGRESS.md) and
   **iter-029 UPDATE — DECOMPOSED; residual narrowed to ONE sub-lemma.** `pushforward_lax_mu_comparison` is now
   PROVEN as an assembly (`hom_ext` to per-section, defer to `lhs_tmul`); the RHS half
   `pushforward_lax_mu_comparison_rhs_tmul` is PROVEN (`= restrictScalars_μ_app_tmul φ'` by defeq). The SOLE
-  open μ-side residual is `pushforward_lax_mu_comparison_lhs_tmul` (sorry@L4353) = the LHS mate
+  open μ-side residual is `pushforward_lax_mu_comparison_lhs_tmul` (sorry@L4362) = the LHS mate
   (adjoint-transported) pure-tensor value: unfold `rightAdjointLaxMonoidal_μ` + `homEquiv_unit` to
-  `unit ≫ map(δ Gβ ≫ counit⊗counit)`, evaluate at `m ⊗ₜ n`. Downstream `pushforward_mu_appIso_collapse`
-  (sorry@L4506) consumes the comparison at morphism level once lhs_tmul lands — do NOT retry its IsMonoidal route.
+  `unit ≫ map(δ Gβ ≫ counit⊗counit)`, evaluate at `m ⊗ₜ n`.
+  **iter-031 UPDATE — `pushforward_mu_appIso_collapse` CLOSED (axiom-clean), so the μ-side is now ONE sorry
+  from done.** The collapse was bypassed by the new abstract helper `deltaConjOfMuComparison` (see Proof
+  Patterns) — a one-line `exact deltaConjOfMuComparison hadj' (pullbackPushforwardAdjunction φ') A B
+  (pushforward_lax_mu_comparison f A B)`. The SOLE remaining μ-side sorry is `lhs_tmul` (L4362), now
+  ADVANCED with a verified sectionwise split (`rw [rightAdjointLaxMonoidal_μ, homEquiv_unit]` then
+  `rw [comp_app, hom_comp, comp_apply]`) → opaque mate-μ is the explicit three-leg form
+  `(G.map (δ Gβ ≫ (ε⊗ₘε))).app W (unit.app Z .app W (m⊗ₜn))`. BLOCKER: the inner unit value lemma
+  `pushforwardPushforwardAdj_unit_app_app_apply` won't fire via `simp only` — the `hadj'` let-binding shadows
+  the `pushforwardPushforwardAdj …` form the lemma keys on. NEXT: un-`let` `hadj'` (or local `show`/`change`)
+  to expose that form, apply the unit value lemma, then reduce the `δ Gβ`/counit legs via the
+  `restrictScalars_μ_app(_tmul)`/`forget₂_restrictScalars_μ_hom_tmul` family (mirror `..._rhs_tmul`). Do NOT
+  route through `hadj'.IsMonoidal` (circular). Coverage debt: `deltaConjOfMuComparison` needs a blueprint block.
+  **iter-033 UPDATE — `lhs_tmul` is a confirmed DOUBLE wall; the explicit-args bypass is DEAD; the SOLO
+  lane committed RED (−141 markers, NET REGRESSION).** The escalation condition is LIVE (no more helper
+  cycles — pivot to user/signature-relax). Two now-DEAD bypasses of the `hadj'` let-binding shadow (do NOT
+  retry): (1) `simp only [hadj', hadj]; rw [pushforwardPushforwardAdj_unit_app_app_apply]` — let-unfold does
+  NOT expose the keyed bare-unit form (`rewrite failed: did not find pattern (unit.app ?M).app ?U) ?x`);
+  (2) building the value lemma with EXPLICIT args `have hunit := pushforwardPushforwardAdj_unit_app_app_apply
+  … (Z := pushforward A ⊗ pushforward B) … W (m⊗ₜn); erw [hunit]` — `synthInstanceFailed:
+  MonoidalCategoryStruct (PresheafOfModules X.ringCatSheaf.obj)` (carrier-diamond on the `⊗`), and per-factor
+  `show _root_.PresheafOfModules (X.presheaf ⋙ forget₂ …) from …` ascriptions do NOT redirect the outer
+  tensor's instance. lean-auditor: the `have hunit` block (TensorObjSubstrate L4365–4379) is NON-recoverable
+  in place (even past synthInstance, `erw [hunit]` still fails the let-shadow). RECOVERY: revert L4365–4379
+  to bare `sorry` via the `refactor` route in PLAN phase (objectivesNoop drops the sorry-adjacent fix from a
+  prover lane) — restores green + the 141 markers. A real corrective needs un-`let`-ing `hadj'` in the
+  *statement* (signature relax) or a value-lemma variant keyed on the `pushforward₀ ⋙ restrictScalars`
+  composite form; flagged for user (mathlib-analogist cross-domain on "let-bound composite-functor
+  adjunction-unit mate on a pure tensor").
+  **NEW iter-033 (lean-auditor): SOLO-lane committed-RED regression mode.** A SOLO prover lane (no race)
+  can still regress the tree by ending ON an elaboration error without reverting to the prior
+  green-mod-sorry state — the final `have`/`erw` block didn't elaborate and the lane exited RED. sync then
+  strips every dependent `\leanok`. Mitigation: a lane that cannot close should leave the bare `sorry`
+  (green-mod-sorry), never a half-built failing `have`. **NEW iter-033: TensorObjInverse `first | <derivation>
+  | sorry` — the `| sorry` is DEAD CODE** (the first branch always fires; sorry-proved lemmas are valid
+  rewrite sources in Lean 4), so `exists_tensorObj_inverse` is sorry-contaminated via the rewrite through the
+  sorry'd `trivialisation_restrict_compat`; the L469–472 comment misdescribes it.
 - ~~**K1 `pullbackTensorMap_isIso_of_isOpenImmersion` carrier diamond**~~: **RESOLVED iter-023** — see the
   "Carrier-diamond RESOLVED via defeq-composite re-ascription" Proof Pattern above (Gβ composite +
   `zeta:=false` + `erw`). The full K1 mate calculus is now PROVEN and compiles; the SOLE residual is
@@ -452,6 +519,45 @@ Current scope and live state live in [`PROGRESS.md`](PROGRESS.md) and
   similarly truncated — worth a one-shot sweep.**
 
 ## Last Updated
+2026-06-20T04:10:00Z (iter-033 review — **NET REGRESSION; SOLO `lhs_tmul` lane committed RED.** The single
+corrective test (`pushforward_lax_mu_comparison_lhs_tmul` SOLO) left TensorObjSubstrate RED
+(synthInstanceFailed L4369) ⇒ sync −141/+0 (b3a0e11) stripped every dependent `\leanok`. The added
+`have hunit := …; erw [hunit]` block (L4365–4379) is NON-recoverable (carrier-diamond synthInstance on the
+`⊗` + `hadj'` let-shadow); revert to bare `sorry` via the PLAN-phase `refactor` route to restore green +
+the 141 markers. Route A escalation is LIVE (no more helper cycles → user/signature-relax). Terminal route
+untouched (effort-broken into 5 squares in plan phase; S2 = iter-034 template AFTER the revert). Reviewers:
+lean-auditor iter033 (1 must-fix = the RED block; NEW: TensorObjInverse `| sorry` dead-code + mis-comment
+L469–472, stale excuse-comment :778 on a complete proof, DualInverse docstring L362–406 contradiction),
+lvb substrate033 CLEAN (0 must-fix; blueprint adequate, blocker is prover-side Lean mechanics). Doctor clean,
+gaps=0, unmatched=106 (no new decls). No manual markers. Full narrative → `iter/iter-033/review.md`.)
+2026-06-19T18:30:00Z (iter-032 review — **PARTIAL, no net sorry elimination; Terminal route confirmed
+STUCK (math/infra, not infra).** TensorObjInverse SOLO fine-grained lane closed only S1 of
+`trivialisation_restrict_compat` (chart morphism `j`/`hjι` + reindex endpoints `hobjU`/`hobjV`, all proved
+but currently DEAD before the L244 sorry); replaced the bare sorry with a scaffold + roadmap. Sorry 2→2,
+sync +0/−0 (008e366), build green-mod-sorry, root untouched, no regression. The route got its FIRST clean
+green-window SOLO lane and still only landed scaffold ⇒ the residual is genuine infra: **5 per-constituent
+restrict-naturality squares** (incl. the blueprint-OMITTED `uι` leg) — see Known Blockers. Reviewers:
+lean-auditor iter032 FAIL (4 must-fix on TensorObjInverse: dead-scaffolding bare sorry, NEW L237
+"verified this iter" excuse-comment, L470–476 "next prover should strip" excuse-comment,
+`first|derivation|sorry` sorry-laundering; 6 major incl. stale module headers across
+DualInverse/Vestigial/LineBundlePullback describing PROVED decls as open; 2 critical excuse-comments),
+lvb inverse032 (signatures faithful both ways, sorries honest/no shape-masking; 2 major: sketch
+under-specifies the 5 squares + omits `uι`, stale inline prose L1482–1490). Doctor clean, gaps=0,
+frontier=3, unmatched=106 (no new decls). No manual markers. CORRECTIVE: effort-break the blueprint into
+the 5 squares + telescope (NOT a 4th blind lane); refactor-cleanup the excuse-comments + stale headers;
+parallel options = `lhs_tmul` (Substrate SOLO) + 3 OnProduct frontier nodes. Full narrative →
+`iter/iter-032/review.md`.)
+2026-06-19T17:15:00Z (iter-031 review — **STRONG RECOVERY + K1 critical-path closure.** Import chain GREEN
+again (the iter-029/030 L219 blocker resolved via the plan-phase refactor route, NOT a prover lane);
+sync_leanok +34/−0 (recovers the iter-029 −29 strip + new closures). `pushforward_mu_appIso_collapse` CLOSED
+(axiom-clean) via the NEW abstract helper `deltaConjOfMuComparison` (Proof Patterns above). Project-wide
+term-position sorries = **exactly 2**: `pushforward_lax_mu_comparison_lhs_tmul` (advanced, verified split) +
+`trivialisation_restrict_compat` (cocycle gate, blueprint roadmap now expanded). Reviewers: lean-auditor
+iter031 (2 must-fix = STALE headers L46/L162 only; closures honest+clean, non-circular; 7 minor), lvb
+substrate031 (0 must-fix / 2 major: helper missing blueprint block + lhs_tmul value-vs-section prose drift /
+1 minor stale collapse sketch). Doctor clean, gaps=0, frontier=3, unmatched=106 (+`deltaConjOfMuComparison`
+coverage debt). Manual marker: `% NOTE` on `lem:pushforward_mu_appiso_collapse` proof block. Full narrative →
+`iter/iter-031/review.md`.)
 2026-06-19T14:59:58Z (iter-030 review — **ZERO buildable progress; build still RED, ~29 markers still
 stripped (sync +0/−0). PROCESS failure, not math.** The plan was correct & tiny (Obj-1 = the deterministic
 one-token L219 fix that unblocks the whole import chain; Obj-2 = type the cocycle on the green window). But

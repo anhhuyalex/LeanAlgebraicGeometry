@@ -8,6 +8,26 @@
 
 ### Proof Patterns (reusable across targets)
 
+- **B6-succ `tensorPowAdd_assoc` braided coherence — the hom-level telescope is diamond-blocked; the
+  iso-level route is NOT diamond-free either (iter-018, SNAP; partial, still open).** Two synonym
+  comp/whisker diamonds gate the succ case. (a) After `apply Iso.ext` + the enhanced telescoping
+  `simp only` (which DOES bring both sides to canonical form — `tensorBraiding_eq` bridges to `β_`, the
+  `.inv`-direction lemmas `Iso.trans_inv`/`Iso.symm_inv`/`whiskerLeftIso_inv`/`whiskerRightIso_inv` expand
+  the `.symm` associators, and `Iso.hom_inv_id_assoc`/`whiskerLeft_hom_inv_assoc`/`Iso.cancel_iso_inv_left`
+  cancel bridge pairs), the LEADING `(tensorObjAssoc L^k L L^m').hom ▷ L^m''` will NOT distribute under
+  `MonoidalCategory.comp_whiskerRight`: the `≫` inside the hand-built iso (from `Iso.trans_hom`) is native
+  `instCategory`-comp while the canonical `▷`/tail are `LocalizedMonoidal`-comp. The `hc` comp-bridge
+  (`analogies/comp-instance-diamond.md`) does NOT fire on this junction (tried keyed to both `X.Modules`
+  and `LocalizedMonoidal …`). (b) `ih` supplies a SINGLE whisker but the goal carries the DOUBLE whisker
+  `(tensorPowAdd k m').hom ▷ L ▷ L^m''` ⇒ needs `whisker_exchange` + the `k+1+m'=(k+m')+1` reindex unfold.
+  **DEAD END (verified iter-018, do not repeat):** the cleaner iso-level route (prove before `Iso.ext` via
+  functoriality helpers `tensorObjWhiskerRightIso_trans/_refl`) with a naive body
+  `dsimp only [tensorObjWhiskerRightIso]; rw [map_comp, comp_whiskerRight, map_comp]` FAILS — `dsimp`
+  strips the `MonoidalPresheaf X` synonym head off `▷`/`◁ᵢ`, so `comp_whiskerRight (C := MonoidalPresheaf X)`
+  won't match and `show … from comp_whiskerRight _` won't synthesize `MonoidalCategoryStruct X.PresheafOfModules`.
+  Such helpers must re-expose the synonym head (`change`/`show` onto `MonoidalPresheaf X`-comp) BEFORE any
+  `rw`/`simp`. The residual math is genuinely the canonical braided-pentagon (assoc-∀L: `hexagon_forward`
+  +`pentagon`+`whisker_exchange`, NO β=id).
 - **Head-pin closes a LARGE concrete monoidal coherence across the comp-diamond — RESOLVES the
   comp-instance-diamond saga (iter-017, SNAP; ★ `tensorObjAssoc_eta_factor_sheaf` CLOSED axiom-clean,
   ending the 4-iter 013–016 wall).** When `exact <generic-coherence> …` (here
@@ -1917,6 +1937,19 @@
 
 ### Known Blockers (do not retry without a structural change)
 
+- **[iter-019 — B6-succ `tensorPowAdd_assoc` (@3151): PROVER LAYER EXHAUSTED on the whiskering-synonym
+  diamond. ESCALATION GATE TRIGGERED — do NOT re-assign a bounded prover round.]** 5 iters (015–019) at
+  the `MonoidalPresheaf X` / `X.PresheafOfModules` whiskering-synonym diamond on the succ-case braided
+  pentagon; sorry plateau 5→5→5 (017–019). Both prover-layer routes are now exhausted: the **element-level**
+  hom-telescope (`comp_whiskerRight` won't fire on the hand-built iso's native-`instCategory` `≫`; the `hc`
+  comp-bridge does not apply to whiskering junctions) AND the **iso-level** functoriality-helper route
+  (Attempt 2 iter-018 reverted for skipping head re-exposure; the corrected re-exposed-head variant
+  iter-019 produced ZERO edits within budget). The residual math is genuinely the canonical braided pentagon
+  (`hexagon_forward`+`pentagon`+`whisker_exchange`, NO β=id). **Required next step (gate, plan-iter-019):**
+  mathlib-analogist (api-alignment) on the whiskering-synonym head-alignment under `comp_whiskerRight`/
+  `whisker_exchange` BEFORE any further prover round; fallback = effort-breaker splitting the pentagon at its
+  seams. NO third add-helpers-retry, no fabricated pin, no `maxHeartbeats`. B7 (@3181) is gated solely on
+  this.
 - **[iter-016 — ★ `tensorObjAssoc_eta_factor_sheaf`: MATH SOLVED, PLACEMENT is a >4M-heartbeat
   comp-diamond `isDefEq` DEAD-END. ESCALATED — do NOT re-assign ANY mechanical closer.]** This
   SUPERSEDES the iter-014/015 ★ entries below. ★'s residual was decomposed and PROVEN: it IS the
@@ -2685,6 +2718,30 @@
   enforced corrective is a mathlib-analogist consult on the reframing keystone, not a prove round.
 
 ## Last Updated
+2026-06-20T (iter-019 review) — **B6-succ `tensorPowAdd_assoc` 0-EDIT NO-PROGRESS (sorry 5→5, plateau 3
+iters).** Bounded final prover attempt (re-exposed-head iso-level recipe) produced ZERO edits — the helper
+chain was never constructed within budget; prover read goal @3151 (canonical braided pentagon, ~1.2M-char),
+forced a green build, committed nothing. **Pre-committed escalation gate (plan-iter-019) TRIGGERED:** next
+iter MUST dispatch mathlib-analogist (api-alignment) on the whiskering-synonym BEFORE any further prover
+round (fallback effort-breaker); NO third add-helpers-retry. Both prover-layer routes (element-level +
+iso-level) now exhausted — see new Known-Blockers iter-019 bullet. ★/B4/B5/B6-base re-confirmed axiom-clean
+(spot `lean_verify`). Review skipped lean-auditor + lean-vs-blueprint-checker (0 prover edits; file
+byte-identical to iter-018). Restored 24 over-stripped axiom-clean proof-block `\leanok` (sync **6th**
+consecutive over-strip). dag unmatched 332 unchanged. Per-iter narrative: `iter/iter-019/review.md`.
+NEXT: analogist on whiskering-synonym → effort-breaker → then prover.
+
+### (prior) 2026-06-20T (iter-018 review) — **B6-succ `tensorPowAdd_assoc` PARTIAL advance, no close (sorry 5→5).**
+Prover enhanced the banked telescope ⇒ both sides now canonical (`β_` braiding, `α_`-expanded associators,
+bridge pairs cancelled); residual = canonical braided-pentagon + `tensorPowAdd k _` atoms. Blocked by 2
+synonym diamonds: (a) leading `(tensorObjAssoc …).hom ▷ L^m''` won't distribute under `comp_whiskerRight`
+(native vs LocalizedMonoidal comp; `hc` doesn't fire), (b) `ih` double-vs-single whisker mismatch. Attempt-2
+iso-level helpers FAILED + REVERTED (MonoidalPresheaf X vs X.PresheafOfModules synonym diamond — see new
+Proof-Patterns bullet). Build green. lean-auditor 0 must-fix (1 major = 3 stale `RelativeSpec.lean`
+docstrings). lean-vs-blueprint-checker 0 must-fix (2 major = unresolvable `\mathlibok` constant @tex L1219
+[% NOTE added] + coverage gap for the `relativeTensorCoequalizerIso` brick). Review RESTORED 24 over-stripped
+axiom-clean proof-block `\leanok` (sync 5th over-strip). dag unmatched 332 unchanged. Per-iter narrative:
+`iter/iter-018/review.md`. NEXT: B6-succ iso-level route with synonym-head re-exposed → B7; effort-breaker if it stalls again.
+
 2026-06-19T (iter-017 review) — **★ `tensorObjAssoc_eta_factor_sheaf` CLOSED axiom-clean — the 4-iter
 013–016 wall is BROKEN.** Head-pin fix: `exact tensorObjAssoc_associator_counit_coherence (M :=
 LocalizedMonoidal …) …` + `set_option maxRecDepth 4000 in` (the >4M wall was head-misalignment, not term

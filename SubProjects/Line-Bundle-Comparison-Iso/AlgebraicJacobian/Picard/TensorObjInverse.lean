@@ -208,6 +208,39 @@ private lemma trivialisation_restrict_compat {X : Scheme.{u}} {L : X.Modules}
         (Opposite.op (V.ι ⁻¹ᵁ V)) ≫
       (SheafOfModules.unit X.ringCatSheaf).val.presheaf.map
         (eqToHom (congrArg Opposite.op (image_preimage_of_le V le_rfl))) := by
+  -- **The chart morphism (the object every naturality square is taken against).**
+  -- `j : V ⟶ U` is the open immersion of the sub-open, with `j ≫ U.ι = V.ι`.  By construction
+  -- `restrictIsoUnitOfLE hVU eM = (restrict j) eM` up to the unit identifications (see its def in
+  -- `TensorObjSubstrate.lean`), so the whole V-chain is the `restrict j`-image of the U-chain.
+  have hVU' : V ≤ (𝟙 X) ⁻¹ᵁ U := hVU
+  set j : (V : Scheme) ⟶ (U : Scheme) := Scheme.Hom.resLE (𝟙 X) U V hVU' with hj
+  have hjι : j ≫ U.ι = V.ι := by rw [hj, Scheme.Hom.resLE_comp_ι, Category.comp_id]
+  -- **The reindexing obstacle (blueprint ¶1).** The two a-priori-distinct opens `U.ι ⁻¹ᵁ V` and
+  -- `V.ι ⁻¹ᵁ V` both name "V seen as a chart"; their direct images coincide as `V` only up to the
+  -- equality-of-opens `image_preimage_of_le`, which sits on both flanks of every constituent and
+  -- must be threaded telescopically.  These are the two endpoints the outer `eqToHom`s transport.
+  have hobjU : U.ι ''ᵁ (U.ι ⁻¹ᵁ V) = V := image_preimage_of_le U hVU
+  have hobjV : V.ι ''ᵁ (V.ι ⁻¹ᵁ V) = V := image_preimage_of_le V le_rfl
+  -- **The genuine residual (blueprint ¶2–3): the four-constituent restriction-naturality.**
+  -- The trivialisation chain `(L ⊗ L⁻¹)|_U ≅ 𝒪_U` is, in order,
+  --   (1) `tensorObj_restrict_iso U.ι`  (commute `⊗` past `(-)|_U`),
+  --   (2) `dual_restrict_iso U.ι ≫ dualIsoOfIso eM`  (dual restriction + transport by `eM`),
+  --   (3) `dual_unit_iso`  (identify `ℋom(𝒪_U,𝒪_U)` with `𝒪_U`),
+  --   (4) `tensorObj_unit_iso`  (the left unitor),
+  -- then `(uι U).inv = (restrictFunctorIsoPullback U.ι ≫ pullbackUnitIso U.ι).inv`.  Each is the
+  -- image of a structural iso under the restriction functor; its naturality square against `j`
+  -- commutes, and `restrictIsoUnitOfLE hVU eM` is `(restrict j) eM`, so the V-chain IS the
+  -- `restrict j`-image of the U-chain.  Composing the four squares in order, threading `hobjU` /
+  -- `hobjV` so adjacent reindexings cancel, yields the claim at the `.val.app`/section level.
+  --
+  -- BLOCKER: the four naturality squares are not yet available as lemmas — each constituent (1)–(4)
+  -- is a *composite* iso through `pullback` + `sheafification` (`tensorObj_restrict_iso` alone is a
+  -- 4-step chart-chase), and there is no per-constituent `restrict`-naturality lemma in the
+  -- codebase.  Building them (one named sub-lemma per square, then the telescope) is the
+  -- bounded-but-real residual.  Probes (`subst`/`congr 1`/
+  -- `Iso.eq_inv_comp`/`SheafOfModules.Hom.ext`) confirm no off-the-shelf reduction fires here:
+  -- `congr 1` splits it into the object equality `hobjU`/`hobjV` plus two `HEq` legs (the chart-
+  -- dependent section maps), which is exactly the four-square telescope restated.
   sorry
 
 /-- **B1: conjugating `dualIsoOfIso s` by `dual_unit_iso` recovers `s`** (the degenerate
@@ -292,12 +325,11 @@ escape (still unavailable — no `MonoidalCategory (X.Modules)` for the varying
 structure sheaf, §2) and WITHOUT the forbidden sheafify-the-presheaf-evaluation
 shortcut (it re-hits the `M ◁ η` whiskering = the abandoned tensor-stalk "d.2"
 gap, a DEAD END — analogist `ts226descent.md`, verdict D). Instead it glues local
-trivialising data, touching no tensor stalk. Two bridges remain before this sorry
-closes (see body comment): the C-bridge `dual_isLocallyTrivial` and the A-bridge
-`homOfLocalCompat` (SheafOfModules morphism descent). The B-bridge
-`isIso_of_isIso_restrict` (local-iso ⇒ global iso, mirroring the CLOSED
-`tensorObj_isLocallyTrivial` at L1912) is DONE (iter-226, above, axiom-clean). EXACT
-decomposition: `informal/exists_tensorObj_inverse.md` and `analogies/ts226descent.md`.
+trivialising data, touching no tensor stalk. The C-bridge `dual_isLocallyTrivial`,
+A-bridge `homOfLocalCompat`, and B-bridge `isIso_of_isIso_restrict` are all
+implemented; the remaining blocker is `trivialisation_restrict_compat` (the per-chart
+restrict naturality telescope, see body comment). EXACT decomposition:
+`informal/exists_tensorObj_inverse.md` and `analogies/ts226descent.md`.
 -/
 lemma exists_tensorObj_inverse {X : Scheme.{u}} {L : X.Modules}
     (hL : LineBundle.IsLocallyTrivial L) :
@@ -434,13 +466,10 @@ lemma exists_tensorObj_inverse {X : Scheme.{u}} {L : X.Modules}
          The sectionwise goal lifts to this iso equation by `congrArg` on the shared
          `(toPresheaf _).map (·).hom ≫ (uι V).inv).val` `.app`-and-eqToHom wrapper.
       -/
-      -- iter-030 TYPED (paper-validated iter-029).  The body below is the full iso-algebra
-      -- reduction; it is wrapped in `first | … | sorry` ONLY because this lane could not obtain a
-      -- green build window this iter (the `DualInverse.lean` import is RED on disk at L219 — the
-      -- one-token Objective-1 fix, owned by a sibling lane, had not landed; I may not edit that
-      -- file).  As soon as `DualInverse` builds green the first branch should fire and the `sorry`
-      -- fallback becomes dead code — the next prover should verify and strip the `first | … |`
-      -- wrapper.  See `task_results/AlgebraicJacobian_Picard_TensorObjInverse.lean.md`.
+      -- The body below is the full iso-algebra reduction; it is wrapped in `first | … | sorry`
+      -- because the derivation is gated on `trivialisation_restrict_compat`: once that lemma is
+      -- sorry-free, the `erw` calls in the first branch fire and the `| sorry` fallback becomes
+      -- dead code.  See `task_results/AlgebraicJacobian_Picard_TensorObjInverse.lean.md`.
       first
       | (-- Reduce BOTH overlap legs to the single-open-`V` form (`trivialisation_restrict_compat`
          -- applied to `i` and `j`), killing the `(U i).ι⁻¹` vs `(U j).ι⁻¹` reindexing.

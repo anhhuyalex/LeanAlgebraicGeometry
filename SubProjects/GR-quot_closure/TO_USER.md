@@ -1,12 +1,15 @@
 <!-- Shared notice board. Keep to <=2-3 short bullets; delete bullets no longer true. -->
 
-- **Goal seed delivered (iter-001):** `Grassmannian.represents` sorry-free + axiom-clean.
-- **SNAP-S0 commutativity — decision made (iter-011):** `sectionsMul_mul_comm` is mathematically FALSE
-  for a general `L : X.Modules` — the section ring `⊕ₘΓ(L^{⊗m})` is the FREE TENSOR ALGEBRA on Γ(L)
-  (counterexample `L=𝒪²`; triple-verified). Per Stacks §17.25, `Γ_*` is defined for INVERTIBLE sheaves.
-  Decision (autonomous): the general ring is a non-commutative `GSemiring` (assoc + units); commutativity
-  is the invertible-only `GCommSemiring` upgrade, re-signed with a project-local `IsInvertible L`
-  (locally-free-rank-1). The comm proof (via `β_{L,L}=𝟙`) is invertibility-gated future work; this iter
-  closes the TRUE assoc chain. Steer via `USER_HINTS.md` if you want a different shape.
-- **χ-blocked sorries (`hilbertPolynomial`/`QuotFunctor`, `QuotScheme.lean`) remain deferred:** they
-  need a higher-cohomology engine absent in this i=0 leg; filled from the cohomology leg at merge.
+- **Goal seed delivered (iter-001):** `Grassmannian.represents` sorry-free + axiom-clean. χ sorries
+  (`hilbertPolynomial`/`QuotFunctor`, `QuotScheme.lean`) and the `[IsInvertible L]` commutativity chain
+  (`sectionsMul_mul_comm` is FALSE for general `L` — the section ring is the free tensor algebra) stay
+  deferred as gated / no-consumer future work; steer via `USER_HINTS.md` if priorities change.
+- **SNAP-S0 assoc leg STUCK (iters 015–019, now 0-edit no-progress):** B6-succ `tensorPowAdd_assoc` is
+  blocked by the `MonoidalPresheaf X` / `X.PresheafOfModules` whiskering-synonym diamond in a braided
+  pentagon; both prover routes (element- and iso-level) are exhausted. The loop auto-escalates next iter to
+  a Mathlib-idiom consult, then a decomposition. Cheapest user help if it persists: confirm whether the two
+  synonyms can be collapsed at the monoidal-setup source, or accept B6/B7 as deferred.
+- **Recurring tooling defect (sync_leanok, 6th consecutive iter):** the deterministic `\leanok` sync
+  over-strips the same ~24 axiom-clean proof-block markers on `Picard_SectionGradedRing.tex` every iter;
+  review restores them each time (pure churn tax). Durable fix is sync-side — skip re-stripping decls the
+  prior sync verified clean, or raise the per-decl `lake build` budget on this large chapter.

@@ -1,12 +1,13 @@
 <!-- Shared notice board. Keep to <=2-3 short bullets; delete bullets no longer true. -->
 
-- **Both lanes progressing, 0 axioms.** SNAP `SectionGradedRing.lean`: all 4 associator-bridge seam
-  lemmas PROVEN axiom-clean; this iter fires the closing pass on `tensorObjAssoc_eq_localizedAssociator`
-  (one `associator_naturality` reduction), which then cascades the remaining graded-ring coherences. FBC
-  `FlatBaseChange.lean`: the long-stuck crux foundation was root-caused (the "pointwise reflexivity"
-  recipe was wrong — real content is a 3-fold structure-sheaf coherence — and a monolithic proof
-  overflows the kernel) and this iter the blueprint was rewritten into a kernel-light decomposition; the
-  FBC prover fires next iter on the decomposed pieces. No user action needed.
-- **FBC route pivot remains the working decision** (concrete module-tilde chain, bypassing the
-  mate-stuck abstract affine base change; Stacks 01I9/02KH source-validated). Steer via `USER_HINTS.md`
-  only if a different decomposition is intended.
+- **SNAP `SectionGradedRing.lean`: one half-lemma from closing the associator assembly.** `hK_rhs` was
+  closed last iter (cold-build green); this iter mechanizes a Mathlib-analogist-VALIDATED (cold-LSP)
+  recipe for the last half `hK_lhs`, which closes the assembly and unblocks the graded-ring coherences.
+  0 axioms.
+- **FBC `FlatBaseChange.lean`: the element-level proof of the foundation cast is a verified kernel-bomb
+  dead end; pivoted to a MORPHISM-LEVEL proof this iter** (its RHS is exactly Mathlib's
+  `PresheafOfModules.map_comp` law). The lane carries a mandatory cold-build self-check + revert-on-bomb, so
+  the file stays compiling regardless; if the morphism proof is fragile it pivots to a junction-free
+  refactor next iter.
+- **Both lanes are >2.7× over their original iter estimates but converging** (SNAP near-done; FBC out of
+  the exhausted element family). Proceeding autonomously. Steer via `USER_HINTS.md` if a different call is wanted.

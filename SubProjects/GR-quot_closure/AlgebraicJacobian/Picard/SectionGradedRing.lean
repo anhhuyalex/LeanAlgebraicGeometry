@@ -2020,6 +2020,38 @@ private lemma tensorObjWhiskerRightIso_eq {F F' : X.Modules} (e : F ≅ F') (G :
   erw [Iso.inv_hom_id, Category.comp_id]
   rfl
 
+/-- Functoriality of the hand-built right-whiskering under iso-composition: route (b) of
+`analogies/whisker-synonym.md` (iter-020, lean_run_code-VERIFIED).  Proved by routing through the
+canonical bridge `tensorObjWhiskerRightIso_eq` (NOT by re-deriving on the `MonoidalPresheaf X` synonym
+side, which re-opens the synonym diamond), so the residual is uniformly `X.Modules`-comp and
+`comp_whiskerRight` fires under `apply Iso.ext; simp`. -/
+private lemma tensorObjWhiskerRightIso_trans {F F' F'' : X.Modules}
+    (e : F ≅ F') (f : F' ≅ F'') (G : X.Modules) :
+    tensorObjWhiskerRightIso (e ≪≫ f) G
+      = tensorObjWhiskerRightIso e G ≪≫ tensorObjWhiskerRightIso f G := by
+  rw [tensorObjWhiskerRightIso_eq, tensorObjWhiskerRightIso_eq, tensorObjWhiskerRightIso_eq]
+  apply Iso.ext; simp
+
+/-- Reflexivity of the hand-built right-whiskering: `tensorObjWhiskerRightIso (Iso.refl F) G` is the
+identity iso.  Route (b), via the canonical bridge. -/
+private lemma tensorObjWhiskerRightIso_refl (F G : X.Modules) :
+    tensorObjWhiskerRightIso (Iso.refl F) G = Iso.refl _ := by
+  rw [tensorObjWhiskerRightIso_eq]; apply Iso.ext; simp
+
+/-- Functoriality of the hand-built left-whiskering under iso-composition: route (b), via the
+canonical bridge `tensorObjWhiskerLeftIso_eq`.  Mirror of `tensorObjWhiskerRightIso_trans`. -/
+private lemma tensorObjWhiskerLeftIso_trans (F : X.Modules) {G G' G'' : X.Modules}
+    (e : G ≅ G') (f : G' ≅ G'') :
+    tensorObjWhiskerLeftIso F (e ≪≫ f)
+      = tensorObjWhiskerLeftIso F e ≪≫ tensorObjWhiskerLeftIso F f := by
+  rw [tensorObjWhiskerLeftIso_eq, tensorObjWhiskerLeftIso_eq, tensorObjWhiskerLeftIso_eq]
+  apply Iso.ext; simp
+
+/-- Reflexivity of the hand-built left-whiskering.  Route (b), via the canonical bridge. -/
+private lemma tensorObjWhiskerLeftIso_refl (F G : X.Modules) :
+    tensorObjWhiskerLeftIso F (Iso.refl G) = Iso.refl _ := by
+  rw [tensorObjWhiskerLeftIso_eq]; apply Iso.ext; simp
+
 /- Planner strategy for `tensorPowAdd` (`lem:sheafTensorPow_add`, blueprint L1158–L1243):
 
 INDUCTION ON m (blueprint proof block L1186–L1222):
@@ -3097,10 +3129,81 @@ private lemma tensorPowAdd_assoc (L : X.Modules) (m m' m'' : ℕ) :
     -- /`tensorObjIso (L^k) (L^m' ⊗ L)` bridge pairs straddling the braiding, then `MonoidalCategory`
     -- `pentagon`/`hexagon_forward` + `whisker_exchange`; the `eqToIso` reindexers (`Nat.succ_add`,
     -- `add_assoc`) discharge by the `tensorObjIso_tensorPowAdd_reindex`-style `subst` helper.
-    apply Iso.ext
-    simp only [tensorPowAdd, tensorObjWhiskerRightIso_eq, tensorObjWhiskerLeftIso_eq, tensorObjAssoc,
-      Iso.trans_hom, Iso.symm_hom, MonoidalCategory.whiskerLeftIso_hom,
-      MonoidalCategory.whiskerRightIso_hom, Category.assoc]
+    --
+    -- iter-018 ADVANCE: the enhanced telescoping `simp only` below (adds `tensorBraiding_eq` and the
+    -- `.inv`-direction bridge/whisker lemmas `Iso.trans_inv`/`Iso.symm_inv`/`whiskerLeftIso_inv`/
+    -- `whiskerRightIso_inv` + the cancellation lemmas `Iso.hom_inv_id_assoc`/`whiskerLeft_hom_inv_assoc`
+    -- /`Iso.cancel_iso_inv_left`) rewrites BOTH sides fully to the canonical form: the braiding is now
+    -- the canonical `β_ L (L^m')` / `β_ L (L^{m'+m''})`, every `tensorObjAssoc` is expanded to its
+    -- `α_`+bridge form, and many adjacent `tensorObjIso` bridge pairs are already cancelled.  The
+    -- residual is the canonical braided-pentagon coherence on `L^k, L, L^m', L^m''` with the surviving
+    -- `tensorObjIso` bridges and the `tensorPowAdd k _` atoms (to be consumed by `ih`).
+    --
+    -- PRECISE REMAINING BLOCKER (iter-018, diagnosed via `lean_multi_attempt`):
+    --   (a) The leading segment `(tensorObjAssoc (L^k) L (L^m')).hom ▷ L^m''` does NOT distribute under
+    --       `MonoidalCategory.comp_whiskerRight` (verified: `rw [comp_whiskerRight_assoc]` reports
+    --       "pattern `(?f ≫ ?g) ▷ ?Z ≫ ?h` not found", and `rw [← comp_whiskerRight]` reports
+    --       "pattern `?f ▷ ?Z ≫ ?g ▷ ?Z` not found").  This is the comp/monoidal-struct diamond:
+    --       the `≫` *inside* this segment is the native `instCategory`-comp produced by `Iso.trans_hom`
+    --       on the hand-built `tensorObjAssoc`/`tensorObjIso` isos, whereas the canonical `▷` and the
+    --       `≫`s in the (already-distributed) tail are the `LocalizedMonoidal`-monoidal comp.  The
+    --       `hc`-bridge of `analogies/comp-instance-diamond.md` (keyed to either head) does NOT fire on
+    --       this junction (unlike on ★), so the leading `b(L^k, L⊗L^m').hom ▷ L^m''` cannot be cancelled
+    --       against the following `b(L^k, L⊗L^m').inv ▷ L^m''`.
+    --   (b) Even past (a), `ih` is NOT directly applicable: the goal carries the DOUBLE right-whisker
+    --       `(tensorPowAdd k m').hom ▷ L ▷ L^m''` (the new `L`-factor whiskered first, then `L^m''`),
+    --       while `ih`'s LHS supplies the SINGLE whisker `tensorObjWhiskerRightIso (tensorPowAdd k m')
+    --       (L^m'') ≪≫ tensorPowAdd (k+m') m''`.  Bridging the two needs the L-vs-`L^m''` whisker
+    --       interchange (`whisker_exchange`) + reassociation, AND `tensorPowAdd (k+1+m') m''` must first
+    --       be unfolded via `k+1+m' = (k+m')+1` to expose its `tensorPowAdd (k+m') m''` core.
+    --   ISO-LEVEL ROUTE for the next prover (prove BEFORE `Iso.ext`, keeping `tensorPowAdd k _` FOLDED
+    --   so `rw [ih]` fires on `tensorObjWhiskerRightIso (tensorPowAdd k m') (L^m'') ≪≫
+    --   tensorPowAdd (k+m') m''`): needs functoriality helpers
+    --     `tensorObjWhiskerRightIso (e ≪≫ f) G = tensorObjWhiskerRightIso e G ≪≫ tensorObjWhiskerRightIso f G`
+    --     (+ `_refl`, + `tensorObjWhiskerLeftIso` analogues).  WARNING (iter-018, verified): these
+    --   helpers are NOT diamond-free — at the presheaf level the `▷`/`◁ᵢ` carry the `MonoidalPresheaf X`
+    --   synonym head while `comp_whiskerRight (C := MonoidalPresheaf X)` / `whiskerLeftIso_trans
+    --   (C := MonoidalPresheaf X)` fail to match (the synonym head is lost after `dsimp`, exactly the
+    --   `MonoidalPresheaf X` vs `X.PresheafOfModules` analogue of (a)).  They must be proved by first
+    --   re-exposing the synonym head (e.g. restating via `sheafification.mapIso (whiskerRightIso …)` and
+    --   a `change`/`show` onto `MonoidalPresheaf X`-comp) — NOT by a plain `rw`/`simp`.  After the
+    --   helpers + `rw [ih]`, the residual canonical coherence closes by `hexagon_forward` + `pentagon`
+    --   + `whisker_exchange` (NO `β = id`), with `Nat.succ_add`/`add_assoc` reindexers via a `subst`
+    --   helper (mirror `tensorObjIso_tensorPowAdd_reindex`).
+    -- iter-020 route (b), STEP 2 (iso-level distribution — VERIFIED, real progress):
+    -- unfold `tensorPowAdd (k+1) m'` (succ branch) and distribute the outer right-whisker over the
+    -- 5-segment composite at ISO level, keeping `tensorPowAdd k m'` FOLDED.  Plain `rw` is blocked by
+    -- the `tensorPow (k+1) = tensorObj (tensorPow k) L` iota-defeq in the outer whisker's implicit
+    -- source (rw keyed-matches at reducible transparency), and `erw` over-unfolds `tensorObjAssoc`
+    -- into its `α_`/`tensorObjIso` pieces and times out — so we FIRST align the source with
+    -- `tensorPow_succ`, then `tensorObjWhiskerRightIso_trans` fires controlled (tensorObjAssoc stays
+    -- folded).
+    rw [show L.tensorPowAdd (k+1) m' =
+        tensorObjAssoc (L.tensorPow k) L (L.tensorPow m') ≪≫
+        tensorObjWhiskerLeftIso (L.tensorPow k) (tensorBraiding L (L.tensorPow m')) ≪≫
+        (tensorObjAssoc (L.tensorPow k) (L.tensorPow m') L).symm ≪≫
+        tensorObjWhiskerRightIso (L.tensorPowAdd k m') L ≪≫
+        eqToIso (congrArg (tensorPow L) (Nat.succ_add k m').symm) from rfl]
+    simp only [tensorPow_succ, tensorObjWhiskerRightIso_trans]
+    -- LHS now exposes the folded inductive atom in its 4th segment as the DOUBLE right-whisker
+    --   `tensorObjWhiskerRightIso (tensorObjWhiskerRightIso (tensorPowAdd k m') L) (L^m'')`
+    --   ( = `(tensorPowAdd k m' ▷ L) ▷ L^m''` canonically ),
+    -- whereas `ih`'s LHS supplies the SINGLE whisker `tensorObjWhiskerRightIso (tensorPowAdd k m')
+    -- (L^m'') ≪≫ tensorPowAdd (k+m') m''`.  PRECISE REMAINING BLOCKER (for the effort-breaker):
+    -- bridging the double whisker to `ih` is the genuine braided-pentagon residual — it needs
+    --   (i) also unfolding `tensorPowAdd (k+1+m') m''` via `k+1+m' = (k+m')+1` (`Nat.succ_add`,
+    --       an index rewrite that drags an `eqToIso` reindexer through the goal type), exposing its
+    --       own 4th segment `tensorObjWhiskerRightIso (tensorPowAdd (k+m') m'') L`;
+    --   (ii) at hom level (`apply Iso.ext`), interchanging `(− ▷ L) ▷ L^m''` with the trailing
+    --        `(tensorPowAdd (k+m') m'') ▷ L` via `whisker_exchange` + associator naturality so the
+    --        `(tensorPowAdd k m' ▷ L^m'') ≫ tensorPowAdd (k+m') m''` of `ih` becomes a literal
+    --        subterm, then `rw [ih]` (its `.hom` image);
+    --   (iii) discharging the surviving canonical coherence on `L^k, L, L^m', L^m''` by
+    --         `hexagon_forward` + `pentagon` + `whisker_exchange` (NO `β = id`), with the
+    --         `Nat.succ_add`/`add_assoc` reindexers via a `subst` helper mirroring
+    --         `tensorObjIso_tensorPowAdd_reindex`.
+    -- The 4 functoriality helpers + this controlled distribution are the STEP-1/STEP-2 deliverable;
+    -- STEP (ii)'s `whisker_exchange`-reassociation against `ih` is the remaining coherence atom.
     sorry
 
 /-- Associativity of the graded section multiplication (`lem:sectionMul_coherent`, associativity):

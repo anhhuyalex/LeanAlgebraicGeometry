@@ -3476,5 +3476,341 @@
         "next_steps": "Blueprint-writer expand lem:trivialisation_restrict_compat (add image_preimage_of_le reindexing + restrictFunctorIsoPullback/pullbackUnitIso legs) THEN prover with green window. This is the true critical-path blocker — it gates the cocycle."
       }
     ]
+  },
+  {
+    "sessionId": "session_31",
+    "milestones": [
+      {
+        "timestamp": "2026-06-19T17:11:00Z",
+        "status": "solved",
+        "target": {
+          "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+          "theorem": "pushforward_mu_appIso_collapse"
+        },
+        "session": {
+          "id": "session_31",
+          "model": "opus"
+        },
+        "findings": {
+          "key_lemmas_used": [
+            "deltaConjOfMuComparison",
+            "pushforward_lax_mu_comparison",
+            "Adjunction.rightAdjointLaxMonoidal",
+            "Adjunction.unit_app_tensor_comp_map_δ",
+            "Adjunction.unit_leftAdjointUniq_hom_app",
+            "Adjunction.leftAdjointUniq_inv_app",
+            "Functor.LaxMonoidal.μ_natural",
+            "MonoidalCategory.tensorHom_comp_tensorHom"
+          ]
+        },
+        "attempts": [
+          {
+            "attempt": 1,
+            "strategy": "inline 4-step mate reduction on the K1 lemma directly",
+            "code_tried": "set G/adj₀; htri'; rw [Adjunction.unit_leftAdjointUniq_hom_app]; rw [hLHS]; ...",
+            "line_number": "4506",
+            "lean_error": "rewrite failed: pattern (?f ≫ ?g) ≫ ?h not found; later whnf timeout (200000 heartbeats) at L4403; instance synth failure Category PresheafOfModules",
+            "result": "failed",
+            "insight": "goal terms are zeta-reduced statement-lets (Gβ/φ'/hadj' unfolded); heavy pushforward₀OfCommRingCat sections make erw whnf-explode and plain rw won't key-match"
+          },
+          {
+            "attempt": 2,
+            "strategy": "extract the reduction as an ABSTRACT helper deltaConjOfMuComparison with clean Type* fvars, then exact-apply",
+            "code_tried": "private lemma deltaConjOfMuComparison ... ; exact deltaConjOfMuComparison hadj' (pullbackPushforwardAdjunction φ') A B (pushforward_lax_mu_comparison f A B)",
+            "line_number": "4407/4540",
+            "lean_error": "none (after iterating the helper body)",
+            "result": "success",
+            "insight": "abstract fvars remove let-fold/whnf friction; helper is axiom-clean (propext/Classical.choice/Quot.sound only)"
+          },
+          {
+            "attempt": 3,
+            "strategy": "helper body: transpose via homEquiv injectivity + show + hLHS + simp + conv + congr_arg₂",
+            "code_tried": "apply (adj₁.homEquiv _ _).injective; rw [homEquiv_unit, homEquiv_unit]; show <clean form>; rw [hLHS]; simp [unit_app_tensor_comp_map_δ_assoc]; conv_rhs => rw [← hnat, ← Category.assoc, tensorHom_comp_tensorHom]; exact congr_arg₂ (·≫·) (congr_arg₂ tensorHom (htri' A).symm (htri' B).symm) hμ",
+            "line_number": "4407",
+            "lean_error": "intermediate: rw [hLHS] without `show` fails to key-match; _left/_right μ_natural simp variants don't fire on ⊗ₘ form",
+            "result": "success",
+            "insight": "load-bearing `show` to clean instance form; FULL simp (not simp only) fires @[reassoc(attr:=simp)] _assoc forms only with a ≫?h tail; combined μ_natural fed by hand via conv; final tailless 2-factor contraction via congr_arg₂ (rw/simp silently no-match adjᵢ.unit≫G.map even on abstract fvars)"
+          }
+        ],
+        "next_steps": "Closed. Add blueprint block for deltaConjOfMuComparison (coverage debt)."
+      },
+      {
+        "timestamp": "2026-06-19T17:06:00Z",
+        "status": "partial",
+        "target": {
+          "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+          "theorem": "pushforward_lax_mu_comparison_lhs_tmul"
+        },
+        "session": {
+          "id": "session_31",
+          "model": "opus"
+        },
+        "findings": {
+          "blocker": "inner unit value lemma pushforwardPushforwardAdj_unit_app_app_apply does NOT fire via simp only — the hadj' let-binding shadows the pushforwardPushforwardAdj form the lemma keys on",
+          "key_lemmas_used": [
+            "Adjunction.rightAdjointLaxMonoidal_μ",
+            "Adjunction.homEquiv_unit",
+            "PresheafOfModules.comp_app",
+            "ModuleCat.hom_comp",
+            "LinearMap.comp_apply"
+          ]
+        },
+        "attempts": [
+          {
+            "attempt": 1,
+            "strategy": "unfold mate tensorator to explicit adjunction form then split sectionwise into three legs",
+            "code_tried": "rw [Adjunction.rightAdjointLaxMonoidal_μ, Adjunction.homEquiv_unit]; rw [PresheafOfModules.comp_app, ModuleCat.hom_comp, LinearMap.comp_apply]; sorry",
+            "line_number": "4362",
+            "lean_error": "none (split fires; residual sorry on the inner unit value)",
+            "result": "partial",
+            "insight": "opaque mate-μ is now the explicit three-leg form (G.map (δ Gβ ≫ (ε⊗ₘε))).app W (unit.app Z .app W (m⊗ₜn)); genuine code advance over the opaque μ. Next: un-let hadj' / show-change to pushforwardPushforwardAdj form so the unit value lemma matches, then reduce δ Gβ/counit legs via restrictScalars_μ_app(_tmul) family mirroring rhs_tmul"
+          }
+        ],
+        "next_steps": "Expose pushforwardPushforwardAdj form (un-let hadj' or local show/change), apply pushforwardPushforwardAdj_unit_app_app_apply to reduce unit to Z.map (counit).op, then δ Gβ/counit legs via restrictScalars-μ family. Do NOT route via hadj'.IsMonoidal (circular)."
+      },
+      {
+        "timestamp": "2026-06-19T17:06:00Z",
+        "status": "blocked",
+        "target": {
+          "file": "AlgebraicJacobian/Picard/TensorObjSubstrate/DualInverse/../TensorObjInverse.lean",
+          "theorem": "trivialisation_restrict_compat"
+        },
+        "session": {
+          "id": "session_31",
+          "model": "opus"
+        },
+        "findings": {
+          "blocker": "not attempted this iter — no prover lane dispatched on TensorObjInverse (single lane = TensorObjSubstrate); multi-hundred-LOC eqToHom residual gating the cocycle; blueprint sketch flagged too thin (iter-030 lvb)"
+        },
+        "attempts": [],
+        "next_steps": "Needs a thicker blueprint sketch before a prover can touch it (iter-030 lvb must-fix). Then a dedicated TensorObjInverse lane. Gates exists_tensorObj_inverse cocycle."
+      }
+    ]
+  },
+  {
+    "sessionId": "session_32",
+    "milestones": [
+      {
+        "timestamp": "2026-06-19T18:30:00Z",
+        "status": "partial",
+        "target": {
+          "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+          "theorem": "trivialisation_restrict_compat"
+        },
+        "session": {
+          "id": "session_32",
+          "model": "claude-opus-4-8"
+        },
+        "findings": {
+          "blocker": "S2-S5: the 4 (really 5, incl uι) per-constituent restrict-naturality squares do not exist in the codebase; each constituent (tensorObj_restrict_iso, dual_restrict_iso≫dualIsoOfIso, dual_unit_iso, tensorObj_unit_iso, uι) is a composite iso through pullback+sheafification, so each square is a bespoke multi-step sub-lemma with no precedent. The blueprint sketch treats them as routine and omits uι.",
+          "key_lemmas_used": [
+            "Scheme.Hom.resLE",
+            "image_preimage_of_le"
+          ]
+        },
+        "attempts": [
+          {
+            "attempt": 1,
+            "strategy": "subst the V≤U hypothesis to collapse both legs",
+            "code_tried": "subst hVU / rcases hVU with rfl",
+            "line_number": "211",
+            "lean_error": "hVU : V ≤ U is not an equation (V ≠ U in general)",
+            "result": "failed",
+            "insight": "the reindexing must be handled by eqToHom transport, not substitution"
+          },
+          {
+            "attempt": 2,
+            "strategy": "unfold the V-side trivialisation",
+            "code_tried": "simp only [restrictIsoUnitOfLE]",
+            "line_number": "211",
+            "lean_error": "no error but no cancellation: unfolds RHS to its 6-leg pullback chain, goal otherwise unchanged",
+            "result": "failed",
+            "insight": "no off-the-shelf reduction; structure must be chased per constituent"
+          },
+          {
+            "attempt": 3,
+            "strategy": "split into object equality + leg HEqs",
+            "code_tried": "congr 1",
+            "line_number": "211",
+            "lean_error": "produces object equality (=hobjU/hobjV) + two HEq legs that ARE the chart-dependent section maps",
+            "result": "partial",
+            "insight": "congr restates the telescope, no reduction"
+          },
+          {
+            "attempt": 4,
+            "strategy": "rotate to iso/Hom equation",
+            "code_tried": "rw [← Iso.eq_inv_comp]; apply SheafOfModules.Hom.ext",
+            "line_number": "211",
+            "lean_error": "no pattern match (goal already at .val.app section level)",
+            "result": "failed",
+            "insight": "goal is below the iso layer; needs presheaf-section naturality"
+          },
+          {
+            "attempt": 5,
+            "strategy": "build the chart-morphism scaffold (S1)",
+            "code_tried": "set j := Scheme.Hom.resLE (𝟙 X) U V hVU' ; have hjι : j ≫ U.ι = V.ι := by rw [Scheme.Hom.resLE_comp_ι, Category.comp_id] ; have hobjU := image_preimage_of_le U hVU ; have hobjV := image_preimage_of_le V le_rfl",
+            "line_number": "215-223",
+            "lean_error": "none — elaborates green-mod-sorry",
+            "result": "partial",
+            "insight": "S1 closed in-proof: chart morphism j and reindex endpoints proved; but they sit before a terminal sorry so they do not yet contribute to any closed step (auditor flags as dead scaffolding)"
+          }
+        ],
+        "next_steps": "Do NOT re-dispatch a blind prover lane (3rd non-progress). Effort-break lem:trivialisation_restrict_compat in the blueprint: extract 5 named per-constituent restrict-naturality squares (incl the omitted uι constituent) each with its own informal proof, then a telescope assembly. Build the tensorObj_restrict_iso square first as the structural template. This is a sizeable infrastructure sub-project, not a one-tactic gap."
+      },
+      {
+        "timestamp": "2026-06-19T18:30:00Z",
+        "status": "blocked",
+        "target": {
+          "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+          "theorem": "exists_tensorObj_inverse"
+        },
+        "session": {
+          "id": "session_32",
+          "model": "claude-opus-4-8"
+        },
+        "findings": {
+          "blocker": "Gated entirely on trivialisation_restrict_compat (L244 sorry). The cocycle hedge `first | <derivation> | sorry` was left untouched; even its protected branch rewrites via trivialisation_restrict_compat, so it is transitively sorry-contaminated and cannot close until L244 closes.",
+          "key_lemmas_used": [
+            "trivialisation_restrict_compat",
+            "tensorObj_unit_self_duality_collapse",
+            "dualIsoOfIso_trans",
+            "tensorObjIsoOfIso_trans"
+          ]
+        },
+        "attempts": [
+          {
+            "attempt": 1,
+            "strategy": "verify the cocycle hedge must stay (not prematurely strip)",
+            "code_tried": "inspect L449 goal: legs (U i).ι⁻¹V vs (U j).ι⁻¹V with distinct eM i/eM j",
+            "line_number": "449",
+            "lean_error": "n/a (inspection)",
+            "result": "partial",
+            "insight": "the two erw [trivialisation_restrict_compat …] alone do NOT close the cocycle (legs keep distinct trivialisations); hfact/hiso/hchain genuinely required; the 'never executed' linter notes are first-combinator failed-branch artifacts, not early closure. Correctly left | sorry in place."
+          }
+        ],
+        "next_steps": "Strip the `first | … |` wrapper ONLY after trivialisation_restrict_compat is sorry-free and green, and re-verify the protected branch fires. Until then this target is correctly blocked. lvb confirms the hedge is faithful (no shape-masking)."
+      }
+    ]
+  },
+  {
+    "sessionId": "session_33",
+    "milestones": [
+      {
+        "timestamp": "2026-06-20T04:10:00Z",
+        "status": "blocked",
+        "target": {
+          "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+          "theorem": "pushforward_lax_mu_comparison_lhs_tmul"
+        },
+        "session": {
+          "id": "session_33",
+          "model": "claude-opus-4-8"
+        },
+        "findings": {
+          "blocker": "Lane left the file RED: the added `have hunit := …` block fails synthInstance (`MonoidalCategoryStruct (PresheafOfModules X.ringCatSheaf.obj)` at L4369). Non-recoverable in place per lean-auditor. The mate is already unfolded to the 3-leg form; residual = inner unit value `(hadj'.unit.app Z).app W (m⊗ₜn)`, blocked 5 iters by the `hadj'` let-binding shadowing the `pushforwardPushforwardAdj` form the value lemma keys on.",
+          "key_lemmas_used": [
+            "Adjunction.rightAdjointLaxMonoidal_μ",
+            "Adjunction.homEquiv_unit",
+            "pushforwardPushforwardAdj_unit_app_app_apply",
+            "pushforward_lax_mu_comparison_rhs_tmul"
+          ]
+        },
+        "attempts": [
+          {
+            "attempt": 1,
+            "strategy": "After rw[comp_app,hom_comp,comp_apply], fire the unit value lemma directly via erw",
+            "code_tried": "erw [pushforwardPushforwardAdj_unit_app_app_apply]",
+            "line_number": "4363",
+            "lean_error": "kernel: unknown constant pushforward_lax_mu_comparison_lhs_tmul (file RED, downstream); whnf timeout at L4292",
+            "result": "failed",
+            "insight": "Bare erw does not key on the let-bound hadj' unit leg; also broke the build."
+          },
+          {
+            "attempt": 2,
+            "strategy": "Unfold the let-bindings first, then rw the value lemma",
+            "code_tried": "simp only [hadj', hadj]\\n  rw [pushforwardPushforwardAdj_unit_app_app_apply]",
+            "line_number": "4363",
+            "lean_error": "rewrite failed: did not find pattern (ModuleCat.Hom.hom (((pushforwardPushforwardAdj ?adj ?φ ?ψ ?H₁ ?H₂).unit.app ?M).app ?U)) ?x in target",
+            "result": "failed",
+            "insight": "simp only [hadj',hadj] does not expose the keyed form; the unit appears wrapped as δ-map composite, not the bare unit-app the lemma keys on."
+          },
+          {
+            "attempt": 3,
+            "strategy": "Build the value lemma with EXPLICIT args as a local `have hunit`, then erw it (mirror pushforwardComp_lax_μ's have…;erw pattern)",
+            "code_tried": "have hunit := pushforwardPushforwardAdj_unit_app_app_apply f.isOpenEmbedding.isOpenMap.adjunction β (Hom.toRingCatSheafHom f).hom (…) (…) (Z := pushforward(A) ⊗ pushforward(B)) W (m ⊗ₜ n)\\n  erw [hunit]",
+            "line_number": "4365",
+            "lean_error": "synthInstanceFailed: MonoidalCategoryStruct (PresheafOfModules X.ringCatSheaf.obj) at L4369",
+            "result": "failed",
+            "insight": "The `⊗` of the two pushforward objects resolves its monoidal instance on `X.ringCatSheaf.obj` (defeq-but-not-syntactic to `X.presheaf ⋙ forget₂`); the `show … from` ascription on each factor does not redirect the outer tensor's instance. Carrier-diamond pathology."
+          },
+          {
+            "attempt": 4,
+            "strategy": "Add `show _root_.PresheafOfModules (X.presheaf ⋙ forget₂ CommRingCat RingCat) from` ascriptions on each tensor factor",
+            "code_tried": "((show _root_.PresheafOfModules (X.presheaf ⋙ forget₂ CommRingCat RingCat) from (pushforward …).obj …) ⊗ (show … from …))",
+            "line_number": "4369",
+            "lean_error": "synthInstanceFailed: MonoidalCategoryStruct (PresheafOfModules X.ringCatSheaf.obj) (unchanged)",
+            "result": "failed",
+            "insight": "Per-factor ascription does not fix the outer `⊗` instance resolution. Block is non-recoverable in place — must revert to bare sorry."
+          }
+        ],
+        "next_steps": "iter-034: (1) deterministic plan-phase REVERT of L4365–4379 to a single `sorry` to restore green + 141 stripped markers (NOT a prover lane). (2) Route A escalation condition is LIVE (iter-033 plan: lhs_tmul fail ⇒ escalate to user, no more helper cycles). Surface in TO_USER. Do NOT re-assign the explicit-args `have hunit` approach — the carrier-diamond + let-binding double-block is confirmed dead."
+      },
+      {
+        "timestamp": "2026-06-20T04:10:00Z",
+        "status": "blocked",
+        "target": {
+          "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+          "theorem": "trivialisation_restrict_compat"
+        },
+        "session": {
+          "id": "session_33",
+          "model": "claude-opus-4-8"
+        },
+        "findings": {
+          "blocker": "Not attempted this iter (no lane — effort-broken into 5 squares S2–S4c in plan phase per pc033). S1 scaffold remains; S2–S5 open. iter-034 template = S2 (tensorObj_restrict_iso).",
+          "key_lemmas_used": []
+        },
+        "attempts": [
+          {
+            "attempt": 1,
+            "strategy": "No prover attempt — effort-breaker decomposition only (plan phase)",
+            "code_tried": "",
+            "line_number": "211",
+            "lean_error": "",
+            "result": "partial",
+            "insight": "Blueprint split into 5 named per-constituent restrict-naturality squares + telescope; S2 is the iter-034 prover template."
+          }
+        ],
+        "next_steps": "iter-034: dispatch S2 (tensorObj_restrict_iso) as the template square, but ONLY after the lhs_tmul revert restores green (TensorObjInverse imports the Substrate root)."
+      },
+      {
+        "timestamp": "2026-06-20T04:10:00Z",
+        "status": "blocked",
+        "target": {
+          "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+          "theorem": "exists_tensorObj_inverse"
+        },
+        "session": {
+          "id": "session_33",
+          "model": "claude-opus-4-8"
+        },
+        "findings": {
+          "blocker": "Gated transitively on trivialisation_restrict_compat. NEW (lean-auditor iter033): the `first | <derivation> | sorry` hedge's `| sorry` branch is DEAD CODE — the first branch always fires because sorry-proved lemmas are valid rewrite sources in Lean 4. So the cocycle is sorry-contaminated via the rewrite through the sorry'd trivialisation_restrict_compat, and the comment at L469–472 misdescribes the hedge as if the sorry branch were active.",
+          "key_lemmas_used": []
+        },
+        "attempts": [
+          {
+            "attempt": 1,
+            "strategy": "Not attempted (gated)",
+            "code_tried": "",
+            "line_number": "492",
+            "lean_error": "",
+            "result": "partial",
+            "insight": "Hedge structure is misleading; fix the comment, and recognise closure depends solely on trivialisation_restrict_compat."
+          }
+        ],
+        "next_steps": "No direct work until trivialisation_restrict_compat closes. Planner: correct the L469–472 hedge comment (dead `| sorry`)."
+      }
+    ]
   }
 ]

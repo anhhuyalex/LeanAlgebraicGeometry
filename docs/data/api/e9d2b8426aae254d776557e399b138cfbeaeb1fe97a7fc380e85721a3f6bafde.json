@@ -1,0 +1,172 @@
+[
+  {
+    "timestamp": "2026-06-20T03:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "tensorPowAdd_assoc"
+    },
+    "session": {
+      "id": "session_18",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Two synonym comp/whisker diamonds in the succ branch: (a) leading (tensorObjAssoc L^k L L^m').hom ▷ L^m'' will not distribute under MonoidalCategory.comp_whiskerRight because the ≫ inside the hand-built iso is native instCategory-comp while the canonical ▷/tail are LocalizedMonoidal-comp; the hc comp-bridge (keyed to either X.Modules or LocalizedMonoidal) does NOT fire on this junction. (b) ih supplies a SINGLE whisker tensorObjWhiskerRightIso (tensorPowAdd k m') (L^m'') while the goal carries the DOUBLE whisker (tensorPowAdd k m').hom ▷ L ▷ L^m'' — needs whisker_exchange + reassoc, and tensorPowAdd (k+1+m') m'' must first unfold via k+1+m'=(k+m')+1.",
+      "key_lemmas_used": [
+        "tensorBraiding_eq",
+        "Iso.trans_inv",
+        "Iso.symm_inv",
+        "MonoidalCategory.whiskerLeftIso_inv",
+        "MonoidalCategory.whiskerRightIso_inv",
+        "Iso.hom_inv_id_assoc",
+        "MonoidalCategory.whiskerLeft_hom_inv_assoc",
+        "Iso.cancel_iso_inv_left"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Enhanced canonical telescoping mirroring tensorPowAdd_zero_right succ: after `apply Iso.ext`, augment the banked first-move `simp only` with `tensorBraiding_eq` (bridge to canonical β_), the .inv-direction expanders (Iso.trans_inv, Iso.symm_inv, whiskerLeftIso_inv, whiskerRightIso_inv) and cancellers (Iso.hom_inv_id_assoc, whiskerLeft_hom_inv_assoc, Iso.cancel_iso_inv_left, whiskerLeft_comp, comp_whiskerRight).",
+        "code_tried": "apply Iso.ext; simp only [tensorPowAdd, tensorObjWhiskerRightIso_eq, tensorObjWhiskerLeftIso_eq, tensorObjAssoc, tensorBraiding_eq, Iso.trans_hom, Iso.symm_hom, Iso.trans_inv, Iso.symm_inv, MonoidalCategory.whiskerLeftIso_hom, MonoidalCategory.whiskerLeftIso_inv, MonoidalCategory.whiskerRightIso_inv, MonoidalCategory.whiskerLeft_comp, MonoidalCategory.comp_whiskerRight, Category.assoc, Iso.hom_inv_id_assoc, MonoidalCategory.whiskerLeft_hom_inv_assoc, Iso.cancel_iso_inv_left]",
+        "line_number": "3141-3151",
+        "lean_error": "no error (compiles); residual goal still open — both sides reduced to canonical form (β_ braiding, α_-expanded associators, many tensorObjIso bridge pairs cancelled) but the canonical braided-pentagon coherence + tensorPowAdd k _ atoms remain",
+        "goal_before": "case succ.w ... ⊢ (tensorObjWhiskerRightIso (tensorPowAdd (k+1) m') (L^m'') ≪≫ tensorPowAdd (k+1+m') m'' ≪≫ eqToIso _).hom = ((tensorPow (k+1)).tensorObjAssoc (L^m') (L^m'') ≪≫ (tensorPow (k+1)).tensorObjWhiskerLeftIso (tensorPowAdd m' m'') ≪≫ tensorPowAdd (k+1) (m'+m'')).hom",
+        "goal_after": "large canonical-form residual; leading (tensorObjAssoc L^k L L^m').hom ▷ L^m'' segment uncancellable + double-whisker ih mismatch",
+        "result": "partial",
+        "insight": "Strict advance over the iter-017 banked first move (which left braiding un-bridged and the .symm associators folded). Banked compiling. The residual is genuinely the braided-pentagon coherence on L^k,L,L^m',L^m'' — assoc-∀L, NOT comm; closes via hexagon_forward+pentagon+whisker_exchange, NO β=id."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Avoid blocker (a) by proving at the ISO level before Iso.ext. Added 4 functoriality helpers tensorObjWhiskerRightIso_trans/_refl, tensorObjWhiskerLeftIso_trans/_refl to distribute tensorObjWhiskerRightIso (tensorPowAdd (k+1) m') _ over the succ-recursion segments keeping tensorPowAdd k _ folded for rw [ih].",
+        "code_tried": "private lemma tensorObjWhiskerRightIso_trans ... := by dsimp only [tensorObjWhiskerRightIso]; rw [(toPresheafOfModules X).map_comp, MonoidalCategory.comp_whiskerRight, sheafification.map_comp]",
+        "line_number": "3032 (helper, since reverted)",
+        "lean_error": "Tactic `rewrite` failed: Did not find an occurrence of the pattern (at the comp_whiskerRight / whiskerLeftIso_trans steps); after dsimp only [tensorObjWhiskerRightIso] the ▷/◁ᵢ lose their MonoidalPresheaf X synonym head so comp_whiskerRight (C := MonoidalPresheaf X) fails to match; `show … from comp_whiskerRight _ _ _` fails to synthesize MonoidalCategoryStruct X.PresheafOfModules",
+        "goal_before": "⊢ sheafification.map ((toPresheafOfModules X).map (e.hom ≫ f.hom) ▷ (toPresheafOfModules X).obj G) = sheafification.map (...e.hom...) ≫ sheafification.map (...f.hom...)",
+        "goal_after": "n/a — helpers reverted to keep file compiling",
+        "result": "failed",
+        "insight": "The iso-level route is NOT diamond-free — it hits the MonoidalPresheaf X vs X.PresheafOfModules synonym diamond, the presheaf-level analogue of blocker (a). DEAD END: do NOT re-add these helpers with a plain dsimp;rw[map_comp,comp_whiskerRight,map_comp] body. Helpers must first re-expose the synonym head (change/show onto MonoidalPresheaf X-comp) before any rw/simp."
+      }
+    ],
+    "next_steps": "Build whiskering-functoriality helpers WITH the synonym head re-exposed (change/show onto MonoidalPresheaf X-comp before comp_whiskerRight/whiskerLeftIso_trans). Then switch succ proof to iso level, distribute outer tensorObjWhiskerRightIso/LeftIso over tensorPowAdd (k+1) _ segments keeping tensorPowAdd k _ folded, unfold tensorPowAdd (k+1+m') m'' via k+1+m'=(k+m')+1, rw [ih], close residual canonical braided coherence by hexagon_forward+pentagon+whisker_exchange (NO β=id). If it resists again, dispatch effort-breaker to split the succ case at the synonym-head re-exposure seam."
+  },
+  {
+    "timestamp": "2026-06-20T03:30:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "sectionsMul_mul_assoc"
+    },
+    "session": {
+      "id": "session_18",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Gated on B6-succ tensorPowAdd_assoc closing (PROGRESS objective: B7 only after B6 succ). B5 dependency already cleared iter-017.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Not attempted — gated on B6 succ per PROGRESS objective.",
+        "code_tried": "n/a",
+        "line_number": "3181",
+        "lean_error": "n/a",
+        "goal_before": "n/a",
+        "goal_after": "n/a",
+        "result": "partial",
+        "insight": "Assembly mirrors sectionsMul_mul_one: ingredients (1)=B5 + (3)=B6 named; only the (2) slide remains once B6 closes."
+      }
+    ],
+    "next_steps": "Attempt only after B6-succ closes."
+  },
+  {
+    "timestamp": "2026-06-20T03:30:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "tensorBraiding_self_eq_id_of_isInvertible"
+    },
+    "session": {
+      "id": "session_18",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Invertibility-gated FUTURE work (comm chain), no consumer (GCommSemiring unbuilt). Depends on Module.Invertible.tensorProductComm_eq_refl which is an Unknown constant in the current import set (Mathlib.RingTheory.PicardGroup not imported).",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Not attempted — deferred comm chain.",
+        "code_tried": "n/a",
+        "line_number": "3199",
+        "lean_error": "n/a",
+        "goal_before": "n/a",
+        "goal_after": "n/a",
+        "result": "partial",
+        "insight": "Mathlib anchor name unverified; resolve before building."
+      }
+    ],
+    "next_steps": "Deferred; resolve the Module.Invertible.tensorProductComm_eq_refl name + import first."
+  },
+  {
+    "timestamp": "2026-06-20T03:30:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "tensorPowAdd_comm"
+    },
+    "session": {
+      "id": "session_18",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Invertibility-gated FUTURE comm chain; no consumer.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Not attempted — deferred.",
+        "code_tried": "n/a",
+        "line_number": "3214",
+        "lean_error": "n/a",
+        "goal_before": "n/a",
+        "goal_after": "n/a",
+        "result": "partial",
+        "insight": "Gated on tensorBraiding_self_eq_id_of_isInvertible."
+      }
+    ],
+    "next_steps": "Deferred."
+  },
+  {
+    "timestamp": "2026-06-20T03:30:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "sectionsMul_mul_comm"
+    },
+    "session": {
+      "id": "session_18",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Invertibility-gated FUTURE comm chain; no consumer (GCommSemiring unbuilt). Mathematically false for general L.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Not attempted — deferred.",
+        "code_tried": "n/a",
+        "line_number": "3256",
+        "lean_error": "n/a",
+        "goal_before": "n/a",
+        "goal_after": "n/a",
+        "result": "partial",
+        "insight": "Requires β_{L,L}=𝟙 (invertibility); typed sorry left at the precise stuck point rather than weakening the signature."
+      }
+    ],
+    "next_steps": "Deferred."
+  }
+]

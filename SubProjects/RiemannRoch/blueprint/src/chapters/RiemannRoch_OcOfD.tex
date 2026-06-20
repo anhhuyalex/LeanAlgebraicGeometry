@@ -1,0 +1,634 @@
+% archon:covers AlgebraicJacobian/RiemannRoch/OcOfD.lean
+
+\chapter{The invertible sheaf \(\mathcal O_C(D)\) of a Weil divisor (RR.2\(_\ast\))}
+\label{chap:RiemannRoch_OcOfD}
+
+% SOURCE: Hartshorne, \emph{Algebraic Geometry}, II~\S6, pp.~144--145
+% (definition of \(\mathscr L(D)\); Proposition 6.13; Remark 6.17.1;
+% Proposition 6.18) and IV.1, p.~296 (the inductive-step short exact
+% sequence). Read directly from
+% references/hartshorne-algebraic-geometry.pdf, PDF pages 161--162 and
+% 313, by rendering the scanned page images and transcribing the
+% statements character-by-character (the PDF has no text layer). Stacks
+% pointers (tag-level, not verbatim-quoted): 02RW (Weil divisors), 0AUW
+% (the sheaf \(\mathcal O_X(D)\) from a Weil divisor), 0BE3 (degree-zero of
+% a principal divisor on a complete nonsingular curve).
+
+\section{Setup and motivation}
+
+This chapter is a satellite of \texttt{RR.2}
+(\cref{chap:RiemannRoch_RRFormula}); together with \texttt{RR.1}
+(\cref{chap:RiemannRoch_WeilDivisor}), \texttt{RR.3}
+(\cref{chap:RiemannRoch_OCofP}), and \texttt{RR.4}
+(\texttt{RiemannRoch\_RationalCurveIso.tex}) it forms the four-stage
+sub-build closing the project's headline \emph{RR bridge}
+\[
+  \mathtt{genusZero\_curve\_iso\_P1}
+  \,\colon\,
+  \text{a smooth proper geometrically irreducible curve \(C / \bar k\) with
+  \(g(C) = 0\) is isomorphic to \(\mathbb P^1_{\bar k}\).}
+\]
+The Hartshorne~IV.1.3.5 chain consumed by \cref{prop:rigidity_genus0_curve_to_AV}
+of \texttt{AbelianVarietyRigidity.tex} relies on the invertible-sheaf
+functor
+\[
+  \mathcal O_C(-) \;\colon\; \mathrm{Div}(C) \;\longrightarrow\;
+  \mathbf{Sh}(C, \mathbf{Mod}_{\bar k})
+\]
+sending a Weil divisor \(D = \sum_i n_i [P_i]\) to its associated invertible
+sheaf \(\mathcal O_C(D)\) on \(C\). The Lean entry-point
+\texttt{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf} of
+\texttt{AlgebraicJacobian/RiemannRoch/RRFormula.lean} (line~168) currently
+encodes this functor as a typed-\texttt{sorry} \texttt{noncomputable def}
+with no chapter pinning. This chapter supplies the missing pinning by
+blueprinting the Lean file \texttt{AlgebraicJacobian/RiemannRoch/OcOfD.lean}
+(to be created in iter-183), where the body of \texttt{sheafOf} and its
+three immediate corollaries will live.
+
+\paragraph{Why this chapter is gated to \texttt{RR.2}.} The
+\(\chi\)-identity proof of \cref{thm:euler_char_eq_deg_plus_one_minus_genus}
+in \texttt{RR.2} is an induction on the Weil divisor \(D\) via the
+``\(D \rightsquigarrow D + [Y]\)'' step of Hartshorne~IV.1.3. That step
+intrinsically references the body of \texttt{sheafOf}: it asks for the
+short exact sequence
+\[
+  0 \to \mathcal O_C(D) \to \mathcal O_C(D + [Y]) \to k(Y)^{[\text{at } Y]}
+  \to 0
+\]
+to be exact in \(\mathbf{Coh}(C)\), which is not a statement on the
+\emph{signature} of \texttt{sheafOf} but on its \emph{body}. The iter-181
+Lane H factoring of \texttt{RR.2} consequently
+landed two helper sorries
+(\texttt{eulerCharacteristic\_sheafOf\_zero},
+\texttt{eulerCharacteristic\_sheafOf\_succ}) that are
+\emph{intrinsically gated} on the body of \texttt{sheafOf}. Until this
+chapter pins the body, those helpers remain vacuous regardless of how
+much \(\chi\)-machinery \texttt{RR.2} adds on top.
+
+\paragraph{Why this chapter is the entry-point for \texttt{RR.3}.} The
+existing \texttt{RR.3} chapter (\cref{chap:RiemannRoch_OCofP}) constructs
+the line bundle \(\mathcal O_C([P])\) associated to a \emph{closed point}
+\(P \in C\) directly, bypassing the Weil-divisor packaging. The
+\cref{lem:sheafOf_singlePoint} below makes this bypass mathematically
+coherent by exhibiting \(\mathcal O_C(D)\) at \(D = [P]\) as canonically
+isomorphic to \cref{def:lineBundleAtClosedPoint}. With this isomorphism in
+hand, \texttt{RR.3}'s downstream consumption of
+\(\dim_{\bar k} H^0(C, \mathcal O_C(P)) = 2\) via the
+\(\chi\)-identity routes through \texttt{sheafOf} cleanly.
+
+\paragraph{Why this chapter is the entry-point for \texttt{RR.4}.} The
+two pins consumed by the \texttt{RR.4} chapter
+(\texttt{RiemannRoch\_RationalCurveIso.tex})
+that translate Riemann--Roch outputs into the function-field/degree
+language of \(C\) both reference \(\mathcal O_C(D)\) for general \(D\) (not
+just \(D = [P]\)): the function-field-degree bridge takes a divisor
+\(D \in \mathrm{Div}(C)\) and reads off \(\deg(D)\) from the
+\texttt{sheafOf}-associated invertible sheaf, while the
+Weil-divisor / line-bundle correspondence is the substance of
+Hartshorne's Proposition~6.15 (which the present chapter pins via
+\cref{lem:sheafOf_singlePoint}).
+
+\paragraph{Standing hypotheses.} Throughout this chapter, \(\bar k\) is an
+algebraically closed field and \(C\) is a smooth proper geometrically
+irreducible curve over \(\bar k\). Concretely, the Lean signatures
+(\texttt{AlgebraicJacobian/RiemannRoch/OcOfD.lean}) carry the same
+typeclass package as the rest of the project's curve API:
+\begin{quote}
+  \texttt{\{kbar : Type u\} [Field kbar] [IsAlgClosed kbar]\\
+   (C : Over (Spec (.of kbar))) [IsProper C.hom]\\
+   \phantom{}\quad[SmoothOfRelativeDimension 1 C.hom]\\
+   \phantom{}\quad[GeometricallyIrreducible C.hom] [IsIntegral C.left]}
+\end{quote}
+The Weil divisor group \(\mathrm{Div}(C)\) is the one defined in
+\cref{def:codim1_cycles} of \texttt{RiemannRoch\_WeilDivisor.tex}; the
+prime-divisor data type is \cref{def:prime_divisor}; the order
+\(\ord_Q(f)\) at a prime divisor \(Q\) is \cref{def:order_at_point}; the
+principal divisor \(\div(f)\) of a non-zero rational function is
+\cref{def:principal_divisor}; the closed-point divisor \([P]\) is
+\cref{def:divisor_closed_point}. The line bundle at a closed point
+already constructed in \texttt{RR.3} is
+\cref{def:lineBundleAtClosedPoint}, and the present chapter's
+\cref{lem:sheafOf_singlePoint} makes the comparison
+\(\mathcal O_C([P]) = \mathcal O_C(D)|_{D = [P]}\) explicit.
+
+\paragraph{Route alignment with iter-182 \texttt{ocofp-sheaf-internalhom}
+analogy.} The iter-182 api-alignment analogy
+\texttt{analogies/ocofp-sheaf-internalhom.md} surveyed three candidate
+Mathlib paths for the closed-point specialisation \(\mathcal O_C([P])\):
+(i)~\texttt{Sheaf-internal-Hom} on \(\mathbf{SheafOfModules}\) (rejected:
+no \texttt{IdealSheafData \(\to\) SheafOfModules} realiser in Mathlib,
+no \(\mathbf{SheafOfModules}\) dual functor in Mathlib);
+(ii)~the abstract dual $\mathcal H\!om_{\mathcal O_C}(\mathcal I_P,
+\mathcal O_C)$ in a new \texttt{IdealSheafDual.lean} (rejected: high
+LOC cost in exchange for a single sheaf the project can build directly);
+(iii)~Hartshorne's \emph{subsheaf-of-\(\mathcal K_C\)} description (accepted).
+The present chapter adopts route~(iii) for the general
+\texttt{sheafOf \(D\)} as well, and \cref{lem:sheafOf_singlePoint} verifies
+that the general construction at \(D = [P]\) recovers the closed-point
+specialisation of \texttt{RR.3} on the nose. The subsheaf-of-\(\mathcal K_C\)
+recipe is mathematically Hartshorne's original (II~\S6, the definition of
+\(\mathscr L(D)\)) and was equally available for the closed-point case; the
+project's choice to use it both at the general \(D\) and at the \(D = [P]\)
+specialisation is what makes the comparison
+\(\mathcal O_C([P]) \cong \mathcal O_C(D)|_{D = [P]}\) a direct unfolding
+rather than a non-trivial isomorphism.
+
+\section{The invertible sheaf \(\mathcal O_C(D)\)}
+
+\begin{definition}\leanok
+[Invertible sheaf \(\mathcal O_C(D)\) of a Weil divisor]
+  \label{def:sheafOf}
+  \lean{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf}
+  \uses{def:codim1_cycles, def:prime_divisor, def:order_at_point,
+        def:Scheme_toModuleKPresheaf, thm:Scheme_toModuleKPresheaf_isSheaf}
+
+  % SOURCE: [Hartshorne], II.6, p.~144 (definition of the invertible
+  % sheaf \(\mathscr L(D)\) associated to a Cartier divisor on a scheme),
+  % and Remark~6.17.1, Proposition~6.18 + Proposition~6.15, p.~145
+  % (Cartier \(\leftrightarrow\) Weil correspondence on an integral
+  % locally factorial scheme; identification of \(\mathscr L(D)\) as a
+  % subsheaf of the constant sheaf at the function field \(K\)). Read from
+  % references/hartshorne-algebraic-geometry.pdf, PDF pages 161--162,
+  % transcribed character-by-character from rendered scanned page
+  % images (the PDF has no text layer).
+  % SOURCE QUOTE: "Definition. Let \(D\) be a Cartier divisor on a scheme
+  % \(X\), represented by \(\{(U_i, f_i)\}\) as above. We define a subsheaf
+  % \(\mathscr L(D)\) of the sheaf of total quotient rings \(\mathscr K\) by
+  % taking \(\mathscr L(D)\) to be the sub-\(\mathscr O_X\)-module of
+  % \(\mathscr K\) generated by \(f_i^{-1}\) on \(U_i\). This is well-defined,
+  % since \(f_i/f_j\) is invertible on \(U_i \cap U_j\), so \(f_i^{-1}\) and
+  % \(f_j^{-1}\) generate the same \(\mathscr O_X\)-module. We call
+  % \(\mathscr L(D)\) the \emph{sheaf associated to \(D\)}."
+  % SOURCE QUOTE: "Proposition 6.15. \emph{If \(X\) is an integral
+  % scheme, the homomorphism \(\mathrm{CaCl}\, X \to \mathrm{Pic}\, X\) of
+  % (6.14) is an isomorphism.} Proof. We have only to show that every
+  % invertible sheaf is isomorphic to a subsheaf of \(\mathscr K\), which
+  % in this case is the constant sheaf \(K\), where \(K\) is the function
+  % field of \(X\)."
+  % SOURCE QUOTE: "Remark 6.17.1. Clearly this gives a 1-1
+  % correspondence between effective Cartier divisors on \(X\) and
+  % \emph{locally principal} closed subschemes \(Y\), i.e., subschemes
+  % whose sheaf of ideals is locally generated by a single element.
+  % Note also that if \(X\) is an integral separated noetherian locally
+  % factorial scheme, so that the Cartier divisors correspond to Weil
+  % divisors by (6.11), then the effective Cartier divisors correspond
+  % exactly to the effective Weil divisors."
+  \textit{Source: Hartshorne, II.6, p.~144 (the definition of
+  \(\mathscr L(D)\)), Proposition~6.15 (the constant-sheaf-at-\(K\)
+  identification on an integral scheme), and Remark~6.17.1 (Weil
+  divisors and Cartier divisors agree on an integral separated
+  noetherian locally factorial scheme).}
+  Let \(C\) be a smooth proper geometrically irreducible curve over
+  \(\bar k\) and let \(D = \sum_{Q} n_Q [Q] \in \mathrm{Div}(C)\) be a Weil divisor
+  on \(C\), with the formal sum indexed by prime divisors \(Q\) of \(C\) and
+  supported on a finite set \(\{Q : n_Q \neq 0\}\)
+  (\cref{def:codim1_cycles}). The \emph{invertible sheaf
+  \(\mathcal O_C(D)\) associated to \(D\)}, also written
+  \(\mathcal O_C(D) := \mathscr L(D)\) in Hartshorne's notation, is the
+  sub-\(\mathcal O_C\)-module of the constant sheaf
+  \(\mathcal K_C \cong K(C)\) (Proposition~6.15: on an integral scheme the
+  sheaf of total quotient rings is the constant sheaf at the function
+  field) defined section-wise by
+  \[
+    \Gamma\bigl(U, \mathcal O_C(D)\bigr) \;:=\;
+    \{\, 0 \,\} \;\cup\;
+    \bigl\{\, f \in K(C)^{\times} \;\big|\;
+      \ord_Q(f) \;\geq\; -\,n_Q \text{ for every prime divisor }
+      Q \text{ of } C \text{ with } Q \in U \bigr\}
+  \]
+  for each open \(U \subseteq C\). Restriction along \(V \hookrightarrow U\)
+  is the identity on the underlying carrier \(K(C)\), which preserves
+  membership (a smaller open imposes \emph{fewer} order constraints, so
+  the constraint set on \(U\) embeds into the constraint set on \(V\)). The
+  \(\bar k\)-module structure on
+  \(\Gamma(U, \mathcal O_C(D))\) is restricted from the
+  \(\bar k\)-module structure on \(K(C)\) (a \(\bar k\)-scalar multiple of a
+  rational function has the same order at every prime divisor).
+
+  \paragraph{Equivalence with the Cartier-divisor description.} The
+  formal sum \(D = \sum_Q n_Q [Q]\) packages, on a curve where prime
+  divisors are exactly closed points and the local rings at prime
+  divisors are DVRs (smoothness \(+\) dimension~\(1\)), the Cartier-divisor
+  data \(\{(U_i, f_i)\}\) of Hartshorne's definition: locally on a small
+  open \(U_i\) containing exactly one prime divisor \(Q\) in the support of
+  \(D\), pick a uniformiser \(\pi_Q \in K(C)\) at \(Q\) and set
+  \(f_i := \pi_Q^{n_Q}\); on opens disjoint from the support of \(D\), set
+  \(f_i := 1\). The transitions on overlaps \(U_i \cap U_j\) are units in
+  \(\mathcal O_{C, Q}^{\times}\) for each prime \(Q\) in the overlap (any
+  two uniformisers differ by a unit, by the DVR structure), so the
+  \(\{(U_i, f_i)\}\) define a Cartier divisor whose Weil-divisor image
+  under Hartshorne's (6.11) is the original \(D\). The
+  ``\(f_i^{-1}\)-generated'' subsheaf of \(\mathcal K_C\) from Hartshorne's
+  definition then coincides with the section-wise description above:
+  the local generator \(f_i^{-1} = \pi_Q^{-n_Q}\) has order \(-n_Q\) at \(Q\),
+  so the local sections are exactly \(f \in K(C)\) with
+  \(\ord_Q(f \cdot \pi_Q^{n_Q}) \geq 0\), i.e.\ \(\ord_Q(f) \geq -n_Q\), on
+  \(U_i\).
+
+  Hartshorne's Proposition~6.13(a) (see
+  \cref{sec:sheaf-property-correctness})
+  then guarantees that the resulting subsheaf $\mathcal O_C(D) \subset
+  \mathcal K_C$ is an invertible sheaf on $C$, independently of the
+  choice of uniformisers \(\pi_Q\) (any two choices differ by a unit, so
+  they generate the same \(\mathcal O_C\)-submodule).
+
+  \paragraph{Lean signature scope.} The Lean definition
+  \texttt{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf} takes a Weil
+  divisor \(D : C.\text{left.WeilDivisor}\) and returns a
+  \(\texttt{Sheaf}~J~(\mathbf{Mod}_{\bar k})\) on
+  \(C.\text{left.toTopCat}\), where
+  \(J = \texttt{Opens.grothendieckTopology C.left.toTopCat}\) is the
+  standard topology on the topological space underlying \(C\). The
+  closed-point specialisation \(\mathcal O_C([P])\) is
+  \cref{def:lineBundleAtClosedPoint} of
+  \cref{chap:RiemannRoch_OCofP}; their agreement at \(D = [P]\) is
+  \cref{lem:sheafOf_singlePoint} below. The construction follows
+  the iter-182 \texttt{ocofp-sheaf-internalhom} recipe in
+  \texttt{analogies/}: presheaf-by-hand via per-open
+  \(\bar k\)-submodules of the function field, sheaf property reduced to
+  the locality of the order conditions at the stalks of the prime
+  divisors. The declaration is \texttt{noncomputable}.
+\end{definition}
+
+\section{Immediate corollaries}
+
+\begin{lemma}\leanok
+[Sheaf of the zero divisor is the structure sheaf]
+  \label{lem:sheafOf_zero}
+  \lean{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf_zero}
+  \uses{def:sheafOf}
+
+  Let \(C\) be a smooth proper geometrically irreducible curve over
+  \(\bar k\). Then the invertible sheaf associated to the zero divisor
+  \(0 \in \mathrm{Div}(C)\) is canonically the structure sheaf:
+  \[
+    \mathcal O_C(0) \;=\; \mathcal O_C
+  \]
+  as sub-\(\mathcal O_C\)-modules of \(\mathcal K_C\), equivalently as
+  objects in \(\mathbf{Sh}(C, \mathbf{Mod}_{\bar k})\).
+\end{lemma}
+
+\begin{proof}
+  
+  At \(D = 0\) the coefficient \(n_Q = 0\) at every prime divisor \(Q\), so the
+  section condition of \cref{def:sheafOf} reduces, on every open
+  \(U \subseteq C\), to
+  \[
+    \Gamma\bigl(U, \mathcal O_C(0)\bigr)
+    \;=\; \{ 0 \} \cup \{ f \in K(C)^{\times} \;|\;
+      \ord_Q(f) \geq 0 \text{ for every prime divisor } Q \in U \}.
+  \]
+  By the local description of the structure sheaf on the integral
+  scheme \(C\) (the regular functions on \(U\) are exactly the rational
+  functions whose order is non-negative at every prime divisor of
+  \(C\) landing in \(U\); this is the standard ``non-negative order \(=\)
+  regular'' identification, e.g.\ Hartshorne~II~\S6 immediately before
+  Proposition~6.11), the right-hand side is precisely
+  \(\Gamma(U, \mathcal O_C)\). The restriction maps on both sides are
+  the identity on \(K(C)\), so the equality of presheaves promotes to an
+  equality of sub-\(\mathcal O_C\)-modules of \(\mathcal K_C\).
+\end{proof}
+
+\begin{lemma}\leanok
+[Sheaf at a single closed point is the line bundle of
+\cref{def:lineBundleAtClosedPoint}]
+  \label{lem:sheafOf_singlePoint}
+  \lean{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf_singlePoint}
+  \uses{def:sheafOf, def:divisor_closed_point, def:prime_divisor,
+        def:lineBundleAtClosedPoint}
+
+  Let \(C\) be a smooth proper geometrically irreducible curve over
+  \(\bar k\) and let \(P \in C\) be a closed point, viewed as a Weil divisor
+  \([P] \in \mathrm{Div}(C)\) via \cref{def:divisor_closed_point}. Then the
+  invertible sheaf \(\mathcal O_C([P])\) of \cref{def:sheafOf} agrees on
+  the nose with the line bundle of the closed point
+  \(\mathcal O_C(P)\) of \cref{def:lineBundleAtClosedPoint}:
+  \[
+    \mathcal O_C(D)\bigl|_{D = [P]}
+    \;=\; \texttt{lineBundleAtClosedPoint}_{P}
+  \]
+  as sub-\(\mathcal O_C\)-modules of \(\mathcal K_C\), equivalently as
+  objects in \(\mathbf{Sh}(C, \mathbf{Mod}_{\bar k})\).
+\end{lemma}
+
+\begin{proof}
+  
+  Unfold both definitions. On the \texttt{sheafOf} side, the formal sum
+  \([P]\) has coefficients \(n_Q = 1\) if \(Q = P\) and \(n_Q = 0\) otherwise
+  (where \(P\) is identified with the prime divisor it determines by
+  \cref{def:divisor_closed_point}). Thus
+  \(\Gamma(U, \mathcal O_C([P]))\) contains \(0\) and those
+  \(f \in K(C)^{\times}\) satisfying \(\ord_Q(f) \geq 0\) for every prime
+  divisor \(Q \in U\) with \(Q \neq P\), plus \(\ord_P(f) \geq -1\) if
+  \(P \in U\).
+
+  On the \cref{def:lineBundleAtClosedPoint} side, the same conditions
+  are exactly the ones extracted by
+  \cref{lem:lineBundleAtClosedPoint_globalSections_iff} of
+  \texttt{RR.3}, at every open \(U\) (not only at the global section
+  \(U = C\)): a rational function \(f \in K(C)\) is a section of
+  \(\mathcal O_C(P)\) on \(U\) iff it lies in the structure sheaf at every
+  \(Q \in U \setminus \{P\}\) and has at most a simple pole at \(P\) when
+  \(P \in U\).
+
+  Restriction maps on both sides are the identity on \(K(C)\). The two
+  sub-\(\mathcal O_C\)-modules of \(\mathcal K_C\) are therefore equal
+  section-by-section as subsets of \(K(C)\), and the equality propagates
+  to an equality of sheaves of \(\mathcal O_C\)-modules. The
+  \(\bar k\)-module structure on both sides is the restriction of the
+  \(\bar k\)-module structure on \(K(C)\), so the identification is
+  \(\bar k\)-linear on each section.
+\end{proof}
+
+\begin{lemma}\leanok
+[Short exact sequence for \(D \rightsquigarrow D + [Y]\)]
+  \label{lem:sheafOf_ses_single_add}
+  \lean{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf_ses_single_add}
+  \uses{def:sheafOf, def:divisor_closed_point, def:prime_divisor}
+
+  % SOURCE: [Hartshorne], IV.1, p.~296 (the inductive step of the proof
+  % of Theorem~1.3, ``Next, let \(D\) be any divisor, and let \(P\) be any
+  % point...''). Read from
+  % references/hartshorne-algebraic-geometry.pdf, PDF page 313,
+  % transcribed character-by-character from the rendered scanned page
+  % image (the PDF has no text layer).
+  % SOURCE QUOTE: "We consider \(P\) as a closed subscheme of \(X\). Its
+  % structure sheaf is a skyscraper sheaf \(k\) sitting at the point \(P\),
+  % which we denote by \(k(P)\), and its ideal sheaf is \(\mathscr L(-P)\)
+  % by (II, 6.18). Therefore we have an exact sequence
+  % \(0 \to \mathscr L(-P) \to \mathscr O_X \to k(P) \to 0\).
+  % Tensoring with \(\mathscr L(D + P)\) we get
+  % \(0 \to \mathscr L(D) \to \mathscr L(D + P) \to k(P) \to 0\).
+  % (Since \(\mathscr L(D + P)\) is locally free of rank 1, tensoring by
+  % it does not affect the sheaf \(k(P)\).)"
+  \textit{Source: Hartshorne, IV.1, p.~296, the inductive step of the
+  proof of Theorem~1.3.}
+  Let \(C\) be a smooth proper geometrically irreducible curve over
+  \(\bar k\), let \(D \in \mathrm{Div}(C)\) be a Weil divisor, and let \(P \in C\) be
+  a closed point (equivalently, a prime divisor
+  \cref{def:prime_divisor} on a smooth curve). Then the inclusion
+  \(\mathcal O_C(D) \hookrightarrow \mathcal O_C(D + [P])\) of
+  sub-\(\mathcal O_C\)-modules of \(\mathcal K_C\) fits into a short exact
+  sequence
+  \[
+    0 \;\longrightarrow\; \mathcal O_C(D)
+    \;\longrightarrow\; \mathcal O_C(D + [P])
+    \;\longrightarrow\; k(P)
+    \;\longrightarrow\; 0
+  \]
+  in \(\mathbf{Coh}(C)\) (equivalently, in
+  \(\mathbf{Sh}(C, \mathbf{Mod}_{\bar k})\)), where \(k(P)\) denotes the
+  skyscraper sheaf at \(P\) with stalk \(\bar k\) (the residue field of \(P\)
+  is \(\bar k\) since \(\bar k\) is algebraically closed and \(P\) is a
+  \(\bar k\)-rational closed point).
+\end{lemma}
+
+\begin{proof}
+  
+  Hartshorne's argument (IV.1.3, the inductive step quoted above)
+  proceeds in two beats:
+
+  \emph{Beat 1 (the ideal-sheaf SES at \(P\)).} The closed-subscheme
+  inclusion \(P \hookrightarrow C\) has structure sheaf
+  \(\mathcal O_P \cong k(P)\) (a skyscraper at \(P\) with stalk \(\bar k\)),
+  and Hartshorne's Proposition~II.6.18 identifies its ideal sheaf as
+  \(\mathcal I_P = \mathcal O_C(-[P])\) (the sub-\(\mathcal O_C\)-module of
+  \(\mathcal K_C\) generated by a local uniformiser \(\pi_P\) at \(P\) and by
+  \(1\) away from \(P\), i.e.\ the locally-principal ideal of the locally
+  principal closed subscheme \(P\)). This produces the structural short
+  exact sequence
+  \[
+    0 \;\longrightarrow\; \mathcal O_C(-[P])
+    \;\longrightarrow\; \mathcal O_C
+    \;\longrightarrow\; k(P)
+    \;\longrightarrow\; 0
+  \]
+  in \(\mathbf{Coh}(C)\).
+
+  \emph{Beat 2 (tensor with \(\mathcal O_C(D + [P])\)).} The line bundle
+  \(\mathcal O_C(D + [P])\) is locally free of rank~\(1\)
+  (Hartshorne~II.6.13(a)), so $- \otimes_{\mathcal O_C}
+  \mathcal O_C(D + [P])$ is exact on $\mathbf{Coh}(C)$ and preserves
+  the short exact sequence of Beat~1:
+  \[
+    0 \;\longrightarrow\; \mathcal O_C(-[P]) \otimes
+      \mathcal O_C(D + [P])
+    \;\longrightarrow\; \mathcal O_C \otimes \mathcal O_C(D + [P])
+    \;\longrightarrow\; k(P) \otimes \mathcal O_C(D + [P])
+    \;\longrightarrow\; 0.
+  \]
+  Three identifications collapse this to the claimed sequence:
+  \begin{itemize}
+    \item $\mathcal O_C(-[P]) \otimes \mathcal O_C(D + [P]) \cong
+      \mathcal O_C(D)$ (tensor product of line bundles is the
+      \(\mathrm{Div}(C)\)-additive operation $D' + D'' \mapsto \mathcal O_C(D' +
+      D'')$ via Hartshorne's Proposition~6.13(b), which is in turn the
+      ring-theoretic identity
+      $\pi_P^{-1} \cdot \pi_P^{1 + n_P^{D}} \cdot \prod_{Q \neq P}
+      \pi_Q^{n_Q^{D}} = \prod_Q \pi_Q^{n_Q^{D}}$ on the generating
+      rational functions, where \(n_Q^{D}\) is the coefficient of \(Q\)
+      in \(D\));
+    \item $\mathcal O_C \otimes \mathcal O_C(D + [P]) \cong
+      \mathcal O_C(D + [P])$ (the structure sheaf is the tensor unit);
+    \item \(k(P) \otimes \mathcal O_C(D + [P]) \cong k(P)\) (tensoring a
+      skyscraper at \(P\) by a locally free rank-\(1\) sheaf preserves the
+      skyscraper; concretely, at the stalk over \(P\) the line bundle
+      \(\mathcal O_C(D + [P])_P\) is a free \(\mathcal O_{C,P}\)-module of
+      rank one, and $k(P) \otimes_{\mathcal O_{C,P}} \mathcal O_{C,P}
+      \cong k(P)$ is just $k(P)$; away from $P$ the skyscraper is the
+      zero sheaf, on which the tensor is the zero sheaf).
+  \end{itemize}
+  Substituting yields
+  \[
+    0 \;\longrightarrow\; \mathcal O_C(D)
+    \;\longrightarrow\; \mathcal O_C(D + [P])
+    \;\longrightarrow\; k(P)
+    \;\longrightarrow\; 0,
+  \]
+  exact in \(\mathbf{Coh}(C)\), as required.
+
+  \emph{Compatibility with the structural inclusion.} The first map
+  \(\mathcal O_C(D) \hookrightarrow \mathcal O_C(D + [P])\) is the
+  inclusion of subsheaves of \(\mathcal K_C\): at the level of sections,
+  the constraint \(\ord_P(f) \geq -n_P^{D}\) of
+  \(\Gamma(U, \mathcal O_C(D))\) implies the weaker constraint
+  \(\ord_P(f) \geq -n_P^{D} - 1\) of \(\Gamma(U, \mathcal O_C(D + [P]))\)
+  when \(P \in U\) (constraints on \(Q \neq P\) are unchanged), and the map
+  is identity on \(K(C)\) at the carrier level. The second map
+  \(\mathcal O_C(D + [P]) \twoheadrightarrow k(P)\) is the evaluation
+  ``leading coefficient at the pole at \(P\)'' (i.e.\ the
+  \(\pi_P^{-(n_P^{D} + 1)}\)-coefficient in the Laurent expansion of \(f\)
+  at \(P\)), which is well-defined on \(\Gamma(U, \mathcal O_C(D + [P]))\)
+  modulo the subgroup of sections with \(\ord_P(f) \geq -n_P^{D}\) ---
+  i.e.\ modulo \(\Gamma(U, \mathcal O_C(D))\).
+\end{proof}
+
+\section{Sheaf-property correctness}
+
+The construction of \cref{def:sheafOf} is presheaf-by-hand: a
+per-open \(\bar k\)-submodule of \(K(C)\), with restriction along
+\(V \hookrightarrow U\) given by the identity on \(K(C)\). This section
+sketches the verifications that make the construction land in the
+target category \(\mathbf{Sh}(C, \mathbf{Mod}_{\bar k})\).
+
+\paragraph{Functoriality of the carrier.} For \(V \subseteq U\), the
+constraint set defining \(\Gamma(U, \mathcal O_C(D))\) is a \emph{subset}
+of the constraint set defining \(\Gamma(V, \mathcal O_C(D))\) (fewer
+prime divisors to constrain at), so the identity on \(K(C)\) restricts
+to a well-defined inclusion
+\(\Gamma(U, \mathcal O_C(D)) \hookrightarrow \Gamma(V, \mathcal O_C(D))\).
+Composition \(W \subseteq V \subseteq U\) is again identity-on-\(K(C)\), so
+strict functoriality holds.
+
+\paragraph{\(\bar k\)-linearity.} A \(\bar k\)-scalar \(\lambda \in \bar k\)
+acts on \(K(C)\) by multiplication, and
+\(\ord_Q(\lambda \cdot f) = \ord_Q(f)\) for \(\lambda \neq 0\)
+(units have order zero); for \(\lambda = 0\), \(\lambda \cdot f = 0\) is
+included by convention. Thus the constraint set is a
+\(\bar k\)-submodule and the restriction maps are \(\bar k\)-linear.
+
+\paragraph{Sheaf property.} The order condition
+``\(\ord_Q(f) \geq -n_Q\) for every prime divisor \(Q \in U\)'' is
+\emph{stalk-local} at each \(Q\): it depends only on the germ of \(f\) at
+the point of \(C\) underlying \(Q\), equivalently on the image of \(f\) in
+the DVR \(\mathcal O_{C, Q}\). Consequently the sheaf property reduces
+to two ingredients:
+\begin{enumerate}
+  \item \emph{The presheaf-of-sets underlying \(\mathcal O_C(D)\) is a
+    subpresheaf of the constant presheaf at \(K(C)\).} The constant
+    presheaf at \(K(C)\) is a sheaf (every locally-constant section of a
+    constant presheaf on a topological space is globally constant when
+    the space is irreducible, which the topological space underlying an
+    integral scheme is). A subpresheaf of a sheaf is itself a sheaf iff
+    its membership condition is local; the order conditions are local
+    at each prime divisor's underlying point, so the membership
+    condition is local across an open cover and a section glued from
+    locally-defined sections inherits the order condition at every
+    prime divisor.
+  \item \emph{The forget-functor bridge from
+    \(\mathbf{Sh}(C, \mathbf{Mod}_{\bar k})\) to
+    \(\mathbf{Sh}(C, \mathbf{Set})\).} The categorical forget
+    \(\mathbf{Mod}_{\bar k} \to \mathbf{Set}\) creates limits, hence
+    reflects the sheaf property: a presheaf of \(\bar k\)-modules is a
+    sheaf iff its underlying presheaf of sets is. Combined with~(i),
+    this delivers the sheaf property for the
+    \(\bar k\)-module-valued \(\mathcal O_C(D)\).
+\end{enumerate}
+
+\paragraph{Invertibility.} On any open \(U \subseteq C\) disjoint from
+the support of \(D\), the constraint set is exactly the structure-sheaf
+constraint \(\ord_Q(f) \geq 0\) for every prime divisor \(Q \in U\); hence
+\(\mathcal O_C(D)|_U = \mathcal O_C|_U\), and the trivialisation
+\(\mathcal O_C(D)|_U \cong \mathcal O_C|_U\) is the identity. On a small
+open \(U \subseteq C\) containing exactly one prime divisor \(Q\) from the
+support of \(D\), the local generator \(\pi_Q^{-n_Q} \in K(C)\) trivialises
+\(\mathcal O_C(D)|_U\) as a free rank-\(1\) \(\mathcal O_C|_U\)-module: a
+section \(f \in \Gamma(U, \mathcal O_C(D))\) satisfies $\ord_Q(f) \geq
+-n_Q$ iff $\pi_Q^{n_Q} \cdot f \in \Gamma(U, \mathcal O_C)$, and the
+``multiplication by \(\pi_Q^{n_Q}\)'' map is an
+\(\mathcal O_C|_U\)-linear isomorphism
+\(\mathcal O_C(D)|_U \xrightarrow{\sim} \mathcal O_C|_U\). The two types
+of trivialising opens cover \(C\) (any prime divisor lies in at most
+finitely many supports across a covering, and the support of \(D\) is
+finite); patching the trivialisations on overlaps amounts to changing
+uniformiser, which is unit-times the original (by the DVR property), so
+the cocycle is in \(\mathcal O_C^{\times}\) and the sheaf is invertible.
+
+The closure of (i)+(ii) in Lean follows the project's existing
+\texttt{Scheme.toModuleKPresheaf} /
+\texttt{toModuleKPresheaf\_isSheaf} template in
+\texttt{AlgebraicJacobian/Cohomology/StructureSheafModuleK/}, which
+landed the analogous bottom-up
+\(\mathbf{Sh}(C, \mathbf{Mod}_{\bar k})\)-valued construction for the
+structure sheaf. The order-condition locality is closed via the project's
+\texttt{Scheme.RationalMap.order} stalk bridge of
+\texttt{RR.1} (\cref{chap:RiemannRoch_WeilDivisor} and surrounding lemmas).
+
+\section{Lean signature pins (iter-183 file skeleton)}
+
+The Lean file \texttt{AlgebraicJacobian/RiemannRoch/OcOfD.lean} (to be
+created in iter-183 as a file-skeleton lane) will host exactly the
+four pinned declarations of this chapter:
+
+\begin{itemize}
+  \item \texttt{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf}
+    (\cref{def:sheafOf}) — the invertible sheaf functor itself, replacing
+    the typed-\texttt{sorry} body currently in
+    \texttt{AlgebraicJacobian/RiemannRoch/RRFormula.lean:168}. The
+    \texttt{noncomputable def} signature is move-only across files;
+    the body lives in \texttt{OcOfD.lean}, the
+    \texttt{RRFormula.lean} entry becomes a re-export (or the signature
+    itself moves wholesale and \texttt{RRFormula.lean}'s consumers
+    re-import).
+  \item \texttt{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf\_zero}
+    (\cref{lem:sheafOf_zero}) — the structure-sheaf identification at
+    \(D = 0\).
+  \item \texttt{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf\_singlePoint}
+    (\cref{lem:sheafOf_singlePoint}) — the
+    \cref{def:lineBundleAtClosedPoint} comparison at \(D = [P]\),
+    upstream of \cref{thm:lineBundleAtClosedPoint_dim_eq_two_of_genusZero}'s
+    consumption in \texttt{RR.3}.
+  \item
+    \texttt{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf\_ses\_single\_add}
+    (\cref{lem:sheafOf_ses_single_add}) — the inductive-step short
+    exact sequence consumed by the two helper sorries
+    \texttt{eulerCharacteristic\_sheafOf\_zero} and
+    \texttt{eulerCharacteristic\_sheafOf\_succ} of \texttt{RR.2}.
+\end{itemize}
+
+The iter-183 file-skeleton lane will create these four declarations as
+typed sorries; the iter-184+ prover lanes will close the bodies along
+the recipe sketched in \
+(via the project's existing \texttt{toModuleKPresheaf} template) and
+unblock both \texttt{RR.2}'s helper sorries and the \texttt{RR.3}
+\(\mathcal O_C([P])\) identification.
+
+\section{Out of scope}
+
+\begin{itemize}
+  \item \textbf{Linear-equivalence isomorphism.} The natural
+    isomorphism \(\mathcal O_C(D) \cong \mathcal O_C(D')\) when
+    \(D \sim D'\) (i.e.\ \(D - D' = \div(f)\) for some
+    \(f \in K(C)^{\times}\)) is \emph{not} formalised in this chapter.
+    It is not needed for the genus-\(0\) critical path: \texttt{RR.2}
+    consumes only \(\chi(\mathcal O_C(D))\) and the SES additivity at
+    closed points; \texttt{RR.3} consumes only the closed-point
+    specialisation; \texttt{RR.4} consumes the function-field /
+    degree bridge, which is divisorial in \(\mathrm{Div}(C)\) rather than
+    in \(\mathrm{Pic}(C) = \mathrm{Div}(C) / \sim\). The
+    Cartier-divisor \(\leftrightarrow\) \texttt{Pic} isomorphism is
+    queued for the post-RR-bridge follow-up chapter.
+  \item \textbf{Sheaf-multiplication
+    $\mathcal O_C(D) \otimes \mathcal O_C(D') \cong \mathcal O_C(D +
+    D')$.} The tensor-product identity of Hartshorne's
+    Proposition~6.13(b) is invoked inside the proof of
+    \cref{lem:sheafOf_ses_single_add} at the single instance
+    $\mathcal O_C(-[P]) \otimes \mathcal O_C(D + [P]) \cong
+    \mathcal O_C(D)$, but the \emph{statement} of
+    Proposition~6.13(b) as a separate lemma is not formalised in this
+    chapter. The instance used inside the SES proof is local to that
+    proof; a generalised tensor-additivity lemma is queued for the
+    post-RR-bridge follow-up.
+  \item \textbf{Pullback of \(\mathcal O_C(D)\) along a morphism.} The
+    pullback \(f^* \mathcal O_C(D) \cong \mathcal O_{C'}(f^* D)\) for
+    a morphism of curves \(f : C' \to C\), used in degree-computation
+    arguments on a base change, is \emph{not} formalised in this
+    chapter and is not needed for the genus-\(0\) critical path.
+  \item \textbf{Global-sections identification as the Riemann--Roch
+    space.} The identification
+    \(H^0(C, \mathcal O_C(D)) \cong L(D)\) for a general Weil divisor
+    \(D\) (i.e.\ the analogue of
+    \cref{lem:lineBundleAtClosedPoint_globalSections_iff} for general
+    \(D\)) is queued for the post-RR-bridge follow-up. The closed-point
+    case \(D = [P]\) is the only specialisation consumed by the
+    genus-\(0\) critical path, and it is handled in
+    \texttt{RR.3} via \cref{lem:sheafOf_singlePoint}.
+  \item \textbf{Serre duality and the canonical sheaf.} As recorded in
+    the \texttt{RR.2} and \texttt{RR.3} chapters, Mathlib (snapshot
+    \texttt{b80f227}) ships no dualizing sheaf \(\omega_X\) on a scheme
+    and no Serre duality theorem. The genus-\(0\) critical path
+    does \emph{not} require either; the present chapter accordingly
+    does not engage them.
+\end{itemize}
+
+\label{sec:sheaf-property-correctness}

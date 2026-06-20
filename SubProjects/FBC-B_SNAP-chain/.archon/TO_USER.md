@@ -1,14 +1,5 @@
 <!-- Shared notice board. Keep to <=2-3 short bullets; delete bullets no longer true. -->
 
-- **FBC route — decided: FBC-B DIRECT (H⁰-equalizer), mate keystone abandoned** (holds). The
-  `base_change_mate_*` decls in FlatBaseChange.lean are off-path dead riders (sorry bodies, false docs)
-  scheduled for deletion in a dedicated refactor iter. Capstone = `baseChangeGammaPullbackEquiv`. Steer via
-  `USER_HINTS.md`.
-- **Both coherence legs: 4 iters with no sorry eliminated, but the blockers are now precisely pinned and
-  the next moves concrete — loop proceeding, no decision needed** (iter-012). FBC foundation: 4 exposure
-  helpers built; element-wise collapse provably exhausted; blocker = value-`ModuleCat` object-junction
-  diamond (needs a sheaf-level reproof). SNAP associator bridge: well-typed `K` built + assembly closed;
-  both halves reduced to one μ-cancel that won't fire across a `Localization.Monoidal`-vs-synonym comp-
-  instance mismatch. Both fixes go via a Mathlib-idiom consult next iter (no user action). If you can
-  confirm a definitional convention or relax a frozen signature that shortcuts either, drop it in
-  `USER_HINTS.md`.
+- **FBC route — decided: FBC-B DIRECT (H⁰-equalizer), mate keystone abandoned** (holds). The `base_change_mate_*` decls in FlatBaseChange.lean are off-path dead riders (sorry bodies, false docs) scheduled for deletion in a dedicated refactor iter. Capstone = `baseChangeGammaPullbackEquiv`. Steer via `USER_HINTS.md`.
+- **FBC foundation kernel bomb is DEFEATED (loop proceeding, no action needed).** iter-015's morphism-level rebuild made `gammaPushforwardIso_comp` cold-build-green; the whole FBC foundation now reduces to ONE small bridge sorry (close `pushforwardComp.inv = 𝟙` without whnf) — iter-016 should land it and unblock the crux. The earlier "FBC needs a structural pivot" notice is overtaken.
+- **SNAP associator bridge `hK_lhs` is stuck on a μ-token-identity (5th iter).** The head algebra is fully reduced to a single `μ.hom ≫ μ.inv` cancel; the two μ's are equal but not syntactically identical (hidden `Localization.fac` proof terms). iter-016 consults a Mathlib idiom for token-identical μ. If you know a `Localization.Monoidal` μ-cancel convention, a hint in `USER_HINTS.md` would shortcut it.

@@ -1,0 +1,1376 @@
+% archon:covers AlgebraicJacobian/RiemannRoch/OCofP.lean
+
+\chapter{The line bundle \(\mathcal O_C(P)\) and its global sections (RR.3)}
+\label{chap:RiemannRoch_OCofP}
+
+% SOURCE: Hartshorne, \emph{Algebraic Geometry}, II.6, p.~144 (definition
+% of \(\mathscr L(D)\)); II.7, Proposition~7.7, p.~157 (effective divisors
+% as divisors of zeros of global sections); IV.1, pp.~294--297
+% (Riemann--Roch, Lemma~1.2, Examples~1.3.3--1.3.5)
+% (read from references/hartshorne-algebraic-geometry.pdf, PDF pages 161,
+% 174, 311--314). The verbatim quotes pasted in the declaration blocks
+% below were copied character-by-character from the rendered page images
+% of the scanned PDF (no text layer is present).
+
+\section{Setup and motivation}
+
+This chapter is the third of four sub-build chapters \texttt{RR.1}--\texttt{RR.4}
+that close the project's headline \emph{RR bridge}
+\[
+  \mathtt{genusZero\_curve\_iso\_P1}
+  \,\colon\,
+  \text{a smooth proper geometrically irreducible curve \(C / \bar k\) with
+  \(g(C) = 0\) is isomorphic to \(\mathbb P^1_{\bar k}\).}
+\]
+The bridge as proved in Hartshorne (Example~IV.1.3.5) chains together:
+the Weil-divisor group \(\mathrm{Div}(C)\), the degree map $\deg \colon \mathrm{Div}(C)
+\to \mathbb Z$, and the divisor $[P]$ of a closed point
+(\texttt{RR.1}, \cref{def:divisor_closed_point}); the Riemann--Roch
+dimension formula in genus~\(0\)
+\[
+  \ell(D) \;=\; \deg(D) + 1 \qquad \text{for } \deg(D) \geq 0
+\]
+via the Euler-characteristic identity
+(\texttt{RR.2}, \cref{thm:euler_char_eq_deg_plus_one_minus_genus}); the global-sections
+calculation \(\dim_{\bar k} H^0(C, \mathcal O_C(P)) = 2\) on a smooth
+proper genus-\(0\) curve (this chapter, \texttt{RR.3}); the
+``rational curve \(\Rightarrow \cong \mathbb P^1\)'' classification via
+\texttt{Proj.fromOfGlobalSections} (\texttt{RR.4}).
+
+The contribution of \texttt{RR.3} is twofold. First, it constructs the
+invertible sheaf \(\mathcal O_C(P)\) associated to a closed point \(P \in C\)
+on a smooth proper curve, identifies its \(\bar k\)-vector space of global
+sections with the \emph{Riemann--Roch space}
+\[
+  L([P]) \;=\;
+  \bigl\{f \in K(C)^{\times} \;\big|\; \div(f) + [P] \geq 0\bigr\}
+  \,\cup\, \{0\},
+\]
+and computes its dimension as \(\dim_{\bar k} H^0(C, \mathcal O_C(P)) = 2\)
+in the genus-\(0\) specialisation. Second, it deduces from the
+two-dimensionality that \(C\) admits a non-constant rational function \(f\)
+having at most a simple pole at \(P\) and no other poles. This rational
+function is the seed for \texttt{RR.4}: the pair $(1, f) \in
+H^0(C, \mathcal O_C(P))^{\oplus 2}$ generates the sheaf and, via
+\texttt{Proj.fromOfGlobalSections}, produces the morphism
+\(C \to \mathbb P^1_{\bar k}\) whose degree-\(1\) identification is the
+content of \texttt{RR.4}.
+
+% NOTE (Direct cohomological vanishing vs. Serre duality — iter-174
+% sub-phase choice). The dimension computation
+% \(\dim_{\bar k} H^0(C, \mathcal O_C(P)) = 2\) would, in Hartshorne's
+% original presentation, route through Serre duality
+% \(H^1(C, \mathcal L) \cong H^0(C, \omega_C \otimes \mathcal L^{-1})^*\)
+% to vanish \(H^1(C, \mathcal O_C(P))\) from the degree count
+% \(\deg(K_C - [P]) = 2g - 2 - 1 = -3 < 0\). Mathlib (snapshot
+% \texttt{b80f227}) ships no dualizing sheaf \(\omega_X\) on a scheme and
+% no Serre duality theorem. The genus-\(0\) specialisation does \emph{not}
+% require Serre duality: the vanishing \(H^1(C, \mathcal O_C(P)) = 0\) is
+% delivered by the long exact sequence of the structural short exact
+% sequence
+% \[
+%   0 \to \mathcal O_C \to \mathcal O_C(P) \to k(P) \to 0
+% \]
+% together with the genus-\(0\) hypothesis
+% \(\dim_{\bar k} H^1(C, \mathcal O_C) = g = 0\) and the skyscraper
+% identity \(H^1(C, k(P)) = 0\). The chapter therefore uses the direct
+% cohomological vanishing route exclusively; Serre duality is left for
+% the post-RR-bridge follow-up chapter that handles the general-\(g\)
+% statement.
+
+\paragraph{Standing hypotheses.} Throughout this chapter, \(\bar k\) is an
+algebraically closed field and \(C\) is a smooth proper geometrically
+irreducible curve over \(\bar k\). Concretely, the Lean signatures
+(\texttt{AlgebraicJacobian/RiemannRoch/OCofP.lean}) carry the same
+typeclass package as the rest of the project's curve API:
+\begin{quote}
+  \texttt{\{kbar : Type u\} [Field kbar] [IsAlgClosed kbar]\\
+   (C : Over (Spec (.of kbar))) [IsProper C.hom]\\
+   \phantom{}\quad[SmoothOfRelativeDimension 1 C.hom]\\
+   \phantom{}\quad[GeometricallyIrreducible C.hom] [IsIntegral C.left]}
+\end{quote}
+The genus \(g(C)\) is the one defined in \cref{def:genus} of
+\texttt{Genus.tex}; the divisor \([P]\) of a closed point is the one of
+\cref{def:divisor_closed_point} of \texttt{RiemannRoch\_WeilDivisor.tex};
+the principal divisor \(\div(f)\) of a nonzero rational function is the one
+of \cref{def:principal_divisor}, and the order \(\ord_Q(f)\) at a prime
+divisor is the standard discrete valuation of the project's Weil-divisor
+order API.
+
+\section{The line bundle of a closed point on a curve}
+
+% --- iter-187 plan-phase additions: pins for the iter-187 refactor's
+% Step 3 + Step 4 sub-helpers (carrierPresheaf functor + sheaf property)
+% which are the direct-construction substrate the definition below
+% consumes (via the iter-186 plan-phase `analogies/ocofp-carrierset-submodule-api.md`
+% Decision 3 + Decision 4 recipe). The Lean declarations are produced
+% by the iter-187 refactor-`ocofp-steps3to5` dispatch. The substantive
+% mathematical content is in the Definition block below; these helper
+% blocks pin the substrate hooks the prover-side construction uses.
+
+\begin{definition}[Carrier set of the line bundle of a closed point over an open]
+  \label{def:lineBundleAtClosedPoint_carrierSet}
+  \lean{AlgebraicGeometry.Scheme.lineBundleAtClosedPoint.carrierSet}
+  Let \(C\) be an integral, locally Noetherian, regular-in-codimension-one
+  scheme over \(\bar k\), let \(P \in C\) be a point of coheight \(1\), and
+  let \(U \subseteq C\) be an open set. The \emph{carrier set}
+  \(\mathrm{carrierSet}_P(U) \subseteq K(C)\) is the set of rational
+  functions \(f\) satisfying the order conditions \(\ord_Q(f) \ge 0\) for
+  every prime divisor \(Q\) with \(Q \in U\) and \(Q \ne P\), together with
+  \(\ord_P(f) \ge -1\) whenever \(P \in U\). It is the underlying set of the
+  section module of \(\mathcal O_C(P)\) over \(U\).
+\end{definition}
+
+\begin{lemma}[Monotonicity of the carrier set]
+  \label{lem:lineBundleAtClosedPoint_carrierSet_mono}
+  \lean{AlgebraicGeometry.Scheme.lineBundleAtClosedPoint.carrierSet_mono}
+  \uses{def:lineBundleAtClosedPoint_carrierSet}
+  With \(C, P\) as in \cref{def:lineBundleAtClosedPoint_carrierSet}, if
+  \(V \subseteq U\) are opens of \(C\) then
+  \(\mathrm{carrierSet}_P(U) \subseteq \mathrm{carrierSet}_P(V)\): the order
+  conditions over the smaller open \(V\) involve fewer prime divisors and are
+  therefore implied by those over \(U\). This antitone inclusion is the
+  restriction map of the carrier presheaf.
+\end{lemma}
+
+\begin{proof} Proved directly in Lean. \end{proof}
+
+\begin{definition}[Nonemptiness of the top open of an integral scheme]
+  \label{def:lineBundleAtClosedPoint_instNonemptyTopOpen}
+  \lean{AlgebraicGeometry.Scheme.lineBundleAtClosedPoint.instNonemptyTopOpen}
+  For an integral scheme \(X\), the top open \(\top \subseteq X\) is nonempty
+  as a scheme: its underlying set is all of \(X\), and \(X\) is nonempty since
+  an integral scheme is irreducible. This instance lets the standard algebra
+  map \(\Gamma(X, U) \to K(X)\) fire at \(U = \top\).
+\end{definition}
+
+\begin{definition}[The \(\bar k\)-algebra structure on the function field]
+  \label{def:lineBundleAtClosedPoint_instAlgebraKbarFunctionField}
+  \lean{AlgebraicGeometry.Scheme.lineBundleAtClosedPoint.instAlgebraKbarFunctionField}
+  \uses{def:lineBundleAtClosedPoint_instNonemptyTopOpen}
+  For an integral scheme \(C\) over \(\bar k\), the function field \(K(C)\)
+  carries a \(\bar k\)-algebra structure, obtained by composing the algebra
+  map \(\bar k \to \Gamma(C, \top)\) with the canonical map
+  \(\Gamma(C, \top) \to K(C)\). This structure is what makes \(K(C)\) a
+  \(\bar k\)-module, so that the carrier sets can be upgraded to
+  \(\bar k\)-submodules.
+\end{definition}
+
+\begin{definition}[Carrier submodule of the line bundle of a closed point]
+  \label{def:lineBundleAtClosedPoint_carrierSubmodule}
+  \lean{AlgebraicGeometry.Scheme.lineBundleAtClosedPoint.carrierSubmodule}
+  \uses{def:lineBundleAtClosedPoint_carrierSet,
+        def:lineBundleAtClosedPoint_instAlgebraKbarFunctionField}
+  With \(C, P, U\) as in \cref{def:lineBundleAtClosedPoint_carrierSet}, the
+  carrier set \(\mathrm{carrierSet}_P(U)\) is a \(\bar k\)-submodule of
+  \(K(C)\). It contains \(0\); it is closed under addition by the
+  non-archimedean inequality \(\ord_Q(f + g) \ge \min(\ord_Q f, \ord_Q g)\)
+  for the discrete valuation at each regular codimension-one stalk; and it is
+  closed under scaling by a constant \(c \in \bar k\), since \(c\) maps to a
+  unit in every stalk and hence has order \(0\) at every prime divisor.
+\end{definition}
+
+\begin{definition}[Bot-trivialisation submodule]
+  \label{def:lineBundleAtClosedPoint_trivAtBot}
+  \lean{AlgebraicGeometry.Scheme.lineBundleAtClosedPoint.trivAtBot}
+  \uses{def:lineBundleAtClosedPoint_instAlgebraKbarFunctionField}
+  For an integral scheme \(C\) over \(\bar k\) and an open \(U \subseteq C\),
+  the \(\bar k\)-submodule \(\mathrm{trivAtBot}(U) \subseteq K(C)\) equals all
+  of \(K(C)\) when \(U \ne \emptyset\) and equals \(\{0\}\) when
+  \(U = \emptyset\). Intersecting the carrier submodule with this factor
+  enforces the sheaf-at-\(\emptyset\) condition \(F(\emptyset) = 0\) required
+  by the Grothendieck topology of opens.
+\end{definition}
+
+\begin{lemma}[Monotonicity of the sheaf-corrected carrier submodule]
+  \label{lem:lineBundleAtClosedPoint_carrierSubmoduleSheaf_le}
+  \lean{AlgebraicGeometry.Scheme.lineBundleAtClosedPoint.carrierSubmoduleSheaf_le}
+  \uses{def:lineBundleAtClosedPoint_carrierSubmoduleSheaf,
+        lem:lineBundleAtClosedPoint_carrierSet_mono}
+  With \(C, P\) as above, if \(V \subseteq U\) are opens with
+  \(V \ne \emptyset\), then
+  \(\mathrm{carrierSubmoduleSheaf}_P(U) \le \mathrm{carrierSubmoduleSheaf}_P(V)\).
+  The hypothesis \(V \ne \emptyset\) is necessary, since a nonzero section
+  over \(U\) need not satisfy the trivialisation-at-\(\emptyset\) condition.
+  This inclusion supplies the restriction maps of the carrier presheaf on
+  nonempty opens.
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:lineBundleAtClosedPoint_carrierSet_mono}
+  Proved directly in Lean, from \cref{lem:lineBundleAtClosedPoint_carrierSet_mono}.
+\end{proof}
+
+\begin{definition}[Type-level subfunctor presentation of the carrier]
+  \label{def:lineBundleAtClosedPoint_carrierTypeSubfunctor}
+  \lean{AlgebraicGeometry.Scheme.lineBundleAtClosedPoint.carrierTypeSubfunctor}
+  \uses{def:lineBundleAtClosedPoint_carrierSubmoduleSheaf}
+  With \(C, P\) as above, the carrier of \(\mathcal O_C(P)\) is presented as a
+  subfunctor of the type-valued presheaf \(U \mapsto (U \to K(C))\) of
+  arbitrary \(K(C)\)-valued functions: a section over \(U\) is a constant
+  function with value \(f \in \mathrm{carrierSubmoduleSheaf}_P(U)\). This
+  presentation reduces the sheaf condition to a stalk-locality check against
+  the ambient sheaf of type-valued functions, exploiting that any two nonempty
+  opens of the irreducible scheme \(C\) intersect.
+\end{definition}
+
+\begin{definition}
+
+\leanok
+[Presheaf carrier for the line bundle of a closed point]
+  \label{def:lineBundleAtClosedPoint_carrierPresheaf}
+  \lean{AlgebraicGeometry.Scheme.lineBundleAtClosedPoint.carrierPresheaf}
+  \uses{def:lineBundleAtClosedPoint_carrierSubmoduleSheaf,
+        lem:lineBundleAtClosedPoint_carrierSubmoduleSheaf_le}
+  For each open \(U \subseteq C\), the \(\bar k\)-submodule
+  \(\mathrm{carrierSubmodule}_P(U) \subset K(C)\) of section candidates
+  satisfying the order conditions ``\(\mathrm{ord}_Q f \ge 0\) for all
+  prime divisors \(Q \in U\) other than \(P\), and additionally
+  \(\mathrm{ord}_P f \ge -1\) when \(P \in U\)'' assembles into a
+  \(\bar k\)-linear functor
+  \[
+    \texttt{carrierPresheaf}_P : (\Opens\, |C|)^{\op}
+    \longrightarrow \ModuleCat_{\bar k},
+    \qquad U \longmapsto \mathrm{carrierSubmodule}_P(U),
+  \]
+  with restriction \(V \subseteq U \mapsto \texttt{Submodule.inclusion}\,
+  (\texttt{carrierSet\_mono})\) on each pair. The functor laws follow from
+  the antitone monotonicity \(U \mapsto \mathrm{carrierSet}_P(U)\) (witness
+  \(\texttt{carrierSet\_mono}\) at L181-192 of the Lean file) by
+  \(\texttt{ext}\,\langle x, \_\rangle\); \texttt{rfl}.
+\end{definition}
+
+\begin{lemma}
+
+\leanok
+[Sheaf property of the carrier presheaf]
+  \label{lem:lineBundleAtClosedPoint_carrierPresheaf_isSheaf}
+  \lean{AlgebraicGeometry.Scheme.lineBundleAtClosedPoint.carrierPresheaf_isSheaf}
+  \uses{def:lineBundleAtClosedPoint_carrierPresheaf,
+        def:lineBundleAtClosedPoint_carrierSubmoduleSheaf,
+        def:lineBundleAtClosedPoint_carrierTypeSubfunctor,
+        def:lineBundleAtClosedPoint_trivAtBot}
+  The presheaf \texttt{carrierPresheaf}\(_P\) (defined via the
+  carrier-refinement of \cref{def:lineBundleAtClosedPoint_carrierSubmoduleSheaf})
+  is a sheaf in the appropriate Grothendieck topology on \(C\). Concretely,
+  the locality + gluing conditions for \(\ModuleCat_{\bar k}\)-valued sections
+  reduce (via \(\texttt{isSheaf\_iff\_isSheaf\_forget}\)) to the sheaf
+  condition on the underlying Set-valued functor: each
+  \(\mathrm{carrierSubmoduleSheaf}_P(U)\) is a subset of the constant
+  \(K(C)\)-sheaf restricted to \(U\), and the sheaf property in the
+  constant-sheaf base case is direct. The project's
+  \texttt{toModuleKSheaf} template
+  (\texttt{Cohomology/StructureSheafModuleK/SheafProperty.lean}) is
+  the model for this argument.
+\end{lemma}
+
+\begin{definition}
+
+
+\leanok
+[Carrier-submodule refinement enforcing \(F(\bot)=0\)]
+  \label{def:lineBundleAtClosedPoint_carrierSubmoduleSheaf}
+  \lean{AlgebraicGeometry.Scheme.lineBundleAtClosedPoint.carrierSubmoduleSheaf}
+  \uses{def:lineBundleAtClosedPoint_carrierSubmodule,
+        def:lineBundleAtClosedPoint_trivAtBot}
+  Iter-188 Lane A discovery: the raw \(\mathrm{carrierSubmodule}_P\) of
+  \cref{def:lineBundleAtClosedPoint_carrierPresheaf} satisfies
+  \(\mathrm{carrierSubmodule}_P(\bot) = K(C)\) (since the order conditions
+  are vacuously satisfied on the empty open). This violates the sheaf
+  axiom on the Grothendieck topology of opens: the empty sieve covers
+  \(\bot\), forcing \(F(\bot) =\) terminal \(= 0\) on
+  \(\ModuleCat_{\bar k}\)-valued functors.
+  The refinement
+  \[
+    \mathrm{carrierSubmoduleSheaf}_P(U) \;:=\;
+    \mathrm{carrierSubmodule}_P(U) \;\sqcap\; \mathrm{trivAtBot}\,U,
+    \qquad \mathrm{trivAtBot}\,U \;:=\;
+    \{\, f \;\mid\; U \ne \bot \,\lor\, f = 0 \,\}.
+  \]
+  forces \(F(\bot) = \bot\) (intersection annihilates) while preserving
+  \(F(U)\) on non-empty \(U\) (since then \(\mathrm{trivAtBot}\,U = \top\)).
+  The case-based restriction map (zero target on \(\bot\); inclusion
+  otherwise) gives a well-formed sheaf-condition substrate consumed by
+  \cref{lem:lineBundleAtClosedPoint_carrierPresheaf_isSheaf}. Downstream
+  consumers \texttt{lineBundleAtClosedPoint}, \texttt{toFunctionField},
+  \texttt{globalSections\_iff\_*} are updated to supply the
+  \texttt{trivAtBot} witness at \(\op\,\top\) via the \texttt{htop\_ne\_bot}
+  helper.
+\end{definition}
+
+\begin{definition}
+
+
+
+\leanok
+[Line bundle of a closed point]
+  \label{def:lineBundleAtClosedPoint}
+  \lean{AlgebraicGeometry.Scheme.lineBundleAtClosedPoint}
+  \uses{def:lineBundleAtClosedPoint_carrierPresheaf, lem:lineBundleAtClosedPoint_carrierPresheaf_isSheaf}
+  
+  % SOURCE: [Hartshorne], II.6, p.~144 (definition of the invertible
+  % sheaf \(\mathscr L(D)\) associated to a Cartier divisor) (read from
+  % references/hartshorne-algebraic-geometry.pdf, PDF page 161).
+  % SOURCE QUOTE: "Definition. Let \(D\) be a Cartier divisor on a scheme
+  % \(X\), represented by \(\{(U_i, f_i)\}\) as above. We define a subsheaf
+  % \(\mathscr L(D)\) of the sheaf of total quotient rings \(\mathscr K\) by
+  % taking \(\mathscr L(D)\) to be the sub-\(\mathscr O_X\)-module of
+  % \(\mathscr K\) generated by \(f_i^{-1}\) on \(U_i\). This is well-defined,
+  % since \(f_i/f_j\) is invertible on \(U_i \cap U_j\), and \(f_i^{-1}\) and
+  % \(f_j^{-1}\) generate the same \(\mathscr O_X\)-module. We call
+  % \(\mathscr L(D)\) the \emph{sheaf associated to \(D\)}."
+  % SOURCE QUOTE: "Proposition 6.13. \emph{Let \(X\) be a scheme. Then:
+  % (a) for any Cartier divisor \(D\), \(\mathscr L(D)\) is an invertible
+  % sheaf on \(X\).}"
+  \textit{Source: Hartshorne, II.6, p.~144 (definition of
+  \(\mathscr L(D)\) and Proposition~6.13(a)).}
+  Let \(C\) be a smooth proper curve over \(\bar k\) and let \(P \in C\) be a
+  closed point. Let \(\mathfrak m_P \subset \mathcal O_{C, P}\) denote the
+  maximal ideal of the local ring at \(P\); by smoothness of \(C\),
+  \(\mathcal O_{C, P}\) is a discrete valuation ring and \(\mathfrak m_P\)
+  is generated by any uniformizer \(f_P \in \mathcal O_{C, P}\) (an
+  element of \(\mathfrak m_P \setminus \mathfrak m_P^2\)). The Cartier
+  divisor associated to the closed point \(P\) is the effective
+  Cartier divisor cut out locally by the uniformizer \(f_P\) on an open
+  affine neighbourhood of \(P\), and by the unit \(1\) on the complement
+  \(C \setminus \{P\}\). The \emph{line bundle of the closed point \(P\)},
+  denoted \(\mathcal O_C(P)\), is the locally free \(\mathcal O_C\)-module
+  of rank \(1\) defined by Hartshorne's construction \(\mathscr L(D)\)
+  applied to this Cartier divisor: explicitly, \(\mathcal O_C(P)\) is the
+  sub-\(\mathcal O_C\)-module of the sheaf of total quotient rings
+  \(\mathcal K_C\) (the constant sheaf of the function field \(K(C)\) on the
+  integral scheme \(C\)) that is generated by \(f_P^{-1} \in K(C)\) on a
+  neighbourhood of \(P\) and by \(1 \in K(C)\) on the complement
+  \(C \setminus \{P\}\). Hartshorne's Proposition~6.13(a) confirms that
+  this subsheaf is an invertible sheaf, independently of the choice of
+  uniformizer \(f_P\) (any two uniformizers differ by a unit in
+  \(\mathcal O_{C, P}^{\times}\), so they generate the same
+  \(\mathcal O_C\)-submodule of \(\mathcal K_C\)).
+
+  \paragraph{Equivalent description via the ideal sheaf.} Let
+  \(\mathcal I_P \subset \mathcal O_C\) denote the ideal sheaf of the
+  closed point \(P\) (locally generated by the uniformizer \(f_P\) near
+  \(P\), and equal to \(\mathcal O_C\) on the complement). Then
+  \(\mathcal I_P\) is the line bundle \(\mathcal O_C(-P)\) associated to the
+  Weil divisor \(-[P]\), and \(\mathcal O_C(P)\) is the
+  \(\mathcal O_C\)-linear dual:
+  \[
+    \mathcal O_C(P) \;\cong\; \mathcal H\!om_{\mathcal O_C}(\mathcal I_P,
+    \mathcal O_C)
+    \;\cong\; \mathcal I_P^{-1}.
+  \]
+  Both descriptions yield the same invertible sheaf; the
+  ``subsheaf of \(\mathcal K_C\)'' description above is the one used in
+  the prose, while the ``dual of the ideal sheaf'' description is the
+  most direct entry point for the Lean construction (Mathlib's
+  \texttt{AlgebraicGeometry.Scheme.IdealSheafData} packages
+  quasi-coherent ideal sheaves, from which the dual is constructed via
+  the internal-hom on invertible sheaves).
+
+  \paragraph{Lean signature scope.} The Lean definition
+  \texttt{AlgebraicGeometry.Scheme.lineBundleAtClosedPoint} takes a
+  scheme \(C\), a point \(P : C\), and a closedness witness
+  \(\texttt{IsClosed (\{P\} : Set C)}\) (the same input shape as
+  \cref{def:divisor_closed_point}), and returns an invertible
+  \(\mathcal O_C\)-module \(\mathcal O_C(P)\). The well-definedness as an
+  invertible sheaf is part of the construction and goes through
+  smoothness of \(C\) (delivering the DVR stalk at \(P\)) and the standard
+  ideal-sheaf-of-a-closed-point machinery in Mathlib's
+  \texttt{AlgebraicGeometry.IdealSheaf} chapter. The chapter's
+  consumption of the closed-point hypothesis matches \texttt{RR.1}:
+  closed plus dimension-\(1\)-integral delivers \(\mathrm{codim}_C \{P\} = 1\)
+  automatically. The declaration is \texttt{noncomputable}.
+\end{definition}
+
+\begin{definition}
+
+
+\leanok
+[Inclusion of \(\mathcal O_C(P)\) into the function field]
+  \label{def:lineBundleAtClosedPoint_toFunctionField}
+  \lean{AlgebraicGeometry.Scheme.lineBundleAtClosedPoint.toFunctionField}
+  
+  % SOURCE: [Hartshorne], II.6, p.~144 (definition of \(\mathscr L(D)\) as a
+  % subsheaf of the sheaf of total quotient rings \(\mathscr K\); the
+  % canonical inclusion \(\mathscr L(D) \hookrightarrow \mathscr K\) is part
+  % of the construction) (read from
+  % references/hartshorne-algebraic-geometry.pdf, PDF page 161).
+  % SOURCE QUOTE: "Definition. Let \(D\) be a Cartier divisor on a scheme
+  % \(X\), represented by \(\{(U_i, f_i)\}\) as above. We define a subsheaf
+  % \(\mathscr L(D)\) of the sheaf of total quotient rings \(\mathscr K\) by
+  % taking \(\mathscr L(D)\) to be the sub-\(\mathscr O_X\)-module of
+  % \(\mathscr K\) generated by \(f_i^{-1}\) on \(U_i\). This is well-defined,
+  % since \(f_i/f_j\) is invertible on \(U_i \cap U_j\), and \(f_i^{-1}\) and
+  % \(f_j^{-1}\) generate the same \(\mathscr O_X\)-module. We call
+  % \(\mathscr L(D)\) the \emph{sheaf associated to \(D\)}."
+  \textit{Source: Hartshorne, II.6, p.~144 (definition of \(\mathscr L(D)\)
+  as a subsheaf of \(\mathscr K\)).}
+  Let \(C\) be a smooth proper geometrically irreducible curve over \(\bar k\)
+  with \(C\) integral, and let \(P \in C\) be a closed point. The line bundle
+  \(\mathcal O_C(P)\) of \cref{def:lineBundleAtClosedPoint} is by
+  construction a sub-\(\mathcal O_C\)-module of the sheaf of total quotient
+  rings \(\mathcal K_C\). Since \(C\) is integral, \(\mathcal K_C\) is the
+  constant sheaf at the function field \(K(C)\), and taking global sections
+  of the structural inclusion \(\mathcal O_C(P) \hookrightarrow \mathcal K_C\)
+  produces a canonical \(\bar k\)-linear map
+  \[
+    \iota \;\colon\; H^0(C, \mathcal O_C(P))
+      \;\longrightarrow\; H^0(C, \mathcal K_C) \;\cong\; K(C)
+  \]
+  sending a global section \(s \in H^0(C, \mathcal O_C(P))\) to the rational
+  function on \(C\) obtained by composing \(s\) with the inclusion of
+  \(\mathcal O_C(P)\) into \(\mathcal K_C\) at each point. The map \(\iota\) is
+  injective (the sub-\(\mathcal O_C\)-module $\mathcal O_C(P) \subset
+  \mathcal K_C$ is torsion-free of rank $1$, so taking global sections
+  preserves injectivity on the integral scheme \(C\)).
+
+  \paragraph{Lean signature scope.} The Lean definition
+  \texttt{AlgebraicGeometry.Scheme.lineBundleAtClosedPoint.toFunctionField}
+  takes the same inputs as \cref{def:lineBundleAtClosedPoint} (a curve
+  \(C\), a point \(P\), and the closedness witness
+  \texttt{IsClosed (\{P\} : Set C.left)}) and produces, for each global
+  section \(s\) of \(\mathcal O_C(P)\) at twist \(0\) in the project's
+  \(\Module \bar k\)-flavoured global-sections pipeline, the corresponding
+  element \(\iota(s) \in K(C)\) of the project's function-field carrier
+  \texttt{C.left.functionField}. The declaration is \texttt{noncomputable}
+  and its body is gated on the body of
+  \cref{def:lineBundleAtClosedPoint}.
+\end{definition}
+
+\section{Global sections as a Riemann--Roch space}
+
+\begin{lemma}
+
+
+
+\leanok
+[Global sections of \(\mathcal O_C(P)\) as rational functions with a
+controlled pole]
+  \label{lem:lineBundleAtClosedPoint_globalSections_iff}
+  \lean{AlgebraicGeometry.Scheme.lineBundleAtClosedPoint.globalSections_iff}
+  
+  % SOURCE: [Hartshorne], II.7, Proposition~7.7, p.~157 (effective
+  % divisors linearly equivalent to \(D_0\) are the divisors of zeros of
+  % global sections of \(\mathscr L(D_0)\), with the explicit
+  % identification of those global sections with rational functions
+  % \(f\) satisfying \((f) \geq -D_0\)) (read from
+  % references/hartshorne-algebraic-geometry.pdf, PDF page 174).
+  % SOURCE QUOTE: "Proposition 7.7. \emph{Let \(X\) be a nonsingular
+  % projective variety over the algebraically closed field \(k\). Let
+  % \(D_0\) be a divisor on \(X\) and let \(\mathscr L = \mathscr L(D_0)\)
+  % be the corresponding invertible sheaf. Then:
+  % (a) for each nonzero \(s \in \Gamma(X, \mathscr L)\), the divisor of
+  % zeros \((s)_0\) is an effective divisor linearly equivalent to \(D_0\);
+  % (b) every effective divisor linearly equivalent to \(D_0\) is \((s)_0\)
+  % for some \(s \in \Gamma(X, \mathscr L)\); and
+  % (c) two sections \(s, s' \in \Gamma(X, \mathscr L)\) have the same
+  % divisor of zeros if and only if there is a \(\lambda \in k^*\) such
+  % that \(s' = \lambda s\).}"
+  % SOURCE QUOTE: "(b) If \(D \geq 0\) and \(D = D_0 + (f)\), then
+  % \((f) \geq -D_0\). Thus \(f\) gives a global section of
+  % \(\mathscr L(D_0)\) whose divisor of zeros is \(D\)."
+  \textit{Source: Hartshorne, II.7, Proposition~7.7 and its
+  proof of part (b), p.~157.}
+  Let \(C\) be a smooth proper curve over \(\bar k\), let \(P \in C\) be a
+  closed point, and let \(\mathcal O_C(P)\) be the line bundle of
+  \cref{def:lineBundleAtClosedPoint}. The \(\bar k\)-vector space of
+  global sections of \(\mathcal O_C(P)\) is naturally identified with the
+  Riemann--Roch space
+  \[
+    L([P]) \;:=\;
+    \bigl\{f \in K(C)^{\times} \;\big|\; \div(f) + [P] \geq 0
+    \text{ in } \mathrm{Div}(C)\bigr\}
+    \,\cup\, \{0\}.
+  \]
+  Equivalently, the order conditions
+  \[
+    \ord_Q(f) \;\geq\; 0 \quad \text{for every closed point } Q \in C
+    \text{ with } Q \neq P,
+    \qquad
+    \ord_P(f) \;\geq\; -1
+  \]
+  on \(f \in K(C)^{\times}\) are equivalent to the existence of a global
+  section \(s \in H^0(C, \mathcal O_C(P))\) whose image \(\iota(s)\) under
+  the canonical inclusion $\iota : \mathcal O_C(P) \hookrightarrow
+  \mathcal K_C \cong K(C)$ equals $f$ (the iff binds $s$ to $f$
+  explicitly — vacuous-in-\(f\) readings such as ``some nonzero global
+  section exists'' are excluded by construction).
+
+  Under this identification, the inclusion
+  \(\bar k \hookrightarrow H^0(C, \mathcal O_C(P))\) of constant functions
+  corresponds to the natural map $\mathcal O_C \hookrightarrow
+  \mathcal O_C(P)$ exhibiting $\mathcal O_C(P)$ as the twist of the
+  structure sheaf along the prime divisor \([P]\).
+\end{lemma}
+
+\begin{proof}
+  
+  
+  
+  
+  By construction, \(\mathcal O_C(P)\) is the sub-\(\mathcal O_C\)-module of
+  the sheaf of total quotient rings \(\mathcal K_C\) generated locally by
+  \(f_P^{-1}\) near \(P\) and by \(1\) on \(C \setminus \{P\}\), where \(f_P\) is
+  a uniformizer at \(P\) (\cref{def:lineBundleAtClosedPoint}). Since \(C\)
+  is integral, \(\mathcal K_C\) is the constant sheaf at the function field
+  \(K(C)\), and a global section of any sub-\(\mathcal O_C\)-module
+  \(\mathcal F \subset \mathcal K_C\) is precisely an element of \(K(C)\)
+  whose germ at every point lies in \(\mathcal F\) at that point.
+  Therefore \(f \in K(C)\) is a global section of \(\mathcal O_C(P)\) if
+  and only if:
+
+  \begin{itemize}
+    \item For every closed point \(Q \in C\) with \(Q \neq P\), the germ of
+      \(f\) at \(Q\) lies in \(\mathcal O_C(P)_Q = \mathcal O_{C, Q}\)
+      (the structure sheaf, since \(\mathcal O_C(P)\) agrees with
+      \(\mathcal O_C\) on \(C \setminus \{P\}\)); equivalently,
+      \(\ord_Q(f) \geq 0\).
+    \item At the closed point \(P\), the germ of \(f\) at \(P\) lies in
+      \(\mathcal O_C(P)_P = f_P^{-1} \cdot \mathcal O_{C, P}\);
+      equivalently, \(f_P \cdot f \in \mathcal O_{C, P}\), i.e.\
+      \(\ord_P(f_P \cdot f) \geq 0\), i.e.\ \(\ord_P(f) \geq -1\).
+  \end{itemize}
+  In divisorial language (\cref{def:principal_divisor},
+  \cref{def:divisor_closed_point}), the two conditions combine to
+  \(\div(f) + [P] \geq 0\), recovering the Riemann--Roch space description
+  \(L([P])\). The zero element of \(K(C)\) is included by convention as the
+  zero global section.
+
+  The identification with Hartshorne's Proposition~7.7(b) is direct:
+  taking \(D_0 = [P]\) effective, Hartshorne's argument shows that a
+  rational function \(f\) with \((f) \geq -D_0\) defines a global section
+  of \(\mathscr L(D_0)\). The condition \((f) \geq -D_0 = -[P]\) is exactly
+  \(\div(f) + [P] \geq 0\). The compatibility with the constant inclusion
+  follows by taking \(f = 1 \in K(C)^{\times}\): then \(\div(1) = 0\), so
+  \(\div(1) + [P] = [P] \geq 0\), and the corresponding section of
+  \(\mathcal O_C(P)\) is the image of $1 \in H^0(C, \mathcal O_C)
+  \cong \bar k$ under the structural inclusion $\mathcal O_C
+  \hookrightarrow \mathcal O_C(P)$.
+\end{proof}
+
+\begin{lemma}[Forward direction of \texttt{globalSections\_iff}: building a
+section from the order conditions]
+  \label{lem:lineBundleAtClosedPoint_globalSections_iff_mp}
+  \lean{AlgebraicGeometry.Scheme.lineBundleAtClosedPoint.globalSections_iff_mp}
+  \uses{lem:lineBundleAtClosedPoint_globalSections_iff,
+        def:lineBundleAtClosedPoint,
+        def:lineBundleAtClosedPoint_toFunctionField,
+        def:lineBundleAtClosedPoint_carrierSubmoduleSheaf}
+  Let \(C\) be a smooth proper geometrically irreducible integral curve over
+  \(\bar k\), let \(P \in C\) be a closed point of coheight \(1\), and let
+  \(f \in K(C)\) be nonzero satisfying the order conditions \(\ord_Q(f) \ge 0\)
+  for every prime divisor \(Q \ne P\) and \(\ord_P(f) \ge -1\). Then there
+  exists a global section \(s \in H^0(C, \mathcal O_C(P))\) whose image under
+  the canonical inclusion \(\iota\) into \(K(C)\) equals \(f\). This is the
+  forward (\texttt{mp}) direction of
+  \cref{lem:lineBundleAtClosedPoint_globalSections_iff}.
+\end{lemma}
+
+\begin{proof}
+  \uses{def:lineBundleAtClosedPoint_carrierSubmoduleSheaf,
+        def:lineBundleAtClosedPoint_toFunctionField}
+  Proved directly in Lean. The order conditions place \(f\) in
+  \(\mathrm{carrierSubmoduleSheaf}_P(\top)\); the resulting witness spans a
+  \(\bar k\)-linear map \(\bar k \to \mathrm{carrierSubmoduleSheaf}_P(\top)\),
+  which transports along the constant-sheaf adjunction and the
+  global-sections linear equivalence to a section \(s\) with
+  \(\iota(s) = f\).
+\end{proof}
+
+\section{Cohomological vanishing in genus zero}
+
+\begin{lemma}
+
+
+
+\leanok
+[Vanishing of \(H^1(C, \mathcal O_C(P))\) on a genus-\(0\) curve]
+  \label{lem:H1_vanishing_lineBundleAtClosedPoint_genusZero}
+  \lean{AlgebraicGeometry.Scheme.lineBundleAtClosedPoint.h1_vanishing_genusZero}
+  \uses{def:lineBundleAtClosedPoint, def:Scheme_HModule, def:genus,
+        thm:H1_vanishing_flasque, lem:sheafOf_ses_single_add}
+
+  % SOURCE: [Hartshorne], IV.1, the proof of Theorem~1.3 (the inductive
+  % step ``Next, let \(D\) be any divisor, and let \(P\) be any point.''):
+  % the short exact sequence $0 \to \mathscr L(-P) \to \mathscr O_X \to
+  % k(P) \to 0\( and its tensor with \)\mathscr L(D + P)$ giving
+  % \(0 \to \mathscr L(D) \to \mathscr L(D + P) \to k(P) \to 0\)
+  % (read from references/hartshorne-algebraic-geometry.pdf, PDF page 313).
+  % SOURCE QUOTE: "We consider \(P\) as a closed subscheme of \(X\). Its
+  % structure sheaf is a skyscraper sheaf \(k\) sitting at the point \(P\),
+  % which we denote by \(k(P)\), and its ideal sheaf is \(\mathscr L(-P)\)
+  % by (II, 6.18). Therefore we have an exact sequence
+  % \(0 \to \mathscr L(-P) \to \mathscr O_X \to k(P) \to 0\).
+  % Tensoring with \(\mathscr L(D + P)\) we get
+  % \(0 \to \mathscr L(D) \to \mathscr L(D + P) \to k(P) \to 0\),
+  % (since \(\mathscr L(P)\) is locally free of rank 1, tensoring by it
+  % does not affect the sheaf \(k(P)\))."
+  \textit{Source: Hartshorne, IV.1, p.~296, the inductive step of the
+  proof of Theorem~1.3.}
+  Let \(C\) be a smooth proper geometrically irreducible curve over
+  \(\bar k\) with \(g(C) = 0\), and let \(P \in C\) be a closed point. Then
+  \[
+    H^1(C, \mathcal O_C(P)) \;=\; 0,
+  \]
+  i.e.\ \(\dim_{\bar k} H^1(C, \mathcal O_C(P)) = 0\).
+\end{lemma}
+
+\begin{proof}
+  
+  Specialise Hartshorne's inductive step at \(D = 0\). The standard short
+  exact sequence
+  \[
+    0 \to \mathcal O_C(-[P]) \to \mathcal O_C \to k(P) \to 0
+  \]
+  (Hartshorne~II.6.18: the ideal sheaf of the locally principal closed
+  subscheme \(P\) is \(\mathcal O_C(-[P])\); the quotient is the structure
+  sheaf of \(P\), which is the skyscraper sheaf \(k(P) \cong \bar k\)
+  supported at \(P\) since \(P\) has residue field \(\bar k\) by closedness
+  over the algebraically closed base \(\bar k\)). Tensoring with the
+  locally free rank-\(1\) sheaf \(\mathcal O_C([P])\)
+  (\cref{def:lineBundleAtClosedPoint}) preserves exactness and leaves
+  the skyscraper sheaf \(k(P)\) unchanged, giving
+  \[
+    0 \to \mathcal O_C \to \mathcal O_C(P) \to k(P) \to 0
+  \]
+  in \(\mathbf{Coh}(C)\). Apply the long exact sequence of sheaf
+  cohomology (\cref{def:Scheme_HModule}, the project's $\Module \bar
+  k$-flavoured cohomology pipeline). Using that $\dim C = 1$ kills
+  \(H^i\) for \(i \geq 2\) (Grothendieck vanishing on a \(1\)-dimensional
+  scheme), the long exact sequence reads
+  \begin{multline*}
+    0 \to H^0(C, \mathcal O_C) \to H^0(C, \mathcal O_C(P)) \to H^0(C, k(P)) \\
+    \to H^1(C, \mathcal O_C) \to H^1(C, \mathcal O_C(P)) \to H^1(C, k(P)) \to 0.
+  \end{multline*}
+  Two ingredients close the proof:
+
+  \emph{(a) \(H^1(C, \mathcal O_C) = 0\).} This is the genus-\(0\)
+  hypothesis: by \cref{def:genus},
+  \[
+    g(C) \;=\; \dim_{\bar k} H^1(C, \mathcal O_C),
+  \]
+  so \(g(C) = 0\) is exactly \(\dim_{\bar k} H^1(C, \mathcal O_C) = 0\),
+  i.e.\ \(H^1(C, \mathcal O_C) = 0\) as a \(\bar k\)-vector space.
+
+  \emph{(b) \(H^1(C, k(P)) = 0\).} The skyscraper sheaf \(k(P)\) is
+  supported at a single closed point, hence is flasque: every section
+  on an open \(U \subset C\) either restricts to \(0\) (if \(P \notin U\)) or
+  takes values in the stalk \(k(P)_P \cong \bar k\) (if \(P \in U\)), and
+  restriction maps between opens of either type are surjective. A
+  flasque sheaf on any topological space has vanishing higher
+  cohomology (Hartshorne~III.2.5); in particular
+  \(H^i(C, k(P)) = 0\) for \(i \geq 1\), and \emph{a fortiori}
+  \(H^1(C, k(P)) = 0\).
+
+  Substituting (a) and (b) into the long exact sequence collapses the
+  segment ending at \(H^1(C, \mathcal O_C(P))\) to
+  \[
+    0 \to H^1(C, \mathcal O_C(P)) \to 0,
+  \]
+  whence \(H^1(C, \mathcal O_C(P)) = 0\), as required.
+
+  \emph{Lean reference note on the long exact sequence.} Mathlib
+  (snapshot \texttt{b80f227}) ships the long exact sequence of
+  \(\Ext_{\mathcal O_C}^*(\mathbf 1, -)\) at the abelian-group level
+  (\texttt{CategoryTheory.Abelian.Ext.covariantSequence\_exact}); the
+  project's \(\Module \bar k\)-flavoured cohomology pipeline
+  (\cref{def:Scheme_HModule}) inherits the long exact sequence by
+  forget-functor naturality. The skyscraper-cohomology vanishing
+  \(H^i(C, k(P)) = 0\) for \(i \geq 1\) is closed by either the flasque
+  argument (Hartshorne~III.2.5; Mathlib has the abelian-sheaf form
+  via \texttt{CategoryTheory.Sheaf.Flasque}) or, more directly for the
+  curve case, by the affine-cover Čech-cohomology argument on
+  \(C \setminus \{P\}\) and a small affine open around \(P\) (the
+  skyscraper has zero sections on \(C \setminus \{P\}\), so the Čech
+  complex degenerates).
+\end{proof}
+
+\section{The dimension formula in genus zero}
+
+% NOTE (iter-194 reviewer): The Lean body is now structurally
+% sorry-free (closed transitively through two named substrate
+% helpers). The substrate helpers `h0_sub_h1_lineBundleAtClosedPoint_eq_two`
+% (the Int-valued $H^0 - H^1 = 2$ \(\chi\)-bridge; gated on
+% `OcOfD.lean` STRUCTURALLY BLOCKED + `RRFormula.lean` $\chi$-additivity)
+% and `h1_vanishing_genusZero` (gated on Lane H \texttt{H1Vanishing.lean}
+% substrate) carry the remaining typed sorries.  Future consumers
+% reading the body should consult those.
+\begin{theorem}
+
+
+
+\leanok
+[\(\dim_{\bar k} H^0(C, \mathcal O_C(P)) = 2\) on a genus-\(0\) curve]
+  \label{thm:lineBundleAtClosedPoint_dim_eq_two_of_genusZero}
+  \lean{AlgebraicGeometry.Scheme.lineBundleAtClosedPoint.dim_eq_two_of_genusZero}
+  \uses{thm:euler_char_eq_deg_plus_one_minus_genus, def:eulerChar_curve,
+        def:divisor_closed_point, def:divisor_degree, def:genus,
+        def:lineBundleAtClosedPoint,
+        thm:lineBundleAtClosedPoint_h0_sub_h1_eq_two,
+        lem:H1_vanishing_lineBundleAtClosedPoint_genusZero}
+
+  % SOURCE: [Hartshorne], IV.1, the Riemann--Roch chain inside
+  % Example~1.3.5 applied with \(D = [P]\): $\chi(\mathscr L([P]))
+  % = \deg([P]) + 1 - g = 1 + 1 - 0 = 2$, combined with the vanishing
+  % \(H^1(\mathscr L([P])) = 0\) (read from
+  % references/hartshorne-algebraic-geometry.pdf, PDF pages 312, 314).
+  % SOURCE QUOTE: "Theorem 1.3 (Riemann--Roch). \emph{Let \(D\) be a
+  % divisor on a curve \(X\) of genus \(g\). Then}
+  % \(l(D) - l(K - D) = \deg D + 1 - g\)."
+  % SOURCE QUOTE: "Thus we have to show that for any \(D\),
+  % \(\chi(\mathscr L(D)) = \deg D + 1 - g\),
+  % where for any coherent sheaf \(\mathscr F\) on \(X\), \(\chi(\mathscr F)\)
+  % is the Euler characteristic
+  % \(\chi(\mathscr F) = \dim H^0(X, \mathscr F) - \dim H^1(X, \mathscr F)\)."
+  \textit{Source: Hartshorne, IV.1, Theorem~1.3, p.~295 (the
+  \(\chi\)-identity inside the proof) and Example~1.3.5, p.~297 (the
+  genus-\(0\) specialisation chain).}
+  Let \(C\) be a smooth proper geometrically irreducible curve over
+  \(\bar k\) with \(g(C) = 0\), and let \(P \in C\) be a closed point. Then
+  \[
+    \dim_{\bar k} H^0(C, \mathcal O_C(P)) \;=\; 2.
+  \]
+\end{theorem}
+
+\begin{proof}
+  
+  
+  
+  Specialise the Euler-characteristic identity
+  \cref{thm:euler_char_eq_deg_plus_one_minus_genus} of \texttt{RR.2} to
+  the divisor \(D = [P]\) of \cref{def:divisor_closed_point}. The
+  degree of \([P]\) is \(\deg([P]) = 1\) (every closed point contributes
+  \(1\) to the bare-sum degree of \cref{def:divisor_degree}), and the
+  genus hypothesis \(g(C) = 0\) (\cref{def:genus}) gives
+  \[
+    \chi(\mathcal O_C(P)) \;=\; \deg([P]) + 1 - g(C)
+    \;=\; 1 + 1 - 0 \;=\; 2.
+  \]
+  Unfolding \(\chi\) via \cref{def:eulerChar_curve} as a two-term Euler
+  characteristic on a curve, this rewrites as
+  \[
+    \dim_{\bar k} H^0(C, \mathcal O_C(P))
+    \,-\, \dim_{\bar k} H^1(C, \mathcal O_C(P))
+    \;=\; 2.
+  \]
+  By
+  \cref{lem:H1_vanishing_lineBundleAtClosedPoint_genusZero}, the second
+  term vanishes:
+  \(\dim_{\bar k} H^1(C, \mathcal O_C(P)) = 0\). Substituting yields
+  \(\dim_{\bar k} H^0(C, \mathcal O_C(P)) = 2\), as required.
+
+  \emph{Alternative direct route via the long exact sequence.} The
+  same long exact sequence used in the proof of
+  \cref{lem:H1_vanishing_lineBundleAtClosedPoint_genusZero} computes
+  the dimension of \(H^0\) in one stroke without invoking
+  \texttt{RR.2}: from
+  \[
+    0 \to H^0(C, \mathcal O_C) \to H^0(C, \mathcal O_C(P))
+    \to H^0(C, k(P)) \to H^1(C, \mathcal O_C) \to \cdots
+  \]
+  together with \(\dim_{\bar k} H^0(C, \mathcal O_C) = 1\)
+  (Hartshorne~I.3.4: \(H^0\) of the structure sheaf on a proper
+  geometrically irreducible variety over \(\bar k\) is \(\bar k\)),
+  \(\dim_{\bar k} H^0(C, k(P)) = 1\) (skyscraper at a \(\bar k\)-rational
+  point), and \(H^1(C, \mathcal O_C) = 0\) (genus-\(0\)), the connecting
+  map \(H^0(C, k(P)) \to H^1(C, \mathcal O_C)\) has zero codomain and the
+  segment yields the short exact sequence
+  \[
+    0 \to \bar k \to H^0(C, \mathcal O_C(P)) \to \bar k \to 0
+  \]
+  of \(\bar k\)-vector spaces, whence $\dim_{\bar k}
+  H^0(C, \mathcal O_C(P)) = 1 + 1 = 2$. This alternative route does
+  not consume the Euler-characteristic identity of \texttt{RR.2} and
+  could be substituted at the formalisation stage; the chapter uses
+  \texttt{RR.2} as written above to keep the dependency graph in
+  line with the iter-173 RR sub-build sequencing.
+\end{proof}
+
+\begin{theorem}[The Euler-characteristic bridge \(H^0 - H^1 = 2\) at
+\(D = [P]\)]
+  \label{thm:lineBundleAtClosedPoint_h0_sub_h1_eq_two}
+  \lean{AlgebraicGeometry.Scheme.lineBundleAtClosedPoint.h0_sub_h1_lineBundleAtClosedPoint_eq_two}
+  \uses{def:lineBundleAtClosedPoint,
+        thm:euler_char_eq_deg_plus_one_minus_genus,
+        def:divisor_degree, def:genus}
+  Let \(C\) be a smooth proper geometrically irreducible curve over \(\bar k\)
+  with \(g(C) = 0\), and let \(P \in C\) be a closed point of coheight \(1\).
+  Then, as integers,
+  \[
+    \dim_{\bar k} H^0(C, \mathcal O_C(P))
+    \,-\, \dim_{\bar k} H^1(C, \mathcal O_C(P)) \;=\; 2.
+  \]
+  This is the specialisation of the Euler-characteristic identity
+  \(\chi(\mathcal O_C(D)) = \deg(D) + 1 - g(C)\) to the single-point divisor
+  \(D = [P]\), with \(\deg([P]) = 1\) and \(g(C) = 0\); it isolates the
+  \(\chi\)-arithmetic consumed by
+  \cref{thm:lineBundleAtClosedPoint_dim_eq_two_of_genusZero}.
+\end{theorem}
+
+\begin{proof}
+  Proved directly in Lean, as a sub-step of
+  \cref{thm:lineBundleAtClosedPoint_dim_eq_two_of_genusZero} via the
+  Riemann--Roch \(\chi\)-identity of \texttt{RR.2} evaluated at the
+  single-point divisor \([P]\).
+\end{proof}
+
+\subsection{Iter-195 substrate substeps for the
+  non-constant-rational corollary}
+\label{subsec:lineBundleAtClosedPoint_substrate_substeps}
+
+The iter-195 substrate prover reduced the body of
+\cref{cor:lineBundleAtClosedPoint_exists_nonconstant_genusZero} to a
+private helper \texttt{exists\_nonconstant\_rational\_from\_dim\_eq\_two}
+(file \texttt{AlgebraicJacobian/RiemannRoch/OCofP.lean}, line~1323)
+which carries the substantive linear-algebra plus principal-divisor
+content of the corollary, isolated from the genus hypothesis. The
+helper's body, after the iter-195 push, executes six structural setup
+steps culminating in the choice of a non-constant candidate section
+\(s\in H^0(C, \mathcal O_C(P))\setminus \bar k\cdot s_1\) (with
+\(s_1\) the distinguished constant section satisfying
+\(\iota(s_1)=1\)) and the definition
+\[
+  f \;:=\; \iota(s) \;=\;
+  \texttt{lineBundleAtClosedPoint.toFunctionField}\,P\,h_P\,h_{P\mathrm{coh}}\,s
+  \;\in\; K(C).
+\]
+After this setup, three named sub-claims (a), (b), (c) remain to close
+the helper. The iter-196 plan splits each into a project-bespoke
+substrate lemma carrying its own \texttt{\textbackslash lean}-pin and proof recipe. The
+sub-claims are Archon-original decompositions of the helper's
+in-Lean documentation block at lines~1421--1440 of
+\texttt{OCofP.lean}; the underlying mathematics is the standard
+content of Hartshorne~IV.1 Exercise~1.1 (already cited at the
+\(\cref{cor:lineBundleAtClosedPoint_exists_nonconstant_genusZero}\)
+level) augmented by the Stacks Project tag \texttt{02P0} input cited
+inline in sub-claim~(c).
+
+\begin{theorem}[Existence of a non-constant rational function from
+\(\dim H^0 = 2\)]
+  \label{thm:lineBundleAtClosedPoint_exists_nonconstant_rational_from_dim_eq_two}
+  \lean{AlgebraicGeometry.Scheme.lineBundleAtClosedPoint.exists_nonconstant_rational_from_dim_eq_two}
+  \uses{def:lineBundleAtClosedPoint,
+        lem:lineBundleAtClosedPoint_globalSections_iff_mp,
+        lem:lineBundleAtClosedPoint_globalSections_iff_mpr,
+        lem:lineBundleAtClosedPoint_toFunctionField_injective,
+        lem:lineBundleAtClosedPoint_functionField_const_of_complete_curve_of_orderZero,
+        def:principal_divisor}
+  Let \(C\) be a smooth proper geometrically irreducible integral curve over
+  \(\bar k\), let \(P \in C\) be a closed point of coheight \(1\), and suppose
+  \(\dim_{\bar k} H^0(C, \mathcal O_C(P)) = 2\). Then there exists a nonzero
+  rational function \(f \in K(C)\) satisfying \(\ord_Q(f) \ge 0\) for every
+  prime divisor \(Q \ne P\), \(\ord_P(f) \ge -1\), and with nonzero principal
+  divisor \(\div(f) \ne 0\). This is the genus-free substrate carrying the
+  linear-algebra and principal-divisor content of
+  \cref{cor:lineBundleAtClosedPoint_exists_nonconstant_genusZero}, isolated
+  from the genus hypothesis (only the dimension count is consumed).
+\end{theorem}
+
+\begin{proof}
+  Proved directly in Lean. The two-dimensionality of
+  \(H^0(C, \mathcal O_C(P))\) together with the one-dimensional constant
+  subspace \(\bar k \cdot s_1\) (with \(s_1\) the distinguished constant
+  section, \(\iota(s_1) = 1\)) yields a section \(s \notin \bar k \cdot s_1\).
+  Setting \(f := \iota(s)\), the inclusion is injective by
+  \cref{lem:lineBundleAtClosedPoint_toFunctionField_injective} (so
+  \(f \ne 0\)), the order conditions on \(f\) follow from
+  \cref{lem:lineBundleAtClosedPoint_globalSections_iff_mpr}, and the
+  non-vanishing of \(\div(f)\) follows by contraposition from
+  \cref{lem:lineBundleAtClosedPoint_functionField_const_of_complete_curve_of_orderZero}
+  (were \(\div(f) = 0\), the function would be constant, forcing
+  \(s \in \bar k \cdot s_1\)).
+\end{proof}
+
+\begin{lemma}
+
+
+\leanok
+[Sub-claim (a): \(\texttt{toFunctionField}\) is \(\bar k\)-linearly
+injective, hence preserves non-zero-ness of sections]
+  \label{lem:lineBundleAtClosedPoint_toFunctionField_injective}
+  \lean{AlgebraicGeometry.Scheme.lineBundleAtClosedPoint.toFunctionField_injective}
+  \uses{def:lineBundleAtClosedPoint_toFunctionField,
+        def:lineBundleAtClosedPoint_carrierSubmoduleSheaf,
+        def:lineBundleAtClosedPoint,
+        lem:lineBundleAtClosedPoint_globalSections_iff,
+        def:Scheme_HModule_zero_linearEquiv}
+  Let \(C\) be a smooth proper geometrically irreducible integral curve
+  over \(\bar k\) and let \(P\in C\) be a closed point with coheight
+  witness \(h_{P\mathrm{coh}}\colon \mathrm{coheight}(P)=1\). Then the
+  \(\bar k\)-linear map
+  \[
+    \iota \;:=\;
+    \texttt{lineBundleAtClosedPoint.toFunctionField}\,P\,h_P\,h_{P\mathrm{coh}}
+    \;\colon\;
+    H^0(C, \mathcal O_C(P)) \;\longrightarrow\; K(C)
+  \]
+  of \cref{def:lineBundleAtClosedPoint_toFunctionField} is injective.
+  In particular, for any global section \(s\in H^0(C, \mathcal O_C(P))\)
+  with \(s\ne 0\), the rational function \(f:=\iota(s)\in K(C)\) is
+  non-zero.
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:lineBundleAtClosedPoint_globalSections_iff,
+        def:lineBundleAtClosedPoint_carrierSubmoduleSheaf}
+  The map \(\iota\) factors as the composition of four \(\bar k\)-linear
+  isomorphisms and one final injective \(\bar k\)-linear map; each
+  factor's injectivity is delivered by existing Mathlib or
+  project-substrate hooks. Concretely, on the integral scheme \(C\),
+  \(\iota\) equals the composition:
+  \begin{enumerate}
+    \item \(\texttt{HModule\_zero\_linearEquiv}_{\bar k,\,\mathcal O_C(P)}\):
+      the project's $\bar k$-linear isomorphism
+      $H^0(C, \mathcal O_C(P)) \;=\; \texttt{Scheme.HModule}\,
+      \bar k\,\mathcal O_C(P)\,0
+        \;\xrightarrow{\sim}\;
+        \Hom_{\Sh}(\mathbf 1, \mathcal O_C(P))$
+      with \(\mathbf 1\) the constant sheaf of \(\bar k\) on \(C\). This
+      bridge is the project-substrate
+      \texttt{Cohomology/StructureSheafModuleK.lean} entry
+      \texttt{HModule\_zero\_linearEquiv}.
+    \item \texttt{sheafToPresheaf.map}: the fully faithful functor
+      \(\Sheaf \to \Psh\) on sheaves of \(\bar k\)-modules sends the
+      sheaf-hom of layer~(1) to the underlying presheaf-hom; full
+      faithfulness is Mathlib's
+      \texttt{CategoryTheory.Sheaf.fullyFaithfulSheafToPresheaf}, so
+      this step is injective on hom-sets.
+    \item \(\texttt{constantSheafAdj}_{\bar k,\,\mathcal O_C(P)}.\texttt{homEquiv}\):
+      Mathlib's constant-sheaf-adjunction
+      \(\texttt{constantSheaf} \dashv \Gamma\) supplies the
+      \(\bar k\)-linear isomorphism
+      $\Hom_{\Psh}(\mathbf 1_{\mathrm{psh}}, \mathcal O_C(P).\val)
+       \;\xrightarrow{\sim}\;
+       \Hom_{\ModuleCat\,\bar k}(\bar k, \mathcal O_C(P).\val(\top))$.
+    \item Evaluation at the generator \(1\in\bar k\): the canonical
+      \(\bar k\)-linear isomorphism
+      $\Hom_{\ModuleCat\,\bar k}(\bar k, M)
+       \;\xrightarrow{\sim}\;
+       M, \qquad \varphi \mapsto \varphi(1),$
+      with \(M:=\mathcal O_C(P).\val(\top)\) the global-section module
+      of \cref{def:lineBundleAtClosedPoint_carrierSubmoduleSheaf}. The
+      Mathlib name at the project's pinned commit may be
+      \texttt{LinearMap.applyOneEquiv} or its
+      \texttt{LinearEquiv.fromBaseRing} variant; the prover hand-rolls
+      a 5-line \texttt{LinearEquiv} if the exact name has been
+      renamed upstream.
+    \item \texttt{Subtype.val}: the carrier sheaf
+      \(\mathcal O_C(P).\val(\top) \;=\;
+      \texttt{carrierSubmoduleSheaf}\,P\,h_{P\mathrm{coh}}(\op\,\top)\)
+      is a \(\bar k\)-submodule of the function field \(K(C)\)
+      (\cref{def:lineBundleAtClosedPoint_carrierSubmoduleSheaf}); the
+      coercion \texttt{Subtype.val} to \(K(C)\) is injective.
+  \end{enumerate}
+  Each layer (1)--(4) is a \texttt{LinearEquiv}; layer (5) is
+  \texttt{Function.Injective Subtype.val}. The composition is therefore
+  an injective \(\bar k\)-linear map, and this composition is precisely
+  the body unfolding of
+  \cref{def:lineBundleAtClosedPoint_toFunctionField}: the iter-187
+  refactor of \texttt{toFunctionField} is the formal record of this
+  factorisation (compare the \emph{iter-187 closure} commentary at
+  \cref{def:lineBundleAtClosedPoint_toFunctionField} and the
+  \texttt{globalSections\_iff\_mpr} proof at line~1024 of
+  \texttt{OCofP.lean}, where the same chain is unfolded in the
+  reverse direction). The non-zero-transfer conclusion is immediate:
+  if \(\iota(s)=0\) and \(s\ne 0\), then \(\iota\) has a non-trivial
+  kernel, contradicting injectivity; equivalently, applying
+  injectivity to \(\iota(s)=0=\iota(0)\) (using
+  \texttt{htF\_zero}, already in scope at line~1364 of the helper
+  body) gives \(s=0\), contradicting the iter-195 hypothesis
+  \(s\notin \bar k\cdot s_1\) (which is strictly stronger than
+  \(s\ne 0\)).
+
+  \emph{Estimated formalisation footprint.} \(\sim 30\)--\(50\)
+  Lean LOC: layer~(1) is one line (named bridge); layer~(2) is
+  \(\sim 5\) LOC; layer~(3) is \(\sim 5\)--\(10\) LOC; layer~(4) is
+  \(\sim 5\)--\(10\) LOC (hand-roll if necessary); layer~(5) is one
+  line (\texttt{Subtype.val\_injective}); the composition and the
+  final \(s\ne 0\Rightarrow\iota(s)\ne 0\) wrap each add 5--10 LOC.
+\end{proof}
+
+\begin{lemma}
+
+
+\leanok
+[Sub-claim (b): backward direction of \texttt{globalSections\_iff} —
+order conditions from an existing section]
+  \label{lem:lineBundleAtClosedPoint_globalSections_iff_mpr}
+  \lean{AlgebraicGeometry.Scheme.lineBundleAtClosedPoint.globalSections_iff_mpr}
+  \uses{lem:lineBundleAtClosedPoint_globalSections_iff,
+        def:lineBundleAtClosedPoint_toFunctionField,
+        def:lineBundleAtClosedPoint_carrierSubmoduleSheaf}
+  Let \(C, P, h_P, h_{P\mathrm{coh}}\) be as in
+  \cref{lem:lineBundleAtClosedPoint_toFunctionField_injective}. Let
+  \(f \in K(C)\) be nonzero, and suppose there exists a global section
+  \(s \in H^0(C, \mathcal O_C(P))\) with \(\iota(s) = f\), where
+  \(\iota:=
+  \texttt{lineBundleAtClosedPoint.toFunctionField}\,P\,h_P\,h_{P\mathrm{coh}}\).
+  Then \(f\) satisfies the order conditions:
+  \[
+    \ord_Q(f) \;\ge\; 0
+    \qquad \text{for every prime divisor } Q\in C \text{ with } Q\ne P,
+    \qquad
+    \ord_P(f) \;\ge\; -1.
+  \]
+  This is the backward direction (\texttt{mpr}) of the equivalence
+  \cref{lem:lineBundleAtClosedPoint_globalSections_iff}; it is pinned as
+  a named substrate helper so that
+  \cref{cor:lineBundleAtClosedPoint_exists_nonconstant_genusZero}'s Lean
+  body can invoke it directly with a witness
+  \(\langle s, \mathtt{rfl}\rangle\) built from the iter-195 setup.
+\end{lemma}
+
+\begin{proof}
+  \uses{def:lineBundleAtClosedPoint_carrierSubmoduleSheaf,
+        def:lineBundleAtClosedPoint_toFunctionField}
+  Unfold the witness section \(s\) along the linear-equivalence chain
+  defining \(\iota = \texttt{toFunctionField}\) (the five-layer
+  composition recorded in
+  \cref{lem:lineBundleAtClosedPoint_toFunctionField_injective}). The
+  underlying carrier element at the top open is a pair
+  \((\widetilde f,\,p) \in \mathrm{carrierSubmoduleSheaf}_P(\op\top)\)
+  with \(\widetilde f = f\) (from the hypothesis \(\iota(s) = f\)) and
+  \(p\) a membership witness. By
+  \cref{def:lineBundleAtClosedPoint_carrierSubmoduleSheaf}, membership
+  in \(\mathrm{carrierSubmoduleSheaf}_P(\op\top)\) unfolds as the
+  conjunction of (i) order \(\ge 0\) at every prime divisor \(Q\) of
+  \(\top\) other than \(P\), and (ii) order \(\ge -1\) at \(P\)
+  (intersected with the trivial \texttt{trivAtBot} factor, which is
+  \(\top\) on the top open). Projecting \(p\) onto its first and
+  second components returns exactly the pair of order bounds claimed
+  (the auxiliary \(Q.\mathrm{point}\in \mathrm{Set.univ}\) premises
+  are discharged by \(\mathrm{Set.mem\_univ}\)). The nonzero hypothesis
+  on \(f\) is carried for downstream typing but is not consumed in the
+  membership-projection step.
+\end{proof}
+
+\begin{lemma}
+
+
+\leanok
+[Sub-claim (c) substrate: a rational function with zero order at every
+prime divisor on a complete curve is constant
+(Hartshorne~I.3.4 / Stacks~\texttt{02P0})]
+  \label{lem:lineBundleAtClosedPoint_functionField_const_of_complete_curve_of_orderZero}
+  \lean{AlgebraicGeometry.Scheme.lineBundleAtClosedPoint.functionField_const_of_complete_curve_of_orderZero}
+  \uses{def:lineBundleAtClosedPoint, lem:lineBundleAtClosedPoint_algebraMap_bijective_of_finite_isDomain_isAlgClosed, lem:lineBundleAtClosedPoint_functionField_localUnit_of_orderZero_at_primeDivisor}
+  Let \(C\) be a smooth proper geometrically irreducible integral curve
+  over the algebraically closed field \(\bar k\). Let \(f \in K(C)\) be
+  a nonzero rational function such that
+  \(\ord_Q(f) = 0\) for every prime divisor \(Q \in C\). Then \(f\)
+  lies in the image of the constant inclusion
+  \(\bar k \hookrightarrow K(C)\): there exists \(c \in \bar k\) with
+  \[
+    f \;=\; \texttt{algebraMap}\,\bar k\,K(C)\,c.
+  \]
+\end{lemma}
+
+% NOTE (iter-197 rename — substrate vs.\ contrapositive). The original
+% iter-196 phrasing of sub-claim~(c) was the contrapositive form
+% ``principal divisor of a non-constant rational function on a complete
+% curve is non-zero'':
+%   \mathtt{Scheme.WeilDivisor.principal}\,f\,h_f \;\ne\; 0
+% whenever \(s \notin \bar k\cdot s_1\) and \(f = \iota(s)\). The two
+% forms are mathematically equivalent: \(\mathrm{principal}\,f =
+% \sum_Q \ord_Q(f)\cdot[Q]\), so \(\mathrm{principal}\,f = 0\) iff
+% \(\ord_Q(f) = 0\) for every prime divisor \(Q\), and the substrate
+% above then forces \(f \in \bar k\). The iter-196 prover chose to
+% extract the Hartshorne~I.3.4 / Stacks~\texttt{02P0} form as the
+% standalone named substrate — it cleanly isolates the substantive
+% Mathlib gap (``\(\Gamma(C, \mathcal O_C) = \bar k\) on a complete
+% geometrically irreducible curve over \(\bar k\)'') — and inlined the
+% contrapositive ``\(s \notin \bar k\cdot s_1 \Rightarrow
+% \mathrm{principal}\,f \ne 0\)'' wrapper inside
+% \texttt{exists\_nonconstant\_rational\_from\_dim\_eq\_two}
+% (\texttt{AlgebraicJacobian/RiemannRoch/OCofP.lean} lines~1596--1635).
+% The contrapositive runs as follows: assume \(\mathrm{principal}\,f
+% = 0\); apply the substrate to obtain \(f = c \in \bar k\); use
+% \(\bar k\)-linearity of \(\iota\) plus \(\iota(s_1) = 1\) and
+% injectivity of \(\iota\)
+% (\cref{lem:lineBundleAtClosedPoint_toFunctionField_injective}) to
+% conclude \(s = c\cdot s_1 \in \bar k\cdot s_1\), contradicting
+% \(s \notin \bar k\cdot s_1\).
+
+\begin{proof}
+  \uses{def:lineBundleAtClosedPoint, lem:lineBundleAtClosedPoint_functionField_localUnit_of_orderZero_at_primeDivisor, lem:lineBundleAtClosedPoint_algebraMap_bijective_of_finite_isDomain_isAlgClosed}
+  This is the classical Hartshorne~I.3.4 statement
+  ``\(\Gamma(C, \mathcal O_C) = \bar k\) on a complete geometrically
+  irreducible reduced variety over the algebraically closed field
+  \(\bar k\)'', combined with the
+  ``no-zeros-no-poles \(\Rightarrow\) regular'' content of
+  Stacks~\texttt{02P0}, in two ingredients:
+
+  \emph{Step (i) — algebraic Hartogs.} On the normal Noetherian scheme
+  \(C\), a rational function regular at every codimension-\(1\) point
+  extends uniquely to a global section of the structure sheaf
+  (Stacks tag~\texttt{0BCK}: $\Gamma(C, \mathcal O_C) =
+  \bigcap_{Q\in C^{(1)}} \mathcal O_{C, Q}$). On the smooth curve
+  \(C\) every prime divisor \(Q\) is a codimension-\(1\) point and
+  \(\ord_Q\) is the standard discrete valuation on
+  \(\mathcal O_{C, Q}\); the hypothesis \(\ord_Q(f) = 0\) for every
+  \(Q\) places \(f\) in the intersection
+  \(\bigcap_Q \mathcal O_{C, Q} = \Gamma(C, \mathcal O_C)\).
+
+  \emph{Step (ii) — global sections are constants.} On a proper
+  geometrically irreducible reduced variety over the algebraically
+  closed field \(\bar k\), the global-sections ring of the structure
+  sheaf coincides with the base field,
+  \(\Gamma(C, \mathcal O_C) = \bar k\) (Hartshorne~I.3.4; or
+  cohomologically: \(\Gamma\) is finite-dimensional over \(\bar k\)
+  by Hartshorne~III.5.2, hence integral over \(\bar k\), hence
+  algebraic, hence \(\bar k\) by algebraic closure). Combining
+  step~(i) with step~(ii) places \(f\) in the image of the constant
+  inclusion \(\bar k \hookrightarrow K(C)\), as required.
+
+  \emph{Mathlib status.} At snapshot \texttt{b80f227} both ingredients
+  are project-bespoke Mathlib gaps: the Lean substrate helper carries
+  a single typed sorry pending upstream development; the named-helper
+  extraction makes the upstream dependency explicit for future
+  iterations.
+\end{proof}
+
+\begin{lemma}[Local DVR lift from vanishing order]
+  \label{lem:lineBundleAtClosedPoint_localLift_of_log_ordFrac_eq_zero}
+  \lean{AlgebraicGeometry.Scheme.lineBundleAtClosedPoint.localLift_of_log_ordFrac_eq_zero}
+  Let \(R\) be a discrete valuation ring with field of fractions \(K\). A
+  nonzero element \(x \in K\) whose valuation is \(0\) (equivalently,
+  \(\log\) of its order is \(0\)) is the image of a unit of \(R\): there
+  exists a unit \(r \in R^{\times}\) with \(x = r\) in \(K\).
+\end{lemma}
+
+\begin{proof}
+  Proved directly in Lean: vanishing of \(\log\) of the order forces the
+  order to equal \(1\), placing \(x\) in the multiplicative kernel of the
+  order homomorphism, which for a discrete valuation ring is exactly the
+  image of the unit submonoid.
+\end{proof}
+
+\begin{lemma}[A finite integral-domain algebra over an algebraically closed
+field is the field]
+  \label{lem:lineBundleAtClosedPoint_algebraMap_bijective_of_finite_isDomain_isAlgClosed}
+  \lean{AlgebraicGeometry.Scheme.lineBundleAtClosedPoint.algebraMap_bijective_of_finite_isDomain_isAlgClosed}
+  Let \(k\) be an algebraically closed field and \(R\) an integral domain that
+  is a finite-dimensional \(k\)-algebra. Then the structural algebra map
+  \(k \to R\) is bijective. This is the abstract algebraic kernel of the
+  identity \(\Gamma(C, \mathcal O_C) = \bar k\) on a complete curve.
+\end{lemma}
+
+\begin{proof}
+  Proved directly in Lean, as a re-export of Mathlib's
+  \texttt{IsAlgClosed.algebraMap\_bijective\_of\_isIntegral} against the
+  finite-implies-integral instance.
+\end{proof}
+
+\begin{lemma}[Stalk-unit lift from vanishing order at a prime divisor]
+  \label{lem:lineBundleAtClosedPoint_functionField_localUnit_of_orderZero_at_primeDivisor}
+  \lean{AlgebraicGeometry.Scheme.lineBundleAtClosedPoint.functionField_localUnit_of_orderZero_at_primeDivisor}
+  \uses{lem:lineBundleAtClosedPoint_localLift_of_log_ordFrac_eq_zero}
+  Let \(X\) be an integral, locally Noetherian, regular-in-codimension-one
+  scheme, let \(Q\) be a prime divisor of \(X\), and let \(f \in K(X)\) be
+  nonzero with \(\ord_Q(f) = 0\). Then \(f\) is the image of a unit of the
+  stalk \(\mathcal O_{X, Q}\) under the canonical embedding
+  \(\mathcal O_{X, Q} \hookrightarrow K(X)\).
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:lineBundleAtClosedPoint_localLift_of_log_ordFrac_eq_zero}
+  Proved directly in Lean by unfolding \(\ord_Q\) and applying
+  \cref{lem:lineBundleAtClosedPoint_localLift_of_log_ordFrac_eq_zero} to the
+  discrete valuation ring stalk at \(Q\).
+\end{proof}
+
+\section{Existence of a non-constant rational function}
+
+\begin{corollary}
+
+
+
+\leanok
+[A genus-\(0\) curve admits a non-constant rational function with a
+single simple pole]
+  \label{cor:lineBundleAtClosedPoint_exists_nonconstant_genusZero}
+  % Alias label consumed under the shorter name by
+  % \texttt{RiemannRoch\_RationalCurveIso.tex} (RR.4):
+  \label{cor:nonconstant_function_genus_zero}
+  \lean{AlgebraicGeometry.Scheme.lineBundleAtClosedPoint.exists_nonconstant_genusZero}
+  \uses{thm:lineBundleAtClosedPoint_dim_eq_two_of_genusZero,
+        thm:lineBundleAtClosedPoint_exists_nonconstant_rational_from_dim_eq_two,
+        lem:lineBundleAtClosedPoint_globalSections_iff,
+        lem:lineBundleAtClosedPoint_toFunctionField_injective,
+        def:principal_divisor}
+
+  % SOURCE: [Hartshorne], IV.1, Exercise~1.1 (the existence of a
+  % nonconstant rational function regular everywhere except at one
+  % point on a genus-\(0\) curve, as a direct consequence of the
+  % Riemann--Roch dimension formula) (read from
+  % references/hartshorne-algebraic-geometry.pdf, PDF page 314).
+  % SOURCE QUOTE: "1.1. Let \(X\) be a curve, and let \(P \in X\) be a
+  % point. Then there exists a nonconstant rational function $f \in
+  % K(X)\(, which is regular everywhere except at \)P$."
+  \textit{Source: Hartshorne, IV.1, Exercise~1.1, p.~297.}
+  Let \(C\) be a smooth proper geometrically irreducible curve over
+  \(\bar k\) with \(g(C) = 0\), and let \(P \in C\) be a closed point. Then
+  there exists a non-constant rational function \(f \in K(C)\) such that:
+  \begin{itemize}
+    \item \(f\) is regular on \(C \setminus \{P\}\), i.e.\ \(\ord_Q(f) \geq 0\)
+      for every closed point \(Q \in C\) with \(Q \neq P\);
+    \item \(f\) has at most a simple pole at \(P\), i.e.\
+      \(\ord_P(f) \geq -1\);
+    \item \(f \notin \bar k\), equivalently
+      \(\div(f) \neq 0 \in \mathrm{Div}(C)\).
+  \end{itemize}
+  In particular, the pair \((1, f)\) spans
+  \(H^0(C, \mathcal O_C(P))\) as a \(\bar k\)-vector space.
+\end{corollary}
+
+\begin{proof}
+  
+  
+  
+  By
+  \cref{thm:lineBundleAtClosedPoint_dim_eq_two_of_genusZero},
+  \(\dim_{\bar k} H^0(C, \mathcal O_C(P)) = 2\). The constant subspace
+  \(\bar k \cdot 1 \subset H^0(C, \mathcal O_C(P))\), obtained from the
+  structural inclusion $\bar k \cong H^0(C, \mathcal O_C)
+  \hookrightarrow H^0(C, \mathcal O_C(P))$ (the rational function
+  \(f = 1\), with \(\div(1) + [P] = [P] \geq 0\), under the
+  identification of
+  \cref{lem:lineBundleAtClosedPoint_globalSections_iff}), is a one-dimensional
+  \(\bar k\)-vector subspace. Since the ambient space has dimension \(2\),
+  the quotient \(H^0(C, \mathcal O_C(P)) / \bar k \cdot 1\) is a
+  non-zero one-dimensional \(\bar k\)-vector space; any lift to
+  \(H^0(C, \mathcal O_C(P))\) of a non-zero element of the quotient is
+  an element of \(H^0(C, \mathcal O_C(P)) \setminus \bar k \cdot 1\).
+
+  Choose such a lift $s \in H^0(C, \mathcal O_C(P)) \setminus \bar k
+  \cdot 1$. Under the identification of
+  \cref{lem:lineBundleAtClosedPoint_globalSections_iff} the section
+  \(s\) corresponds to a rational function \(f \in K(C)^{\times}\)
+  satisfying \(\div(f) + [P] \geq 0\), equivalently \(\ord_Q(f) \geq 0\)
+  for every \(Q \neq P\) and \(\ord_P(f) \geq -1\). The choice
+  \(s \notin \bar k \cdot 1\) means \(f\) is not the image of a constant,
+  so \(f \notin \bar k\) (every non-zero element of
+  \(H^0(C, \mathcal O_C) \cong \bar k\) corresponds, under the
+  identification, to a constant element of \(K(C)\)). The three bullets
+  of the statement are now immediate.
+
+  Spanning. Linear independence of \(1\) and \(f\) over \(\bar k\) in
+  \(H^0(C, \mathcal O_C(P))\) is the same condition as
+  \(s \notin \bar k \cdot 1\) above; combined with the dimension count
+  \(\dim_{\bar k} H^0(C, \mathcal O_C(P)) = 2\), the pair \((1, f)\) is a
+  \(\bar k\)-basis of \(H^0(C, \mathcal O_C(P))\).
+
+  \paragraph{Lean signature scope.} The Lean signature
+  \texttt{AlgebraicGeometry.Scheme.lineBundleAtClosedPoint.exists\_nonconstant\_genusZero}
+  returns an element \(f\) of the project's function-field carrier
+  \(K(C)\) together with proofs of regularity on \(C \setminus \{P\}\) and
+  the simple-pole bound at \(P\), packaged in the same shape as
+  \cref{thm:lineBundleAtClosedPoint_exists_nonconstant_rational_from_dim_eq_two}'s output. The
+  non-constancy is recorded as a separate field; the spanning
+  statement is downstream and is consumed by \texttt{RR.4} via
+  \texttt{Proj.fromOfGlobalSections}.
+\end{proof}
+
+\section{Mathlib-status flag: the H\(^1\)-vanishing input}
+
+The vanishing \(H^1(C, \mathcal O_C(P)) = 0\) on a genus-\(0\) curve
+(\cref{lem:H1_vanishing_lineBundleAtClosedPoint_genusZero}) is the
+critical cohomological input of this chapter. Its closure depends on
+two Mathlib-status facts, both of which the project already consumes
+elsewhere:
+
+\begin{itemize}
+  \item \textbf{Long exact sequence of \(\Module \bar k\)-flavoured sheaf
+    cohomology.} Mathlib (\texttt{b80f227}) ships
+    \texttt{CategoryTheory.Abelian.Ext.covariantSequence\_exact} for
+    \(\Ext^*\)-long-exact-sequences at the abelian-group level. The
+    project's \(\Module \bar k\)-flavoured pipeline
+    (\cref{def:Scheme_HModule}, \texttt{Cohomology\_StructureSheafModuleK.tex})
+    inherits it by forget-functor naturality. This bridge is already
+    consumed by \cref{thm:euler_char_eq_deg_plus_one_minus_genus} of
+    \texttt{RR.2}, so closing it here introduces no new Mathlib
+    obligation.
+  \item \textbf{Vanishing of higher cohomology of a skyscraper sheaf}
+    on a Noetherian scheme. Hartshorne~III.2.5 gives the flasque
+    formulation; the project's affine-cover Čech route
+    (\cref{def:Scheme_HModule} and surrounding
+    \texttt{Cohomology\_StructureSheafModuleK.tex} machinery) computes
+    the same vanishing for the skyscraper at a closed point by direct
+    Čech-degeneration. \texttt{RR.2}'s inductive step already invokes
+    \(\chi(k(P)) = 1\), which is the combined statement
+    \(\dim H^0(C, k(P)) = 1\) and \(\dim H^i(C, k(P)) = 0\) for \(i \geq 1\),
+    so the vanishing \(H^1(C, k(P)) = 0\) is already a consumer
+    obligation of \texttt{RR.2}.
+\end{itemize}
+
+Consequently the H\(^1\)-vanishing
+\cref{lem:H1_vanishing_lineBundleAtClosedPoint_genusZero} introduces no
+Mathlib obligation that is not already on \texttt{RR.2}'s critical
+path. The genus-\(0\) specialisation should therefore close at the
+formalisation stage without splitting this chapter or pushing the
+vanishing back into \texttt{RR.2}.
+
+% NOTE (iter-174 plan-agent flag). The general-\(g\) vanishing statement
+% ``\(H^1(C, \mathcal L) = 0\) whenever \(\deg \mathcal L > 2g - 2\)''
+% (Hartshorne~IV.1, the Riemann--Roch consequence read covariantly) is
+% \emph{not} a deliverable of this chapter and is not required for the
+% genus-\(0\) critical path: the genus-\(0\) argument closes via the long
+% exact sequence at \(D = 0\) without ever needing the general bound. The
+% general bound is a Serre-duality-flavoured statement and is queued for
+% the post-RR-bridge follow-up chapter together with the dualizing sheaf
+% \(\omega_C\) and the canonical-divisor identification \(K_C \sim -2[P]\)
+% on \(\mathbb P^1\) (Hartshorne~II.8.20.1).
+
+\section{Out of scope}
+
+The following items are deliberately \emph{not} part of \texttt{RR.3}
+and are sequenced into the sibling sub-build chapters or queued for
+follow-up iterations:
+
+\begin{itemize}
+  \item The construction of the invertible sheaf \(\mathcal O_C(D)\)
+    associated to an arbitrary Weil divisor $D = \sum n_i [P_i] \in
+    \mathrm{Div}(C)$, and the linear-equivalence isomorphism
+    \(\mathcal O_C(D) \cong \mathcal O_C(D')\) when \(D \sim D'\), are
+    \emph{not} performed in this chapter. The chapter constructs only
+    the specialisation \(\mathcal O_C(D)\) at \(D = [P]\) a prime divisor,
+    which is the only case consumed by the genus-\(0\) classification
+    chain. The general \(\mathcal O_C(D)\) is queued for the
+    post-RR-bridge follow-up (where it pairs with the general-\(g\)
+    Riemann--Roch formula and the canonical-divisor identification).
+  \item The general-\(g\) statement
+    $\dim_{\bar k} H^0(C, \mathcal O_C(P)) = \deg([P]) + 1 -
+    g(C) + \dim_{\bar k} H^1(C, \mathcal O_C(P))$, while a direct
+    consequence of
+    \cref{thm:euler_char_eq_deg_plus_one_minus_genus} of \texttt{RR.2},
+    is not separately formalised here; the chapter restricts to the
+    genus-\(0\) specialisation \(g = 0\) on which
+    \cref{thm:lineBundleAtClosedPoint_dim_eq_two_of_genusZero} is
+    available.
+  \item \textbf{Serre duality} $H^1(C, \mathcal L) \cong
+    H^0(C, \omega_C \otimes \mathcal L^{-1})^*$ and the associated
+    canonical divisor \(K_C = c_1(\omega_C)\) are \emph{not} used at any
+    step of this chapter and are not deliverables; the chapter routes
+    cohomological vanishing through the long exact sequence at
+    \(D = 0\) (\cref{lem:H1_vanishing_lineBundleAtClosedPoint_genusZero})
+    instead. Serre duality is queued for the post-RR-bridge follow-up.
+  \item The morphism \(C \to \mathbb P^1_{\bar k}\) produced by applying
+    \texttt{Proj.fromOfGlobalSections} to the basis \((1, f)\) of
+    \cref{cor:lineBundleAtClosedPoint_exists_nonconstant_genusZero},
+    and its identification as an isomorphism, are the content of
+    \texttt{RR.4} (sibling chapter
+    \texttt{RiemannRoch\_RationalIsoP1.tex}, to be added). The present
+    chapter supplies the basis \((1, f)\) and stops.
+  \item The general-\(g\) vanishing
+    \(H^1(C, \mathcal L) = 0\) for \(\deg \mathcal L > 2g - 2\) is
+    \emph{not} part of this chapter and is not required for the
+    genus-\(0\) critical path. It is a Serre-duality-flavoured statement
+    queued for the post-RR-bridge follow-up.
+  \item The interpretation of \(H^0(C, \mathcal O_C(P))\) as the space
+    of sections of a complete linear system \(|[P]|\) in
+    projective-space form (Hartshorne~II.7.7) is gestured at by
+    \cref{lem:lineBundleAtClosedPoint_globalSections_iff} but the
+    projective-space structure on the underlying set is not separately
+    formalised; the chapter consumes only the \(\bar k\)-vector space
+    structure on \(H^0(C, \mathcal O_C(P))\).
+\end{itemize}

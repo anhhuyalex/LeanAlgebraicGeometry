@@ -9,14 +9,16 @@ A high-level, mathematical checklist across the scope's member projects.
 - [ ] not started (no Lean yet — blueprint only, or theme not begun)
 
 **Status snapshot** *(open `sorry` counts measured over each project's `AlgebraicJacobian/`
-source tree, comments/docstrings excluded; 2026-06-19):*
+source tree, comments/docstrings excluded; 2026-06-20):*
 
 | Project | Stage | Open `sorry` |
 | --- | --- | --- |
 | Algebraic-Jacobian-Challenge | prover | 87 ✨ |
 | Cech-Cohomology | ✅ complete | 0 ✨ |
 | Line-Bundle-Comparison-Iso | prover | 4 ✨ |
-| Quot-Foundations | prover | 21 |
+| Albanese | prover | 17 ✨ |
+| RiemannRoch | prover | 18 ✨ |
+| Quot-Foundations | ⏸️ deferred | 21 |
 | GR-quot_closure | prover | 9 ✨ |
 | FBC-B_SNAP-chain | prover | 16 ✨ |
 | 36 related-paper projects | 📝 blueprint only | 0 Lean (stub aggregators) |
@@ -28,9 +30,11 @@ source tree, comments/docstrings excluded; 2026-06-19):*
 ### Core algebraic-geometry engine
 
 - `Line-Bundle-Comparison-Iso` → `Algebraic-Jacobian-Challenge` (largest leverage: unblocks the Picard / comparison-iso substrate; merges back the `A.1.c.sub` package)
+- `Albanese` → `Algebraic-Jacobian-Challenge` (extracted Albanese / abelian-variety leg — Albanese universal property, codim-one & Thm 3.2 rational-map extension, Auslander–Buchsbaum/coheight bridge; merges back) ✨ 2026-06-20
+- `RiemannRoch` → `Algebraic-Jacobian-Challenge` (extracted Weil-divisor / Riemann–Roch core — `O(D)`/`O(P)`, skyscraper SES, `H¹`-vanishing, RR formula, rational-curve iso; merges back) ✨ 2026-06-20
 - `Cech-Cohomology` ↔ `Algebraic-Jacobian-Challenge` (the Čech `Rⁱf_*` engine is the cohomological substrate; proved sorry-free here, **merged sorry-free into the AJC tree** ✨ 2026-06-19 — all Čech MERGE-STUBs restored with the working proofs, AJC's full `lake build` is green and the capstone `cech_computes_higherDirectImage` is axiom-clean)
 - `GR-quot_closure`, `FBC-B_SNAP-chain` → `Quot-Foundations` (extracted work packages of the Quot/Picard-representability cone; share the SNAP section-graded-ring foundation `Picard/SectionGradedRing.lean`)
-- `Quot-Foundations` → `Algebraic-Jacobian-Challenge` (the H⁰ Picard-representability cone — flat base change, Grassmannian, Quot — merges back)
+- `Quot-Foundations` → `Algebraic-Jacobian-Challenge` (the H⁰ Picard-representability cone — flat base change, Grassmannian, Quot — merges back; **deferred**, active work now lives in the `GR-quot_closure` / `FBC-B_SNAP-chain` extractions)
 
 ### Related papers → AG base
 
@@ -120,12 +124,43 @@ structure (the A.1.c.sub package; merges back into the Jacobian challenge).
 - [x] **Line-bundle pullback / relative Pic functor** — `LineBundlePullback`, `RelPicFunctor` **sorry-free**
 - [~] **Tensor unitors & Picard-group assembly** — `TensorObjSubstrate` (PicGroup/picCommGroup wiring), **4 residual `sorry`**
 
-## Quot-Foundations  *(prover stage — 21 open `sorry`)*
+## Albanese  *(prover stage — extraction → Jacobian, 17 open `sorry`)* ✨
+
+**Goal:** the Albanese universal property of `Pic⁰` (Milne III §6 Prop 6.1, seed
+`thm:albanese_universal_property`) and the rational-map-extension machinery feeding the
+abelian-variety leg of the Jacobian challenge. Extracted from `Algebraic-Jacobian-Challenge`
+on 2026-06-20; merges back. *(Full `lake build` green — the carve had dropped load-bearing
+`Genus0BaseObjects/BareScheme` grading / `Over` / standard-smooth instances, restored from
+the parent ✨ 2026-06-20.)*
+
+- [x] **Auslander–Buchsbaum / coheight bridge** — `Albanese/AuslanderBuchsbaum`, `Albanese/CoheightBridge` **sorry-free**
+- [x] **Rigidity lemma + structure-sheaf module substrate** — `RigidityLemma`, `Cohomology/StructureSheaf*` **sorry-free**
+- [~] **Albanese universal property** — `Albanese/AlbaneseUP` (×7): the headline `Pic.albaneseUP` + universal-map descent
+- [~] **Codim-one & Thm 3.2 rational-map extension** — `Albanese/CodimOneExtension` (×3), `Albanese/Thm32RationalMapExtension` (×2)
+- [~] **FGA Picard representability slice** — `Picard/FGAPicRepresentability` (×2)
+- [~] **Genus-0 base + Weil-divisor riders** — `Genus0BaseObjects/BareScheme` (×1, `projectiveLineBar_geomIrred` scaffold), `Genus0BaseObjects/GmScaling` (×1), `RiemannRoch/WeilDivisor` (×1)
+
+## RiemannRoch  *(prover stage — extraction → Jacobian, 18 open `sorry`)* ✨
+
+**Goal:** the Weil-divisor / Riemann–Roch core for a smooth proper curve — order valuation,
+degree homomorphism, `O(D)`/`O(P)`, the skyscraper SES, `H¹`-vanishing, and the RR formula.
+Extracted from `Algebraic-Jacobian-Challenge` on 2026-06-20; merges back. *(Full `lake build` green.)*
+
+- [x] **Structure-sheaf module substrate + rigidity** — `Cohomology/StructureSheaf*`, `RigidityLemma` **sorry-free**
+- [~] **Weil divisors** — `RiemannRoch/WeilDivisor` (×3): order valuation, degree hom, principal divisors
+- [~] **`O(D)` / `O(P)` line bundles** — `RiemannRoch/OcOfD` (×3), `RiemannRoch/OCofP` (×3): skyscraper SES
+- [~] **`H¹`-vanishing & RR formula** — `RiemannRoch/H1Vanishing` (×2), `RiemannRoch/RRFormula` (×1)
+- [~] **Rational-curve iso + abelian-variety rigidity** — `RiemannRoch/RationalCurveIso` (×3), `AbelianVarietyRigidity` (×1)
+- [~] **Genus-0 base riders** — `Genus0BaseObjects/BareScheme` (×1), `Genus0BaseObjects/GmScaling` (×1)
+
+## Quot-Foundations  *(⏸️ deferred — 21 open `sorry`; active work moved to subproject extractions)*
 
 **Goal:** the Čech-independent (i = 0) leg of FGA Picard representability — flat base
 change, generic flatness, and Quot/Grassmannian foundations. The Grassmannian-quotient
 representability endgame and the flat-base-change/SNAP legs are carved into the sibling
 extractions `GR-quot_closure` and `FBC-B_SNAP-chain` (below); proofs merge back here.
+**Deferred:** the directory is parked as `Quot-Foundations-[deferred_to_subprojects]` while
+the two extractions carry the active proving.
 
 - [x] **Grassmannian construction & gluing** — `GrassmannianCells`, `GlueDescent` **sorry-free** (rank-quotient setoid, charts, transition cocycle, effective descent)
 - [x] **RelativeSpec / flattening stratification** — `RelativeSpec`, `FlatteningStratification` **sorry-free**

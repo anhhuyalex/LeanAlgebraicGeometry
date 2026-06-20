@@ -8,6 +8,35 @@
 
 ### Proof Patterns (reusable across targets)
 
+- **VALIDATED μ-cancel across the localized-synonym / `X.Modules` comp-instance boundary (iter-013, SNAP
+  analogist, cold-LSP-verified on the real `hK_rhs` goal, 0 errors).** When a keystone composite (internal
+  `≫` = `modulesLocalizedMonoidal X` = `LocalizedMonoidal` comp) is `erw`'d into an `X.Modules`-comp context
+  (e.g. the `μ.inv` from `tensorObjLocalizedIso`), the two `≫` are defeq-but-DISTINCT instance terms and the
+  `μ.hom ≫ μ.inv` pair will not cancel by `rw`/`simp [Category.assoc]` (pattern-not-found / no-progress),
+  by `Iso.hom_inv_id_assoc` without a peel (adjacency not reached), or by a 2nd unshielded `erw [Category.assoc]`
+  (catastrophically whnf-unfolds `Localization.Monoidal.μ` → `Functor.curry.mapIso (Localization.fac …)`).
+  THE CLOSE: `erw [Category.assoc]; refine congrArg (fun t => _ ≫ t) ?_  -- MANDATORY leading-μ.inv peel/shield;
+  erw [Category.assoc, Iso.hom_inv_id_assoc]`. `erw` absorbs BOTH the comp-instance and the μ-object-arg defeqs
+  up-to-reducible. No new lemma / no comp-unification needed (the "restate keystones to unify comps" idea is
+  REFUTED). Residual closes by `μ_natural_right`/`_left` + counit triangle `L'η ≫ c = 𝟙`. Authority:
+  `analogies/snap-localized-comp-cancel.md`. The `congrArg` peel is the proof's own existing idiom and is
+  non-optional (prevents the μ-unfold blow-up).
+- **`show`-to-uniform-localized-form unblock for the MIXED `⊗ₘ`(localized)/`≫`(X.Modules) comp-instance
+  (iter-014, SNAP, LANDED `hK_rhs` sorry-free, cold-build green; REUSABLE for `hK_lhs` + the 5 cascade
+  coherences).** After the μ-cancel above, the residual counit-coherence goal is mixed-instance: the `⊗ₘ`
+  is the `modulesLocalizedMonoidal X` tensorHom but the joining `≫` is the (defeq) `X.Modules` comp. Then
+  EVERY interchange/assoc/whisker lemma refuses to fire — plain `rw`/`simp` find no pattern; bare `erw`
+  resolves `C := X.Modules` which has NO `MonoidalCategory(Struct)` instance (synth fail); a
+  `(C := modulesLocalizedMonoidal X)`-pinned `erw` whnf-BOMBS the μ. FIX: re-elaborate the whole goal into a
+  UNIFORM all-localized form with a single `show` (one defeq cross, kernel-safe here), writing the whiskering
+  and counit-`⊗ₘ`s with explicit `MonoidalCategoryStruct.whiskerLeft/tensorHom (C := modulesLocalizedMonoidal X)`
+  (bare `◁`/`⊗ₘ` otherwise re-resolves the absent `X.Modules` monoidal instance). AFTER `show`, every `≫` is
+  the localized comp, so: `simp only [← MonoidalCategory.id_tensorHom]; simp only [tensorHom_comp_tensorHom,
+  Category.id_comp, Category.comp_id]` (merge), `congr 1` (first `⊗ₘ` factor `c_A` closes by congr-rfl),
+  `simp only [sheafificationCounitIso]; erw [(…sheafificationAdjunction …).left_triangle_components_assoc]; rfl`.
+  **NON-OBVIOUS: the merge MUST be `simp only [tensorHom_comp_tensorHom]`, NOT `rw`** — `rw` isDefEq-times-out
+  on the localized-monoidal instance args even with uniform comp; `simp`'s discrimination-tree matching
+  sidesteps it.
 - **`slice`+`erw` junction idiom for `tensorObj`/`sheafification.obj` defeq (iter-010, SNAP).** When a
   rewrite target straddles a defeq junction between a hand-built object (`A.tensorObj (B.tensorObj C)`,
   from `tensorObjAssoc`'s codomain) and its sheafified form (`sheafification.obj (…)` /
@@ -29,6 +58,20 @@
   fails `motive is not type correct`** (the μ object sits in the *type* of an adjacent dependent whiskering
   morphism); `simp only [tensorObj]` sidesteps it. The object fold alone is necessary-not-sufficient — see
   the Known Blocker on the assembly cancel.
+- **MORPHISM-LEVEL composition coherence beats the value-`ModuleCat`/`X.Modules` junction kernel bomb
+  (iter-015, FBC, COLD-BUILD VERIFIED — 8318 jobs, closes `gammaPushforwardIso_comp` own body sorry-free).**
+  When proving a `Γ`-comparison composition law `map(φ≫ρ) = map(φ) ≫ restr_φ(map(ρ)) ≫ restrictScalarsComp.inv`
+  whose ring/coherence content is ALREADY baked into the single-map isos (`gammaPushforwardIso φ/ρ`), the
+  composite law is pure BOOKKEEPING — do NOT descend to elements over the whole composite (that distributes
+  the junction whnf past the kernel limit = the iter-011..014 bomb). Instead: (1) isolate the lone junction
+  crossing in a standalone bridge lemma `Γ.map(cast ≫ pushforwardComp.inv) = eqToHom` (cross the junction
+  ONCE); (2) `rw [bridge]`; (3) the RHS tail is identity-on-carrier by a SINGLE kernel-light rfl
+  (`have htail : ∀ y, (…tail…) y = y := fun y => rfl`) that never touches the `φ≫ρ` junction; (4) collapse
+  the LHS by `gammaPushforwardIso_hom_apply`; (5) close the residual `eqToHom` cast by
+  `moduleCat_eqToHom_concreteCategory_apply` + `cast_heq`/proof-irrelevance. NO ring coherence
+  (`globalSectionsIso_hom_comp3…`) is invoked at the composite level — it is absorbed defeq inside the per-map
+  isos. Recipe: `analogies/fbc-morphism-comp.md`. (The leftover bridge sorry is a SEPARATE small goal — see
+  Known Blocker.)
 - **Kernel-light NatIso composition coherence (iter-011, FBC, reusable & cold-build verified).** To prove a
   natural-iso composition-coherence equality without a kernel bomb: `apply Iso.ext; apply NatTrans.ext;
   funext N` → a PURELY STRUCTURAL `simp only` (`Iso.trans_hom`, `NatTrans.comp_app`,
@@ -1915,6 +1958,64 @@
 
 ### Known Blockers (do not retry without a structural change)
 
+- **SNAP μ-SYNTACTIC-IDENTITY wall — a fully-reduced single `μ_X.hom ≫ μ_X.inv` cancel still fails
+  (iter-015, COLD-PROBED, `hK_lhs` + the new `tensorObjAssoc_hK_lhs_head`).** After mechanizing the head
+  reduction down to ONE `Localization.Monoidal.μ` hom-inv pair (`cancel_epi` + keystone
+  `sheafification_whiskerRight_unit_eq_mu'` + `show`-uniform + flatten — all GREEN), the two `μ_X`
+  occurrences PRINT IDENTICALLY but carry HIDDEN distinct `Localization.fac` proof terms → defeq-NOT-token-
+  identical. `rw [Iso.hom_inv_id_assoc]`/`rw [Iso.hom_inv_id]` → pattern-not-found; `slice`/`simp`/`erw` →
+  isDefEq-timeout. The SAME wall blocks `hK_lhs` Step-1b (the interchange MERGE `tensorHom_comp_tensorHom`/
+  `← tensor_comp` at the `c_{A⊗B} ≫ μ.inv` composite-object junction: plain `rw` reducible-only no-match,
+  `conv`/`erw` whnf-timeout) AND `associator_naturality`/`associator_hom_app` are NO-MATCH on `α_ A B C`.
+  STRUCTURAL FIX (iter-016, do NOT warm-retry): make the two μ's TOKEN-identical — `Localization.Monoidal`
+  μ-cancel API, or `Subsingleton.elim`/proof-irrelevance on the `Localization.fac` witness, or restate the
+  keystone with a canonical μ object-arg. The head-cancel tail past the μ-pair is already GREEN. NOT a
+  head-algebra gap — the algebra is done; only the token-identity is missing. 5th churning iter on hK_lhs.
+- **FBC `gammaPushforwardIso_comp_bridge` residual — `(pushforwardComp …).inv.app N = 𝟙` by rfl/whnf KERNEL-
+  BOMBS (iter-015, cold-probed).** The bridge body `rw [Functor.map_comp, eqToIso.hom, eqToHom_app,
+  eqToHom_map]` is kernel-safe and reduces to `eqToHom ⋯ ≫ Γ.map((pushforwardComp ρ φ).inv.app N) = eqToHom`.
+  But `congr 1`, `rw [show (pushforwardComp …).inv.app N = 𝟙 _ from rfl]; rfl`, and
+  `show … = eqToHom rfl from rfl` ALL whnf-reduce `pushforwardComp` (= `Iso.refl` underneath) across the
+  junction → `(kernel) deterministic timeout` (LSP-clean, cold-bomb). DO NOT close it by any rfl on the whole
+  iso. FIX (iter-016): `SheafOfModules.Hom.ext`/`Scheme.Modules.Hom.ext` (sheaf-hom extensionality at the
+  open level) + the per-open identity `pushforwardComp_inv_app_app` (`= 𝟙` at every open, EXISTS) — the iso
+  is never whnf'd as a whole. This is the SOLE FBC foundation residual; closing it makes
+  `gammaPushforwardIso_comp` axiom-clean. **Do NOT trigger the junction-free `gammaPushforwardIso` refactor —
+  the morphism route already defeated the bomb; the refactor's reversal-signal precondition does not hold.**
+- **FBC `gammaPushforwardIso_comp` element-wise close via `erw [...concreteApply]` + `erw [Category.comp_id]`
+  is a KERNEL BOMB the LSP HIDES (iter-013, VERIFIED — it shipped a non-compiling file).** The chain
+  `simp only [...concreteApply]; erw [restrictScalarsComp_inv_app_concreteApply, gammaPushforwardIso_hom_concreteApply];
+  rw [Hom.comp_app, pushforwardComp_inv_app_app]; erw [Category.comp_id]` reduces the LSP goal to a clean
+  `x = hom (Hom.app ((eqToIso E).hom.app N) ⊤) x`, but the resulting proof TERM gives `(kernel) deterministic
+  timeout` under `lake build` (erw crosses the value-`ModuleCat`/`X.Modules` object-junction diamond up-to-defeq,
+  emitting a term the kernel can't whnf in budget). RULE: any FBC/SNAP proof closing through that diamond MUST
+  be cold-`lake build`-verified before commit — an LSP-clean goal is NOT sufficient. FIX (per cut-off
+  diamond-collapse analogist): close the residual `eqToIso (Spec.map_comp)` cast via eqToHom-CALCULUS
+  (`eqToHom_map`, `eqToHom_map_comp`, `eqToHom_trans`, `eqToHom_app`, `eqToHom_refl` — all exist), NOT erw;
+  ring content already isolated in `globalSectionsIso_hom_comp3_specMap_appTop`.
+  **iter-014 DECISIVE CORRECTION (cold-build-localized via 3 builds — corrects the iter-011–013 framing):
+  the kernel bomb is the RHS REDUCTION itself, NOT the residual `eqToHom` cast.** Three cold builds pin it:
+  (1) clean stub → GREEN; (2) `rw [gammaPushforwardIso_hom_apply (φ≫ρ) N x]` ALONE (one junction rfl on the
+  LHS) → GREEN — so a SINGLE heavy identity-on-carrier rfl is kernel-light; (3) add the
+  `simp only [ModuleCat.comp_apply, restrictScalars_map_concreteApply, gammaPushforwardIso_hom_concreteApply,
+  moduleSpecΓFunctor_map_concreteApply]` distribution (drop the wrappers, BEFORE ever touching the residual)
+  → `(kernel) deterministic timeout @743`. Each `_concreteApply` lemma is `rfl` and compiles in isolation, but
+  reducing the FULL RHS composite forces the kernel to whnf the value-`ModuleCat`/`X.Modules` junction once
+  per wrapper and those reductions COMPOUND past the limit — the residual cast is never even reached. So the
+  eqToHom-calculus fix above CANNOT be applied (you can't get TO the residual). The element/sheaf-level family
+  is now EXHAUSTED. iter-015 = pre-committed ROUTE PIVOT: refactor `gammaPushforwardIso` to a junction-free
+  construction, or find a Mathlib-native pushforward-composition coherence. The committed body reduces only
+  the LHS + `sorry` (cold-build green, no bomb term).
+- **PROCESS / LATENT (iter-012, re-confirmed iter-014, low-urgency): misplaced `set_option maxHeartbeats` in
+  FlatBaseChange.lean.** L1480 (`4000000 in`) and L1515–1518 (four stacked 4M/4M/4M/1.6M) each precede a
+  `/-! … -/` doc-section command, NOT a `theorem`, so the budget scopes to the comment and
+  `base_change_mate_gstar_transpose` runs at DEFAULT 400000 hb. Inert today (decls are COMPILE-DEAD mate
+  apparatus with bare-`sorry` bodies) — fix only when the mate-excision refactor iter touches that region;
+  move ONE option to immediately precede the `theorem`.
+- **PROCESS: a prover lane that ERRORS mid-edit (idle_timeout / `MCP -32000 Connection closed`) can leave its
+  file NON-COMPILING on disk (iter-013, FBC).** sync_leanok then strips ALL `\leanok` from that chapter
+  (correct verdict on a broken module, not laundering). The next iter must `lean_diagnostic_messages` / cold
+  build the target files and REPAIR before new proof work; treat "both targets cold-build green" as a pre-flight gate.
 - **SNAP assembly `tensorObjAssoc_eq_localizedAssociator` is a multi-step μ/counit chase, NOT "one
   `associator_naturality` step from done" (iter-009 premise, DISPROVED iter-010).** The full-goal μ hom-inv
   cancel cannot fire by ANY of `rw`/`simp`/`erw`/`change`-via-`slice`/`rfl`-bridge: the keystones
@@ -2786,6 +2887,38 @@
   enforced corrective is a mathlib-analogist consult on the reframing keystone, not a prove round.
 
 ## Last Updated
+2026-06-20T (iter-015 review, this subproject) — **FBC KERNEL BOMB DEFEATED.** The morphism-level route
+landed: `gammaPushforwardIso_comp` is cold-build-green and sorry-free in its own body (FBC 8318 jobs), the
+entire foundation collapsed to ONE small bridge sorry `gammaPushforwardIso_comp_bridge` (residual:
+`(pushforwardComp).inv.app N = 𝟙` without whnf — fix via `Hom.ext` + `pushforwardComp_inv_app_app`). FBC
+5→5 (main eliminated, bridge added). SNAP `hK_lhs` STALLED at the μ-syntactic-identity wall (5th churning
+iter): mechanized Step 0+1a GREEN, extracted head helper `tensorObjAssoc_hK_lhs_head` reduced to a single
+μ-pair cancel but residual = two defeq-not-token-identical `μ_X` (hidden `Localization.fac` proofs); SNAP
+5→6, 0 eliminated. Both files cold-build GREEN (review-verified), 0 axioms, doctor 0. sync_leanok SNAP
+−31/+0 (honest). iter-016: FBC close the bridge (prover, NOT refactor); SNAP 3rd analogist on the μ-token-
+identity (NOT a warm retry). See `iter/iter-015/review.md`. — PRIOR:
+2026-06-19T (iter-014 review, this subproject) — **FIRST sorry-ELIMINATION in ~6 iters.** SNAP `hK_rhs`
+CLOSED sorry-free (SNAP −1, cold-build green) via the analogist μ-cancel VERBATIM + the new reusable
+`show`-to-uniform-localized-form unblock (see Proof Patterns). FBC: iter-013 kernel-bomb regression REPAIRED
+(file cold-builds green again) + DECISIVE finding — the bomb is the RHS REDUCTION (compounding junction whnf),
+NOT the residual cast (corrects 011–013; element/sheaf family EXHAUSTED → iter-015 ROUTE PIVOT). `hK_lhs`
+stalled at the `associator_hom_app` exposure (surfaced for iter-015 2nd analogist). 3 review subagents:
+lean-auditor (standing maxHeartbeats misscope + stale-comment/dead-code hygiene), 2 lvbc (both chapters'
+proof prose over-state their realized routes → `% NOTE`s added, writer task next iter). blueprint-doctor 0;
+0 new axioms; sync_leanok +92/-0 (sha d63c384; +61 is the FBC-chapter restoration after repair). See
+iter/iter-014/review.md. — PRIOR:
+2026-06-19T (iter-013 review, this subproject) — FIRED BOTH provers (plan fired after consults; pc013 had
+proposed a no-prover consult iter). **FBC lane ERRORED (idle_timeout+MCP closed) → left FlatBaseChange.lean
+NON-COMPILING (kernel timeout @ `gammaPushforwardIso_comp` L743; downstream unknown-const L816) = REGRESSION
+from cold-green; sync_leanok −61/+0 on Cohomology chapter (→0 \leanok, correct verdict on broken module).**
+SNAP lane done, compiles, 0 sorries closed (5th consecutive 0-elim iter). KEY: the `snap-localized-comp-cancel`
+analogist VALIDATED the μ-cancel close on the real goal (cold LSP, 0 err): `erw [Category.assoc]; refine
+congrArg (fun t => _ ≫ t) ?_; erw [Category.assoc, Iso.hom_inv_id_assoc]` + `μ_natural` + counit triangle —
+the prover applied only step 1 and instead recommended comp-unification, which the analogist REFUTES. 3 FBC
+analogist consults all CUT OFF before writing (salvage: close cast via eqToHom-calculus, not erw). iter-014
+forced-action: REPAIR FBC file first, then land the validated SNAP recipe, then re-run FBC analogist. lvbc
+snap013: faithful, 1 major (prose over-promises cancel). blueprint-doctor 0; 0 new axioms. See
+iter/iter-013/review.md. — PRIOR:
 2026-06-19T (iter-012 review, this subproject) — FIRED BOTH provers. FBC 5→5, SNAP 6→7 (4th consecutive
 0-sorry-ELIMINATION iter on both routes). Decisive diagnostic this iter: BOTH iter-011 "isolation/exposure
 will close it" premises REFUTED (cold-build-verified). FBC `gammaPushforwardIso_comp`: 4 new `:= rfl`
