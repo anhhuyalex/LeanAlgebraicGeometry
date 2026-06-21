@@ -1,0 +1,113 @@
+[
+  {
+    "timestamp": "2026-06-21T17:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "conjugateEquiv_restrictFunctorComp_inv"
+    },
+    "session": {
+      "id": "session_48",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "Adjunction.leftAdjointCompIso",
+        "Adjunction.conjugateEquiv_leftAdjointCompIso_inv",
+        "restrictFunctorComp_hom_app_app",
+        "pushforwardComp_hom_app_app",
+        "restrictAdjunction_unit_app_app",
+        "restrictAdjunction_counit_app_app",
+        "pushforward_map_app",
+        "restrictFunctor_map_app'",
+        "Subsingleton.elim"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Abstract reduction: rewrite (restrictFunctorComp f g).hom to (leftAdjointCompIso ... pushforwardComp).inv, close conjugate head by conjugateEquiv_leftAdjointCompIso_inv, then sectionwise residual",
+        "code_tried": "rw [show (restrictFunctorComp f g).hom = (Adjunction.leftAdjointCompIso (restrictAdjunction g) (restrictAdjunction f) (restrictAdjunction (f ≫ g)) (pushforwardComp f g)).inv from ?_]; exact Adjunction.conjugateEquiv_leftAdjointCompIso_inv _ _ _ _",
+        "line_number": "4950",
+        "lean_error": null,
+        "goal_before": "conjugateEquiv ((restrictAdjunction g).comp (restrictAdjunction f)) (restrictAdjunction (f ≫ g)) (restrictFunctorComp f g).hom = (pushforwardComp f g).hom",
+        "goal_after": "(restrictFunctorComp f g).hom = (leftAdjointCompIso ...).inv",
+        "result": "success",
+        "insight": "leftAdjointCompIso is INSTANTIATED on pushforwardComp, not equated definitionally with restrictFunctorComp — this dodges the iter-046 'circular' obstruction. Main conjugate goal closes by the Mathlib lemma directly."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Discharge residual concrete iso-hom equality sectionwise at map level (conjugate head gone, so ext is safe)",
+        "code_tried": "ext M U : 3; rw [restrictFunctorComp_hom_app_app]; simp only [Adjunction.leftAdjointCompIso, conjugateIsoEquiv_symm_apply_inv, ...]; erw [Hom.comp_app, restrictAdjunction_unit_app_app, pushforward_map_app, restrictAdjunction_unit_app_app, restrictAdjunction_counit_app_app]; simp only [Functor.comp_obj, restrict_map]; erw [Category.id_comp, ← M.presheaf.map_comp, ← M.presheaf.map_comp]; all_goals first | rfl | (congr 1; exact Subsingleton.elim _ _)",
+        "line_number": "4954",
+        "lean_error": null,
+        "goal_before": "(restrictFunctorComp f g).hom = (leftAdjointCompIso ...).inv",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Every SheafOfModules ≫ / .app-value seam needs erw not rw (defeq-not-syntactic). Merge at MAP level (← presheaf.map_comp) so the carrier is never forced; thin-poset Subsingleton.elim closes. Closing rfl is heartbeat-flaky → robust fallback branch needed."
+      }
+    ],
+    "next_steps": "Keystone is public + axiom-clean in root. iter-049: delete the colliding private sorry-stub in TensorObjInverse.lean L207-259 (restores terminal build), then close B2 + B1-crux by consuming this lemma (recipe analogies/b2mate045.md)."
+  },
+  {
+    "timestamp": "2026-06-21T17:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "restrictFunctor_map_app'"
+    },
+    "session": {
+      "id": "session_48",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Sectionwise value of (restrictFunctor f).map by rfl",
+        "code_tried": "private lemma restrictFunctor_map_app' ... : ((restrictFunctor f).map φ).app U = φ.app (f ''ᵁ U) := rfl",
+        "line_number": "4931",
+        "lean_error": null,
+        "goal_before": "((restrictFunctor f).map φ).app U = φ.app (f ''ᵁ U)",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Pure rfl reindex helper that drives the sectionwise reduction in the keystone proof. lean_aux (no blueprint block)."
+      }
+    ],
+    "next_steps": "None — private helper, fully proved."
+  },
+  {
+    "timestamp": "2026-06-21T17:30:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "conjugateEquiv_restrictFunctorComp_inv (private stub)"
+    },
+    "session": {
+      "id": "session_48",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Name collision: this private sorry-stub shares the FQ name AlgebraicGeometry.Scheme.Modules.conjugateEquiv_restrictFunctorComp_inv with the now-public proved root decl, causing a hard Lean build error ('a non-private declaration ... has already been declared'). Terminal file RED. Not touched this iter (HARD-STOP compliance: terminal gets no prover during the root escalation lane).",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Not attempted this iter — terminal file intentionally untouched (root-churn race + no-7th-round HARD STOP). Verified RED via lake build.",
+        "code_tried": "lake build AlgebraicJacobian.Picard.TensorObjInverse",
+        "line_number": "216",
+        "lean_error": "error: AlgebraicJacobian/Picard/TensorObjInverse.lean:216:14: a non-private declaration `AlgebraicGeometry.Scheme.Modules.conjugateEquiv_restrictFunctorComp_inv` has already been declared",
+        "goal_before": null,
+        "goal_after": null,
+        "result": "failed",
+        "insight": "private does NOT name-mangle the stub away once a non-private import shares the FQ name. The stub MUST be deleted next iter to restore the terminal build."
+      }
+    ],
+    "next_steps": "iter-049 must-fix: delete stub L207-259 in TensorObjInverse.lean and consume the root public lemma."
+  }
+]

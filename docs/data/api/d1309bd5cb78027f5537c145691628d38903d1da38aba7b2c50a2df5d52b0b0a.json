@@ -1,0 +1,142 @@
+[
+  {
+    "timestamp": "2026-06-21T10:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "restrictFunctorIsoPullback_comp_compat (B2)"
+    },
+    "session": {
+      "id": "session_49",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "Iso.ext",
+        "Adjunction.homEquiv_leftAdjointUniq_hom_app",
+        "Adjunction.homEquiv_unit",
+        "Adjunction.unit_leftAdjointUniq_hom_app",
+        "restrictFunctorIsoPullback_comp_compat_hom",
+        "Functor.map_comp"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "iso->hom reduction: Iso.ext + restrictAdjunction.homEquiv injective; rewrite LHS via leftAdjointUniq definitional eq + homEquiv_leftAdjointUniq_hom_app; replace pullbackPushforwardAdjunction.unit by restrictAdjunction.unit + pushforward.map via unit_leftAdjointUniq_hom_app.symm; congr 1; close (pushforward V.ι).map-level eq",
+        "code_tried": "exact congrArg (pushforward V.ι).map (restrictFunctorIsoPullback_comp_compat_hom j hjι A)",
+        "line_number": "91-101",
+        "lean_error": "maximum recursion depth / whnf blowup on the heavy pushforward functor",
+        "result": "failed",
+        "insight": "congrArg over the heavy sheafification-laden functor blows recursion depth; do NOT use congrArg (pushforward V.ι).map"
+      },
+      {
+        "attempt": 2,
+        "strategy": "same reduction, discharge the map-level eq with rw of the helper + 5x Functor.map_comp then rfl",
+        "code_tried": "congr 1; rw [restrictFunctorIsoPullback_comp_compat_hom j hjι A, Functor.map_comp, Functor.map_comp, Functor.map_comp, Functor.map_comp, Functor.map_comp]; rfl",
+        "line_number": "315-318",
+        "lean_error": null,
+        "result": "success",
+        "insight": "rw [helper, Functor.map_comp x5] + trailing rfl crosses the carrier diamond where congrArg fails. B2 body is now sorry-free; build EXIT 0."
+      }
+    ],
+    "next_steps": "B2 proof complete modulo the helper sorry (hNat conjugate telescope). Update stale B2 'PARTIAL (iter-041)' docstring."
+  },
+  {
+    "timestamp": "2026-06-21T10:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "restrictFunctorIsoPullback_comp_compat_hom (B2 .hom crux)"
+    },
+    "session": {
+      "id": "session_49",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "conjugateEquiv_comp leg-by-leg telescope through 7 intermediate adjunctions — ~60-100 LOC orientation bookkeeping; no missing Mathlib ingredient",
+      "key_lemmas_used": [
+        "congr_app",
+        "NatTrans.comp_app",
+        "Functor.whiskerRight_app",
+        "Functor.whiskerLeft_app",
+        "Adjunction.conjugateEquiv",
+        "conjugateEquiv injective"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "reduce .app A to a single NatTrans identity hNat via congr_app + simpa over whisker lemmas, then apply conjugateEquiv injectivity onto pushforward V.ι; leaves pure conjugate-distribution goal",
+        "code_tried": "have hNat : ... := by apply (conjugateEquiv (pullbackPushforwardAdjunction V.ι) (restrictAdjunction V.ι)).injective; sorry\nhave happ := congr_app hNat A; simpa only [NatTrans.comp_app, Functor.whiskerRight_app, Functor.whiskerLeft_app] using happ",
+        "line_number": "228-262",
+        "lean_error": null,
+        "result": "partial",
+        "insight": "app->NatTrans bookkeeping + conjugateEquiv-injectivity both compile. STRUCTURAL FINDING: every intermediate functor is X.Modules->V.Modules (fixed (C,D)), so conjugateEquiv_comp distributes leg-by-leg; mateEquiv_hcomp/vcomp NOT needed (contra b2mate045.md). 7 intermediate adjunctions G0..G6 identified; per-leg targets pinned (c2=conjugateEquiv_restrictFunctorComp_inv, c5=inv of conjugateEquiv_pullbackComp_inv, c3/c4=unit_leftAdjointUniq_hom_app, c1/c6=pushforwardCongr/eqToHom); telescopes to identity. Residual = mechanical ~60-100 LOC."
+      }
+    ],
+    "next_steps": "fine-grained / effort-break: extract the telescope as named per-leg conjugateEquiv_comp sub-lemmas (one per G_k boundary). Same machinery discharges the B1 crux."
+  },
+  {
+    "timestamp": "2026-06-21T10:30:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "H1inv_app_eq_pullbackVal_restrict (B1 crux)"
+    },
+    "session": {
+      "id": "session_49",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "same conjugateEquiv_comp / leftAdjointUniq_trans mate-calculus family as the B2 helper, plus leftAdjointUniqUnitEta for the sheafificationCompPullback unit leg. ~80-120 LOC.",
+      "key_lemmas_used": [
+        "pullbackValIso",
+        "restrictFunctorIsoPullback",
+        "sheafificationCompPullback_eq_leftAdjointUniq",
+        "leftAdjointUniqUnitEta"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "analyzed only (not edited this round): verified-reduction prefix rw [pullbackValIso, restrictFunctorIsoPullback]; simp; rw [sheafificationCompPullback_eq_leftAdjointUniq] reduces to a pure leftAdjointUniq/composite-adjunction coherence in the same family as B2",
+        "code_tried": "(documented reduction; no edit this iter — gated behind hNat telescope routine)",
+        "line_number": "336-392",
+        "lean_error": null,
+        "result": "partial",
+        "insight": "B1 crux is the sheafification-intertwining coherence; distinct statement but SAME conjugate-telescope family. Closes once the hNat per-leg routine exists."
+      }
+    ],
+    "next_steps": "Build the shared per-leg conjugateEquiv_comp routine via effort-breaker, then reuse here."
+  },
+  {
+    "timestamp": "2026-06-21T10:30:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "S2/S3/S4a/S4b squares + trivialisation_restrict_compat"
+    },
+    "session": {
+      "id": "session_49",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "immersion-naturality residuals (Stacks pullback-commutes-with-tensor functorially in the immersion j); gated behind B2-helper/B1-crux landing",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "not attempted this round (conjugate telescope was the higher-value shared target)",
+        "code_tried": "n/a",
+        "line_number": "496/518/542/558/689",
+        "lean_error": null,
+        "result": "partial",
+        "insight": "Same depth; faithful to blueprint per vs-checker. Deferred."
+      }
+    ],
+    "next_steps": "Tackle after the shared conjugate-telescope routine lands."
+  }
+]

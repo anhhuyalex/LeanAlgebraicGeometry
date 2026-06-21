@@ -1,0 +1,179 @@
+[
+  {
+    "timestamp": "2026-06-20T09:16:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/WeilDivisor.lean",
+      "theorem": "Ideal.finite_setOf_isPrime_height_one_mem"
+    },
+    "session": {
+      "id": "session_3",
+      "model": "opus-4.8"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "Ideal.finite_minimalPrimes_of_isNoetherianRing",
+        "Ideal.exists_minimalPrimes_le",
+        "Ideal.height_le_iff",
+        "Ideal.isPrime_bot",
+        "Order.lt_one_iff_nonpos",
+        "Ideal.span_singleton_le_iff_mem"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Show {p | p.IsPrime ∧ p.height=1 ∧ a∈p} ⊆ (span {a}).minimalPrimes (finite by finite_minimalPrimes_of_isNoetherianRing); a height-1 prime ∋ a is minimal over (a). Get q ∈ minimalPrimes, q≤p via exists_minimalPrimes_le; q≠⊥ since a≠0; if q<p then height_le_iff gives q.height<1 ⟹ ≤0 ⟹ ⊥<q forces height<0, impossible; so q=p∈minimalPrimes.",
+        "code_tried": "subset into (Ideal.span {a}).minimalPrimes + Ideal.height_le_iff chain",
+        "result": "success",
+        "insight": "Ideal.height_le_iff is the LOCAL-Mathlib tool. height_add_one_le_of_lt / height_strict_mono_of_isPrime / height_eq_zero_iff are loogle-server-only, ABSENT in toolchain b80f227 — false leads."
+      }
+    ],
+    "next_steps": "Consumed by finite_order_support_affine via the _or variant. Needs blueprint entry (unmatched lean_aux)."
+  },
+  {
+    "timestamp": "2026-06-20T09:16:05Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/WeilDivisor.lean",
+      "theorem": "Ideal.finite_setOf_isPrime_height_one_mem_or"
+    },
+    "session": {
+      "id": "session_3",
+      "model": "opus-4.8"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "Ideal.finite_setOf_isPrime_height_one_mem",
+        "Set.Finite.union",
+        "Set.mem_union_left",
+        "Set.mem_union_right"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Union of two copies of the single-element lemma for a,b≠0; predicate (a∈p ∨ b∈p). This is the g=a/b shape the order-finiteness consumes.",
+        "code_tried": "Set.Finite.union of two finite_setOf_isPrime_height_one_mem instances",
+        "result": "success",
+        "insight": "axiom-clean [propext, Classical.choice, Quot.sound] confirmed by lean_verify in-context AND by review."
+      }
+    ],
+    "next_steps": "Direct consumable for the finite_order_support_affine AG bridge. Needs blueprint entry (unmatched)."
+  },
+  {
+    "timestamp": "2026-06-20T09:16:10Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/WeilDivisor.lean",
+      "theorem": "finite_order_support_affine"
+    },
+    "session": {
+      "id": "session_3",
+      "model": "opus-4.8"
+    },
+    "findings": {
+      "blocker": "AG scheme→ring bridge for abstract [IsAffine V] (not literally Spec R): (1) V.PrimeDivisor point ↔ height-1 prime of R=Γ(V) via isoSpec + coheight=height; (2) order Z g = localized ordFrac via stalk ≅ Localization.AtPrime + functionField ≅ FractionRing; (3) ordFrac≠1 ⟹ a∈p∨b∈p. 4 deep Mathlib gaps, each research-scale.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Discharge the ring-theoretic FINITENESS core (the genuine math content) as standalone axiom-clean lemmas, then sharpen the body comment to enumerate exactly the remaining AG bridge substrate. Did NOT wire the bridge (would require new sorries, forbidden in mathlib-build mode).",
+        "code_tried": "added finite_setOf_isPrime_height_one_mem(_or); retained pre-existing sorry with sharpened 4-step decomposition comment L863-880",
+        "line_number": "859",
+        "result": "partial",
+        "insight": "Recurring M1 blocker (isolated 4× across iters). Finiteness heart now PERMANENTLY discharged axiom-clean; residual is pure AG-bridge plumbing. progress-critic flagged CHURNING; mathlib-build corrective produced the achievable axiom-clean sub-piece, not another helper round."
+      }
+    ],
+    "next_steps": "Either mathematician-authorised gap for the Hartshorne II.6.1 AG bridge, OR a dedicated iter building the 4 named bridge sub-lemmas (each consuming finite_setOf_isPrime_height_one_mem_or). Do NOT re-assign inline-tactic rounds."
+  },
+  {
+    "timestamp": "2026-06-20T09:16:15Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+      "theorem": "AlgebraicGeometry.ringKrullDim_stalk_eq_one_of_coheight_eq_one"
+    },
+    "session": {
+      "id": "session_3",
+      "model": "opus-4.8"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "AlgebraicGeometry.Scheme.ringKrullDim_stalk_eq_coheight"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Blueprint-cited ringKrullDim_stalk_eq_coheight is NOT in Mathlib b80f227 (loogle index is a NEWER Mathlib — false lead). But the PROJECT already has it sorry-free in Albanese/CoheightBridge.lean. Import it, then rw [Scheme.ringKrullDim_stalk_eq_coheight X x, hx]; rfl.",
+        "code_tried": "import AlgebraicJacobian.Albanese.CoheightBridge; rw [Scheme.ringKrullDim_stalk_eq_coheight X x, hx]; rfl",
+        "result": "success",
+        "insight": "No cycle: nothing in Albanese/ imports RiemannRoch/. Matches blueprint lem:coheight_eq_ringKrullDim_stalk. Axiom-clean."
+      }
+    ],
+    "next_steps": "Covered (matched pin). Done."
+  },
+  {
+    "timestamp": "2026-06-20T09:16:18Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+      "theorem": "AlgebraicGeometry.isDiscreteValuationRing_of_isRegularLocalRing_of_ringKrullDim_eq_one"
+    },
+    "session": {
+      "id": "session_3",
+      "model": "opus-4.8"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "IsRegularLocalRing.iff_finrank_cotangentSpace",
+        "IsLocalRing.finrank_CotangentSpace_eq_one_iff"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Cotangent-space route (both lemmas present in b80f227): IsRegularLocalRing.iff_finrank_cotangentSpace gives finrank(m/m²)=ringKrullDim; rw ringKrullDim=1; exact_mod_cast to finrank=1; then IsLocalRing.finrank_CotangentSpace_eq_one_iff.mp. IsDomain supplied at call site.",
+        "code_tried": "iff_finrank_cotangentSpace + finrank_CotangentSpace_eq_one_iff.mp",
+        "result": "success",
+        "insight": "This is the dim-1-regular⟹DVR step the iter-002 KB wrongly thought ABSENT (old '00PD rebuild' classification). It IS buildable from the cotangent API. Matches lem:regularLocal_dim_one_isDVR. Axiom-clean."
+      }
+    ],
+    "next_steps": "Covered. Done. NOTE: KB iter-002 blocker 'S1 lacks IsRegularLocalRing.isDiscreteValuationRing' now RESOLVED."
+  },
+  {
+    "timestamp": "2026-06-20T09:16:22Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+      "theorem": "isRegularLocalRing_stalk_of_smooth"
+    },
+    "session": {
+      "id": "session_3",
+      "model": "opus-4.8"
+    },
+    "findings": {
+      "blocker": "smooth ⟹ regular-local stalk: NO Smooth⟹IsRegular bridge anywhere in Mathlib b80f227 (grep over whole snapshot: IsRegularLocalRing appears ONLY in RingTheory/RegularLocalRing/Defs.lean). Differentials route has the pieces (rank_kaehlerDifferential, Smooth.exists_isStandardSmooth, finrank_CotangentSpace_eq_one_iff) but lacks the assembly: m/m² ≅ Ω[R⁄k]⊗κ at a rational point + Jacobson residue-field=kbar + IsLocalization cotangent transfer.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Direct Mathlib bridge search (smooth⟹regular).",
+        "code_tried": "grep -rln IsRegularLocalRing over b80f227; loogle/leansearch for Algebra.Smooth + IsRegularLocalRing",
+        "result": "failed",
+        "insight": "Conclusively ABSENT. Do NOT re-attempt the bare search."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Differentials route: assemble from rank_kaehlerDifferential (= rel.dim n) + exists_isStandardSmooth + finrank_CotangentSpace_eq_one_iff.",
+        "code_tried": "decomposition only — not wired",
+        "result": "partial",
+        "insight": "Missing link is m/m² ≅ Algebra.Extension.CotangentSpace bridged to IsLocalRing.CotangentSpace at a rational point. Multi-lemma ~200-400 LOC with own residual gaps; cannot close axiom-clean in this lane."
+      }
+    ],
+    "next_steps": "Recommend going for DVR form DIRECTLY via IsLocalRing.finrank_CotangentSpace_eq_one_iff (skip IsRegularLocalRing). Named sub-lemmas: (1) isRational_residueField_of_closed_kbar (Jacobson); (2) cotangentSpace_stalk_equiv_kaehler_tensor_residue; (3) finrank_cotangentSpace_eq_relativeDimension; (4) close DVR. Blueprint step-1 pin points to a not-yet-existing decl — extract named lemma when built."
+  }
+]

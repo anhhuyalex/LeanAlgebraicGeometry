@@ -1,0 +1,210 @@
+[
+  {
+    "timestamp": "2026-06-20T12:08:55Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "trivialisation_restrict_compat"
+    },
+    "session": {
+      "id": "session_40",
+      "model": "opus-4.8"
+    },
+    "findings": {
+      "blocker": "Decomposed into 5 named square-lemmas + 2 helper defs, all green-mod-sorry; ZERO squares closed and none yet wired into the target body (orphaned). iter-039 keystone premise 'squares come FREE via restrictFunctorComp.hom.naturality' DISPROVEN by prover (type-error demonstrated): keystone supplies only the reindex iso rho, not per-leg immersion-naturality.",
+      "key_lemmas_used": [
+        "Scheme.Modules.restrictFunctorComp",
+        "Scheme.Modules.restrictFunctorCongr",
+        "Scheme.Hom.resLE_id",
+        "restrictCompReindex",
+        "unitRestrictIso"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Install IsOpenImmersion j for the chart j = resLE (1 X) U V",
+        "code_tried": "haveI hji : IsOpenImmersion j := by rw [hj, Scheme.Hom.resLE_id]; infer_instance",
+        "line_number": "183",
+        "lean_error": "first tries (Scheme.Hom.resLE without resLE_id; IsOpenImmersion.comp) failed to synthesize; resLE_id route succeeded",
+        "result": "success",
+        "insight": "IsOpenImmersion j is NOT auto-synthesized for resLE; comes from resLE_id : resLE(1 X) U V = X.homOfLE. Analogist restrictcomp039 missed this."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Build reindex iso rho via keystone + congruence",
+        "code_tried": "def restrictCompReindex j hjι A := (restrictFunctorCongr hjι).symm.app A ≪≫ (restrictFunctorComp j U.ι).app A",
+        "line_number": "~185",
+        "result": "success",
+        "insight": "rho : A.restrict V.ι ≅ (A.restrict U.ι).restrict j, clean, no raw eqToHom/HEq"
+      },
+      {
+        "attempt": 3,
+        "strategy": "Scaffold 5 square-lemma statements modulo rho and attempt each with Iso.ext + targeted simp",
+        "code_tried": "apply Iso.ext; simp [tensorObj_restrict_iso] (resp dual_restrict_iso / unitRestrictIso etc.)",
+        "line_number": "205,227,251,267,282",
+        "lean_error": "no error; simp explodes goal into 4-leg chart-chase (restrictFunctorIsoPullback ≫ sheafificationCompPullback ≫ leftAdjointUniq ≫ restrictScalars-δ) needing immersion-naturality of each leg; left sorry",
+        "result": "partial",
+        "insight": "Each square is a genuine immersion-naturality residual of composite pullback/sheafification isos — NOT free. S4c most tractable (reduces to pullbackUnitIso/pullbackComp coherence)."
+      }
+    ],
+    "next_steps": "iter-042: start at S4c (trivialisation_uIota_restrict_compat) — finite pullbackUnitIso/pullbackComp coherence; then S2 (Stacks 'pullback ⊗ functorial'); S3/S4a/S4b mirror; then wire all 5 + section-level telescope into target. Consider effort-breaker on S4c or mathlib-analogist on immersion-naturality of pullback/sheafification isos."
+  },
+  {
+    "timestamp": "2026-06-20T12:08:55Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "tensorObj_restrict_iso_restrict_compat"
+    },
+    "session": {
+      "id": "session_40",
+      "model": "opus-4.8"
+    },
+    "findings": {
+      "blocker": "S2: simp [tensorObj_restrict_iso] explodes into 4-leg pullback/sheafification chart-chase; needs Stacks 'pullback commutes with ⊗ functorially' immersion-naturality. Statement typechecks (green), proof open.",
+      "key_lemmas_used": [
+        "restrictCompReindex",
+        "tensorObj_restrict_iso"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Iso.ext + simp on the tensor-restriction iso",
+        "code_tried": "apply Iso.ext; simp [tensorObj_restrict_iso, restrictCompReindex]",
+        "line_number": "205",
+        "lean_error": "goal explodes to full 4-leg comparison restricted along j vs built over V.ι; no off-the-shelf reduction",
+        "result": "partial",
+        "insight": "Genuine depth; statement scaffold verified by typecheck"
+      }
+    ],
+    "next_steps": "Needs per-leg immersion-naturality (Stacks pullback-⊗ functoriality)."
+  },
+  {
+    "timestamp": "2026-06-20T12:08:55Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "dual_restrict_iso_restrict_compat"
+    },
+    "session": {
+      "id": "session_40",
+      "model": "opus-4.8"
+    },
+    "findings": {
+      "blocker": "S3 (clean core, RENAMED from blueprint's bundled dual_restrict_iso_dualIsoOfIso_restrict_compat). Statement typechecks; proof open (same depth as S2). Blueprint \\lean{} now DANGLES — points to a name that exists only in a comment.",
+      "key_lemmas_used": [
+        "restrictCompReindex",
+        "dual_restrict_iso",
+        "dualIsoOfIso_trans"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Iso.ext + simp [dual_restrict_iso]",
+        "code_tried": "apply Iso.ext; simp [dual_restrict_iso, restrictCompReindex]",
+        "line_number": "227",
+        "lean_error": "explodes to 4-leg chart-chase (contravariant dual side); proof open",
+        "result": "partial",
+        "insight": "Prover scaffolded the clean immersion-naturality CORE, deferring the e^M/restrictIsoUnitOfLE bundling to the parent telescope. Blueprint S3 \\lean{} must be retargeted + restated."
+      }
+    ],
+    "next_steps": "Planner/blueprint-writer decision: retarget blueprint S3 \\lean{} to dual_restrict_iso_restrict_compat + restate as core, move e^M bundling into parent sketch (recommended), OR add thin bundled wrapper."
+  },
+  {
+    "timestamp": "2026-06-20T12:08:55Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "dual_unit_iso_restrict_compat"
+    },
+    "session": {
+      "id": "session_40",
+      "model": "opus-4.8"
+    },
+    "findings": {
+      "blocker": "S4a: needs immersion-naturality of presheaf left-unitor / presheafDualUnitIso + counit, plus S2/S3. presheafDualUnitIso_naturality is the unit-automorphism template, NOT the immersion one. Statement typechecks; proof open.",
+      "key_lemmas_used": [
+        "unitRestrictIso",
+        "dual_unit_iso"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Iso.ext + simp",
+        "code_tried": "apply Iso.ext; simp [dual_unit_iso, unitRestrictIso, restrictCompReindex]",
+        "line_number": "251",
+        "lean_error": "reduces via sheafification.mapIso(presheafDualUnitIso) ≫ counit; needs immersion-naturality; open",
+        "result": "partial",
+        "insight": "minor: _hjι param vestigial here (only j used, not the composite equality)"
+      }
+    ],
+    "next_steps": "Mirror S2/S3 after they land."
+  },
+  {
+    "timestamp": "2026-06-20T12:08:55Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "tensorObj_unit_iso_restrict_compat"
+    },
+    "session": {
+      "id": "session_40",
+      "model": "opus-4.8"
+    },
+    "findings": {
+      "blocker": "S4b: same depth as S4a via presheaf left-unitor immersion-naturality. Statement typechecks; proof open.",
+      "key_lemmas_used": [
+        "unitRestrictIso",
+        "tensorObj_unit_iso"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Iso.ext + simp",
+        "code_tried": "apply Iso.ext; simp [tensorObj_unit_iso, unitRestrictIso]",
+        "line_number": "267",
+        "lean_error": "needs immersion-naturality of presheaf left-unitor; open",
+        "result": "partial",
+        "insight": "minor: _hjι param vestigial (only j used)"
+      }
+    ],
+    "next_steps": "Mirror S4a."
+  },
+  {
+    "timestamp": "2026-06-20T12:08:55Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "trivialisation_uIota_restrict_compat"
+    },
+    "session": {
+      "id": "session_40",
+      "model": "opus-4.8"
+    },
+    "findings": {
+      "blocker": "S4c (MOST TRACTABLE): reduces to a pushforwardComp/pushforwardCongr/pullbackObjUnitToUnit/leftAdjointUniq coherence under composition. No restrictFunctorComp_hom_app simp exists (plain def). Likely closeable from Mathlib pullbackUnitIso/pullbackComp coherence. Statement typechecks; proof reduced but open.",
+      "key_lemmas_used": [
+        "unitRestrictIso",
+        "restrictCompReindex",
+        "pullbackUnitIso"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Iso.ext + simp then rw naturality",
+        "code_tried": "apply Iso.ext; simp only [unitRestrictIso, restrictCompReindex, Iso.trans_hom, Functor.mapIso_hom, Category.assoc]; rw [← restrictFunctorIsoPullback.hom.naturality]",
+        "line_number": "282",
+        "lean_error": "reduces to pullbackUnitIso/pullbackComp coherence; not closed",
+        "result": "partial",
+        "insight": "Recommended starting point for iter-042 — finite coherence, no chart-chase depth"
+      }
+    ],
+    "next_steps": "iter-042 START HERE: search Mathlib pullbackUnitIso/pullbackComp/pushforwardComp coherence lemmas."
+  }
+]

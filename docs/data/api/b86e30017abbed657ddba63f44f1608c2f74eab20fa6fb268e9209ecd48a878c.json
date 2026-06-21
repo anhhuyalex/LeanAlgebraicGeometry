@@ -1,0 +1,98 @@
+[
+  {
+    "timestamp": "2026-06-20T05:58:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "pushforward_lax_mu_comparison_lhs_tmul"
+    },
+    "session": {
+      "id": "session_36",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "outer δ/counit telescope remains (4 documented steps; needs new counit rfl-helper pushforwardPushforwardAdj_counit_app_app_apply)",
+      "key_lemmas_used": [
+        "Adjunction.rightAdjointLaxMonoidal_μ",
+        "Adjunction.homEquiv_unit",
+        "PresheafOfModules.comp_app",
+        "pushforwardPushforwardAdj_unit_app_app_apply"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "unfold mate to unit≫G.map(δ≫ε⊗ε), then bare rw of the rfl unit lemma",
+        "code_tried": "rw [Adjunction.rightAdjointLaxMonoidal_μ, Adjunction.homEquiv_unit]; rw [PresheafOfModules.comp_app]; erw [ModuleCat.hom_comp, LinearMap.comp_apply]; rw [pushforwardPushforwardAdj_unit_app_app_apply]",
+        "line_number": "4339-4343",
+        "lean_error": "rewrite did not find pattern (unit.app ?M).app ?U) ?x",
+        "result": "failed",
+        "insight": "bare rw of the rfl unit lemma never key-matches through the hadj' let-fvar"
+      },
+      {
+        "attempt": 2,
+        "strategy": "simp only on the unit lemma",
+        "code_tried": "simp only [pushforwardPushforwardAdj_unit_app_app_apply]",
+        "line_number": "4343",
+        "lean_error": "simp made no progress",
+        "result": "failed",
+        "insight": "simp form also dead on the heavy ⊗ object"
+      },
+      {
+        "attempt": 3,
+        "strategy": "fresh have hU restating value with Z:=pushforward A ⊗ pushforward B then erw",
+        "code_tried": "have hU := pushforwardPushforwardAdj_unit_app_app_apply ... _ W (m ⊗ₜ n); erw [hU]",
+        "line_number": "4365-4379",
+        "lean_error": "synthInstance failed: MonoidalCategoryStruct (PresheafOfModules X.ringCatSheaf.obj)",
+        "result": "failed",
+        "insight": "WALL #2: writing ⊗ in a fresh have re-elaborates base ring to bad head → carrier diamond"
+      },
+      {
+        "attempt": 4,
+        "strategy": "explicit-args have supplying M/x from m⊗ₜn",
+        "code_tried": "have hU := pushforwardPushforwardAdj_unit_app_app_apply ... _ W (m ⊗ₜ n)",
+        "line_number": "4350",
+        "lean_error": "application type mismatch: m ⊗ₜ[?m] n; ?M uninferable",
+        "result": "failed",
+        "insight": "supplying the value explicitly fails type inference"
+      },
+      {
+        "attempt": 5,
+        "strategy": "∀-have hU keyed on the goal's OWN hadj'.unit fvar (no ⊗ written), proved by exact lemma _ _ _ _ _ M U x, then rw [hU]",
+        "code_tried": "have hU : ∀ M U x, ((hadj'.unit.app M).app U).hom x = (M.map (...counit.app U.unop).op).hom x := fun M U x => pushforwardPushforwardAdj_unit_app_app_apply _ _ _ _ _ M U x; rw [hU]",
+        "line_number": "4350-4355",
+        "lean_error": "rewrite did not find pattern (hadj'.unit.app ?M).app ?U) ?x",
+        "result": "failed",
+        "insight": "rw still won't fire — needs coercion/instance defeq"
+      },
+      {
+        "attempt": 6,
+        "strategy": "same ∀-have but discharge via erw [hU]",
+        "code_tried": "erw [hU]",
+        "line_number": "4355",
+        "lean_error": null,
+        "result": "success",
+        "insight": "WALL #1 CRACKED: erw provides the coercion/instance defeq rw lacks; inner unit leg discharged. Build 8321 jobs clean, file green-mod-sorry"
+      }
+    ],
+    "next_steps": "Execute the documented 4-step outer telescope: (1) tensorObj_map_tmul as fvar-keyed have+erw; (2) Functor.map_comp + pushforward_map_app_apply reindex; (3) δ Gβ collapse via restrictScalars_μ_app family; (4) NEW counit helper pushforwardPushforwardAdj_counit_app_app_apply (dual rfl) + erw, then rhs_tmul closes."
+  },
+  {
+    "timestamp": "2026-06-20T05:58:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "trivialisation_restrict_compat"
+    },
+    "session": {
+      "id": "session_36",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "not attempted this iter (Route B parked; SOLO Route A lane only — root-churn race forbids co-dispatch). Residual = 5 per-constituent restrict-naturality squares (S2-S4c), no codebase precedent.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "iter-037: SOLO Route B lane — scaffold the 5 effort-broken square stubs + prove S2 tensorObj_restrict_iso_restrict_compat as the template (root must stay green/untouched to avoid the iter-029 build race)."
+  }
+]

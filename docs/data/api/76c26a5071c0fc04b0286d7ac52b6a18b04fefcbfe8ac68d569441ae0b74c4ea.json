@@ -1,0 +1,137 @@
+[
+  {
+    "timestamp": "2026-06-20T06:49:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/FlatBaseChange.lean",
+      "theorem": "gammaPushforwardIso_comp_bridge"
+    },
+    "session": {
+      "id": "session_16",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "Scheme.Modules.pushforwardComp_inv_app_app",
+        "Scheme.Modules.hom_ext",
+        "Scheme.Modules.Hom.id_app",
+        "eqToHom_refl",
+        "Category.comp_id"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "morphism-level eqToHom calculus: rewrite (pushforwardComp …).inv.app N = eqToHom rfl via hom_ext + per-open identity, then term-mode comp_id; close residual eqToHom by proof-irrelevance",
+        "code_tried": "rw [show (Scheme.Modules.pushforwardComp (Spec.map ρ) (Spec.map φ)).inv.app N = eqToHom rfl from ?_]; · rw [eqToHom_refl]; exact Category.comp_id _; · apply Scheme.Modules.hom_ext; intro U; rw [Scheme.Modules.pushforwardComp_inv_app_app]; exact (Scheme.Modules.Hom.id_app _).symm",
+        "line_number": "741",
+        "lean_error": null,
+        "goal_before": "eqToHom _ ≫ moduleSpecΓFunctor.map ((pushforwardComp (Spec.map ρ) (Spec.map φ)).inv.app N) = eqToHom _",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Naive rw [eqToHom_map]/[Functor.map_id]/[moduleSpecΓFunctor.map_id] all FAIL (pattern not found) — category-instance junction: moduleSpecΓFunctor {R} domain (Spec (CommRingCat.of ↑R)).Modules vs the 𝟙 living in (Spec R).Modules, defeq-not-syntactic. Term-mode Category.comp_id unifies up to defeq (the identity carries no value-ModuleCat content → no kernel bomb). Cold-build GREEN, 8318 jobs, no kernel timeout."
+      }
+    ],
+    "next_steps": "Transitively closes gammaPushforwardIso_comp + foundation gammaPushforwardNatIso_comp. FBC foundation now sorry-free. Next: crux pullback_spec_tilde_iso_ring_square_natural (L1447) via conjugate-mate re-route."
+  },
+  {
+    "timestamp": "2026-06-20T06:49:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "tensorObjAssoc_hK_lhs_head"
+    },
+    "session": {
+      "id": "session_16",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "Iso.hom_inv_id_assoc",
+        "comp_whiskerRight",
+        "sheafification_map_unit_comp_counitIso_hom",
+        "MonoidalCategory.id_whiskerRight",
+        "Iso.inv_hom_id"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "statement-level (C := MonoidalPresheaf X) pinning of every μ object-arg to make the two μ token-identical, then erw [Iso.hom_inv_id_assoc] cancel with each step isolated in a slice/have",
+        "code_tried": "STMT: L1899 middle-μ obj → MonoidalCategory.tensorObj (C := MonoidalPresheaf X) …; L1892 leading-μ obj → sheafification.obj (MonoidalCategory.tensorObj (C := MonoidalPresheaf X) …). PROOF: erw [Iso.hom_inv_id_assoc] → show-uniform sheafification form → have hmid (isolated): erw [← comp_whiskerRight, sheafification_map_unit_comp_counitIso_hom, MonoidalCategory.id_whiskerRight] → slice_lhs 2 3 => erw [hmid] → exact Iso.inv_hom_id _",
+        "line_number": "1900",
+        "lean_error": null,
+        "goal_before": "leading μ.inv ≫ … ≫ μ.hom (two defeq-but-token-divergent μ_X) = …",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Statement pinning NECESSARY but NOT sufficient: (1) μ-pairs stay defeq-but-token-divergent even after pinning (divergence is a deeply-nested instance hidden under pp ⋯ truncation, invisible via pp.all) — cancel fires with erw [Iso.hom_inv_id_assoc] (reducible), NOT rw (pattern-not-found); (2) the triangle/μ-cancel rewrites BOMB in the full goal (motive re-typechecks surrounding μ → isDefEq 200k hb) — must ISOLATE each step in slice/have (local motive, no μ). Cold-build GREEN, 2441 jobs. Root cause = project-local DUAL MonoidalCategory instance (pshModMonoidal vs MonoidalPresheaf X synonym), NOT a hidden Localization.fac witness (analogist snap-mu-identity refuted that)."
+      }
+    ],
+    "next_steps": "Head closed; assembly tensorObjAssoc_eq_localizedAssociator_hK_lhs (L2142) is one mechanical recipe tail from closing. New helper sheafification_map_unit_comp_counitIso_hom needs blueprint entry (coverage debt)."
+  },
+  {
+    "timestamp": "2026-06-20T06:49:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "tensorObjAssoc_eq_localizedAssociator_hK_lhs"
+    },
+    "session": {
+      "id": "session_16",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "mechanical recipe tail: each step crosses the localized↔X.Modules μ-boundary, needs slice/have-isolation + erw; re-split as a single have got within one Category.id_comp/assoc of closing but bombed at the boundary",
+      "key_lemmas_used": [
+        "Localization.Monoidal.tensor_comp",
+        "Category.comp_id"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "defeat the iter-015 interchange-merge WALL by isolating the two ⊗ₘ factors",
+        "code_tried": "slice_lhs 2 3 => erw [← Localization.Monoidal.tensor_comp]; simp only [Category.comp_id]",
+        "line_number": "2142",
+        "lean_error": null,
+        "goal_before": "(c_{A⊗B}⊗ₘc_C) ≫ ((μ.inv≫(c_A⊗c_B))⊗ₘ𝟙C) … (merge target)",
+        "goal_after": "merged (two new green steps committed)",
+        "result": "partial",
+        "insight": "iter-015 WALL DEFEATED: slice-isolating the merge to the two ⊗ₘ factors gives a local motive → no whnf bomb (plain rw no-match / full erw/conv bomb both avoided). Both steps committed cold-green. Remaining tail = re-split → associator_naturality → associator_hom_app → μ-cancel on the ▷L'C♭ slot → rw [tensorObjAssoc_hK_lhs_head]; each tail step needs the same slice/have isolation. Ran out of budget after merge defeat + re-split attempt (bombed at a boundary Category.id_comp/assoc cleanup)."
+      }
+    ],
+    "next_steps": "Isolate the tail cleanup too (or build the re-split via conv entering the single ⊗ₘ). Head lemma now available for the rw step. One lemma from closing the full assembly tensorObjAssoc_eq_localizedAssociator."
+  },
+  {
+    "timestamp": "2026-06-20T06:49:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/FlatBaseChange.lean",
+      "theorem": "pullback_spec_tilde_iso_ring_square_natural"
+    },
+    "session": {
+      "id": "session_16",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "crux (b2 pseudofunctoriality); current body = documented DEAD END (triple homEquiv.injective hand-peel stranding a unit-prefixed equality, no finisher). Correct route = conjugate-mate re-route (iterated_mateEquiv_conjugateEquiv / conjugateEquiv_mateEquiv_vcomp / mateEquiv_conjugateEquiv_vcomp, TwoSquare-valued, recover NatTrans via .natTrans) — a large standalone effort, typed-sorry acceptable per objectives",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "assessed-only (not attempted): goal is two big compositions both prefixed tilde.adjunction.unit.app M ≫ moduleSpecΓFunctor.map (…), inner args genuinely different (the real naturality content) — no congr/rfl shortcut; does NOT flow from the eqToHom bridge mechanics built this iter",
+        "code_tried": null,
+        "line_number": "1447",
+        "lean_error": null,
+        "goal_before": "two compositions both prefixed by tilde.adjunction.unit.app M ≫ moduleSpecΓFunctor.map (…)",
+        "goal_after": null,
+        "result": "partial",
+        "insight": "Not retried — pushing the verified-green file into the conjugate-mate re-route now risks destabilizing it for no guaranteed close. Queued by planner as the next dedicated lane."
+      }
+    ],
+    "next_steps": "Conjugate-mate re-route via the EXISTING Mathlib trio (Adjunction.Mates, v4.30); HAZARD mateEquiv is TwoSquare-valued (recover NatTrans via .natTrans/equivNatTrans; whiskerings are TwoSquare pasting). homEquiv.injective hand-peel is a confirmed DEAD END."
+  }
+]

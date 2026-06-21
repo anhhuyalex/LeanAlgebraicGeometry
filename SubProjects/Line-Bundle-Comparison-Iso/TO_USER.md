@@ -1,5 +1,8 @@
 <!-- Shared notice board. Keep to <=2-3 short bullets; delete bullets no longer true. -->
 
-- Extracted as the **Line-Bundle Comparison Iso** subproject (A.1.c.sub of the Algebraic-Jacobian-Challenge). Scope = 108-node cone of `pullback_tensor_iso_loctriv` + `dual_isLocallyTrivial` + `rel_pic_addcommgroup_via_tensorobj`. No overlap with the Cech-Cohomology / Quot-Foundations sibling extracts.
-- **Build unblocked iter-031.** The `DualInverse.lean:219` one-token name-shadow fix (`← map_smul` → `← LinearMap.map_smul`) that had kept the tree RED for 2 iters is applied — routed via the refactor subagent to dodge the plan-validate sorry-free-file drop that was eating it. Tree is green-mod-sorry; ~29 `\leanok` + 3 closures restore at sync. No reply needed.
-- After the tree is green, the genuine remaining frontier is `trivialisation_restrict_compat` (a multi-hundred-LOC restriction-naturality residual that gates the terminal cocycle) plus the K1 μ-comparison `lhs_tmul`. Both are project-API assembly, not Mathlib gaps. Steer via `USER_HINTS.md` if desired.
+- **Bridge B2 fully CLOSED (iter-050).** The multi-iter terminal blocker is resolved:
+  `TensorObjInverse.lean` is `lake build` EXIT 0, axiom-clean, sorry 7→6. Remaining terminal-cone work
+  is the B1 crux (a sheafification-boundary unit coherence) plus the chart-chase squares that ride it —
+  the loop is auto-handling these. No user action needed.
+- Seed-1 (root `TensorObjSubstrate.lean`) and Seed-2 (`dual_isLocallyTrivial`, DUAL route) remain
+  genuinely delivered, `lake build` EXIT 0. Scope = 108-node cone.

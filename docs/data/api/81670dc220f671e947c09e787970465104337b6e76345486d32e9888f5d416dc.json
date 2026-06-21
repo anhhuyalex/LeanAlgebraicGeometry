@@ -1,0 +1,313 @@
+[
+  {
+    "timestamp": "2026-06-20T05:34:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/H1Vanishing.lean",
+      "theorem": "Scheme.IsFlasque.constant_of_irreducible"
+    },
+    "session": {
+      "id": "session_1",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "CategoryTheory.toSheafify",
+        "Presheaf.equalizerSieve_mem",
+        "Presheaf.imageSieve_mem",
+        "Sheaf.isSeparated",
+        "PreirreducibleSpace.isPreirreducible_univ",
+        "Functor.const_obj_map"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Close the non-empty branch by reducing restriction-map surjectivity to surjectivity of the sheafification unit toSheafify at V, via naturality of the unit on the constant presheaf",
+        "code_tried": "obtain ⟨a₀, ha₀⟩ := toSheafify_const_app_surjective_of_ne_bot A hV y; refine ⟨((toSheafify …)).app …, ?_⟩; rw [toSheafify_const_restrict A h a₀]; exact ha₀",
+        "line_number": "178",
+        "lean_error": "(closed) — required 3 new private helpers",
+        "goal_before": "∃ a, (Hom.hom ((constantSheaf …).obj A).val.map (homOfLE h).op) a = y",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "On an irreducible space toSheafify of the constant presheaf is bijective at every non-empty open; naturality (const.map = 𝟙) turns the restriction map into toSheafify at V."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Prove helper toSheafify_const_app_surjective_of_ne_bot via imageSieve_mem cover + Sheaf.isSeparated; on each cover member W: W=⊥ ⇒ codomain subsingleton, W≠⊥ ⇒ a₀=t by injectivity at non-empty W⊓U₀",
+        "code_tried": "intro W g hg; obtain ⟨t, ht⟩ := hg; by_cases hWbot : W = ⊥; … PreirreducibleSpace.isPreirreducible_univ (W:Set X) (U₀:Set X) W.2 U₀.2 …",
+        "line_number": "223",
+        "lean_error": "first used IrreducibleSpace.isPreirreducible_univ (unknown) → fixed to PreirreducibleSpace.isPreirreducible_univ",
+        "goal_before": "F.map g.op (toSheafify_V a₀) = F.map g.op y on each cover member",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Two non-empty opens of an irreducible space meet (PreirreducibleSpace.isPreirreducible_univ); rw [toSheafify_const_restrict] does NOT match (ConcreteCategory.hom/.obj/g.op vs ModuleCat.Hom.hom/.val/homOfLE) — use term-mode refine/congrArg/exact (defeq) and erw for nested-restriction collapse."
+      }
+    ],
+    "next_steps": "Add 1-to-1 blueprint blocks for the 3 new private helpers; rewrite chapter Route-B sketch to match the actual sheafification-unit argument."
+  },
+  {
+    "timestamp": "2026-06-20T05:36:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/H1Vanishing.lean",
+      "theorem": "Scheme.IsFlasque.injective_flasque"
+    },
+    "session": {
+      "id": "session_1",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Mathlib b80f227 ships no extension-by-zero functor j_! (left adjoint to open-immersion restriction) for Sheaf (Opens X) (ModuleCat kbar); only restrictAdjunction (restriction ⊣ pushforward, wrong direction) exists",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Reduce to per-(V≤U) surjectivity of I(U)→I(V), realised as Hom(-,I) of the extension-by-zero mono j_{V!}𝒪_V ↪ j_{U!}𝒪_U; injectivity of I ⇒ Hom-map surjective; j_! ⊣ restriction identifies Hom-sets with I(U), I(V)",
+        "code_tried": "intro U V h; -- documented route then typed sorry at the surjectivity goal",
+        "line_number": "756",
+        "lean_error": "no error — typed sorry; missing infrastructure (no j_!)",
+        "goal_before": "Function.Surjective (I.val.map (homOfLE h).op) (per V≤U)",
+        "goal_after": "(unchanged — sorry)",
+        "result": "partial",
+        "insight": "Genuine missing Mathlib ingredient (~100-150 LOC extByZeroPresheaf + Hom-iso), specced in informal/injective_flasque.md. NOTE: lean_verify shows this sorry transitively poisons the degree-1 headline (see KB)."
+      }
+    ],
+    "next_steps": "Cheapest headline-#1 unblock is NOT closing this — it is factoring the n=0 base case out of HModule_flasque_subsingleton_aux's induction so the i=1 path avoids the succ-case injective_flasque call. Building j_! is a mathlib-build lane."
+  },
+  {
+    "timestamp": "2026-06-20T13:15:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+      "theorem": "sheafOf"
+    },
+    "session": {
+      "id": "session_1",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Localized: Scheme.IsRegularInCodimensionOne C.left (smooth⟹DVR at every codim-1 stalk) is not synthesizable from the smooth/proper package and not in the signature",
+      "key_lemmas_used": [
+        "Ring.ordFrac_add",
+        "Ring.ordFrac_ge_one_of_ne_zero",
+        "isSheafUniqueGluing",
+        "IsProper.toLocallyOfFiniteType",
+        "LocallyOfFiniteType.isLocallyNoetherian"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Generalise the entire OCofP lineBundleAtClosedPoint.carrier* chain from a single closed point to an arbitrary Weil divisor D; build carrierSet/carrierSubmodule/carrierPresheaf/carrierPresheaf_isSheaf and set the else-branch to ⟨carrierPresheaf D, carrierPresheaf_isSheaf D⟩",
+        "code_tried": "carrierSet D U := { f | f = 0 ∨ ∀ Q, Q.point ∈ U → -(D Q) ≤ ord_Q f }; full zero/add/smul closure; ~150-line isSheafUniqueGluing (Case A empty-cover + Case B irreducible-gluing); derive IsLocallyNoetherian on the nose from properness; IsRegularInCodimensionOne := ⟨fun _ => sorry⟩",
+        "line_number": "553",
+        "lean_error": "no error — one localized Prop-instance sorry",
+        "goal_before": "Sheaf (Opens.grothendieckTopology C.left) (ModuleCat kbar) for D≠0",
+        "goal_after": "(builds; single sorry inside the IsRegularInCodimensionOne witness)",
+        "result": "partial",
+        "insight": "Disjunctive f=0 clause REQUIRED (negative coeff D Q<0 ⇒ -(D Q)>0 and junk ord_Q(0)=0 fails the pure ∧). Could not add [IsRegularInCodimensionOne]/[IsLocallyNoetherian] as instance args — RRFormula calls sheafOf with only smooth/proper instances, so added args break the cross-file consumer."
+      }
+    ],
+    "next_steps": "mathlib-build lane: prove global instance Scheme.IsRegularInCodimensionOne C.left from [SmoothOfRelativeDimension 1 C.hom] + field base; once it exists the localized sorry vanishes. Add 1-to-1 blueprint blocks for the new sheafOf.carrier* helpers."
+  },
+  {
+    "timestamp": "2026-06-20T13:20:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+      "theorem": "sheafOf_singlePoint"
+    },
+    "session": {
+      "id": "session_1",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "RHS lineBundleAtClosedPoint is bundled from OCofP private carrierPresheaf/carrierSubmoduleSheaf; strict functor equality (sheafOf [P]).val = (lineBundle).val needs a per-open Submodule equality whose RHS is OCofP-private and unnameable; Sheaf.ext does not exist",
+      "key_lemmas_used": [
+        "ofClosedPoint_eq_single",
+        "Finsupp.single_eq_zero"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Prove hne: ofClosedPoint P hP ≠ 0 to place sheafOf [P] in the general else branch, then show the two sides have equal section sets on every open",
+        "code_tried": "have hne : ofClosedPoint P hP ≠ 0 := by rw [ofClosedPoint_eq_single]; exact (Finsupp.single_eq_zero.not).mpr one_ne_zero  -- then sorry on the functor-equality core",
+        "line_number": "630",
+        "lean_error": "no error — documented sorry after hne; Sheaf.ext / TopCat.Sheaf.ext / CategoryTheory.Sheaf.ext all unknown",
+        "goal_before": "(sheafOf (ofClosedPoint P hP)) = lineBundleAtClosedPoint P hP",
+        "goal_after": "(hne proven; functor-equality core left as sorry)",
+        "result": "partial",
+        "insight": "Section sets DO match (at D=single⟨P⟩1, -(D Q)=if Q=P then -1 else 0 = RR.3's split, ord_Q(0)=0 matches f=0 clause). Blocker is OCofP privacy + strict = vs ≅."
+      }
+    ],
+    "next_steps": "Planner decision: (a) de-privatise OCofP's carrier* API, or (b) restate as sheaf iso ≅ instead of strict =."
+  },
+  {
+    "timestamp": "2026-06-20T13:20:30Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+      "theorem": "sheafOf_ses_single_add"
+    },
+    "session": {
+      "id": "session_1",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Cokernel arm X₂↠k(P) (skyscraper) + ShortExact is Hartshorne IV.1.3 ideal-sheaf SES tensored by 𝒪_C(D+[P]); Mathlib b80f227 has no coherent-sheaf tensor-exactness API; also same regularity-instance gating as sheafOf",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Note the X₁⟶X₂ inclusion arm is constructible (carrierSet D U ⊆ carrierSet (single P 1 + D) U since (single P 1 + D) Q ≥ D Q) but leave full ShortComplex as documented sorry",
+        "code_tried": "(documented in-body route; sorry at L697)",
+        "line_number": "697",
+        "lean_error": "no error — documented sorry",
+        "goal_before": "ShortExact short complex sheafOf D ⟶ sheafOf (single P 1 + D) ⟶ skyscraper k(P)",
+        "goal_after": "(unchanged — sorry)",
+        "result": "partial",
+        "insight": "Inclusion arm is easy; the cokernel/exactness needs missing coherent-sheaf tensor-exactness API."
+      }
+    ],
+    "next_steps": "Deferred; needs tensor-exactness substrate (mathlib-build). Out of headline-#1 critical path until χ-machinery consumes it."
+  },
+  {
+    "timestamp": "2026-06-20T05:23:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/RRFormula.lean",
+      "theorem": "Scheme.eulerCharacteristic_shortExact_add"
+    },
+    "session": {
+      "id": "session_1",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Lemma is FALSE as typed (no coherence/finiteness hyp on abstract S); 6 FiniteDimensional sorries unprovable in place + 1 honest degree-2 Ext-vanishing gap (Grothendieck III.2.7, absent from Mathlib b80f227)",
+      "key_lemmas_used": [
+        "Abelian.Ext.covariant_sequence_exact₁",
+        "Abelian.Ext.covariant_sequence_exact₂",
+        "Abelian.Ext.covariant_sequence_exact₃",
+        "LinearMap.finrank_range_add_finrank_ker",
+        "LinearMap.exact_iff",
+        "Abelian.Ext.postcomp_mk₀_injective_of_mono"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Build the six-term covariant Ext-LES H⁰(X₁)→…→H¹(X₃), feed it to a new pure-linear-algebra alternating-sum lemma, unfold χ",
+        "code_tried": "finrank_alternating_six_term (NEW, sorry-free, axiom-clean) + e₁..e₄ exactness from covariant_sequence_exact₂/₃/₁ + hf₀ injectivity from postcomp_mk₀_injective_of_mono + simp only [Scheme.eulerCharacteristic]; linarith",
+        "line_number": "335",
+        "lean_error": "infer_instance fails for FiniteDimensional kbar (HModule kbar S.Xᵢ n); Subsingleton (Abelian.Ext L S.X₁ 2) absent",
+        "goal_before": "eulerCharacteristic S.X₁ + eulerCharacteristic S.X₃ = eulerCharacteristic S.X₂",
+        "goal_after": "(connective math proven; 7 typed sorries remain: 6 finiteness + 1 H²-vanishing)",
+        "result": "partial",
+        "insight": "The Ext-LES connective mathematics (exactness ×4, injectivity, surjectivity-mod-vanishing, χ-unfold + linarith) all PROVEN. But the 6 finiteness sorries cannot close — they signal the wrong signature (Serre finiteness needs coherence). Decomposing 1→7 is partly laundering: only the 1 H²-vanishing sorry is honest debt."
+      }
+    ],
+    "next_steps": "Planner signature decision: add coherence/finiteness hyp to the lemma, discharge at concrete call site eulerCharacteristic_of_shortExact_skyscraper; mathlib-build for degree-≥2 Ext-from-constant-sheaf vanishing. Fix blueprint lem:euler_char_shortExact_add to carry the coherence hyp (internal inconsistency with def:eulerChar_curve)."
+  },
+  {
+    "timestamp": "2026-06-20T05:32:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/WeilDivisor.lean",
+      "theorem": "rationalMap_order_finite_support"
+    },
+    "session": {
+      "id": "session_1",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "FALSE as typed under [IsLocallyNoetherian X]-only — counterexample: non-quasi-compact integral locally-Noetherian scheme (affine line with infinitely many origins) where f=t has order 1 at every origin; .Finite conclusion fails. Fix needs [IsNoetherian X]/[CompactSpace X] on principal's signature, a cross-file change",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Route via Sub-builds 1-3 + terminal affine-cover closure needing [IsNoetherian X]/[CompactSpace X]; probe whether CompactSpace C.left synthesizes free",
+        "code_tried": "lean_multi_attempt: CompactSpace C.left does NOT synthesize (only QuasiCompact C.hom and CompactSpace (Spec kbar) do); in-code counterexample documented L807-812",
+        "line_number": "773",
+        "lean_error": "no error — sorry at L831 fills a FALSE proposition; can never be honestly discharged as typed",
+        "goal_before": "(rationalMap order has finite support over U under [IsLocallyNoetherian X])",
+        "goal_after": "(unchanged — sorry; statement is false)",
+        "result": "failed",
+        "insight": "Adding [CompactSpace X] propagates to principal, principal_apply/_hom, LinearEquivalence, principal_degree_zero, degree_positivePart_principal_eq_finrank AND cross-file callers OCofP.lean:1609,1807 / RationalCurveIso.lean:565 where CompactSpace C.left is not free → would break them. Forbidden cross-file signature change for a prover lane."
+      }
+    ],
+    "next_steps": "DO NOT re-assign to a prover under current signature. Planner/mathematician: strengthen principal to [CompactSpace X] (derive from IsProper C.hom via a new instance) in one coordinated cross-file pass; correct blueprint excuse-prose L1305-1309."
+  },
+  {
+    "timestamp": "2026-06-20T05:25:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/WeilDivisor.lean",
+      "theorem": "principal_degree_zero"
+    },
+    "session": {
+      "id": "session_1",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Residual deep equality deg((f)_0)=deg((f⁻¹)_0) (Hartshorne II.6.9) needs Scheme.Hom.ofFunctionFieldEmbedding (no Mathlib constructor)",
+      "key_lemmas_used": [
+        "Finsupp.sum_sub",
+        "Finsupp.sum_neg_index",
+        "principal_inv"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Elementary degree decomposition: deg D = Σmax(ord,0) − Σmax(−ord,0) via integer identity n=max n 0 − max(−n)0; pole part of f = zero part of f⁻¹ via new principal_inv; reduce to zeros=poles degree equality",
+        "code_tried": "unfold degree; rw [← Finsupp.sum_sub]; Finsupp.sum_congr; omega  (hdeg); rw [← principal_inv f hf]; Finsupp.sum_neg_index  (hpoles); rw [hdeg, hpoles, sub_eq_zero]",
+        "line_number": "1120",
+        "lean_error": "no error — bare sorry replaced by compiling block; residual sorry is the precise deep equality",
+        "goal_before": "degree (principal f hf) = 0 (non-constant branch, was bare sorry)",
+        "goal_after": "deg((f)_0) = deg((f⁻¹)_0)",
+        "result": "partial",
+        "insight": "Bare sorry → precise Hartshorne II.6.9 crux. Both sides equal deg φ = [K(C):k̄(ℙ¹)] via the SAME finite morphism (since k̄(f)=k̄(f⁻¹)). Added sorry-free helper principal_inv."
+      }
+    ],
+    "next_steps": "Blocked on ofFunctionFieldEmbedding substrate (mathlib-build). Leave partial; add blueprint block for principal_inv."
+  },
+  {
+    "timestamp": "2026-06-20T05:26:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/WeilDivisor.lean",
+      "theorem": "degree_positivePart_principal_eq_finrank"
+    },
+    "session": {
+      "id": "session_1",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Needs Scheme.Hom.ofFunctionFieldEmbedding (no Mathlib constructor) + Ideal.sum_ramification_inertia/finrank_quotient_map on the Dedekind extension (Hartshorne II.6.9); ~several hundred LOC mathlib-build",
+      "key_lemmas_used": [
+        "degree_positivePart_eq_sum_max",
+        "Finsupp.sum_max_zero_eq_sum_filter_pos"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Existing body does the Mathlib-clean reductions, leaving Σ over positive-order primes = (finrank K(ℙ¹) K(C)); then Hartshorne II.6.9 ramification-inertia",
+        "code_tried": "degree_positivePart_eq_sum_max; Finsupp.sum_max_zero_eq_sum_filter_pos; simp_rw [hbridge]  -- leaves goal Σ ord = finrank, then sorry",
+        "line_number": "1685",
+        "lean_error": "no error — documented sorry at the ramification-inertia step",
+        "goal_before": "deg (positivePart (principal f)) = (finrank K(ℙ¹) K(C) : ℤ)",
+        "goal_after": "Σ Y ∈ supp(div f).filter(0<ord), ord_Y f = finrank ...",
+        "result": "partial",
+        "insight": "Reductions land; the morphism φ:C→ℙ¹ from the function-field embedding is the missing substrate. Also added sorry-free axiom-clean helper degree_eq_degree_positivePart_sub."
+      }
+    ],
+    "next_steps": "mathlib-build lane for ofFunctionFieldEmbedding + ramification-inertia; do not retry as a prover lane. Add blueprint blocks for the 2 new helpers."
+  }
+]

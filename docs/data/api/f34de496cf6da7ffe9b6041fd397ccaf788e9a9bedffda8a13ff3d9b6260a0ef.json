@@ -1,0 +1,140 @@
+[
+  {
+    "timestamp": "2026-06-20T05:34:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "tensorPowAdd_assoc"
+    },
+    "session": {
+      "id": "session_21",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "B6-succ braided-pentagon residual (ii interchange + iii coherence): sliding the A4 double-whisker (mu_{k,m'} ▷ L) ▷ L^m'' past the segment-B2 braiding beta_{L,L^m''} to expose ihR.LHS, then the canonical four-letter hexagon/pentagon. hom-level whisker_exchange crosses the hand-built-whisker/tensorObjIso bridge diamond, did not mechanically discharge within budget.",
+      "key_lemmas_used": [
+        "tensorPowAdd_reindex_fst",
+        "tensorPowAdd_assoc_succ_reindex",
+        "tensorPowAdd_succ",
+        "tensorObjWhiskerRightIso_trans",
+        "tensorPow_succ"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "effort-breaker (i): new helper tensorPowAdd_reindex_fst — first-index reindex of mu via subst",
+        "code_tried": "private lemma tensorPowAdd_reindex_fst (L) {a b} (h:a=b) (c) : tensorPowAdd L a c = eqToIso(...) ≪≫ tensorPowAdd L b c ≪≫ eqToIso(...) := by subst h; simp",
+        "line_number": "3079",
+        "lean_error": "",
+        "result": "success",
+        "insight": "Mirror of tensorObjIso_tensorPowAdd_reindex; axiom-clean [propext,Classical.choice,Quot.sound]."
+      },
+      {
+        "attempt": 2,
+        "strategy": "effort-breaker (i): tensorPowAdd_assoc_succ_reindex via rw[reindex_fst (Nat.succ_add k m')] ; rfl",
+        "code_tried": "rw [tensorPowAdd_reindex_fst L (Nat.succ_add k m') m'']  -- then needed rfl",
+        "line_number": "3092",
+        "lean_error": "unsolved goals (eqToIso ⋯ ≪≫ tensorPowAdd (k+m').succ m'' ≪≫ eqToIso ⋯ = …)",
+        "goal_after": "residual closed by appending rfl",
+        "result": "success",
+        "insight": "MECHANICAL, no braided coherence — exactly as the breaker predicted. CLOSED, axiom-clean."
+      },
+      {
+        "attempt": 3,
+        "strategy": "effort-breaker: tensorPowAdd_succ definitional succ-clause as rewrite lemma (rfl)",
+        "code_tried": "private lemma tensorPowAdd_succ (L) (k c) : tensorPowAdd L (k+1) c = tensorObjAssoc … ≪≫ … ≪≫ eqToIso(Nat.succ_add k c).symm := rfl",
+        "line_number": "3066",
+        "lean_error": "",
+        "result": "success",
+        "insight": "Unfolds RHS comparison mu_{k+1,m'+m''}; axiom-clean."
+      },
+      {
+        "attempt": 4,
+        "strategy": "assemble succ case: rw both outer comparisons into succ form",
+        "code_tried": "rw [tensorPowAdd_assoc_succ_reindex L k m' m'', tensorPowAdd_succ L k (m' + m'')]",
+        "line_number": "3236",
+        "lean_error": "",
+        "result": "partial",
+        "insight": "Both outer comparisons now explicit succ form; every remaining tensorPowAdd is one of the 4 FOLDED inductive atoms mu_{k,m'}/mu_{k+m',m''}/mu_{m',m''}/mu_{k,m'+m''} — exactly the atoms ih ties. Build GREEN (2439 jobs)."
+      },
+      {
+        "attempt": 5,
+        "strategy": "(ii) groundwork: whisker ih by ▷ L and distribute to surface the bridge",
+        "code_tried": "have ihR := congrArg (fun e => tensorObjWhiskerRightIso e L) ih\\nsimp only [tensorObjWhiskerRightIso_trans] at ihR",
+        "line_number": "3259",
+        "lean_error": "",
+        "result": "partial",
+        "insight": "VERIFIED via lean_goal: ihR 2nd segment WR(mu_{k+m',m''})L matches goal LHS B4 verbatim; ihR 3rd segment WR(mu_{k,m'+m''})L matches goal RHS D4 verbatim. ihR IS the literal bridge. ONLY residual obstruction = goal LHS A4 (mu▷L)▷L^m'' vs ihR first term (mu▷L^m'')▷L — differ by transposing new L past L^m'', must slide A4 past braiding beta_{L,L^m''}. Left as inline sorry @3261."
+      }
+    ],
+    "next_steps": "FINE re-break (per pre-committed gate): (ii) split into (a) move A4 across B2 via a tensorObjWhiskerRightIso(-)(L^m'')-natural-vs-tensorBraiding bridge lemma (route through tensorObjWhiskerRightIso_eq + tensorBraiding_eq, NOT the MonoidalPresheaf X synonym side — confirmed DEAD), then (b) canonical whisker_exchange; (iii) hexagon_forward+pentagon on the four-letter word, NO beta=id. Realise interchange/coherence as named helpers or collapse to one residual block."
+  },
+  {
+    "timestamp": "2026-06-20T05:34:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "tensorPowAdd_assoc_succ_reindex"
+    },
+    "session": {
+      "id": "session_21",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "",
+      "key_lemmas_used": [
+        "tensorPowAdd_reindex_fst",
+        "Nat.succ_add"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "effort-breaker sub-lemma (i): rw[reindex_fst]; rfl",
+        "code_tried": "rw [tensorPowAdd_reindex_fst L (Nat.succ_add k m') m'']; rfl",
+        "line_number": "3103",
+        "lean_error": "",
+        "result": "success",
+        "insight": "Closed + axiom-clean [propext,Classical.choice,Quot.sound]. Exposes trailing right-whisker mu_{k+m',m''} ▷ L."
+      }
+    ],
+    "next_steps": "Consumed by tensorPowAdd_assoc succ case (attempt 4 above)."
+  },
+  {
+    "timestamp": "2026-06-20T05:34:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "sectionsMul_mul_assoc"
+    },
+    "session": {
+      "id": "session_21",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "B7 gated solely on full B6 (tensorPowAdd_assoc); its ingredient (3) unavailable while B6 succ open. Not attempted.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Unblocks the iter B6-succ closes."
+  },
+  {
+    "timestamp": "2026-06-20T05:34:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "tensorPowAdd_comm"
+    },
+    "session": {
+      "id": "session_21",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "FUTURE: [IsInvertible L]-gated, no consumer (GCommSemiring unbuilt); sectionsMul_mul_comm FALSE for general L. Deferred, untouched.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Do NOT re-assign; no consumer."
+  }
+]

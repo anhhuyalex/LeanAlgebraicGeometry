@@ -1,0 +1,118 @@
+[
+  {
+    "timestamp": "2026-06-20T10:04:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "tensorPowAdd_assoc"
+    },
+    "session": {
+      "id": "session_24",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "succ branch open (typed sorry @3178). The iter-023 diagnosis was WRONG: the residual is NOT a dependently-typed eqToIso motive — it IS the LocalizedMonoidal/X.Modules comp-instance diamond at ONE junction. After the canonical Iso.ext+simp reduction the goal LHS contains ihRh.LHS modulo the telescope α_.hom ≫ AB◁tC.hom ≫ tR.hom ≫ tR.inv ≫ AB◁tC.inv ≫ α_.inv = 𝟙 (tR = tensorObjIso (L^{m+m'}) ((L^c)⊗L)); the ≫ at tR.hom ≫ tR.inv mixes native X.Modules comp with LocalizedMonoidal comp. rw/simp/explicit Iso.trans_assoc/hc comp-bridge all no-match; erw [Iso.trans_assoc] deterministically times out >200k whnf; ← Iso.trans_assoc fires but cannot expose the cancellation.",
+      "key_lemmas_used": [
+        "ihRh := congrArg Iso.hom (congrArg (·▷L) ih)",
+        "key: eqToIso(add_assoc) = WR(eqToIso, L) via tensorObjWhiskerRightIso_eqToIso",
+        "tensorPowAdd_succ",
+        "tensorObjWhiskerRightIso_tensorObj",
+        "Iso.ext + canonical simp only"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "bank a compiling reduction to the fully-canonical pentagon residual: build ihRh fold relation, rewrite the trailing dependent eqToIso reindexer to WR(eqToIso,L) via new inline `key` to match ihRh, distribute, Iso.ext, canonical simp only to a pure-canonical hom equation",
+        "code_tried": "have ihR := congrArg (fun i => tensorObjWhiskerRightIso i L) ih; simp [tensorObjWhiskerRightIso_trans] at ihR; have ihRh := congrArg Iso.hom ihR; simp only [...] at ihRh; have key : eqToIso (congrArg (tensorPow L) (add_assoc m m' (c+1))) = tensorObjWhiskerRightIso (eqToIso (congrArg (tensorPow L) (add_assoc m m' c))) L := by rw [tensorObjWhiskerRightIso_eqToIso]; rfl; simp [tensorPow_succ, tensorPowAdd_succ, tensorObjWhiskerRightIso_tensorObj, tensorObjWhiskerLeftIso_trans, Iso.trans_assoc]; rw [key]; refine Iso.ext ?_; simp only [...]; sorry",
+        "line_number": "3178",
+        "result": "partial",
+        "insight": "GENUINE (lean-auditor confirmed 8 real tactic steps, no sorryAx/maxHeartbeats/axiom laundering). Reduction compiles green; goal lands at the canonical pentagon residual. Blocker is ONE comp-instance-diamond junction."
+      }
+    ],
+    "next_steps": "CLOSE PATH (fully scoped, same-file precedent tensorObjAssoc_eta_factor_sheaf ~L2530-2640): extract a generic {M}[Category M][MonoidalCategory M] lemma tensorPowAdd_assoc_succ_core stating the canonical hom equation (ONE category instance ⇒ simp [Category.assoc, Iso.hom_inv_id_assoc, whisker_exchange_assoc, associator_naturality_*] + rw[foldhyp] + monoidal all fire), then close B6-succ by `exact tensorPowAdd_assoc_succ_core … ihRh` (isDefEq bridges the rfl-defeq diamond). NB unfold RHS μ_{m,m'+(c+1)} via tensorPowAdd_succ (force m'+(c+1) ⤳ (m'+c)+1) first. HARD GATE: if this does not close in iter-025, escalate to USER (last untried mechanical variant; no further structural refactor available)."
+  },
+  {
+    "timestamp": "2026-06-20T10:04:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "cleanup (objective C): canonical_runit_core deletion + docstring/comment fixes"
+    },
+    "session": {
+      "id": "session_24",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "delete dead canonical_runit_core (0 call sites), fix the tensorPowAdd strategy block + docstring (was 1st-index/braiding), clean stale sectionsMul_mul_one body comment (now rfl base)",
+        "code_tried": "(deletions + comment rewrites)",
+        "line_number": "n/a",
+        "result": "success",
+        "insight": "Resolves all 3 iter-023 lean-auditor stale-guidance majors (planner block L2077-2138, docstring L2142-2146, dead canonical_runit_core L2964). lean-auditor iter-024 confirmed ALL resolved + canonical_runit_core gone project-wide. NB: created a dangling blueprint \\lean{} pin (canonical_runit_core) — neutralized by review."
+      }
+    ],
+    "next_steps": "n/a — delivered"
+  },
+  {
+    "timestamp": "2026-06-20T10:04:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "sectionsMul_mul_assoc"
+    },
+    "session": {
+      "id": "session_24",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "B7 — gated solely on full B6 (tensorPowAdd_assoc succ). Untouched this iter beyond confirming the assembly plan (B5 tensorObjAssoc_hom_sectionsMul + μ-slide helper + B6 + sectionsCast transport). Honest typed sorry, un-weakened (lvbc + auditor confirmed).",
+      "key_lemmas_used": [
+        "tensorObjAssoc_hom_sectionsMul",
+        "tensorPowAdd_assoc"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "not re-attempted (gated on B6)",
+        "code_tried": "sorry",
+        "line_number": "3208",
+        "result": "partial",
+        "insight": "unblock once B6 succ closes; assemble like sectionsMul_mul_one."
+      }
+    ],
+    "next_steps": "unblock once B6 succ closes."
+  },
+  {
+    "timestamp": "2026-06-20T10:04:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "tensorBraiding_self_eq_id_of_isInvertible / tensorPowAdd_comm / sectionsMul_mul_comm"
+    },
+    "session": {
+      "id": "session_24",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "DEFERRED FUTURE — sectionsMul_mul_comm FALSE for general L (section ring = free tensor algebra); comm holds only [IsInvertible L]. No consumer; off the goal cone. 3 sorries, all [IsInvertible L]-gated (auditor: mathematically necessary, not a weakening; counterexample L=𝒪² documented inline).",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "not attempted (deferred, no consumer)",
+        "code_tried": "sorry",
+        "line_number": "3226/3241/3283",
+        "result": "partial",
+        "insight": "do NOT re-assign; invertibility + cohomology-independent FUTURE."
+      }
+    ],
+    "next_steps": "leave deferred until a consumer appears."
+  }
+]

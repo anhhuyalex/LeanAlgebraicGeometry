@@ -1,0 +1,196 @@
+[
+  {
+    "timestamp": "2026-06-21T05:12:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/CurveKrullDim.lean",
+      "theorem": "comap_lt_comap_of_isIntegral"
+    },
+    "session": {
+      "id": "session_12",
+      "model": "opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "Ideal.comap_mono",
+        "Algebra.IsIntegral.quotient",
+        "Ideal.Quotient.algebraMap_mk_of_liesOver",
+        "Ideal.comap_map_of_surjective",
+        "RingHom.ker_eq_comap_bot",
+        "Ideal.mk_ker",
+        "Ideal.under_ne_bot"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Mathlib `Ideal.IntegralClosure.comap_lt_comap` only covers `integralClosure R A`, not a general integral algebra; tried it directly",
+        "code_tried": "have key := Ideal.IntegralClosure.comap_lt_comap (R := R) hlt",
+        "line_number": "91",
+        "lean_error": "Application type mismatch: hlt has type q₁.asIdeal < q₂.asIdeal but expected ?m < ?m (ideals of integralClosure, not A)",
+        "result": "failed",
+        "insight": "general-ring incomparability is NOT in Mathlib; must hand-build via quotient"
+      },
+      {
+        "attempt": 2,
+        "strategy": "Build general-ring incomparability: comap monotone gives ≤; for strictness assume equal contractions, pass to A⧸I (domain) integral over R⧸p, image J⧸I nonzero contracting to ⊥, contradiction via IsIntegralClosure.comap_ne_bot",
+        "code_tried": "exact (Ideal.IsIntegralClosure.comap_ne_bot (R := R ⧸ p) (A := A ⧸ I) (I := J') hJ'_ne) hcontr",
+        "line_number": "120",
+        "lean_error": "failed to synthesize IsIntegralClosure (A⧸I) (R⧸p) (A⧸I); also arg-order type mismatch (hJ'_ne expected Type)",
+        "result": "failed",
+        "insight": "IsIntegralClosure not an instance for Algebra.IsIntegral; need a different no-vanishing lemma"
+      },
+      {
+        "attempt": 3,
+        "strategy": "Replace IsIntegralClosure.comap_ne_bot with Ideal.under_ne_bot (same content, only needs Algebra.IsIntegral + Nontrivial base + IsDomain top)",
+        "code_tried": "exact (Ideal.under_ne_bot (R ⧸ p) hJ'_ne) (by rw [Ideal.under_def]; exact hcontr)",
+        "line_number": "120",
+        "lean_error": null,
+        "result": "success",
+        "insight": "Ideal.under_ne_bot is the clean general-integral replacement; axiom-clean"
+      }
+    ],
+    "next_steps": "Needs blueprint \\lean{} block (coverage debt — surfaces under dag unmatched)."
+  },
+  {
+    "timestamp": "2026-06-21T05:12:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/CurveKrullDim.lean",
+      "theorem": "ringKrullDim_le_of_moduleFinite_injective"
+    },
+    "session": {
+      "id": "session_12",
+      "model": "opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "Algebra.IsIntegral.of_finite",
+        "Order.krullDim_le_of_strictMono",
+        "PrimeSpectrum.comap",
+        "PrimeSpectrum.comap_asIdeal",
+        "comap_lt_comap_of_isIntegral"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "ringKrullDim = Order.krullDim (PrimeSpectrum); show contraction map is StrictMono via Order.krullDim_le_of_strictMono; strictness from incomparability",
+        "code_tried": "refine Order.krullDim_le_of_strictMono (PrimeSpectrum.comap (algebraMap R S)) ?_; intro q₁ q₂ h; ...",
+        "line_number": "133",
+        "lean_error": "Unknown constant PrimeSpectrum.comap_mono / PrimeSpectrum.lt_iff_lt (do not exist)",
+        "result": "partial",
+        "insight": "PrimeSpectrum order IS ideal-inclusion definitionally; `have hlt : q₁.asIdeal < q₂.asIdeal := h` works directly"
+      },
+      {
+        "attempt": 2,
+        "strategy": "Close via the new helper comap_lt_comap_of_isIntegral + change goal to asIdeal form + simpa PrimeSpectrum.comap_asIdeal",
+        "code_tried": "have key := comap_lt_comap_of_isIntegral (R := R) hlt; change ...asIdeal < ...asIdeal; simpa only [PrimeSpectrum.comap_asIdeal] using key",
+        "line_number": "140",
+        "lean_error": null,
+        "result": "success",
+        "insight": "hinj is NOT consumed — only incomparability (≤ direction) needed; `unused variable hinj` lint fires"
+      }
+    ],
+    "next_steps": "Auditor MF-1: hinj unused → misleading signature. Planner: either drop hinj (rename to ringKrullDim_le_of_moduleFinite) + fix C call site, or rename _hinj. Signature change → planner decision."
+  },
+  {
+    "timestamp": "2026-06-21T05:12:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/CurveKrullDim.lean",
+      "theorem": "chart_ringKrullDim_le_one"
+    },
+    "session": {
+      "id": "session_12",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "s ≤ 1: chain s = dim S = trdeg(Frac S/k̄) = relDim = rank Ω[S/k̄] = 1 is Mathlib-ABSENT (rev v4.30.0-rc2)",
+      "key_lemmas_used": [
+        "Algebra.IsStandardSmoothOfRelativeDimension.isStandardSmooth",
+        "exists_finite_inj_algHom_of_fg",
+        "ringKrullDim_le_of_moduleFinite_injective",
+        "MvPolynomial.ringKrullDim_of_isNoetherianRing",
+        "ringKrullDim_eq_zero_of_field",
+        "Algebra.IsStandardSmoothOfRelativeDimension.rank_kaehlerDifferential"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Noether normalization (Stacks 00P0): standard-smooth ⇒ FiniteType; exists_finite_inj_algHom_of_fg; algebraize [g.toRingHom]; G1 ⇒ dim S ≤ dim k̄[Xᵢ] = s; isolate s≤1 as a `have ... sorry`",
+        "code_tried": "obtain ⟨s, g, hg_inj, hg_fin⟩ := exists_finite_inj_algHom_of_fg kbar S; algebraize [g.toRingHom]; ... rw [MvPolynomial.ringKrullDim_of_isNoetherianRing, ringKrullDim_eq_zero_of_field kbar, Nat.card_fin, zero_add] at hle",
+        "line_number": "200-236",
+        "lean_error": null,
+        "result": "partial",
+        "insight": "Entire Noether/G1/polynomial scaffold lands axiom-clean; gap reduces to one named missing lemma s = rank Ω"
+      },
+      {
+        "attempt": 2,
+        "strategy": "Extract the one available smooth-side fact rank Ω = 1 into the sorry block to document the gap",
+        "code_tried": "have hrank : Module.rank S (Ω[S⁄kbar]) = 1 := Algebra.IsStandardSmoothOfRelativeDimension.rank_kaehlerDifferential 1; ... sorry",
+        "line_number": "224-235",
+        "lean_error": null,
+        "result": "partial",
+        "insight": "rank_kaehlerDifferential exists but bridge s = rank Ω is absent; loogle/leansearch confirm no ringKrullDim↔trdeg, no trdeg=rankΩ; informal agent unavailable (no API key). Write-up in informal/chart_ringKrullDim_le_one_s_le_one.md"
+      }
+    ],
+    "next_steps": "DO NOT re-assign as plain `prove` — genuine Mathlib gap. Needs mathlib-build lane to formalize `dim = trdeg` (Tag 00P0) + `trdeg = rank Ω`, OR an effort-breaker to decompose. informal/ write-up exists."
+  },
+  {
+    "timestamp": "2026-06-21T05:12:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/CurveKrullDim.lean",
+      "theorem": "krullDim_curve_le_one"
+    },
+    "session": {
+      "id": "session_12",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "own proof complete; transitively depends on chart_ringKrullDim_le_one's s≤1 sorry → lean_verify reports sorryAx until C lands",
+      "key_lemmas_used": [
+        "Order.krullDim_eq_iSup_coheight",
+        "Scheme.ringKrullDim_stalk_eq_coheight",
+        "isLocalization_stalk_standardSmooth_chart_of_smooth",
+        "IsLocalization.AtPrime.ringKrullDim_eq_height",
+        "Ideal.height_eq_primeHeight",
+        "Ideal.primeHeight_le_ringKrullDim",
+        "IsIntegral.component_integral",
+        "chart_ringKrullDim_le_one"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "krullDim_eq_iSup_coheight + iSup_le ⇒ pointwise; ringKrullDim_stalk_eq_coheight bridge; standard-smooth chart; localisation height bound; chain dim(stalk)=height P=primeHeight P ≤ dim S ≤ 1",
+        "code_tried": "rw [Order.krullDim_eq_iSup_coheight]; refine iSup_le fun z => ?_; rw [← Scheme.ringKrullDim_stalk_eq_coheight ...]; obtain ⟨V,hV,hxV,ψ,hψ,hLoc⟩ := ...; algebraize [ψ]",
+        "line_number": "296-322",
+        "lean_error": null,
+        "result": "partial",
+        "insight": "needs IsDomain Γ(C.left,V)"
+      },
+      {
+        "attempt": 2,
+        "strategy": "Build Nonempty V + IsDomain via IsIntegral.component_integral",
+        "code_tried": "haveI : Nonempty ↥↑V := ⟨⟨z, hxV⟩⟩",
+        "line_number": "312",
+        "lean_error": "failed to synthesize Nonempty ↥↑V (wrong coercion form)",
+        "result": "failed",
+        "insight": "anonymous ⟨⟨z,hxV⟩⟩ and ↥(V:Set _) forms don't give the ↥↑V the lemma wants"
+      },
+      {
+        "attempt": 3,
+        "strategy": "Use Set.Nonempty.to_subtype for the exact subtype form; pass explicit (kbar:=kbar)(S:=Γ) to chart lemma",
+        "code_tried": "haveI : Nonempty V := Set.Nonempty.to_subtype ⟨z, hxV⟩; exact le_trans Ideal.primeHeight_le_ringKrullDim (chart_ringKrullDim_le_one (kbar := kbar) (S := ↑Γ(C.left, V)))",
+        "line_number": "312,321-322",
+        "lean_error": null,
+        "result": "success",
+        "insight": "Set.Nonempty.to_subtype gives the right form; chart_ringKrullDim_le_one needs explicit kbar/S or instance search stalls on kbar metavar. Own body sorry-free; sorryAx only transitively via C."
+      }
+    ],
+    "next_steps": "Becomes axiom-clean once chart_ringKrullDim_le_one's s≤1 lands. Unblocks OcOfD L635 wiring (hdim)."
+  }
+]

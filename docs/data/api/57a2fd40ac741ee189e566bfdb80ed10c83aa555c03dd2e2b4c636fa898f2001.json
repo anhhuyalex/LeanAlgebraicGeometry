@@ -1,0 +1,135 @@
+[
+  {
+    "timestamp": "2026-06-21T10:14:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "tensorBraiding_naturality_left"
+    },
+    "session": {
+      "id": "session_34",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "tensorBraiding_eq",
+        "tensorObjWhiskerRightIso_eq",
+        "tensorObjWhiskerLeftIso_eq",
+        "BraidedCategory.braiding_naturality_left_assoc"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Iso-level naturality of hand-built tensorBraiding in arg 1: descend from canonical BraidedCategory.braiding_naturality_left through the _eq bridges, then Iso.ext + simp + rw[braiding_naturality_left_assoc].",
+        "code_tried": "rw [tensorBraiding_eq, ...]; apply Iso.ext; simp only [...]; rw [BraidedCategory.braiding_naturality_left_assoc]",
+        "line_number": "4012",
+        "result": "success",
+        "insight": "Companion to tensorBraiding_hexagon_forward/_symm; descends cleanly via the proven _eq bridges. Axiom-clean {propext,Classical.choice,Quot.sound}."
+      }
+    ],
+    "next_steps": "Reusable infra for an iso-level (A) route; the hom-level (A) script uses canonical naturality directly and does not consume these."
+  },
+  {
+    "timestamp": "2026-06-21T10:14:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "tensorBraiding_naturality_right"
+    },
+    "session": {
+      "id": "session_34",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "tensorBraiding_eq",
+        "tensorObjWhiskerLeftIso_eq",
+        "tensorObjWhiskerRightIso_eq",
+        "BraidedCategory.braiding_naturality_right_assoc"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Mirror of _left in arg 2.",
+        "code_tried": "rw [tensorBraiding_eq, ...]; apply Iso.ext; simp only [...]; rw [BraidedCategory.braiding_naturality_right_assoc]",
+        "line_number": "4025",
+        "result": "success",
+        "insight": "Symmetric to _left. Axiom-clean."
+      }
+    ],
+    "next_steps": "Reusable infra."
+  },
+  {
+    "timestamp": "2026-06-21T10:14:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "moduleTensorPowAdd_assoc"
+    },
+    "session": {
+      "id": "session_34",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "ONE residual braiding transposition after the hexagon split: β_a=β_{L^i,F} sits before the inner merge μ_{j,k} on LHS vs after it on RHS. True by whisker_exchange on disjoint factors, but the merge is nested F◁(L^i◁·) so whisker_exchange_assoc does not fire; `monoidal` cannot do braiding moves. ~5-15 lines from done. NOT a math gap.",
+      "key_lemmas_used": [
+        "tensorPowAdd_assoc",
+        "BraidedCategory.hexagon_reverse",
+        "BraidedCategory.braiding_naturality_left",
+        "MonoidalCategory.associator_naturality_middle_assoc",
+        "whisker_exchange_assoc",
+        "tensorObjWhiskerRightIso_eq",
+        "tensorObjWhiskerLeftIso_eq",
+        "tensorBraiding_eq"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Canonicalize both moduleTensorPowAdd sides to canonical β_/α_/bridges/μ keeping tensorPowAdd.hom OPAQUE (avoids LocalizedMonoidal/X.Modules comp-instance diamond; plain rw works, no generic-M _core needed). Then: (1) slide μ_{i,j} to F-side converting β_{L^{i+j},F}→β_{tensorObj L^i L^j,F} via braiding_naturality_left; (2) inject pentagon hp:=tensorPowAdd_assoc L i j k under F◁ via cancel_epi(hp') + a hand-built hgen eqToHom-slide; (3) convert to canonical β_{L^i⊗L^j,F} then split via hexagon_reverse (hhex); (4) commute β_a past inner merge then monoidal.",
+        "code_tried": "apply Iso.ext; simp only [moduleTensorPowAdd, moduleTensorPow, ...]; have hp := congrArg Iso.hom (tensorPowAdd_assoc L i j k); ...; rw [hgen (add_assoc i j k), ...]; rw [hp']; ...; rw [hhex]; sorry",
+        "line_number": "~4035 (reverted)",
+        "lean_error": "monoidal leaves exactly one mismatch: LHS (β_ L^i F)▷j▷k before F◁i◁Tbc;F◁i◁μ_{j,k} vs RHS i◁F◁Tbc;i◁F◁μ_{j,k} before (β_ L^i F)▷(j+k); the Tab.inv/β_{L^j,F} prefix and Tajk/μ_{i,j+k}/TF' suffix already match.",
+        "result": "partial",
+        "insight": "Full proof compiles through step (3) (rw[hhex]), verified via lean_goal/diagnostics. Diamond entirely avoided by keeping tensorPowAdd.hom opaque. associator_naturality_middle_assoc EXISTS and fires. hexagon_reverse is the correct splitter for β_{X⊗Y,Z}. Reverted to keep file sorry-free per no-sorry invariant; full script banked in task_results."
+      }
+    ],
+    "next_steps": "iter-035: paste back the banked script; close step (4) by regrouping the nested F◁(L^i◁·) via tensor_whiskerLeft/associator so whisker_exchange fires on (β_ L^i F)▷(L^j⊗L^k) vs the merge, OR apply braiding_naturality to the merge morphism Tbc.hom≫μ_{j,k} directly (mirror of step 1 for β_a on the RHS leg), then monoidal."
+  },
+  {
+    "timestamp": "2026-06-21T10:14:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "moduleSectionAction_coherent"
+    },
+    "session": {
+      "id": "session_34",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Gated on (A) moduleTensorPowAdd_assoc."
+    },
+    "attempts": [],
+    "next_steps": "After (A): mirrors sectionsMul_mul_assoc (B7) assembly at element level (diamond-free) using tensorBraiding_hom_sectionsMul + tensorObjAssoc_hom_sectionsMul + whiskers."
+  },
+  {
+    "timestamp": "2026-06-21T10:14:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "sectionGradedModule_gmodule"
+    },
+    "session": {
+      "id": "session_34",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Gated on (A),(B)."
+    },
+    "attempts": [],
+    "next_steps": "After (A),(B): DirectSum.Gmodule field-port via gradedMonoid_eq_of_cast; needs import Mathlib.Algebra.DirectSum.Module."
+  }
+]

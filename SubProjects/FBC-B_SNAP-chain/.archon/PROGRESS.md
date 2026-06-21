@@ -17,116 +17,112 @@ Two Čech-independent (i=0) legs split from the parent *Quot-Foundations* `thm:f
 cone (full arc in STRATEGY.md):
 
 - **FBC-B** — flat base change of the degree-0 pushforward (`thm:flat_base_change_pushforward`), via the
-  CONCRETE-tilde equalizer chain. Per-chart iso (a) DONE sorry-free; restriction-naturality (b) reduced
-  to its crux `pullback_spec_tilde_iso_ring_square_natural`, gated on the foundation
-  `gammaPushforwardNatIso_comp` (own body CLOSED iter-011). Residual = `gammaPushforwardIso_comp` (@L743).
-  **iter-014:** element/sheaf-element family VERIFIED-EXHAUSTED (kernel bomb is the RHS reduction across
-  the value-`ModuleCat`/`X.Modules` junction, NOT the cast). **iter-015:** MORPHISM-LEVEL route
-  (analogist-found, gate-cleared bp015): prove `_comp` as a morphism equality (RHS = `map_comp` law),
-  single junction crossing + proof-irrelevance closer — NEVER element-wise. Refactor fallback queued.
+  CONCRETE-tilde equalizer chain. FOUNDATION SORRY-FREE (iter-016). **iter-018: BOTH ring-square mate legs
+  CLOSED** (geometric + algebraic, axiom-clean). CONVERGING (pc019). Frontier = the glue
+  `pullback_spec_tilde_iso_ring_square_mate_glue` (pure iterated-mate assembly; both dependency legs live),
+  then crux rewire + 2 seeds.
 - **SNAP** — the section graded ring `Γ_*(X,L)` (`lem:sectionGradedRing_gcommSemiring`). Foundation +
-  bridges + `sectionMul_assoc_core` + 4 seams + 2 keystones DONE. Assembly
-  `tensorObjAssoc_eq_localizedAssociator = hK_lhs.trans hK_rhs.symm` (sorry-free body); **`hK_rhs` CLOSED
-  iter-014** (cold-build green). Residual = `hK_lhs` (@L1919). **iter-015:** mechanize the analogist-
-  VALIDATED (cold-LSP) exposure recipe (`analogies/snap-assoc-expose.md`); closing it closes the assembly.
+  bridges + 4 seams + 2 keystones + `hK_rhs` + head + (iter-018) `native` DONE. `native` BROKE the 7-iter
+  reassoc wall; the chain runs bomb-free to the head lemma. **STUCK (pc019, 4 PARTIAL / 0 net elim):**
+  residual = applying the proven head lemma over the full-`tail` goal whnf-bombs (heavy μ in `tail`).
+  iter-019 = the analogist-validated SUFFIX-REMOVAL route (last automated attempt before a refactor pivot).
 
 ## Current Objectives
 
-TWO prover lanes, independent files → parallel. iter-015 is the pre-committed escalation iter: BOTH
-correctives were SUBAGENT consults (not warm prover retries), and BOTH returned actionable recipes that
-are now blueprint-gate-cleared (bp015 complete+correct on both patched chapters). SNAP's recipe is
-cold-LSP-VALIDATED; FBC's is a genuinely NEW (morphism-level) family — the exhausted element family is
-abandoned. pc015: SNAP CHURNING-transitional (corrective genuine), FBC STUCK (morphism route is the
-structural pivot, not a retry).
+TWO prover lanes, independent files → parallel.
 
-1. **`Picard/SectionGradedRing.lean`** — mechanize the VALIDATED `hK_lhs` exposure recipe.
-   Blueprint: `chapters/Picard_SectionGradedRing.tex` (`lem:tensorObjAssoc_hK_lhs`, rewritten + cleared
-   bp015). Recipe: `analogies/snap-assoc-expose.md` (cold-LSP-validated, verbatim). [prover-mode: fine-grained]
-   - **`tensorObjAssoc_eq_localizedAssociator_hK_lhs` (sorry @L1919):** after the existing
-     `rw [assocCommonForm]; simp only [tensorObjLocalizedIso, …]` (@L1892–1894):
-     - **Step 0 (MANDATORY FIRST):** re-elaborate the LHS uniformly in the `modulesLocalizedMonoidal X`
-       comp via the SAME `show`-to-uniform template that landed `hK_rhs` (@L1999–2026) — every `≫` must
-       become `CategoryStruct.comp (modulesLocalizedMonoidal X)`. Until then the interchange laws NO-MATCH
-       (the outer `≫` is the `X.Modules` comp). `change`/`dsimp` across the boundary stay DEAD — use `show`.
-     - **Step 1:** `rw [← Localization.Monoidal.tensorHom_id]` (fires — whiskering is instance-agnostic),
-       then `← tensor_comp` merge + re-split to expose `((c_A⊗ₘc_B)⊗ₘc_C)`.
-     - **Step 2:** `rw [Localization.Monoidal.associator_naturality (c_A).hom (c_B).hom (c_C).hom]`
-       [verified Basic.lean L286] — native-ises `α_ A B C → α_ (L'A♭)(L'B♭)(L'C♭)`. (The iter-014 plan to
-       "relate `c_{A⊗B}` to `μ_{A,B}`" was MIS-FRAMED/not-well-typed — `c_{A⊗B}` stays WHOLE.)
-     - **Step 3:** `rw [Localization.Monoidal.associator_hom_app]` [verified L234] expands the native α.
-     - **Step 4:** `simp only [← whiskerRight_comp, Iso.inv_hom_id]` cancels the `μ_{A♭,B♭}` pair on the
-       `▷ L'C♭` slot, leaving `c_{A⊗B} ▷ L'C♭` whole.
-     - **Step 5 (the only non-routine step — prove as a `have hHead`):**
-       `μ_{(A⊗B)♭,C♭}.inv ≫ (c_{A⊗B} ▷ L'C♭) ≫ μ_{A♭⊗B♭,C♭}.hom = (L'(η_{A♭⊗B♭} ▷ C♭))⁻¹`, via
-       `μ_natural_left _ _ _ η_{A♭⊗B♭} C♭` [verified L188] + the adjunction triangle
-       `(sheafificationAdjunction _).left_triangle_components (A♭⊗B♭)` (gives `c_{A⊗B}=(L'η)⁻¹`) + cancel
-       `μ⁻¹≫μ`. Then `rw [hHead]`; the tail (from `L'(α^p)`) already coincides with `K`. ∎
-   - **Object-arg align:** in `μ_natural_left`'s output the μ first-objects print as `(L'⋙forget⋙restrict).obj _`
-     / `(𝟭 _).obj _` — defeq to the goal's forms; align with the `Functor.id_obj` simp already at L1742/L1766.
-   - **Assembly** `tensorObjAssoc_eq_localizedAssociator` (@L2044) is already `= hK_lhs.trans hK_rhs.symm`
-     (sorry-free); closing `hK_lhs` closes it. Do NOT touch the 5 cascade coherences yet (next iter).
-   - Validate with cold `lake build AlgebraicJacobian.Picard.SectionGradedRing` (LSP hides kernel
-     timeouts). Do NOT add `maxHeartbeats 1e6`.
+1. **`Picard/SectionGradedRing.lean`** — close `tensorObjAssoc_hK_lhs_native` (~L2058) then `hK_lhs`
+   (~L2127) via the SUFFIX-REMOVAL route. Blueprint: `chapters/Picard_SectionGradedRing.tex`
+   (`lem:tensorObjAssoc_hK_lhs_native`, `lem:tensorObjAssoc_hK_lhs_head` DONE, `lem:tensorObjAssoc_hK_lhs`).
+   Recipe: **`analogies/snap-suffix-cancel.md`** (analogist `snap-suffix-cancel`, PROCEED). [prover-mode: prove]
+   - **CONTEXT (pc019: STUCK route — this is the LAST automated attempt).** iter-018's `native` lemma runs
+     the full reassoc→associator-expand→whisker-merge→μ-cancel chain bomb-free down to the goal
+     `μ.inv ≫ (c_{A⊗B} ▷ L'C♭) ≫ μ_{a⊗ₚb,c}.hom ≫ tail = s1.inv ≫ tail`, where the 3-factor prefix is
+     EXACTLY the proven head lemma `tensorObjAssoc_hK_lhs_head A B C : (prefix) = s1.inv`. The ONLY
+     remaining step — applying head — whnf-bombs because the goal still carries the heavy `tail`
+     (multiple `Localization.Monoidal.μ`). DO NOT retry any full-goal op on the concrete goal
+     (`rw [head]`/`erw`/`simp only [head]`/`rw [reassoc_of% head]`/`conv … rw`/`refine (h2 _).trans` — ALL
+     VERIFIED-DEAD iter-018).
+   - **THE FIX — remove the heavy suffix BEFORE applying head (analogist-validated, PROCEED):**
+     - **PRIMARY:** put `@[reassoc]` on `tensorObjAssoc_hK_lhs_head` (auto-generates the suffixed sibling
+       `…_head_assoc {Z'} (g) : prefix ≫ g = s1.inv ≫ g` with `Category.assoc` baked in). Then in `native`,
+       after `conv_rhs => rw [assocCommonForm]; simp only [sheafification, toMonoidalCategory]` exposes the
+       RHS as `s1.inv ≫ tail` (prover-confirmed bomb-free), close with
+       `exact tensorObjAssoc_hK_lhs_head_assoc A B C` (the `?g` metavar binds `tail` by structural ≫-match,
+       so `tail` is never whnf'd). If `@[reassoc]`'s generated decl shows in `unmatched`, instead define a
+       `private` sibling `_head_assoc := by rw [reassoc_of% tensorObjAssoc_hK_lhs_head]` (or `:= reassoc_of%
+       …`) so it leaves the scan.
+     - **FALLBACK** (if structural ≫-match still trips the instance): `generalize hT : tail = t` (after the
+       `conv_rhs` alignment so `tail` is token-identical on both sides — the load-bearing guard), VERIFY both
+       sides now show `t`, then `exact reassoc_of% tensorObjAssoc_hK_lhs_head A B C` (or `rw [reassoc_of% …]`).
+     - **PREFIX RESIDUAL:** the analogist flags that suffix-removal is NECESSARY-not-sufficient — once `tail`
+       is gone, the prefix μ's (head-lemma spelling vs goal spelling) may still need the head lemma's own
+       `show`-to-uniform-localized recast on the now-tail-free prefix before `exact`. Apply it if the
+       prefix unification bombs.
+   - **Then `hK_lhs`** (~L2127): `simp only [tensorObj]` (unfold once) + `exact tensorObjAssoc_hK_lhs_native
+     A B C`. If THAT `exact` still bombs on the full term, apply the SAME suffix-removal idiom to the
+     `hK_lhs`↔`native` connection (it is the same prefix/tail shape).
+   - **If `hK_lhs` closes** → assembly `tensorObjAssoc_eq_localizedAssociator` (~L2115) closes transitively.
+   - **NET-PROGRESS FALLBACK (this is a STUCK lane — extract progress regardless of hK_lhs):** whether or
+     not the suffix route lands, spend remaining budget on the leandag-READY independent bridge
+     `tensorObjUnitor_eq_localized` (~blueprint L1883; a UNITOR bridge via `leftUnitor_hom_app`, structurally
+     simpler than the associator and NOT gated on hK_lhs) and then the cascade coherences
+     (`tensorPowAdd_*`/`sectionsMul_mul_assoc`/`sectionMul_coherent`). Reuse KB idioms (`show`-to-uniform +
+     `simp [tensorHom_comp_tensorHom]` (NOT rw) + counit-triangle + statement-level `(C := MonoidalPresheaf
+     X)` pinning + the NEW suffix-removal idiom where a heavy-μ tail blocks a prefix-equality application).
+     Leave a typed sorry on any that doesn't yield — do not thrash.
+   - **GUARD:** do NOT re-sign `assocCommonForm` (risks the CLOSED `hK_rhs`).
+   - **MANDATORY:** validate with cold `lake build AlgebraicJacobian.Picard.SectionGradedRing` (LSP HIDES
+     `(kernel) deterministic timeout`). Do NOT add `maxHeartbeats 1e6`. Revert any bombing close to a clean
+     stub; the file MUST end green.
 
-2. **`Cohomology/FlatBaseChange.lean`** — MORPHISM-LEVEL close of `gammaPushforwardIso_comp`.
-   Blueprint: `chapters/Cohomology_FlatBaseChange.tex` (`lem:gammaPushforwardIso_comp`, rewritten + cleared
-   bp015). Recipe: `analogies/fbc-morphism-comp.md`. [prover-mode: prove]
-   - **`gammaPushforwardIso_comp` (sorry @L776):** REPLACE the body — DELETE the `apply ModuleCat.hom_ext;
-     refine LinearMap.ext fun x => ?_` descent (that descent IS the kernel-bomb entry point; the
-     element/sheaf-element family is VERIFIED-EXHAUSTED). Prove the MORPHISM equality (goal shown in the
-     analogy @L30; RHS is verbatim `PresheafOfModules.map_comp`). Steps:
-     1. Normalise the codomain glue: `restrictScalarsComp φ.hom ρ.hom` → `restrictScalarsComp' φ.hom ρ.hom
-        (ρ.hom.comp φ.hom) rfl` (defeq), then `rw [ModuleCat.restrictScalarsComp'_inv_app]`.
-     2. **ADD** a `rfl` lemma `gammaPushforwardIso_hom_def` unfolding `(gammaPushforwardIso ψ N).hom` to its
-        defining `restrictScalarsComp'App`/`restrictScalarsCongr` composite (single-layer rfl, green in
-        isolation); `rw` it for `φ≫ρ`, `φ`, `ρ` — pure morphism rewrites, NO elements.
-     3. Slide the middle `(restrictScalars φ.hom).map (gammaPushforwardIso ρ N).hom` leftward via
-        `ModuleCat.restrictScalarsComp'App_hom_naturality_assoc` [expected — verify] / `_inv_naturality`.
-     4. **ADD** a morphism-level bridge lemma crossing the junction EXACTLY ONCE:
-        `moduleSpecΓFunctor.map ((eqToIso (Spec.map_comp φ ρ)).hom.app N ≫ pushforwardComp.inv.app N)
-        = <explicit restrictScalars coherence morphism over Γ(N,⊤)>` (proof = the single junction rfl/short
-        reduction — cold-build GREEN per iter-014). `rw` it; goal then has NO `moduleSpecΓFunctor.map`/`pushforward`.
-     5. Close the residual `restrictScalarsCongr` endpoint mismatch by PROOF-IRRELEVANCE (`congr 1` /
-        `Subsingleton.elim` on the `Prop` endpoint equalities; the equality content is
-        `globalSectionsIso_hom_comp3_specMap_appTop`). NO `ext x`.
-   - **MANDATORY self-check + revert-on-bomb:** after any close attempt, run cold `lake build
-     AlgebraicJacobian.Cohomology.FlatBaseChange`. If `(kernel) deterministic timeout` → REVERT to the
-     clean partial (LHS reduced + `sorry`, currently green) and report. NEVER commit a kernel-bomb term
-     (the iter-013 regression). The 2 new helpers are kernel-light `rfl`s — they are safe.
-   - Closing `gammaPushforwardIso_comp` closes the foundation `gammaPushforwardNatIso_comp` transitively
-     (its body is `exact gammaPushforwardIso_comp φ ρ N`). If it closes AND budget remains, attempt the
-     crux `pullback_spec_tilde_iso_ring_square_natural` (@~L1289) via the mate recipe
-     (`analogies/fbc-pst-pseudofunctor.md`; `mateEquiv` TwoSquare-valued → `.natTrans`); typed `sorry` ok.
-   - **Do NOT** touch the COMPILE-DEAD mate sorries; do NOT attempt set_option/comment cleanup (deferred
-     to the dedicated mate-excision refactor iter). Do NOT add `maxHeartbeats 1e6`.
+2. **`Cohomology/FlatBaseChange.lean`** — assemble the glue, then rewire the crux + seeds. Blueprint:
+   `chapters/Cohomology_FlatBaseChange.tex` (`lem:pullback_spec_tilde_iso_ring_square_mate_glue`; both
+   leg lemmas `lem:chartBaseChangeGeometricComparison_mate`,
+   `lem:chartBaseChangeModuleReassoc_extendScalarsComp` CLOSED iter-018). [prover-mode: prove]
+   - **GLUE `pullback_spec_tilde_iso_ring_square_mate_glue`** (~L1760) — both dependency legs are now live,
+     so this is the iterated-mate ASSEMBLY: transpose the M-component iso equation through
+     `iterated_mateEquiv_conjugateEquiv` (`_symm`) + the per-leg unit triangle
+     `pullback_spec_tilde_iso_inv_unit_triangle` (@L897) + `gammaPushforwardNatIso_comp`, combining the
+     geometric leg `chartBaseChangeGeometricComparison_mate` + algebraic leg
+     `chartBaseChangeModuleReassoc_extendScalarsComp`. HAZARD (documented): `iterated_mateEquiv_conjugateEquiv`
+     is `TwoSquare`-valued (whiskerings are TwoSquare pasting, NOT `Functor.whiskerLeft`); naive use forces
+     the composite-adjunction unit to whnf → 200k-hb bomb. MIRROR the leg engine: drive by the CLOSED
+     coherences + `← conjugateEquiv_comp` splits with explicit midpoints, NEVER `unit_conjugateEquiv` over a
+     composite. If the TwoSquare transposition bombs, leave the typed sorry and report the exact blocked step
+     (do NOT thrash).
+   - **VERIFY before building** (Mathlib bumps): `loogle`/`local_search` `iterated_mateEquiv_conjugateEquiv`,
+     `conjugateEquiv_mateEquiv_vcomp`, `mateEquiv_conjugateEquiv_vcomp` (KB: all REAL in `…Adjunction.Mates`).
+     If a name mismatches, STOP + surface — do NOT thrash.
+   - **If the glue lands** → rewire the crux body `pullback_spec_tilde_iso_ring_square_natural` to
+     `exact … mate_glue …`; then attempt the 2 downstream seeds (`affineBaseChange_pushforward_iso` @L1875,
+     `flatBaseChange_pushforward_isIso` @L1897) via the concrete chain — leave typed sorry if not ready.
+   - **MANDATORY cold-build self-check + revert-on-bomb:** after each close run cold `lake build
+     AlgebraicJacobian.Cohomology.FlatBaseChange`. If it bombs → REVERT to the clean stub-sorry. The file
+     MUST end green. Do NOT touch the COMPILE-DEAD mate sorries (@L1694/L1875/L1897 apparatus); no
+     `set_option`/comment cleanup (deferred to the mate-excision refactor). Do NOT add `maxHeartbeats 1e6`.
 
 ## Queued — NEXT iters
 
-- **iter-016 escalation (pre-committed):** If SNAP `hK_lhs` stalls AGAIN despite the validated recipe →
-  surface the exact failing step (do NOT warm-retry); the recipe is cold-LSP-validated so a stall implies
-  a syntactic-shape mismatch worth a focused 3rd analogist on that step. If FBC morphism-level close
-  kernel-bombs OR steps 3–5 prove syntactically fragile → execute the **junction-free refactor of
-  `gammaPushforwardIso`** (`refactor` subagent, NOT a prover): reconstruct so the value/scheme junction is
-  crossed once centrally (a `moduleSpecΓObjIso` natural iso, or package as the `map_comp` field of a
-  presheaf-of-modules / restrictScalars-pseudofunctor structure) so `_comp` + future coherences are
-  `cat_disch`-cheap. analogist also flagged `analogies/fbc-pst-pseudofunctor.md` mis-records this coherence
-  cost as "pointwise rfl" — correct it when the refactor lands.
-- **SNAP cascade + `sectionGradedModule_gmodule`** — once the assembly closes, the 5 coherences
-  (`tensorPowAdd_rightUnit/_braiding/_assoc×2`, `sectionsMul_mul_assoc`) cascade; all reuse the REUSABLE
-  `show`-to-uniform-localized-form + `simp [tensorHom_comp_tensorHom]` (NOT rw) + counit-triangle unblock
-  (KB, promoted iter-014). Gate-confirm each block + the 2 unitor bridges' `\lean{}` names when activating.
-- **FBC crux → Global assembly** `baseChange_sheafConditionFork_tensorIso`: after the crux +
-  `TensorProduct.piRight`; add `[IsSeparated X]`/`[Fintype ι]`/`[F.IsQuasicoherent]` hyps.
-- **FBC separated → MV → bridge → goal**: both seeds. Bridge reverse gated on qcqs-pushforward-QC
-  (Stacks 01XJ) — verify Mathlib / `mathlib-build` first (STRATEGY Open Q).
-- **FBC mate excision + cleanup (dedicated `refactor` iter)** — delete the COMPILE-DEAD mate apparatus +
+- **SNAP refactor pivot (iter-020, CONDITIONAL — fires ONLY if the iter-019 suffix route bombs):** glue
+  Option A — rewire the hand-built `tensorObj*` defs onto the `LocalizedMonoidal X` synonym `⊗` so the
+  bridges (`tensorObjLocalizedIso` et al.) become DEFINITIONAL and the comp-instance boundary disappears.
+  Dispatch the `refactor` subagent (directive to `logs/iter-020/refactor-snap-…-directive.md`); sync the
+  blueprint the same iter. This is the autonomous dead-end response (standing directive: no user escalation).
+  Dual-instance DELETION stays REFUTED (load-bearing).
+- **FBC downstream (after glue + crux):** rewire crux → seeds → Global assembly
+  `baseChange_sheafConditionFork_tensorIso` (+ `TensorProduct.piRight`; add
+  `[IsSeparated X]`/`[Fintype ι]`/`[F.IsQuasicoherent]`) → separated → MV → bridge → goal (bridge reverse
+  gated on Stacks 01XJ — verify Mathlib / `mathlib-build` first, STRATEGY Open Q).
+- **SNAP cascade coherences + `sectionGradedModule_gmodule`** — after `hK_lhs` + assembly close.
+- **FBC mate excision + cleanup (dedicated `refactor` iter):** delete the COMPILE-DEAD mate apparatus +
   dead `/-!` blocks; FIX the latent `set_option maxHeartbeats` placement bug (scopes to comments not
-  theorems); strip stale comments. KEEP `base_change_mate_regroupEquiv` + `base_change_map_affine_local`.
-  Sync the blueprint `\uses` same iter. Run via `refactor`, NOT alongside a prover.
-- **SNAP file-split + coverage-debt clear** — `SectionGradedRing.lean` >2200 lines with ~70 unmatched
-  Lean helpers (mostly `RelativeTensorCoequalizer.*`). Split into smaller files (user standing directive:
+  theorems); strip stale iter-NNN comments. KEEP `base_change_mate_regroupEquiv` +
+  `base_change_map_affine_local`. Sync blueprint `\uses` same iter. (Auditor: FBC L1957-1960 orphan
+  `maxHeartbeats`, L2000-2104 104-line scaffold; SNAP L2148-2278 ~130-line dead scaffold.)
+- **SNAP file-split + coverage-debt clear** — `SectionGradedRing.lean` >2200 lines, ~70 unmatched
+  `RelativeTensorCoequalizer.*`/`W_*` helpers. Split into smaller files (user standing directive:
   parallelism) + mark impl-detail helpers `private` + blueprint genuine infra. Dedicated `refactor` iter.
-  (Also blueprint the 2 new FBC helpers `gammaPushforwardIso_hom_def` + the junction bridge once named.)
 
 ## Standing notes
 
@@ -137,14 +133,17 @@ structural pivot, not a retry).
   AlgebraicJacobian.Cohomology.FlatBaseChange` / `...Picard.SectionGradedRing`. The LSP / `lean_multi_attempt`
   HIDE `(kernel) deterministic timeout`. Never add `maxHeartbeats 1e6`.
 - **No LLM API key in env** — use blueprint + Mathlib search + the analogist subagent.
-- **SNAP localized-comp boundary (analogist-VALIDATED):** the `LocalizedMonoidal`↔`X.Modules` comp boundary
-  is defeq-not-syntactic. hK_rhs μ-cancel (`analogies/snap-localized-comp-cancel.md`): `erw [assoc];
-  congrArg leading-μ.inv peel; erw [assoc, Iso.hom_inv_id_assoc]`. hK_lhs exposure
-  (`analogies/snap-assoc-expose.md`): Step-0 `show`-to-uniform FIRST, then `associator_naturality` →
-  `associator_hom_app` → μ-cancel → `μ_natural_left` + `left_triangle_components` head reduction.
-- **FBC element family EXHAUSTED (iter-014, cold-build-verified):** the bomb is the RHS-composite REDUCTION
-  across the value-`ModuleCat`/`X.Modules` junction (compounds past the kernel limit), NOT the residual
-  cast. ANY `ext`/element descent re-crosses the junction per-wrapper → bomb. Morphism-level (cross once)
-  is the only route; junction-free refactor is the structural fix (`analogies/fbc-morphism-comp.md`).
+- **SNAP localized↔X.Modules μ-boundary (KB):** the comp boundary is defeq-not-syntactic. (1) Object-phrasing
+  discipline: a folded `tensorObj` inside a μ-object bombs every reassoc/`associator_*`/`Category.assoc`
+  → state the step with μ-objects in unfolded `(L').obj _` form. (2) μ-pair cancel/merge fires via `erw`
+  ONLY when ISOLATED (slice/`have`/`conv`); full-goal `rw`/`simp` whnf-bombs. (3) NEW (iter-019): applying a
+  proven prefix-equality over a goal carrying a heavy μ-`tail` whnf-bombs → REMOVE the suffix first
+  (`@[reassoc]`/`generalize`). Recipes: `analogies/snap-suffix-cancel.md`, `snap-reassoc-pin.md`,
+  `snap-mu-identity.md`, `snap-assoc-expose.md`, `snap-localized-comp-cancel.md`.
+- **FBC mate API (KB):** GEOMETRIC per-piece mate `conjugateEquiv_pullbackComp_inv` REAL (Sheaf.lean:238,
+  `@[simp]`); ALGEBRAIC engine `conjugateEquiv_extendScalarsComp`+`natTrans_ext_of_unit` (DONE). Both legs
+  CLOSED iter-018 via `← conjugateEquiv_comp` split ×2 + `simp only […eq_mpr_eq_cast,cast_eq]` cast-dissolve.
+  Drive composites by `conjugateEquiv_comp` splits, NEVER `unit_conjugateEquiv` over the composite (whnf
+  bomb). `iterated_mateEquiv_conjugateEquiv` (for the glue) is TwoSquare-valued.
 - **Merge-back discipline:** never rename kept decls/labels; never add `\leanok` by hand. No declarations
-  are currently protected — chain decls may be re-signed to add missing hyps.
+  are currently protected — chain decls may be re-signed to add missing hyps / pin instances.

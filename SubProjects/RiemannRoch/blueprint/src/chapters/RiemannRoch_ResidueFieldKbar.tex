@@ -1,0 +1,212 @@
+\chapter{Codimension-one points are \texorpdfstring{$\bar k$}{kbar}-rational}
+\label{chap:RiemannRoch_ResidueFieldKbar}
+
+% archon:covers AlgebraicJacobian/RiemannRoch/ResidueFieldKbar.lean
+
+% Chapter-local fallbacks for the order-theoretic dimension macros (not yet in
+% blueprint/src/macros/common.tex).  See the writer report "needs macros" note.
+\providecommand{\Order}{\mathrm{Order}}
+\providecommand{\krullDim}{\dim}
+\providecommand{\coheight}{\operatorname{coheight}}
+\providecommand{\height}{\operatorname{ht}}
+
+This chapter collects the project-local commutative-algebra and topological
+substrate behind the codimension-one rationality statement
+\cref{lem:codimOne_point_residueField_eq_kbar}, proved at the end of this
+chapter and consumed by the regularity substrate of
+\cref{chap:RiemannRoch_OcOfD}.  At a closed point of an integral finite-type
+curve over an algebraically closed field $\bar k$ the residue field is $\bar k$
+itself; the file isolates the two ingredients --- the affine-local residue-field
+computation (Zariski/Nullstellensatz plus algebraic-closure triviality) and the
+topological ``coheight one $\Rightarrow$ closed point'' implication --- as
+standalone supplementary lemmas, then glues them into the scheme-level statement.
+
+\begin{lemma}[Finite-type field extension of $\bar k$ is trivial]
+  \label{lem:algebraMap_bijective_of_finiteType}
+  \lean{IsAlgClosed.algebraMap_bijective_of_finiteType}
+  \leanok
+  Let $\bar k$ be algebraically closed and $K$ a field that is a finite-type
+  $\bar k$-algebra.  Then the structure map $\bar k \to K$ is bijective.
+\end{lemma}
+
+\begin{proof}\leanok
+  By Zariski's lemma (the Nullstellensatz in Jacobson-ring form), $K$ is
+  module-finite, hence integral, over $\bar k$.  An integral extension of
+  an algebraically closed field is trivial, so the structure map is bijective.
+\end{proof}
+
+\begin{lemma}[Residue field at a maximal ideal of a finite-type $\bar k$-algebra]
+  \label{lem:algebraMap_residueField_bijective_of_isMaximal}
+  \lean{IsAlgClosed.algebraMap_residueField_bijective_of_isMaximal}
+  \leanok
+  \uses{lem:algebraMap_bijective_of_finiteType}
+  Let $\bar k$ be algebraically closed and $A$ a finite-type $\bar k$-algebra.
+  For a maximal ideal $\mathfrak p$ of $A$, the structure map
+  $\bar k \to \kappa(\mathfrak p)$ into the residue field is bijective.
+\end{lemma}
+
+\begin{proof}\leanok
+  The residue field $\kappa(\mathfrak{p}) = A/\mathfrak{p}$ is a surjective
+  quotient of $A$, hence itself a finite-type $\bar k$-algebra; the conclusion
+  follows from \cref{lem:algebraMap_bijective_of_finiteType}.
+\end{proof}
+
+\section{Residue-rationality interface}
+
+The downstream conormal comparison reads the residue rationality not as a bare
+bijection but through three formal vanishing facts ($\Omega_{K/\bar k} = 0$,
+$H^1_{\mathrm{cot}}(\bar k, K) = 0$, and formal smoothness), all of which follow
+once the structure map $\bar k \to K$ is bijective --- i.e.\ once $K \cong \bar k$
+as a $\bar k$-algebra.  The next four blocks package exactly this interface,
+keyed on bijectivity of the structure map so that the geometric application can
+feed them $K = \kappa(x)$.
+
+\begin{definition}\leanok
+[$\bar k$-algebra isomorphism from a bijective structure map]
+  \label{def:algEquivOfAlgebraMapBijective}
+  \lean{algEquivOfAlgebraMapBijective}
+  For fields $\bar k, K$ with the $\bar k$-algebra structure map $\bar k \to K$
+  bijective, that map packages canonically as a $\bar k$-algebra isomorphism
+  $\bar k \cong K$.
+\end{definition}
+
+\begin{lemma}\leanok
+[Bijective structure map gives formal smoothness]
+  \label{lem:formallySmooth_of_algebraMap_bijective}
+  \lean{formallySmooth_of_algebraMap_bijective}
+  \uses{def:algEquivOfAlgebraMapBijective}
+  If the structure map $\bar k \to K$ is bijective, then $K$ is formally smooth
+  over $\bar k$.
+\end{lemma}
+
+\begin{proof}
+  \uses{def:algEquivOfAlgebraMapBijective}
+  \leanok
+  By \cref{def:algEquivOfAlgebraMapBijective} the structure map is a
+  $\bar k$-algebra isomorphism $K \cong \bar k$.  Formal smoothness is invariant
+  under algebra isomorphism, and $\bar k$ is formally smooth over itself.
+\end{proof}
+
+\begin{lemma}\leanok
+[Bijective structure map kills Kähler differentials]
+  \label{lem:subsingleton_kaehlerDifferential_of_algebraMap_bijective}
+  \lean{subsingleton_kaehlerDifferential_of_algebraMap_bijective}
+  \uses{def:algEquivOfAlgebraMapBijective}
+  If the structure map $\bar k \to K$ is bijective, then $\Omega_{K/\bar k} = 0$.
+\end{lemma}
+
+\begin{proof}
+  \uses{def:algEquivOfAlgebraMapBijective}
+  \leanok
+  Through the isomorphism $K \cong \bar k$ of
+  \cref{def:algEquivOfAlgebraMapBijective}, $K$ is formally unramified over
+  $\bar k$, and the module of Kähler differentials of a formally unramified
+  algebra vanishes.
+\end{proof}
+
+\begin{lemma}\leanok
+[Bijective structure map kills $H^1$ of the cotangent complex]
+  \label{lem:subsingleton_h1Cotangent_of_algebraMap_bijective}
+  \lean{subsingleton_h1Cotangent_of_algebraMap_bijective}
+  \uses{lem:formallySmooth_of_algebraMap_bijective}
+  If the structure map $\bar k \to K$ is bijective, then the first cotangent
+  cohomology $H^1_{\mathrm{cot}}(\bar k, K)$ vanishes.
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:formallySmooth_of_algebraMap_bijective}
+  \leanok
+  $K$ is formally smooth over $\bar k$
+  (\cref{lem:formallySmooth_of_algebraMap_bijective}), and the first cotangent
+  cohomology of a formally smooth algebra vanishes.
+\end{proof}
+
+\section{Coheight one is closed, and the scheme-level statement}
+
+\begin{lemma}[Coheight-one points of a dimension-$\le 1$ scheme are closed]
+  \label{lem:isClosed_singleton_of_coheight_eq_one}
+  \lean{AlgebraicGeometry.isClosed_singleton_of_coheight_eq_one}
+  \leanok
+  Let $X$ be a scheme whose underlying space has Krull dimension at most one (in
+  the specialisation order).  If $x \in X$ has $\coheight(x) = 1$ then
+  $\{x\}$ is closed.
+\end{lemma}
+
+\begin{proof}\leanok
+  From $\krullDim X = \sup_a (\height a + \coheight a)$ and $\coheight x = 1$,
+  $\dim X \le 1$ forces $\height x = 0$, i.e.\ $x$ is minimal in the
+  specialisation order.  A specialisation-minimal point of a $T_0$ space is
+  closed (its closure, the set of its specialisations, reduces to $\{x\}$).
+\end{proof}
+
+\begin{definition}\leanok
+[$\bar k$-algebra on a residue field from the structure morphism]
+  \label{def:residueFieldAlgebra}
+  \lean{AlgebraicGeometry.residueFieldAlgebra}
+  For a scheme $C$ over $\operatorname{Spec}\bar k$ and a point $x \in C$, the
+  structure morphism $C \to \operatorname{Spec}\bar k$ induces a canonical
+  $\bar k$-algebra structure on the residue field $\kappa(x)$ (via the residue-field
+  map of the morphism at $x$ and the identification $\kappa(\ast)=\bar k$ at the
+  base point).  This $\bar k$-algebra structure is not canonical from $\kappa(x)$
+  alone but requires the data of the structure morphism, so it is recorded
+  explicitly to state $\bar k$-rationality below.
+\end{definition}
+
+\begin{lemma}[Residue field of a closed point over an algebraically closed base]
+  \label{lem:residueFieldIsoBase_mathlib}
+  \lean{AlgebraicGeometry.residueFieldIsoBase}
+  \mathlibok
+  \textit{Provided by Mathlib.}
+  Let $f : X \to \operatorname{Spec}\bar k$ be a morphism locally of finite type to
+  the spectrum of an algebraically closed field $\bar k$, and let $x \in X$ be a
+  point whose singleton $\{x\}$ is closed.  Then the residue field $\kappa(x)$ is
+  canonically isomorphic, as a $\bar k$-algebra, to $\bar k$ itself.
+\end{lemma}
+
+\begin{lemma}\leanok
+[Codimension-one points are $\bar k$-rational]
+  \label{lem:codimOne_point_residueField_eq_kbar}
+  \lean{AlgebraicGeometry.residueField_eq_of_coheight_eq_one}
+  \uses{lem:isClosed_singleton_of_coheight_eq_one,
+        lem:residueFieldIsoBase_mathlib,
+        def:residueFieldAlgebra}
+  Let $C$ be an integral curve of finite type over an algebraically closed field
+  $\bar k$, and let $x \in C$ be a point with $\coheight x = 1$.  Then $x$ is a
+  closed point and the canonical map $\bar k \to \kappa(x)$ is an isomorphism; in
+  particular $\kappa(x) = \bar k$.
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:isClosed_singleton_of_coheight_eq_one,
+        lem:residueFieldIsoBase_mathlib,
+        def:residueFieldAlgebra}
+        \leanok
+  The closedness step \cref{lem:isClosed_singleton_of_coheight_eq_one} requires
+  the topological dimension bound $\krullDim C \le 1$ as an explicit input,
+  which the statement carries as the hypothesis $\krullDim C \le 1$.
+  Granting this bound, \cref{lem:isClosed_singleton_of_coheight_eq_one} applies to
+  the coheight-one point $x$ and shows that $\{x\}$ is closed; this is the first
+  conclusion.
+
+  For the residue-field rationality, the structure morphism $C \to
+  \operatorname{Spec}\bar k$ is locally of finite type and $\bar k$ is
+  algebraically closed, so \cref{lem:residueFieldIsoBase_mathlib} applies to the
+  closed point $x$ and supplies a canonical isomorphism
+  $\rho \colon \kappa(x) \cong \bar k$.  Its inverse
+  $\rho^{-1} \colon \bar k \cong \kappa(x)$ is an isomorphism of rings, hence
+  bijective.
+
+  It remains to identify the canonical structure map $\bar k \to \kappa(x)$ of
+  \cref{def:residueFieldAlgebra} with $\rho^{-1}$, after which bijectivity is
+  immediate.  By construction the structure map is the composite of the
+  residue-field map of the structure morphism at $x$ with the base identification
+  $\kappa(\ast) = \bar k$.  This composite and $\rho^{-1}$ agree because they agree
+  after applying the (fully faithful) spectrum functor $\operatorname{Spec}(-)$:
+  there both sides reduce to the canonical morphism
+  $\operatorname{Spec}\kappa(x) \to C$ from the spectrum of the residue field,
+  using the compatibility of $\rho^{-1}$ with this canonical morphism and the
+  compatibility of the residue-field map of the structure morphism with it.  Since
+  $\operatorname{Spec}(-)$ is faithful, the two maps are equal; hence the structure
+  map $\bar k \to \kappa(x)$ equals $\rho^{-1}$ and is bijective, so
+  $\kappa(x) \cong \bar k$.
+\end{proof}

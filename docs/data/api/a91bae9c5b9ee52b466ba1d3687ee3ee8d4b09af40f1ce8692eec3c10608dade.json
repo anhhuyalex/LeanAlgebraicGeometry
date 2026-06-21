@@ -1,0 +1,147 @@
+[
+  {
+    "timestamp": "2026-06-21T12:10:14Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "moduleTensorPowAdd_zero_left"
+    },
+    "session": {
+      "id": "session_36",
+      "model": "claude-opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "tensorPowAdd_zero_left",
+        "tensorPow_zero",
+        "tensorObjUnitIso_eq",
+        "tensorObjWhiskerRightIso_eq",
+        "tensorObjWhiskerLeftIso_eq",
+        "tensorBraiding_eq",
+        "leftUnitor_naturality",
+        "Iso.inv_hom_id_assoc"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "apply Iso.ext then simp only over the _eq bridges + tensorPowAdd_zero_left + tensorObjAssoc + whisker iso simp set",
+        "code_tried": "apply Iso.ext; simp only [moduleTensorPowAdd, moduleTensorPow, tensorPowAdd_zero_left, tensorObjUnitIso_eq, tensorObjWhiskerRightIso_eq, tensorObjWhiskerLeftIso_eq, tensorBraiding_eq, tensorObjAssoc, ...]",
+        "line_number": "3999",
+        "lean_error": "goal left with L.tensorPow 0 everywhere (β_ (L.tensorPow 0) F), not collapsed to unit",
+        "result": "partial",
+        "insight": "without tensorPow_zero the simp leaves L^0 uncollapsed; bridges don't reach a common prefix"
+      },
+      {
+        "attempt": 2,
+        "strategy": "add tensorPow_zero to opening simp to collapse L^0 to the unit object and B0/B2 bridges to common B0.inv prefix",
+        "code_tried": "simp only [..., tensorPow_zero, ...]",
+        "line_number": "3999",
+        "lean_error": "goal now over unitModule X / 𝟙_ form",
+        "result": "partial",
+        "insight": "tensorPow_zero collapses bridges to common prefix; goal becomes unit-braiding coherence over unitModule X (≠ 𝟙_ syntactically)"
+      },
+      {
+        "attempt": 3,
+        "strategy": "build hgen reindex helper (F◁eqToHom ≫ T'.hom = T.hom ≫ eqToHom), state mid-square hmid₀ over 𝟙_, prove by monoidal, transport to unitModule X by defeq",
+        "code_tried": "have hgen : ∀ {n1 n2} (hn:n1=n2), (F.tensorObjIso (L.tensorPow n1)).hom ≫ eqToHom _ = F ◁ eqToHom _ ≫ (F.tensorObjIso (L.tensorPow n2)).hom := ...; have hmid₀ : (α_ (𝟙_ ..) F _).inv ≫ (β_ ..).hom ▷ _ ≫ (α_ ..).hom ≫ F ◁ (λ_ _).hom = (λ_ _).hom := by monoidal; rw [reassoc_of% hmid, leftUnitor_naturality_assoc, hgen ..., Iso.inv_hom_id_assoc]",
+        "line_number": "4131",
+        "lean_error": "rewrite failed: pattern 𝟙_ ?m ◁ ?f ≫ (λ_ ?m).hom ≫ ?h not found (leftUnitor_naturality special-cases 𝟙_)",
+        "result": "partial",
+        "insight": "leftUnitor_naturality positional rw fails on the unitModule X whisker; needed naturality stated over 𝟙_ then transported by defeq"
+      },
+      {
+        "attempt": 4,
+        "strategy": "state leftUnitor naturality over 𝟙_ and transport to unitModule X via defeq/reassoc; finish with hgen + Iso.inv_hom_id_assoc",
+        "code_tried": "(full hmid transport + reassoc_of% hmid + hgen (Nat.zero_add k).symm + Iso.inv_hom_id_assoc)",
+        "line_number": "3999",
+        "lean_error": "",
+        "result": "success",
+        "insight": "clean; #print axioms = {propext, Classical.choice, Quot.sound}"
+      }
+    ],
+    "next_steps": "Consumed by moduleSectionAction_one_smul and sectionGradedModule_gmodule (both landed same iter)."
+  },
+  {
+    "timestamp": "2026-06-21T12:22:09Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "moduleSectionAction_one_smul"
+    },
+    "session": {
+      "id": "session_36",
+      "model": "claude-opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "gSMul_smul_apply",
+        "moduleTensorPowAdd_zero_left",
+        "moduleSectionsCast_sectionsCast",
+        "tensorObjUnitIso_hom_sectionsMul"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "rw [gSMul_smul_apply, gOne_one_eq, moduleTensorPowAdd_zero_left] then change/cast-cancel",
+        "code_tried": "rw [gSMul_smul_apply, gOne_one_eq, moduleTensorPowAdd_zero_left F L k]; change ...",
+        "line_number": "4155",
+        "lean_error": "(deterministic) timeout at whnf, 200000 heartbeats",
+        "result": "failed",
+        "insight": "the bare GradedMonoid.GOne.one as GSMul.smul argument triggers a whnf blow-up"
+      },
+      {
+        "attempt": 2,
+        "strategy": "try simp only instead of rw, add vadd_eq_add (GSMul lands in i+ᵥj), add set_option maxRecDepth 4000",
+        "code_tried": "set_option maxRecDepth 4000 in ...; simp only [vadd_eq_add, gSMul_smul_apply, gOne_one_eq]",
+        "line_number": "4155",
+        "lean_error": "(deterministic) timeout at whnf, 200000 heartbeats (statement elaboration, not proof)",
+        "result": "failed",
+        "insight": "timeout is during STATEMENT elaboration — maxRecDepth/vadd_eq_add do not help; the GradedMonoid.GOne.one projection is the bomb"
+      },
+      {
+        "attempt": 3,
+        "strategy": "spell the graded unit as (1 : sectionDeg L 0) in the statement (defeq to GOne.one via gOne_one_eq), then rw the action-apply + base-case zero_left + cast cancellation",
+        "code_tried": "theorem moduleSectionAction_one_smul (F L) {k} (x : moduleSectionDeg F L k) : moduleSectionsCast F L (zero_add k) (GradedMonoid.GSMul.smul (1 : sectionDeg L 0) x) = x := by rw [gSMul_smul_apply, moduleTensorPowAdd_zero_left F L k]; ...; rw [moduleSectionsCast_sectionsCast]; exact tensorObjUnitIso_hom_sectionsMul (moduleTensorPow F L k) x",
+        "line_number": "4155",
+        "lean_error": "",
+        "result": "success",
+        "insight": "spelling (1 : sectionDeg L 0) instead of GradedMonoid.GOne.one avoids the statement-elaboration whnf bomb; proof then mirrors sectionsMul_one_mul. Axiom-clean."
+      }
+    ],
+    "next_steps": "Consumed by sectionGradedModule_gmodule unit field."
+  },
+  {
+    "timestamp": "2026-06-21T12:31:43Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "sectionGradedModule_gmodule"
+    },
+    "session": {
+      "id": "session_36",
+      "model": "claude-opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "moduleGradedMonoid_eq_of_cast",
+        "moduleSectionAction_one_smul",
+        "moduleSectionAction_mul_smul",
+        "moduleTensorPowAdd_assoc"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "assemble DirectSum.Gmodule instance over (sectionDeg L) acting on (moduleSectionDeg F L); one_smul field via moduleGradedMonoid_eq_of_cast + moduleSectionAction_one_smul, mul_smul field via moduleGradedMonoid_eq_of_cast + moduleSectionAction_mul_smul, with set_option maxRecDepth 4000 in",
+        "code_tried": "set_option maxRecDepth 4000 in @[reducible] noncomputable def sectionGradedModule_gmodule (F L : X.Modules) : DirectSum.Gmodule (sectionDeg L) (moduleSectionDeg F L) where one_smul b := moduleGradedMonoid_eq_of_cast F L (zero_add b.1) (moduleSectionAction_one_smul F L b.2); mul_smul a a' b := moduleGradedMonoid_eq_of_cast F L _ (moduleSectionAction_mul_smul F L a.2 a'.2 b.2); ...",
+        "line_number": "4184",
+        "lean_error": "",
+        "result": "success",
+        "insight": "field-for-field port via the module bridge moduleGradedMonoid_eq_of_cast (mirror of the ring's gradedMonoid_eq_of_cast); build green 2632 jobs; #print axioms clean. M(X,L,F)=⊕Γ(F⊗L^{⊗m}) is DirectSum.Gmodule over Γ_*(X,L) ∀L,F."
+      }
+    ],
+    "next_steps": "SNAP-S1 module lane FULLY CLOSED. No remaining open targets in this file (only 4 χ deferred in QuotScheme.lean)."
+  }
+]

@@ -1,0 +1,123 @@
+[
+  {
+    "timestamp": "2026-06-21T05:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "tensorBraiding_hexagon_forward"
+    },
+    "session": {
+      "id": "session_29",
+      "model": "opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "tensorBraiding_eq",
+        "tensorObjWhiskerRightIso_eq",
+        "tensorObjWhiskerLeftIso_eq",
+        "BraidedCategory.braiding_naturality_right_assoc",
+        "BraidedCategory.hexagon_forward_assoc"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Descend Mathlib BraidedCategory.hexagon_forward to the hand-built tensorBraiding/tensorObjAssoc, mirroring the base helper tensorObjRightUnitor_eq_braiding_unit",
+        "code_tried": "rw [tensorBraiding_eq x3, tensorObjWhiskerRightIso_eq, tensorObjWhiskerLeftIso_eq]; Iso.ext; unfold tensorObjAssoc; simp only [..., Iso.hom_inv_id_assoc, whiskerLeft_hom_inv_assoc, hom_inv_whiskerRight_assoc]; BraidedCategory.braiding_naturality_right_assoc; BraidedCategory.hexagon_forward_assoc; final whisker-distribute simp only",
+        "line_number": "3638",
+        "result": "success",
+        "insight": "Bridge-cancel pattern + convert beta_ F (A.tensorObj B) to canonical beta_ F (A tensor B) via braiding_naturality_right_assoc; worked first try after one fix. axiom-clean [propext, Classical.choice, Quot.sound]."
+      }
+    ],
+    "next_steps": "Reusable; consumed (via isolation pattern) by the tensorPowAdd_comm succ residual."
+  },
+  {
+    "timestamp": "2026-06-21T05:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "tensorPowAdd_succ_left"
+    },
+    "session": {
+      "id": "session_29",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "DEAD END for the comm glue (correct infra but wrong tool): order-preserving form surfaces opaque atoms mu_{1,m},mu_{c,1} that never cancel",
+      "key_lemmas_used": [
+        "tensorPowAdd_assoc",
+        "Iso.eq_inv_comp",
+        "eqToIso.hom"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Instantiate the closed B6 pentagon tensorPowAdd_assoc at (c,1,m) and solve for mu_{c+1,m}; place reindex on LHS to dodge trans-assoc friction",
+        "code_tried": "Iso.ext; simp [Iso.trans_hom, Iso.symm_hom, eqToIso.hom]; rw [Iso.eq_inv_comp]; exact congrArg Iso.hom (tensorPowAdd_assoc L c 1 m)",
+        "line_number": "3661",
+        "result": "success",
+        "insight": "Order-PRESERVING form mu_{c+1,m}=mu_{c,1+m} o (L^c<|nu_m) o alpha. Axiom-clean. BUT planner/effort-breaker-specified form is the WRONG tool for the glue: it injects stray mu_{1,m} growing with m, never on LHS, cannot canonicalize -> verified dead end. Auditor confirms zero call-sites."
+      }
+    ],
+    "next_steps": "Keep as correct reusable infra; the comm succ glue needs the order-REVERSING variant brick 1'."
+  },
+  {
+    "timestamp": "2026-06-21T05:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "tensorPowAdd_comm"
+    },
+    "session": {
+      "id": "session_29",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Needs brick 1' = order-REVERSING first-index recursion mu_{c+1,m}=alpha<<>>(L^c<|beta_{L,L^m})<<>>alpha^-1<<>>(mu_{c,m}|>L)<<>>reindex, requires [IsInvertible L] (consumes beta_{L,L}=id). B6-pentagon-scale braided induction on m, NOT yet blueprinted.",
+      "key_lemmas_used": [
+        "tensorPowAdd_succ",
+        "tensorBraiding_hexagon_forward",
+        "SymmetricCategory.symmetry",
+        "tensorBraiding_self_eq_id_of_isInvertible"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Unfold LHS by 2nd-index tensorPowAdd_succ + ih; isolate descended hexagon hbeta for beta_{L^m, L^c tensor L} (brick 2); rfl-rewrite the ISO to split RHS braiding (dodges dependent-motive trap on object tensorPow(c+1)); distribute LHS right-whisker",
+        "code_tried": "rw [tensorPowAdd_succ, ih]; have hbeta := <isolation of tensorBraiding_hexagon_forward>; rw [<rfl iso split>, hbeta]; simp only [tensorObjWhiskerRightIso_trans]",
+        "line_number": "3735",
+        "result": "partial",
+        "insight": "Reduced from unreachable raw mu_{c+1,m} goal to a single precise residual (*): WR(mu_{c,m})L <<>> WR(reindex)L = alpha <<>> WL_{L^c}(beta_{L^m,L}) <<>> alpha^-1 <<>> mu_{c+1,m} <<>> reindex. Given brick 1', (*) closes with NO further invertibility: only SymmetricCategory.symmetry (Braided/Basic.lean:369) + associator cancel + monoidal."
+      }
+    ],
+    "next_steps": "Add brick 1' as a blueprint lemma (lvbc MAJOR); prove by induction on m (base m=0 unit coherence; succ split beta_{L,L^{m+1}} via braiding_tensor_right_hom + ih, collapse each beta_{L,L} via tensorBraiding_self_eq_id_of_isInvertible, monoidal). Then close (*). Then sectionsMul_mul_comm auto-clean -> build sectionGradedRing_gcommSemiring."
+  },
+  {
+    "timestamp": "2026-06-21T05:30:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "sectionGradedRing_gcommSemiring"
+    },
+    "session": {
+      "id": "session_29",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Capstone intentionally NOT built: transitively needs sectionsMul_mul_comm -> tensorPowAdd_comm (open sorry); building now would carry sorryAx. Per objective, build only after tensorPowAdd_comm is axiom-clean."
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "deferred-by-design",
+        "code_tried": "(not attempted)",
+        "line_number": "n/a",
+        "result": "partial",
+        "insight": "Mechanical capstone once comm chain closes: DirectSum.GCommSemiring on sectionDeg L for [IsInvertible L], graded mul_comm via gradedMonoid_eq_of_cast + sectionsMul_mul_comm, mirroring sectionGradedRing_gsemiring."
+      }
+    ],
+    "next_steps": "Build after brick 1' + (*) close tensorPowAdd_comm axiom-clean."
+  }
+]

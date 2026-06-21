@@ -8,6 +8,80 @@
 
 ### Proof Patterns (reusable across targets)
 
+- **FBC mate-leg engine — `← conjugateEquiv_comp` split over per-piece coherences (iter-018, CLOSED BOTH b2
+  mate legs `chartBaseChangeGeometricComparison_mate` + `chartBaseChangeModuleReassoc_extendScalarsComp`
+  cold-green + axiom-clean, review-verified sorryAx-free).** To prove a 3-factor mate identity
+  `conjugateEquiv(comparison).hom = pushforward/restrict composite`: (1) `apply Iso.ext; rw
+  [conjugateIsoEquiv_apply_hom]`; (2) **KEY unfold** `simp only [<the Nat defs>, eq_mpr_eq_cast, cast_eq,
+  Iso.trans_hom, Iso.symm_hom (, eqToIso.hom)]` — **`eq_mpr_eq_cast, cast_eq` DISSOLVE the `letI : Algebra …`-
+  induced `Eq.mpr` casts** that were the iter-011..017 "cast blocker" (they vanish under these simp lemmas, NOT
+  a residual cast to strip); (3) `set` the ring maps + composite/midpoint adjunctions; (4) split the right-assoc
+  conjugate with `← CategoryTheory.conjugateEquiv_comp` (×2, midpoints supplied EXPLICITLY); (5) discharge
+  per-factor by the REAL per-piece coherences — geom: `Scheme.Modules.conjugateEquiv_pullbackComp_inv` (REAL
+  Mathlib, Sheaf.lean:238, @[simp]); alg: `conjugateEquiv_extendScalarsComp` (iter-017) — plus a tiny congruence
+  helper (`conjugateEquiv_pullbackCongr` / `conjugateEquiv_extendScalars_eqToHom`, latter needs `h` supplied
+  explicitly since bare `rw` can't infer the Prop) + an inverted `f3` iso-calc. **TRAP (algebraic leg): you MUST
+  re-declare the three `letI : Algebra …` instances at the proof head or `includeLeftRingHom`'s `(R:=)(A:=)(B:=)`
+  cannot synthesize and every `set` silently breaks to `CommRingCat.ofHom sorry`.** Drive entirely by CLOSED
+  coherences — NEVER `unit_conjugateEquiv` over the composite (that is the 200k-hb whnf bomb).
+- **SNAP statement-pin BREAKS the 7-iter reassoc wall — `tensorObjAssoc_hK_lhs_native` (iter-018; the
+  `rw [Category.assoc]` wall is DOWN; the reassoc chain proves bomb-free, cold-build GREEN 2441 jobs).** The
+  iter-017 reassoc-wall `(W≫T)≫α → W≫(T≫α)` is defeated by STATEMENT-level object-pinning: state the lemma with
+  every comparison-μ object-arg in **unfolded image form** `sheafification.obj (tensorObj (C := MonoidalPresheaf X)
+  A♭ B♭)`, never folded `A.tensorObj B`. Then `rw [Category.assoc, Localization.Monoidal.associator_naturality]`
+  (NO explicit args — explicit args make `rw` miss) → `erw [associator_hom_app]` → `simp only [sheafification,
+  toMonoidalCategory, tensorHom_id, id_tensorHom, Category.assoc]` → `erw [← whiskerRight_comp_assoc]` →
+  `conv_lhs => enter [2,1]; rw [Category.assoc]; erw [Iso.inv_hom_id]` + `erw [Category.comp_id]` ALL fire
+  bomb-free. **CONFIRMED:** in-proof `simp only [tensorObj]; rw [...]` on the FOLDED goal STILL bombs — the pin
+  MUST be at STATEMENT level (refutes inlining). (Residual = the final head-lemma application over the full-`tail`
+  goal still bombs — see Known Blockers.)
+
+- **Adjoint-mate UNIQUENESS via the unit transpose — `natTrans_ext_of_unit` (iter-017, FBC, CLOSED
+  `conjugateEquiv_extendScalarsComp` cold-green + NEW reusable general helper).** To prove an adjoint-mate
+  identity `conjugateEquiv … (f).hom = g` between two natTrans `R₁ ⟶ R₂` of right adjoints, do NOT go
+  element-wise (the `∘ₗ`/`restrictScalars`-nesting value-diamond blocks `LinearMap.comp_apply`/`rw`/`simp`;
+  `erw` over-unfolds the counit to raw `TensorProduct.lift` — DEAD) and do NOT use the counit transpose
+  (CIRCULAR — `conjugateEquiv_counit` rewrites back to the original goal). The UNIT form is the one with
+  Mathlib content: prove the general lemma `natTrans_ext_of_unit` — two natTrans with the SAME unit transpose
+  against a fixed `α` are equal (each pinned to the triangle-identity formula
+  `adj₂.unit.app (R₁.obj Y) ≫ R₂.map (α.app _) ≫ R₂.map (adj₁.counit.app Y)`) — then discharge the two unit
+  relations: the `conjugateEquiv` side by `unit_conjugateEquiv`, the target side by Mathlib's
+  `ModuleCat.homEquiv_extendScalarsComp` (read off via `Adjunction.comp_unit_app` + `homEquiv_unit`).
+  TOOLING (reusable, ABSTRACT category): `rw`/`simp only` mysteriously FAIL to match `≫`-subterms with
+  `.app`/`.map` heads (`right_triangle_components`, `NatTrans.naturality`) — surface form defeq-obscured;
+  only FULL `simp` matches. Idiom: `have e1 : … := by simp` (insert the triangle), `rw [e1, Category.assoc]`,
+  then `simp [reassoc_of% (hδ (R₁.obj Y))]`.
+- **Bomb-free transformer principle for localized-tensor-μ goals (iter-017, SNAP, committed step (a) of
+  `hK_lhs` cold-green).** On a goal carrying `Localization.Monoidal.μ` at folded localized-tensor objects,
+  the ONLY transformation that does not isDefEq/whnf-bomb (200k hb) is an equation whose TWO SIDES ARE EXACT
+  CURRENT-GOAL SUBTERMS, applied by `congrArg`-peel of the whole surrounding context written with holes:
+  `refine (congrArg (fun t => μ.inv ≫ t ≫ _) hsplit).trans ?_`. Build that equation as a standalone
+  `have hsplit` whose RHS type FLOWS FROM the goal (so it elaborates) and whose proof is `rw [← tensorHom_id,
+  ← tensor_comp]; congr 1` — `congr 1`/term-mode is bomb-free where `rw [Category.assoc]`/`Category.id_comp`
+  BOMB even isolated. Substituting via `rw [hsplit]`/`conv => rw [hsplit]` MOTIVE-bombs — only the
+  `congrArg`-peel works. ANY generic lemma (`Category.assoc`, `associator_naturality` on the main goal,
+  `Category.id_comp`) introduces fresh implicit OBJECT args that whnf `μ` → `Localization.fac` → bomb.
+- **DUAL-`MonoidalCategory`-instance μ-token-identity cancel (iter-016, SNAP, CLOSED `tensorObjAssoc_hK_lhs_head`
+  cold-green — defeated the 5-iter μ-syntactic-identity wall).** The 5-iter wall was NOT a hidden
+  `Localization.fac`/`IsIso` witness (`Localization.Monoidal.μ` has none → Subsingleton/convert VACUOUS) and NOT
+  a missing cancel lemma (`Iso.hom_inv_id_assoc` IS right) — it is a **project-local DUAL `MonoidalCategory`
+  instance** (`pshModMonoidal` bare L1402 vs the `MonoidalPresheaf X` synonym the keystone uses) making the two
+  μ object-args token-divergent. FIX (analogist `snap-mu-identity` + prover): pin inner tensors to
+  `(C := MonoidalPresheaf X)` at **STATEMENT** level. Pinning is NECESSARY but NOT sufficient — two more facts:
+  (1) μ-pairs stay defeq-but-token-divergent even after pinning (divergence under pp `⋯` truncation, invisible
+  via pp.all) → cancel fires with **`erw [Iso.hom_inv_id_assoc]`** (reducible), NOT `rw` (pattern-not-found);
+  (2) the cancel/triangle rewrite BOMBS in the full goal (motive re-typechecks surrounding μ → isDefEq 200k hb)
+  → must **ISOLATE each step in `slice`/`have`** (local motive, no μ). Same idiom defeats the interchange MERGE
+  wall: `slice_lhs i j => erw [← Localization.Monoidal.tensor_comp]`. In-proof `show`/`rfl`/`convert` pinning
+  isDefEq-BOMBS — pinning must be at the STATEMENT. Durable fix (queued) = delete the bare dual instance.
+- **FBC morphism-level identity-bridge close across a category-instance junction (iter-016, CLOSED
+  `gammaPushforwardIso_comp_bridge` cold-green).** When `F.map (iso.inv.app N)` must reduce to `𝟙` but
+  `F`'s domain and the `𝟙`'s ambient category are defeq-not-syntactic (`(Spec (CommRingCat.of ↑R)).Modules`
+  vs `(Spec R).Modules`), naive `rw [Functor.map_id]`/`[eqToHom_map]`/`[F.map_id]` all FAIL "pattern not found".
+  FIX: rewrite the inner morphism to `eqToHom rfl` via `hom_ext` + a per-open rfl-lemma (`pushforwardComp_inv_app_app`)
+  + `Hom.id_app`, then `rw [eqToHom_refl]; exact Category.comp_id _` (TERM mode — `comp_id` unifies up to defeq
+  cheaply because the identity carries NO value-ModuleCat content, so NO kernel bomb); residual `eqToHom = eqToHom`
+  by proof-irrelevance. This is the route that finally beat the iter-011..014 RHS-reduction kernel bomb.
 - **VALIDATED μ-cancel across the localized-synonym / `X.Modules` comp-instance boundary (iter-013, SNAP
   analogist, cold-LSP-verified on the real `hK_rhs` goal, 0 errors).** When a keystone composite (internal
   `≫` = `modulesLocalizedMonoidal X` = `LocalizedMonoidal` comp) is `erw`'d into an `X.Modules`-comp context
@@ -1958,6 +2032,49 @@
 
 ### Known Blockers (do not retry without a structural change)
 
+- **SNAP `tensorObjAssoc_hK_lhs_native` FINAL STEP — head-lemma application over the full-`tail` goal
+  isDefEq-BOMBS (iter-018, 200k hb; the SUCCESSOR to the now-DOWN iter-017 reassoc wall).** The iter-017
+  reassoc wall is RESOLVED by the statement-pin (see Proof Patterns: `native` drives the whole reassoc →
+  associator-expand → whisker-merge → μ-cancel chain bomb-free, cold-build GREEN). What remains: the reduced
+  goal is `μ_{(A⊗B)♭,C♭}.inv ≫ (c_{A⊗B} ▷ L'C♭) ≫ μ_{A♭⊗B♭,C♭}.hom ≫ tail = assocCommonForm`, whose head
+  3-factor prefix is VERBATIM the proven `tensorObjAssoc_hK_lhs_head`. EVERY way of applying the head lemma
+  (`rw`/`erw [...]`/`rw [reassoc_of% hhead]`/`have h2 := reassoc_of% hhead; rw [h2]`/`refine (h2 _).trans ?_`/
+  `simp only [h2]`/`conv_lhs => rw [h2]`/`conv_rhs => rw [assocCommonForm]; simp; rw [← hhead]`) hits the
+  `(kernel/isDefEq/whnf) deterministic timeout` because the goal STILL CARRIES the full `tail` → unifying the
+  head-lemma composite re-checks the `LocalizedMonoidal`↔`modulesLocalizedMonoidal X` comp-instance over heavy
+  `Localization.Monoidal.μ` (→ `Localization.fac` whnf). The head lemma itself overcame the analogue on a
+  SMALLER goal (`show`-uniform recast); here the full `tail` makes any full-goal op bomb. `hK_lhs`'s
+  `simp only [tensorObj]; exact tensorObjAssoc_hK_lhs_native` connection bombs IDENTICALLY. **iter-019: the
+  iter-018 suffix-peel FIX is now itself a CONFIRMED DEAD END.** `cancel_mono` does NOT strip the tail — it
+  **bombs at the rewrite** (matching `?g ≫ ?f = ?h ≫ ?f` forces an assoc-reconciliation isDefEq over the
+  heavy right-associated goal → whnf-unfolds μ). ALL FOUR bridge routes cold-build-verified to bomb: folded
+  `_head_assoc A B C _` (whnf), image-form `_head_img_assoc A B C _` (isDefEq — the `simp[toMonoidalCategory]`
+  whiskerRight-instance spelling diverges from the `(C := modulesLocalizedMonoidal X)` synonym), `have key :=
+  head; simp only […] at key; exact reassoc_of% key` (the `simp at key` bombs — `key` carries the composite-
+  object `c_{A⊗B} ≫ μ.inv` the post-native goal no longer has), and `cancel_mono`. Root cause = the dual-
+  `MonoidalCategory`-instance μ-token-divergence. **RESOLUTION = iter-020 REFACTOR PIVOT (glue Option A: rewire
+  the hand-built `tensorObj*` defs onto the `LocalizedMonoidal` synonym ⊗ so the comp-instance boundary — the
+  SOLE source of the spelling divergence — disappears and the bridges become definitional). NOT another prover
+  round; NOT dual-instance deletion (refuted load-bearing, 51-site cascade).** `tensorObjAssoc_hK_lhs_head_img`
+  (image-form head, `@[reassoc]`, sorry-free) is staged for the pivot.
+- **FBC iterated-mate glue — TwoSquare vcomp lemmas BOMB over the whole combined goal (iter-019).** The glue
+  `pullback_spec_tilde_iso_ring_square_mate_glue` stages cleanly into uniform conjugate form (via the new `rfl`
+  bridges `pullback_spec_tilde_iso_{inv,hom}_conjugateEquiv`: `apply Iso.ext; rw [← Iso.inv_eq_inv]; simp only
+  [Iso.trans_inv, Iso.symm_inv, Functor.mapIso_inv, …both bridges]` → all 4 `pst` legs uniform). But applying
+  `iterated_mateEquiv_conjugateEquiv(_symm)` / `{conjugateEquiv,mateEquiv}_conjugateEquiv_vcomp` (all REAL,
+  Mates.lean L450-485) over the COMBINED 4-leg goal forces the composite-adjunction unit to whnf → 200k-hb
+  kernel bomb. FIX: telescope PER-FACTOR via `← conjugateEquiv_comp` splits with explicit midpoint adjunctions
+  (mirror the iter-018 closed legs), substitute the 2 closed mate legs, close residual on `gammaPushforwardNatIso_comp`.
+- **[RESOLVED iter-018] FBC geometric leg `chartBaseChangeGeometricComparison_mate` — CLOSED cold-green +
+  axiom-clean.** The iter-017 "`conjugateEquiv_pullbackComp_inv` is comment-fiction" claim was FALSE: it IS
+  real Mathlib (`Scheme.Modules`, Sheaf.lean:238, @[simp]). The whnf-bomb was avoided by driving via CLOSED
+  coherences (the `← conjugateEquiv_comp` split engine — see Proof Patterns), NOT the `unit_conjugateEquiv`
+  scaffold over the composite. No longer a blocker.
+- **[RESOLVED iter-018] FBC algebraic leg `chartBaseChangeModuleReassoc_extendScalarsComp` — CLOSED cold-green
+  + axiom-clean.** The "`Eq.mpr` cast" was NOT a residual to strip: `simp only […, eq_mpr_eq_cast, cast_eq]`
+  DISSOLVES the `letI : Algebra`-induced casts outright; then the `← conjugateEquiv_comp` (×2) split closes it
+  (see Proof Patterns; note the trap: re-declare the `letI : Algebra` instances at the proof head). No longer a
+  blocker.
 - **SNAP μ-SYNTACTIC-IDENTITY wall — a fully-reduced single `μ_X.hom ≫ μ_X.inv` cancel still fails
   (iter-015, COLD-PROBED, `hK_lhs` + the new `tensorObjAssoc_hK_lhs_head`).** After mechanizing the head
   reduction down to ONE `Localization.Monoidal.μ` hom-inv pair (`cancel_epi` + keystone
@@ -2887,6 +3004,51 @@
   enforced corrective is a mathlib-analogist consult on the reframing keystone, not a prove round.
 
 ## Last Updated
+2026-06-21T (iter-019 review, this subproject) — **FBC: glue `pullback_spec_tilde_iso_ring_square_mate_glue`
+STAGED into uniform conjugate form (2 new `rfl` bridges) + crux consolidated to delegate to it (direct sorry
+−1); residual = per-factor iterated-mate telescoping. SNAP: file was RED on entry (iter-018 left 2 hard
+compile errors that the iter-018 review FALSELY certified green); iter-019 un-RED-ed it and fully characterised
+the `hK_lhs_native` wall — ALL FOUR bridge routes (incl. the iter-018-planned `cancel_mono` suffix-peel)
+cold-build-verified to BOMB.** FBC 4 sorry, SNAP 6 sorry, both cold-build GREEN (8318 / 2441 jobs), 0 axioms,
+blueprint-doctor 0 findings. **Net frontier sorry elim = 0.** SNAP route STUCK (~8 iters) → the pre-committed
+iter-020 AUTONOMOUS REFACTOR PIVOT (glue Option A) has triggered (NOT another prover round; dual-instance
+deletion stays refuted). FBC glue is the live, HARD-GATE-clear frontier. **Process lesson: review-phase build
+verification MUST be a fresh cold `lake build; echo EXIT=$?` — LSP/diagnostics times out on `SectionGradedRing.lean`
+and the prior review trusted a false green.** See `iter/iter-019/review.md`.
+
+### Prior: 2026-06-21T (iter-018 review, this subproject) — **FBC: BOTH b2 mate legs CLOSED cold-green + axiom-clean
+(`chartBaseChangeGeometricComparison_mate` + `chartBaseChangeModuleReassoc_extendScalarsComp`, review-verified
+sorryAx-free); SNAP: the 7-iter `rw [Category.assoc]` reassoc WALL is DOWN.** FBC sorry 5→3 (closed 2); SNAP
+sorry 6→7 (decomposition, 0 net elim). Both cold-build GREEN (8318 / 2441 jobs), blueprint-doctor 0 findings,
+0 axioms. FBC engine = `← conjugateEquiv_comp` split over per-piece coherences + `eq_mpr_eq_cast/cast_eq`
+cast-dissolve (the iter-011..017 "cast blocker" was a mis-diagnosis — it dissolves outright); 3 new helpers.
+SNAP `tensorObjAssoc_hK_lhs_native` (statement-pinned image form) drives the whole reassoc chain bomb-free
+but its FINAL head-lemma application bombs over the full-`tail` goal (localized-comp isDefEq, 200k hb). iter-019:
+FBC = the glue `pullback_spec_tilde_iso_ring_square_mate_glue` (both legs now live); SNAP = suffix-peel `tail`
+then `exact tensorObjAssoc_hK_lhs_head` (NOT a new helper round — if it bombs, analogist on the suffix-cancel).
+See `iter/iter-018/review.md`.
+
+### (prior) 2026-06-21T (iter-017 review) — **FBC b2-mate phase OPENED: algebraic per-piece mate fact
+`conjugateEquiv_extendScalarsComp` CLOSED cold-green + NEW reusable engine `natTrans_ext_of_unit`.** Both
+FBC + SNAP cold-build GREEN (8318 / 2441 jobs, review-verified firsthand), 0 axioms, no regression. FBC
+algebraic leg PARTIAL (conjugate side discharged, residual = `Eq.mpr` cast strip); geometric leg STUB
+(`conjugateEquiv`-over-`(Spec _).Modules` whnf-bomb, reverted). SNAP `hK_lhs` step (a) re-split SOLVED +
+committed cold-green (the `have hsplit` + `congrArg`-peel idiom), but 0 sorry eliminated — blocked at the
+NEW reassoc `(W≫T)≫α` localized-tensor-object wall. See `iter/iter-017/review.md`.
+
+### (prior) 2026-06-20T (iter-016 review) — **FBC FOUNDATION SORRY-FREE + SNAP 5-ITER μ-WALL DOWN.**
+Both pre-committed correctives landed cold-green; both lanes closed exactly 1 (FBC 5→4, SNAP 7→6, net −2).
+FBC: bridge `gammaPushforwardIso_comp_bridge` CLOSED (morphism-level eqToHom calculus — `inv.app N = eqToHom rfl`
+via `hom_ext`+per-open `pushforwardComp_inv_app_app`, then term-mode `Category.comp_id`), transitively closing
+`gammaPushforwardIso_comp` + foundation `gammaPushforwardNatIso_comp` (all axiom-clean). SNAP:
+`tensorObjAssoc_hK_lhs_head` CLOSED — root cause was a project-local DUAL `MonoidalCategory` instance (NOT a
+hidden `Localization.fac` witness, analogist-refuted); fix = STATEMENT-level `(C := MonoidalPresheaf X)` pinning
++ `erw [Iso.hom_inv_id_assoc]` with steps ISOLATED in slice/have; new helper
+`sheafification_map_unit_comp_counitIso_hom`. iter-015 interchange-merge wall also DEFEATED; assembly
+`tensorObjAssoc_eq_localizedAssociator_hK_lhs` (L2142) one mechanical tail from closing. Both cold-build GREEN,
+0 axioms, doctor 0, sync_leanok +2/−0. New Proof Patterns added (dual-instance μ-cancel; FBC morphism bridge).
+iter-017: SNAP land the assembly tail (prover); FBC crux L1447 conjugate-mate (effort-break first). See
+`iter/iter-016/review.md`. — PRIOR:
 2026-06-20T (iter-015 review, this subproject) — **FBC KERNEL BOMB DEFEATED.** The morphism-level route
 landed: `gammaPushforwardIso_comp` is cold-build-green and sorry-free in its own body (FBC 8318 jobs), the
 entire foundation collapsed to ONE small bridge sorry `gammaPushforwardIso_comp_bridge` (residual:

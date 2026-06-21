@@ -803,12 +803,40 @@ right-adjoint functors (Lemma~\ref{lem:gammaPushforwardNatIso}).
 
 \begin{lemma}
 
+\leanok
+[Bridge: the pushforward-composition cast on \(\Gamma\) is an \texttt{eqToHom}]
+  \label{lem:gammaPushforwardIso_comp_bridge}
+  \lean{AlgebraicGeometry.gammaPushforwardIso_comp_bridge}
+  For ring maps \(\varphi : R \to S\), \(\rho : S \to T\) and a
+  \(\operatorname{Spec}(T)\)-module \(N\), the sheaf-of-modules morphism on
+  \(\operatorname{Spec} R\) obtained as the cast carried by the pushforward-composition
+  identity \((\operatorname{Spec}(\rho\circ\varphi))_* = (\operatorname{Spec}\varphi)_*\circ
+  (\operatorname{Spec}\rho)_*\), followed by the inverse component of the pushforward
+  composition isomorphism, has the identity section at every open. Consequently its image
+  under the global-sections functor \(\Gamma_R\) is the \texttt{eqToHom} of the induced
+  object equality. This isolates the single value-module-category / scheme-module junction
+  crossing of \cref{lem:gammaPushforwardIso_comp} into one bounded morphism identity.
+\end{lemma}
+
+\begin{proof}
+  The pushforward composition isomorphism is, underneath, the identity isomorphism, so its
+  inverse component at \(N\) is the identity morphism, and the cast factor is an
+  \texttt{eqToHom} by construction; their composite is therefore an \texttt{eqToHom}.
+  Applying the global-sections functor and using that the functor sends a morphism to its
+  top-open section, the claim reduces, by morphism extensionality, to the per-open identity
+  of the pushforward-composition inverse, reconciled with the \texttt{eqToHom} on the
+  underlying carrier by the \texttt{eqToHom}-on-elements identity. No element of a
+  substantive composite is reduced — the lone junction crossing happens once, here.
+\end{proof}
+
+\begin{lemma}
+
 
 \leanok
 [Per-component composition coherence of the affine-pushforward \(\Gamma\)-comparison]
   \label{lem:gammaPushforwardIso_comp}
   \lean{AlgebraicGeometry.gammaPushforwardIso_comp}
-  \uses{lem:gammaPushforwardIso, lem:globalSectionsIso_hom_comp3_specMap_appTop}
+  \uses{lem:gammaPushforwardIso, lem:gammaPushforwardIso_hom_apply, lem:gammaPushforwardIso_comp_bridge}
   Let \(\varphi : R \to S\) and \(\rho : S \to T\) be homomorphisms of commutative
   rings and let \(N\) be an \(\operatorname{Spec}(T)\)-module. Then the global-sections
   comparison \cref{lem:gammaPushforwardIso} for the composite ring map
@@ -831,9 +859,16 @@ right-adjoint functors (Lemma~\ref{lem:gammaPushforwardNatIso}).
 \end{lemma}
 
 \begin{proof}
-  \uses{lem:gammaPushforwardIso, lem:globalSectionsIso_hom_comp3_specMap_appTop}
-  We argue entirely at the level of module morphisms, never descending to underlying
-  elements. Both the comparison \cref{lem:gammaPushforwardIso} for \(\rho\circ\varphi\) and
+  \uses{lem:gammaPushforwardIso, lem:gammaPushforwardIso_hom_apply, lem:gammaPushforwardIso_comp_bridge}
+  We argue at the level of module morphisms. The realized route crosses the value/scheme
+  junction exactly once, inside the bridge \cref{lem:gammaPushforwardIso_comp_bridge}; after
+  substituting it, the comparison collapses on the carrier by
+  \cref{lem:gammaPushforwardIso_hom_apply} and the residual cast is discharged by
+  proof-irrelevance. The three-fold ring coherence
+  \cref{lem:globalSectionsIso_hom_comp3_specMap_appTop} that the idealized argument below
+  invokes is, in the realized proof, absorbed definitionally inside the per-map comparisons,
+  so it is not directly cited.
+  Both the comparison \cref{lem:gammaPushforwardIso} for \(\rho\circ\varphi\) and
   the right-hand composite are morphisms in the module category over \(R\), and the
   identity to be proved is an equality of two such morphisms.
 
@@ -904,10 +939,12 @@ right-adjoint functors (Lemma~\ref{lem:gammaPushforwardNatIso}).
   % to elements (`ModuleCat.hom_ext; LinearMap.ext fun x; gammaPushforwardIso_hom_apply; cast_heq`), not a
   % pure morphism argument; (2) it does NOT invoke `globalSectionsIso_hom_comp3_specMap_appTop` — the ring
   % content is absorbed defeq inside the per-map `gammaPushforwardIso`s, so that `\uses` edge (stmt + proof)
-  % is STALE at this composite level. The whole proof is transitively gated on the still-`sorry` bridge
-  % `gammaPushforwardIso_comp_bridge` (residual: `eqToHom ≫ Γ.map(pushforwardComp.inv.app N) = eqToHom`,
-  % needs `pushforwardComp.inv.app N = 𝟙` WITHOUT rfl/whnf — try `SheafOfModules.Hom.ext` +
-  % `pushforwardComp_inv_app_app` per-open identity). The bridge needs its own blueprint block (unmarked).
+  % is STALE at this composite level. iter-016 UPDATE: the gating bridge `gammaPushforwardIso_comp_bridge`
+  % is now CLOSED (cold-build green) and HAS its own blueprint block `lem:gammaPushforwardIso_comp_bridge`
+  % (). Closed via morphism-level eqToHom calculus: `pushforwardComp.inv.app N = eqToHom rfl` proved
+  % by `Scheme.Modules.hom_ext` + per-open `pushforwardComp_inv_app_app` identity, then term-mode
+  % `Category.comp_id`. Therefore `gammaPushforwardIso_comp` and the foundation `gammaPushforwardNatIso_comp`
+  % are now both sorry-free.
 \end{proof}
 
 \begin{lemma}
@@ -2126,6 +2163,8 @@ supplied verbatim by Mathlib, recorded here as a dependency anchor.
 \end{lemma}
 
 \begin{lemma}
+
+\leanok
 [(b2) Geometric-leg coherence: the geometric comparison is the mate of the pushforward coherence]
   \label{lem:chartBaseChangeGeometricComparison_mate}
   \lean{AlgebraicGeometry.chartBaseChangeGeometricComparison_mate}
@@ -2140,22 +2179,198 @@ supplied verbatim by Mathlib, recorded here as a dependency anchor.
   matching pushforward coherences. This is the geometric leg of the ring-square mate-glue
   \cref{lem:pullback_spec_tilde_iso_ring_square_mate_glue}.
   \begin{proof}
-    \uses{lem:chartBaseChangeGeometricComparison, lem:chartBaseChange_ring_square}
+    \uses{lem:chartBaseChangeGeometricComparison, lem:chartBaseChange_ring_square,
+      lem:conjugateEquiv_pullbackCongr, lem:pushforwardCongr_inv_eq}
     Unfold \cref{lem:chartBaseChangeGeometricComparison} as
     \(\mathrm{pullbackComp}(\operatorname{Spec}\rho_B,\operatorname{Spec}\iota_R)\) followed by the
     pullback congruence on \cref{lem:chartBaseChange_ring_square} followed by
     \(\mathrm{pullbackComp}(\operatorname{Spec}\iota_{R'},\operatorname{Spec}\rho)^{-1}\). Each
     \texttt{Scheme.Modules.pullbackComp} is, under \texttt{pullbackPushforwardAdjunction}, the adjoint
-    mate of the corresponding \texttt{Scheme.Modules.pushforwardComp}; transporting the composite
-    through the composite-adjunction mate equivalence
-    \texttt{CategoryTheory.conjugateEquiv\_mateEquiv\_vcomp} replaces each \(\mathrm{pullbackComp}\)
-    leg by its \(\mathrm{pushforwardComp}\) mate and the pullback congruence by the matching
-    \texttt{Scheme.Modules.pushforwardCongr} on \cref{lem:chartBaseChange_ring_square}. Both
-    composites are identity-on-sections over \(\operatorname{Spec} R\).
+    mate of the corresponding \texttt{Scheme.Modules.pushforwardComp}: this per-factor coherence is the
+    Mathlib lemma \texttt{Scheme.Modules.conjugateEquiv\_pullbackComp\_inv} (the geometric analogue of
+    the algebraic \cref{lem:conjugateEquiv_extendScalarsComp}). Splitting the conjugate of the composite
+    by \texttt{CategoryTheory.conjugateEquiv\_comp} into its three factors and discharging each by that
+    coherence (twice, once inverted) together with a single-pair congruence reconciliation
+    \(\texttt{conjugateEquiv\_pullbackCongr}\) for the \texttt{pullbackCongr}/\texttt{pushforwardCongr}
+    on \cref{lem:chartBaseChange_ring_square} yields the matching composite of the two
+    \emph{pushforward} composition coherences. Both composites are identity-on-sections over
+    \(\operatorname{Spec} R\).
+  % NOTE: (iter-018, realized route) the per-piece geometric mate fact IS in Mathlib:
+  % `AlgebraicGeometry.Scheme.Modules.conjugateEquiv_pullbackComp_inv` (Sheaf.lean:238, @[simp]) —
+  % the iter-017 "comment-fiction" claim was STALE/FALSE. Route (analogies/fbc-geom-mate.md): drive by
+  % CLOSED @[simp] coherences (`conjugateEquiv_comp` split + `conjugateEquiv_pullbackComp_inv` ×2 +
+  % a 3-line `conjugateEquiv_pullbackCongr` helper), NEVER `natTrans_ext_of_unit`/`unit_conjugateEquiv`
+  % over the composite (that forces the composite unit to whnf per component → the 200k-hb bomb). The
+  % single-pair eqToHom congruence is the lone residual and does not trigger the bomb.
   \end{proof}
 \end{lemma}
 
+The geometric leg above uses two small project-bespoke reconciliation helpers, recorded here
+for the dependency graph.
+
+\begin{lemma}\leanok
+[Mate of a pullback congruence is the pushforward congruence]
+  \label{lem:conjugateEquiv_pullbackCongr}
+  \lean{AlgebraicGeometry.conjugateEquiv_pullbackCongr}
+  \uses{lem:chartBaseChange_ring_square}
+  For two equal morphisms \(f = g\) of affine schemes, the adjoint conjugate (mate) of the pullback
+  congruence iso \(\mathrm{pullbackCongr}(f=g)\) along the pullback--pushforward adjunctions equals the
+  pushforward congruence iso \(\mathrm{pushforwardCongr}(f=g)\).
+  \begin{proof}
+    Substitute the equality \(f = g\); both congruence isos collapse to identities and the conjugate of
+    an identity is the identity (\texttt{conjugateEquiv\_id}).
+  \end{proof}
+\end{lemma}
+
+\begin{lemma}\leanok
+[Inverse of a pushforward congruence is the reversed congruence]
+  \label{lem:pushforwardCongr_inv_eq}
+  \lean{AlgebraicGeometry.pushforwardCongr_inv_eq}
+  The inverse of \(\mathrm{pushforwardCongr}(f=g)\) equals \(\mathrm{pushforwardCongr}(g=f)\).
+  \begin{proof}
+    Substitute the equality; both sides are identities.
+  \end{proof}
+\end{lemma}
+
+The algebraic leg below is realized through two reusable mate facts: a
+category-agnostic mate-uniqueness criterion and the per-piece conjugate of the
+extend-scalars composition coherence. We record them first, together with the four
+Mathlib results they rest on as dependency anchors. We also record one bespoke
+\(\mathrm{eqToHom}\) reconciliation helper used by the algebraic leg.
+
+\begin{lemma}\leanok
+[Mate of an extend-scalars \(\mathrm{eqToHom}\) is the restrict-scalars \(\mathrm{eqToHom}\)]
+  \label{lem:conjugateEquiv_extendScalars_eqToHom}
+  \lean{AlgebraicGeometry.conjugateEquiv_extendScalars_eqToHom}
+  \uses{lem:conjugateEquiv_extendScalarsComp}
+  The adjoint conjugate of the \(\mathrm{eqToHom}\) between two extend-scalars functors (induced by a
+  ring equality) equals the \(\mathrm{eqToHom}\) between the corresponding restrict-scalars functors.
+  \begin{proof}
+    Substitute the ring equality; \(\mathrm{eqToHom}\) collapses to the identity and the conjugate of an
+    identity is the identity (\texttt{eqToHom\_refl} then \texttt{conjugateEquiv\_id}).
+  \end{proof}
+\end{lemma}
+
+\begin{lemma}[Right triangle identity of an adjunction]
+  \label{lem:right_triangle_components_mathlib}
+  \lean{CategoryTheory.Adjunction.right_triangle_components}
+  \mathlibok
+  \textit{Provided by Mathlib.}
+  For an adjunction \(F \dashv G\) with unit \(\eta\) and counit \(\varepsilon\), and
+  for every object \(Y\) of the codomain category, the right triangle identity holds:
+  the unit at \(G Y\) followed by \(G\) applied to the counit at \(Y\) is the identity,
+  \[
+    \eta_{G Y} \;\text{followed by}\; G(\varepsilon_Y) \;=\; \mathrm{id}_{G Y}.
+  \]
+\end{lemma}
+
+\begin{lemma}[Naturality of a natural transformation]
+  \label{lem:natTrans_naturality_mathlib}
+  \lean{CategoryTheory.NatTrans.naturality}
+  \mathlibok
+  \textit{Provided by Mathlib.}
+  For a natural transformation \(\theta : F \Rightarrow G\) and a morphism
+  \(f : X \to Y\), the naturality square commutes: \(F(f)\) followed by \(\theta_Y\)
+  equals \(\theta_X\) followed by \(G(f)\).
+\end{lemma}
+
+\begin{lemma}[Unit transpose of a conjugate transformation]
+  \label{lem:unit_conjugateEquiv_mathlib}
+  \lean{CategoryTheory.unit_conjugateEquiv}
+  \mathlibok
+  \textit{Provided by Mathlib.}
+  Let \(\mathrm{adj}_1 : L_1 \dashv R_1\) and \(\mathrm{adj}_2 : L_2 \dashv R_2\) be
+  adjunctions with units \(\eta^1, \eta^2\), and let \(\alpha : L_2 \Rightarrow L_1\)
+  be a transformation of the left adjoints. Then the conjugate (adjoint mate)
+  \(\mathrm{conjugateEquiv}(\alpha) : R_1 \Rightarrow R_2\) satisfies, at every object
+  \(c\), the unit-transpose relation
+  \[
+    \eta^1_c \;\text{followed by}\; \mathrm{conjugateEquiv}(\alpha)_{L_1 c}
+    \;=\; \eta^2_c \;\text{followed by}\; R_2(\alpha_c).
+  \]
+\end{lemma}
+
+\begin{lemma}[Unit transpose of the extend-scalars composition coherence]
+  \label{lem:homEquiv_extendScalarsComp_mathlib}
+  \lean{ModuleCat.homEquiv_extendScalarsComp}
+  \mathlibok
+  \textit{Provided by Mathlib.}
+  For ring homomorphisms \(f : R_1 \to R_2\), \(g : R_2 \to R_3\) and an
+  \(R_1\)-module \(M\), the adjunction transpose, under the extend--restrict
+  adjunction for \(g \circ f\), of the component at \(M\) of the extend-scalars
+  composition isomorphism \(\mathrm{extendScalarsComp}\,f\,g\) equals the explicit
+  unit composite assembled from the units of the extend--restrict adjunctions for
+  \(f\) and \(g\) and the inverse of the restrict-scalars composition isomorphism
+  \(\mathrm{restrictScalarsComp}\,f\,g\).
+\end{lemma}
+
+\begin{lemma}\leanok
+[Mate-uniqueness by the unit transpose]
+  \label{lem:natTrans_ext_of_unit}
+  \lean{AlgebraicGeometry.natTrans_ext_of_unit}
+  \uses{lem:right_triangle_components_mathlib, lem:natTrans_naturality_mathlib}
+  Let \(\mathrm{adj}_1 : L_1 \dashv R_1\) and \(\mathrm{adj}_2 : L_2 \dashv R_2\) be
+  adjunctions between the same pair of categories, with units \(\eta^1, \eta^2\), and
+  let \(\alpha : L_2 \Rightarrow L_1\) be a fixed transformation of the left adjoints.
+  If two natural transformations \(\beta, \gamma : R_1 \Rightarrow R_2\) of the right
+  adjoints have the same unit transpose against \(\alpha\) — that is, for every object
+  \(c\),
+  \[
+    \eta^1_c \;\text{followed by}\; \beta_{L_1 c}
+    \;=\; \eta^2_c \;\text{followed by}\; R_2(\alpha_c)
+    \;=\; \eta^1_c \;\text{followed by}\; \gamma_{L_1 c}
+  \]
+  — then \(\beta = \gamma\).
+\end{lemma}
+\begin{proof}
+  \uses{lem:right_triangle_components_mathlib, lem:natTrans_naturality_mathlib}
+  Any transformation \(\delta\) satisfying the unit-transpose relation is pinned to the
+  single explicit formula
+  \[
+    \delta_Y \;=\; \eta^2_{R_1 Y} \;\text{followed by}\; R_2(\alpha_{R_1 Y})
+      \;\text{followed by}\; R_2(\varepsilon^1_Y),
+  \]
+  where \(\varepsilon^1\) is the counit of \(\mathrm{adj}_1\). Indeed, inserting the
+  right triangle identity \cref{lem:right_triangle_components_mathlib} of
+  \(\mathrm{adj}_1\) at \(Y\) writes \(\delta_Y\) as a composite to which naturality
+  \cref{lem:natTrans_naturality_mathlib} of \(\delta\) and the unit-transpose
+  hypothesis apply, collapsing it to the formula. Since both \(\beta\) and \(\gamma\)
+  equal this one formula, they coincide.
+\end{proof}
+
+\begin{lemma}\leanok
+[Per-piece algebraic mate: conjugate of the extend-scalars coherence]
+  \label{lem:conjugateEquiv_extendScalarsComp}
+  \lean{AlgebraicGeometry.conjugateEquiv_extendScalarsComp}
+  \uses{lem:natTrans_ext_of_unit, lem:unit_conjugateEquiv_mathlib,
+        lem:homEquiv_extendScalarsComp_mathlib}
+  Let \(f : R \to S\) and \(g : S \to T\) be homomorphisms of commutative rings. Under
+  the composite extend--restrict adjunction
+  \((\mathrm{adj}_f) \,\square\, (\mathrm{adj}_g)\), transported against the single
+  extend--restrict adjunction for \(g \circ f\), the adjoint mate (conjugate) of the
+  extend-scalars composition isomorphism \(\mathrm{extendScalarsComp}\,f\,g\) is the
+  inverse of the restrict-scalars composition isomorphism:
+  \[
+    \mathrm{conjugateEquiv}\bigl(\mathrm{extendScalarsComp}\,f\,g\bigr)
+    \;=\; \bigl(\mathrm{restrictScalarsComp}\,f\,g\bigr)^{-1}.
+  \]
+\end{lemma}
+\begin{proof}
+  \uses{lem:natTrans_ext_of_unit, lem:unit_conjugateEquiv_mathlib,
+        lem:homEquiv_extendScalarsComp_mathlib}
+  Both sides are natural transformations of the right adjoints, and they share the same
+  unit transpose against \(\alpha = \mathrm{extendScalarsComp}\,f\,g\), so they agree by
+  the mate-uniqueness criterion \cref{lem:natTrans_ext_of_unit}. For the left-hand side
+  this unit transpose is the defining relation of the conjugate,
+  \cref{lem:unit_conjugateEquiv_mathlib}. For the right-hand side, the unit transpose of
+  \(\bigl(\mathrm{restrictScalarsComp}\,f\,g\bigr)^{-1}\), read off the composite-adjunction
+  unit, is exactly the extend-scalars composition coherence
+  \cref{lem:homEquiv_extendScalarsComp_mathlib}. The two unit transposes coincide.
+\end{proof}
+
 \begin{lemma}
+
+\leanok
 [(b2) Algebraic-leg coherence: the module reassociation through \texttt{extendScalarsComp}]
   \label{lem:chartBaseChangeModuleReassoc_extendScalarsComp}
   \lean{AlgebraicGeometry.chartBaseChangeModuleReassoc_extendScalarsComp}
@@ -2167,19 +2382,40 @@ supplied verbatim by Mathlib, recorded here as a dependency anchor.
   algebraic leg of the ring-square mate-glue
   \cref{lem:pullback_spec_tilde_iso_ring_square_mate_glue}.
   \begin{proof}
-    \uses{lem:chartBaseChangeModuleReassoc, lem:chartBaseChange_ring_square}
+    \uses{lem:chartBaseChangeModuleReassoc, lem:chartBaseChange_ring_square,
+          lem:natTrans_ext_of_unit, lem:conjugateEquiv_extendScalarsComp,
+          lem:conjugateEquiv_extendScalars_eqToHom,
+          lem:unit_conjugateEquiv_mathlib, lem:homEquiv_extendScalarsComp_mathlib}
     By definition \cref{lem:chartBaseChangeModuleReassoc} is
     \((\mathrm{extendScalarsComp}\,\iota_R\,\rho_B)^{-1}\) followed by the \(\mathrm{eqToIso}\) of the
     ring equality \cref{lem:chartBaseChange_ring_square} followed by
     \(\mathrm{extendScalarsComp}\,\rho\,\iota_{R'}\), each factor being Mathlib's
-    \texttt{ModuleCat.extendScalarsComp}. Since extend scalars is left adjoint to restrict scalars,
-    transporting this composite through the composite-adjunction mate equivalence
-    \texttt{CategoryTheory.mateEquiv\_conjugateEquiv\_vcomp} exhibits it as the mate of the analogous
-    restrict-scalars coherence; both are identity-on-elements.
+    \texttt{ModuleCat.extendScalarsComp}; the matching restrict-scalars reassociation is the
+    analogous composite of the \(\mathrm{restrictScalarsComp}\) coherences with the same
+    \(\mathrm{eqToIso}\). The claim is that the adjoint mate (conjugate) of the former, under the
+    composite extend--restrict adjunctions, is the latter. Both are natural transformations of the
+    right adjoints sharing the same unit transpose against \(\alpha = \) the extend-scalars
+    reassociation, so they agree by the mate-uniqueness criterion
+    \cref{lem:natTrans_ext_of_unit}: the conjugate side is its defining unit transpose
+    \cref{lem:unit_conjugateEquiv_mathlib}, while the restrict side is the residual
+    \emph{composite-unit coherence} — the three-factor analogue of the per-piece mate fact
+    \cref{lem:conjugateEquiv_extendScalarsComp}, namely one extend/restrict-scalars composition
+    coherence \cref{lem:homEquiv_extendScalarsComp_mathlib} per factor together with the
+    \(\mathrm{eqToIso}\) of the ring square. All constituents are identity-on-elements.
+  % NOTE: (iter-018, CLOSED — cold-build green, axiom-clean) the per-factor reduction follows
+  % \cref{lem:conjugateEquiv_extendScalarsComp} (natTrans_ext_of_unit + unit_conjugateEquiv +
+  % homEquiv_extendScalarsComp), NOT the retired `mateEquiv_conjugateEquiv_vcomp`. The earlier
+  % "blocked by `Eq.mpr` casts" residual was a MISDIAGNOSIS: the realized route splits into two
+  % `conjugateEquiv_comp` factors (each closed by \cref{lem:conjugateEquiv_extendScalarsComp}),
+  % then `simp only [..., eq_mpr_eq_cast, cast_eq]` DISSOLVES the `letI : Algebra` `Eq.mpr` casts
+  % outright. Both b2 mate legs are now sorry-free; the only remaining b2 obstacle is the
+  % iterated-mate assembly in \cref{lem:pullback_spec_tilde_iso_ring_square_mate_glue}.
   \end{proof}
 \end{lemma}
 
 \begin{lemma}
+
+\leanok
 [(b2) Iterated-mate glue of the ring-square naturality]
   \label{lem:pullback_spec_tilde_iso_ring_square_mate_glue}
   \lean{AlgebraicGeometry.pullback_spec_tilde_iso_ring_square_mate_glue}

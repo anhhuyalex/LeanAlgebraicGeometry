@@ -1,0 +1,257 @@
+[
+  {
+    "timestamp": "2026-06-21T08:24:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+      "theorem": "sheafOf.orderAtPSubmodule"
+    },
+    "session": {
+      "id": "session_15",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "Ring.ordFrac_add",
+        "Ring.ordFrac_ge_one_of_ne_zero",
+        "Algebra.smul_def",
+        "TopCat.Presheaf.germ_stalkSpecializes_apply"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Define the Submodule k̄ K(C) cut out by the single order constraint g = 0 ∨ -(D P) ≤ ord_P g (= the fractional ideal π_P^{-n}·𝒪_{C,P}); discharge zero/add/smul closure by specialising the carrierSubmodule closure proofs to the single prime P, using germ-to-stalk for the scalar case",
+        "code_tried": "private noncomputable def sheafOf.orderAtPSubmodule ... := { carrier := {g | g = 0 ∨ -(D P) ≤ order P g}, zero_mem' := ..., add_mem' := Ring.ordFrac_add ..., smul_mem' := (key_alpha_ge via germ β + Ring.ordFrac_ge_one_of_ne_zero) }",
+        "line_number": "1040",
+        "lean_error": null,
+        "goal_before": "Submodule kbar C.left.functionField",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "axiom-clean {propext, Classical.choice, Quot.sound} (verified). Reusable target submodule for the stubbed stalk iso — proving the target object even while the iso landing in it stays a stub banks concrete infra."
+      }
+    ],
+    "next_steps": "Blueprint this helper (currently dag-unmatched coverage debt — no \\lean{} block). It is the codomain of carrierSheaf_stalk_eq."
+  },
+  {
+    "timestamp": "2026-06-21T08:17:30Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+      "theorem": "sheafOf.cokernel_carrierSheafHom_iso_skyscraper"
+    },
+    "session": {
+      "id": "session_15",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "asIso",
+        "sheafOf.cokernel_skyscraper_hom",
+        "sheafOf.cokernel_skyscraper_hom_isIso"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Effort-break the opaque deep iso (3 prior blind attempts regressed sorry 0→2→4): introduce named comparison morphism cokernel_skyscraper_hom (def stub) + its IsIso (lemma stub), assemble the iso as asIso of the morphism under the IsIso instance",
+        "code_tried": "haveI := sheafOf.cokernel_skyscraper_hom_isIso (C := C) D P\n  asIso (sheafOf.cokernel_skyscraper_hom (C := C) D P)",
+        "line_number": "1268",
+        "lean_error": null,
+        "goal_before": "cokernel (carrierSheafHom_le_add_single D P) ≅ skyscraperSheaf P.point (ModuleCat.of kbar kbar)",
+        "goal_after": "no goals (body sorry-free; transitively sorryAx via the two stubs)",
+        "result": "success",
+        "insight": "Body is sorry-FREE; deep work relocated into the two named leaves. Auditor confirmed non-circular: asIso delegates the sorry into the stubs, does not self-consume. Canonical decomposition shape for a stalkwise iso."
+      }
+    ],
+    "next_steps": "Close carrierSheaf_stalk_eq → cascades cokernel_stalk_at_iso_kbar → cokernel_skyscraper_hom(_isIso); the iso is already wired and lands automatically."
+  },
+  {
+    "timestamp": "2026-06-21T08:16:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+      "theorem": "sheafOf.carrierSheaf_stalk_eq"
+    },
+    "session": {
+      "id": "session_15",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "binding ~200-400 LOC carrier-stalk computation (filtered colimit of section submodules → union inside K(C) → smooth-curve constraint collapse to the single prime P); NO Mathlib carrier-stalk API. CategoryTheory.Sheaf.val deprecated in the type (use ObjectProperty.obj) — will error when body filled.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Per PROGRESS directive: STUB only (avoid 4th regression). Land a faithful type at the pinned name with the proven orderAtPSubmodule as codomain.",
+        "code_tried": "private noncomputable def sheafOf.carrierSheaf_stalk_eq ... : TopCat.Presheaf.stalk (sheafOf.carrierSheaf D).val P.point ≅ ModuleCat.of kbar (sheafOf.orderAtPSubmodule D P) := sorry",
+        "line_number": "1139",
+        "lean_error": null,
+        "goal_before": "stalk (carrierSheaf D).val P.point ≅ ModuleCat.of kbar (orderAtPSubmodule D P)",
+        "goal_after": "sorry",
+        "result": "partial",
+        "insight": "Binding leaf — explicitly scoped out this pass. Closing it cascades the whole S3 chain (iso already wired)."
+      }
+    ],
+    "next_steps": "Dedicated mathlib-build/prove lane next iter. Migrate Sheaf.val → ObjectProperty.obj in the type first."
+  },
+  {
+    "timestamp": "2026-06-21T08:16:30Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+      "theorem": "sheafOf.cokernel_stalk_at_iso_kbar"
+    },
+    "session": {
+      "id": "session_15",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "depends on carrierSheaf_stalk_eq; mult-by-π^{n+1} automorphism + residueField_eq_of_coheight_eq_one. CategoryTheory.Sheaf.val deprecated in the type.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "STUB at pinned name; faithful type stalk(cokernel f) P.point ≅ ModuleCat.of kbar kbar",
+        "code_tried": "private noncomputable def sheafOf.cokernel_stalk_at_iso_kbar ... := sorry",
+        "line_number": "1156",
+        "lean_error": null,
+        "goal_before": "stalk (cokernel (carrierSheafHom_le_add_single D P)).val P.point ≅ ModuleCat.of kbar kbar",
+        "goal_after": "sorry",
+        "result": "partial",
+        "insight": "G2 input; cascades from carrierSheaf_stalk_eq."
+      }
+    ],
+    "next_steps": "After carrierSheaf_stalk_eq lands: mult-by-π^{n+1} to 𝔪_P ⊆ 𝒪_{C,P}, quotient = residue field = k̄."
+  },
+  {
+    "timestamp": "2026-06-21T08:16:45Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+      "theorem": "sheafOf.cokernel_skyscraper_hom"
+    },
+    "session": {
+      "id": "session_15",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "explicit leading-Laurent-coefficient residue evaluation needs the carrier-stalk identification (carrierSheaf_stalk_eq)",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "STUB the comparison morphism so the IsIso/asIso chain assembles around it",
+        "code_tried": "private noncomputable def sheafOf.cokernel_skyscraper_hom ... : cokernel (carrierSheafHom_le_add_single D P) ⟶ skyscraperSheaf P.point (ModuleCat.of kbar kbar) := sorry",
+        "line_number": "1173",
+        "lean_error": null,
+        "goal_before": "cokernel f ⟶ skyscraperSheaf P.point (ModuleCat.of kbar kbar)",
+        "goal_after": "sorry",
+        "result": "partial",
+        "insight": "S-C: the residue-evaluation morphism. Needed for the asIso assembly to typecheck (it does)."
+      }
+    ],
+    "next_steps": "Construct via residue evaluation (leading Laurent coeff mod 𝔪_P) once carrier-stalk lands."
+  },
+  {
+    "timestamp": "2026-06-21T08:17:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+      "theorem": "sheafOf.cokernel_skyscraper_hom_isIso"
+    },
+    "session": {
+      "id": "session_15",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "isIso_of_stalkFunctor_map_iso requires evaluating the stalk maps of cokernel_skyscraper_hom — impossible while that morphism (S-C) is itself a stub",
+      "key_lemmas_used": [
+        "TopCat.Presheaf.isIso_of_stalkFunctor_map_iso",
+        "carrierPresheaf_le_hom_app_isIso_of_not_mem"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "STUB; genuinely un-attemptable while S-C is a stub",
+        "code_tried": "private lemma sheafOf.cokernel_skyscraper_hom_isIso ... : IsIso (sheafOf.cokernel_skyscraper_hom D P) := sorry",
+        "line_number": "1193",
+        "lean_error": null,
+        "goal_before": "IsIso (cokernel_skyscraper_hom D P)",
+        "goal_after": "sorry",
+        "result": "partial",
+        "insight": "G1 input (away-from-P, carrierPresheaf_le_hom_app_isIso_of_not_mem) already PROVEN; G2 input = cokernel_stalk_at_iso_kbar. Assembly blocked only on S-C existing as a real morphism."
+      }
+    ],
+    "next_steps": "Once S-C constructed: isIso_of_stalkFunctor_map_iso, zero stalk away from P (G1) + residue iso at P (G2)."
+  },
+  {
+    "timestamp": "2026-06-21T08:19:30Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+      "theorem": "sheafOf.carrierSheaf_zero_iso_toModuleKSheaf"
+    },
+    "session": {
+      "id": "session_15",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Hartshorne II.6.3A (A = ⋂_{ht 𝔭=1} A_𝔭 on the normal curve): regular fns = order-≥0-everywhere; no single-call Mathlib form",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "STUB the corner bridge at pinned name (per directive fallback: if deep, stub the bridge and leave the corners)",
+        "code_tried": "private noncomputable def sheafOf.carrierSheaf_zero_iso_toModuleKSheaf ... : sheafOf.carrierSheaf 0 ≅ Scheme.toModuleKSheaf C := sorry",
+        "line_number": "1293",
+        "lean_error": null,
+        "goal_before": "carrierSheaf 0 ≅ Scheme.toModuleKSheaf C",
+        "goal_after": "sorry",
+        "result": "partial",
+        "insight": "Deep input to the two sheafOf_ses_single_add corners. Corner wiring recipe recorded inline (ShortComplex.shortExact_of_iso along isoMk (eqToIso h1 ≪≫ e) refl refl)."
+      }
+    ],
+    "next_steps": "Land the bridge (Hartshorne 6.3A section-wise equality + sheaf-iso), then wire the 2 corners via the recorded ShortComplex transport recipe."
+  },
+  {
+    "timestamp": "2026-06-21T08:21:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+      "theorem": "sheafOf.sheafOf_ses_single_add"
+    },
+    "session": {
+      "id": "session_15",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "2 corner cases (D=0, [P]+D=0) need ShortComplex transport along the stubbed carrierSheaf_zero_iso_toModuleKSheaf bridge; wiring now would be net-neutral on deep-sorry count at regression risk",
+      "key_lemmas_used": [
+        "CategoryTheory.ShortComplex.shortExact_of_iso",
+        "carrierSheaf_ses_single_add"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Leave the 2 corners as sorry; main case (D≠0 ∧ [P]+D≠0) already proven via carrier-SES delegation; record exact transport recipe inline",
+        "code_tried": "-- corners left `sorry`; recipe: obtain carrier SES → ShortComplex.mk (e.inv ≫ eqToHom h1.symm ≫ S₀.f) S₀.g … → ShortComplex.shortExact_of_iso along isoMk (eqToIso h1 ≪≫ e) refl refl",
+        "line_number": "1437",
+        "lean_error": null,
+        "goal_before": "ShortExact corner SES for D=0 / [P]+D=0",
+        "goal_after": "sorry (×2)",
+        "result": "partial",
+        "insight": "Deferred deliberately: depends on the stubbed bridge; wiring it converts 2 corner sorries into 1 transport proof still gated on the bridge (no net deep-sorry reduction)."
+      }
+    ],
+    "next_steps": "Wire after carrierSheaf_zero_iso_toModuleKSheaf lands, via the recorded recipe."
+  }
+]

@@ -1,0 +1,179 @@
+[
+  {
+    "timestamp": "2026-06-21T05:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/FlatBaseChange.lean",
+      "theorem": "conjugateEquiv_extendScalarsComp"
+    },
+    "session": {
+      "id": "session_17",
+      "model": "opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "natTrans_ext_of_unit",
+        "unit_conjugateEquiv",
+        "ModuleCat.homEquiv_extendScalarsComp",
+        "Adjunction.comp_unit_app",
+        "Adjunction.homEquiv_unit"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "element-wise dsimp [conjugateEquiv] -> m = m",
+        "code_tried": "dsimp [conjugateEquiv]; simp only [restrictScalarsComp'App_inv_apply, extendRestrictScalarsAdj_unit_app_apply, ExtendScalars.map_tmul]",
+        "result": "failed",
+        "insight": "The composing-linear-map `∘ₗ` cannot be peeled: LinearMap.comp_apply/rw/simp all fail to match (restrictScalars g ⋙ restrictScalars f vs nested restrictScalars f (restrictScalars g _) value-diamond); erw over-unfolds counit/unit to raw TensorProduct.lift. Documented X.Modules/value-ModuleCat diamond DEAD END."
+      },
+      {
+        "attempt": 2,
+        "strategy": "counit-side uniqueness via conjugateEquiv_counit + homEquiv.symm.injective",
+        "code_tried": "rw [conjugateEquiv_counit]; apply homEquiv.symm.injective",
+        "result": "failed",
+        "insight": "CIRCULAR: conjugateEquiv_counit rewrites the LHS mate back to α.app _ ≫ adj₁.counit, residual provably equivalent to the original goal componentwise. Positional rw hits the morphism-level diamond (use term-mode .trans). DEAD END."
+      },
+      {
+        "attempt": 3,
+        "strategy": "unit-side uniqueness via NEW general helper natTrans_ext_of_unit",
+        "code_tried": "refine natTrans_ext_of_unit ((ModuleCat.extendRestrictScalarsAdj f).comp _) _ _ _ _ (fun c => unit_conjugateEquiv _ _ _ c) (fun c => ?_); -- discharge target unit relation via homEquiv_extendScalarsComp + Adjunction.comp_unit_app",
+        "result": "success",
+        "insight": "Only the UNIT transpose has Mathlib content (homEquiv_extendScalarsComp = the unit transpose). Both sides satisfy the same unit relation (conjugateEquiv side by unit_conjugateEquiv), so equal by natTrans_ext_of_unit. Closes in 6 lines, cold-build GREEN, 0 axioms."
+      }
+    ],
+    "next_steps": "Reuse for the algebraic leg (chartBaseChangeModuleReassoc_extendScalarsComp) via conjugateEquiv_comp split."
+  },
+  {
+    "timestamp": "2026-06-21T05:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/FlatBaseChange.lean",
+      "theorem": "natTrans_ext_of_unit"
+    },
+    "session": {
+      "id": "session_17",
+      "model": "opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "Adjunction.right_triangle_components",
+        "NatTrans.naturality"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "NEW general category-agnostic helper: two natTrans R₁⟶R₂ of right adjoints with the same unit transpose against fixed α are equal",
+        "code_tried": "intro Y; have e1 : ... := by simp; rw [e1, Category.assoc]; simp [reassoc_of% (hδ (R₁.obj Y))] -- each side pinned to adj₂.unit.app(R₁.obj Y) ≫ R₂.map(α.app _) ≫ R₂.map(adj₁.counit.app Y)",
+        "result": "success",
+        "insight": "In the ABSTRACT category rw/simp only FAIL to match ≫-subterms with .app/.map heads (right_triangle_components, NatTrans.naturality) — surface form defeq-obscured; only FULL simp matches. Idiom: insert triangle via `have e1 := by simp`, then rw + reassoc_of%. Cold-green, reusable for both b2 mate legs."
+      }
+    ],
+    "next_steps": "Engine for both FBC mate legs once the geometric conjugateEquiv elaboration is made cheap."
+  },
+  {
+    "timestamp": "2026-06-21T05:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/FlatBaseChange.lean",
+      "theorem": "chartBaseChangeModuleReassoc_extendScalarsComp"
+    },
+    "session": {
+      "id": "session_17",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Eq.mpr/id instance-casts from letI:Algebra in chartBaseChangeModuleReassocNat/…RestrictReassocNat wrap the iso composites, so per-factor homEquiv_extendScalarsComp coherence cannot fire",
+      "key_lemmas_used": [
+        "natTrans_ext_of_unit",
+        "unit_conjugateEquiv",
+        "conjugateIsoEquiv_apply_hom"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "natTrans_ext_of_unit reduction — discharge conjugate side, reduce to composite-unit coherence",
+        "code_tried": "apply Iso.ext; rw [conjugateIsoEquiv_apply_hom]; refine natTrans_ext_of_unit _ _ (chartBaseChangeModuleReassocNat ψ φ ρ).hom _ _ (fun c => unit_conjugateEquiv _ _ _ c) (fun c => ?_)",
+        "line_number": "1481",
+        "result": "partial",
+        "insight": "Conjugate side DISCHARGED. Residual = 3-factor composite-unit relation (adjE_ρ.comp adjE_ι').unit ≫ restrictReassocNat = (adjE_ι.comp adjE_ρB).unit ≫ R₂.map reassocNat. Blocked: simp only [chartBaseChange…Nat, Adjunction.comp_unit_app, Functor.map_comp] reaches the .mpr-wrapped form but no further — the Eq.mpr casts must be stripped first."
+      }
+    ],
+    "next_steps": "(a) re-state the two …ReassocNat defs WITHOUT letI casts so .hom is clean ≫ composite, OR (b) two conjugateEquiv_comp splits each closed by conjugateEquiv_extendScalarsComp."
+  },
+  {
+    "timestamp": "2026-06-21T05:30:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/FlatBaseChange.lean",
+      "theorem": "chartBaseChangeGeometricComparison_mate"
+    },
+    "session": {
+      "id": "session_17",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "natTrans_ext_of_unit scaffold whnf-TIMES OUT (200k hb) at the unit_conjugateEquiv term — conjugateEquiv over binary-composite Scheme.Modules adjunctions in (Spec _).Modules is too expensive to elaborate; Mathlib has NO conjugateEquiv_pullbackComp_inv (comment-fiction confirmed)",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "same natTrans_ext_of_unit scaffold as the algebraic leg",
+        "code_tried": "apply Iso.ext; rw [conjugateIsoEquiv_apply_hom]; refine natTrans_ext_of_unit _ _ (chartBaseChangeGeometricComparisonNat ψ φ ρ).hom _ _ (fun c => unit_conjugateEquiv _ _ _ c) (fun c => ?_)",
+        "line_number": "1590",
+        "result": "failed",
+        "insight": "The `refine` itself whnf-TIMES OUT (200000 hb) at unit_conjugateEquiv over the (Spec _).Modules value-ModuleCat junction. Reverted to clean stub-sorry per revert-on-bomb. Real elaboration-cost wall, not a missing tactic."
+      }
+    ],
+    "next_steps": "Make conjugateEquiv-over-(Spec _).Modules cheap: opaque-def the adjunction OR build a bespoke morphism-level homEquiv_pullbackComp. maxHeartbeats banned. Do NOT retry the scaffold."
+  },
+  {
+    "timestamp": "2026-06-21T05:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "tensorObjAssoc_eq_localizedAssociator_hK_lhs"
+    },
+    "session": {
+      "id": "session_17",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "reassoc (W≫T)≫α → W≫(T≫α) bombs on every mechanism — localized-tensor μ-objects (μ at sheafification.obj(A♭⊗B♭); c_{A⊗B}≫μ.inv junction codomain (toMonoidalCategory…).obj-defeq-not-syntactic to A.tensorObj B); isolated-have route blocked because freshly stating the whiskerRight(c_{A⊗B}≫μ.inv) junction bombs at elaboration",
+      "key_lemmas_used": [
+        "Localization.Monoidal.tensorHom_id",
+        "Localization.Monoidal.tensor_comp"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "HARD-GATE step (a): slice/conv re-split",
+        "code_tried": "slice_lhs 2 2 => rw [← Category.assoc, ← Category.id_comp …, tensor_comp, tensorHom_id]",
+        "line_number": "2054",
+        "result": "failed",
+        "insight": "slice_lhs 2 2 => rw [← Category.assoc] returns (deterministic) timeout at isDefEq (200000 hb) immediately = the pc017 HARD-GATE condition. Pivoted to the sanctioned standalone-have alternative."
+      },
+      {
+        "attempt": 2,
+        "strategy": "step (a) via isolated have hsplit + congrArg-peel of whole outer context",
+        "code_tried": "have hsplit : ((c_{A⊗B} ≫ μ.inv ≫ (c_A⊗ₘc_B)) ⊗ₘ c_C) = ((c_{A⊗B} ≫ μ.inv) ▷ L'C♭) ≫ ((c_A⊗ₘc_B) ⊗ₘ c_C) := by rw [← Localization.Monoidal.tensorHom_id, ← Localization.Monoidal.tensor_comp]; congr 1; refine (congrArg (fun t => μ.inv ≫ t ≫ _) hsplit).trans ?_",
+        "line_number": "2054",
+        "result": "partial",
+        "insight": "step (a) DONE + COMMITTED cold-green (2441 jobs). rw [Category.assoc]/Category.id_comp BOMB even isolated; congr 1 + term-mode is bomb-free. rw [hsplit]/conv => rw [hsplit] MOTIVE-bomb; only congrArg-peel works. Goal advanced from merged-M stage to μ.inv ≫ ((W≫T)≫α) = K."
+      },
+      {
+        "attempt": 3,
+        "strategy": "reassoc (W≫T)≫α → W≫(T≫α) (step a→b bridge)",
+        "code_tried": "rw [Category.assoc] ; simp only [Category.assoc] ; conv_lhs => enter [2]; rw [Category.assoc] ; refine (congrArg (μ.inv ≫ ·) (Category.assoc _ _ _)).trans ?_ ; rw [Localization.Monoidal.associator_naturality] (on main goal)",
+        "line_number": "2054",
+        "result": "failed",
+        "insight": "ALL isDefEq/whnf-timeout on the localized-tensor μ-objects. Isolated-have for reassoc ALSO blocked: stating whiskerRight(c_{A⊗B}≫μ.inv) … ≫ α freshly isDefEq-bombs at elaboration. VERIFIED: step (b) (associator_naturality+associator_hom_app) fires bomb-free ONCE right-associated — tail unblocks the instant a bomb-free reassoc exists."
+      }
+    ],
+    "next_steps": "iter-018: analogist on the reassoc sub-step (statement-OBJECT-pinned localized reassoc lemma, (C := MonoidalPresheaf X) on every inner tensor) OR the queued durable dual-instance refactor. Do NOT warm-retry the bombing tactics."
+  }
+]

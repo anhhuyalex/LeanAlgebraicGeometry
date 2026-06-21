@@ -221,6 +221,23 @@
 
 ## Knowledge Base
 
+### RiemannRoch subproject — known blockers (iter-001 review, 2026-06-20)
+
+- **Degree-1 H¹ headline is NOT axiom-clean — it transitively carries `sorryAx` via `injective_flasque`** *(iter-001, first-hand `lean_verify` confirmed; do-not-trust the "out-of-cone" claim).* The prover (H1Vanishing task result) and an in-file comment (`H1Vanishing.lean:781-783`) claim `H1_skyscraperSheaf_finrank_eq_zero` does NOT depend on the open `IsFlasque.injective_flasque` (only the `n=0` base case). **Formally false:** the headline `:= HModule_flasque_eq_zero (…) 1`, whose induction's `succ` case calls `injective_flasque` (a typed sorry, blocked on Mathlib's missing `j_!` extension-by-zero). `lean_verify` on the headline → `{propext, sorryAx, Classical.choice, Quot.sound}`. A sorry-free `i=1`-only path is mathematically available but requires **factoring the `n=0` base case out of the induction** (structural refactor) — that, not closing `injective_flasque`, is the cheapest unblock for headline #1. `% NOTE:` added to both blueprint proof blocks (`thm:H1_vanishing_flasque`, `lem:H1_skyscraperSheaf_finrank_eq_zero_main`).
+- **`rationalMap_order_finite_support` is FALSE as typed under `[IsLocallyNoetherian X]`** *(iter-001, lean-vs-blueprint-checker + in-code counterexample L807-812; do-not-retry under current signature).* The `.Finite` conclusion fails on a non-quasi-compact integral locally-Noetherian scheme (affine line with infinitely many origins). The `sorry` at L831 fills a false proposition. Blueprint *statement* already carries the correct hyp (Noetherian) and even says the Lean signature should take `[IsNoetherian X]`; the **Lean signature drifted to `[IsLocallyNoetherian X]`-only**. Fix = strengthen `principal`'s signature to `[IsNoetherian X]`/`[CompactSpace X]` (derive `CompactSpace C.left` from `IsProper C.hom`) project-wide in one coordinated pass — it ripples to `principal`, `principal_apply/_hom`, `LinearEquivalence`, `principal_degree_zero`, `degree_positivePart_principal_eq_finrank`, and cross-file callers (`OCofP.lean`, `RationalCurveIso.lean`). Cross-file/protected-shape decision — NOT a prover-lane task.
+- **`eulerCharacteristic_shortExact_add` is FALSE without a coherence/finiteness hypothesis** *(iter-001, lean-vs-blueprint-checker, explicit counterexample; do-not-retry the 6 finiteness sorries in place).* Stated for an arbitrary `ShortComplex` of `ModuleCat kbar`-sheaves with only `S.ShortExact`; under Mathlib's `finrank = 0` convention χ-additivity fails for non-coherent sheaves. 6 of the lemma's 7 sorries are `FiniteDimensional (HModule … Xᵢ n)` — **unprovable as typed** (signal of the wrong signature, NOT routine debt); only the 7th (`Subsingleton (Ext L S.X₁ 2)`, Grothendieck degree-2 vanishing) is honest missing-Mathlib infra. Lemma not frozen; fix = add coherence/finiteness hyp, discharge at the concrete call site `eulerCharacteristic_of_shortExact_skyscraper`. Blueprint `lem:euler_char_shortExact_add` ALSO omits the coherence hyp that its own `def:eulerChar_curve` insists on — internal inconsistency, fix both sides.
+- **`sheafOf` `D≠0` general construction is done sorry-free except the smooth⟹DVR instance** *(iter-001, OcOfD; honest, lean-vs-blueprint-checker 0 must-fix).* The ~430-line subsheaf-of-`K_C` carrier/presheaf/sheaf-property construction is sorry-free; the ONLY gap is the localized `Scheme.IsRegularInCodimensionOne C.left := ⟨fun _ => sorry⟩` (every codim-1 stalk of a smooth dim-1 curve over `k̄` is a DVR). This is the project's deliberately-axiomatised hypothesis; closing it as a global instance from `[SmoothOfRelativeDimension 1 C.hom]` (a `mathlib-build` lane) makes the localized sorry vanish. Related: `sheafOf_singlePoint` needs OCofP's `private carrier*` de-privatised OR restatement as iso `≅` (strict `Sheaf` equality unreachable); `sheafOf_ses_single_add` needs coherent-sheaf tensor-exactness API absent from Mathlib.
+- **`Scheme.Hom.ofFunctionFieldEmbedding` (function-field-determines-curve, Hartshorne I.6.12) has no Mathlib constructor** *(iter-001, WeilDivisor).* Blocks `degree_positivePart_principal_eq_finrank` and the residual of `principal_degree_zero` (both bottom out at Hartshorne II.6.9 deg-multiplicativity / ramification-inertia on the finite morphism `φ : C → ℙ¹`). `mathlib-build`-scale substrate (~several hundred LOC), outside a single prover lane.
+- **DVR-stalk Route-C algebra core CLOSED; the two residual blockers are scheme-theory, named** *(iter-007, SmoothStalkDVR.lean — NEW file, 3 axiom-clean decls `{propext,Classical.choice,Quot.sound}`).* `Algebra.{free_and_finrank_kaehlerDifferential_localization_eq_one, finrank_cotangentSpace_localization_eq_one_of_isStandardSmooth_dim_one, isDiscreteValuationRing_localization_of_isStandardSmooth_dim_one}` abstract over `k S T` with `S` rel-dim-1 standard-smooth and `T = S` localised at `M`; they consume SmoothRegular's Route-C closes. **Use `KaehlerDifferential.isLocalizedModule_map (R S T) (M)` — NOT `isLocalizedModule`** (the latter localises the *base*; PROGRESS named the wrong one). Localisation transports freeness via `Module.free_of_isLocalizedModule` + rank via `Module.finrank_of_isLocalizedModule_of_free`; `FormallySmooth k T`/`EssFiniteType k T` assemble by composition (`FormallySmooth.of_isLocalization M` + `.comp`; `EssFiniteType.of_isLocalization`/`.comp`). **Two scheme-pin blockers remain** (each multi-piece, raw material PRESENT): **(B1)** chart-extraction — from `SmoothOfRelativeDimension 1 C.hom` + `x`, produce affine `V∋x`, the *non-global* `k̄`-algebra instance on stalk `T = 𝒪_{C,x}` (k̄ not recoverable from the stalk type → thread via `letI`/binders), `IsStandardSmoothOfRelativeDimension 1 k̄ Γ(V)` via `IsSmoothOfRelativeDimension.mk` + `IsAffineOpen.isLocalization_stalk` + `Scheme.ΓSpecIso`; **(B2)** residue-field rationality `κ(x)=k̄` (discharges the two `Subsingleton` residue hyps) via Nullstellensatz — **no single-call Mathlib lemma**, assemble finite-ext-of-alg-closed-is-trivial.
+
+- **`chart_ringKrullDim_le_one`'s `s ≤ 1` step is a genuine Mathlib gap — do NOT re-assign as a plain `prove`** *(iter-012, CurveKrullDim.lean L235; lean-auditor + lvb both confirm genuine, not laundering).* The C lemma (Krull dim of a rel-dim-1 standard-smooth domain over `k̄` is ≤1, Stacks 00P0) lands axiom-clean EXCEPT the isolated `have hs : (s : WithBot ℕ∞) ≤ 1`. The Noether-normalization scaffold proves `dim S ≤ s` (`exists_finite_inj_algHom_of_fg` + `algebraize` + G1 + `MvPolynomial.ringKrullDim_of_isNoetherianRing` + `ringKrullDim_eq_zero_of_field`). The residual is the chain `s = dim S = trdeg(Frac S/k̄) = relDim = rank Ω[S/k̄] = 1`: the links `dim = trdeg` (Tag 00P0) and `trdeg = rank Ω` are **Mathlib-ABSENT (rev v4.30.0-rc2)** — confirmed loogle/leansearch (no `ringKrullDim↔trdeg`, no `trdeg = rank Ω`, no `IsStandardSmoothOfRelativeDimension → ringKrullDim`). The one available fact `Algebra.IsStandardSmoothOfRelativeDimension.rank_kaehlerDifferential 1` (`rank Ω = 1`) is in-block but the bridge to `s` is the gap. Informal agent unavailable (no API key). Corrective TYPE = mathlib-build / effort-breaker (decompose into the two named bridge lemmas), NOT `prove`. Write-up: `informal/chart_ringKrullDim_le_one_s_le_one.md`. Closing this makes `krullDim_curve_le_one` (T, own body already sorry-free) axiom-clean and unblocks OcOfD L635 `hdim` wiring. Watch: progress-critic flagged C "amber" → STUCK if unclosed by iter-013.
+- **OcOfD L635 cotangent-finrank sorry is WIRING-READY** *(iter-012, lean-auditor MJ-2).* `have hfin : … CotangentSpace … = 1 := sorry` (inside `sheafOf`) feeds `isDiscreteValuationRing_stalk_of_finrank_cotangentSpace_eq_one`; its substrate `finrank_cotangentSpace_stalk_eq_one_of_smooth` (SmoothStalkDVR, iter-011) is axiom-clean. The sorry already exists in-file (plan-validate will not drop it). Verify whether L635 needs `krullDim_curve_le_one`'s `hdim` (blocked on C) or only the cotangent pin — if cotangent-only, it can land now. First iter-013 target.
+
+### RiemannRoch — proof patterns & dead ends (iter-007)
+
+- **OcOfD skyscraper-cokernel iso `cokernel_carrierSheafHom_iso_skyscraper`: away-from-`P` half PROVED at section level (4 axiom-clean bricks); 3 named gaps remain** *(iter-007, OcOfD.lean — sorry 4→4, the assigned `≅` kept as honest typed sorry, NOT a costume skeleton).* New sorry-free private lemmas: `sheafOf.{carrierSet, carrierSubmodule, carrierSubmoduleSheaf}_add_single_eq_of_not_mem` (P.point∉U ⟹ the two carrier objects coincide, via `Scheme.PrimeDivisor.ext` point-injectivity + `Finsupp.single_apply`/`add_apply`) and `carrierPresheaf_le_hom_app_isIso_of_not_mem` (the section-level away-from-`P` iso). **Remaining gaps:** **(G1)** promote brick-4 to a *stalk* iso for `x≠P.point` — needs the geometric fact "`P.point` is a closed point of the curve" (**ABSENT** — no `isClosed`/closed-point lemma for `PrimeDivisor`, confirmed by search) + an iso-from-basis colimit-cofinality helper (Mathlib has injective-only `TopCat.Presheaf.stalkFunctor_map_injective_of_isBasis`, NO iso/surjective version); **(G2 = deep blocker)** the at-`P` carrier-stalk DVR computation `stalk_P(carrierSheaf D) ≅ π_P^{-n}𝒪_{C,P}` then `π^{-(n+1)}𝒪/π^{-n}𝒪 ≅ k̄` — no carrier-stalk lemma exists, ~200–400 LOC separate development; **(G3)** assembly via `stalkSkyscraperSheafAdjunction` + `isIso_of_stalkFunctor_map_iso` (friction: `Sheaf (Opens.grothendieckTopology) (ModuleCat k̄)` vs `TopCat.Sheaf`-phrased API — defeq, but `.val`/`.hom` accessors must be matched).
+- **DEAD END: `ConcreteCategory.isIso_iff_bijective` for an inclusion-of-equal-submodules iso in `ModuleCat`** *(iter-007).* Proving `Function.Bijective` of the app FAILS: the underlying map carries a `ConcreteCategory.hom` wrapper, so `congrArg Subtype.val`/`Subtype.ext_iff.mp` mis-infer which `Subtype.val` (source vs target) and reject the hypothesis. **Robust route:** explicit two-sided inverse `refine ⟨ModuleCat.ofHom (Submodule.inclusion (le_of_eq heq.symm)), ?_, ?_⟩`, both composites `rfl` after `ModuleCat.hom_ext; LinearMap.ext; rintro ⟨x,hx⟩`.
+
 ### Toolchain / process lessons
 
 - **Re-test a stale Lean-tactical "bomb"/timeout on the current Mathlib before escalating** *(NEW iter-224)*. The `internalHomEval` naturality sorry was diagnosed iter-222 as a `whnf` heartbeat bomb (>200k–3.2M heartbeats), re-characterized iter-223 as goal-wide/lemma-non-localized, and triggered a full `mathlib-analogist` ts224dual ALIGN escalation (ROUTE A `with_reducible` / ROUTE B `unit`-reshape recipes). At iter-224 the bomb **did not exist** — a Mathlib version bump silently removed it; the "bombing" tactic `rw [ModuleCat.hom_comp]` now returns *instantly* ("pattern not found", not a timeout), and the six-step reduction prior provers had already written just compiles. Cost: ~2 iters (222 stub 80→81, 223 mis-characterization 81→81) on a phantom. **Rule:** before escalating a multi-iter-old elaboration-cost wall, re-run the plain tactic once on the current toolchain. A version bump can retract such a wall with no other signal.
@@ -244,6 +261,9 @@
 - **`sorry`-derived typeclass instances silently propagate `sorryAx` into every downstream typeclass synthesis automatically** *(NEW iter-193 Archon canonical — lean-auditor iter193 finding, `IdentityComponent.lean:500-507`.)* A `private instance identityComponent_geometricallyConnected` whose body invokes a sorry-bodied helper `geometricallyConnected_of_connected_of_section` (L414-420) is qualitatively worse than a sorry-bodied **theorem** because consumers CANNOT opt out — instance synthesis fires automatically on every `[GeometricallyConnected (IdentityComponent G).hom]` query. **Auditor recommendation**: either (a) demote to a non-instance lemma until the helper closes; or (b) gate the instance behind a separate `[Hypothesis_GC]` typeclass that callers must explicitly supply. Reusable: NEVER mark `instance` on a typeclass derivation whose body transitively invokes `sorryAx` — only `lemma` / `def`.
 
 ### Proof Patterns (reusable across targets)
+- **Bound `ringKrullDim S ≤ 1` for an f.t.-over-algebraically-closed-`k̄` chart algebra via the EMBEDDING-DIMENSION inequality, NOT trdeg** *(NEW iter-013 Archon canonical — `RiemannRoch/CurveKrullDim.lean`, `chart_ringKrullDim_le_one` CLOSED axiom-clean `{propext, Classical.choice, Quot.sound}`, file 1→0; `krullDim_curve_le_one` now axiom-clean end-to-end; lean-auditor ts013 + lvb ts013 both 0 must-fix.)* The trdeg route (`s = dim = trdeg = rankΩ`) is a DEAD END — `dim=trdeg` (Tag 00P0) and `trdeg=rankΩ` are Mathlib-ABSENT (v4.30.0-rc2, confirmed iter-012). **Working route:** `Ideal.sup_primeHeight_of_maximal_eq_ringKrullDim` reduces `ringKrullDim S ≤ 1` to `primeHeight 𝔪 ≤ 1` per MAXIMAL `𝔪` (coercion `WithBot ℕ∞ ↔ ℕ∞` via `WithBot.coe_one` + `WithBot.coe_le_coe` + `iSup_le`); localize `T := Localization.AtPrime 𝔪`, `IsLocalization.AtPrime.ringKrullDim_eq_height` + `Ideal.height_eq_primeHeight` give `primeHeight 𝔪 = ringKrullDim T`; Krull height theorem `ringKrullDim_le_spanFinrank_maximalIdeal T` + `IsLocalRing.spanFinrank_maximalIdeal_eq_finrank_cotangentSpace T` give `ringKrullDim T ≤ finrank κ(T) (CotangentSpace T)`; close `=1` by REUSING the conormal bridge `Algebra.finrank_cotangentSpace_localization_eq_one_of_isStandardSmooth_dim_one kbar S T 𝔪.primeCompl` (the same bridge the cotangent stalk-pin uses). **GOTCHAS:** (1) **NEVER `letI : Algebra kbar T := (...).toAlgebra` on a `Localization`** — it auto-derives `Algebra kbar T` + `IsScalarTower kbar S T` from `[Algebra kbar S]`; a manual instance collides with the OreLocalization SMul (kernel-rejected diamond). (2) The ONLY non-inferred instance is `IsScalarTower kbar S (IsLocalRing.ResidueField T)` — build via `IsScalarTower.of_algebraMap_eq` + 3 `IsScalarTower.algebraMap_apply` rewrites. (3) Noetherianness needed by both height lemmas: `IsNoetherianRing S := Algebra.FiniteType.isNoetherianRing kbar S`, `IsNoetherianRing T := IsLocalization.isNoetherianRing 𝔪.primeCompl T inferInstance`. (4) Residue rationality (`κ(T)=k̄`) copied verbatim from the cotangent stalk-pin: `algebraMap_residueField_surjective_of_isLocalization_atPrime` → `FiniteType.of_surjective` → `IsAlgClosed.algebraMap_bijective_of_finiteType` → `subsingleton_{kaehlerDifferential,h1Cotangent}_of_algebraMap_bijective` (both root-namespace). (5) Signature needs `[IsAlgClosed kbar]` and `{kbar S : Type u}` (single universe — the conormal bridge's `k S T` share `Type u_1`). **Lesson:** when a Mathlib infra gap blocks a route, a cheaper reroute reusing already-built infra (here the conormal bridge) can beat filling the gap.
+- **`ringKrullDim S ≤ ringKrullDim R` via `Order.krullDim_le_of_strictMono (PrimeSpectrum.comap f)`; and general-ring integral incomparability via the quotient + `Ideal.under_ne_bot` (NOT `IsIntegralClosure.comap_ne_bot`)** *(NEW iter-012 Archon canonical — `RiemannRoch/CurveKrullDim.lean`, G1 `ringKrullDim_le_of_moduleFinite_injective` + helper `comap_lt_comap_of_isIntegral` CLOSED axiom-clean `{propext, Classical.choice, Quot.sound}`; lvb ts012 + lean-auditor ts012 confirm soundness.)* **(a) The dim-≤ keystone (Cohen–Seidenberg ≤, Stacks 00OJ):** `ringKrullDim X = Order.krullDim (PrimeSpectrum X)` definitionally, so `[Module.Finite R S]` (⇒ `Algebra.IsIntegral.of_finite`) gives the bound by showing `PrimeSpectrum.comap (algebraMap R S)` is `StrictMono` → `Order.krullDim_le_of_strictMono`. **The `PrimeSpectrum` order IS ideal-inclusion definitionally**: a hypothesis `h : q₁ < q₂` in `PrimeSpectrum S` is directly usable as `have hlt : q₁.asIdeal < q₂.asIdeal := h`; finish with `change … .asIdeal < … .asIdeal; simpa only [PrimeSpectrum.comap_asIdeal] using key`. **Injectivity (`hinj`) is NOT needed for the `≤` direction** — only incomparability (it is the going-up half giving equality). DEAD constants (loogle lists, ABSENT in v4.30.0-rc2): `PrimeSpectrum.comap_mono`, `PrimeSpectrum.lt_iff_lt`, `Ideal.IsIntegral.comap_lt_comap`. **(b) General-ring incomparability** (`I<J` primes ⇒ `comap I < comap J` for `[Algebra.IsIntegral R A]`): Mathlib ships only the `integralClosure R A` form `Ideal.IntegralClosure.comap_lt_comap`. Build the general form: `comap` monotone ⇒ `≤`; for strictness assume equal contractions, pass to `A⧸I` (domain, `Ideal.Quotient.isDomain`) integral over `R⧸p` (nontrivial, `Ideal.Quotient.nontrivial_iff.mpr …ne_top`) via `I.LiesOver p` from `⟨hp⟩` + the auto instance `Algebra.IsIntegral.quotient`; the image `J⧸I` is a nonzero ideal contracting to `⊥`, contradicting **`Ideal.under_ne_bot`** (rw `Ideal.under_def`). **`Ideal.IsIntegralClosure.comap_ne_bot` is a DEAD END** — it needs an `IsIntegralClosure A R A` instance absent for `Algebra.IsIntegral`. Key glue: `Ideal.Quotient.algebraMap_mk_of_liesOver`, `Ideal.comap_map_of_surjective _ Ideal.Quotient.mk_surjective`, `RingHom.ker_eq_comap_bot`, `Ideal.mk_ker`, `sup_eq_left.mpr hIJ.le`. **(c) Chart caller gotchas:** `IsDomain Γ(C.left,V)` via `AlgebraicGeometry.IsIntegral.component_integral V` needs `Nonempty V` in the exact subtype form — use `Set.Nonempty.to_subtype ⟨z, hxV⟩` (anonymous `⟨⟨z,hxV⟩⟩` / `↥(V:Set _)` FAIL); a chart lemma applied under `algebraize` needs instance-args passed explicitly (`(kbar := …)(S := …)`) or `IsStandardSmoothOfRelativeDimension` search stalls on a metavar.
+- **Dissolve a residue-field algebra DIAMOND by proving bijectivity of the bridge's OWN `algebraize` residue map — do NOT reconcile it against the scheme `residueFieldAlgebra`** *(NEW iter-011 Archon canonical — Lane S1b in `RiemannRoch/SmoothStalkDVR.lean`, `finrank_cotangentSpace_stalk_eq_one_of_smooth` CLOSED axiom-clean `{propext, Classical.choice, Quot.sound}`; project sorry 1→0 in-file; both lean-auditor ts011 and lvb ts011 0 must-fix. The S1b critical path for OcOfD L632 is now FULLY CLOSED.)* When an abstract bridge (here `Algebra.finrank_cotangentSpace_localization_eq_one_of_isStandardSmooth_dim_one`) leaves a `Subsingleton (H1Cotangent k̄ κ(x))` / `Subsingleton (kaehlerDifferential k̄ κ(x))` obligation over a residue field whose `k̄`-algebra structure was FEARED to clash with the scheme-theoretic `residueFieldAlgebra`, **the diamond is moot**: prove `Bijective (algebraMap k̄ κ(x))` in the bridge's NATIVE (algebraize-synthesized) instance and feed `subsingleton_{kaehlerDifferential,h1Cotangent}_of_algebraMap_bijective hbij` — the `Subsingleton`s land in exactly the instance the bridge resolves, zero `algebra_ext`/defeq reconciliation. **Recipe for the bijectivity:** (a) new helper `algebraMap_residueField_surjective_of_isLocalization_atPrime` — `S ↠ IsLocalRing.ResidueField T` surjective when `T = IsLocalization.AtPrime` at a MAXIMAL `p` (Bézout: `IsLocalRing.residue_surjective` + `IsLocalization.mk'_surjective`/`mk'_spec` + `IsLocalization.AtPrime.to_map_mem_maximal_iff` + `IsLocalRing.residue_eq_zero_iff` + `Ideal.IsMaximal.eq_of_le` for `span{s} ⊔ p = ⊤` + `Submodule.mem_sup` + `Ideal.mem_span_singleton'`); (b) `p` maximal from closed point: `isClosed_singleton_of_coheight_eq_one` (ResidueFieldKbar) + `IsAffineOpen.primeIdealOf_isMaximal_of_isClosed`; (c) `Algebra.FiniteType k̄ κ(x)` via `Algebra.FiniteType.of_surjective`; (d) `IsAlgClosed.algebraMap_bijective_of_finiteType k̄ κ(x)` ⇒ `hbij`. **`algebraize` GOTCHA (load-bearing):** NEVER `set S := …`/`set T := …` BEFORE `algebraize [ψ, (algebraMap S T).comp ψ]` — it renames the source ring-hom `ψ→ψ✝` and the `@[algebraize]` attribute fails to synthesize the `Algebra.IsStandardSmoothOfRelativeDimension 1 k̄ S` instance; work inline with `↑Γ(C.left,V)` / `↑(C.left.presheaf.stalk x)`. `Nontrivial S` via `(algebraMap S T).domain_nontrivial` (T local ⇒ nontrivial).
 - **`Category.assoc` SILENTLY FAILS to `rw`-match on `PresheafOfModules`-over-`Sheaf.val` composites — the reliable idiom is `(Category.assoc _ _ _).symm.trans (h ▸ Category.id_comp _)`; and the D2′ abstract mate-calculus telescope is now CLOSED, leaving ONE concrete presheaf residual** *(NEW iter-249 Archon canonical — Lane TS in `Picard/TensorObjSubstrate.lean`, `pullbackEtaUnitSquare` (L1648); file builds GREEN, 2 sorries (L699 guardrailed `exists_tensorObj_inverse`, L1741 the `(∗∗)` residual); the closed telescope steps INDEPENDENTLY verified by both lean-auditor ts249 (0 must-fix; every named step is live tactic code, the `:= rfl` linchpin confirmed) and lean-vs-blueprint-checker ts249 (steps 1–6 axiom-clean, 0 must-fix). Memory `[[ts-d2-telescope-closed-iter249]]`.)* **The friction (cost the whole session):** on `PresheafOfModules`-over-`Sheaf.val` composites, `rw [Category.assoc]`, `rw [← Category.assoc]`, `reassoc_of% h`, and direct `rw [h]` ALL silently fail to match `(f ≫ g) ≫ h` (instance/defeq friction). **Working idioms:** (a) reassociate-then-cancel via `(Category.assoc _ _ _).symm.trans (h ▸ Category.id_comp _)`; (b) split composite-functor maps with `simp only [Functor.comp_map]` BEFORE `Functor.map_comp`, and state helper lemmas in the SAME split form as the post-`simp` goal; (c) when `rw [h]` fails on a `homEquiv`-object defeq, use `refine Eq.trans ?_ h.symm` instead. **The D2′ telescope recipe that landed:** keep the goal in `homEquiv` form (do NOT unfold `homEquiv_unit` first — that route dead-ends at `Functor.map_comp` not matching); transpose via `homEquiv.injective` + `homEquiv_pullbackObjUnitToUnit`; decompose `pullbackValIso.inv`; peel via `homEquiv_naturality_left`/`_right`; plug the iter-248-closed `compHomEquivFactor` + `leftAdjointUniqUnitEta` + `rfl`-linchpin `sheafificationCompPullback_eq_leftAdjointUniq`; fold via `homEquiv_naturality_right_symm`; collapse via X-side `right_triangle_components` + `presheafUnit_comp_map_eta`. **Remaining `(∗∗)` (the ONLY open D2′ math item):** a sectionwise lemma `epsilonPresheafToSheafUnit` (NOT yet created) reconciling `ε(pushforward φ') = (unitToPushforwardObjUnit φ).val` (both act as `φ.hom.app X`), plus a Y-side sheafification triangle (use idiom (a)) and a pushforward–forget defeq. NOTE: the abstract telescope is DONE — do NOT re-decompose it or add more abstract helpers (that is the forbidden churn pattern).
 - **The open-immersion↔slice sheaf-site equivalence is `Equivalence.sheafCongr` on `Opens.overEquivalence U` — the SHARED root both ⊗-inverse bridges (A-engine `homOfLocalCompat`, C-bridge `dual_isLocallyTrivial`) reduce to; `Opens X` thinness kills ALL `Over.map` coherence** *(NEW iter-229 Archon canonical — Lane TS in `Picard/TensorObjSubstrate.lean`, completing the documented Mathlib TODO `Topology/Sheaves/Over.lean:19-22`; `overSliceSheafEquiv` (L2321, `noncomputable def`, blueprint `lem:open_immersion_slice_sheaf_equiv`), `overEquivInverseIsDenseSubsite` (instance, L2295), `overEquiv_image_cover_iff` (`private`, L2266) — all axiom-clean `{propext, Classical.choice, Quot.sound}`, build GREEN; sync_leanok +4/−0 sha `814670bd` on `Picard_TensorObjSubstrate.tex`; project sorry stays 80 (no consumer built yet — the planned outcome, success bar was the bridge, MET).)* **Recipe:** to upgrade a bare 1-categorical equivalence `e : Over U ≌ Opens ↥U` to a sheaf-site equivalence `Sheaf (J.over U) A ≌ Sheaf K A`, use `CategoryTheory.Equivalence.sheafCongr` — **STRICTLY cheaper than `Functor.IsDenseSubsite.sheafEquiv`** (route (b) additionally demands an `IsEquivalence (sheafPushforwardContinuous …)` instance for no benefit; `sheafCongr` needs only `e.inverse.IsDenseSubsite K J`). For an equivalence functor the three `IsDenseSubsite` auto-fields (`isCoverDense'`/`isLocallyFull'`/`isLocallyFaithful'`) infer for free; **only `functorPushforward_mem_iff` has content** — discharge it by `GrothendieckTopology.mem_over_iff` (drop the slice topology to `(gt X)` membership) + `Sieve.functorPushforward_comp` (+ `rfl` unfolding `Sieve.overEquiv`, identifying pushforward-along-`e.inverse` with pushforward along the open-embedding image functor `↥U ↪ X`) + the pointwise cover-correspondence lemma (both sides are the neighbourhood-cover condition DEFINING `Opens.grothendieckTopology`, matched across the injection `Subtype.val`: forward `y∈W ⇒ ↑y∈image` pull a cover back; backward push the subspace cover forward with `h = 𝟙`). NO `Over.map` pseudofunctor coherence appears (the iter-228 "~150–300 LOC slice-site build" fear was pessimistic — the whole thing is ~110 LOC incl. docstrings). **Namespace gotchas (reusable):** (1) inside `namespace AlgebraicGeometry.Scheme.Modules` the unqualified `Opens` resolves to the SCHEME `Scheme.Opens` (expects a `Scheme`), shadowing point-set `TopologicalSpace.Opens` — fully qualify the TYPE as `TopologicalSpace.Opens X` and the equivalence as `TopologicalSpace.Opens.overEquivalence`, BUT the topology is `Opens.grothendieckTopology` (root `Opens` namespace), NOT `TopologicalSpace.Opens.grothendieckTopology` (an UNKNOWN constant); (2) do NOT write a dotted declaration name (`def AlgebraicGeometry.Scheme.Modules.foo …`) — it re-opens the namespace for the body and the scheme-`Opens` shadow returns; use a `namespace …` block. **Next:** compose the bridge with the already-built per-bridge module-transport shadows — `homMk` (A, `A := Type`) / `restrictScalarsRingIsoDualEquiv` (C, `A := ModuleCat`) — to build a consumer and move 80→79 (watch strategy-critic ts229's `restrictScalars`/CommRingCat composition-friction "4th-growth" signal). Recipe also in memory `[[ts229-shared-bridge-landed]]`. (lean-vs-blueprint-checker ts229: the decl MATCHES `lem:open_immersion_slice_sheaf_equiv`; 2 MINOR blueprint-side fixes owed — the proof sketch names `IsDenseSubsite.sheafEquiv` not the used `Equivalence.sheafCongr`, and overstates a `restrictFunctorIsoPullback`-compatibility not bundled in the type.)*
 - **The presheaf dual `dual = internalHom(-, 𝟙_)` is cleanly CONTRAVARIANTLY FUNCTORIAL in isos, and this is SEPARATE from (and far cheaper than) the open-immersion pushforward commutation** *(NEW iter-228 — Lane TS in `Picard/TensorObjSubstrate.lean`). `dualPrecompEquiv` (L1558, section-level `R(U)`-linear precomposition `φ ↦ (pushforward₀(Over.forget U)).map e.hom ≫ φ`), `PresheafOfModules.dualIsoOfIso` (L1603), `Scheme.Modules.dualIsoOfIso` (L1698, dual analogue of `tensorObjIsoOfIso`) — all axiom-clean `{propext, Classical.choice, Quot.sound}`. KEY: `PresheafOfModules.isoMk`'s naturality is discharged by the DEFAULT `cat_disch` (the slice-restriction coherence `Over.map g ⋙ Over.forget U = Over.forget V` on `.left` is essentially definitional), so NO manual naturality proof is needed for iso-functoriality. GOTCHAS: `Preadditive.comp_add` has 3 EXPLICIT object args — call `Preadditive.comp_add _ _ _ _ φ ψ` (4 underscores); `Functor.map_id` mis-resolves to the monad `<$>` form, qualify `CategoryTheory.Functor.map_id`; structure-field lambdas need `change` (not `rw`) to beta-reduce before `← Category.assoc`. CONTRAST: the iso-functoriality is trivial; the HARD obstruction is the pushforward commutation `(pushforward β).obj (dual A) ≅ dual ((pushforward β).obj A)` — see Known Blocker.*
@@ -2931,6 +2951,7 @@
 - **`LocalizedMonoidal + inferInstanceAs`** *(iter-079)*.
 
 ### Known Blockers (do not retry)
+- **The trdeg route for curve dimension (`dim S = trdeg(Frac S/k̄) = relDim = rank Ω = 1`) is a PERMANENT DEAD END — `dim=trdeg` (Tag 00P0) and `trdeg=rankΩ` are Mathlib-ABSENT (v4.30.0-rc2); curve `ringKrullDim ≤ 1` is now CLOSED via the embedding-dimension route instead (see Proof Patterns top entry)** *(NEW iter-013 — `RiemannRoch/CurveKrullDim.lean`, `chart_ringKrullDim_le_one` CLOSED axiom-clean. The trdeg chain stalled iter-012; do NOT reopen it. `Algebra.IsStandardSmoothOfRelativeDimension.rank_kaehlerDifferential` gives `rank Ω = 1` but the links `s = rank Ω` and `dim = trdeg` are both absent — confirmed loogle/leansearch multiple angles. The embedding-dimension reroute reuses the already-built conormal bridge and needs NO new dimension-theory infra.)*
 - **FlatBaseChange `moduleSpecΓFunctor_pushforward_tilde_iso` via tactic `map_smul'` is a DEAD instance wall — do NOT retry the tactic route; use the element-free `restrictScalarsComp'App` route instead** *(NEW iter-234 — engine lane `Cohomology/FlatBaseChange.lean`).* The Γ-fragment iso skeleton typechecks (needs `set_option backward.isDefEq.respectTransparency false`), reducing to one `map_smul'` goal. That goal is blocked: the intermediate `Γ(Spec R,⊤)`/`Γ(Spec R',⊤)` actions are buried inside `Module.compHom`/`ModuleCat.restrictScalars` and are **not synthesizable `SMul`/`Module` instances on the final carrier**, so none of `show φ.hom r • s = r • s` / `change … globalSectionsIso … • s` / `rfl` / `IsScalarTower.algebraMap_smul` / `erw [restrictScalars.smul_def]` can name the common `Γ(Spec R',⊤)`-action to `congr` down to the scalar equality (`ΓSpecIso_inv_naturality`). **RECOMMENDED LIVE ROUTE:** element-free — `ModuleCat.restrictScalarsComp'App` + `restrictScalarsId'App` + `eqToIso`(`ΓSpecIso_inv_naturality` ring equality), all identity-carrier (no element smul). Step (a) `rfl`-confirmed; step (b) blocked only on plumbing `ψ : Γ(Spec R,⊤)→Γ(Spec R',⊤)` out of `PresheafOfModules.pushforward = pushforward₀ ⋙ restrictScalars` internals (`(Spec.map φ).toRingCatSheafHom` is an `InducedCategory.Hom`; `.val` does not project). **Scope:** closing this Γ-fragment does NOT close `affineBaseChange_pushforward_iso` (still needs QC-of-pushforward [Mathlib-absent] + pullback dict + fibre-product id + `cancelBaseChange` match — multi-iter).
 - **Lane TS C-bridge `dual_isLocallyTrivial` is a GENUINE BLOCK at H2′ — the blueprint's "verbatim mirror of `tensorObj_restrict_iso`" claim is EMPIRICALLY FALSE past Step 3/H1; do NOT re-dispatch the verbatim-mirror route** *(NEW iter-228 — Lane TS in `Picard/TensorObjSubstrate.lean`, confirmed via `lean_goal`). Steps 1–3 (`restrictFunctorIsoPullback` → `sheafificationCompPullback` → strip-sheafification `.mapIso`) + H1 (`pushforwardPushforwardAdj.leftAdjointUniq`) typecheck cleanly for the dual; the residual is `(pushforward β).obj (dual A) ≅ dual ((pushforward β).obj A)` (open-immersion pushforward commuting with the presheaf dual). This does NOT close via H2′/`restrictScalarsRingIsoDualEquiv`: the tensor's H2 worked because `tensorObj` is SECTIONWISE `M(U) ⊗_{R(U)} N(U)` (a literal `restrictScalars`-image, so the strong-monoidal tensorator `restrictScalarsMonoidalOfBijective` applies), whereas `dual = internalHom(-,𝟙_)` is the SLICE internal hom — its value `(restr U A ⟶ restr U 𝟙_)` is a morphism-module over `Over U`, NOT a sectionwise `restrictScalars`-image, so it has NO sectionwise strong-monoidal-closed analogue. `restrictScalarsRingIsoDualEquiv` (iter-227) is only the ModuleCat-level SHADOW and cannot be lifted the way the tensor's `restrictScalarsRingIsoTensorEquiv` was. The genuine missing infra: the OPEN-IMMERSION SLICE-SITE EQUIVALENCE (`Over V` in `Opens Y` ≅ `Over (f''V)` in `Opens X`, transporting morphism-modules naturally + compatibility with `restr`/`pushforward₀`) — Mathlib-absent, ~150–300 LOC `Over.map`/pseudofunctor coherence. Still d.2-free, but NOT a verbatim mirror and NOT cheap. The iso-functoriality of `dual` IS easy (`dualIsoOfIso`, axiom-clean); the obstruction is the PUSHFORWARD commutation specifically. **The iter-228 hard-block condition fired → the USER RR-pause fork BINDS.**
 - **Lane TS descent re-route: the A-bridge `homOfLocalCompat` is a ~120–190 LOC gluing engine (NOT ~30–60), and BOTH the A-front and C-front are CONFIRMED d.2-free — do NOT re-estimate the engine small, do NOT pivot to building d.2, do NOT dispatch the whole engine as one objective** *(NEW iter-227 Archon canonical — Lane TS in `Picard/TensorObjSubstrate.lean`; prover PARTIAL report + lean-auditor ts227 (0 must-fix) + lean-vs-blueprint-checker ts227 (0 must-fix, 3 major) + first-hand `lean_verify`.)* iter-227 was the planner's pre-committed terminal-grace window (progress-critic ts227 = STUCK + OVER_BUDGET; 11 iters no project-sorry-elim since iter-217). Outcome: **3 axiom-clean decls landed** (`Scheme.Modules.homMk` = A-bridge step ii; `toPresheaf_map_homMk`; `restrictScalarsRingIsoDualEquiv` = C-build H2′ core — see Proof Patterns), and the **C-probe returned DECISIVELY d.2-free** (the C-bridge `(dual M).restrict f ≅ dual (M.restrict f)` mirrors the closed `tensorObj_restrict_iso` H1∘H2 verbatim — `restrictFunctorIsoPullback` → `sheafificationCompPullback` → strip sheafification → presheaf residual closed by H1 `pushforwardPushforwardAdj`+`leftAdjointUniq` reused verbatim + H2′ `restrictScalarsRingIsoDualEquiv`; no tensor stalk, no `M ◁ η` whiskering). **But the PRIMARY `homOfLocalCompat` did NOT land** — only step (ii). Step (i), the ab-presheaf morphism gluing, is a ~120–190 LOC build (grounded in a full `Sites/SheafHom.lean` + `Modules/Sheaf.lean` read + typechecked skeleton; the plan's ~30–60 LOC est is DISCREDITED). **The tripwire FIRES on the A-front, but the cause is build SIZE, not d.2 re-emergence** — the route is mathematically sound and d.2-free on both fronts. **Correct next action (if the build continues — the RR-pause fork was escalated to the USER this iter):** build sub-piece (1) `localSection` (with its `naturality` field — the ONLY step with real `Over.map`/`Over.forget` + eqToHom coherence risk) FIRST as its own axiom-clean lemma via `existsUnique_gluing` on `presheafHom (M.val.presheaf)(N.val.presheaf)` (a `TopCat.Sheaf (Type u)` via `Presheaf.IsSheaf.hom`, needs `N.isSheaf`); then (2) `IsCompatible` cocycle, (3) glue+convert to `F ⟶ G`, (4) linearity + feed to `homMk` (DONE) follow mechanically. Do NOT pin a sorry; do NOT use the raw `presheafHom_isSheafFor` sieve route unless (1) proves intractable (more bookkeeping, also d.2-free). **Blueprint owed (lvb ts227, 3 major — plan/writer domain):** add `\lean{}` blocks for `restrictScalarsRingIsoDualEquiv` (in `sec:tensorobj_dual_infra`) and `Scheme.Modules.homMk` (near `lem:sheafofmodules_hom_of_local_compat`); and EXPAND the `homOfLocalCompat` proof sketch (chapter L2823–2854) to name the Lean API path + flag the `localSection` naturality obligation + revise the size estimate. **`.lean` comment hygiene owed (lean-auditor ts227, 3 minor — next prover ride-along):** stale L2070 "at L1912" ref, stale L103–113 "absent … REAL bottom gap" header (gap filled since iter-217), iter-224-stale Status block L36–95.
@@ -3414,7 +3435,10 @@ is trustworthy under the current harness.
 - **Diamond-bridge tricks for the eval map (iter-221, reusable):** (1) over-ring CAST via `evalLin`'s type ascription (`φ.app term` is linear over `((Over.forget X.unop).op ⋙ R₀).obj _`, defeq-but-not-syntactic to `R₀.obj X`); (2) keep the eval value at its NATURAL over-ring type in `change` proofs (never cast), then `rw [termRingMap_terminal]` + `rfl` discharges the smul defeq; (3) `show ModuleCat.of (R₀.obj X) _ ⟶ ModuleCat.of (R₀.obj X) (R₀.obj X) from ofHom ...` at the `ofHom` boundary. NEVER land eval in `(𝟙_).obj X` — it reduces to the bare `RingCat` carrier and loses the `CommRingCat` module. `termRingMap` needs its ring presheaf passed explicitly (`termRingMap (R := (Over.forget X.unop).op ⋙ R₀) ...`).
 
 ## Last Updated
-iter-228 (2026-05-31) — review phase. **Hard-block fired on the d.2-free descent re-route (bounded committed runway; progress-critic ts228 = STUCK + OVER_BUDGET).** One `mathlib-build` prover landed 3 axiom-clean helpers (re-verified first-hand, `{propext, Classical.choice, Quot.sound}`): `dualPrecompEquiv` (L1558), `PresheafOfModules.dualIsoOfIso` (L1603), `Scheme.Modules.dualIsoOfIso` (L1698) — the "dual respects isos" ingredient. **The SHARPENED C success bar (C-bridge FULL axiom-clean) was NOT met:** `dual_isLocallyTrivial` is a GENUINE BLOCK at H2′ — empirically (`lean_goal`) the verbatim mirror typechecks through Step 3/H1, then the residual `(pushforward β).obj (dual A) ≅ dual ((pushforward β).obj A)` does NOT close via `restrictScalarsRingIsoDualEquiv` (dual = SLICE internal hom, not sectionwise tensor → no strong-monoidal analogue). Closing it needs the Mathlib-absent open-immersion slice-site equivalence (~150–300 LOC). NO sorry pinned. **Project sorry 80 → 80** (12th consecutive iter with no down-move since iter-217). **The iter-228 pre-committed hard-block condition FIRED → the USER RR-pause fork BINDS** (lift ROUTE C PAUSE → divisor `Pic⁰`, discarding the substrate; else the loop scopes the slice-site equivalence as a fresh sub-build — see `TO_USER.md`). Markers: added `% NOTE:` to `lem:dual_isLocallyTrivial` flagging the falsified verbatim-mirror sketch. Build GREEN; blueprint-doctor CLEAN; sync_leanok sha `2f21b101` +2/−0 (`Picard_TensorObjSubstrate.tex`). Full narrative: `iter/iter-228/review.md`. Prior: iter-227 (2026-05-31) — review phase. **Terminal-grace window for the d.2-free descent re-route (progress-critic ts227 = STUCK + OVER_BUDGET).** One `mathlib-build` prover landed 3 axiom-clean decls (re-verified first-hand, no `sorryAx`): `Scheme.Modules.homMk` (A-bridge step ii) + `toPresheaf_map_homMk` (`{propext, Classical.choice, Quot.sound}`); `restrictScalarsRingIsoDualEquiv` (C-build H2′ core, `{propext, Quot.sound}`). **C-probe = DECISIVELY d.2-free** (the C-bridge mirrors the closed `tensorObj_restrict_iso` H1∘H2 verbatim; no tensor stalk, no `M ◁ η`). **PRIMARY `homOfLocalCompat` did NOT land** — only step (ii); the gluing engine (step i) is ~120–190 LOC (plan's ~30–60 est discredited), no sorry pinned. **Project sorry 80 → 80** (11th iter no down-move since iter-217). **Tripwire FIRES on the A-front (build size, NOT d.2 re-emergence)** — the RR-pause fork is escalated to the USER as a LIVE FYI (loop continues the bounded build by default). lean-auditor ts227 + lean-vs-blueprint-checker ts227 both 0 must-fix (3 major blueprint-pin/sketch gaps; 3 minor stale comments). Build GREEN; blueprint-doctor CLEAN; sync_leanok sha `73ffcdaf` +1/−0 (`Picard_TensorObjSubstrate.tex`). Full narrative: `iter/iter-227/review.md`. Prior: iter-226 — the funded ⊗-dual block took the blueprint's **d.2-free descent re-route** (planner declined both horns of the iter-225 forced fork — build d.2, or escalate RR-pause — after a ≤1-iter mathlib-analogist ts226descent confirmed d.2-freeness, verdict D). One `mathlib-build` prover landed the cheapest descent bridge: `AlgebraicGeometry.Scheme.Modules.isIso_of_isIso_restrict` (the "locally-iso ⇒ global iso" **B-connector**), **axiom-clean** (`{propext, Classical.choice, Quot.sound}`, verified first-hand; genuine ~35-line stalkwise proof). **Project sorry 80 → 80** (sorry-free infra; the 80→79 mover `exists_tensorObj_inverse` stays open). Two bridges remain: (A) SheafOfModules morphism descent (~30–60 LOC, bounded cocycle, NOT d.2); (C) `dual_isLocallyTrivial` via `(dual M).restrict f ≅ dual (M.restrict f)` — a **major mirror build** of the closed `tensorObj_restrict_iso`. New reusable proof pattern recorded in Knowledge Base. **Reversal signal (pre-named):** if A or C silently re-requires a stalk/colimit-⊗ statement, verdict D was wrong in practice and the RR-escalation becomes live. Note: project sorry counter has had no genuine downward move since iter-217. Build GREEN; blueprint-doctor CLEAN; sync_leanok sha `591de177` +1/−0 (`AbelianVarietyRigidity.tex`, unrelated to this iter). Full narrative: `iter/iter-226/review.md`.
+iter-013 (2026-06-21) — review phase. **S1b STRUCTURALLY COMPLETE.** CurveKrullDim.lean sorry 1→0 (FULLY CLOSED axiom-clean): `chart_ringKrullDim_le_one` SOLVED via the **embedding-dimension pivot** (trdeg route ABANDONED — `dim=trdeg`/`trdeg=rankΩ` Mathlib-ABSENT). Route: `Ideal.sup_primeHeight_of_maximal_eq_ringKrullDim` → per-maximal localize → `ringKrullDim_le_spanFinrank_maximalIdeal`+`spanFinrank_maximalIdeal_eq_finrank_cotangentSpace` → REUSE conormal bridge `finrank_cotangentSpace_localization_eq_one_of_isStandardSmooth_dim_one`. `krullDim_curve_le_one` now axiom-clean END-TO-END (the deliverable S1b owed OcOfD). Sig gained `[IsAlgClosed kbar]`+`Type u`. lean-auditor ts013: 0 must-fix (1 major = `_hinj` unused/misleading sig, off critical path; 3 minor stale comments). lvb ts013: 0 must-fix (minor = 2 orphaned `\mathlibok` anchors from abandoned trdeg route). blueprint-doctor CLEAN; sync_leanok iter=13 +2/−0. Next: OcOfD L632/L635 wiring (iter-014, ~1 line). Full narrative: `iter/iter-013/review.md`.
+iter-012 (2026-06-21) — review phase. CurveKrullDim.lean (S1b last leaf) sorry 3→1: G1 `ringKrullDim_le_of_moduleFinite_injective` + T `krullDim_curve_le_one` + helper `comap_lt_comap_of_isIntegral` CLOSED axiom-clean; C `chart_ringKrullDim_le_one` PARTIAL (sole residual `s≤1` = Mathlib gap `dim=trdeg=rankΩ`). New KB proof-pattern + 2 blockers (C gap, OcOfD-L635-wiring-ready) recorded. blueprint-doctor CLEAN; sync_leanok iter=12 +7/−0 (`RiemannRoch_CurveKrullDim.tex`). lean-auditor ts012: 1 must-fix (G1 `hinj` unused/misleading sig) + 2 major (G1 stale comment, OcOfD L635 wiring-ready). lvb ts012: 0 must-fix. Full narrative: `iter/iter-012/review.md`.
+
+Prior (parent-Jacobian carryover): iter-228 (2026-05-31) — review phase. **Hard-block fired on the d.2-free descent re-route (bounded committed runway; progress-critic ts228 = STUCK + OVER_BUDGET).** One `mathlib-build` prover landed 3 axiom-clean helpers (re-verified first-hand, `{propext, Classical.choice, Quot.sound}`): `dualPrecompEquiv` (L1558), `PresheafOfModules.dualIsoOfIso` (L1603), `Scheme.Modules.dualIsoOfIso` (L1698) — the "dual respects isos" ingredient. **The SHARPENED C success bar (C-bridge FULL axiom-clean) was NOT met:** `dual_isLocallyTrivial` is a GENUINE BLOCK at H2′ — empirically (`lean_goal`) the verbatim mirror typechecks through Step 3/H1, then the residual `(pushforward β).obj (dual A) ≅ dual ((pushforward β).obj A)` does NOT close via `restrictScalarsRingIsoDualEquiv` (dual = SLICE internal hom, not sectionwise tensor → no strong-monoidal analogue). Closing it needs the Mathlib-absent open-immersion slice-site equivalence (~150–300 LOC). NO sorry pinned. **Project sorry 80 → 80** (12th consecutive iter with no down-move since iter-217). **The iter-228 pre-committed hard-block condition FIRED → the USER RR-pause fork BINDS** (lift ROUTE C PAUSE → divisor `Pic⁰`, discarding the substrate; else the loop scopes the slice-site equivalence as a fresh sub-build — see `TO_USER.md`). Markers: added `% NOTE:` to `lem:dual_isLocallyTrivial` flagging the falsified verbatim-mirror sketch. Build GREEN; blueprint-doctor CLEAN; sync_leanok sha `2f21b101` +2/−0 (`Picard_TensorObjSubstrate.tex`). Full narrative: `iter/iter-228/review.md`. Prior: iter-227 (2026-05-31) — review phase. **Terminal-grace window for the d.2-free descent re-route (progress-critic ts227 = STUCK + OVER_BUDGET).** One `mathlib-build` prover landed 3 axiom-clean decls (re-verified first-hand, no `sorryAx`): `Scheme.Modules.homMk` (A-bridge step ii) + `toPresheaf_map_homMk` (`{propext, Classical.choice, Quot.sound}`); `restrictScalarsRingIsoDualEquiv` (C-build H2′ core, `{propext, Quot.sound}`). **C-probe = DECISIVELY d.2-free** (the C-bridge mirrors the closed `tensorObj_restrict_iso` H1∘H2 verbatim; no tensor stalk, no `M ◁ η`). **PRIMARY `homOfLocalCompat` did NOT land** — only step (ii); the gluing engine (step i) is ~120–190 LOC (plan's ~30–60 est discredited), no sorry pinned. **Project sorry 80 → 80** (11th iter no down-move since iter-217). **Tripwire FIRES on the A-front (build size, NOT d.2 re-emergence)** — the RR-pause fork is escalated to the USER as a LIVE FYI (loop continues the bounded build by default). lean-auditor ts227 + lean-vs-blueprint-checker ts227 both 0 must-fix (3 major blueprint-pin/sketch gaps; 3 minor stale comments). Build GREEN; blueprint-doctor CLEAN; sync_leanok sha `73ffcdaf` +1/−0 (`Picard_TensorObjSubstrate.tex`). Full narrative: `iter/iter-227/review.md`. Prior: iter-226 — the funded ⊗-dual block took the blueprint's **d.2-free descent re-route** (planner declined both horns of the iter-225 forced fork — build d.2, or escalate RR-pause — after a ≤1-iter mathlib-analogist ts226descent confirmed d.2-freeness, verdict D). One `mathlib-build` prover landed the cheapest descent bridge: `AlgebraicGeometry.Scheme.Modules.isIso_of_isIso_restrict` (the "locally-iso ⇒ global iso" **B-connector**), **axiom-clean** (`{propext, Classical.choice, Quot.sound}`, verified first-hand; genuine ~35-line stalkwise proof). **Project sorry 80 → 80** (sorry-free infra; the 80→79 mover `exists_tensorObj_inverse` stays open). Two bridges remain: (A) SheafOfModules morphism descent (~30–60 LOC, bounded cocycle, NOT d.2); (C) `dual_isLocallyTrivial` via `(dual M).restrict f ≅ dual (M.restrict f)` — a **major mirror build** of the closed `tensorObj_restrict_iso`. New reusable proof pattern recorded in Knowledge Base. **Reversal signal (pre-named):** if A or C silently re-requires a stalk/colimit-⊗ statement, verdict D was wrong in practice and the RR-escalation becomes live. Note: project sorry counter has had no genuine downward move since iter-217. Build GREEN; blueprint-doctor CLEAN; sync_leanok sha `591de177` +1/−0 (`AbelianVarietyRigidity.tex`, unrelated to this iter). Full narrative: `iter/iter-226/review.md`.
 
 iter-225 (2026-05-31) — review phase. Sub-step 4 of the funded ⊗-dual block RETIRED: `AlgebraicGeometry.Scheme.Modules.dual` built axiom-clean (`{propext, Classical.choice, Quot.sound}`, verified first-hand), the sheafification of the presheaf dual — the dual analogue of in-file `tensorObj`. **Project sorry 80 → 80** (no-sorry infra; the 80→79 mover is sub-step 5 `exists_tensorObj_inverse`). The flagged CommRingCat/RingCat base bridge was a NON-ISSUE (`X.presheaf` already CommRingCat-valued over `Opens X`). The descended evaluation `dual_eval` was BUILT-then-REMOVED (sorry-transitive through the L641 d.2 residual `isLocallyInjective_whiskerLeft_of_W`); `dual_isLocallyTrivial` cleanly handed off. **The lane now converges to ONE gap: d.2 stalk-⊗ commutation `(F⊗ᵖM)_x ≅ F_x⊗_{R_x}M_x` gates both the associator and the descended eval (hence sub-step 5).** Review subagents: lean-vs-blueprint-checker `tensorobj225` = 0 must-fix / 0 major / 2 minor (`dual` faithful); lean-auditor skipped (single verified-clean decl, same scope audited iters 221–224). Manual marker: corrected `lem:rational_map_to_av_extends` `\lean{}` pin → `AlgebraicGeometry.Scheme.RationalMap.extend_to_av`. Build GREEN; blueprint-doctor CLEAN; sync_leanok sha `2ca5a93c` +1/−0. Full narrative: `iter/iter-225/review.md`.
 
@@ -4770,7 +4794,508 @@ remains queued; if iter-109 stalls on L1802, iter-110 fires C1 promotion.)
 - **`\leanok` staleness**: `sync_leanok-state.json` records `iter: 271` (< 303) — markers may be
   stale until the next deterministic sync runs.
 
+## Knowledge Base — RiemannRoch subproject (iter-002 addition)
+
+NOTE: everything above this heading is parent-Jacobian carryover (iters ≤ 303). The
+RiemannRoch subproject's own iteration counter restarts at iter-001.
+
+### Proof patterns (reusable)
+- **`finrank`-level transport beats `FiniteDimensional`-instance transport when synthesis
+  times out.** Transporting `FiniteDimensional`/`Module.Finite` across a project `LinearEquiv`
+  (e.g. `HModule_linearEquiv_of_iso`) via `Module.Finite.equiv`/`.finiteDimensional` can FAIL at
+  typeclass *synthesis* — the equiv's own `HasSheafify`/`HasExt` binders don't key-match the
+  ambient instance, giving a deterministic 20000-heartbeat timeout — even though the types are
+  defeq. Fix: transport at the `finrank` level (`LinearEquiv.finrank_eq` then
+  `FiniteDimensional.of_finrank_eq_succ`); `exact`/`rw` match up to defeq where synthesis cannot.
+- **Base-case factoring removes inherited `sorryAx`.** A headline routed through a strong-induction
+  carrier inherits any `sorryAx` from the carrier's `succ` branch even when it only needs the base
+  case. Factor the base case into a standalone lemma → the headline becomes axiom-clean. Did exactly
+  this: `H1_skyscraperSheaf_finrank_eq_zero` now routes through `HModule_flasque_one_eq_zero` (the
+  `i=1` branch, `injective_flasque`-free, only uses Mathlib `Injective.injective_under`) instead of
+  `HModule_flasque_eq_zero` (whose `succ` case pulls in the `sorryAx`-carrying `injective_flasque`).
+- **Compactness ⇒ finite affine cover for finiteness of codim-1 support.** With `[CompactSpace X]`,
+  `isCompact_iff_finite_and_eq_biUnion_affineOpens` on `⊤` gives a finite affine cover; reduce a
+  global finiteness to a finite union of per-chart finiteness (`Set.Finite.biUnion`).
+- **Mathlib renames hit this iter**: `Set.eq_empty_iff_forall_not_mem` → `...notMem`.
+
+### Resolved blockers (iter-001 → iter-002)
+- **iter-001 CRITICAL #1 RESOLVED**: `H1_skyscraperSheaf_finrank_eq_zero` is axiom-clean
+  (`lean_verify`: `[propext, Classical.choice, Quot.sound]`). See base-case-factoring above.
+- **iter-001 CRITICALs #2/#3 (false-as-typed signatures) FIXED**:
+  `rationalMap_order_finite_support` now takes `[CompactSpace X]`; `eulerCharacteristic_shortExact_add`
+  now takes a 5-instance `[FiniteDimensional kbar (HModule kbar S.Xᵢ j)]` package (sixth group
+  `H¹(X₃)` derived in-body via `Module.Finite.of_surjective`, since skyscraper `H¹` is only public as
+  `finrank=0` and the underlying `Subsingleton` is private). Both confirmed faithful by lvb-checker.
+- **`instCompactSpaceLeftOfIsProper`** (`[CompactSpace S][IsProper C.hom] ⇒ CompactSpace C.left` via
+  `QuasiCompact.compactSpace_of_compactSpace`) fires cross-file; curve-side/OCofP/RationalCurveIso
+  consumers get compactness for free — no per-site binder needed.
+
+### Known blockers (do NOT retry inline — substrate/mathlib-build lanes)
+- **WeilDivisor affine ring core** `finite_order_support_affine`: needs affine `isoSpec`-naturality of
+  `order` + `O_{V,Z}=Localization.AtPrime` + `ordFrac`=p-adic valuation. Project order-naturality
+  covers only the open-immersion `stalkIso`, not the affine `isoSpec`. ~150–300 LOC. Already isolated
+  3×; further inline decomposition will churn.
+- **S1**: Mathlib `b80f227` lacks `IsRegularLocalRing.isDiscreteValuationRing` — build dim-1-regular⇒DVR
+  project-side (Stacks 00PD).
+- **S2** Serre coherent-cohomology finiteness (4 `eulerCharacteristic_sheafOf_succ` sorries): no Mathlib
+  support; needs subphase decision (general Serre vs subsheaf-of-K_C) + a blueprint chapter (not written).
+- **S3** `hvan : Subsingleton (Abelian.Ext L S.X₁ 2)` (Grothendieck H²-vanishing): no Mathlib support.
+- **S5** `injective_flasque`/`j_!` (extension-by-zero, absent in `b80f227`): headline no longer depends
+  on it; only the *general* flasque induction `thm:H1_vanishing_flasque` still carries its `sorryAx`.
+
+### Coverage debt (iter-002)
+- 4 new `lean_aux` helpers lack `\lean{}` blueprint entries (`archon dag-query unmatched` = 141):
+  `finite_order_support_affine`, `finite_order_support_on_affineOpen`, `instCompactSpaceLeftOfIsProper`,
+  `Scheme.HModule_linearEquiv_of_iso`. Planner to blueprint. (`dag-query gaps` = 0 — no ∞-holes.)
+- Stale `.lean` docstrings (NOT code defects; route to prove/refactor): `H1Vanishing.lean` headline
+  docstring L1409–1417 and `constant_of_irreducible` L271–273 contradict the now-true code.
+
+## Knowledge Base — RiemannRoch subproject (iter-003 addition)
+
+### Proof patterns (reusable)
+- **Search the PROJECT before the TOOLCHAIN.** The live loogle/leansearch index targets a *newer*
+  Mathlib than the pinned `b80f227`, so it repeatedly reports lemmas that are NOT locally available.
+  Two false "it exists" leads this iter; `ringKrullDim_stalk_eq_coheight` was found sorry-free in the
+  project's own `Albanese/CoheightBridge.lean` (import it — no cycle, nothing in `Albanese/` imports
+  `RiemannRoch/`).
+- **Finiteness of height-1 primes containing a fixed element** (`Ideal.finite_setOf_isPrime_height_one_mem`):
+  subset into `(Ideal.span {a}).minimalPrimes` (finite by `Ideal.finite_minimalPrimes_of_isNoetherianRing`);
+  a height-1 prime ∋ a is minimal over `(a)` via `Ideal.exists_minimalPrimes_le` + the `Ideal.height_le_iff`
+  contradiction chain (`q<p ⟹ q.height<1≤0`, then `⊥<q` forces `<0`). `_or` variant = `Set.Finite.union`.
+- **dim-1-regular ⟹ DVR** (`isDiscreteValuationRing_of_isRegularLocalRing_of_ringKrullDim_eq_one`):
+  `IsRegularLocalRing.iff_finrank_cotangentSpace` → rw `ringKrullDim=1` → `exact_mod_cast finrank=1` →
+  `IsLocalRing.finrank_CotangentSpace_eq_one_iff.mp`. `IsDomain` supplied at call site.
+
+### Resolved blockers (iter-003)
+- **iter-002 KB blocker RETIRED**: `dim-1-regular ⟹ DVR` is NOT absent. The old "S1 lacks
+  `IsRegularLocalRing.isDiscreteValuationRing` / 00PD rebuild" classification was WRONG — it builds
+  from the cotangent API (above), now axiom-clean as `lem:regularLocal_dim_one_isDVR`.
+- **OcOfD S1 now 2-of-3 done**: `lem:coheight_eq_ringKrullDim_stalk` + `lem:regularLocal_dim_one_isDVR`
+  both axiom-clean. `sheafOf`'s `IsRegularInCodimensionOne` witness restructured: residual `sorry`
+  isolated to EXACTLY `IsRegularLocalRing (stalk Y.point)`.
+- **WeilDivisor finiteness HEART discharged**: `finite_setOf_isPrime_height_one_mem(_or)` axiom-clean;
+  `finite_order_support_affine` residual is now pure AG-bridge plumbing only.
+
+### Known blockers (do NOT retry — mathlib-build / research-scale)
+- **`isRegularLocalRing_stalk_of_smooth`** (OcOfD frontier, eff 665): NO `Smooth⟹IsRegular` bridge in
+  b80f227 (`IsRegularLocalRing` appears ONLY in `RingTheory/RegularLocalRing/Defs.lean`). Do NOT re-run
+  the bare search. Viable route = differentials assembly, going for **DVR form directly** via
+  `IsLocalRing.finrank_CotangentSpace_eq_one_iff` (bypass `IsRegularLocalRing`): missing pieces are
+  `m/m² ≅ Ω[chart⁄kbar]⊗κ` at a rational point + Jacobson residue-field=kbar + `IsLocalization`
+  cotangent transfer. effort-breaker candidate.
+- **`finite_order_support_affine`** (WeilDivisor): residual = 3-step AG bridge for abstract `[IsAffine V]`
+  (not literally `Spec R`): `V.PrimeDivisor ↔ height-1 prime` via `isoSpec`+`coheight=height`;
+  `order Z g` = localized `ordFrac` via `stalk ≅ Localization.AtPrime` + `functionField ≅ FractionRing`;
+  `ordFrac≠1 ⟹ a∈p∨b∈p`. Isolated 4×; do NOT assign inline rounds.
+
+### Toolchain gotcha (iter-003)
+- These `Ideal.height` lemmas are **loogle-server-only, ABSENT in local b80f227**: `height_add_one_le_of_lt_of_isPrime`,
+  `height_strict_mono_of_isPrime_of_isPrime`, `height_eq_zero_iff`. Use `Ideal.height_le_iff` instead.
+
+### Coverage / doc debt (iter-003)
+- 2 new in-cone `lean_aux` owe blueprint blocks (`unmatched`=141): `Ideal.finite_setOf_isPrime_height_one_mem(_or)`
+  → `RiemannRoch_WeilDivisor.tex` §5. (~139 others are out-of-cone parent substrate, no entries owed.)
+- Blueprint-doctor: `Cohomology_SerreFiniteness.tex` `% archon:covers` a non-existent `SerreFiniteness.lean`
+  (S2 chapter shipped, `.lean` deferred) — fix the covers line before the gate misroutes.
+- Stale `.lean` docstrings/labels (route to prover/refactor, not code defects): `WeilDivisor.lean` L28–35
+  "iter-172 file-skeleton" (claims all `sorry`, file is proved); `isRegularInCodimOneProjectiveLineBar`
+  "Typed-sorry" mislabel; OcOfD `sheafOf`/`sheafOf_zero` stale "Tier-3 honest typed sorry" labels.
+
+## Knowledge Base — RiemannRoch subproject (iter-004 addition)
+
+### Proof patterns (reusable)
+- **AG affine scheme→ring bridge with NO ring-iso transport** (the M1 unlock): to move
+  order-of-vanishing data from a structure-sheaf stalk to a ring localization, use
+  `IsAffineOpen.isLocalization_stalk` — it presents `𝒪_{V,Z.point}` as an *abstract*
+  `IsLocalization.AtPrime A p_Z` directly. Combine with the function-field tower
+  (`AlgebraicGeometry.functionField_isScalarTower`, `functionField_isFractionRing_of_isAffineOpen`)
+  and `Ring.ordFrac_of_isUnit`. Point injectivity (height-1 prime ↦ point) via
+  `IsAffineOpen.fromSpec_primeIdealOf` + `Set.Finite.of_finite_image`; step (i) height=coheight via
+  `Scheme.ringKrullDim_stalk_eq_coheight` (project, `Albanese/CoheightBridge.lean`) +
+  `IsLocalization.AtPrime.ringKrullDim_eq_height`.
+- **Scheme-stalk DVR endpoint:** wrap `IsLocalRing.finrank_CotangentSpace_eq_one_iff.mp` (one line);
+  the stalk's `IsLocalRing` / `IsNoetherianRing` (from `[IsLocallyNoetherian X]`) / `IsDomain`
+  (from `[IsIntegral X]`) instances all resolve by inference — no manual instance plumbing.
+
+### Resolved blockers (iter-004)
+- **M1 `finite_order_support_affine` CLOSED axiom-clean** — the CHURNING×2 / "authorized-gap"
+  target. The escalation is **no longer needed**: the assumed `𝒪_{V,Z} ≅ Localization.AtPrime`
+  explicit ring-iso + `ordFrac_ringEquiv` transport was a 2-iter RED HERRING; `isLocalization_stalk`
+  removes it. WeilDivisor sorry 3→2.
+- **OcOfD DVR substrate RE-SCOPED + endpoint landed**: new axiom-clean wiring lemma
+  `isDiscreteValuationRing_stalk_of_finrank_cotangentSpace_eq_one` packages the codim-1 DVR theory;
+  the `sheafOf` sorry is retargeted from off-path `IsRegularLocalRing` to the sharp
+  `finrank κ (CotangentSpace) = 1`, bypassing the (also-absent) general smooth⟹regular route.
+
+### Known blockers (do NOT retry — research-scale Mathlib gap)
+- **OcOfD `finrank κ(x) (m_x/m_x²) = 1`** (the retargeted `sheafOf` sorry, conormal iso Hartshorne
+  II.8.7): genuine multi-theorem gap. Mathlib `b80f227` ships NONE of: (1) Ω locally-free rank 1 for
+  the *stalk localization* (only `IsStandardSmooth` finite-presentation form exists); (2) codim-1 pt
+  is k̄-rational; (3) the conormal iso `m/m² ≅ Ω⊗κ` itself. NO regularity shortcut either
+  (`IsRegularLocalRing`-from-smooth, `FormallySmooth⟹regular` both loogle-empty). 2nd blueprinted iter
+  on this substrate ⇒ decision owed: mathematician-authorised gap (cf. `lem:serre_finiteness_mathlib_gap`)
+  or dedicated conormal-iso build lane. Do NOT assign inline.
+
+### Coverage / doc debt (iter-004)
+- 2 new in-cone `lean_aux` owe blocks (`unmatched`=141; ~139 out-of-cone parent substrate):
+  `isDiscreteValuationRing_stalk_of_finrank_cotangentSpace_eq_one` → `RiemannRoch_OcOfD.tex` (DVR-endpoint;
+  do NOT repoint `lem:stalk_isDVR_of_smooth` — signature differs); `Ring.ordFrac_eq_one_of_notMem`
+  → `RiemannRoch_WeilDivisor.tex` §affine_bridge_ingredients.
+- OcOfD chapter has **5 dangling `\lean{}` pins** (cotangent-route decomposition not yet in Lean) —
+  blueprint-doctor does NOT check `\lean{}` pins, so they pass silently; need `% NOTE: planned` or land the lemmas.
+- F-1 doc-rot (route to prover, NOT code defect): `isRegularInCodimOneProjectiveLineBar` (WeilDivisor
+  ~L1677) has a CLOSED axiom-clean body but docstring says "Typed-sorry theorem". Plus stale file headers
+  (WeilDivisor iter-172, OCofP iter-183, RationalCurveIso iter-177, AbelianVarietyRigidity iter-166).
+
+## Knowledge Base — RiemannRoch subproject (iter-005 addition)
+
+### Proof patterns (reusable)
+- **Noetherian-local regularity = one inequality** (SmoothRegular Decl 1 reduction): to prove
+  `IsRegularLocalRing R`, apply `IsRegularLocalRing.of_spanFinrank_maximalIdeal_le` (VERIFIED present);
+  the reverse `ringKrullDim R ≤ spanFinrank 𝔪` is Krull's height theorem
+  `ringKrullDim_le_spanFinrank_maximalIdeal` (free for ANY Noetherian local ring), so the entire
+  residual content is the single goal `↑(spanFinrank 𝔪) ≤ ringKrullDim R`.
+- **Regular-local cotangent finrank chain** (Decl 2, axiom-clean one-liner):
+  `(IsRegularLocalRing.iff_finrank_cotangentSpace R).mp inferInstance`. dim-1 ⟹ DVR endpoint:
+  `(IsLocalRing.finrank_CotangentSpace_eq_one_iff (R := R)).mp` — note `R` is **implicit**, pass `(R := R)`.
+- **`if D = 0` sheaf unwrap** (OcOfD `sheafOf_eq_carrier_of_ne_zero`): the internally-derived
+  `IsLocallyNoetherian`/`IsRegularInCodimensionOne` instances are `Prop` classes, so they match the
+  ambient ones by proof-irrelevance and the `else`-branch equation `sheafOf D = ⟨carrierPresheaf D, …⟩`
+  holds definitionally once the branch is selected (`dif_neg`).
+- **Carrier-presheaf inclusion arm** (`carrierPresheaf_le_hom`): `Submodule.inclusion` of
+  `carrierSet D U ⊆ carrierSet (single Y 1 + D) U` (extra `[Y]` only relaxes `-(•Q) ≤ ord_Q`, via
+  `Finsupp.add_apply` + `Finsupp.single_apply` ≥ 0 + `linarith`); naturality `V=⊥` arm via `Subsingleton`
+  of the `⊥`-carrier, `V≠⊥` arm is `rfl` after `dif_neg`.
+
+### Resolved blockers / corrections (iter-005)
+- **SmoothRegular sorry 3→1.** Decl 2 `finrank_cotangentSpace_eq_ringKrullDim` CLOSED axiom-clean;
+  Decl 3 `isDiscreteValuationRing_of_smooth_dim_one` fully assembled + compiling, axiom-clean **except**
+  its dependency on Decl 1 (auto-lands when Decl 1 closes — NO further work on Decl 3).
+- **Signature fix `FiniteType → EssFiniteType`** on Decl 1 + Decl 3: `[FiniteType k R] + IsLocalRing +
+  IsDomain + dim=1` is **UNSATISFIABLE** (finite-type ⟹ Jacobson ⟹ a 1-dim domain has ∞-many maximals,
+  never local). The intended stalk `𝒪_{C,x}` is a *localization* of finite-type = `EssFiniteType`.
+  Proof-neutral for what's proved. **Downstream wiring must feed `EssFiniteType`** (the stalk's
+  `IsLocalization.AtPrime` gives it), not `FiniteType`. Chapter prose already says "essentially of finite type".
+- **loogle≠local re-confirmed**: `IsRegularRing`, `isRegularRing_iff`, `IsRegularRing.isRegularLocalRing_localization`
+  are **ABSENT** from project Mathlib b80f227 (local `#check` = `Unknown identifier`; upstream `lean_loogle`
+  lists them — the standing gotcha). Localization-transport of regularity must be built project-side.
+
+### Known blockers (do NOT retry — research-scale Mathlib gap)
+- **SmoothRegular Decl 1 `Algebra.IsRegularLocalRing_of_smooth`** (Stacks 00TT Jacobian criterion): the one
+  remaining sorry, now isolated to `↑(spanFinrank 𝔪) ≤ ringKrullDim R`. No single Mathlib lemma closes it
+  (`lean_state_search` empty); no `smooth⟹regular` / `smooth⟹normal` decl exists (the normality fallback is
+  EQUALLY deep — do NOT pursue as a shortcut). Build bottom-up: (1) `Module.rank S Ω[S⁄k] = ringKrullDim S`
+  for a standard-smooth finite-type chart `S` (needs `dim = #vars − #eqns`; `…rank_kaehlerDifferential` gives
+  free rank but NOT `= dim`); (2) conormal bound `finrank κ(𝔪/𝔪²) ≤ rank(Ω⊗κ)` (2nd fundamental sequence +
+  residue separability — collapses to the iso `𝔪/𝔪² ≅ Ω⊗κ` when `κ = k̄`, so specialise to alg-closed base
+  first); (3) localization transport chart `S_g` → `R = (S_g)_q` (project-side, no `IsRegularRing`).
+- **OcOfD SES `sheafOf_ses_single_add` residual = skyscraper-cokernel iso** (piece C): `Nonempty (cokernel f ≅
+  skyscraperSheaf P.point (ModuleCat.of k̄ k̄))`. Mathlib b80f227 has NO skyscraper-cokernel API. The
+  blueprint's **tensor-route `⊗_{𝒪_C}` decomposition does NOT translate** — `Sheaf J (ModuleCat k̄)` objects are
+  `k̄`-linear sheaves, not `𝒪_C`-module objects, so its monoidal product is not the structure-sheaf tensor.
+  Faithful route = mono `f` + `ShortComplex.mk f (cokernel.π f)` + cokernel-iso (C). The 4 new bricks are its
+  bottom layer. The `if`-case assembly of (A)/(B) is gated on the L635 `finrank=1` close (Lane A wiring, next iter).
+- **OcOfD `sheafOf_singlePoint_iso` blocked on OCofP `private` carriers**: building any morphism into
+  `Scheme.lineBundleAtClosedPoint` needs its per-open section submodule, which is `private` in OCofP.lean
+  (`carrierPresheaf`/`carrierSubmoduleSheaf`), and there's no public inclusion `lineBundleAtClosedPoint ⟶ 𝒦_C`.
+  Cross-file fix owed: OCofP must expose (a) a public per-open carrier identification OR (b) a public
+  inclusion into the constant `𝒦_C` sheaf — then the identity-on-`K(C)` iso is immediate.
+
+### Coverage / doc debt (iter-005)
+- **5 in-cone `lean_aux` owe blocks** (`unmatched`=144; ~137 out-of-cone parent substrate):
+  `sheafOf.carrierSet_le_add_single`, `sheafOf.carrierSubmoduleSheaf_le_add_single`,
+  `sheafOf.carrierPresheaf_le_hom`, `sheafOf_eq_carrier_of_ne_zero`, and `sheafOf_singlePoint_iso`
+  (restated) → all `RiemannRoch_OcOfD.tex`. The first 4 should REPLACE the 3 untranslatable `⊗`-tensor
+  sub-lemma blocks during the SES-sketch rewrite.
+- **Blueprint-side dangling pins** (lvb-ocofd, major): live substrate pins `instIsRegularInCodimOneOfSmooth`
+  and `isDiscreteValuationRing_stalk_of_smooth` resolve to nothing in the project (the Lean realizes that
+  substrate inline as the L635 `finrank=1 := sorry`). SmoothRegular has dangling `\uses`
+  `lem:regularLocal_dim_one_isDVR`, `lem:finrank_cotangentSpace_eq_one_iff_isDVR` (no defining blocks).
+  Blueprint-doctor does NOT catch `\lean{}`/this class — surface to planner.
+- **Doc-rot (route to prover, NOT defect)**: OcOfD `sheafOf` docstring still says "general case remains an
+  honest typed sorry" (the full construction is now present, only L635 `finrank` sorry remains);
+  `sheafOf_zero` docstring still carries "iter-183 Tier-3 honest typed sorry" (the lemma is CLOSED).
+- **`\lean{}` pin corrected (this review)**: `lem:sheafOf_singlePoint` `AlgebraicGeometry.sheafOf_singlePoint_iso`
+  → `AlgebraicGeometry.Scheme.WeilDivisor.sheafOf_singlePoint_iso` (full namespace; verified resolves).
+
+## Knowledge Base — RiemannRoch subproject (iter-006 addition)
+
+### Proof patterns (reusable)
+- **Conormal/cotangent iso (Route C), axiom-clean** (`cotangentSpace_linearEquiv_baseChange_kaehler`):
+  `CotangentSpace R ≃ₗ[κ] κ⊗[R]Ω[R⁄k]` for a FormallySmooth local k-algebra with residue field formally
+  smooth over k. Build: injectivity = `(Algebra.FormallySmooth.kerCotangentToTensor_injective_iff hsurj).mpr hh`;
+  surjectivity = `KaehlerDifferential.exact_kerCotangentToTensor_mapBaseChange` + `Subsingleton Ω[κ⁄k]`
+  ⟹ `(hex y).mp (Subsingleton.elim _ _)`; bundle `LinearEquiv.ofBijective`; **cast source ideal**
+  `(ker (algebraMap R κ)).Cotangent → 𝔪.Cotangent` via `Ideal.Cotangent.equivOfEq _ _ IsLocalRing.ker_residue`;
+  **promote R-linear → κ-linear** via `LinearEquiv.extendScalarsOfSurjective hsurj`. ALL ingredients PRESENT
+  in pin b80f227 (verified `lean_run_code`). This SUPERSEDES Route R (Stacks 00TT).
+- **DVR-stalk interface (the headline-#1 substrate, COMPLETE):** `isDiscreteValuationRing_of_smooth_dim_one`
+  now consumes `[FormallySmooth k R] [EssFiniteType k R] [IsNoetherianRing R] [IsDomain R] [Module.Free R Ω]
+  [Subsingleton (H1Cotangent k κ)] [Subsingleton Ω[κ⁄k]]` + `(hrank : finrank R Ω[R⁄k] = 1)`. Proof:
+  `finrank_cotangentSpace_eq_finrank_kaehler.trans hrank` ⟹ `finrank κ (CotangentSpace R) = 1` ⟹
+  `IsLocalRing.finrank_CotangentSpace_eq_one_iff.mp`. (Signature retargeted from `ringKrullDim R = 1`; NOT
+  protected, no downstream usage.)
+- **Sheaf-morphism mono lifting** (`carrierSheafHom_le_add_single_mono`): to prove `Mono` of a `Sheaf.Hom`
+  in `Sheaf J (ModuleCat k̄)`: `Sheaf.Hom.mono_of_presheaf_mono` (J A explicit) + `NatTrans.mono_of_mono_app`
+  both take the mono hypothesis as an **INSTANCE arg** — `haveI` them (don't `apply`). Section-wise:
+  `ModuleCat.mono_iff_injective` then `apply Submodule.inclusion_injective` (sees through `ConcreteCategory.hom`
+  by defeq) + supply the `≤`. The underlying presheaf map is field `.hom` (this pin), NOT `.val`.
+- **Mono → ShortExact** (`carrierSheaf_ses_single_add`): `ShortComplex.mk f (cokernel.π f)` is `ShortExact`
+  via `ShortComplex.exact_cokernel` (exactness) + `ShortComplex.ShortExact.mk` (epi of `cokernel.π` auto,
+  mono supplied). `Abelian`+`HasCokernels` hold for `Sheaf (Opens.grothendieckTopology C.left.toTopCat) (ModuleCat k̄)`.
+
+### Resolved blockers / corrections (iter-006)
+- **S1 DVR-stalk substrate CLOSED on critical path (Route C).** The iter-005 "conormal iso absent/superseded"
+  KB memory was FACTUALLY WRONG — every Route-C ingredient is present in b80f227 (analogist + prover both
+  compiled them). Route R (smooth⟹regular, Stacks 00TT; 3 absent gaps) is DEAD as a critical-path route.
+- **OcOfD SES mono arm + SES-from-mono assembly PROVEN** at carrier-sheaf level (`carrierSheaf` =
+  `⟨carrierPresheaf D, carrierPresheaf_isSheaf D⟩` = value of `sheafOf D` on D≠0), parameterized by the
+  regularity instances so it compiles independently of the S1-gated L635 finrank fact.
+
+### Known blockers (do NOT retry without structural change)
+- **OcOfD deep gap C `cokernel_carrierSheafHom_iso_skyscraper`** (L930, honest typed sorry): no Mathlib
+  skyscraper-cokernel API (confirmed leansearch/loogle). ~hundreds LOC. Route = cokernel presheaf
+  `U↦carrierSubmoduleSheaf([P]+D)U/carrierSubmoduleSheaf D U` → residue eval onto k̄ (leading Laurent coeff
+  at order-(n+1) pole) → sheafify via `TopCat.Presheaf.isIso_of_stalkFunctor_map_iso`. SOLE remaining deep
+  ingredient of the carrier SES. Dispatch effort-breaker before a prover round. Parallel to
+  `lem:serre_finiteness_mathlib_gap` ∞-hole.
+- **OcOfD Decl `sheafOf_ses_single_add` (public, L1044)** gated on `[IsRegularInCodimensionOne C.left]`,
+  whose synthesis needs the S1 L635 finrank fact. NOT a research gap — closes once iter-007 wires
+  `isDiscreteValuationRing_of_smooth_dim_one` into L635. Body carries the reduction roadmap.
+- **SmoothRegular Decl 1 `IsRegularLocalRing_of_smooth`** (Stacks 00TT, L140 sorry): off critical path,
+  superseded by Route C. Do NOT re-open as a shortcut.
+- **`sheafOf_singlePoint_iso`** still blocked on OCofP `private` carriers (cross-file; unchanged from iter-005).
+
+### Coverage / doc debt (iter-006)
+- **5 in-cone `lean_aux` owe blocks** (all `RiemannRoch_OcOfD.tex`): `sheafOf.carrierSheaf`,
+  `…carrierSheafHom_le_add_single`, `…carrierSheafHom_le_add_single_mono`, `…cokernel_carrierSheafHom_iso_skyscraper`,
+  `…carrierSheaf_ses_single_add`. (`dag-query unmatched`=145; ~140 out-of-cone parent substrate, no debt.)
+- **2 dangling `\lean{}` pins** (`lem:sheafOf_mono_single_add`, `lem:cokernel_sheafOf_single_add_iso_skyscraper`)
+  point to nonexistent sheaf-level names; carrier-level realizations exist. `% NOTE:`s added this review;
+  planner repoints or keeps as forward targets + adds the carrier layer.
+- **5 cosmetic .lean docstring drifts** (lean-auditor): `OcOfD sheafOf` (stale iter-labels + stale
+  `RRFormula.lean:168` cross-ref), `OCofP globalSections_iff` (PARTIAL→closed), `RationalCurveIso
+  localParameterAtInfty` (sorry→closed), `H1Vanishing skyscraperSheaf_eq_pushforward_const` (stale gap note).
+  Route to next prover touching each file (review can't edit .lean).
+- **Process note:** SmoothRegular Route-C `\leanok` markers were added in-tree during the prover phase;
+  benign (sync left them, lvb confirmed correct) but provers should not edit blueprints.
+
+## Knowledge Base — RiemannRoch subproject (iter-008 addition)
+
+### Proof patterns (reusable)
+- **κ(x)=k̄ affine-local heart, axiom-clean** (`IsAlgClosed.algebraMap_residueField_bijective_of_isMaximal`):
+  for `A` finite-type over alg-closed `k̄` and `𝔭` MAXIMAL, `k̄ → κ(𝔭)` is bijective. Build:
+  `Ideal.algebraMap_residueField_surjective 𝔭` (needs `𝔭.IsMaximal`) ⟹ `IsScalarTower.toAlgHom k̄ A 𝔭.ResidueField`
+  surjective ⟹ `Algebra.FiniteType.of_surjective` ⟹ `FiniteType k̄ κ(𝔭)`; then
+  `IsAlgClosed.algebraMap_bijective_of_finiteType` = `finite_of_finite_type_of_isJacobsonRing`
+  (Zariski/Nullstellensatz; field ⟹ `IsJacobsonRing`) → `Module.Finite` → `Algebra.IsIntegral.of_finite`
+  → `IsAlgClosed.algebraMap_bijective_of_isIntegral`. Instances `Algebra k̄ κ(𝔭)`, `IsScalarTower k̄ A κ(𝔭)`
+  fire by `inferInstance`.
+- **Rationality corollaries from a bijective structure map** (decls 3–6 of ResidueFieldKbar): given
+  `Function.Bijective (algebraMap k̄ K)` build `k̄ ≃ₐ[k̄] K` via `AlgEquiv.ofBijective (Algebra.ofId k̄ K) h`,
+  then transport: `Algebra.FormallySmooth.of_equiv`, `Algebra.FormallyUnramified.of_equiv` (+
+  `subsingleton_kaehlerDifferential`), `Algebra.FormallySmooth.subsingleton_h1Cotangent`. Stated abstractly
+  on bijectivity so the geometric κ(x)≅k̄ application (SmoothStalkDVR consumer) just supplies the hypothesis.
+- **coheight-1 ⟹ closed point** (`AlgebraicGeometry.isClosed_singleton_of_coheight_eq_one`): from
+  `Order.krullDim_eq_iSup_height_add_coheight_of_nonempty` get `height x + coheight x ≤ krullDim X`; with
+  `coheight x = 1` + `krullDim X ≤ 1`, ENat arith (`ENat.add_one_le_iff`, `ENat.lt_one_iff_eq_zero`) forces
+  `height x = 0` = `IsMin x` (`Order.height_eq_zero`); then `specializes_iff_mem_closure` + scheme order
+  convention `x ≤ y ↔ y ⤳ x` (**holds by `rfl`** for `X : Scheme`, so `closure {x} = Set.Iic x`) +
+  `Specializes.antisymm` + `Inseparable.eq` (T0) ⟹ `closure {x} = {x}` ⟹ `isClosed_closure`. Needs a
+  `krullDim ≤ 1` hypothesis (the "curve" input).
+
+### Known blockers (do NOT retry without structural change)
+- **`residueField_eq_of_coheight_eq_one` (scheme glue)** — pinned scheme target, NOT added (no sorry; left
+  absent). Both halves of the math are now proved (closedness decl 7 + affine bijection decl 2). Residual is
+  the scheme-presentation bridge, the SAME class as SmoothStalkDVR's chart-extraction bottleneck:
+  (1) build the **non-synthesizable** `Algebra k̄ (C.left.residueField x)` from `C.hom` (via
+  `Scheme.Hom.residueFieldMap` ∘ `Scheme.Spec.residueFieldIso` ∘ `Ideal.algEquivResidueFieldOfField`);
+  (2) identify `C.left.residueField x ≅ p.asIdeal.ResidueField` at the closed point via
+  `IsAffineOpen.isLocalization_stalk` + `hU.primeIdealOf`, `IsClosed {x}` ⟹ `p` maximal; (3) the input
+  `Order.krullDim (α := C.left) ≤ 1` needs the bridge `topologicalKrullDim X = Order.krullDim (α := X)`
+  — **NOT yet checked for a single-call Mathlib form** (concrete next-step lookup).
+- **SmoothStalkDVR scheme pins (Lane 2)** — `kaehlerDifferential_locallyFree_rank_one_of_smooth`,
+  `finrank_cotangentSpace_stalk_eq_one_of_smooth`, `isDiscreteValuationRing_stalk_of_smooth` made NO landable
+  progress iter-008 (prover attempted, committed nothing, no task_result). The chart-extraction bottleneck
+  (extract affine `Spec S ∋ x` with `𝒪_{C,x}=S_𝔮` + non-global `k̄`-algebra-on-stalk via `letI`) held. Do NOT
+  re-dispatch as a plain prover round without effort-breaking the chart-extraction step first.
+
+### Coverage / doc / structural debt (iter-008)
+- **blueprint-doctor: `ResidueFieldKbar.lean` DOUBLE-COVERED** — `% archon:covers` for it appears in BOTH
+  `RiemannRoch_OcOfD.tex:3` (planner anchor, iter-007) AND new `RiemannRoch_ResidueFieldKbar.tex:4`. HARD GATE
+  routing ambiguity — planner must give the file exactly one owner.
+- **blueprint-doctor: `RiemannRoch_ResidueFieldKbar.tex` is an ORPHAN** — not `\input` in `content.tex`, so it
+  never renders and the dag never ingests it (all 7 decls show `chapter: ''`, unmatched). sync_leanok did NOT
+  touch it (chapters_touched = OcOfD only); its 3 `\leanok` markers were prover-added (benign, decls are
+  axiom-clean, lvb-confirmed correct — but provers must not write chapters).
+- **4 unblueprinted ResidueFieldKbar decls** (coverage debt): `algEquivOfAlgebraMapBijective` (helper),
+  `formallySmooth_of_algebraMap_bijective`, `subsingleton_kaehlerDifferential_of_algebraMap_bijective`,
+  `subsingleton_h1Cotangent_of_algebraMap_bijective` — the 3 substantive ones are the residue-rationality
+  interface SmoothStalkDVR consumes; warrant `\lean{}` blocks.
+- **2 minor .lean doc drifts** (lean-auditor): ResidueFieldKbar module docstring says "integral curve" but
+  `isClosed_singleton_of_coheight_eq_one` is for any `Scheme` with `krullDim ≤ 1`; SmoothStalkDVR handoff
+  comment hard-codes `(L635)` cross-file ref (rots). Route to next prover touching each file.
+
+## Knowledge Base — RiemannRoch subproject (iter-010 addition)
+
+### Proof patterns (reusable)
+- **Smooth-of-rel-dim-1-over-field chart entry** (`AlgebraicGeometry.exists_isStandardSmooth_chart_of_smooth`):
+  the scheme→ring bridge is the `SmoothOfRelativeDimension` **CLASS FIELD**
+  `‹SmoothOfRelativeDimension 1 C.hom›.exists_isStandardSmoothOfRelativeDimension x` → `⟨U,hU,V,hV,hx,e,hss⟩`
+  with `hss : RingHom.IsStandardSmoothOfRelativeDimension 1 (C.hom.appLE U V e).hom`. NOT
+  `HasRingHomProperty.appLE` (wrong `Locally(IsStandardSmooth…)` shape). This dissolved the 3-iter STUCK knot.
+- **`U = ⊤` over `Spec(field)`** (base is `Subsingleton`): `rw [eq_top_iff]; intro y _; rwa [Subsingleton.elim y base]`
+  where `base := C.hom.base x` and `hmem : base ∈ U := e hx`. AVOID `ext y; simp [Opens.mem_top]` → "simp made no
+  progress" on the `y ∈ ↑U ↔ y ∈ ↑⊤` set-coercion goal.
+- **Pin a chart's base to `k̄`**: witness `ψ := ((Scheme.ΓSpecIso (.of k̄)).inv ≫ C.hom.appLE ⊤ V e).hom`; transport
+  standard-smoothness via `RingHom.IsStandardSmoothOfRelativeDimension.equiv` (from
+  `(ΓSpecIso _).symm.commRingCatIsoToRingEquiv`, rewrite by `Iso.commRingCatIsoToRingEquiv_toRingHom`) then `.comp hss`
+  (`IsStandardSmoothOfRelativeDimension.comp`, `1 + 0 = 1`).
+- **Stalk = localisation at a standard-smooth chart** (`isLocalization_stalk_standardSmooth_chart_of_smooth`): one-liner
+  `⟨V,hV,hx,ψ,hψ, hV.isLocalization_stalk ⟨x,hx⟩⟩` — `IsAffineOpen.isLocalization_stalk`'s algebra instance IS
+  `algebra_section_stalk`, so it matches the explicit `@IsLocalization` goal on the nose (no `convert`).
+- **`k̄`-algebra on a scheme residue field from the structure morphism** (`AlgebraicGeometry.residueFieldAlgebra`):
+  `RingHom.toAlgebra <| (C.hom.residueFieldMap x).hom.comp <| (Scheme.Spec.residueFieldIso (.of k̄) (C.hom.base x)).inv.hom.comp (algebraMap k̄ (C.hom.base x).asIdeal.ResidueField)`.
+  Mark `@[reducible]` so the downstream `algebraMap = …` match is `rfl`.
+- **Closed codim-1 point ⇒ κ(x) ≅ k̄, one shot** (`residueField_eq_of_coheight_eq_one`): Mathlib
+  `AlgebraicGeometry.residueFieldIsoBase` (`AlgClosed/Basic.lean`) gives `κ(x) ≅ .of k̄` for a closed point of a
+  `LocallyOfFiniteType` scheme over an alg-closed field (internally bundles the Nullstellensatz content). Prove the
+  canonical structure map `= (residueFieldIsoBase …).inv.hom` via `Spec.map_injective` +
+  `SpecMap_residueFieldIsoBase_inv` + `map_residueFieldIso_inv_eq_fromSpecResidueField` +
+  `SpecMap_residueFieldMap_fromSpecResidueField`, conclude `ConcreteCategory.bijective_of_isIso`. SUPERSEDES the
+  hand-rolled 6-step affine-chart Nullstellensatz route (iter-008 decls now orphaned from the critical path).
+- **`CommRingCat` iso → `RingEquiv`**: `CategoryTheory.Iso.commRingCatIsoToRingEquiv` (+ `_toRingHom` to land on `.hom`).
+
+### Known blockers / gotchas (do NOT retry)
+- **`Ideal.algEquivResidueFieldOfField` is ABSENT** in Mathlib rev b80f227 (newer Mathlib). Use
+  `algebraMap k̄ p.ResidueField` directly.
+- **`CommRingCat.isoToRingEquiv` does not exist** → `CategoryTheory.Iso.commRingCatIsoToRingEquiv`.
+- **NEW-decl auto-drop hazard** (re-confirmed live): the 3 SmoothStalkDVR scheme pins are fresh decls with no
+  pre-existing sorry → a `mathlib-build` lane creating them is auto-dropped by plan-validate. MUST scaffold them as
+  `sorry` stubs (`lean-scaffolder`) FIRST, then `prove`. Cost iter-008/009 two wasted rounds.
+
+### Coverage / doc debt (iter-010)
+- **STALE blueprint prose**: `RiemannRoch_ResidueFieldKbar.tex` `lem:codimOne_point_residueField_eq_kbar` proof sketch +
+  `\uses` describe the abandoned affine-chart route, not the `residueFieldIsoBase` route the Lean uses. `% NOTE:` added;
+  needs a blueprint-writer refresh + a `\mathlibok` anchor for `residueFieldIsoBase`. (lean-vs-blueprint-checker MAJOR.)
+- **Orphaned-from-critical-path**: iter-008's `algebraMap_residueField_bijective_of_isMaximal` + sibling affine-chart
+  decls are no longer in any live `\uses` — keep as reference or prune.
+
+## Knowledge Base — RiemannRoch subproject (iter-014 addition)
+
+### Resolved blockers
+- **S1 DVR-stalk substrate END-TO-END CLOSED, axiom-clean (iter-014, `OcOfD.lean`).** The
+  `sheafOf` codim-1 regularity gap (the L635 `finrank` cotangent `sorry`, feared a deep
+  `mathlib-build` lane since iter-010) is GONE. Once the cotangent pin (iter-011) +
+  `krullDim_curve_le_one` (iter-013) existed, it was a 3-decl mechanical wire:
+  `isDiscreteValuationRing_stalk_of_smooth` (one-line:
+  `isDiscreteValuationRing_stalk_of_finrank_cotangentSpace_eq_one x (finrank_cotangentSpace_stalk_eq_one_of_smooth x hx krullDim_curve_le_one)`)
+  + global instance `instIsRegularInCodimensionOneOfSmooth`
+  (`⟨fun Y => isDiscreteValuationRing_stalk_of_smooth Y.point Y.coheight⟩`) + `haveI := inferInstance`
+  at the call site. `sheafOf`, `sheafOf_zero` both axiom-clean now. Remaining OcOfD frontier = S3
+  skyscraper-cokernel iso (L1086) + off-cone `sheafOf_singlePoint_iso` (L745).
+- **`sheafOf_ses_single_add` main case CLOSED (iter-014, PARTIAL decl).** Generic case (`D≠0 ∧ [P]+D≠0`)
+  delegates to `carrierSheaf_ses_single_add` via `sheafOf_eq_carrier_of_ne_zero`. 2 corner sorries
+  (`D=0`/`[P]+D=0`) remain, blocked on a `carrierSheaf 0 ≅ toModuleKSheaf C` bridge (regular fns =
+  order-≥0 on integral scheme, Hartshorne II §6 pre-Prop 6.11) — queue with iter-015 cokernel.
+
+### Proof patterns (reusable)
+- **Substrate-wiring as a GLOBAL instance** beats inline `haveI ... ⟨…⟩`: lifting a codim-1 regularity
+  witness to a top-level `instance` makes downstream `haveI := inferInstance` and is reusable.
+  Pattern: `⟨fun Y => <stalk-lemma> Y.point Y.coheight⟩` (a `Scheme.PrimeDivisor Y` carries `Y.coheight`).
+- **Namespace placement must match the blueprint `\lean{}` pin**: place a decl in the namespace the
+  pin names (here `AlgebraicGeometry`, NOT the enclosing `Scheme.WeilDivisor` section) — else
+  fully-qualified name mismatches break `sync_leanok`/dag resolution. Prover caught+corrected mid-session.
+- **Verify import back-edge absent before adding an import**: CurveKrullDim→OcOfD was safe because
+  CurveKrullDim imports only SmoothStalkDVR+CoheightBridge, neither of which imports OcOfD/WeilDivisor.
+
+### Documentation-rot watch
+- **OcOfD.lean carries 5 STALE Lean comments contradicting iter-014's closed work** (lean-auditor majors,
+  review cannot edit `.lean`): module docstring "four decls Tier-3 sorry"; `sheafOf` docstring "general
+  case still a sorry" / "iter-183 Lane K Tier-3 honest typed sorry"; body comment "residual sorry is
+  cotangent fact, no Mathlib bridge"; `sheafOf_ses_single_add` comment "gated on L635". Hand a
+  comment-only cleanup to the next OcOfD prover. (Blueprint `% NOTE: [expected]` twins FIXED this pass.)
+
+## Knowledge Base — RiemannRoch subproject (iter-015 addition)
+
+### Proof patterns (reusable)
+- **Effort-break a deep iso into an `asIso` chain, not a blind retry.** A single opaque `≅ : A ≅ B`
+  that resisted 3 blind attempts (sorry 0→2→4) was dissolved by introducing a *named comparison
+  morphism* `f : A ⟶ B` (def stub) + its `IsIso f` (lemma stub) and writing the iso as
+  `haveI := <isIso-lemma>; asIso f`. The iso body becomes `sorry`-FREE immediately; all deep work is
+  relocated into the two stubs. Verified non-circular (auditor): the `asIso` assembly delegates the
+  `sorry` into the named leaves, it does not consume itself. This is the canonical decomposition
+  shape for "iso whose proof is a stalkwise/pointwise argument."
+- **Prove the *target object* of a stubbed `≅` even when the `≅` itself is stubbed.** Here
+  `sheafOf.orderAtPSubmodule` (the fractional ideal `π_P^{-n}𝒪` as the `Submodule k̄ K(C)` cut out by
+  `g = 0 ∨ -(D P) ≤ ord_P g`) was proved axiom-clean (closure proofs adapted from `carrierSubmodule`
+  specialised to one prime: `Ring.ordFrac_add`, `Ring.ordFrac_ge_one_of_ne_zero`, germ-to-stalk for
+  scalars) while the stalk iso `carrierSheaf_stalk_eq` landing in it stays a stub. Banks reusable
+  infra and makes the next prover's target concrete.
+
+### Mathlib-API watch (for the next OcOfD prover)
+- **`CategoryTheory.Sheaf.val` is DEPRECATED** (use `ObjectProperty.obj`). It appears in the *types* of
+  the two deep stubs `carrierSheaf_stalk_eq` (L1142) and `cokernel_stalk_at_iso_kbar` (L1161). Harmless
+  as a stub (only a deprecation warning) but **will surface as errors when the bodies are filled** —
+  migrate the type to the non-deprecated accessor before/while proving. (lean-auditor iter-015 major #5.)
+
+### Documentation-rot watch (CARRIED + EXTENDED — still unfixed, review cannot edit `.lean`)
+- **OcOfD.lean module header + docstrings are now MORE stale after iter-015.** lean-auditor iter-015
+  (0 must-fix, 6 major / 7 minor) confirms: (a) header "Status" block names 2 sorries — actual is 7
+  (5 new S3 stubs unlisted); (b) the 3-tier disclosure (L68–74) + `sheafOf` docstring (L606–633) +
+  `sheafOf_zero` docstring (L692–700) still call those decls "Tier-3 honest typed sorry" though they are
+  fully implemented (LSP: no sorry-warning). These are the iter-014 stale-comment majors PLUS the new
+  count drift. **All comment-only; no laundering, no excuse-comments — every one of the 7 sorry stubs
+  carries an honest mathematical type.** Hand a single comment-only cleanup directive to the next OcOfD
+  prover; pair it with the `Sheaf.val` migration above.
+
+## Knowledge Base — RiemannRoch subproject (iter-016 addition)
+
+### Proof patterns (reusable)
+- **A decomposed deep leaf can collapse to a 2-line composition.** The binding stalk leaf
+  `carrierSheaf_stalk_eq` (feared 200–400 LOC, "no Mathlib carrier-stalk API") closed as
+  `carrierSheaf_stalk_iso_iSup ≪≫ eqToIso (by rw [iSup_…_eq_orderAtPSubmodule])` once the two named
+  seams existed. Pattern: when a `≅`-leaf is `(stalk ≅ ⨆Γ(U)) ∘ (⨆Γ(U) = target)`, prove the
+  stalk-colimit iso (seam A) and the directed-iSup identification (seam B) separately, then compose with
+  `eqToIso` over the submodule equality. Don't prove the leaf monolithically.
+- **Germ-API stalk-colimit descent for a sub-presheaf-of-modules of a constant sheaf.** Build
+  `φ : stalk F x ⟶ ModuleCat.of k M` (M = `⨆_U Γ(U)`) via `Limits.colimit.desc` of the cocone with legs
+  `Submodule.inclusion`; cocone naturality reduces at element level to "restriction preserves underlying
+  value" (helper `carrierPresheaf_map_coe`, via `dif_neg` = `Submodule.inclusion` away from `⊥`).
+  Injective: `injective_iff_map_eq_zero` + `germ_exist`. Surjective: `Submodule.mem_iSup_of_directed`
+  (family directed through `U ⊓ V`). Finish `ConcreteCategory.isIso_iff_bijective` + `asIso`. (Per
+  `analogies/stalk-colimit.md`. `ModuleCat.isIso_iff_bijective` IS `ConcreteCategory.isIso_iff_bijective`.)
+- **Finite-poles open from closed prime-divisor points.** To realise an order constraint on a small open:
+  affine `W ∋ x`, finite bad set `B`, `Z = ⋃_{Q∈B}{Q.point}` is closed because each prime-divisor point is
+  closed on the curve (`isClosed_singleton_of_coheight_eq_one` + `krullDim_curve_le_one`); take `W ⊓ Zᶜ`.
+
+### Mathlib-API watch
+- **`TopologicalSpace.Opens.not_mem_bot` does NOT exist.** To discharge `x ∈ (⊥ : Opens)` → `False`, use a
+  membership rewrite: `have h : (U) = ⊥ := hbot; rw [h] at hmem; exact hmem` (the `⊥` Opens has empty carrier).
+- **`carrierSheaf_zero_iso_toModuleKSheaf` hard direction is pinned.** `IsDedekindDomain.HeightOneSpectrum.mem_integers_of_valuation_le_one`
+  (`x ∈ Frac(R)`, `v(x) ≤ 1` at all height-one `v`, `[IsDedekindDomain R]` ⇒ `x ∈ R`). Needs per-chart
+  Dedekind + `HeightOneSpectrum.valuation = RationalMap.order` + gluing. Dedicated lane.
+
+### Process gotcha
+- **Blueprint `private` cross-file lemmas are inaccessible.** B0 could not call `finite_order_support_affine`
+  (private in `WeilDivisor.lean`) from `OcOfD.lean`; the pivot to global `principal`-divisor finiteness was
+  forced, not chosen. When a blueprint route cites a private lemma in another file, the Lean route WILL diverge.
+
+### Documentation-rot watch (CARRIED + WORSE — review cannot edit `.lean`)
+- OcOfD header/docstrings still label the now-closed carrier-stalk chain (`sheafOf`, `sheafOf_zero`,
+  `carrierSheaf_stalk_eq`) as STUBBED/Tier-3. lean-auditor iter-016 0/6/3 — all 6 majors are this stale
+  text. Comment-only cleanup owed to the next OcOfD prover (pair with no code change).
+
 ## Last Updated
+iter-016 (2026-06-21) — RiemannRoch review phase. **S3 carrier-stalk chain FULLY CLOSED axiom-clean.** OcOfD decl-level sorry 11→6: B0 `finite_orderConstraintFail_affine` (pivoted to GLOBAL `principal`-divisor finiteness — blueprint's affine `finite_order_support_affine` is `private`/cross-file; un-omitted `[IsProper C.hom]`), B1 `exists_open_mem_carrierSubmoduleSheaf` (closed prime-divisor points → `W⊓Zᶜ`), B `iSup_…_eq_orderAtPSubmodule`, seam A `carrierSheaf_stalk_iso_iSup` (germ-API `colimit.desc` descent — the stretch goal), binding `carrierSheaf_stalk_eq` (= A ≪≫ eqToIso B, 2 lines). New helper `carrierPresheaf_map_coe` (coverage debt). All axiom-clean `{propext, Classical.choice, Quot.sound}`. lean-auditor 0/6/3 (majors = stale docstrings; assembly non-circular, no laundering); lvb-ocofd 0 must-fix, 1 major = B0 prose divergence (→ `% NOTE:` added, prose/`\uses` rewrite routed to planner). blueprint-doctor CLEAN; sync +5/−0 (5 chain decls). Next: G2/G3 cokernel leaves (now unblocked) + Hartshorne-6.3A bridge as a dedicated lane. Knowledge Base only (per-session narrative → `iter/iter-016/review.md`).
+iter-015 (2026-06-21) — RiemannRoch review phase. **S3 deep cokernel iso DECOMPOSED (effort-break landed).** `cokernel_carrierSheafHom_iso_skyscraper` body now `sorry`-FREE via `haveI := cokernel_skyscraper_hom_isIso D P; asIso (cokernel_skyscraper_hom D P)` (auditor: non-circular). `sheafOf.orderAtPSubmodule` PROVEN axiom-clean (the `π_P^{-n}𝒪` target submodule). 5 faithfully-typed `sorry` stubs created at pinned `\lean{}` names (`carrierSheaf_stalk_eq` [binding, ~200–400 LOC, no Mathlib carrier-stalk API], `cokernel_stalk_at_iso_kbar`, `cokernel_skyscraper_hom`, `cokernel_skyscraper_hom_isIso`, `carrierSheaf_zero_iso_toModuleKSheaf`); 2 `sheafOf_ses_single_add` corners untouched (wiring recipe recorded inline). lean-auditor 0/6/7 (majors = stale docstrings + `Sheaf.val` deprecation in 2 stub types; no laundering); lvb-ocofd 0 must-fix (major = `orderAtPSubmodule` coverage debt, minor = `sheofOf` label typo). blueprint-doctor CLEAN; sync +5/−0 (statement `\leanok` on the 5 new stubs). Next: `mathlib-build`/`prove` lane on `carrierSheaf_stalk_eq` (cascades S-B→S-C→S-D; iso already wired). Knowledge Base only (per-session narrative → `iter/iter-015/review.md`).
+iter-014 (2026-06-21) — RiemannRoch review phase. **S1 DVR-stalk substrate WIRED + CLOSED axiom-clean.** OcOfD sorry 4→3: `sheafOf` L635 cotangent `sorry` GONE via 2 new axiom-clean blueprint-pinned decls (`isDiscreteValuationRing_stalk_of_smooth`, global `instIsRegularInCodimensionOneOfSmooth`) consuming the iter-011 cotangent pin + iter-013 `krullDim_curve_le_one`; `sheafOf`/`sheafOf_zero` axiom-clean. `sheafOf_ses_single_add` main case CLOSED, 2 corner sorries remain (carrierSheaf-0 bridge). lean-auditor 0/5/3 (all majors = stale Lean comments, no laundering); lvb-ocofd 0 must-fix (2 majors = stale blueprint `% NOTE` → FIXED). blueprint-doctor CLEAN; sync +2/−0. Next: S3 cokernel iso (L1086) via iter-015 effort-breaker split. Knowledge Base only (per-session narrative → `iter/iter-014/review.md`).
+iter-010 (2026-06-20) — RiemannRoch review phase. **BOTH parallel lanes FULLY CLOSED, axiom-clean.** Lane 1 `ResidueFieldKbar.lean` 2→0 (`residueFieldAlgebra` + `residueField_eq_of_coheight_eq_one` via Mathlib `residueFieldIsoBase`, collapsing the 6-step chart recipe; `Ideal.algEquivResidueFieldOfField` absent → `algebraMap k̄ p.ResidueField`). Lane 2 `SmoothStalkDVR.lean` 2→0: the 3-iter STUCK chart-extraction knot DISSOLVED via the `SmoothOfRelativeDimension` class field + `U=⊤`/`eq_top_iff` + `ΓSpecIso` base-pin. lean-auditor CLEAN (0/0/0); 2 lvb checkers 0 must-fix (1 MAJOR blueprint-side: stale ResidueFieldKbar proof prose). S1b critical path UNBLOCKED → iter-011 scaffolds+wires the 3 scheme pins into the iter-007 algebra bridge. Knowledge Base only (per-session narrative → `iter/iter-010/review.md`).
+iter-008 (2026-06-20) — RiemannRoch review phase. Lane 1 `ResidueFieldKbar.lean` CREATED: 7 axiom-clean decls (κ(x)=k̄ algebra cone via Zariski/Nullstellensatz + rationality corollaries + topological `isClosed_singleton_of_coheight_eq_one`), sorry-free; pinned scheme target `residueField_eq_of_coheight_eq_one` left absent (scheme glue named). Lane 2 `SmoothStalkDVR.lean` scheme pins: NO landable progress (chart-extraction bottleneck, no task_result). blueprint-doctor: ResidueFieldKbar.lean double-covered + new chapter orphan. lean-auditor + lvb: 0 must-fix, 2 minor doc drifts. Knowledge Base only (per-session narrative → `iter/iter-008/review.md`).
+iter-006 (2026-06-20) — RiemannRoch review phase. **S1 headline DVR-stalk substrate CLOSED on critical path**: 3 axiom-clean Route-C decls in SmoothRegular.lean (`cotangentSpace_linearEquiv_baseChange_kaehler`, `finrank_cotangentSpace_eq_finrank_kaehler`, retargeted `isDiscreteValuationRing_of_smooth_dim_one`); Route R dropped. OcOfD.lean S3: carrier-level mono arm + SES-from-mono PROVEN axiom-clean, deep gap C (skyscraper-cokernel iso) isolated as one typed sorry. Lanes coupled through one wiring (L635 finrank, iter-007). lean-auditor: no laundered holes. Knowledge Base only (per-session narrative → `iter/iter-006/review.md`).
+iter-005 (2026-06-20) — RiemannRoch review phase. SmoothRegular.lean (NEW Lane-A split) sorry 3→1: Decl 2 CLOSED axiom-clean, Decl 3 assembled (auto-lands w/ Decl 1), Decl 1 isolated to `spanFinrank 𝔪 ≤ ringKrullDim`; `FiniteType→EssFiniteType` sig fix. OcOfD.lean (Lane B/S3): 4 sorry-free bricks for the `X₁↪X₂` SES arm + `singlePoint` restated to iso; both targets still typed sorries (skyscraper-cokernel + OCofP-private blockers, precise handoffs). Knowledge Base only (per-session narrative → `iter/iter-005/review.md`).
+iter-003 (2026-06-20) — RiemannRoch review phase. 4 axiom-clean helpers added; OcOfD S1 2-of-3 done (dim-1-regular⟹DVR retires false iter-002 blocker); both open headlines isolated to a single deep ingredient. Knowledge Base only (per-session narrative → `iter/iter-003/review.md`).
+iter-002 (2026-06-20) — RiemannRoch subproject review phase. Headline H1-skyscraper-vanishing now axiom-clean; both false-as-typed signatures fixed. Knowledge Base only (per-session narrative → `iter/iter-002/review.md`).
 iter-303 (2026-06-05) — review phase. First prover round after 31 DAG iters. Knowledge Base only (per-session narrative → `iter/iter-303/review.md`).
 iter-271 (2026-06-04) — review phase. Knowledge Base only (per-session narrative → `iter/iter-271/review.md`).
 iter-265 (2026-06-04) — review phase. Knowledge Base only (per-session narrative → `iter/iter-265/review.md`).

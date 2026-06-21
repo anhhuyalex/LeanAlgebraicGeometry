@@ -1,0 +1,173 @@
+[
+  {
+    "timestamp": "2026-06-20T12:09:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/SmoothRegular.lean",
+      "theorem": "IsRegularLocalRing.finrank_cotangentSpace_eq_ringKrullDim"
+    },
+    "session": {
+      "id": "session_5",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "IsRegularLocalRing.iff_finrank_cotangentSpace"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "forward direction of the verified Mathlib iff",
+        "code_tried": "exact (IsRegularLocalRing.iff_finrank_cotangentSpace R).mp inferInstance",
+        "line_number": "133",
+        "lean_error": "",
+        "result": "success",
+        "insight": "axiom-clean {propext, Classical.choice, Quot.sound}; cross-checked alt chain via spanFinrank_maximalIdeal + ..._eq_finrank_cotangentSpace, both close"
+      }
+    ],
+    "next_steps": "done"
+  },
+  {
+    "timestamp": "2026-06-20T12:09:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/SmoothRegular.lean",
+      "theorem": "Algebra.isDiscreteValuationRing_of_smooth_dim_one"
+    },
+    "session": {
+      "id": "session_5",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "depends only on Decl 1 (Algebra.IsRegularLocalRing_of_smooth) which remains a sorry; body itself axiom-clean",
+      "key_lemmas_used": [
+        "Algebra.IsRegularLocalRing_of_smooth",
+        "IsRegularLocalRing.finrank_cotangentSpace_eq_ringKrullDim",
+        "IsLocalRing.finrank_CotangentSpace_eq_one_iff"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Route (b): regularity from Decl 1, cotangent finrank = ringKrullDim = 1, then finrank=1 iff DVR",
+        "code_tried": "have hreg : IsRegularLocalRing R := Algebra.IsRegularLocalRing_of_smooth k R; ... rw [hdim]; exact_mod_cast ...; exact (IsLocalRing.finrank_CotangentSpace_eq_one_iff (R := R)).mp hone",
+        "line_number": "196",
+        "lean_error": "Function expected at IsLocalRing.finrank_CotangentSpace_eq_one_iff (R was applied explicitly)",
+        "result": "partial",
+        "insight": "finrank_CotangentSpace_eq_one_iff takes R IMPLICITLY; fixed with (R := R). Body compiles axiom-clean modulo Decl 1; lands automatically when Decl 1 closes"
+      }
+    ],
+    "next_steps": "no further work; auto-closes with Decl 1"
+  },
+  {
+    "timestamp": "2026-06-20T12:09:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/SmoothRegular.lean",
+      "theorem": "Algebra.IsRegularLocalRing_of_smooth"
+    },
+    "session": {
+      "id": "session_5",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Stacks 00TT Jacobian criterion: residual goal is the single inequality spanFinrank(maximalIdeal) <= ringKrullDim R; no Mathlib lemma closes it, no smooth=>regular/normal decl exists, normality fallback equally deep",
+      "key_lemmas_used": [
+        "IsRegularLocalRing.of_spanFinrank_maximalIdeal_le",
+        "ringKrullDim_le_spanFinrank_maximalIdeal"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "structural reduction via of_spanFinrank_maximalIdeal_le (regularity = the spanFinrank=ringKrullDim equality; reverse <= is Krull height theorem, free)",
+        "code_tried": "apply IsRegularLocalRing.of_spanFinrank_maximalIdeal_le  -- residual: spanFinrank 𝔪 ≤ ringKrullDim R",
+        "line_number": "140",
+        "lean_error": "sorry (residual goal isolated)",
+        "goal_after": "↑(Submodule.spanFinrank (IsLocalRing.maximalIdeal R)) ≤ ringKrullDim R",
+        "result": "partial",
+        "insight": "reduced opaque sorry to ONE inequality; lean_state_search found nothing; informal-agent skipped (no API key)"
+      },
+      {
+        "attempt": 2,
+        "strategy": "fix unsatisfiable hypothesis FiniteType -> EssFiniteType",
+        "code_tried": "[Algebra.FiniteType k R] -> [Algebra.EssFiniteType k R]  (Decl 1 + Decl 3)",
+        "line_number": "107",
+        "lean_error": "",
+        "result": "success",
+        "insight": "FiniteType + IsLocalRing + IsDomain + dim=1 is UNSATISFIABLE (finite-type => Jacobson => 1-dim domain has infinitely many maximals, never local). Stalk is a localization = EssFiniteType. Proof-neutral; downstream wiring must feed EssFiniteType"
+      }
+    ],
+    "next_steps": "BUILD bottom-up: (1) Module.rank S Ω[S/k] = ringKrullDim S for standard-smooth finite-type chart; (2) conormal bound finrank(𝔪/𝔪²) <= rank(Ω⊗κ), collapse to iso when κ=k̄; (3) localization transport (no IsRegularRing in b80f227). Do NOT retry inline; do NOT pursue normality fallback (equally deep)"
+  },
+  {
+    "timestamp": "2026-06-20T12:15:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+      "theorem": "sheafOf_singlePoint_iso"
+    },
+    "session": {
+      "id": "session_5",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "cross-file (category-2): building any morphism into Scheme.lineBundleAtClosedPoint needs its per-open section submodule, which is `private` in OCofP.lean; no public inclusion lineBundleAtClosedPoint -> 𝒦_C exists",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "restate strict-equality target as Nonempty (sheafOf (ofClosedPoint P) ≅ lineBundleAtClosedPoint P) per planner directive",
+        "code_tried": "lemma sheafOf_singlePoint_iso ... : Nonempty (sheafOf (ofClosedPoint P hP) ≅ lineBundleAtClosedPoint P hP hPcoh) := by sorry",
+        "line_number": "707",
+        "lean_error": "",
+        "result": "partial",
+        "insight": "signature restated to provable-in-principle iso form; body is documented typed sorry; blocked by OCofP private carriers. Renamed/relocated to Scheme.WeilDivisor namespace -> blueprint pin corrected this review"
+      }
+    ],
+    "next_steps": "OCofP must expose ONE of: (a) public per-open carrier identification of lineBundleAtClosedPoint.carrierSubmoduleSheaf U, or (b) public inclusion lineBundleAtClosedPoint ⟶ constant 𝒦_C sheaf. Then identity-on-K(C) iso is immediate from carrierSet-equality"
+  },
+  {
+    "timestamp": "2026-06-20T12:15:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+      "theorem": "sheafOf_ses_single_add"
+    },
+    "session": {
+      "id": "session_5",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "residual = skyscraper-cokernel iso Nonempty(cokernel f ≅ skyscraperSheaf P.point (ModuleCat.of k̄ k̄)); no Mathlib b80f227 skyscraper-cokernel API. Plus if-case assembly gated on L635 finrank=1 close (Lane A wiring). Blueprint tensor-route does not translate to Sheaf J (ModuleCat k̄)",
+      "key_lemmas_used": [
+        "Finsupp.add_apply",
+        "Finsupp.single_apply",
+        "Submodule.inclusion"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "build the X₁↪X₂ mono arm bottom-up as sorry-free bricks",
+        "code_tried": "sheafOf.carrierSet_le_add_single (sorry-free) -> carrierSubmoduleSheaf_le_add_single (sorry-free) -> carrierPresheaf_le_hom (Submodule.inclusion morphism, sorry-free) -> sheafOf_eq_carrier_of_ne_zero (if-unfold)",
+        "line_number": "742-831",
+        "lean_error": "",
+        "result": "partial",
+        "insight": "key for carrierSet inclusion: hsingle : 0 ≤ (Finsupp.single Y 1) Q via `rw [Finsupp.single_apply]; split <;> norm_num` (earlier Finsupp.single_eq_of_ne / direct simp failed on the fun₀ pattern); naturality V=⊥ via Subsingleton of ⊥-carrier, V≠⊥ rfl after dif_neg"
+      },
+      {
+        "attempt": 2,
+        "strategy": "diagnose blueprint tensor decomposition",
+        "code_tried": "(did NOT create idealSheaf_ses_closedPoint / skyscraper_tensor_lineBundle / lineBundle_tensor_additive)",
+        "line_number": "877",
+        "lean_error": "⊗_{𝒪_C} is not the monoidal product of Sheaf J (ModuleCat k̄)",
+        "result": "partial",
+        "insight": "creating ⊗-shaped fakes would be unfaithful; faithful route = mono f + ShortComplex.mk f (cokernel.π f) + ShortExact from Mono f + cokernel-iso (C). Handed off corrected decomposition"
+      }
+    ],
+    "next_steps": "next iter: wire L635 finrank=1 close (Lane A's isDiscreteValuationRing_of_smooth_dim_one) to enable if-case assembly of (A)/(B); then build skyscraper-cokernel iso (C) project-side (no Mathlib API). Rewrite blueprint SES sketch to cokernel route, replacing the 3 tensor sub-lemmas"
+  }
+]

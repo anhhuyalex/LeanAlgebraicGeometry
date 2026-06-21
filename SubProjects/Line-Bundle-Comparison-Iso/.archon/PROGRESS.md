@@ -12,113 +12,89 @@ prover
 
 ## End-state overview
 
-**Zero inline `sorry` in the dependency cone of the three seed declarations
-+ kernel-only axioms**, for the **Line-Bundle Comparison Iso** subproject
-(A.1.c.sub of the Algebraic-Jacobian-Challenge). Seeds:
+**Zero inline `sorry` in the dependency cone of the three seed declarations + kernel-only
+axioms**, for the **Line-Bundle Comparison Iso** subproject (A.1.c.sub). Seeds:
+`lem:pullback_tensor_iso_loctriv` (seed-1, D4′ — **DELIVERED iter-042**),
+`lem:dual_isLocallyTrivial` (seed-2, DUAL — DELIVERED),
+`thm:rel_pic_addcommgroup_via_tensorobj` (seed-3, consumer; gated on terminal).
 
-- `lem:pullback_tensor_iso_loctriv` — `pullbackTensorIsoOfLocallyTrivial` (D4′; body CLOSED; transitively
-  sorry ONLY via K1 `pushforward_lax_mu_comparison_lhs_tmul`. η CLOSED iter-028, μ RHS + comparison-assembly
-  CLOSED iter-029, `pushforward_mu_appIso_collapse` CLOSED iter-031. **SOLE residual = `lhs_tmul`, the
-  iter-033 SOLO lane.**).
-- `lem:dual_isLocallyTrivial` — `dual_isLocallyTrivial` (DUAL route) — **DELIVERED**.
-- `thm:rel_pic_addcommgroup_via_tensorobj` — `PicSharp.addCommGroup_via_tensorObj` (consumer; SCAFFOLD,
-  gated on seed-1 + terminal).
+## Build state (iter-051 plan turn)
 
-## Build state (iter-033 plan turn)
+- **Terminal `TensorObjInverse.lean` GREEN-mod-sorry (6).** `lake build` EXIT 0 (iter-050), zero axioms.
+  Sorries: L493 (B1-crux `H1inv_app_eq_pullbackVal_restrict`), L594/L616/L640/L656 (squares S2/S3/S4a/S4b),
+  L787 (`trivialisation_restrict_compat`).
+- **iter-050 outcome: Bridge B2 FULLY CLOSED** (the 044–049 multi-iter blocker, gone). fine-grained landed
+  6 new axiom-clean public lemmas (5 atomic per-leg sub-lemmas + assembled `_hom` helper); B2's
+  `restrictFunctorIsoPullback_comp_compat` is now sorry-free. Sorry 7→6.
+- **progress-critic terminal051: CONVERGING, dispatch=OK** (8→8→7→6; helpers closed-not-accumulated;
+  "conjugate telescope" blocker resolved). Proceed with the B1-crux prove lane.
+- **iter-049/050 HARD STOP (B2 `_hom` survives → refactor) is SATISFIED** — `_hom` closed iter-050. It does
+  NOT apply to B1-crux: B1-crux's blocker is the *sheafification boundary*, a different problem than the
+  conjugate-of-comp the `restrictCompReindex`→pullback refactor would address.
 
-- **Import chain GREEN** since iter-031; iter-032 +0/−0 (no regression). Tree builds green-mod-sorry.
-- iter-033 plan-phase edits (all committed pre-prover, root green): blueprint effort-break of
-  `lem:trivialisation_restrict_compat` (5 squares + telescope) + blueprint-clean; comment/docstring
-  cleanup refactor (7 edits across DualInverse/Vestigial/LineBundlePullback/TensorObjInverse, zero new
-  sorries, root untouched).
-- **True leaf-sorry disk state (3 sorries, unchanged):**
-  - `TensorObjSubstrate.lean:4362` — `pushforward_lax_mu_comparison_lhs_tmul` (seed-1's sole residual,
-    import-chain ROOT). **This iter's SOLO lane.**
-  - `TensorObjInverse.lean:~244` — `trivialisation_restrict_compat` (now effort-broken; **prover
-    DEFERRED to iter-034** — prove S2 template first).
-  - `TensorObjInverse.lean:~492` — cocycle `exists_tensorObj_inverse` hedge (gated on the above).
+## Decision (iter-051) — `prove` lane on B1-crux `H1inv_app_eq_pullbackVal_restrict` (the sole "engine" sorry)
 
-## iter-033 decision — run the CHURNING `lhs_tmul` lane SOLO (single corrective test); effort-break the STUCK Terminal (done, not a prover lane)
-
-**pc033: STUCK×2, dispatch=OK.** Both correctives executed this iter:
-
-- **Route A `lhs_tmul` (STUCK, 4-iter `hadj'`-let wall):** the iter-033 SOLO prover lane IS the
-  pc033-endorsed single corrective test — the FIRST prover shot with the iter-032-expanded blueprint
-  (per-section comparison form; explicit step 1 = identify `hadj'` with `pushforwardPushforwardAdjunction`
-  so the unit value lemma keys). Runs ALONE (no downstream co-dispatch → no iter-029 build-race).
-  **pc033 must-fix: if `lhs_tmul` does NOT close this iter → iter-034 escalates to user immediately
-  (no further blueprint/helper cycles on Route A).**
-- **Route B Terminal `trivialisation_restrict_compat` (STUCK, 1st green window iter-032 closed only S1):**
-  pc033 confirms the blueprint EFFORT-BREAK is the correct corrective (NOT escalation/pivot — the S1
-  closure proves the sub-squares are individually tractable). EXECUTED this iter: effort-breaker split
-  the lemma into 5 named per-constituent restriction-naturality squares (S2–S4c, incl. the
-  blueprint-OMITTED `uι` 5th leg) + a telescope (target effort 6409→3928); bp033 verifies all five
-  complete+correct. **Prover deferred to iter-034 (prove S2 `tensorObj_restrict_iso` square FIRST as the
-  structural template). pc033 must-fix: iter-034 MUST dispatch S2 — a 2nd prover deferral crosses the
-  persistent-deferral threshold.**
-
-Why not co-run Terminal + lhs_tmul provers: import chain Terminal→DualInverse→Substrate; a root-churn
-invalidates Terminal builds (iter-029 race, ARCHON_MEMORY). Terminal isn't prover-ready anyway (the 5
-squares need Lean scaffolding first, iter-034).
-
-Cheapest reversal: if the `lhs_tmul` lane leaves the root RED, sync_leanok re-strips markers — prover
-instructed to keep green-mod-sorry. The effort-break + cleanup are banked regardless (blueprint/comment
-only).
-
-## Gate status (iter-033)
-
-- **blueprint-reviewer bp033: HARD GATE for the `lhs_tmul` lane CLEARED.** `Picard_TensorObjSubstrate.tex`
-  complete:true + correct:true, 0 must-fix; bp032's `correct:partial` (lhs_tmul statement-drift) is
-  cleared — the per-section comparison statement now matches the Lean signature + consumer
-  (`hom_ext` at L4410). The 5 new squares all complete+correct (feed iter-034). leandag 0
-  unknown_uses/conflicts; doctor 0 broken refs / 0 axioms.
-- **progress-critic pc033: STUCK×2, dispatch=OK** (both correctives executed/planned, see above).
-- **strategy-critic: SKIPPED** — no route swap; STRATEGY.md edited only for the Terminal row estimate
-  refresh + the tactical 5-square decomposition note (within the unchanged SOUND Terminal route);
-  goal/routes identical to the sc024-SOUND state. (Rationale in `iter/iter-033/plan.md`.)
+- B2 done ⇒ B1-crux is now the next blocker; the squares ride the B1 keystone body (already sorry-free mod
+  this crux) + B2. The conjugate toolkit built iter-050 (c₅, reindexCongr, whiskers, LHS-collapse keystone)
+  is now available to it. B1-crux has had NO dedicated prove pass yet (iter-050 spent its budget closing B2,
+  left a clean documented sorry), so this is `prove`, not fine-grained — no churn signal to fine-grain on.
+- **B1-crux reversal/HARD STOP (NEW, AUTONOMOUS — distinct from the satisfied B2 one):** if B1-crux is STILL
+  sorry after this round with no structural advance, do NOT re-dispatch the same recipe. Next iter pivot
+  autonomously to (a) `effort-break` the crux unit-coherence identity into named sub-claims at the
+  sheafification-unit seam, AND/OR (b) `mathlib-analogist` (cross-domain) on the structural shape
+  "sheafification unit intertwines presheaf vs sheaf left-adjoint-uniqueness comparisons" — NOT user
+  escalation (standing AUTONOMOUS directive 2026-05-31), NOT the `restrictCompReindex`→pullback refactor
+  (wrong target — that addresses B2's conjugate-of-comp, already done).
 
 ## Current Objectives
 
-1. **`AlgebraicJacobian/Picard/TensorObjSubstrate.lean`** — close `pushforward_lax_mu_comparison_lhs_tmul`
-   (decl L4303, **sorry@L4362**), seed-1's sole residual. **SOLO lane — do NOT touch any other file**
-   (root must stay green-mod-sorry for the downstream chain). Build with `lake build`/LSP.
-   Blueprint: `chapters/Picard_TensorObjSubstrate.tex` (`lem:pushforward_lax_mu_comparison_lhs_tmul`,
-   reworded iter-032 to the per-section comparison form). `[prover-mode: prove]`
-   - **The 4-iter wall + its concrete next step (blueprint step 1 + task_pending):** the opaque mate-μ
-     is already reduced (iter-029/031) to the explicit 3-leg form `unit ≫ G.map(δGβ ≫ counit⊗counit)`,
-     split sectionwise. The residual is the sectionwise value on `m⊗ₜn`. **Un-`let` `hadj'` (or `change`
-     it to the `pushforwardPushforwardAdjunction` form) so `pushforwardPushforwardAdj_unit_app_app_apply`
-     keys on the unit leg** — this is the wall every prior iter hit. Then: δGβ leg →
-     `Functor.OplaxMonoidal.comp_δ` + `restrictScalars_μ_app_tmul` /
-     `forget₂_restrictScalars_μ_hom_tmul`; counit pair → bijective `f.appIso`. All via `erw` (no whnf),
-     mirroring the PROVED `pushforwardComp_lax_μ` (L2197) for a MATE LHS. Routing through
-     `hadj'.IsMonoidal` is CIRCULAR (DEAD — ARCHON_MEMORY). Recipe also in `task_pending.md` (Seed 1).
-   - Attempt the body with this recipe; leave partial progress (compiling sub-goals / the un-`let`
-     `change` that finally keys the unit lemma) if stuck. **This is the final automated attempt — if it
-     does not close, the route escalates to the user iter-034 (pc033 mandate).**
-
-(Terminal `trivialisation_restrict_compat` prover DEFERRED to iter-034: effort-broken into 5 squares
-this iter; iter-034 scaffolds them in `TensorObjInverse.lean` + proves S2 first as the template. Seed-3
-`RelPicFunctor` BLOCKED on seed-1 + terminal.)
+1. **`AlgebraicJacobian/Picard/TensorObjInverse.lean`** — **TERMINAL lane, SOLO. Close the B1-crux engine
+   sorry; then drive the dependent squares as budget permits.**
+   Blueprint: `chapters/Picard_TensorObjSubstrate.tex` (consolidated; `% archon:covers …/TensorObjInverse.lean`).
+   - **PRIMARY — B1-crux `H1inv_app_eq_pullbackVal_restrict` (sorry L493).** The body is already reduced
+     (verified iter-045) to the isolated CRUX unit identity: after
+     `apply (pullbackPushforwardAdjunction …).homEquiv … |>.injective; rw [leftAdjointUniq_inv_app];`
+     `simp only [homEquiv_unit]; refine Eq.trans (unit_leftAdjointUniq_hom_app _ hadj M.val) ?_`, the
+     remaining goal is `hadj.unit.app M.val = pullbackPPAdj.unit.app M.val ≫ pushforward.map (η ≫ …)`.
+     **Documented route (in-code L466–492; blueprint `lem:h1inv_app_eq_pullbackval_restrict` L7132):**
+     `rw [pullbackValIso, restrictFunctorIsoPullback]; simp only [Iso.trans_hom, Iso.symm_hom,`
+     `Functor.mapIso_hom, Functor.map_comp]; rw [sheafificationCompPullback_eq_leftAdjointUniq]`
+     (`sheafificationCompPullback_eq_leftAdjointUniq` [verified, root L1511]); then a
+     `leftAdjointUniq_trans`/`conjugateEquiv_comp` coherence threading the SCPB unit leg via
+     `leftAdjointUniqUnitEta` [verified, root L1531]. The new iter-050 conjugate lemmas
+     (`conjugateEquiv_pullbackComp_hom`, `conjugateEquiv_reindexCongr`, the whiskers, the LHS-collapse
+     `conjugateEquiv_restrictFunctorIsoPullback_hom`) are now available. This crosses the presheaf/sheaf
+     sheafification boundary (`pushforwardPushforwardAdj` vs `pullbackPushforwardAdjunction` vs
+     `sheafificationAdjunction`) — genuinely harder than B2's clean restrict/pullback world. **Attempt the
+     body; leave attempt-backed partial progress (a compiling sub-step / helper) if genuinely stuck —
+     NOT a fresh untouched sorry.**
+   - **SECONDARY (only if B1-crux closes, then as budget permits):** S2 `tensorObj_restrict_iso_restrict_compat`
+     (L594) and S4b `tensorObj_unit_iso_restrict_compat` (L656) — ride B1 (body now fully closed) +
+     `pullbackTensorMap_restrict`/`_natural` (sorry-free D3′ cone) + B2 (done) + left-unitor. These are
+     deep immersion-naturality 4-step chart-chases; one at a time.
+   - **DEFER unless trivial:** S3 (L616) / S4a (L640) — dual analogue, thin-poset `subsingleton` route (b)
+     UNVERIFIED; if it stalls leave a clean sorry, do NOT burn the round. `trivialisation_restrict_compat`
+     (L787) — telescope of all 5 squares; only after they close.
+   - **Cleanup (cheap, lean-auditor iter-050 major/minor — do while warm):** L193 section header drop the
+     stale "(iter-028 stubs)" qualifier (all decls under it proved); L519 docstring qualify "sorry-free" →
+     "sorry-free at this level" (transitively rides the B1-crux sorry).
+   - **AUTHORITATIVE = `lake build AlgebraicJacobian.Picard.TensorObjInverse` EXIT 0, NOT LSP** (LSP gave
+     stale-green for 3 iters — memory `lhs-tmul-telescope-iter037`). DEAD probes (do NOT retry):
+     `restrictFunctorComp.hom.naturality φ`; `subst`/`rcases` on `hVU`; `simp[restrictIsoUnitOfLE]`;
+     `congr 1`/`Iso.eq_inv_comp`/`Hom.ext`; **NEVER `ext` on a conjugate-headed goal** (whnf-bomb). Across
+     the SheafOfModules `≫` defeq-not-syntactic seam use term-mode `exact` of a generic single-`[Category C]`
+     lemma, NOT `rw`/`simp` of a category lemma (always misses).
+   [prover-mode: prove]
 
 ## Standing deferrals
 
-- **Terminal route iter-034 (pc033 MUST-DISPATCH):** scaffold the 5 effort-broken squares
-  (`tensorObj_restrict_iso_restrict_compat` (S2), `dual_restrict_iso_dualIsoOfIso_restrict_compat` (S3),
-  `dual_unit_iso_restrict_compat` (S4a), `tensorObj_unit_iso_restrict_compat` (S4b),
-  `trivialisation_uIota_restrict_compat` (S4c)) in `TensorObjInverse.lean`, then prove **S2 first** as
-  the structural template (the 4-step chart-chase + ρ-threading; effort≈1502, the largest — re-break if
-  it stalls). The other four are short once S2's pattern exists. Then the telescope closes
-  `trivialisation_restrict_compat`, which fires the cocycle `| sorry` strip. The root will be settled
-  after this iter's `lhs_tmul` lane (run the Terminal lane SOLO or co-dispatch only if root stays green).
-- **Scaffold target (decl does not exist yet — NOT fill-sorry):** `PicSharp.addCommGroup_via_tensorObj`
-  (seed 3, `RelPicFunctor.lean`); gated on seed-1 (K1) + the terminal. Stays BLOCKED.
-- **Coverage / file-split debt (deferred phase):** ~106 `lean_aux` decls unmatched (bulk pre-existing,
-  all `lean_aux` — no wire-up owed per bp033); the 5 new square `\lean{}` hints are `unmatched_lean`
-  until iter-034 scaffolds them (expected, tex-precedes-Lean); `deltaConjOfMuComparison` +
-  `linearEndo_apply_comm` are `private`. `TensorObjSubstrate.lean` (>3600 LOC) split scheduled. Defer
-  until the active seed lanes land.
-- **AJC Lan-decomposition block** (`extendScalars`/`pullback0`/`pullbackLanDecomposition`) — NOT ported
-  (dead code; not in any seed cone).
-- **Extraction note:** module names, file paths, blueprint labels unchanged from the parent so proved
-  seeds merge back cleanly. Sibling extracts (Cech-Cohomology, Quot-Foundations) cover disjoint cones.
+- **Consumer seed-3 `PicSharp.addCommGroup_via_tensorObj` (`RelPicFunctor.lean`)** — not in Lean; gated on
+  the terminal close (seed-1 done). `map_add` ← seed-1 comparison iso; `map_zero` ← `pullbackUnitIso`;
+  inverse ← `exists_tensorObj_inverse`. Blueprint `Picard_RelPicFunctor.tex` has the 2 forward `\lean{}`
+  targets (non-gating "soon" — formalize when unblocked).
+- **Coverage / file-split debt:** ~105 isolated `lean_aux` nodes (mostly `private` generic plumbing);
+  `TensorObjSubstrate.lean` (>4800 LOC) split scheduled after the terminal lands. iter-051 cleared the 2
+  freshly-flagged B2-block items (added `lem:conjugateequiv_restrictfunctorisopullback_hom` block; removed
+  the dangling `pushforwardComp_reindex_telescope` `\lean{}` → exposition). Bulk deferred to the phase.
+- **AJC Lan-decomposition block** — NOT ported (dead code; not in any seed cone).
+- **Extraction note:** module names / paths / labels unchanged from the parent for clean merge-back.

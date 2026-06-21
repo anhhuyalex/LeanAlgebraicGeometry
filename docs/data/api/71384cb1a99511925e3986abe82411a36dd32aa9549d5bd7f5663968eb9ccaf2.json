@@ -1,0 +1,223 @@
+[
+  {
+    "timestamp": "2026-06-21T03:50:19Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "tensorObj_restrict_iso_eq_pullbackTensorMap"
+    },
+    "session": {
+      "id": "session_43",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Root privacy gate: the equational delta-conjugation content (pushforward_mu_appIso_collapse L4678, deltaConjOfMuComparison L4624, isIso_oplaxdelta_of_conj L4750, pushforward_lax_mu_comparison L4573) is `private` in frozen root TensorObjSubstrate.lean; only the IsIso witness pullbackTensorMap_isIso_of_isOpenImmersion (L4770) is public. The planner's 'B1 unblocked' premise was FALSE (it conflated public witness with accessible equation).",
+      "key_lemmas_used": [
+        "pullbackTensorMap_isIso_of_isOpenImmersion (asIso witness, public)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Drop stale (hiso : IsIso ...) hypothesis to match blueprint signature; cite public witness via @asIso _ _ _ _ (pullbackTensorMap f M N) (pullbackTensorMap_isIso_of_isOpenImmersion f M N); install IsIso instance then sorry.",
+        "code_tried": "signature change + witness instance install; body sorry",
+        "line_number": "270",
+        "lean_error": "none (typechecks); body cannot be discharged — needs private root equation",
+        "result": "partial",
+        "insight": "Signature now matches blueprint lem:tensorobj_restrict_iso_eq_pullback_tensor_map (confirmed by lean-vs-blueprint-checker). Body blocked on private root delta-conjugation — genuine cross-file blocker, not a tactic gap."
+      }
+    ],
+    "next_steps": "Mathematician/root lane: de-`private` pushforward_mu_appIso_collapse + isIso_oplaxdelta_of_conj in TensorObjSubstrate.lean (or add public re-export). Do NOT re-dispatch B1 downstream until unblocked — re-deriving locally means re-proving pushforward_lax_mu_comparison_lhs_tmul (~200 LOC)."
+  },
+  {
+    "timestamp": "2026-06-21T03:50:19Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "restrictFunctorIsoPullback_comp_compat"
+    },
+    "session": {
+      "id": "session_43",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Residual is genuine mate calculus (~80-120 LOC): mateEquiv_vcomp / leftAdjointUniq_trans threading across three differing right adjoints + conjugateEquiv_pullbackComp_inv + pullbackCongr hjι eqToHom. Independent of the B1 privacy gate.",
+      "key_lemmas_used": [
+        "Adjunction.homEquiv_leftAdjointUniq_hom_app",
+        "Adjunction.homEquiv_unit",
+        "restrictCompReindex",
+        "restrictFunctorComp_hom_app_app"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "homEquiv-injectivity reduction: apply Iso.ext; apply (restrictAdjunction V.ι).homEquiv _ _ |>.injective; rw [Adjunction.homEquiv_unit, ...]; simp [restrictFunctorIsoPullback].",
+        "code_tried": "apply Iso.ext; apply (restrictAdjunction V.ι).homEquiv _ _ |>.injective; rw [Adjunction.homEquiv_unit, Adjunction.homEquiv_unit]; simp only [restrictFunctorIsoPullback, Iso.app_hom]; rw [Adjunction.unit_leftAdjointUniq_hom_app]",
+        "line_number": "196",
+        "lean_error": "unit_leftAdjointUniq_hom_app did not directly fire; reworked via defeq `show ... = leftAdjointUniq ... .hom.app A from rfl` then homEquiv_leftAdjointUniq_hom_app",
+        "result": "partial",
+        "insight": "LHS discharges to (pullbackPushforwardAdjunction V.ι).unit.app A via homEquiv_leftAdjointUniq_hom_app."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Expand RHS via homEquiv_unit + simp [Iso.trans_hom, Functor.mapIso_hom, Functor.map_comp, Category.assoc, restrictCompReindex, Iso.app_hom] then merge legs with repeated ← Functor.map_comp.",
+        "code_tried": "rw [Adjunction.homEquiv_unit]; simp only [Iso.trans_hom, Functor.mapIso_hom, Functor.map_comp, Category.assoc, restrictCompReindex, Iso.app_hom]; rw [← Functor.map_comp × 6]; simp only [restrictFunctorComp_hom_app_app, restrictFunctorCongr_inv_app_app, Iso.symm_hom]",
+        "line_number": "196",
+        "lean_error": "no close — coherence simp merges legs but does not discharge; residual is explicit pseudofunctoriality unit-coherence (c1..c6)",
+        "result": "partial",
+        "insight": "Reduced from bare sorry to a compiling LHS-discharged / RHS-fully-expanded mate-coherence residual. Estimate ~80-120 LOC (NOT planner's 40-60)."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Try to eliminate the j ≫ U.ι = V.ι chart shim by substitution.",
+        "code_tried": "clear_value j; subst hjι",
+        "line_number": "196",
+        "lean_error": "DEAD: j is a plain parameter and V.ι is compound, so the shim cannot be eliminated by subst; eqToHom must be threaded explicitly",
+        "result": "failed",
+        "insight": "Recorded as DEAD probe in body. The pullbackCongr hjι eqToHom must be threaded through the mate calculus, not substituted away."
+      }
+    ],
+    "next_steps": "Dedicated mate-calculus iteration (independent of root unblock — most tractable remaining sorry). Closing B2 also keeps S4c (L372) closed. Consider effort-breaker to split the c1..c6 leg-coherence into per-leg sub-lemmas."
+  },
+  {
+    "timestamp": "2026-06-21T03:50:19Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "tensorObj_restrict_iso_restrict_compat (S2)"
+    },
+    "session": {
+      "id": "session_43",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Substitutes B1 then runs base-change bookkeeping; gated behind B1 privacy gate.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Not independently attempted — blueprint proof substitutes B1, which is blocked by root privacy.",
+        "code_tried": "n/a (left documented sorry)",
+        "line_number": "289",
+        "lean_error": "n/a",
+        "result": "failed",
+        "insight": "Cannot close until B1 unblocked (root de-private)."
+      }
+    ],
+    "next_steps": "Wait for B1 root unblock; then substitute B1 + base-change bookkeeping."
+  },
+  {
+    "timestamp": "2026-06-21T03:50:19Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "tensorObj_restrict_iso_self_restrict_compat (S4b)"
+    },
+    "session": {
+      "id": "session_43",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Depends on S2 → B1 privacy gate.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Not attempted — gated behind S2/B1.",
+        "code_tried": "n/a (left documented sorry)",
+        "line_number": "355",
+        "lean_error": "n/a",
+        "result": "failed",
+        "insight": "Transitively blocked by B1 root privacy."
+      }
+    ],
+    "next_steps": "Wait for B1 root unblock + S2."
+  },
+  {
+    "timestamp": "2026-06-21T03:50:19Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "dual_restrict_iso_restrict_compat (S3)"
+    },
+    "session": {
+      "id": "session_43",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Deep dual route: dual_restrict_iso immersion-naturality, same depth as S2. Route-b thin-poset subsingleton UNVERIFIED; route-a full pullbackDualMap cone (~150-250 LOC) deferred.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Not attempted this iter — deferred behind B1/B2 priority.",
+        "code_tried": "n/a (left documented sorry)",
+        "line_number": "314",
+        "lean_error": "n/a",
+        "result": "failed",
+        "insight": "Dual route depth not yet de-risked; route-b subsingleton needs verification before committing."
+      }
+    ],
+    "next_steps": "Verify route-b thin-poset subsingleton viability OR scope route-a pullbackDualMap cone; consider effort-breaker."
+  },
+  {
+    "timestamp": "2026-06-21T03:50:19Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "dual_unit_iso_restrict_compat (S4a)"
+    },
+    "session": {
+      "id": "session_43",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Dual route, same depth as S3.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Not attempted — deferred behind B1/B2 priority and S3 dual route.",
+        "code_tried": "n/a (left documented sorry)",
+        "line_number": "339",
+        "lean_error": "n/a",
+        "result": "failed",
+        "insight": "Pairs with S3; same dual-route gating."
+      }
+    ],
+    "next_steps": "Resolve with S3 dual route."
+  },
+  {
+    "timestamp": "2026-06-21T03:50:19Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "trivialisation_restrict_compat (telescope)"
+    },
+    "session": {
+      "id": "session_43",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Wires S2/S3/S4a/S4b/S4c; only attemptable once all five squares close. Currently bare sorry; does not yet call the closed S4c.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Not attempted — all constituent squares except S4c are open.",
+        "code_tried": "n/a (left documented sorry)",
+        "line_number": "427",
+        "lean_error": "n/a",
+        "result": "failed",
+        "insight": "Terminal assembly; bottleneck of the whole cocycle. exists_tensorObj_inverse closes mod this."
+      }
+    ],
+    "next_steps": "Assemble only after S2/S3/S4a/S4b close (and B2 for S4c). This is the cocycle's sole remaining seed-cone gate."
+  }
+]

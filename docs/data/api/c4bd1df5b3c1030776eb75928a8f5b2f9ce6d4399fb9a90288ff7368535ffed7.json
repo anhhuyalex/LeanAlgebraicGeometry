@@ -1,0 +1,242 @@
+[
+  {
+    "timestamp": "2026-06-20T13:07:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "sectionGradedRing_gsemiring"
+    },
+    "session": {
+      "id": "session_27",
+      "model": "opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "sectionGradedRing_gmonoid",
+        "gMul_mul_apply",
+        "TensorProduct.tmul_zero",
+        "TensorProduct.zero_tmul",
+        "TensorProduct.tmul_add",
+        "TensorProduct.add_tmul",
+        "map_zero",
+        "map_add",
+        "DirectSum.GSemiring",
+        "zero_nsmul",
+        "succ_nsmul"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Add sectionGradedRing_gmonoid (GMonoid via one_mul/mul_one/mul_assoc routed through gradedMonoid_eq_of_cast) + sectionGradedRing_gsemiring (DirectSum.GSemiring extending gmonoid with bilinearity+natCast)",
+        "code_tried": "noncomputable def sectionGradedRing_gsemiring ... { sectionGradedRing_gmonoid L with mul_zero := fun a => by simp only [gMul_mul_apply, TensorProduct.tmul_zero, map_zero] ... }",
+        "line_number": "3437,3456",
+        "lean_error": "Unknown constant `DirectSum.GSemiring` (missing import); class-type def must be @[reducible]",
+        "result": "failed",
+        "insight": "DirectSum.GSemiring lives in Mathlib.Algebra.DirectSum.Ring (not transitively imported); class-valued defs must be reducible to be found by instance resolution"
+      },
+      {
+        "attempt": 2,
+        "strategy": "Add import + @[reducible]",
+        "code_tried": "import Mathlib.Algebra.DirectSum.Ring ; @[reducible] noncomputable def sectionGradedRing_g{monoid,semiring}",
+        "line_number": "2,3437,3456",
+        "lean_error": "unsolved goals at mul_zero/zero_mul/mul_add/add_mul: simp only [gMul_mul_apply, TensorProduct.tmul_zero, map_zero] leaves Γ(μ)(sectionsMul(a⊗ₜ0))=0",
+        "result": "partial",
+        "insight": "the TensorProduct.tmul_zero rewrite does not fire under simp only across the ModuleCat.Hom.hom/DFunLike coercion of sectionsMul/tensorPowAdd"
+      },
+      {
+        "attempt": 3,
+        "strategy": "lean_multi_attempt to find a firing tactic for the bilinearity clauses",
+        "code_tried": "simp only [gMul_mul_apply]; erw [TensorProduct.tmul_zero, map_zero, map_zero]",
+        "line_number": "3462-3469",
+        "lean_error": null,
+        "result": "success",
+        "insight": "erw (not rw/simp only) is required to cross the coercion; push 0/+ through the TensorProduct step then through BOTH ModuleCat morphisms (two map_zero/map_add)"
+      },
+      {
+        "attempt": 4,
+        "strategy": "natCast fields",
+        "code_tried": "natCast := fun n => n • (GradedMonoid.GOne.one : sectionDeg L 0); natCast_zero := by rw [zero_nsmul]; natCast_succ := fun n => by rw [succ_nsmul]",
+        "line_number": "3470-3472",
+        "lean_error": null,
+        "result": "success",
+        "insight": "natCast = n-fold nsmul of the degree-0 unit; the two laws are zero_nsmul/succ_nsmul"
+      }
+    ],
+    "next_steps": "Deliverable complete + axiom-clean. Next: GCommSemiring (iter-028, invertible L — gated on re-signing IsInvertible to carry trivializing cover as data, then comm chain)."
+  },
+  {
+    "timestamp": "2026-06-20T13:07:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "sectionGradedRing_gmonoid"
+    },
+    "session": {
+      "id": "session_27",
+      "model": "opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "sectionsMul_one_mul",
+        "sectionsMul_mul_one",
+        "sectionsMul_mul_assoc",
+        "gradedMonoid_eq_of_cast",
+        "GradedMonoid.GMul",
+        "GradedMonoid.GOne"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Assemble GMonoid from the now-complete B1-B7 coherence clauses via gradedMonoid_eq_of_cast (transport-mediated eq -> dependent-pair eq); gnpow takes Mathlib default",
+        "code_tried": "@[reducible] noncomputable def sectionGradedRing_gmonoid (L) : GradedMonoid.GMonoid (sectionDeg L) := { GMul, GOne with one_mul := fun a => gradedMonoid_eq_of_cast L (zero_add a.1) (sectionsMul_one_mul L a.2), mul_one := ..., mul_assoc := fun a b c => gradedMonoid_eq_of_cast L (add_assoc ...) (sectionsMul_mul_assoc L a.2 b.2 c.2) }",
+        "line_number": "3437",
+        "lean_error": null,
+        "result": "success",
+        "insight": "the three hypothesis-free coherence clauses (B2/B3/B7) feed directly; gradedMonoid_eq_of_cast is the bridge; axiom-clean"
+      }
+    ],
+    "next_steps": "Folded into lem:sectionGradedRing_gsemiring blueprint prose (lvbc-approved; no own block needed). Coverage-debt: list in recommendations as lean_aux for planner."
+  },
+  {
+    "timestamp": "2026-06-20T13:07:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "sectionGradedRing_semiring_nonempty"
+    },
+    "session": {
+      "id": "session_27",
+      "model": "opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "sectionGradedRing_gsemiring",
+        "DirectSum.toSemiring"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Sanity example: Semiring on the external direct sum via the GSemiring",
+        "code_tried": "example (L) : Semiring (⨁ m, sectionDeg L m) := letI := sectionGradedRing_gsemiring L; inferInstance",
+        "line_number": "3479",
+        "lean_error": "Application type mismatch (m : ?->? not ℕ); then unexpected token ','; then ⨁ parse yields (_ × Type)",
+        "result": "failed",
+        "insight": "the ⨁ big-operator notation does not elaborate cleanly here for the index binder"
+      },
+      {
+        "attempt": 2,
+        "strategy": "Use DirectSum applied form + avoid codegen",
+        "code_tried": "example (L) : Semiring (DirectSum ℕ (sectionDeg L)) := letI := ...; inferInstance",
+        "line_number": "3479",
+        "lean_error": "failed to compile definition, consider marking 'noncomputable' (depends on noncomputable tensorPow)",
+        "result": "failed",
+        "insight": "an example is elaborated as a def and triggers codegen on the noncomputable carrier"
+      },
+      {
+        "attempt": 3,
+        "strategy": "State as Nonempty theorem to sidestep both codegen and global-instance registration",
+        "code_tried": "theorem sectionGradedRing_semiring_nonempty (L) : Nonempty (Semiring (DirectSum ℕ (sectionDeg L))) := ⟨letI := sectionGradedRing_gsemiring L; inferInstance⟩",
+        "line_number": "3479",
+        "lean_error": null,
+        "result": "success",
+        "insight": "Nonempty wrapper = no codegen, no global instance (carrier depends on L); confirms the deliverable assembles a genuine Semiring on ⊕_m Γ(X,L^⊗m); axiom-clean"
+      }
+    ],
+    "next_steps": "Coverage-debt: list as lean_aux for planner (folded into gsemiring conclusion clause per lvbc)."
+  },
+  {
+    "timestamp": "2026-06-20T13:07:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "moduleTensorPowAdd"
+    },
+    "session": {
+      "id": "session_27",
+      "model": "opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "tensorObjAssoc",
+        "tensorObjWhiskerRightIso",
+        "tensorBraiding",
+        "tensorObjWhiskerLeftIso",
+        "tensorPowAdd"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "STRETCH Gmodule foundation iso: L^i ⊗ (F ⊗ L^j) ≅ F ⊗ L^(i+j) by reassociate + braid L^i past F + merge line-bundle blocks (braiding between DISTINCT L^i and F -> always exists, no invertibility)",
+        "code_tried": "noncomputable def moduleTensorPowAdd (F L) (i j) : tensorObj (tensorPow L i) (moduleTensorPow F L j) ≅ moduleTensorPow F L (i+j) := (tensorObjAssoc ...).symm ⪪⪪ tensorObjWhiskerRightIso (tensorBraiding (tensorPow L i) F) (tensorPow L j) ⪪⪪ tensorObjAssoc F ... ⪪⪪ tensorObjWhiskerLeftIso F (tensorPowAdd L i j)",
+        "line_number": "3489",
+        "lean_error": null,
+        "result": "success",
+        "insight": "term-mode iso composition; axiom-clean; lays the foundation for sectionGradedModule_gmodule but the Gmodule mul_smul axiom remains a braided-hexagon blocker (no Mathlib tactic; braiding-past-F intrinsic)"
+      }
+    ],
+    "next_steps": "Gmodule instance (sectionGradedModule_gmodule) NOT built: mul_smul = braided hexagon, multi-iter blocker. Recommend effort-breaker if pursued, else leave as documented STRETCH FUTURE."
+  },
+  {
+    "timestamp": "2026-06-20T13:07:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "sectionGradedModule_gmodule"
+    },
+    "session": {
+      "id": "session_27",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Gmodule.mul_smul = braided hexagon coherence (braiding L^i past F intrinsic); no Mathlib tactic discharges it; foundation iso moduleTensorPowAdd laid but the action-coherence axioms unbuilt. STRETCH beyond the iter-027 deliverable.",
+      "key_lemmas_used": [
+        "moduleTensorPowAdd",
+        "DirectSum.Gmodule"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Build only the foundation iso this iter; defer the Gmodule axioms",
+        "code_tried": "(moduleTensorPowAdd built; Gmodule instance left unscaffolded)",
+        "line_number": "3489",
+        "lean_error": null,
+        "result": "partial",
+        "insight": "the GMonoid/GSemiring deliverable was the iter-027 target; Gmodule is the documented STRETCH and its mul_smul hexagon is a genuine multi-iter obstacle"
+      }
+    ],
+    "next_steps": "Not on the deliverable critical path. If pursued: dispatch effort-breaker on lem:sectionGradedModule_gmodule (split mul_smul into per-leg hexagon sub-lemmas) BEFORE a prover round."
+  },
+  {
+    "timestamp": "2026-06-20T13:07:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "sectionsMul_mul_comm"
+    },
+    "session": {
+      "id": "session_27",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "FALSE for arbitrary L (free tensor algebra, counterexample L=O_X^2). Needs [IsInvertible L] + tensorBraiding_self_eq_id_of_isInvertible (beta_{L,L}=1), which itself needs IsInvertible re-signed to carry a trivializing cover as data (Stacks 01CR). No consumer until GCommSemiring. Deferred FUTURE (3 sorries: tensorBraiding_self_eq_id_of_isInvertible, tensorPowAdd_comm, sectionsMul_mul_comm).",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Not attempted this iter (deferred; out of deliverable scope)",
+        "code_tried": "n/a",
+        "line_number": "3506,3520,3541",
+        "lean_error": null,
+        "result": "partial",
+        "insight": "the 3 comm sorries are untouched, honest, un-weakened, [IsInvertible L]-gated (confirmed by lean-auditor iter-027)"
+      }
+    ],
+    "next_steps": "iter-028+: re-sign IsInvertible to carry cover-as-data FIRST (free, unprotected), then descend beta_{L,L}=1 via cover + Module.Invertible.tensorProductComm_eq_refl + TopCat.Sheaf.hom_ext (NOT Scheme.Modules.hom_ext, top-trap)."
+  }
+]

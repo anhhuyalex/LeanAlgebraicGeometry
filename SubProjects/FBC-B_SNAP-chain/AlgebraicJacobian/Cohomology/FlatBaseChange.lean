@@ -750,7 +750,19 @@ theorem gammaPushforwardIso_comp_bridge {R S T : CommRingCat.{u}} (φ : R ⟶ S)
   -- identity (NO substantive morphism, so no value-`ModuleCat`/`X.Modules` element reduction), closed
   -- by `rfl`.
   rw [Functor.map_comp, eqToIso.hom, eqToHom_app, eqToHom_map]
-  sorry
+  -- The remaining inner morphism `(pushforwardComp …).inv.app N` is the identity on every open
+  -- (`pushforwardComp_inv_app_app`), so it is `eqToHom rfl` between the two defeq pushforward objects.
+  -- Its image under the (global-section) functor `moduleSpecΓFunctor` is therefore the identity, and the
+  -- surviving `eqToHom` prefactor closes the goal. No value-`ModuleCat`/`X.Modules` element reduction is
+  -- performed (the morphism carries no substantive content), so this stays kernel-light.
+  rw [show (Scheme.Modules.pushforwardComp (Spec.map ρ) (Spec.map φ)).inv.app N
+        = eqToHom rfl from ?_]
+  · rw [eqToHom_refl]
+    exact Category.comp_id _
+  · apply Scheme.Modules.hom_ext
+    intro U
+    rw [Scheme.Modules.pushforwardComp_inv_app_app]
+    exact (Scheme.Modules.Hom.id_app _).symm
 
 /-- **Per-component composition coherence of the affine-pushforward Γ-comparison** (blueprint
 `lem:gammaPushforwardIso_comp`). For ring maps `φ : R ⟶ S`, `ρ : S ⟶ T` and a `Spec T`-module
@@ -900,6 +912,33 @@ lemma pullback_spec_tilde_iso_inv_unit_triangle {R R' : CommRingCat.{u}}
       = (pullback_spec_tilde_iso φ M).inv := rfl
   rw [← hbridge]
   exact unit_conjugateEquiv_symm adjL adjR (gammaPushforwardNatIso φ).hom M
+
+/-- **Conjugate presentation of the affine pullback dictionary inverse.** By construction
+`pullback_spec_tilde_iso φ` is the conjugate (via `conjugateIsoEquiv`) of the `Γ`-pushforward
+natural isomorphism `gammaPushforwardNatIso φ`, so its inverse is, definitionally, the `M`-component
+of `(conjugateEquiv adjL adjR).symm (gammaPushforwardNatIso φ).hom`. This is the `rfl` bridge already
+used inside `pullback_spec_tilde_iso_inv_unit_triangle`, extracted as a reusable lemma for the
+iterated-mate assembly `pullback_spec_tilde_iso_ring_square_mate_glue`. Project-local. -/
+lemma pullback_spec_tilde_iso_inv_conjugateEquiv {R R' : CommRingCat.{u}}
+    (φ : R ⟶ R') (M : ModuleCat.{u} R) :
+    (pullback_spec_tilde_iso φ M).inv =
+      ((conjugateEquiv ((tilde.adjunction (R := R)).comp
+            (Scheme.Modules.pullbackPushforwardAdjunction (Spec.map φ)))
+          ((ModuleCat.extendRestrictScalarsAdj φ.hom).comp (tilde.adjunction (R := R')))).symm
+        (gammaPushforwardNatIso φ).hom).app M := rfl
+
+/-- **Conjugate presentation of the affine pullback dictionary forward map.** Companion of
+`pullback_spec_tilde_iso_inv_conjugateEquiv`: the forward map is the `M`-component of
+`(conjugateEquiv adjR adjL).symm (gammaPushforwardNatIso φ).inv` (the right and left adjoint roles
+swapped versus the inverse). Used to put all four `pullback_spec_tilde_iso` legs of the iterated-mate
+glue into a uniform `conjugateEquiv` form. Project-local. -/
+lemma pullback_spec_tilde_iso_hom_conjugateEquiv {R R' : CommRingCat.{u}}
+    (φ : R ⟶ R') (M : ModuleCat.{u} R) :
+    (pullback_spec_tilde_iso φ M).hom =
+      ((conjugateEquiv ((ModuleCat.extendRestrictScalarsAdj φ.hom).comp (tilde.adjunction (R := R')))
+            ((tilde.adjunction (R := R)).comp
+              (Scheme.Modules.pullbackPushforwardAdjunction (Spec.map φ)))).symm
+        (gammaPushforwardNatIso φ).inv).app M := rfl
 
 /-! ## Project-local Mathlib supplement — pullback cone legs as Spec of tensor inclusions -/
 
@@ -1336,6 +1375,450 @@ noncomputable def chartBaseChangeModuleReassoc {A R R' B : CommRingCat.{u}}
     eqToIso (by rw [hRing]) ≪≫
     (ModuleCat.extendScalarsComp ρ.hom inclR'.hom).app M
 
+/-- **Natural-iso form of the algebraic base-change reassociation.** The composite left adjoint
+`extendScalars ι_R ⋙ extendScalars ρ_B` is naturally isomorphic to `extendScalars ρ ⋙ extendScalars ι_{R'}`
+via the two `ModuleCat.extendScalarsComp` coherences and the `eqToIso` of the base-change ring square
+`chartBaseChange_ring_square`. Its `M`-component is `chartBaseChangeModuleReassoc`. Project-local. -/
+noncomputable def chartBaseChangeModuleReassocNat {A R R' B : CommRingCat.{u}}
+    (ψ : A ⟶ B) (φ : A ⟶ R) (ρ : R ⟶ R') :
+    letI : Algebra (A : Type u) (R : Type u) := φ.hom.toAlgebra
+    letI : Algebra (A : Type u) (R' : Type u) := (φ ≫ ρ).hom.toAlgebra
+    letI : Algebra (A : Type u) (B : Type u) := ψ.hom.toAlgebra
+    ModuleCat.extendScalars (CommRingCat.ofHom (Algebra.TensorProduct.includeLeftRingHom
+        (R := (A : Type u)) (A := (R : Type u)) (B := (B : Type u)))).hom ⋙
+      ModuleCat.extendScalars (chartBaseChangeRingMap ψ φ ρ).hom ≅
+      ModuleCat.extendScalars ρ.hom ⋙
+        ModuleCat.extendScalars (CommRingCat.ofHom (Algebra.TensorProduct.includeLeftRingHom
+          (R := (A : Type u)) (A := (R' : Type u)) (B := (B : Type u)))).hom := by
+  letI : Algebra (A : Type u) (R : Type u) := φ.hom.toAlgebra
+  letI : Algebra (A : Type u) (R' : Type u) := (φ ≫ ρ).hom.toAlgebra
+  letI : Algebra (A : Type u) (B : Type u) := ψ.hom.toAlgebra
+  set inclR := CommRingCat.ofHom (Algebra.TensorProduct.includeLeftRingHom
+    (R := (A : Type u)) (A := (R : Type u)) (B := (B : Type u))) with hinclR
+  set inclR' := CommRingCat.ofHom (Algebra.TensorProduct.includeLeftRingHom
+    (R := (A : Type u)) (A := (R' : Type u)) (B := (B : Type u))) with hinclR'
+  set ρB := chartBaseChangeRingMap ψ φ ρ with hρB
+  have hRing : ρB.hom.comp inclR.hom = inclR'.hom.comp ρ.hom := by
+    rw [← CommRingCat.hom_comp, ← CommRingCat.hom_comp]
+    exact congrArg CommRingCat.Hom.hom (chartBaseChange_ring_square ψ φ ρ)
+  exact (ModuleCat.extendScalarsComp inclR.hom ρB.hom).symm ≪≫
+    eqToIso (by rw [hRing]) ≪≫
+    (ModuleCat.extendScalarsComp ρ.hom inclR'.hom)
+
+/-- **Natural-iso form of the restrict-scalars base-change reassociation** — the right-adjoint mate
+target for `chartBaseChangeModuleReassocNat`. The composite right adjoint
+`restrictScalars ι_{R'} ⋙ restrictScalars ρ` is naturally isomorphic to
+`restrictScalars ρ_B ⋙ restrictScalars ι_R` via the two `ModuleCat.restrictScalarsComp` coherences
+and the `eqToIso` of the base-change ring square. Project-local. -/
+noncomputable def chartBaseChangeRestrictReassocNat {A R R' B : CommRingCat.{u}}
+    (ψ : A ⟶ B) (φ : A ⟶ R) (ρ : R ⟶ R') :
+    letI : Algebra (A : Type u) (R : Type u) := φ.hom.toAlgebra
+    letI : Algebra (A : Type u) (R' : Type u) := (φ ≫ ρ).hom.toAlgebra
+    letI : Algebra (A : Type u) (B : Type u) := ψ.hom.toAlgebra
+    ModuleCat.restrictScalars (CommRingCat.ofHom (Algebra.TensorProduct.includeLeftRingHom
+        (R := (A : Type u)) (A := (R' : Type u)) (B := (B : Type u)))).hom ⋙
+      ModuleCat.restrictScalars ρ.hom ≅
+      ModuleCat.restrictScalars (chartBaseChangeRingMap ψ φ ρ).hom ⋙
+        ModuleCat.restrictScalars (CommRingCat.ofHom (Algebra.TensorProduct.includeLeftRingHom
+          (R := (A : Type u)) (A := (R : Type u)) (B := (B : Type u)))).hom := by
+  letI : Algebra (A : Type u) (R : Type u) := φ.hom.toAlgebra
+  letI : Algebra (A : Type u) (R' : Type u) := (φ ≫ ρ).hom.toAlgebra
+  letI : Algebra (A : Type u) (B : Type u) := ψ.hom.toAlgebra
+  set inclR := CommRingCat.ofHom (Algebra.TensorProduct.includeLeftRingHom
+    (R := (A : Type u)) (A := (R : Type u)) (B := (B : Type u))) with hinclR
+  set inclR' := CommRingCat.ofHom (Algebra.TensorProduct.includeLeftRingHom
+    (R := (A : Type u)) (A := (R' : Type u)) (B := (B : Type u))) with hinclR'
+  set ρB := chartBaseChangeRingMap ψ φ ρ with hρB
+  have hRing : inclR'.hom.comp ρ.hom = ρB.hom.comp inclR.hom := by
+    rw [← CommRingCat.hom_comp, ← CommRingCat.hom_comp]
+    exact (congrArg CommRingCat.Hom.hom (chartBaseChange_ring_square ψ φ ρ)).symm
+  exact (ModuleCat.restrictScalarsComp ρ.hom inclR'.hom).symm ≪≫
+    eqToIso (by rw [hRing]) ≪≫
+    (ModuleCat.restrictScalarsComp inclR.hom ρB.hom)
+
+/-- **Uniqueness of a natural transformation between right adjoints from its unit transpose.** Two
+natural transformations `β γ : R₁ ⟶ R₂` between the right adjoints of `adj₁ : L₁ ⊣ R₁`,
+`adj₂ : L₂ ⊣ R₂` that have the same composite with the unit against a fixed `α : L₂ ⟶ L₁`
+(`adj₁.unit.app c ≫ -.app (L₁.obj c) = adj₂.unit.app c ≫ R₂.map (α.app c)` for all `c`) are equal.
+This is the uniqueness underlying the adjoint-mate bijection `conjugateEquiv`: each side is forced to
+the explicit triangle-identity formula `adj₂.unit.app (R₁.obj Y) ≫ R₂.map (α.app (R₁.obj Y)) ≫
+R₂.map (adj₁.counit.app Y)`. Reusable for any `conjugateEquiv`-value identification (it powers both
+the algebraic and geometric `b2` mate legs). Project-local. -/
+lemma natTrans_ext_of_unit {C D : Type*} [CategoryTheory.Category C] [CategoryTheory.Category D]
+    {L₁ L₂ : CategoryTheory.Functor C D} {R₁ R₂ : CategoryTheory.Functor D C}
+    (adj₁ : L₁ ⊣ R₁) (adj₂ : L₂ ⊣ R₂) (α : L₂ ⟶ L₁) (β γ : R₁ ⟶ R₂)
+    (hβ : ∀ c, adj₁.unit.app c ≫ β.app (L₁.obj c) = adj₂.unit.app c ≫ R₂.map (α.app c))
+    (hγ : ∀ c, adj₁.unit.app c ≫ γ.app (L₁.obj c) = adj₂.unit.app c ≫ R₂.map (α.app c)) :
+    β = γ := by
+  apply NatTrans.ext
+  funext Y
+  -- Each `δ` satisfying the unit relation is pinned to the same explicit formula.
+  have key : ∀ (δ : R₁ ⟶ R₂),
+      (∀ c, adj₁.unit.app c ≫ δ.app (L₁.obj c) = adj₂.unit.app c ≫ R₂.map (α.app c)) →
+      δ.app Y = adj₂.unit.app (R₁.obj Y) ≫ R₂.map (α.app (R₁.obj Y)) ≫
+        R₂.map (adj₁.counit.app Y) := by
+    intro δ hδ
+    -- Insert the right-triangle identity `𝟙 = unit ≫ R₁.map counit` (the surface form is
+    -- defeq-obscured, so `simp` rather than a positional `rw`), then naturality of `δ` and the unit
+    -- relation `hδ` pin `δ.app Y` to the formula.
+    have e1 : δ.app Y
+        = (adj₁.unit.app (R₁.obj Y) ≫ R₁.map (adj₁.counit.app Y)) ≫ δ.app Y := by simp
+    rw [e1, Category.assoc]
+    simp [reassoc_of% (hδ (R₁.obj Y))]
+  rw [key β hβ, key γ hγ]
+
+/-- **The extend-scalars composition coherence is the adjoint mate of the restrict-scalars
+composition coherence.** For ring homs `f : R →+* S`, `g : S →+* T`, transporting the
+`ModuleCat.extendScalarsComp f g` natural iso through the conjugate equivalence of the composite
+extend–restrict adjunction `(extendRestrictScalarsAdj f).comp (extendRestrictScalarsAdj g)` against
+the single adjunction `extendRestrictScalarsAdj (g.comp f)` yields the inverse of
+`ModuleCat.restrictScalarsComp f g`. The per-piece mate fact powering
+`chartBaseChangeModuleReassoc_extendScalarsComp`. Project-local. -/
+lemma conjugateEquiv_extendScalarsComp {R S T : Type u} [CommRing R] [CommRing S] [CommRing T]
+    (f : R →+* S) (g : S →+* T) :
+    conjugateEquiv
+        ((ModuleCat.extendRestrictScalarsAdj f).comp (ModuleCat.extendRestrictScalarsAdj g))
+        (ModuleCat.extendRestrictScalarsAdj (g.comp f))
+        (ModuleCat.extendScalarsComp f g).hom
+      = (ModuleCat.restrictScalarsComp f g).inv := by
+  -- Both sides satisfy the SAME unit transpose against `α = extendScalarsComp.hom`, so they agree by
+  -- `natTrans_ext_of_unit`. For `conjugateEquiv` this is `unit_conjugateEquiv`; for
+  -- `restrictScalarsComp.inv` it is `homEquiv_extendScalarsComp` (Mathlib's unit-side coherence),
+  -- read off the composite-adjunction unit by `Adjunction.comp_unit_app`/`homEquiv_unit`.
+  refine natTrans_ext_of_unit ((ModuleCat.extendRestrictScalarsAdj f).comp
+      (ModuleCat.extendRestrictScalarsAdj g)) (ModuleCat.extendRestrictScalarsAdj (g.comp f))
+      (ModuleCat.extendScalarsComp f g).hom _ _ (fun c => ?_) (fun c => ?_)
+  · -- Unit transpose of the conjugate is definitional (`unit_conjugateEquiv`).
+    exact unit_conjugateEquiv _ _ _ c
+  · -- Unit transpose of `restrictScalarsComp.inv` is `homEquiv_extendScalarsComp`.
+    have h := ModuleCat.homEquiv_extendScalarsComp f g c
+    rw [Adjunction.homEquiv_unit] at h
+    rw [Adjunction.comp_unit_app]
+    -- `(A ≫ B) ≫ C = A ≫ B ≫ C` via term-mode `Category.assoc` (positional `rw` hits the diamond).
+    exact (Category.assoc _ _ _).trans h.symm
+
+/-- The conjugate (adjoint mate) of an `eqToHom` between extend-scalars functors is the `eqToHom`
+between the corresponding restrict-scalars functors. The middle congruence piece of the algebraic leg
+`chartBaseChangeModuleReassoc_extendScalarsComp`. Project-local. -/
+lemma conjugateEquiv_extendScalars_eqToHom {R S : Type u} [CommRing R] [CommRing S]
+    {f g : R →+* S} (h : f = g) :
+    conjugateEquiv (ModuleCat.extendRestrictScalarsAdj g) (ModuleCat.extendRestrictScalarsAdj f)
+        (eqToHom (by rw [h] : ModuleCat.extendScalars f = ModuleCat.extendScalars g))
+      = eqToHom (by rw [h] : ModuleCat.restrictScalars g = ModuleCat.restrictScalars f) := by
+  subst h
+  simp only [eqToHom_refl, conjugateEquiv_id]
+
+/-- **(b2) Algebraic-leg coherence: the module reassociation through `extendScalarsComp`**
+(blueprint `lem:chartBaseChangeModuleReassoc_extendScalarsComp`). Under the algebraic
+extend–restrict adjunctions, the conjugate (adjoint mate) of the extend-scalars reassociation
+`chartBaseChangeModuleReassocNat` is the matching restrict-scalars reassociation
+`chartBaseChangeRestrictReassocNat`. Both are built from the composition coherences
+(`ModuleCat.extendScalarsComp`/`restrictScalarsComp`) and the `eqToIso` of the same base-change
+ring square. This is the algebraic leg of the ring-square mate-glue
+`pullback_spec_tilde_iso_ring_square_mate_glue`. Project-local. -/
+theorem chartBaseChangeModuleReassoc_extendScalarsComp {A R R' B : CommRingCat.{u}}
+    (ψ : A ⟶ B) (φ : A ⟶ R) (ρ : R ⟶ R') :
+    letI : Algebra (A : Type u) (R : Type u) := φ.hom.toAlgebra
+    letI : Algebra (A : Type u) (R' : Type u) := (φ ≫ ρ).hom.toAlgebra
+    letI : Algebra (A : Type u) (B : Type u) := ψ.hom.toAlgebra
+    conjugateIsoEquiv
+        ((ModuleCat.extendRestrictScalarsAdj ρ.hom).comp
+          (ModuleCat.extendRestrictScalarsAdj (CommRingCat.ofHom
+            (Algebra.TensorProduct.includeLeftRingHom
+              (R := (A : Type u)) (A := (R' : Type u)) (B := (B : Type u)))).hom))
+        ((ModuleCat.extendRestrictScalarsAdj (CommRingCat.ofHom
+            (Algebra.TensorProduct.includeLeftRingHom
+              (R := (A : Type u)) (A := (R : Type u)) (B := (B : Type u)))).hom).comp
+          (ModuleCat.extendRestrictScalarsAdj (chartBaseChangeRingMap ψ φ ρ).hom))
+        (chartBaseChangeModuleReassocNat ψ φ ρ)
+      = chartBaseChangeRestrictReassocNat ψ φ ρ := by
+  -- ROUTE (iter-018, option (b)): mirror the geometric leg — split the 3-factor conjugate with
+  -- `conjugateEquiv_comp`, discharge the two `extendScalarsComp` factors by
+  -- `conjugateEquiv_extendScalarsComp` (one inverted) and the middle `eqToHom` congruence by
+  -- `conjugateEquiv_extendScalars_eqToHom`.
+  letI : Algebra (A : Type u) (R : Type u) := φ.hom.toAlgebra
+  letI : Algebra (A : Type u) (R' : Type u) := (φ ≫ ρ).hom.toAlgebra
+  letI : Algebra (A : Type u) (B : Type u) := ψ.hom.toAlgebra
+  apply Iso.ext
+  rw [conjugateIsoEquiv_apply_hom]
+  simp only [chartBaseChangeModuleReassocNat, chartBaseChangeRestrictReassocNat,
+    eq_mpr_eq_cast, cast_eq, Iso.trans_hom, Iso.symm_hom, eqToIso.hom]
+  set inclR := CommRingCat.ofHom (Algebra.TensorProduct.includeLeftRingHom
+    (R := (A : Type u)) (A := (R : Type u)) (B := (B : Type u))) with hinclR
+  set inclR' := CommRingCat.ofHom (Algebra.TensorProduct.includeLeftRingHom
+    (R := (A : Type u)) (A := (R' : Type u)) (B := (B : Type u))) with hinclR'
+  set ρB := chartBaseChangeRingMap ψ φ ρ with hρB
+  have hRing : ρB.hom.comp inclR.hom = inclR'.hom.comp ρ.hom := by
+    rw [← CommRingCat.hom_comp, ← CommRingCat.hom_comp]
+    exact congrArg CommRingCat.Hom.hom (chartBaseChange_ring_square ψ φ ρ)
+  set adjA := (ModuleCat.extendRestrictScalarsAdj ρ.hom).comp
+    (ModuleCat.extendRestrictScalarsAdj inclR'.hom) with hadjA
+  set adjB := (ModuleCat.extendRestrictScalarsAdj inclR.hom).comp
+    (ModuleCat.extendRestrictScalarsAdj ρB.hom) with hadjB
+  set adjMα := ModuleCat.extendRestrictScalarsAdj (ρB.hom.comp inclR.hom) with hadjMα
+  set adjMβ := ModuleCat.extendRestrictScalarsAdj (inclR'.hom.comp ρ.hom) with hadjMβ
+  -- Factor 3 (the `.inv` direction): invert `conjugateEquiv_extendScalarsComp`.
+  have f3 : conjugateEquiv adjMα adjB (ModuleCat.extendScalarsComp inclR.hom ρB.hom).inv
+      = (ModuleCat.restrictScalarsComp inclR.hom ρB.hom).hom := by
+    set K := conjugateIsoEquiv adjMα adjB (ModuleCat.extendScalarsComp inclR.hom ρB.hom).symm
+      with hKdef
+    have hKhom : K.hom
+        = conjugateEquiv adjMα adjB (ModuleCat.extendScalarsComp inclR.hom ρB.hom).inv := by
+      rw [hKdef, conjugateIsoEquiv_apply_hom, Iso.symm_hom]
+    have hKinv : K.inv = (ModuleCat.restrictScalarsComp inclR.hom ρB.hom).inv := by
+      rw [hKdef, conjugateIsoEquiv_apply_inv, Iso.symm_inv]
+      exact conjugateEquiv_extendScalarsComp inclR.hom ρB.hom
+    rw [← hKhom]
+    calc K.hom
+        = K.hom ≫ (ModuleCat.restrictScalarsComp inclR.hom ρB.hom).inv ≫
+            (ModuleCat.restrictScalarsComp inclR.hom ρB.hom).hom := by
+          rw [Iso.inv_hom_id, Category.comp_id]
+      _ = K.hom ≫ K.inv ≫ (ModuleCat.restrictScalarsComp inclR.hom ρB.hom).hom := by rw [← hKinv]
+      _ = (ModuleCat.restrictScalarsComp inclR.hom ρB.hom).hom := by rw [Iso.hom_inv_id_assoc]
+  -- Split the 3-factor conjugate (right-associated) with `conjugateEquiv_comp` (twice).
+  rw [← conjugateEquiv_comp adjA adjMα adjB,
+    ← conjugateEquiv_comp adjA adjMβ adjMα,
+    conjugateEquiv_extendScalarsComp, conjugateEquiv_extendScalars_eqToHom hRing, f3,
+    Category.assoc]
+
+/-- **Per-congruence mate coherence.** For parallel scheme morphisms `f = g`, the conjugate (adjoint
+mate) of the pullback congruence iso `pullbackCongr hf` is the pushforward congruence iso
+`pushforwardCongr hf`. The congruence piece (a single `eqToIso`, not a binary composite) of the
+geometric leg `chartBaseChangeGeometricComparison_mate`. Project-local. -/
+lemma conjugateEquiv_pullbackCongr {X Y : Scheme} {f g : X ⟶ Y} (hf : f = g) :
+    conjugateEquiv (Scheme.Modules.pullbackPushforwardAdjunction g)
+        (Scheme.Modules.pullbackPushforwardAdjunction f)
+        (Scheme.Modules.pullbackCongr hf).hom
+      = (Scheme.Modules.pushforwardCongr hf).inv := by
+  subst hf
+  have hp : (Scheme.Modules.pullbackCongr (rfl : f = f)).hom = 𝟙 _ := by
+    simp [Scheme.Modules.pullbackCongr]
+  have hq : (Scheme.Modules.pushforwardCongr (rfl : f = f)).inv = 𝟙 _ := by
+    aesop_cat
+  rw [hp, conjugateEquiv_id, hq]
+
+/-- The inverse of a pushforward congruence iso is the forward map of the reversed congruence.
+Reconciles the two orientations of the congruence square in
+`chartBaseChangeGeometricComparison_mate`. Project-local. -/
+lemma pushforwardCongr_inv_eq {X Y : Scheme} {f g : X ⟶ Y} (hf : f = g) :
+    (Scheme.Modules.pushforwardCongr hf).inv = (Scheme.Modules.pushforwardCongr hf.symm).hom := by
+  subst hf
+  aesop_cat
+
+/-- **Natural-iso form of the geometric base-change comparison.** The composite pullback functor
+`pullback (Spec ι_R) ⋙ pullback (Spec ρ_B)` is naturally isomorphic to
+`pullback (Spec ρ) ⋙ pullback (Spec ι_{R'})` via the two `pullbackComp` pseudofunctor coherences and
+the `pullbackCongr` of the base-change geometric square (the `Spec`-image of
+`chartBaseChange_ring_square`). Its `(tilde M)`-component is `chartBaseChangeGeometricComparison`.
+Project-local. -/
+noncomputable def chartBaseChangeGeometricComparisonNat {A R R' B : CommRingCat.{u}}
+    (ψ : A ⟶ B) (φ : A ⟶ R) (ρ : R ⟶ R') :
+    letI : Algebra (A : Type u) (R : Type u) := φ.hom.toAlgebra
+    letI : Algebra (A : Type u) (R' : Type u) := (φ ≫ ρ).hom.toAlgebra
+    letI : Algebra (A : Type u) (B : Type u) := ψ.hom.toAlgebra
+    Scheme.Modules.pullback (Spec.map (CommRingCat.ofHom (Algebra.TensorProduct.includeLeftRingHom
+        (R := (A : Type u)) (A := (R : Type u)) (B := (B : Type u))))) ⋙
+      Scheme.Modules.pullback (Spec.map (chartBaseChangeRingMap ψ φ ρ)) ≅
+      Scheme.Modules.pullback (Spec.map ρ) ⋙
+        Scheme.Modules.pullback (Spec.map (CommRingCat.ofHom
+          (Algebra.TensorProduct.includeLeftRingHom
+            (R := (A : Type u)) (A := (R' : Type u)) (B := (B : Type u))))) := by
+  letI : Algebra (A : Type u) (R : Type u) := φ.hom.toAlgebra
+  letI : Algebra (A : Type u) (R' : Type u) := (φ ≫ ρ).hom.toAlgebra
+  letI : Algebra (A : Type u) (B : Type u) := ψ.hom.toAlgebra
+  set inclR := CommRingCat.ofHom (Algebra.TensorProduct.includeLeftRingHom
+    (R := (A : Type u)) (A := (R : Type u)) (B := (B : Type u))) with hinclR
+  set inclR' := CommRingCat.ofHom (Algebra.TensorProduct.includeLeftRingHom
+    (R := (A : Type u)) (A := (R' : Type u)) (B := (B : Type u))) with hinclR'
+  set ρB := chartBaseChangeRingMap ψ φ ρ with hρB
+  have hsq : Spec.map ρB ≫ Spec.map inclR = Spec.map inclR' ≫ Spec.map ρ := by
+    rw [← Spec.map_comp, ← Spec.map_comp]
+    exact congrArg Spec.map (chartBaseChange_ring_square ψ φ ρ)
+  exact (Scheme.Modules.pullbackComp (Spec.map ρB) (Spec.map inclR)) ≪≫
+    (Scheme.Modules.pullbackCongr hsq) ≪≫
+    (Scheme.Modules.pullbackComp (Spec.map inclR') (Spec.map ρ)).symm
+
+/-- **Natural-iso form of the geometric base-change comparison on the pushforward side** — the
+right-adjoint mate target for `chartBaseChangeGeometricComparisonNat`. The composite pushforward
+functor `pushforward (Spec ι_{R'}) ⋙ pushforward (Spec ρ)` is naturally isomorphic to
+`pushforward (Spec ρ_B) ⋙ pushforward (Spec ι_R)` via the two `pushforwardComp` coherences and the
+`pushforwardCongr` of the same base-change geometric square. Project-local. -/
+noncomputable def chartBaseChangePushforwardNat {A R R' B : CommRingCat.{u}}
+    (ψ : A ⟶ B) (φ : A ⟶ R) (ρ : R ⟶ R') :
+    letI : Algebra (A : Type u) (R : Type u) := φ.hom.toAlgebra
+    letI : Algebra (A : Type u) (R' : Type u) := (φ ≫ ρ).hom.toAlgebra
+    letI : Algebra (A : Type u) (B : Type u) := ψ.hom.toAlgebra
+    Scheme.Modules.pushforward (Spec.map (CommRingCat.ofHom
+        (Algebra.TensorProduct.includeLeftRingHom
+          (R := (A : Type u)) (A := (R' : Type u)) (B := (B : Type u))))) ⋙
+      Scheme.Modules.pushforward (Spec.map ρ) ≅
+      Scheme.Modules.pushforward (Spec.map (chartBaseChangeRingMap ψ φ ρ)) ⋙
+        Scheme.Modules.pushforward (Spec.map (CommRingCat.ofHom
+          (Algebra.TensorProduct.includeLeftRingHom
+            (R := (A : Type u)) (A := (R : Type u)) (B := (B : Type u))))) := by
+  letI : Algebra (A : Type u) (R : Type u) := φ.hom.toAlgebra
+  letI : Algebra (A : Type u) (R' : Type u) := (φ ≫ ρ).hom.toAlgebra
+  letI : Algebra (A : Type u) (B : Type u) := ψ.hom.toAlgebra
+  set inclR := CommRingCat.ofHom (Algebra.TensorProduct.includeLeftRingHom
+    (R := (A : Type u)) (A := (R : Type u)) (B := (B : Type u))) with hinclR
+  set inclR' := CommRingCat.ofHom (Algebra.TensorProduct.includeLeftRingHom
+    (R := (A : Type u)) (A := (R' : Type u)) (B := (B : Type u))) with hinclR'
+  set ρB := chartBaseChangeRingMap ψ φ ρ with hρB
+  have hsq : Spec.map inclR' ≫ Spec.map ρ = Spec.map ρB ≫ Spec.map inclR := by
+    rw [← Spec.map_comp, ← Spec.map_comp]
+    exact (congrArg Spec.map (chartBaseChange_ring_square ψ φ ρ)).symm
+  exact (Scheme.Modules.pushforwardComp (Spec.map inclR') (Spec.map ρ)) ≪≫
+    (Scheme.Modules.pushforwardCongr hsq) ≪≫
+    (Scheme.Modules.pushforwardComp (Spec.map ρB) (Spec.map inclR)).symm
+
+/-- **(b2) Geometric-leg coherence: the geometric comparison is the mate of the pushforward
+coherence** (blueprint `lem:chartBaseChangeGeometricComparison_mate`). Under the composite
+pullback–pushforward adjunctions, the conjugate (adjoint mate) of the geometric comparison
+`chartBaseChangeGeometricComparisonNat` (built from `pullbackComp`) is the matching pushforward
+comparison `chartBaseChangePushforwardNat` (built from `pushforwardComp`). This is the geometric leg
+of the ring-square mate-glue `pullback_spec_tilde_iso_ring_square_mate_glue`. Project-local. -/
+theorem chartBaseChangeGeometricComparison_mate {A R R' B : CommRingCat.{u}}
+    (ψ : A ⟶ B) (φ : A ⟶ R) (ρ : R ⟶ R') :
+    letI : Algebra (A : Type u) (R : Type u) := φ.hom.toAlgebra
+    letI : Algebra (A : Type u) (R' : Type u) := (φ ≫ ρ).hom.toAlgebra
+    letI : Algebra (A : Type u) (B : Type u) := ψ.hom.toAlgebra
+    conjugateIsoEquiv
+        ((Scheme.Modules.pullbackPushforwardAdjunction (Spec.map ρ)).comp
+          (Scheme.Modules.pullbackPushforwardAdjunction (Spec.map (CommRingCat.ofHom
+            (Algebra.TensorProduct.includeLeftRingHom
+              (R := (A : Type u)) (A := (R' : Type u)) (B := (B : Type u)))))))
+        ((Scheme.Modules.pullbackPushforwardAdjunction (Spec.map (CommRingCat.ofHom
+            (Algebra.TensorProduct.includeLeftRingHom
+              (R := (A : Type u)) (A := (R : Type u)) (B := (B : Type u)))))).comp
+          (Scheme.Modules.pullbackPushforwardAdjunction (Spec.map (chartBaseChangeRingMap ψ φ ρ))))
+        (chartBaseChangeGeometricComparisonNat ψ φ ρ)
+      = chartBaseChangePushforwardNat ψ φ ρ := by
+  -- ROUTE (iter-018, analogist `fbc-geom-mate`, ALIGN_WITH_MATHLIB): the per-factor mate fact
+  -- `conjugateEquiv_pullbackComp_inv` IS real Mathlib (`Sheaf.lean:238`, `@[simp]`); the iter-017
+  -- "comment-fiction" note was FALSE. Drive entirely by closed coherence lemmas: split the 3-factor
+  -- conjugate with `conjugateEquiv_comp` over named midpoint adjunctions, then discharge each factor by
+  -- `conjugateEquiv_pullbackComp_inv` (×2, one inverted) + `conjugateEquiv_pullbackCongr`. No
+  -- `unit_conjugateEquiv`-over-the-composite (that is the 200k-hb bomb).
+  letI : Algebra (A : Type u) (R : Type u) := φ.hom.toAlgebra
+  letI : Algebra (A : Type u) (R' : Type u) := (φ ≫ ρ).hom.toAlgebra
+  letI : Algebra (A : Type u) (B : Type u) := ψ.hom.toAlgebra
+  apply Iso.ext
+  rw [conjugateIsoEquiv_apply_hom]
+  simp only [chartBaseChangeGeometricComparisonNat, chartBaseChangePushforwardNat,
+    eq_mpr_eq_cast, cast_eq, Iso.trans_hom, Iso.symm_hom]
+  set inclR := CommRingCat.ofHom (Algebra.TensorProduct.includeLeftRingHom
+    (R := (A : Type u)) (A := (R : Type u)) (B := (B : Type u))) with hinclR
+  set inclR' := CommRingCat.ofHom (Algebra.TensorProduct.includeLeftRingHom
+    (R := (A : Type u)) (A := (R' : Type u)) (B := (B : Type u))) with hinclR'
+  set ρB := chartBaseChangeRingMap ψ φ ρ with hρB
+  -- Midpoint adjunctions for the two `conjugateEquiv_comp` splits.
+  set adjA := (Scheme.Modules.pullbackPushforwardAdjunction (Spec.map ρ)).comp
+    (Scheme.Modules.pullbackPushforwardAdjunction (Spec.map inclR')) with hadjA
+  set adjB := (Scheme.Modules.pullbackPushforwardAdjunction (Spec.map inclR)).comp
+    (Scheme.Modules.pullbackPushforwardAdjunction (Spec.map ρB)) with hadjB
+  set adjMid1 := Scheme.Modules.pullbackPushforwardAdjunction (Spec.map ρB ≫ Spec.map inclR)
+    with hadjMid1
+  set adjMid2 := Scheme.Modules.pullbackPushforwardAdjunction (Spec.map inclR' ≫ Spec.map ρ)
+    with hadjMid2
+  -- Factor 3 (the `.hom` direction): obtained by inverting `conjugateEquiv_pullbackComp_inv`.
+  have f3 : conjugateEquiv adjMid1 adjB
+      (Scheme.Modules.pullbackComp (Spec.map ρB) (Spec.map inclR)).hom
+      = (Scheme.Modules.pushforwardComp (Spec.map ρB) (Spec.map inclR)).inv := by
+    have hk : (conjugateIsoEquiv adjMid1 adjB
+        (Scheme.Modules.pullbackComp (Spec.map ρB) (Spec.map inclR))).inv
+        = (Scheme.Modules.pushforwardComp (Spec.map ρB) (Spec.map inclR)).hom := by
+      rw [conjugateIsoEquiv_apply_inv]
+      exact conjugateEquiv_pullbackComp_inv (Spec.map ρB) (Spec.map inclR)
+    rw [← conjugateIsoEquiv_apply_hom]
+    set K := conjugateIsoEquiv adjMid1 adjB
+      (Scheme.Modules.pullbackComp (Spec.map ρB) (Spec.map inclR)) with hK
+    calc K.hom
+        = K.hom ≫ (Scheme.Modules.pushforwardComp (Spec.map ρB) (Spec.map inclR)).hom ≫
+            (Scheme.Modules.pushforwardComp (Spec.map ρB) (Spec.map inclR)).inv := by
+          rw [Iso.hom_inv_id, Category.comp_id]
+      _ = K.hom ≫ K.inv ≫ (Scheme.Modules.pushforwardComp (Spec.map ρB) (Spec.map inclR)).inv := by
+          rw [← hk]
+      _ = (Scheme.Modules.pushforwardComp (Spec.map ρB) (Spec.map inclR)).inv := by
+          rw [Iso.hom_inv_id_assoc]
+  -- Split the 3-factor conjugate (right-associated) with `conjugateEquiv_comp` (twice).
+  rw [← conjugateEquiv_comp adjA adjMid1 adjB,
+    ← conjugateEquiv_comp adjA adjMid2 adjMid1,
+    conjugateEquiv_pullbackComp_inv, conjugateEquiv_pullbackCongr, f3,
+    pushforwardCongr_inv_eq, Category.assoc]
+
+/-- **(b2) Iterated-mate glue of the ring-square naturality** (blueprint
+`lem:pullback_spec_tilde_iso_ring_square_mate_glue`). The iterated-mate assembly of the per-leg unit
+triangle `pullback_spec_tilde_iso_inv_unit_triangle`, the two mate legs
+`chartBaseChangeGeometricComparison_mate` and `chartBaseChangeModuleReassoc_extendScalarsComp`, and
+the composition coherence `gammaPushforwardNatIso_comp` discharges the ring-square naturality of the
+tilde-pullback dictionary. Stated here with the same conclusion as
+`pullback_spec_tilde_iso_ring_square_natural`; the crux delegates to this once the mate assembly is
+filled (queued iter-018). Project-local. -/
+theorem pullback_spec_tilde_iso_ring_square_mate_glue {A R R' B : CommRingCat.{u}}
+    (ψ : A ⟶ B) (φ : A ⟶ R) (ρ : R ⟶ R') (M : ModuleCat.{u} R) :
+    letI : Algebra (A : Type u) (R : Type u) := φ.hom.toAlgebra
+    letI : Algebra (A : Type u) (R' : Type u) := (φ ≫ ρ).hom.toAlgebra
+    letI : Algebra (A : Type u) (B : Type u) := ψ.hom.toAlgebra
+    (chartBaseChangeGeometricComparison ψ φ ρ M ≪≫
+        (Scheme.Modules.pullback (Spec.map (CommRingCat.ofHom
+          (Algebra.TensorProduct.includeLeftRingHom
+            (R := (A : Type u)) (A := (R' : Type u)) (B := (B : Type u)))))).mapIso
+          (pullback_spec_tilde_iso ρ M))
+      = ((Scheme.Modules.pullback (Spec.map (chartBaseChangeRingMap ψ φ ρ))).mapIso
+            (pullback_spec_tilde_iso (CommRingCat.ofHom (Algebra.TensorProduct.includeLeftRingHom
+              (R := (A : Type u)) (A := (R : Type u)) (B := (B : Type u)))) M) ≪≫
+          pullback_spec_tilde_iso (chartBaseChangeRingMap ψ φ ρ)
+            ((ModuleCat.extendScalars (CommRingCat.ofHom (Algebra.TensorProduct.includeLeftRingHom
+              (R := (A : Type u)) (A := (R : Type u)) (B := (B : Type u)))).hom).obj M) ≪≫
+          (tilde.functor _).mapIso (chartBaseChangeModuleReassoc ψ φ ρ M) ≪≫
+          (pullback_spec_tilde_iso (CommRingCat.ofHom (Algebra.TensorProduct.includeLeftRingHom
+            (R := (A : Type u)) (A := (R' : Type u)) (B := (B : Type u))))
+            ((ModuleCat.extendScalars ρ.hom).obj M)).symm) := by
+  -- ROUTE (iter-018, blueprint `lem:pullback_spec_tilde_iso_ring_square_mate_glue`): transpose the
+  -- target equation through the composite left adjoint `L_tot = tilde ⋙ pullback (Spec ι_R) ⋙
+  -- pullback (Spec ρ_B)` via `(conjugateIsoEquiv adjL_tot adjR_tot)` (each `pullback_spec_tilde_iso`
+  -- leg is, by construction, the conjugate of `gammaPushforwardNatIso`). Expose the iterated single-step
+  -- mate with `iterated_mateEquiv_conjugateEquiv` (`.symm` direction); discharge the geometric leg with
+  -- `chartBaseChangeGeometricComparison_mate` and the algebraic leg with
+  -- `chartBaseChangeModuleReassoc_extendScalarsComp`; each `pullback_spec_tilde_iso` leg transposes to
+  -- `gammaPushforwardNatIso` by `pullback_spec_tilde_iso_inv_unit_triangle`; assemble the residual
+  -- `ModuleCat R` equation and close on `gammaPushforwardNatIso_comp`. (Both legs + the unit triangle +
+  -- the comp coherence already exist; this is the assembly step.)
+  letI : Algebra (A : Type u) (R : Type u) := φ.hom.toAlgebra
+  letI : Algebra (A : Type u) (R' : Type u) := (φ ≫ ρ).hom.toAlgebra
+  letI : Algebra (A : Type u) (B : Type u) := ψ.hom.toAlgebra
+  -- Reduce the iso equation to the underlying INVERSE natural-transformation equality, where every
+  -- `pullback_spec_tilde_iso` leg becomes, by `pullback_spec_tilde_iso_inv_conjugateEquiv`, the
+  -- `M`-component of `(conjugateEquiv adjLφ adjRφ).symm (gammaPushforwardNatIso φ).hom`.
+  apply Iso.ext
+  rw [← Iso.inv_eq_inv]
+  simp only [Iso.trans_inv, Iso.symm_inv, Functor.mapIso_inv,
+    pullback_spec_tilde_iso_inv_conjugateEquiv, pullback_spec_tilde_iso_hom_conjugateEquiv]
+  -- GOAL NOW (staged): an equality of two morphisms `tilde N ⟶ Source` in `(Spec (R'⊗[A]B)).Modules`,
+  -- with all four `pullback_spec_tilde_iso` legs rewritten to `M`-components of
+  -- `(conjugateEquiv adjLφ adjRφ).symm (gammaPushforwardNatIso φ).hom` (resp. the `.hom`/`.inv` swap),
+  -- and the two non-`pst` legs present as `(chartBaseChangeGeometricComparison ψ φ ρ M).inv` and
+  -- `(tilde.functor _).map (chartBaseChangeModuleReassoc ψ φ ρ M).inv`.
+  --
+  -- REMAINING STEP (the iterated single-step-mate telescoping; blueprint b2): recognise this
+  -- component equation as the `M`-component of a NATURAL-ISO equation between the composite functors,
+  -- and transpose it through the composite-adjunction mate equivalence so that:
+  --   * the geometric leg `(chartBaseChangeGeometricComparison …).inv` is replaced, via
+  --     `chartBaseChangeGeometricComparison_mate` (the conjugate of `chartBaseChangePushforwardNat`),
+  --     by the matching pushforward comparison `chartBaseChangePushforwardNat`;
+  --   * the algebraic leg `tilde.map (chartBaseChangeModuleReassoc …).inv` is replaced, via
+  --     `chartBaseChangeModuleReassoc_extendScalarsComp`, by `chartBaseChangeRestrictReassocNat`;
+  --   * the four `conjugateEquiv.symm (gammaPushforwardNatIso φ)` legs are telescoped by
+  --     `conjugateEquiv_symm_comp`/`iterated_mateEquiv_conjugateEquiv`(`_symm`) and the vcomp lemmas
+  --     `conjugateEquiv_mateEquiv_vcomp`/`mateEquiv_conjugateEquiv_vcomp` (TwoSquare pasting), reducing
+  --     the residual `ModuleCat ↑R` equation to the composition coherence `gammaPushforwardNatIso_comp`.
+  -- BLOCKED HERE: the `iterated_mateEquiv_conjugateEquiv`(`_symm`) recognition is `TwoSquare`-valued and
+  -- forces the composite-adjunction unit to whnf (the documented 200k-heartbeat kernel bomb when applied
+  -- naively over the whole goal). The Mathlib-aligned escape is to drive each factor by the closed
+  -- coherence lemmas (as the two legs themselves were closed in iter-018), never `unit_conjugateEquiv`
+  -- over the composite — but that telescoping at the COMBINED four-leg level is the open assembly.
+  sorry
+
 /-- **(b2) Ring-square naturality of the tilde-pullback dictionary**
 (blueprint `lem:pullback_spec_tilde_iso_ring_square_natural`). The explicit affine tilde-pullback
 isomorphism `pullback_spec_tilde_iso` is natural across the base-change ring square
@@ -1375,64 +1858,11 @@ theorem pullback_spec_tilde_iso_ring_square_natural {A R R' B : CommRingCat.{u}}
           (pullback_spec_tilde_iso (CommRingCat.ofHom (Algebra.TensorProduct.includeLeftRingHom
             (R := (A : Type u)) (A := (R' : Type u)) (B := (B : Type u))))
             ((ModuleCat.extendScalars ρ.hom).obj M)).symm) := by
-  letI : Algebra (A : Type u) (R : Type u) := φ.hom.toAlgebra
-  letI : Algebra (A : Type u) (R' : Type u) := (φ ≫ ρ).hom.toAlgebra
-  letI : Algebra (A : Type u) (B : Type u) := ψ.hom.toAlgebra
-  -- Reduce to a `.hom` equality of `(Spec (R' ⊗[A] B)).Modules` morphisms.
-  apply Iso.ext
-  simp only [Iso.trans_hom, Iso.symm_hom, Functor.mapIso_hom]
-  -- Move the trailing `(pullback_spec_tilde_iso inclR' _).inv` to the left as its `.hom`, so both
-  -- sides become honest morphisms `Source ⟶ tilde (extendScalars inclR' (extendScalars ρ M))`.
-  rw [← Category.assoc, ← Category.assoc, Iso.eq_comp_inv]
-  -- RESIDUAL CRUX (blueprint b2): naturality of the opaque `pullback_spec_tilde_iso` across
-  -- `chartBaseChange_ring_square`, i.e. the pseudo-functoriality of the dictionary in the ring map.
-  -- `Source = (tilde_R ⋙ pullback (Spec inclR) ⋙ pullback (Spec ρB)).obj M` is the value at `M`
-  -- of the composite LEFT adjoint `L_tot`, whose right adjoint is
-  -- `R_tot = pushforward (Spec ρB) ⋙ pushforward (Spec inclR) ⋙ Γ_R`. Both sides are morphisms
-  -- out of `Source`, so transposing through the composite adjunction `L_tot ⊣ R_tot`
-  -- (`tilde.adjunction.comp (ppAdj (Spec inclR)) |>.comp (ppAdj (Spec ρB))`) sends the identity to a
-  -- `ModuleCat ↑R` equation `M ⟶ R_tot.obj (tilde N)`; under the `pushforward`/`Γ` dictionaries
-  -- (`pushforward_spec_tilde_iso`, `gammaPushforwardIso`) `R_tot.obj (tilde N)` reads as a nested
-  -- `restrictScalars` tower, and each `pullback_spec_tilde_iso` leg transposes — via
-  -- `unit_conjugateEquiv` applied to its defining `conjugateIsoEquiv` — to the identity-on-elements
-  -- `gammaPushforwardNatIso`, so the two transposed maps coincide. The geometric comparison
-  -- transposes through `pushforwardComp` (`conjugateEquiv_pullbackComp_inv`) and the reassociation
-  -- through `extendScalarsComp`, matching the same target tower. See task_results for the attempt log.
-  -- First transpose peel: through the outermost adjunction `pullback (Spec ρB) ⊣ pushforward (Spec ρB)`.
-  -- Both sides are morphisms out of `pullback (Spec ρB).obj X` (`X = pullback (Spec inclR) (tilde M)`),
-  -- so `homEquiv`-injectivity reduces to an equation of morphisms `X ⟶ pushforward (Spec ρB) (tilde N)`;
-  -- iterating through `pullback (Spec inclR) ⊣ pushforward (Spec inclR)` and `tilde ⊣ Γ` lands the
-  -- identity in `ModuleCat ↑R`. (Remaining: push `homEquiv` through the composites and identify each
-  -- `pullback_spec_tilde_iso` transpose with `gammaPushforwardNatIso` via `unit_conjugateEquiv`.)
-  apply ((Scheme.Modules.pullbackPushforwardAdjunction
-    (Spec.map (chartBaseChangeRingMap ψ φ ρ))).homEquiv _ _).injective
-  -- Expand the transpose as `unit ≫ pushforward.map (…)`; both sides now share the leading unit and
-  -- carry the three legs pushed through `pushforward (Spec ρB)`.
-  simp only [Adjunction.homEquiv_unit, Functor.map_comp, Category.assoc]
-  -- REMAINING: cancel the common `unit` prefix, then transpose twice more — through
-  -- `pullback (Spec inclR) ⊣ pushforward (Spec inclR)` and `tilde ⊣ Γ` — to reach a `ModuleCat ↑R`
-  -- equation `M ⟶ restrictScalars inclR (restrictScalars ρB N)`. There each `pullback_spec_tilde_iso`
-  -- leg becomes `gammaPushforwardNatIso` (its defining conjugate, via `unit_conjugateEquiv`), the
-  -- geometric comparison becomes `pushforwardComp` (`conjugateEquiv_pullbackComp_inv`), and the
-  -- reassociation becomes `extendScalarsComp`; all are identity-on-elements, so the two sides agree
-  -- by `gammaPushforwardIso`'s pointwise-`rfl` naturality. See task_results for the full route.
-  -- Second transpose peel: through `pullback (Spec inclR) ⊣ pushforward (Spec inclR)`. Both sides are
-  -- maps out of `X = pullback (Spec inclR) (tilde M)`, so injectivity reduces to an equation of maps
-  -- `tilde M ⟶ pushforward (Spec inclR) (pushforward (Spec ρB) (tilde N))`.
-  apply ((Scheme.Modules.pullbackPushforwardAdjunction (Spec.map (CommRingCat.ofHom
-    (Algebra.TensorProduct.includeLeftRingHom
-      (R := (A : Type u)) (A := (R : Type u)) (B := (B : Type u)))))).homEquiv _ _).injective
-  simp only [Adjunction.homEquiv_unit, Functor.map_comp, Category.assoc]
-  -- Third transpose peel: through `tilde ⊣ Γ`. Lands the identity in `ModuleCat ↑R` as a map
-  -- `M ⟶ Γ_R (pushforward (Spec inclR) (pushforward (Spec ρB) (tilde N)))`.
-  apply ((tilde.adjunction (R := R)).homEquiv _ _).injective
-  simp only [Adjunction.homEquiv_unit, Functor.map_comp, Category.assoc]
-  -- REMAINING (`ModuleCat ↑R` equation): each `pullback_spec_tilde_iso` leg transposes to
-  -- `gammaPushforwardNatIso` via the verified brick `pullback_spec_tilde_iso_inv_unit_triangle`;
-  -- the geometric comparison transposes through `pushforwardComp`; the reassociation through
-  -- `ModuleCat.extendScalarsComp`. All identity-on-elements ⇒ coincide by `gammaPushforwardIso`'s
-  -- pointwise `rfl` naturality.
-  sorry
+  -- This is exactly the iterated-mate glue `pullback_spec_tilde_iso_ring_square_mate_glue` (identical
+  -- conclusion); the b2 assembly is isolated there. The earlier triple-`homEquiv.injective` hand-peel
+  -- here was a KB-confirmed dead end (it strands a unit-prefixed equation with no finisher); the route
+  -- is the conjugate/iterated-mate staging carried out in the glue.
+  exact pullback_spec_tilde_iso_ring_square_mate_glue ψ φ ρ M
 
 /-- **(b) Restriction-naturality of the affine pullback dictionary**
 (blueprint `lem:pullback_tilde_restriction_natural`). For a chart restriction `ρ : R ⟶ R'`

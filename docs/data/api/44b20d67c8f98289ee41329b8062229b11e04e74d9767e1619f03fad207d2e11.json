@@ -1,0 +1,137 @@
+[
+  {
+    "timestamp": "2026-06-20T18:34:34Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/ResidueFieldKbar.lean",
+      "theorem": "AlgebraicGeometry.residueFieldAlgebra"
+    },
+    "session": {
+      "id": "session_10",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "RingHom.toAlgebra",
+        "Scheme.Spec.residueFieldIso",
+        "Scheme.Hom.residueFieldMap",
+        "algebraMap kbar p.ResidueField"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Build k̄-algebra on κ(x) as RingHom.toAlgebra of the composite k̄ →+* p.ResidueField → (Spec k̄).residueField → C.left.residueField x",
+        "code_tried": "RingHom.toAlgebra <| (C.hom.residueFieldMap x).hom.comp <| (Scheme.Spec.residueFieldIso (.of kbar) (C.hom.base x)).inv.hom.comp (algebraMap kbar (C.hom.base x).asIdeal.ResidueField)",
+        "line_number": "156",
+        "lean_error": null,
+        "goal_before": "Algebra kbar (C.left.residueField x)",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Planner's Ideal.algEquivResidueFieldOfField is ABSENT in rev b80f227 (newer Mathlib); replaced by canonical algebraMap k̄ p.ResidueField. Spec.residueFieldIso is the Spec-side identification, residueFieldMap the contravariant morphism map."
+      }
+    ],
+    "next_steps": "Downstream lanes may import this k̄-algebra instance for the 3 SmoothStalkDVR scheme pins."
+  },
+  {
+    "timestamp": "2026-06-20T18:37:44Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/ResidueFieldKbar.lean",
+      "theorem": "AlgebraicGeometry.residueField_eq_of_coheight_eq_one"
+    },
+    "session": {
+      "id": "session_10",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "isClosed_singleton_of_coheight_eq_one",
+        "AlgebraicGeometry.residueFieldIsoBase",
+        "ConcreteCategory.bijective_of_isIso",
+        "Spec.map_injective"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Closedness via isClosed_singleton_of_coheight_eq_one; bijectivity via Mathlib residueFieldIsoBase (κ(x)≅k̄ for closed point of LocallyOfFiniteType over alg-closed), proving structure map = iso inverse then ConcreteCategory.bijective_of_isIso",
+        "code_tried": "have hcl := isClosed_singleton_of_coheight_eq_one x hx hdim; refine ⟨hcl, ?_⟩; (structure map = (residueFieldIsoBase C.hom x hcl).inv.hom via Spec.map_injective + SpecMap_residueFieldIsoBase_inv + map_residueFieldIso_inv_eq_fromSpecResidueField + SpecMap_residueFieldMap_fromSpecResidueField, then rfl on @[reducible] residueFieldAlgebra)",
+        "line_number": "183",
+        "lean_error": null,
+        "goal_before": "IsClosed {x} ∧ Function.Bijective (algebraMap kbar (C.left.residueField x))",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Mathlib residueFieldIsoBase collapses the planner's 6-step affine-chart recipe into one iso + an inv=structure-map identity. The algebra match is rfl because residueFieldAlgebra is @[reducible]. Blueprint prose for this lemma is now STALE (describes abandoned route)."
+      }
+    ],
+    "next_steps": "File FULLY CLOSED (0 sorry, axiom-clean). Blueprint-writer must refresh the proof sketch + \\uses next iter (see % NOTE)."
+  },
+  {
+    "timestamp": "2026-06-20T18:34:29Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/SmoothStalkDVR.lean",
+      "theorem": "AlgebraicGeometry.exists_isStandardSmooth_chart_of_smooth"
+    },
+    "session": {
+      "id": "session_10",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "SmoothOfRelativeDimension.exists_isStandardSmoothOfRelativeDimension",
+        "Scheme.ΓSpecIso",
+        "RingHom.IsStandardSmoothOfRelativeDimension.equiv",
+        "RingHom.IsStandardSmoothOfRelativeDimension.comp",
+        "CategoryTheory.Iso.commRingCatIsoToRingEquiv"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Chart entry via class field exists_isStandardSmoothOfRelativeDimension; U=⊤ via Subsingleton(Spec k̄); pin base by precomposing ΓSpecIso.inv; transport standard-smoothness via .comp (1+0=1)",
+        "code_tried": "obtain ⟨U,hU,V,hV,hx,e,hss⟩ := (‹SmoothOfRelativeDimension 1 C.hom›).exists_isStandardSmoothOfRelativeDimension x; have hU_top: U=⊤ := by rw[eq_top_iff]; intro y _; rwa[Subsingleton.elim y (C.hom.base x)]; subst hU_top; refine ⟨V,hV,hx,((Scheme.ΓSpecIso (.of kbar)).inv ≫ C.hom.appLE ⊤ V e).hom, ?_⟩; ... hss.comp he",
+        "line_number": "199",
+        "lean_error": "Intermediate: 'simp made no progress' (ext y then simp on y∈↑U↔y∈↑⊤); 'Unknown constant CommRingCat.isoToRingEquiv'",
+        "goal_before": "∃ V, IsAffineOpen V ∧ x∈V ∧ ∃ ψ:kbar→+*Γ(C.left,V), RingHom.IsStandardSmoothOfRelativeDimension 1 ψ",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Class field (NOT HasRingHomProperty.appLE → wrong Locally(...) shape) is the correct chart entry, dissolving the 3-iter STUCK knot. eq_top_iff avoids the failing ext+simp. CommRingCat.isoToRingEquiv absent → use CategoryTheory.Iso.commRingCatIsoToRingEquiv."
+      }
+    ],
+    "next_steps": "Frontier node landed; feeds the SECONDARY + the 3 scheme pins (iter-011)."
+  },
+  {
+    "timestamp": "2026-06-20T18:36:18Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/SmoothStalkDVR.lean",
+      "theorem": "AlgebraicGeometry.isLocalization_stalk_standardSmooth_chart_of_smooth"
+    },
+    "session": {
+      "id": "session_10",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "exists_isStandardSmooth_chart_of_smooth",
+        "IsAffineOpen.isLocalization_stalk"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Reuse PRIMARY for the chart, supply stalk localisation via hV.isLocalization_stalk",
+        "code_tried": "obtain ⟨V, hV, hx, ψ, hψ⟩ := exists_isStandardSmooth_chart_of_smooth C x; exact ⟨V, hV, hx, ψ, hψ, hV.isLocalization_stalk ⟨x, hx⟩⟩",
+        "line_number": "225",
+        "lean_error": null,
+        "goal_before": "∃ V hV hx ψ, IsStandardSmoothOfRelativeDimension 1 ψ ∧ IsLocalization _ (stalk x)",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Goal's @IsLocalization with algebra_section_stalk matches IsAffineOpen.isLocalization_stalk on the nose; no convert/instance-massaging. algebraize-threading for k̄-tower instances NOT needed by this packaging (produced downstream in the 3 scheme pins)."
+      }
+    ],
+    "next_steps": "File FULLY CLOSED (0 sorry, axiom-clean). 3 scheme pins remain (iter-011), gated on lane-1's residueField_eq_of_coheight_eq_one (now available)."
+  }
+]

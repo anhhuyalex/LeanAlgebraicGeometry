@@ -1,0 +1,101 @@
+[
+  {
+    "timestamp": "2026-06-20T11:15:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "pushforward_lax_mu_comparison_lhs_tmul"
+    },
+    "session": {
+      "id": "session_39",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "restrictScalars_δ_app_tmul",
+        "pushforwardPushforwardAdj_counit_app_app_apply",
+        "pushforwardPushforwardAdj_unit_app_app_apply",
+        "pushforward_lax_mu_comparison_rhs_tmul",
+        "PresheafOfModules.pushforward_obj_map_apply",
+        "ConcreteCategory.congr_hom",
+        "Subsingleton.elim"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "STEP 3 δ-leg: peel composite δ Gβ via abstract helper pushforward₀_restrictScalars_δ_app_tmul",
+        "code_tried": "set_option ... /-- abstract δ value helper --/ ... (input tmul over (pf0⋙rs).obj(M₁⊗M₂).obj W)",
+        "line_number": "~4420",
+        "lean_error": "input-tmul type cannot be elaborated as TensorProduct; composite blocks peeling",
+        "result": "failed",
+        "insight": "Abstract helper ABANDONED — the composite input type un-elaborable. Direct in-context erw is the move."
+      },
+      {
+        "attempt": 2,
+        "strategy": "STEP 3 δ-leg: direct erw through the defeq composite",
+        "code_tried": "erw [PresheafOfModules.pushforward_map_app_apply, restrictScalars_δ_app_tmul β' hβ (pf0.obj (G GA)) (pf0.obj (G GB)) V']",
+        "line_number": "~4445",
+        "lean_error": null,
+        "result": "success",
+        "insight": "Under backward.isDefEq.respectTransparency false, erw defeq-matches δ Gβ = (rs β').map(δ pf0) ≫ δ(rs β') with δ pf0 = 𝟙 against the helper's δ(rs β') DIRECTLY — no manual comp_δ/map_id/id_comp (those silently no-op / motive-fail in the carrier diamond)."
+      },
+      {
+        "attempt": 3,
+        "strategy": "STEP 4 counit-pair: split tensorHom on pure tensor, discharge each counit leg via fvar-keyed hC",
+        "code_tried": "erw [Monoidal.tensorHom_app, ModuleCat.MonoidalCategory.tensorHom_tmul]; have hC : ∀ (N) (U) (y), ... := fun N U y => pushforwardPushforwardAdj_counit_app_app_apply _ _ _ _ _ N U y; erw [hC (Gβ.obj A) V' _, hC (Gβ.obj B) V' _]",
+        "line_number": "~4480",
+        "lean_error": "with metavar N/U/y: whnf heartbeat EXPLOSION (timeout) on heavy composite",
+        "result": "partial",
+        "insight": "hC must be applied with ALL THREE args explicit (N,U,y); binder N over the BIG composite (pushforward φ' ⋙ Gβ).obj N, U : (Opens Y)ᵒᵖ. Even pinned, cumulative erw cost needed set_option maxHeartbeats 1600000."
+      },
+      {
+        "attempt": 4,
+        "strategy": "CLOSING: collapse RHS μ then split factors",
+        "code_tried": "erw [pushforward_lax_mu_comparison_rhs_tmul]; congr 1",
+        "line_number": "~4540",
+        "lean_error": null,
+        "result": "success",
+        "insight": "rhs_tmul collapses RHS μ to m ⊗ₜ n; congr 1 splits factorA ⊗ₜ factorB = m ⊗ₜ n into factorA = m, factorB = n with no extra goal."
+      },
+      {
+        "attempt": 5,
+        "strategy": "CLOSING factor legs: combine P.map uo (P.map co z) via comp_apply family",
+        "code_tried": "simp only [pushforward_obj_map_apply]; erw [← ConcreteCategory.comp_apply, ← Functor.map_comp]  (also tried ← LinearMap.comp_apply, ← ModuleCat.hom_comp, ← CategoryTheory.comp_apply)",
+        "line_number": "~4548",
+        "lean_error": "pattern not found / no progress — morphisms compose only up to defeq-through-⋙ that ≫ won't unfold",
+        "result": "failed",
+        "insight": "ALL ← comp_apply variants fail; the defeq-not-syntactic intermediate restrictScalars-codomain object blocks ≫. Need the indirect P.map_comp/congr_hom TERM route."
+      },
+      {
+        "attempt": 6,
+        "strategy": "CLOSING factor legs: hfac abstract-P term route",
+        "code_tried": "have hfac (abstract P) : ... := (ConcreteCategory.congr_hom (P.map_comp co uo) z).symm.trans step  where step collapses P.map(co≫uo) via co≫uo=𝟙 (Subsingleton.elim, Opens Y poset) using conv_lhs => rw[Subsingleton.elim]; then (ConcreteCategory.congr_hom (P.map_id _) z).trans (id_apply z)",
+        "line_number": "~4548",
+        "lean_error": null,
+        "result": "success",
+        "insight": "Abstract P dodges the Gβ.obj carrier diamond + propositional opens identity f⁻¹(f(f⁻¹W))=f⁻¹W. ConcreteCategory.congr_hom forms the ModuleCat ≫ INDIRECTLY (manual P.map co ≫ P.map uo fails to typecheck on the defeq intermediate); conv handles the dependent motive rw/simp cannot; P.map_id collapse via a TERM to dodge the morphism-dependent restrictScalars-codomain motive. Lemma CLOSED; lake build EXIT 0, 8321 jobs."
+      }
+    ],
+    "next_steps": "Seed-1 DONE. Only remaining project sorry is Route B trivialisation_restrict_compat (TensorObjInverse:183) — iter-040 even-slot, de-risked via restrictFunctorComp keystone."
+  },
+  {
+    "timestamp": "2026-06-20T11:15:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "trivialisation_restrict_compat"
+    },
+    "session": {
+      "id": "session_39",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Out of this iter's write domain (Route A SOLO slot, root file only). Lone remaining project sorry. De-risked: 5 restriction-naturality squares come FREE from Mathlib NatIso Scheme.Modules.restrictFunctorComp via .hom/.inv.naturality (analogies/restrictcomp039.md).",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "iter-040 binding even-slot, root frozen (race-free). Wire the 5 squares via restrictFunctorComp then assemble the cocycle telescope."
+  }
+]

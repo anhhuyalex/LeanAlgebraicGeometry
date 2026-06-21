@@ -1,0 +1,253 @@
+[
+  {
+    "timestamp": "2026-06-20T13:27:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "trivialisation_uIota_restrict_compat"
+    },
+    "session": {
+      "id": "session_41",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "depends transitively on B2 restrictFunctorIsoPullback_comp_compat (sorry); S4c's own body is sorry-free",
+      "key_lemmas_used": [
+        "restrictFunctorIsoPullback_comp_compat",
+        "pullbackObjUnitToUnit_comp",
+        "Iso.hom_inv_id_app",
+        "pullbackCongr"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "reframe S4c (unit square) through the pullback world via new bridge B2, then close the two residual sub-squares",
+        "code_tried": "simp only [unitRestrictIso, Functor.mapIso_trans]; rw [restrictFunctorIsoPullback_comp_compat j hjι (SheafOfModules.unit X.ringCatSheaf)]; have hslideH := (restrictFunctorIsoPullback j).hom.naturality (pullbackUnitIso U.ι).hom; have hunitH : ... ; apply Iso.ext; simp only [Iso.trans_hom, Functor.mapIso_hom, Category.assoc, Iso.app_hom]; rw [reassoc_of% hslideH]; rw [← hunitH]; rfl",
+        "line_number": "337-382",
+        "lean_error": "first assembly left 'unsolved goals case w' until trailing rfl added; rw [← hunitH] alone insufficient (SheafOfModules-defeq) -> needs explicit rfl at default transparency",
+        "goal_before": "unitRestrictIso V.ι = restrictCompReindex j hjι 𝟙 ≪≫ (restrictFunctor j).mapIso (unitRestrictIso U.ι) ≪≫ unitRestrictIso j",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "B2-rewrite cancels shared restrict-prefix; hslide=naturality of restrictFunctorIsoPullback j (reassoc_of%); hunit=pullbackObjUnitToUnit_comp with eqToHom transport via generalized subst (morphisms must be variables: subst hjι fails since V.ι not a variable); trailing rfl mandatory."
+      }
+    ],
+    "next_steps": "Fully closing B2 promotes S4c to a true \\leanok proof block."
+  },
+  {
+    "timestamp": "2026-06-20T13:27:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "restrictFunctorIsoPullback_comp_compat"
+    },
+    "session": {
+      "id": "session_41",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "RHS unit-image is a leftAdjointUniq-across-composition coherence chase (~40-60 LOC); no Mathlib lemma; restrictFunctorIsoPullback has zero downstream lemmas",
+      "key_lemmas_used": [
+        "restrictAdjunction.homEquiv",
+        "Adjunction.homEquiv_unit",
+        "Adjunction.unit_leftAdjointUniq_hom_app",
+        "restrictFunctorIsoPullback"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "new bridge lemma B2: state V-restriction-to-pullback comparison factors through reindex (restrict side) + pullbackComp/pullbackCongr (pullback side); prove by homEquiv-injectivity (both sides left-adjoint to pushforward)",
+        "code_tried": "apply Iso.ext; apply (restrictAdjunction V.ι).homEquiv _ _ |>.injective; rw [Adjunction.homEquiv_unit, Adjunction.homEquiv_unit]; simp only [restrictFunctorIsoPullback, Iso.app_hom]; rw [Adjunction.unit_leftAdjointUniq_hom_app]",
+        "line_number": "196-219",
+        "lean_error": "no error on LHS reduction (verified via lean_multi_attempt) — discharges LHS to (pullbackPushforwardAdjunction V.ι).unit.app A; RHS composite unit-image left as sorry",
+        "goal_before": "(restrictFunctorIsoPullback V.ι).app A = restrictCompReindex j hjι A ≪≫ (restrictFunctor j).mapIso ((restrictFunctorIsoPullback U.ι).app A) ≪≫ (restrictFunctorIsoPullback j).app ((pullback U.ι).obj A) ≪≫ (pullbackComp j U.ι).app A ≪≫ (pullbackCongr hjι).app A",
+        "goal_after": "RHS unit-image residual (sorry)",
+        "result": "partial",
+        "insight": "Statement elaborates cleanly (type-match record delivered). LHS reduces via unit_leftAdjointUniq_hom_app. RHS needs conjugateEquiv_pullbackComp_inv + unit_leftAdjointUniq at U.ι/j + hjι eqToHom threading. Lynchpin: S2/S3/S4c all \\cref B2."
+      }
+    ],
+    "next_steps": "iter-042: complete RHS unit chase (~40-60 LOC); LHS already scripted in body comment."
+  },
+  {
+    "timestamp": "2026-06-20T13:27:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "tensorObj_restrict_iso_eq_pullbackTensorMap"
+    },
+    "session": {
+      "id": "session_41",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "ROOT-PRIVACY: deep content δ=e.hom is the hcompat have INSIDE private pullbackTensorMap_isIso_of_isOpenImmersion (root TensorObjSubstrate.lean L4812); root FROZEN this iter; re-deriving downstream is >100-LOC mate calculus",
+      "key_lemmas_used": [
+        "pullbackTensorMap",
+        "tensorObj_restrict_iso",
+        "tensorObjIsoOfIso",
+        "restrictFunctorIsoPullback",
+        "asIso"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "new bridge B1: state tensorObj_restrict_iso = conjugate of asIso (pullbackTensorMap) by restrictFunctorIsoPullback; take IsIso as explicit hyp since witness is private",
+        "code_tried": "private lemma tensorObj_restrict_iso_eq_pullbackTensorMap (f) [IsOpenImmersion f] (M N) (hiso : IsIso (pullbackTensorMap f M N)) : tensorObj_restrict_iso f M N = (restrictFunctorIsoPullback f).app (tensorObj M N) ≪≫ asIso (pullbackTensorMap f M N) ≪≫ tensorObjIsoOfIso ((restrictFunctorIsoPullback f).app M).symm ((restrictFunctorIsoPullback f).app N).symm := by sorry",
+        "line_number": "238-246",
+        "lean_error": "none (statement elaborates with explicit hiso hyp); body left sorry — cannot cite private witness pullbackTensorMap_isIso_of_isOpenImmersion; deep content locked in frozen root",
+        "goal_before": "n/a (statement scaffold)",
+        "goal_after": "sorry",
+        "result": "partial",
+        "insight": "Statement needs explicit (hiso : IsIso (pullbackTensorMap f M N)) because the witness is private in frozen root. Proof needs δ=e.hom from root L4812 hcompat. Clean additive root extraction (de-private witness or export hcompat) unblocks iter-042."
+      }
+    ],
+    "next_steps": "iter-042 thin additive root edit: de-private pullbackTensorMap_isIso_of_isOpenImmersion OR export hcompat/δ=e.hom; then B1 closes -> unblocks S2 -> S4b."
+  },
+  {
+    "timestamp": "2026-06-20T13:27:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "tensorObj_restrict_iso_restrict_compat"
+    },
+    "session": {
+      "id": "session_41",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "needs B1 (root-privacy blocked) + B2 + pullbackTensorMap_restrict",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "not attempted this iter (blocked downstream of B1/B2)",
+        "code_tried": "sorry (scaffold unchanged from iter-040)",
+        "line_number": "254-268",
+        "lean_error": "n/a",
+        "result": "partial",
+        "insight": "S2 is the ⊗-leg; blocked until B1 lands."
+      }
+    ],
+    "next_steps": "After B1+B2 close: rewrite via B1 per tensor factor, then B2 for the unit-comparison; pullbackTensorMap_restrict gives the pullback-world composition law."
+  },
+  {
+    "timestamp": "2026-06-20T13:27:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "dual_restrict_iso_restrict_compat"
+    },
+    "session": {
+      "id": "session_41",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "dual-side gap; thin-poset subsingleton route (b) unverified",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "not attempted this iter",
+        "code_tried": "sorry (scaffold unchanged)",
+        "line_number": "279-290",
+        "lean_error": "n/a",
+        "result": "partial",
+        "insight": "S3 immersion-naturality of dual_restrict_iso = same depth as S2; route (b) subsingleton unverified."
+      }
+    ],
+    "next_steps": "Independent of B1/B2 chain; needs the dual-side naturality decided (route b)."
+  },
+  {
+    "timestamp": "2026-06-20T13:27:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "dual_unit_iso_restrict_compat"
+    },
+    "session": {
+      "id": "session_41",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "depends on S3",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "not attempted this iter",
+        "code_tried": "sorry (scaffold unchanged)",
+        "line_number": "304-314",
+        "lean_error": "n/a",
+        "result": "partial",
+        "insight": "S4a template = presheafDualUnitIso_naturality; depends on S3."
+      }
+    ],
+    "next_steps": "After S3."
+  },
+  {
+    "timestamp": "2026-06-20T13:27:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "tensorObj_unit_iso_restrict_compat"
+    },
+    "session": {
+      "id": "session_41",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "depends on S2 (=> B1 root-privacy)",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "not attempted this iter",
+        "code_tried": "sorry (scaffold unchanged)",
+        "line_number": "320-330",
+        "lean_error": "n/a",
+        "result": "partial",
+        "insight": "S4b left unitor; needs S2 + S4c + left-unitor naturality."
+      }
+    ],
+    "next_steps": "After S2."
+  },
+  {
+    "timestamp": "2026-06-20T13:27:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "trivialisation_restrict_compat"
+    },
+    "session": {
+      "id": "session_41",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "telescope wiring of the 5 squares; closes only after S2,S3,S4a,S4b (S4c done mod B2)",
+      "key_lemmas_used": [
+        "restrictCompReindex",
+        "unitRestrictIso",
+        "image_preimage_of_le",
+        "Scheme.Hom.resLE"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "not attempted this iter (scaffold with chart morphism j + reindex endpoints from iter-040)",
+        "code_tried": "sorry (scaffold with hVU', j, hjι, hji IsOpenImmersion, hobjU/hobjV unchanged)",
+        "line_number": "392-461",
+        "lean_error": "n/a",
+        "result": "partial",
+        "insight": "Telescope plan documented in-body: rewrite V-chain by S2/S3/S4a/S4b/S4c, split tensorObjIsoOfIso via bifunctoriality, cancel adjacent ρ's, leave outer eqToHom hobjU/hobjV."
+      }
+    ],
+    "next_steps": "After the 4 remaining squares close: execute the documented telescope (ρ-cancellation + eqToHom evaluation)."
+  }
+]

@@ -1,0 +1,144 @@
+[
+  {
+    "timestamp": "2026-06-21T03:00:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "tensorBraiding_self_eq_id_of_isInvertible"
+    },
+    "session": {
+      "id": "session_28",
+      "model": "opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "PresheafOfModules.braiding_hom_app",
+        "Module.Invertible.tensorProductComm_eq_refl",
+        "TopCat.Sheaf.hom_ext",
+        "PresheafOfModules.sheafificationAdjunction",
+        "PresheafOfModules.toPresheaf_map_app_apply",
+        "Adjunction.homEquiv_unit"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "ModuleCat self-braiding = TensorProduct.comm probe",
+        "code_tried": "apply ModuleCat.hom_ext; apply TensorProduct.ext'; intro m m'; rfl",
+        "line_number": "3516",
+        "result": "success",
+        "insight": "moduleCat_braiding_hom_eq_comm: (β_ M M).hom = ofHom (TensorProduct.comm).toLinearMap, no invertibility needed"
+      },
+      {
+        "attempt": 2,
+        "strategy": "Invertible module: comm = refl => id; pass Invertible as EXPLICIT arg to dissolve ring-spelling diamond",
+        "code_tried": "rw [moduleCat_braiding_hom_eq_comm, Module.Invertible.tensorProductComm_eq_refl]; rfl  (with hM : Module.Invertible R M explicit)",
+        "line_number": "3531",
+        "lean_error": "earlier: failed to synthesize CommSemiring/Module instance when passed via haveI (Γ(X,U) vs R.obj U spelling)",
+        "result": "success",
+        "insight": "EXPLICIT arg hM unifies by defeq, not instance search — the key to crossing the X.presheaf.obj vs X.sheaf.obj⋙forget₂ diamond"
+      },
+      {
+        "attempt": 3,
+        "strategy": "presheaf braiding component at trivializing open = id",
+        "code_tried": "erw [PresheafOfModules.braiding_hom_app]; exact moduleCat_braiding_self_hom_eq_id _ h",
+        "line_number": "3546",
+        "lean_error": "plain rw [braiding_hom_app] no-match; hand-built hcomp rfl-bridge gave rfl type mismatch",
+        "result": "success",
+        "insight": "erw needed (not rw) to cross the braiding coercion; hand-rolled rfl-bridge was wrong route"
+      },
+      {
+        "attempt": 4,
+        "strategy": "descent β^pre ≫ unit = unit via basis sheaf separatedness",
+        "code_tried": "(toPresheaf _).map_injective; TopCat.Sheaf.hom_ext _ _ hbasis; intro i; rw[hb (=𝟙), Category.id_comp]",
+        "line_number": "3564",
+        "result": "success",
+        "insight": "TopCat.Sheaf.hom_ext on underlying Ab sheaf + basis (NOT Scheme.Modules.hom_ext = ⊤-trap)"
+      },
+      {
+        "attempt": 5,
+        "strategy": "main lemma: unit-injectivity of sheafification adjunction",
+        "code_tried": "Iso.ext; change sheafification.map β = 𝟙; homEquiv.injective; rw[homEquiv_unit,homEquiv_unit]; erw[Functor.map_id,Category.comp_id]; exact (unit.naturality β).symm.trans descent",
+        "line_number": "3594",
+        "result": "success",
+        "insight": "erw[Functor.map_id, Category.comp_id] needed — plain rw/simp FAIL on the 𝟙 here"
+      }
+    ],
+    "next_steps": "PROVED axiom-clean [propext, Classical.choice, Quot.sound]. The gated novel-infrastructure deliverable; consumer = succ-hexagon."
+  },
+  {
+    "timestamp": "2026-06-21T03:00:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "tensorPowAdd_comm"
+    },
+    "session": {
+      "id": "session_28",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "succ-hexagon: RHS μ_{c+1,m} = tensorPowAdd L (c+1) m is a 1ST-INDEX successor; tensorPowAdd recurses on the 2ND index, so neither tensorPowAdd_succ nor ih (μ_{c,m}) reaches it. Needs an unbuilt tensorPowAdd_succ_left (1st-index recursion) + descended hexagon_forward.",
+      "key_lemmas_used": [
+        "tensorPowAdd_zero_right",
+        "tensorObjRightUnitor_eq_braiding_unit",
+        "tensorPowAdd_zero_left",
+        "CategoryTheory.braiding_leftUnitor"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "base m'=0: ρ = β ≫ λ via descended braiding_leftUnitor",
+        "code_tried": "rw [tensorPowAdd_zero_right, tensorObjRightUnitor_eq_braiding_unit, tensorPowAdd_zero_left]; apply Iso.ext; simp only [Iso.trans_hom, eqToIso.hom]; congr 1; simp",
+        "line_number": "3648",
+        "result": "success",
+        "insight": "base case PROVED; helper tensorObjRightUnitor_eq_braiding_unit descends MonoidalCategory.braiding_leftUnitor (β_{G,𝟙}≫λ=ρ) through sheafification"
+      },
+      {
+        "attempt": 2,
+        "strategy": "succ c: unfold LHS and apply ih",
+        "code_tried": "rw [tensorPowAdd_succ, ih]",
+        "line_number": "3653",
+        "lean_error": "residual goal: α⁻¹ ≪≫ WR(β_{L^m,L^c} ≪≫ μ_{c,m} ≪≫ reindex) L = β_{L^m,L^{c+1}} ≪≫ μ_{c+1,m} ≪≫ reindex; RHS μ_{c+1,m} unreachable (1st-index successor)",
+        "result": "partial",
+        "insight": "VERIFIED OBSTRUCTION: 2nd-index recursion cannot characterize the 1st-index successor μ_{c+1,m}. sorry left with detailed handoff."
+      }
+    ],
+    "next_steps": "Build tensorPowAdd_succ_left : μ_{c+1,m} ≅ …μ_{c,m}… (1st-index recursion via tensorPowAdd_assoc/tensorObjAssoc + tensorPow_succ), THEN descended BraidedCategory.hexagon_forward with β_{L,L}=𝟙 collapsing doubled-L slide. monoidal tactic does NOT handle braidings. This is the braided analogue of the multi-iter B6 pentagon — multi-iter scope, consider effort-breaker."
+  },
+  {
+    "timestamp": "2026-06-21T03:00:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "sectionsMul_mul_comm"
+    },
+    "session": {
+      "id": "session_28",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "fully reduced to tensorPowAdd_comm; carries sorryAx ONLY transitively via tensorPowAdd_comm succ-hexagon. Own explicit sorry REMOVED.",
+      "key_lemmas_used": [
+        "gMul_mul_apply",
+        "tensorBraiding_hom_sectionsMul",
+        "tensorPowAdd_comm",
+        "iso_trans_hom_val_app_apply",
+        "sectionsCast_apply",
+        "sectionsCast_sectionsCast"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "element-level reduction (B7 pattern): collapse both sides to x via braiding naturality, rewrite via tensorPowAdd_comm, cancel casts",
+        "code_tried": "simp only [gMul_mul_apply]; rw [← tensorBraiding_hom_sectionsMul …, tensorPowAdd_comm L na nb, iso_trans_hom_val_app_apply, iso_trans_hom_val_app_apply, ← sectionsCast_apply, sectionsCast_sectionsCast]; exact Nat.add_comm nb na",
+        "line_number": "3713",
+        "result": "success",
+        "insight": "ELEMENT-level closes cleanly (no comp-instance diamond on elements, as with B7). New helper iso_trans_hom_val_app_apply for section-level iso-composite functoriality. Only residual is transitive sorryAx via tensorPowAdd_comm."
+      }
+    ],
+    "next_steps": "Automatically axiom-clean once tensorPowAdd_comm succ-hexagon closes. No further work on this lemma itself."
+  }
+]

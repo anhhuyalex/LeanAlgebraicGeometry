@@ -9,18 +9,18 @@ A high-level, mathematical checklist across the scope's member projects.
 - [ ] not started (no Lean yet — blueprint only, or theme not begun)
 
 **Status snapshot** *(open `sorry` counts measured over each project's `AlgebraicJacobian/`
-source tree, comments/docstrings excluded; 2026-06-20):*
+source tree, comments/docstrings excluded; 2026-06-21):*
 
 | Project | Stage | Open `sorry` |
 | --- | --- | --- |
 | Algebraic-Jacobian-Challenge | prover | 87 ✨ |
 | Cech-Cohomology | ✅ complete | 0 ✨ |
-| Line-Bundle-Comparison-Iso | prover | 4 ✨ |
+| Line-Bundle-Comparison-Iso | prover | 6 ✨ |
 | Albanese | prover | 17 ✨ |
-| RiemannRoch | prover | 18 ✨ |
+| RiemannRoch | prover | 25 ✨ |
 | Quot-Foundations | ⏸️ deferred | 21 |
-| GR-quot_closure | prover | 9 ✨ |
-| FBC-B_SNAP-chain | prover | 16 ✨ |
+| GR-quot_closure | prover | 4 ✨ |
+| FBC-B_SNAP-chain | prover | 14 ✨ |
 | 36 related-paper projects | 📝 blueprint only | 0 Lean (stub aggregators) |
 
 ---
@@ -114,15 +114,16 @@ complex computes `Rⁱf_* F`. Unconditional (no enough-injectives appeal).
 - [x] **PushPull functoriality** — `pushPullMap` composition, leg coherence, pentagon
 - [x] **Comparison theorem `cech_computes_higherDirectImage`** *(proved iter-079, 0 sorries)*
 
-## Line-Bundle-Comparison-Iso  *(prover stage — extraction hub → Jacobian, 4 open `sorry`)* ✨
+## Line-Bundle-Comparison-Iso  *(prover stage — extraction hub → Jacobian, 6 open `sorry`)* ✨
 
 **Goal:** the comparison-isomorphism substrate giving `Pic♯_{C/k}` its abelian-group
 structure (the A.1.c.sub package; merges back into the Jacobian challenge).
 
 - [x] **Stalk-tensor / internal-hom machinery** — `TensorObjSubstrate/StalkTensor`, `PresheafInternalHom` **sorry-free**
 - [x] **Slice-dual transport iso (DUAL route)** — `TensorObjSubstrate/DualInverse`, `DualInverse/SliceTransport` **sorry-free**
-- [x] **Line-bundle pullback / relative Pic functor** — `LineBundlePullback`, `RelPicFunctor` **sorry-free**
-- [~] **Tensor unitors & Picard-group assembly** — `TensorObjSubstrate` (PicGroup/picCommGroup wiring), **4 residual `sorry`**
+- [x] **Line-bundle pullback / relative Pic functor** — `LineBundlePullback`, `RelPicFunctor` **sorry-free**; seed `pullback_tensor_iso_loctriv` delivered ✨
+- [x] **Bridge B2 terminal blocker** — `TensorObjInverse.restrictFunctorIsoPullback_comp_compat` is closed axiom-clean; `TensorObjInverse.lean` builds green with the blocker gone ✨
+- [~] **Terminal comparison inverse** — `TensorObjInverse` (×6): B1 crux, immersion-compatibility squares, and final trivialisation restriction compatibility
 
 ## Albanese  *(prover stage — extraction → Jacobian, 17 open `sorry`)* ✨
 
@@ -140,18 +141,19 @@ the parent ✨ 2026-06-20.)*
 - [~] **FGA Picard representability slice** — `Picard/FGAPicRepresentability` (×2)
 - [~] **Genus-0 base + Weil-divisor riders** — `Genus0BaseObjects/BareScheme` (×1, `projectiveLineBar_geomIrred` scaffold), `Genus0BaseObjects/GmScaling` (×1), `RiemannRoch/WeilDivisor` (×1)
 
-## RiemannRoch  *(prover stage — extraction → Jacobian, 18 open `sorry`)* ✨
+## RiemannRoch  *(prover stage — extraction → Jacobian, 25 open `sorry`)* ✨
 
 **Goal:** the Weil-divisor / Riemann–Roch core for a smooth proper curve — order valuation,
 degree homomorphism, `O(D)`/`O(P)`, the skyscraper SES, `H¹`-vanishing, and the RR formula.
 Extracted from `Algebraic-Jacobian-Challenge` on 2026-06-20; merges back. *(Full `lake build` green.)*
 
 - [x] **Structure-sheaf module substrate + rigidity** — `Cohomology/StructureSheaf*`, `RigidityLemma` **sorry-free**
-- [~] **Weil divisors** — `RiemannRoch/WeilDivisor` (×3): order valuation, degree hom, principal divisors
-- [~] **`O(D)` / `O(P)` line bundles** — `RiemannRoch/OcOfD` (×3), `RiemannRoch/OCofP` (×3): skyscraper SES
-- [~] **`H¹`-vanishing & RR formula** — `RiemannRoch/H1Vanishing` (×2), `RiemannRoch/RRFormula` (×1)
+- [x] **`O(D)` carrier-stalk chain** — the S3 binding leaf `carrierSheaf_stalk_eq` is closed axiom-clean; `OcOfD` dropped from 11 to 6 sorries ✨
+- [~] **Weil divisors and smooth-regular substrate** — `RiemannRoch/WeilDivisor` (×2), `RiemannRoch/SmoothRegular` (×1): divisor arithmetic plus the smooth-stalk regularity bridge
+- [~] **`O(D)` / `O(P)` line bundles** — `RiemannRoch/OcOfD` (×6), `RiemannRoch/OCofP` (×3): carrier, cokernel, and skyscraper SES bridges
+- [~] **`H¹`-vanishing & RR formula** — `RiemannRoch/H1Vanishing` (×1), `RiemannRoch/RRFormula` (×5)
 - [~] **Rational-curve iso + abelian-variety rigidity** — `RiemannRoch/RationalCurveIso` (×3), `AbelianVarietyRigidity` (×1)
-- [~] **Genus-0 base riders** — `Genus0BaseObjects/BareScheme` (×1), `Genus0BaseObjects/GmScaling` (×1)
+- [~] **Genus-0 base riders** — `Genus0BaseObjects/BareScheme` (×1), `Genus0BaseObjects/GmScaling` (×2)
 
 ## Quot-Foundations  *(⏸️ deferred — 21 open `sorry`; active work moved to subproject extractions)*
 
@@ -170,7 +172,7 @@ the two extractions carry the active proving.
 - [~] **Quot scheme** — `QuotScheme` (×4): `RepresentableBy` upgrade + Quot-representability core
 - [~] **Section graded ring (SNAP)** — `Picard/SectionGradedRing` (×9): cast coherence → Hilbert polynomial *(shared with the sibling extractions)*
 
-## GR-quot_closure  *(prover stage — 9 open `sorry`)* ✨
+## GR-quot_closure  *(prover stage — 4 open `sorry`)* ✨
 
 **Goal:** representability of the relative Grassmannian — the Čech-independent (H⁰) leg that
 builds `Grass(V, d)` from affine charts via the `GL_d` cocycle and proves it represents the
@@ -178,17 +180,18 @@ rank-`d`-quotient functor. Extracted from `Quot-Foundations`; merges back as a t
 
 - [x] **Grassmannian cells, gluing & descent** — `GrassmannianCells`, `GrassmannianQuot`, `GlueDescent`, `GradedHilbertSerre`, `RelativeSpec` **sorry-free**
 - [~] **Quot scheme** — `QuotScheme` (×4): representability endgame
-- [~] **Section graded ring (SNAP)** — `Picard/SectionGradedRing` (×5) *(shared with `FBC-B_SNAP-chain`)*
+- [x] **Section graded ring (SNAP)** — `Picard/SectionGradedRing` **sorry-free** through the graded ring and module stretch ✨
 
-## FBC-B_SNAP-chain  *(prover stage — 16 open `sorry`)* ✨
+## FBC-B_SNAP-chain  *(prover stage — 14 open `sorry`)* ✨
 
 **Goal:** the flat-base-change (FBC-B) leg of the Quot/Picard-representability cone, sharing the
 SNAP section-graded-ring foundation with `GR-quot_closure`. *(Lean scaffolding has been
 generated — this is no longer an empty extraction skeleton.)*
 
 - [x] **Regroup helper** — `Cohomology/RegroupHelper` **sorry-free**
-- [~] **Flat base change (FBC-B)** — `Cohomology/FlatBaseChange` (×5), `FlatBaseChangeGlobal` (×4): pushforward flat base-change leg
-- [~] **Section graded ring (SNAP)** — `Picard/SectionGradedRing` (×7): shared foundation with `GR-quot_closure`
+- [x] **FBC ring-square mate legs** — geometric and algebraic mate legs in `Cohomology/FlatBaseChange` are closed axiom-clean ✨
+- [~] **Flat base change (FBC-B)** — `Cohomology/FlatBaseChange` (×4), `FlatBaseChangeGlobal` (×4): pushforward flat base-change leg
+- [~] **Section graded ring (SNAP)** — `Picard/SectionGradedRing` (×6): shared foundation with `GR-quot_closure`
 
 ---
 

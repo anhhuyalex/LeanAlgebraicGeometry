@@ -10,80 +10,84 @@ FGA Explained Ch. 5), then merge back into *Quot-Foundations*:
   `lem:tautologicalQuotient_epi`: the rank-`d` Grassmannian as a scheme glued from affine
   charts via the `GL_d` cocycle, representing the rank-`d`-quotient functor. χ-free (the
   Hilbert condition is constant rank `d`).
-- **SNAP-S0** (ACTIVE — iter-006, user-directed) — `def:sectionsCast`, `lem:sectionsCast_refl`,
-  `lem:gradedMonoid_eq_of_cast`, `lem:sectionMul_coherent` (+ graded `GMul`/`GOne` assembly): the
-  H⁰ section graded ring `Γ_*(X,L)` (Stacks 01CV). Foundations
-  (`tensorPow`/`sectionsMul`/`tensorObjAssoc`/`tensorPowAdd`) already proved axiom-clean in-leg.
-  iter-007 pivot: the residual coherence laws are inherited from a Mathlib-aligned
-  `MonoidalCategory`/`SymmetricCategory X.Modules` (monoidal localization), diverging from the
-  sibling `FBC-B_SNAP-chain` encoding (which is stuck at 9 sorries on the same hand-rolled wall).
-- **χ-blocked** (DEFERRED here) — `def:quot_functor`, `def:hilbert_polynomial`: in the parent's
-  287-node cone but χ-semantic (need higher cohomology this leg lacks) and **not in the GR-seed
-  cone**. Sourced from the cohomology leg at merge; kept as `sorry` here.
+- **SNAP-S0** — `def:sectionsCast`, `lem:sectionsCast_refl`, `lem:gradedMonoid_eq_of_cast`,
+  `lem:sectionMul_coherent` (+ graded assembly): the H⁰ section graded ring `Γ_*(X,L)`,
+  Čech-independent. **Shared with the sibling `FBC-B_SNAP-chain`** — keep as sorry here or
+  import the sibling's proofs (user hint).
+- **χ-blocked** — `def:quot_functor`, `def:hilbert_polynomial`: in-cone via the blueprint
+  `\uses` wiring, but χ-semantic (need higher cohomology this leg lacks). Sourced from the
+  cohomology leg at merge; kept as `sorry` here.
 
-**Disjointness invariant (load-bearing).** The three closable seeds (`grassmannian_scheme`,
-`grassmannian_representable`, `tautologicalQuotient_epi`) transitively `\uses` NO sorry-bearing
-SNAP-S0 or χ-blocked node — confirmed at source level (`GrassmannianQuot.lean`, which holds all
-three seeds + their construction, references 0 of {`hilbertPolynomial`, `QuotFunctor`,
-`sectionsMul`, `sectionGradedRing`, `sectionsCast`}). To be re-confirmed via `#print axioms` once
-the 3 GR sorries are closed: the only `sorryAx` admitted must come from the deferred SNAP/χ nodes
-that the seeds do NOT depend on, i.e. each closed seed is kernel-axiom-only. If this invariant
-ever fails, the SNAP/χ deferral becomes a goal-blocking gap, not an accepted dependency.
-
-End-state: zero project `sorry` in the closable GR-seed cone, zero project axioms, kernel-only
-axioms on the closed seeds. Names/labels/paths are the parent's so finished work merges back
-cleanly.
+End-state: zero project `sorry` in the closable part of the 287-node cone, zero project axioms,
+kernel-only axioms. Names/labels/paths are the parent's so finished work merges back cleanly.
 
 ## Phases & estimations
 
+**Leg closable scope COMPLETE.** GR functor-representability (`represents`) + section graded ring
+`Γ_*(X,L)` (through invertible-`L` `GCommSemiring`) + the capped SNAP-S1 module stretch are ALL
+delivered 0-sorry, axiom-clean. No live prover frontier remains. The leg is in a delivered /
+awaiting-merge terminal state; the only open phases below are intentional out-of-leg deferrals. (Goal
+boundary: the goal-named `thm:grassmannian_representable` = smooth-PROJECTIVE representability is delivered
+only as a weak skeleton — the substantive content is `represents`/`grassmannian_universal_property`; the
+smooth+projective+`relative_spec_*` residue is out-of-cone, parent-owned. See Open questions.)
+
 | Phase | Status | Iters left | LOC | Key Mathlib needs | Risks |
 |---|---|---|---|---|---|
-| SNAP-S0 — section graded ring assoc legs | ACTIVE (live: ★ placement gating B4/B5, + B6/B7; +3 comm-gated future) | 1 (★ closes via head-pin → B4/B5 auto-clean + B6/B7 same lane; if head-pin AND uniform-synonym restatement BOTH fail → user escalation, no further non-user variants) | ~50–120 | inherited monoidal structure + bridges DONE; `tensorPowAdd_zero_right`/B1/B2/B3/B5-assembly/B4-reduction DONE; ★'s residual generic coherence PROVEN axiom-clean (iter-016); `MonoidalCategory.pentagon`; in-synonym `Localization.Monoidal.μ_natural_*(_assoc)`/`associator_naturality`; `DirectSum.GSemiring` assembly | LIVE = assoc chain only. iter-013 REDUCED B4 to the isolated ★ `tensorObjAssoc_eta_factor_sheaf` (closing ★ auto-cleans B4+B5). iter-015 comp-bridge `hc` ⇒ ★ prefix compiles; iter-016 PROVED ★'s residual as a generic `[MonoidalCategory M]` coherence (axiom-clean) — math DONE — but ★'s placement `exact` blew >4M heartbeats. **progress-critic iter-017 STUCK** (6→6 ×4); corrective = mathlib-analogist consult (DONE), which **re-diagnosed: the wall is HEAD-MISALIGNMENT, not term size** — the failing `exact` lets the generic's `M` default to native `X.Modules`-comp while the `hc`-normalized goal carries the `LocalizedMonoidal` head ⇒ no `isDefEq` short-circuit, full 1.2M-char diamond traversal. FIX = pin `M` to the synonym (1-line); fallback = restate ★ uniformly in LocalizedMonoidal-comp. Then B6 `tensorPowAdd_assoc` (canonical pentagon, diamond-free, COMMITTED), B7 `sectionsMul_mul_assoc`. comm = invertibility-gated FUTURE, no consumer. |
-| χ-blocked nodes | DEFERRED | — | — | higher-cohomology engine (absent here) | `hilbert_polynomial`/`quot_functor` filled from cohomology leg at merge |
-
-**Leg status: GR-seed cone DELIVERED (iter-001); SNAP-S0 residue ACTIVE (iter-006).** Per user
-directive the SNAP graded-section residue (9 sorries in `SectionGradedRing.lean`) is now being
-proved in-leg on its already-closed foundations. The χ-blocked nodes remain DEFERRED (need a
-cohomology engine absent here; filled from the cohomology leg at merge).
+| χ-blocked nodes (`hilbert_polynomial`/`quot_functor`; downstream `sectionGradedModule_fg`, `hilbertPoly_of_sectionModule`) | DEFERRED — out of this i=0 leg | — | — | higher-cohomology / Euler-char engine (absent here) | `_fg` = Serre-finiteness/cohomology node (its blueprint needs properness+ampleness+coherence, cites Hartshorne II.5); `hilbertPoly` = Euler-char extraction; neither is a project sorry (blueprint pin only, no Lean decl) — both closable only in the cohomology leg, filled at merge |
+| Blueprint marker/pin reconciliation + 356 `lean_aux` coverage debt + dormant broken refs | MERGE-BACK | — | — | — | extraction artifacts; labels owned by parent; resolve at merge, do NOT edit in-leg |
 
 ## Completed
 
-(Inherited from the parent, in kept files. `Iters` cells are parent-side; this leg did not re-run them.)
+`Iters (done@ · used)` = the iter the phase finished and how many iters it took. `inherited` =
+delivered in the parent before this leg branched (no this-leg iter cost); this-leg phases carry
+their actual iter span.
 
 | Phase | Iters (done@ · used) | LOC | Files | Key results | Reusable techniques | Pitfalls |
 |---|---|---|---|---|---|---|
-| GR-cells/glue/sep/proper | parent · — | ~1310 | `GrassmannianCells.lean`, `GlueDescent.lean` | charts, cocycle, `Grassmannian.scheme`, `isSeparated`, `isProper`, keystone `isIso_glueRestrictionHom` (0-sorry) | `IsLocalization.Away.lift`; `ValuativeCriterion`; cocycle telescopes via rotMid; effective descent NOT stalks | `Matrix.det_updateColumn` absent; `Spec.map_comp` rw fails on Scheme-cat diamond |
-| GR-quot inverse + represents | parent · — | ~900 | `GrassmannianQuot.lean` | `grPointOfRankQuotient` (Nitsure §5 inverse), `represents` (modulo 2 inverse-law helper sorries, this leg) | equivalence-transport; joint reflection across chart cover | value-ModuleCat diamond: never positional rw |
-| SNAP-S2 Hilbert–Serre engine | parent · — | ~1470 | `QuotScheme.lean`, `GradedHilbertSerre.lean` | `IsRatHilb.ofDiffEq`; `gradedModule_hilbertSeries_rational` (00K1) | Route-2 ambient-subquotient pairs sidestep quotient gradings | bundled `IsInternal` over quotient carrier = hard `isDefEq` dead end |
-| QUOT P1+gap1+gap2 | parent · — | ~990 | `QuotScheme.lean` | schematic/proper support; `isIso_fromTildeΓ`; `isLocalizedModule_basicOpen` | equivalence-transport beats `IsContinuous`; open-imm pullback-unit IS Final | general-U `_of_cover` unprovable (basic-open only) |
-| SNAP-S0 tensor crux + chain | parent · — | ~600 | `SectionGradedRing.lean` | `isIso_sheafification_whiskerRight_unit`; `tensorObjAssoc`; `tensorPowAdd` (axiom-clean) | `W.whiskerRight`@`ModuleCat (ULift ℤ)` + coequalizer descent (NOT stalks) | instance synth flaky in long `≪≫` — pass `@asIso _ _ _ _ f h` |
-| GR-quot / repr — tautological quotient + representability | 001 · 1 | ~0 (3 sorries closed in-place) | `GrassmannianQuot.lean` | effective descent for `SheafOfModules`; `Functor.RepresentableBy` | `tautologicalQuotient_epi` (joint reflection + `epi_comp'`), `presentedMatrix_rqPullback`, `grPointOfRankQuotient_rqPullback_tautological` → `represents` sorry-free + axiom-clean | the two "calc-`Trans` toolchain bug" FIXMEs were misdiagnosed diamond-`rfl` gaps — append explicit `rfl` / use `congrArg…|>.trans` not `rw` |
+| GR-cells/glue/sep/proper | inherited | ~1310 | `GrassmannianCells.lean`, `GlueDescent.lean` | charts, cocycle, `Grassmannian.scheme`, `isSeparated`, `isProper`, keystone `isIso_glueRestrictionHom` (0-sorry) | `IsLocalization.Away.lift`; `ValuativeCriterion`; cocycle telescopes via rotMid; effective descent NOT stalks | `Matrix.det_updateColumn` absent; `Spec.map_comp` rw fails on Scheme-cat diamond |
+| GR-quot inverse | inherited | ~? | `GrassmannianQuot.lean` | `grPointOfRankQuotient` (Nitsure §5 inverse) | equivalence-transport; joint reflection across chart cover | value-ModuleCat diamond: never positional rw |
+| GR-seed `represents` (goal) | 001 · 1 | ~? | `GrassmannianQuot.lean` | `represents` sorry-free + axiom-clean (goal seed DELIVERED) | equivalence-transport across chart cover | disjoint from SNAP/χ — SNAP shape cannot disturb it |
+| GR-quot / repr — tautological quotient epi (closable GR cone) | ≤031 · — | ~? | `GrassmannianQuot.lean`, `GlueDescent.lean` | `tautologicalQuotient_epi` PROVED (last GR sorry); `universalQuotient_isLocallyFreeOfRank` — closable GR cone now 0-sorry | chart-local epi via `pullback_map_tautologicalQuotient` + surjectivity of chart immersions | `representable` weak-skeleton tracked-debt is OUT of the closable cone |
+| SNAP-S0 phase (ii) GCommSemiring (invertible `L`) | 031 · 4 (028→031) | ~? | `SectionGradedRing.lean` | `sectionGradedRing_gcommSemiring` (Stacks 01CR/01CV); brick 1′ `tensorPowAdd_succ_left_braided`; `tensorBraiding_{self_eq_id,hexagon_forward,symm}`; `braiding_canonical_self_eq_id`; `tensorPowAdd_comm`; `sectionsMul_mul_comm` (auto) — `Γ_*(X,L)` is a graded CommSemiring for invertible `L` | generic-`M` braided core (mirror B6 `_assoc_succ_core`, pin `M:=LocalizedMonoidal`, maxRecDepth 4000); hand-built-first β-split via brick 2; β∘β=refl telescoping (`reassoc_of% hsymm`, no `monoidal`); basis-local descent for `β_{L,L}=𝟙` | canonical-first β-split DEAD (`braiding_tensor_right_hom` won't fire on hand-built `tensorObj`); order-PRESERVING `tensorPowAdd_succ_left` = WRONG glue (use order-reversing brick 1′); `Scheme.Modules.hom_ext`=⊤-trap (use `TopCat.Sheaf.hom_ext` on basis) |
+| SNAP-S2 Hilbert–Serre engine | inherited | ~1470 | `QuotScheme.lean`, `GradedHilbertSerre.lean` | `IsRatHilb.ofDiffEq`; `gradedModule_hilbertSeries_rational` (00K1) | Route-2 ambient-subquotient pairs sidestep quotient gradings | bundled `IsInternal` over quotient carrier = hard `isDefEq` dead end |
+| QUOT P1+gap1+gap2 | inherited | ~990 | `QuotScheme.lean` | schematic/proper support; `isIso_fromTildeΓ`; `isLocalizedModule_basicOpen` | equivalence-transport beats `IsContinuous`; open-imm pullback-unit IS Final | general-U `_of_cover` unprovable (basic-open only) |
+| SNAP-S0 foundation → B1–B7 assoc → ∀L GSemiring | 007–027 · ~14 | ~? | `SectionGradedRing.lean` | crux `isIso_sheafification_whiskerRight_unit`; `tensorObjAssoc`; `tensorPowAdd` def; ★ `tensorObjAssoc_eta_factor_sheaf`; entire B1–B7 `tensorPowAdd_assoc`/`sectionsMul_mul_assoc` (∀L); `sectionGradedRing_gsemiring` (01CV) — all axiom-clean | Mathlib monoidal-localization + bridge `tensorObjIso`; coequalizer descent (NOT stalks); pin generic `M` to `LocalizedMonoidal` synonym + `maxRecDepth 4000` + comp-bridge `hc`; 2nd-index re-orient kills braided residual; element-level `congrArg` dissolves diamond (B7); `gradedMonoid_eq_of_cast` + `erw` bilinearity; `⨁`=`DirectSum ℕ` | `exact` default head ⇒ heartbeat blowup; `repeat erw` timeout; `monoidal` stalls on opaque iso pairs; `example` Semiring triggers codegen → `Nonempty` thm |
+| SNAP-S0 phase (ii) PRIMARY braiding=id | 028 · 1 | ~? | `SectionGradedRing.lean` | `tensorBraiding_self_eq_id_of_isInvertible` (Stacks 01CR), axiom-clean; `IsInvertible` re-signed to carry trivializing basis as data | basis-local sheafification descent (Route A): presheaf β=`TensorProduct.comm`=id per open; descend via `TopCat.Sheaf.hom_ext` (basis) + unit injectivity; ring-diamond dissolved by explicit `Module.Invertible` arg (defeq) | `Scheme.Modules.hom_ext`=⊤-TRAP (use underlying `TopCat.Sheaf Ab`); `rw`/`simp` fail on `𝟙` after adjunction-unit step → `erw [Functor.map_id, comp_id]` |
+| SNAP-S1 ℕ-graded ∀L graded MODULE `M(X,L,F)=⊕Γ(F⊗L^{⊗m})` (capped STRETCH) | 036 · 5 (032→036, 3 real-attempt) | ~? | `SectionGradedRing.lean` | (A) `moduleTensorPowAdd_assoc` (load-bearing distinct-object hexagon `β_{L^i,F}`); (B) `moduleSectionAction_{mul_smul,one_smul}`; base `moduleTensorPowAdd_zero_left`; (C) `sectionGradedModule_gmodule` = the deliverable `DirectSum.Gmodule` ∀L,F — all axiom-clean, file SORRY-FREE | keep `tensorPowAdd`/`moduleTensorPowAdd` `.hom` OPAQUE ⇒ NO comp-instance diamond ⇒ plain `rw`, NO generic-`M` `_core` (cheaper than B6/comm); (A) needs TWO `whisker_exchange` interchanges (`monoidal`≠interchange); unit friction `unitModule X`≠`𝟙_` → state over `𝟙_`+defeq-transport; `(1:sectionDeg L 0)` spelled (bare `GOne.one`=whnf bomb) | canonical-first β-split DEAD; `tensorBraiding_naturality_{left,right}` were dead code (deleted); prep/dispatch-bug iters 032/033 cost 2 iters (scaffold keyword must sit on the filename line) |
 
 ## Routes
 
-**GR-quot route — COMPLETE (iter-001).** Glue `SheafOfModules` over `Scheme.GlueData` →
-effective-descent iso `isIso_glueRestrictionHom` → Nitsure §5 inverse `grPointOfRankQuotient` →
-`represents` → residue `tautologicalQuotient_epi`: all sorries closed; `Grassmannian.represents`
-sorry-free + axiom-clean (`[propext, Classical.choice, Quot.sound]`, no `sorryAx`) ⇒ disjointness
-invariant verified (seeds use 0 SNAP/χ sorry nodes). Faithful Lean image of Nitsure §5 cell-gluing
-+ `GL_d` cocycle; inverse/representability is Archon-original (Nitsure leaves it as §5 exercise).
+**GR-quot route (closable cone DONE).** Glue `SheafOfModules` over `Scheme.GlueData` → effective-descent
+iso `isIso_glueRestrictionHom` (DONE keystone) → Nitsure §5 inverse `grPointOfRankQuotient` (DONE) →
+`represents` (DONE, goal seed) → `tautologicalQuotient_epi` (DONE, last GR sorry). The closable GR cone is
+0-sorry. Faithful Lean image of Nitsure §5 cell-gluing + `GL_d` cocycle; inverse/representability is
+Archon-original (Nitsure leaves it as §5 exercise). Tracked-debt `representable` (weak skeleton) is OUT of
+the closable cone (its `\lean{}` under-delivers the prose: omits smoothness/properness/Plücker).
 
-**SNAP-S0 route — ACTIVE (iter-006; approach pivoted iter-007).** Not in the GR-seed cone
-(disjoint, cannot disturb the delivered seed). Cast machinery + graded `GMul`/`GOne` + left-unit
-law CLOSED axiom-clean (iter-006, 9→3 sorries). **iter-010/011 re-anchor:** `sectionsMul_mul_comm` is
-FALSE for general `L` (free tensor algebra) — re-signed `[IsInvertible L]` (Stacks 01CR); comm proof +
-its `tensorBraiding_self_eq_id_of_isInvertible`/`tensorPowAdd_comm` deps are invertibility-gated FUTURE
-work with NO consumer (`GCommSemiring` unbuilt), so OUT of active scope. **Live = the assoc chain only**
-(∀L, TRUE): B1 `presheafAssociator_top_apply` DONE; B2→B7 remaining, blocked on the `⊗ₜ`/`forget₂`
-instance diamond (FIX = morphism-level statements, proven on B1; blueprint rewritten iter-012). **iter-007
-pivot (mathlib-analogist ALIGN_WITH_MATHLIB, `analogies/tensorobjassoc.md`):** the residual coherence laws
-are NOT hand-proved over the hand-rolled (obfuscated double-braiding) `tensorObjAssoc`; instead BUILD the full
-`MonoidalCategory`/`SymmetricCategory X.Modules` via Mathlib monoidal localization —
-`(J.W.inverseImage (toPresheaf R₀)).IsMonoidal` (whiskerRight = `ztensor_whisker_localIso` DONE;
-whiskerLeft by braiding-conjugation, presheaves symmetric) + `LocalizedMonoidal` — so
-assoc/pentagon/triangle/hexagon are INHERITED. Stalkwise routes DEAD. Merge-dedup with
-`FBC-B_SNAP-chain` is moot (sibling stuck at 9 sorries on the same dead-end; standing directive
-sanctions refactoring out of dead-ends).
+**SNAP-S0 route (DONE axiom-clean).** Crux `IsIso(sheafification.map(η_P ▷ Q))`, associator,
+`tensorPowAdd`, the entire B1–B7 assoc chain, and both ring layers are closed. RE-ANCHOR (decisive): the
+section ring `⊕ₘΓ(L^{⊗m})` is the FREE TENSOR ALGEBRA on Γ(L) — `sectionsMul_mul_comm` is FALSE for
+general `L` (triple-verified; counterexample `L=𝒪²`). Per Stacks §17.25 `Γ_*` is defined for INVERTIBLE
+sheaves; commutativity holds iff `L` invertible (`β_{L,L}=𝟙`). So the general deliverable is a
+NON-commutative `DirectSum.GSemiring` (`sectionGradedRing_gsemiring`, Stacks 01CV, ∀L); `GCommSemiring`
+(`sectionGradedRing_gcommSemiring`) is the upgrade under a project-local `IsInvertible L`
+(locally-free-rank-1, Stacks 01CR), gated on `β_{L,L}=𝟙` (Mathlib
+`Module.Invertible.tensorProductComm_eq_refl`, basis-local descent) → brick 2 hexagon →
+`tensorBraiding_symm` → brick 1′ (order-REVERSING recursion) → `tensorPowAdd_comm` → `sectionsMul_mul_comm`
+→ `sectionGradedRing_gcommSemiring`. `Γ_*(X,L)` is a graded CommSemiring for invertible `L`;
+`sectionsMul_mul_comm` is correctly `[IsInvertible L]`-gated.
+
+**SNAP-S1 module sub-route (COMPLETE, capped stretch).** `M(X,L,F) = ⊕_{m≥0} Γ(X, F⊗L^{⊗m})` is a
+graded `DirectSum.Gmodule` over `Γ_*(X,L)` for ANY `F` — the ℕ-graded ∀L analog of Stacks 01CV (literal
+01CV is Z-graded over an INVERTIBLE `L` using `L^∨`; we built the n≥0 truncation, general `L`). Delivered
+axiom-clean: (A) `moduleTensorPowAdd_assoc` (distinct-object braided hexagon `β_{L^i,F}`, no invertibility)
+→ (B) `moduleSectionAction_{mul_smul,one_smul}` → base `moduleTensorPowAdd_zero_left` → (C)
+`sectionGradedModule_gmodule`. Route detail + pitfalls in the `## Completed` row. Downstream nodes
+`sectionGradedModule_fg` and `hilbertPoly_of_sectionModule` are NOT pursued in-leg — and are neither
+project sorries (blueprint `\lean{}` pins only, no Lean decl) nor closable in this H⁰ leg: `_fg` is a
+Serre-finiteness/cohomology node (its blueprint statement needs `X_s` proper, `L_s` ample, `F_s` coherent
+and cites Hartshorne II.5), `hilbertPoly` is the Euler-characteristic extraction. Both belong to the
+cohomology leg, filled at merge. **Shared with sibling — finished proofs mergeable as-is.**
 
 **χ-blocked route — none here.** `quot_functor`/`hilbert_polynomial` need the χ
 (Euler-characteristic) engine; this i=0 leg does not build it. They remain `sorry` and are
@@ -91,21 +95,33 @@ filled from the cohomology leg at merge.
 
 ## Open strategic questions
 
-- **Q3 RESOLVED (iter 001).** The goal-delivering seed is `thm:grassmannian_universal_property`
-  (`\lean{Grassmannian.represents}` in `Picard_GrassmannianQuot.tex`): a fresh scoped blueprint
-  review confirmed it states the full representability (bijection `Hom(T,Gr) ≅ Grass(r,d)(T)`
-  natural in `T`, i.e. `RepresentableBy` of the rank-`d`-quotient functor), and `represents` is
-  proof-complete in Lean once the 3 GR sorries close. The weak `Scheme.Grassmannian.representable`
-  skeleton (`thm:grassmannian_representable`, `Picard_QuotScheme.tex`, already `\leanok`) is a
-  SEPARATE under-delivering pin (omits smoothness/properness/rel-dim/Plücker) that the closable
-  cone does NOT rely on for goal delivery — kept as tracked debt, not a seed. Closing the 3 GR
-  sorries → `represents` proven = goal theorem.
+- **SNAP-S1 module (RESOLVED: DELIVERED, capped stretch closed).** Pursued as a capped stretch after the
+  mandated goal landed; closed axiom-clean. Leg's closable scope is now fully delivered — finalize / await
+  merge. Downstream `_fg`/`hilbertPoly` deliberately NOT pursued (Serre-finiteness/cohomology nodes, not
+  closable in the H⁰ leg).
+- **SNAP coordination with `FBC-B_SNAP-chain`.** Decide per-iteration whether to prove SNAP here
+  or import the sibling's finished proofs (Lean names identical). See manifest `overlaps` and
+  `.archon/USER_HINTS.md`.
 - **χ encoding consistency.** The blueprint `def:hilbert_polynomial` ENCODING comment claims an
   H⁰ encoding that contradicts the χ Lean decl. The Lean source governs; flag for the parent to
   reconcile the comment, but do NOT change the Lean to H⁰ in this leg.
+- **Goal-label boundary `thm:grassmannian_representable` vs `represents` (state crisply, do NOT bury).**
+  The goal para names `thm:grassmannian_representable` (smooth-PROJECTIVE representability, `\uses`
+  `relative_spec_*`). The leg delivers the substantive functor-representability heart as
+  `thm:grassmannian_universal_property` = `Grassmannian.represents` (`RepresentableBy (scheme d r)`,
+  sorry-free + axiom-clean) — a DIFFERENT blueprint label. The goal-named node's residue (smooth +
+  projective geometric upgrade + its out-of-cone `relative_spec_*` dependency) is delivered only as a weak
+  skeleton and is parent-owned. This is a legitimate scope boundary, not a gap: deliverable (1)'s
+  functor-moduli content is closed; the smooth/projective upgrade is out-of-cone. Strengthen/split the
+  `thm:grassmannian_representable` label at merge in the parent.
 
 ## Mathlib gaps & new material
 
 - GR-quot: effective descent for `SheafOfModules` over `Scheme.GlueData` (project-built).
-- SNAP-S0: `(J.W.inverseImage (toPresheaf R₀)).IsMonoidal` ⇒ `MonoidalCategory`/`SymmetricCategory X.Modules` via Mathlib `LocalizedMonoidal` (iter-007); H⁰ section graded ring `Γ_*(X,L)`.
+- SNAP-S0: H⁰ section graded ring `Γ_*(X,L)` (project-built, `TensorPower.Basic` idiom: free tensor
+  algebra ⇒ general `GSemiring`, `GCommSemiring` under invertibility).
+- SNAP-S0: `IsInvertible (L : X.Modules)` (locally-free-rank-1, Stacks 01CR) + `β_{L,L}=𝟙` for
+  invertible `L` (`braiding_eq_id_of_invertible`, via `Module.Invertible.tensorProductComm_eq_refl`).
+- SNAP-S1: ℕ-graded ∀L module `M(X,L,F)=⊕_{m≥0}Γ(F⊗L^{⊗m})` over `Γ_*(X,L)` (project-built; `DirectSum.Gmodule`
+  via the new module hexagon `moduleTensorPowAdd_assoc` — distinct-object braiding, no invertibility).
 - `Grassmannian` (rank-`d` locally-free quotients) + representability as `IsRepresentable`.

@@ -1,0 +1,420 @@
+% archon:covers AlgebraicJacobian/RiemannRoch/CurveKrullDim.lean
+
+\chapter{The Krull dimension of a smooth curve is at most one}
+\label{chap:RiemannRoch_CurveKrullDim}
+
+\providecommand{\krullDim}{\dim}
+\providecommand{\coheight}{\operatorname{coheight}}
+\providecommand{\height}{\operatorname{height}}
+\providecommand{\trdeg}{\operatorname{trdeg}}
+\providecommand{\Frac}{\operatorname{Frac}}
+
+% SOURCE: [Stacks Project] dimension theory, read from
+% references/stacks-regular-dvr-algebra.tex (a verbatim copy of the Stacks
+% `algebra.tex').  The crux \cref{lem:chart_ringKrullDim_le_one} uses the
+% embedding-dimension inequality $\dim R \le \dim_\kappa(\mathfrak m/\mathfrak m^2)$
+% at each maximal ideal; the residue field is $\bar k$ by the Nullstellensatz, and
+% the cotangent dimension bound is reused from \cref{chap:RiemannRoch_OcOfD}.
+% The Cohen--Seidenberg keystone \cref{lem:ringKrullDim_le_of_moduleFinite_injective}
+% (Tag 00OJ, `lemma-integral-dim-up', l.27352) is retained as reusable infrastructure.
+
+\section{Purpose and standing hypotheses}
+
+This chapter supplies the single dimension-theoretic input required by the
+codimension-one regularity witness of \cref{chap:RiemannRoch_OcOfD}: the bound
+\[
+  \krullDim C \;\le\; 1
+\]
+on the Krull dimension of the underlying space of a smooth, relative-dimension-one
+curve \(C\) over an algebraically closed field \(\bar k\).  Here \(\krullDim\) is the
+order-theoretic Krull dimension of the topological space \(\lvert C\rvert\) under its
+specialisation order.  The bound is consumed --- as the hypothesis \(\krullDim C \le
+1\) of the cotangent pin
+\cref{lem:cotangentSpace_finrank_eq_one_of_smooth} --- to license the passage
+``coheight one \(\Rightarrow\) closed point'' that underlies the discrete-valuation
+property at each codimension-one stalk.
+
+\paragraph{Standing hypotheses.}  Throughout, \(\bar k\) is an algebraically closed
+field and \(C : \Over(\Spec \bar k)\) is a curve over \(\bar k\) whose structure
+morphism \(C.\mathrm{hom} : C \to \Spec \bar k\) is smooth of relative dimension one
+(\(\texttt{SmoothOfRelativeDimension}\ 1\ C.\mathrm{hom}\)) and locally of finite type
+(\(\texttt{LocallyOfFiniteType}\ C.\mathrm{hom}\)), and whose underlying scheme
+\(C.\mathrm{left}\) is integral (\(\texttt{IsIntegral}\ C.\mathrm{left}\)).
+
+\paragraph{Strategy.}  The argument has three layers.
+
+\begin{enumerate}
+  \item \emph{Outer reduction (free).}  Krull dimension of a space is the supremum of
+    the coheights of its points, and for a scheme the coheight of a point equals the
+    Krull dimension of its local ring.  This reduces \(\krullDim C \le 1\) to a
+    \emph{pointwise} bound \(\krullDim \mathcal O_{C,z} \le 1\) on every stalk.
+  \item \emph{Localisation push (free).}  At each point \(z\) the stalk
+    \(\mathcal O_{C,z}\) is the localisation of a standard-smooth affine chart ring
+    \(S\) at a prime \(\mathfrak p_z\); the Krull dimension of a localisation at a
+    prime is the height of that prime, which is at most the Krull dimension of \(S\).
+    This reduces the pointwise bound to \(\krullDim S \le 1\) for the chart ring.
+  \item \emph{The crux (embedding-dimension route).}  For a
+    standard-smooth, relative-dimension-one \(\bar k\)-algebra \(S\) which is an
+    integral domain, \(\krullDim S \le 1\).  Write the Krull dimension as the
+    supremum of the prime heights of the \emph{maximal} ideals.  At each maximal
+    ideal \(\mathfrak m\), the localisation \(S_\mathfrak m\) is a Noetherian local
+    ring whose residue field is \(\bar k\) --- because \(S\) is finite type over the
+    algebraically closed field \(\bar k\), the Nullstellensatz forces every maximal
+    quotient to equal \(\bar k\), with \emph{no} appeal to the global dimension bound.
+    Krull's height theorem bounds \(\krullDim S_\mathfrak m\) by the embedding
+    dimension \(\dim_{\bar k}(\mathfrak m S_\mathfrak m / \mathfrak m^2 S_\mathfrak
+    m)\), and the conormal bridge of \cref{chap:RiemannRoch_OcOfD} (already
+    proved, reused here at the maximal ideals of the chart) shows this cotangent
+    dimension is one.  Hence every maximal height is \(\le 1\) and \(\krullDim S \le
+    1\).
+\end{enumerate}
+
+Every external step invoked in the crux is present in Mathlib, and the
+one-dimensionality of the cotangent space is the conormal corollary already
+established for the DVR-stalk substrate.  The Cohen--Seidenberg keystone
+\cref{lem:ringKrullDim_le_of_moduleFinite_injective} and its incomparability engine
+\cref{lem:comap_lt_comap_of_isIntegral} are retained below as general reusable
+infrastructure.
+
+\section{Mathlib dependency anchors}
+
+The outer reduction and the localisation push are assembled entirely from Mathlib
+results, recorded here as dependency anchors.
+
+\begin{lemma}[Krull dimension as a supremum of coheights]
+  \label{lem:krullDim_eq_iSup_coheight_mathlib}
+  \lean{Order.krullDim_eq_iSup_coheight}
+  \mathlibok
+  \textit{Provided by Mathlib (\texttt{Mathlib.Order.KrullDimension}).}
+  For a preorder \(\alpha\), the Krull dimension of \(\alpha\) is the supremum over
+  all \(a : \alpha\) of the coheights:
+  \(\krullDim \alpha = \bigsqcup_{a} \coheight(a)\) in \(\mathrm{WithBot}\,\mathbb
+  N_\infty\).
+\end{lemma}
+
+\begin{lemma}[Stalk Krull dimension as a localisation height]
+  \label{lem:ringKrullDim_eq_height_mathlib}
+  \lean{IsLocalization.AtPrime.ringKrullDim_eq_height}
+  \mathlibok
+  \textit{Provided by Mathlib (\texttt{Mathlib.RingTheory.Ideal.Height}).}
+  Let \(R\) be a commutative ring and \(I \subseteq R\) a prime ideal.  If \(A\) is an
+  \(R\)-algebra that is a localisation of \(R\) at \(I\)
+  (\(\texttt{IsLocalization.AtPrime}\ A\ I\)), then \(\krullDim A = \height I\).
+\end{lemma}
+
+\begin{lemma}[Prime height is bounded by Krull dimension]
+  \label{lem:height_le_ringKrullDim_mathlib}
+  \lean{Ideal.primeHeight_le_ringKrullDim}
+  \mathlibok
+  % NOTE: \lean{} targets `Ideal.primeHeight_le_ringKrullDim` (with `Ideal.height_eq_primeHeight`),
+  % the declarations that `krullDim_curve_le_one` actually invokes.
+  \textit{Provided by Mathlib (\texttt{Mathlib.RingTheory.Ideal.Height}).}
+  For a commutative ring \(R\) and a prime ideal \(I \subseteq R\), the height of
+  \(I\) is at most the Krull dimension of \(R\): \(\height I \le \krullDim R\).
+\end{lemma}
+
+\begin{lemma}[Krull dimension as a supremum over maximal ideals]
+  \label{lem:sup_primeHeight_maximal_mathlib}
+  \lean{Ideal.sup_primeHeight_of_maximal_eq_ringKrullDim}
+  \mathlibok
+  \textit{Provided by Mathlib (\texttt{Mathlib.RingTheory.Ideal.Height}).}
+  For a nontrivial commutative ring \(R\), the Krull dimension of \(R\) is the
+  supremum of the prime heights of its \emph{maximal} ideals:
+  \(\krullDim R = \bigsqcup_{\mathfrak m \text{ maximal}} \height \mathfrak m\).
+\end{lemma}
+
+% SOURCE: [Stacks Project], `algebra.tex' (inline prose preceding
+% \label{definition-regular-local}, lines 14604--14613):
+% SOURCE QUOTE: "Let $(R, \mathfrak m)$ be a Noetherian local ring. From the above it
+% is clear that $\mathfrak m$ cannot be generated by fewer than $\dim(R)$ variables.
+% By Nakayama's Lemma \ref{lemma-NAK} the minimal number of generators of $\mathfrak m$
+% equals $\dim_{\kappa(\mathfrak m)} \mathfrak m/\mathfrak m^2$. Hence we have the
+% following fundamental inequality $\dim(R) \leq \dim_{\kappa(\mathfrak m)}
+% \mathfrak m/\mathfrak m^2$."
+\begin{lemma}[Krull's height theorem: dimension below embedding dimension]
+  \label{lem:ringKrullDim_le_spanFinrank_mathlib}
+  \lean{ringKrullDim_le_spanFinrank_maximalIdeal}
+  \mathlibok
+  \textit{Provided by Mathlib (\texttt{Mathlib.RingTheory.Ideal.KrullsHeightTheorem}).}
+  For a Noetherian local ring \(R\), the Krull dimension of \(R\) is at most the
+  minimal number of generators of its maximal ideal:
+  \(\krullDim R \le \operatorname{spanFinrank}(\mathfrak m_R)\).
+\end{lemma}
+
+\begin{lemma}[Minimal generators of the maximal ideal equal the cotangent dimension]
+  \label{lem:spanFinrank_eq_finrank_cotangent_mathlib}
+  \lean{IsLocalRing.spanFinrank_maximalIdeal_eq_finrank_cotangentSpace}
+  \mathlibok
+  \textit{Provided by Mathlib (\texttt{Mathlib.Algebra.Module.SpanRankOperations}).}
+  For a Noetherian local ring \(R\), the minimal number of generators of the maximal
+  ideal equals the dimension of the cotangent space over the residue field:
+  \(\operatorname{spanFinrank}(\mathfrak m_R) = \dim_{\kappa(R)}(\mathfrak m_R/\mathfrak
+  m_R^2)\).  Combined with \cref{lem:ringKrullDim_le_spanFinrank_mathlib} this gives
+  \(\krullDim R \le \dim_{\kappa(R)}(\mathfrak m_R/\mathfrak m_R^2)\).
+\end{lemma}
+
+\begin{lemma}\leanok
+[Cotangent dimension one at a standard-smooth localisation]
+  \label{lem:cotangent_localization_eq_one_bridge}
+  \lean{Algebra.finrank_cotangentSpace_localization_eq_one_of_isStandardSmooth_dim_one}
+  \textit{Established in \cref{chap:RiemannRoch_OcOfD} (reused here).}
+  Let \(S\) be a relative-dimension-one standard-smooth \(\bar k\)-algebra and let
+  \(T\) be a localisation of \(S\) at a prime, a local ring whose residue field is
+  \(\bar k\)-rational (encoded by the two vanishings \(\Omega_{\kappa(T)/\bar k} = 0\)
+  and \(H_1^{\mathrm{cot}}(\bar k, \kappa(T)) = 0\)).  Then
+  \(\dim_{\kappa(T)}(\mathfrak m_T/\mathfrak m_T^2) = 1\).
+\end{lemma}
+
+\begin{lemma}[Krull dimension of a polynomial ring over a Noetherian base]
+  \label{lem:mvpoly_ringKrullDim_mathlib}
+  \lean{MvPolynomial.ringKrullDim_of_isNoetherianRing}
+  \mathlibok
+  \textit{Provided by Mathlib (\texttt{Mathlib.RingTheory.KrullDimension.Polynomial}).}
+  For a Noetherian commutative ring \(R\) and a finite index type \(\iota\),
+  \(\krullDim\bigl(R[\iota]\bigr) = \krullDim R + \lvert\iota\rvert\), where
+  \(R[\iota]\) is the polynomial ring \(\texttt{MvPolynomial}\ \iota\ R\) and
+  \(\lvert\iota\rvert\) is the cardinality of \(\iota\).  In particular, over a field
+  \(\bar k\) (where \(\krullDim \bar k = 0\)) one has \(\krullDim(\bar k[\iota]) =
+  \lvert\iota\rvert\).
+\end{lemma}
+
+\begin{lemma}[Noether normalisation, module-finite injective form]
+  \label{lem:noether_normalization_mathlib}
+  \lean{exists_finite_inj_algHom_of_fg}
+  \mathlibok
+  \textit{Provided by Mathlib (\texttt{Mathlib.RingTheory.NoetherNormalization}).}
+  Let \(k\) be a field and \(R\) a nonzero, finitely generated \(k\)-algebra
+  (\(\texttt{Algebra.FiniteType}\ k\ R\)).  Then there is a natural number \(s\) and a
+  \(k\)-algebra homomorphism \(g : k[X_1,\dots,X_s] \to R\) from the polynomial ring in
+  \(s\) variables that is injective and module-finite (\(g.\texttt{Finite}\)).
+\end{lemma}
+
+The project's own bridge from a scheme point to its stalk dimension is recorded next;
+it is established in the file \texttt{AlgebraicJacobian/Albanese/CoheightBridge.lean}.
+
+\begin{lemma}\leanok
+[Coheight of a scheme point equals the stalk Krull dimension]
+  \label{lem:ringKrullDim_stalk_eq_coheight}
+  \lean{AlgebraicGeometry.Scheme.ringKrullDim_stalk_eq_coheight}
+  \uses{lem:ringKrullDim_eq_height_mathlib}
+  For any scheme \(X\) and any point \(z : X\), the Krull dimension of the stalk
+  \(\mathcal O_{X,z}\) equals the coheight of \(z\) in the underlying space (with the
+  specialisation preorder): \(\krullDim \mathcal O_{X,z} = \coheight(z)\).
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:ringKrullDim_eq_height_mathlib}
+  \leanok
+  Choose an affine open \(U = \Spec \Gamma(X,U) \ni z\) and let \(\mathfrak p\) be the
+  prime of \(\Gamma(X,U)\) corresponding to \(z\).  The stalk \(\mathcal O_{X,z}\) is
+  the localisation of \(\Gamma(X,U)\) at \(\mathfrak p\), so by
+  \cref{lem:ringKrullDim_eq_height_mathlib} its Krull dimension is the height of
+  \(\mathfrak p\) computed in \(\Spec \Gamma(X,U)\).  On the other hand the coheight
+  of \(z\), being a property of the specialisation order, is unchanged on passing to
+  the open subspace \(U\), and under the homeomorphism \(U \cong \Spec \Gamma(X,U)\)
+  the coheight of \(z\) equals the height of \(\mathfrak p\).  Combining the two
+  identifications gives \(\krullDim \mathcal O_{X,z} = \coheight(z)\).
+\end{proof}
+
+\section{The keystone: Cohen--Seidenberg upper bound}
+
+\emph{The two lemmas of this section are general Cohen--Seidenberg infrastructure;
+they are not used in the proof of \cref{lem:chart_ringKrullDim_le_one} but are
+available for reuse.}
+
+% SOURCE: [Stacks Project], incomparability for integral extensions, Tag 00H8
+% (`lemma-integral-no-inclusion'); the project lemma generalises Mathlib's
+% `Ideal.IntegralClosure.comap_lt_comap` (which is stated only for an
+% `integralClosure R A`) to an arbitrary integral algebra.
+\begin{lemma}\leanok
+[Incomparability: strict contraction along an integral extension]
+  \label{lem:comap_lt_comap_of_isIntegral}
+  \lean{comap_lt_comap_of_isIntegral}
+  \textit{Source: Stacks Project, Tag 00H8 (incomparability).}
+  Let \(A\) be an integral \(R\)-algebra and let \(I \subsetneq J\) be prime ideals of
+  \(A\) with \(I\) prime.  Then the contractions are strict:
+  \(I \cap R \subsetneq J \cap R\) (in algebra notation,
+  \(\operatorname{comap}(\mathrm{alg}) I \subsetneq \operatorname{comap}(\mathrm{alg})
+  J\)).
+\end{lemma}
+
+\begin{proof}\leanok
+  Monotonicity of contraction gives \(I \cap R \subseteq J \cap R\).  For strictness,
+  suppose \(I \cap R = J \cap R = \mathfrak p\).  Pass to the integral extension of
+  domains \(R/\mathfrak p \hookrightarrow A/I\); the image \(J/I\) is a nonzero ideal
+  whose contraction to \(R/\mathfrak p\) is \(\bot\).  But a nonzero ideal of a domain
+  integral over a domain contracts to a nonzero ideal (Stacks Tag 00H8 /
+  \texttt{Ideal.under\_ne\_bot}), a contradiction.  Hence the contraction is strict.
+\end{proof}
+
+
+% SOURCE: [Stacks Project], Tag 00OJ (`lemma-integral-dim-up'), read from
+% references/stacks-regular-dvr-algebra.tex, lines 27351--27362.  The going-up
+% mechanism it depends on is Tag 00OH (`lemma-dimension-going-up', lines
+% 27316--27336) and the equality version is Tag 00OK (`lemma-integral-sub-dim-equal',
+% lines 27364--27376).
+% SOURCE QUOTE: "Suppose that $R \to S$ is a ring map such that $S$ is integral over
+% $R$. Then $\dim (R) \geq \dim(S)$, and every closed point of $\Spec(S)$ maps to a
+% closed point of $\Spec(R)$."
+\begin{lemma}\leanok
+[Krull dimension does not increase along a module-finite injective extension]
+  \label{lem:ringKrullDim_le_of_moduleFinite_injective}
+  \lean{ringKrullDim_le_of_moduleFinite_injective}
+  \textit{Source: Stacks Project, Tag 00OJ.}
+  Let \(f : R \to S\) be an injective homomorphism of commutative rings such that
+  \(S\) is module-finite over \(R\) (equivalently, \(f\) is finite; in particular
+  \(S\) is integral over \(R\)).  Then \(\krullDim S \le \krullDim R\).
+\end{lemma}
+
+% SOURCE QUOTE PROOF: "Immediate from Lemmas \ref{lemma-integral-no-inclusion} and
+% \ref{lemma-going-up-maximal-on-top} and the definitions."
+% (The going-up chain mechanism this defers to is Tag 00OH, whose proof reads:
+% "Assume going up. Take any chain $\mathfrak p_0 \subset \mathfrak p_1 \subset \ldots
+% \subset \mathfrak p_e$ of prime ideals in $R$. By surjectivity we may choose a prime
+% $\mathfrak q_0$ mapping to $\mathfrak p_0$. By going up we may extend this to a chain
+% of length $e$ of primes $\mathfrak q_i$ lying over $\mathfrak p_i$. Thus $\dim(S)
+% \geq \dim(R)$. The case of going down is exactly the same.")
+\begin{proof}
+  \uses{lem:comap_lt_comap_of_isIntegral}
+\leanok
+  Since \(S\) is module-finite over \(R\), it is integral over \(R\); the statement
+  is therefore the upper bound of the Cohen--Seidenberg theorem (Stacks~Tag~00OJ).
+  Concretely, let
+  \[
+    \mathfrak q_0 \subsetneq \mathfrak q_1 \subsetneq \dots \subsetneq \mathfrak q_e
+  \]
+  be a strict chain of primes in \(S\), and let \(\mathfrak p_i = f^{-1}(\mathfrak
+  q_i)\) be its contraction to \(R\).  The chain of contractions is increasing; it is
+  moreover \emph{strict}, because an integral extension satisfies incomparability ---
+  two distinct primes of \(S\) with the same contraction to \(R\) would be comparable
+  and equal, contradicting \(\mathfrak q_i \subsetneq \mathfrak q_{i+1}\).  Hence
+  \(\mathfrak p_0 \subsetneq \dots \subsetneq \mathfrak p_e\) is a strict chain of the
+  same length \(e\) in \(R\), so every chain length realised in \(S\) is realised in
+  \(R\), giving \(\krullDim S \le \krullDim R\).  Injectivity of \(f\) is what makes
+  the contraction map \(\Spec S \to \Spec R\) dominant, ensuring no length is lost; it
+  is the going-up direction (Stacks~Tag~00OH), together with this incomparability
+  bound, that yields the equality \(\krullDim S = \krullDim R\) of Stacks~Tag~00OK,
+  of which only the \(\le\) half is needed here.
+\end{proof}
+
+\section{The crux: dimension of a standard-smooth chart (embedding-dimension route)}
+
+\begin{lemma}\leanok
+[Krull dimension of a relative-dimension-one standard-smooth chart]
+  \label{lem:chart_ringKrullDim_le_one}
+  \lean{AlgebraicGeometry.chart_ringKrullDim_le_one}
+  \uses{lem:sup_primeHeight_maximal_mathlib, lem:ringKrullDim_le_spanFinrank_mathlib,
+        lem:spanFinrank_eq_finrank_cotangent_mathlib, lem:ringKrullDim_eq_height_mathlib,
+        lem:cotangent_localization_eq_one_bridge}
+  Let \(S\) be a standard-smooth \(\bar k\)-algebra of relative dimension one over an
+  algebraically closed field \(\bar k\), which is an integral domain.  Then
+  \(\krullDim S \le 1\).
+\end{lemma}
+
+% SOURCE: [Stacks Project], Hilbert Nullstellensatz, `algebra.tex'
+% (\label{theorem-nullstellensatz}):
+% SOURCE QUOTE: "Let $k$ be a field. (1) For any maximal ideal $\mathfrak m \subset
+% k[x_1, \ldots, x_n]$ the field extension $\kappa(\mathfrak m)/k$ is finite. [...]
+% The same is true in any finite type $k$-algebra."
+% SOURCE QUOTE PROOF: "It is enough to prove part (1) of the theorem for the case of a
+% polynomial algebra $k[x_1, \ldots, x_n]$, because any finitely generated $k$-algebra
+% is a quotient of such a polynomial algebra."
+\begin{proof}
+  \uses{lem:sup_primeHeight_maximal_mathlib, lem:ringKrullDim_le_spanFinrank_mathlib,
+        lem:spanFinrank_eq_finrank_cotangent_mathlib, lem:ringKrullDim_eq_height_mathlib,
+        lem:cotangent_localization_eq_one_bridge}
+        \leanok
+  Since a standard-smooth algebra is of finite presentation, \(S\) is of finite type
+  over \(\bar k\), and being a domain it is nontrivial.  By
+  \cref{lem:sup_primeHeight_maximal_mathlib},
+  \[
+    \krullDim S \;=\; \bigsqcup_{\mathfrak m \text{ maximal}} \height \mathfrak m ,
+  \]
+  so it suffices to prove \(\height \mathfrak m \le 1\) for every maximal ideal
+  \(\mathfrak m \subseteq S\).
+
+  Fix a maximal ideal \(\mathfrak m\) and pass to the localisation \(S_\mathfrak m\),
+  a Noetherian local domain.  By \cref{lem:ringKrullDim_eq_height_mathlib} the height
+  of \(\mathfrak m\) is the Krull dimension of \(S_\mathfrak m\).  Krull's height
+  theorem \cref{lem:ringKrullDim_le_spanFinrank_mathlib} together with
+  \cref{lem:spanFinrank_eq_finrank_cotangent_mathlib} bounds this by the cotangent
+  dimension:
+  \[
+    \height \mathfrak m \;=\; \krullDim S_\mathfrak m
+      \;\le\; \operatorname{spanFinrank}(\mathfrak m S_\mathfrak m)
+      \;=\; \dim_{\kappa(S_\mathfrak m)}\bigl(\mathfrak m S_\mathfrak m / \mathfrak m^2
+      S_\mathfrak m\bigr).
+  \]
+
+  It remains to show this cotangent dimension is \(1\).  Because \(S\) is finite type
+  over the algebraically closed field \(\bar k\) and \(\mathfrak m\) is maximal, the
+  Nullstellensatz gives a residue-field isomorphism \(\kappa(S_\mathfrak m) = S/\mathfrak
+  m \cong \bar k\); concretely the composite \(S \to S_\mathfrak m \to \kappa(S_\mathfrak
+  m)\) is surjective, so \(\kappa(S_\mathfrak m)\) is finite type over \(\bar k\), hence
+  equal to \(\bar k\) (algebraically closed).  Rationality of the residue field supplies
+  the two vanishings \(\Omega_{\kappa(S_\mathfrak m)/\bar k} = 0\) and
+  \(H_1^{\mathrm{cot}}(\bar k, \kappa(S_\mathfrak m)) = 0\), which are exactly the
+  hypotheses of the conormal bridge
+  \cref{lem:cotangent_localization_eq_one_bridge}.  Applying that bridge to the
+  localisation \(S_\mathfrak m\) of the relative-dimension-one standard-smooth algebra
+  \(S\) gives \(\dim_{\kappa(S_\mathfrak m)}(\mathfrak m S_\mathfrak m/\mathfrak
+  m^2 S_\mathfrak m) = 1\).
+
+  Therefore \(\height \mathfrak m \le 1\) for every maximal \(\mathfrak m\), and taking
+  the supremum yields \(\krullDim S \le 1\).
+\end{proof}
+
+\section{The dimension bound for a smooth curve}
+
+\begin{theorem}\leanok
+[Krull dimension of a smooth curve is at most one]
+  \label{thm:krullDim_curve_le_one}
+  \lean{AlgebraicGeometry.krullDim_curve_le_one}
+  \uses{lem:krullDim_eq_iSup_coheight_mathlib, lem:ringKrullDim_stalk_eq_coheight,
+        lem:stalk_standardSmooth_localization_of_smooth,
+        lem:ringKrullDim_eq_height_mathlib, lem:height_le_ringKrullDim_mathlib,
+        lem:chart_ringKrullDim_le_one}
+  Let \(\bar k\) be an algebraically closed field and let \(C : \Over(\Spec \bar k)\)
+  be a curve over \(\bar k\) whose structure morphism is smooth of relative dimension
+  one and locally of finite type, with \(C.\mathrm{left}\) integral.  Then
+  \[
+    \krullDim C.\mathrm{left} \;\le\; 1 .
+  \]
+\end{theorem}
+
+\begin{proof}
+  \uses{lem:krullDim_eq_iSup_coheight_mathlib, lem:ringKrullDim_stalk_eq_coheight,
+        lem:stalk_standardSmooth_localization_of_smooth,
+        lem:ringKrullDim_eq_height_mathlib, lem:height_le_ringKrullDim_mathlib,
+        lem:chart_ringKrullDim_le_one}
+        \leanok
+  By \cref{lem:krullDim_eq_iSup_coheight_mathlib} the Krull dimension of the space
+  \(C.\mathrm{left}\) is the supremum of the coheights of its points, so it suffices to
+  prove \(\coheight(z) \le 1\) for every point \(z : C.\mathrm{left}\).  By the
+  coheight bridge \cref{lem:ringKrullDim_stalk_eq_coheight} this coheight equals the
+  Krull dimension of the stalk, so the goal becomes \(\krullDim \mathcal O_{C,z} \le
+  1\).
+
+  Fix \(z\).  By
+  \cref{lem:stalk_standardSmooth_localization_of_smooth} the point \(z\) lies on an
+  affine open chart \(V \ni z\) with coordinate ring \(S = \Gamma(C, V)\), a
+  standard-smooth \(\bar k\)-algebra of relative dimension one, such that the stalk
+  \(\mathcal O_{C,z}\) is the localisation of \(S\) at the prime \(\mathfrak p_z\)
+  corresponding to \(z\).  Since \(C.\mathrm{left}\) is integral and \(V\) is a
+  nonempty open, the section ring \(S\) is an integral domain.
+
+  Now \cref{lem:ringKrullDim_eq_height_mathlib} identifies the stalk dimension with the
+  height of the prime, \(\krullDim \mathcal O_{C,z} = \height \mathfrak p_z\), and
+  \cref{lem:height_le_ringKrullDim_mathlib} bounds this height by the dimension of the
+  chart ring, \(\height \mathfrak p_z \le \krullDim S\).  Finally
+  \cref{lem:chart_ringKrullDim_le_one} gives \(\krullDim S \le 1\).  Chaining the
+  inequalities,
+  \[
+    \krullDim \mathcal O_{C,z}
+      = \height \mathfrak p_z
+      \le \krullDim S
+      \le 1 ,
+  \]
+  which is the required pointwise bound.  Taking the supremum over \(z\) yields
+  \(\krullDim C.\mathrm{left} \le 1\).
+\end{proof}

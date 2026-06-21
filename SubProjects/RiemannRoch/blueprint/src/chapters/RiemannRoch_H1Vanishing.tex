@@ -169,54 +169,118 @@ synthesis on the underlying space \(C.\mathtt{left.toTopCat}\).
 \end{lemma}
 
 \begin{proof}
-  \uses{def:isFlasque_sheaf}
-  On an irreducible topological space every non-empty open is connected
-  and dense, so the constant presheaf
-  \(U \mapsto A\) (with all non-empty restriction maps the identity)
-  already satisfies the sheaf condition, and equals its sheafification.
-  For every inclusion of non-empty opens \(V \subseteq U\), the
-  restriction map is the identity on \(A\) — in particular surjective.
-  For an inclusion involving the empty open, the target is the zero
-  module, so surjectivity is immediate. Therefore the constant sheaf is
-  flasque.
+  \uses{def:isFlasque_sheaf, lem:toSheafify_const_restrict,
+        lem:toSheafify_const_app_injective_of_ne_bot,
+        lem:toSheafify_const_app_surjective_of_ne_bot}
+  \leanok
+  Write \(D = \Module \bar k\), let \(J\) be the Grothendieck topology of
+  opens on \(X\), and let
+  \(\mathcal F = (\mathrm{constantSheaf}\;J\;D)\,.\,\mathrm{obj}\;A\) be the
+  constant sheaf, realised as the sheafification of the literal constant
+  presheaf \(\underline A \colon U \mapsto A\) whose restriction maps are
+  all the identity of \(A\). Let \(\eta \colon \underline A \to
+  \mathcal F\) be the sheafification unit. Fix an inclusion of opens
+  \(V \subseteq U\); we must show the restriction
+  \(\mathcal F(U) \to \mathcal F(V)\) is surjective.
 
-  % NOTE (iter-197 lean-vs-blueprint-checker M-1): The "restriction map
-  % is the identity on A" sentence above describes the underlying
-  % mathematical fact correctly, but presents the non-empty branch as
-  % immediate. In Lean (snapshot `b80f227`) this branch is non-trivial:
-  % the constant sheaf
-  % `(constantSheaf J D).obj A` is built as the sheafification of the
-  % literal constant presheaf, and the sheafification unit
-  % \(\eta\colon (\mathrm{Functor.const}\;C^{\mathrm{op}})\,.\,\mathrm{obj}\,A
-  % \;\to\;((\mathrm{constantSheaf}\;J\;D)\,.\,\mathrm{obj}\,A)\,.\,\mathrm{val}\)
-  % is iso on every non-empty open of an irreducible space, but Mathlib
-  % does NOT ship this lemma at the present generality.  The Lean file
-  % `AlgebraicJacobian/RiemannRoch/H1Vanishing.lean` (around L150-154 of
-  % `Scheme.IsFlasque.constant_of_irreducible`) documents the gap; the
-  % empty branch is closed axiom-clean, the non-empty branch carries a
-  % typed sorry pending one of two closure routes:
-  %
-  % Route A (preferred — Mathlib upstreaming candidate, smallest project
-  % delta). Provide `Full` and `Faithful` instances for the functor
-  % `(constantSheaf J D)` on an irreducible space `X` (equivalently:
-  % the `Sheaf.IsConstant` framework for irreducible base spaces).
-  % Once these instances are available, the non-empty branch of
-  % `constant_of_irreducible` reduces to a single rewrite that pushes
-  % the restriction map through the unit iso. Estimated LOC envelope:
-  % ~100-150 LOC project-side plus a candidate Mathlib PR.
-  %
-  % Route B (fallback — no Mathlib upstream needed, larger local
-  % construction). Build an alternate sheaf `P'` on `X` with
-  % `P'(U) = A` for non-empty `U`, `P'(\bot) = 0`, restriction maps
-  % the identity wherever defined; show `P'` is a sheaf on `X`
-  % (using irreducibility for the gluing condition); exhibit an
-  % isomorphism `(constantSheaf J D).obj A \cong \langle P', _\rangle`
-  % by universal property of sheafification. Flasqueness is then
-  % immediate from the `P'` description. Estimated LOC envelope:
-  % ~150-200 LOC standalone.
-  %
-  % Route A is the recommended target for iter-197+; Route B is the
-  % documented fallback if Route A blocks on a Mathlib gap.
+  \emph{Empty target.} If \(V = \varnothing\), then \(\mathcal F(V)\) is
+  the terminal object of \(D\) — the zero module — so every map into it,
+  in particular the restriction, is surjective.
+
+  \emph{Non-empty target.} Suppose \(V \neq \varnothing\) and let
+  \(y \in \mathcal F(V)\). On the irreducible space \(X\) the unit
+  \(\eta\) is bijective on every non-empty open
+  (\cref{lem:toSheafify_const_app_injective_of_ne_bot},
+  \cref{lem:toSheafify_const_app_surjective_of_ne_bot}): a section over a
+  non-empty open is globally constant. In particular \(\eta_V\) is
+  surjective, so there is a constant \(a_0 \in A\) with
+  \(\eta_V(a_0) = y\). Take \(\eta_U(a_0) \in \mathcal F(U)\) as the
+  candidate preimage. By naturality of the unit on the constant presheaf,
+  whose restriction maps are the identity
+  (\cref{lem:toSheafify_const_restrict}), the restriction of
+  \(\eta_U(a_0)\) from \(U\) to \(V\) equals \(\eta_V(a_0) = y\). Hence
+  \(y\) lies in the image of the restriction map.
+
+  Combining the two cases, every restriction map of \(\mathcal F\) is
+  surjective, so \(\mathcal F\) is flasque. The displayed irreducibility
+  input enters only through the two non-empty-open statements about
+  \(\eta\): an irreducible space has the property that any two of its
+  non-empty opens meet, which is what forces a locally constant section
+  to be globally constant.
+\end{proof}
+
+\begin{lemma}\leanok
+[Sheafification unit on the constant presheaf commutes with restriction]
+  \label{lem:toSheafify_const_restrict}
+  \lean{AlgebraicGeometry.toSheafify_const_restrict}
+  \uses{def:isFlasque_sheaf}
+  Let \(X\) be a topological space, \(A\) a \(\bar k\)-module, and
+  \(W \subseteq W'\) an inclusion of opens. Writing \(\eta\) for the
+  sheafification unit of the constant presheaf \(\underline A\) and
+  \(\mathcal F = (\mathrm{constantSheaf}\;J\;\Module \bar k)\,.\,
+  \mathrm{obj}\;A\), the restriction of the unit section \(\eta_{W'}(c)\)
+  from \(W'\) to \(W\) equals \(\eta_W(c)\) for every constant
+  \(c \in A\).
+\end{lemma}
+
+\begin{proof}\leanok
+  Naturality of the sheafification unit \(\eta\) on the inclusion
+  \(W \subseteq W'\), together with the fact that the constant presheaf
+  \(\underline A\) sends that inclusion to the identity of \(A\).
+\end{proof}
+
+\begin{lemma}\leanok
+[Sheafification unit on the constant presheaf is injective on non-empty opens]
+  \label{lem:toSheafify_const_app_injective_of_ne_bot}
+  \lean{AlgebraicGeometry.toSheafify_const_app_injective_of_ne_bot}
+  \uses{def:isFlasque_sheaf}
+  Let \(X\) be an irreducible topological space, \(A\) a
+  \(\bar k\)-module, and \(W \neq \varnothing\) a non-empty open. Then the
+  unit \(\eta_W \colon A \to \mathcal F(W)\) of the constant presheaf is
+  injective: \(\eta_W(a) = \eta_W(b)\) implies \(a = b\).
+\end{lemma}
+
+\begin{proof}\leanok
+  If \(\eta_W(a) = \eta_W(b)\), the two constants agree locally along the
+  equalizer sieve of \(\eta\), which is a covering sieve of \(W\). Since
+  \(W\) is non-empty and \(X\) is irreducible, this sieve contains a
+  non-empty open; there the restriction maps of the constant presheaf are
+  the identity, so \(a\) and \(b\) literally coincide, forcing
+  \(a = b\).
+\end{proof}
+
+\begin{lemma}\leanok
+[Sheafification unit on the constant presheaf is surjective on non-empty opens]
+  \label{lem:toSheafify_const_app_surjective_of_ne_bot}
+  \lean{AlgebraicGeometry.toSheafify_const_app_surjective_of_ne_bot}
+  \uses{def:isFlasque_sheaf, lem:toSheafify_const_restrict,
+        lem:toSheafify_const_app_injective_of_ne_bot}
+  Let \(X\) be an irreducible topological space, \(A\) a
+  \(\bar k\)-module, and \(V \neq \varnothing\) a non-empty open. Then the
+  unit \(\eta_V \colon A \to \mathcal F(V)\) of the constant presheaf is
+  surjective: every section of the constant sheaf over \(V\) is globally
+  constant.
+\end{lemma}
+
+\begin{proof}\leanok
+  Let \(y \in \mathcal F(V)\). The unit \(\eta\) is locally surjective, so
+  its image sieve covers \(V\): on each member \(W\) of a cover of \(V\)
+  there is a constant whose unit section restricts to \(y|_W\). Fix one
+  non-empty member \(U_0\) of the cover, with witnessing constant
+  \(a_0\). We claim \(\eta_V(a_0) = y\). By separatedness of the sheaf
+  \(\mathcal F\) it suffices to check the equality after restricting to
+  each member \(W\) of the cover. If \(W = \varnothing\) the check is
+  automatic, the target being the zero module. If \(W \neq \varnothing\),
+  let \(t\) be the witnessing constant on \(W\). The intersection
+  \(U_0 \cap W\) is non-empty, because any two non-empty opens of an
+  irreducible space meet, and both \(\eta_{U_0 \cap W}(a_0)\) and
+  \(\eta_{U_0 \cap W}(t)\) equal \(y|_{U_0 \cap W}\); injectivity on the
+  non-empty open \(U_0 \cap W\)
+  (\cref{lem:toSheafify_const_app_injective_of_ne_bot}) gives
+  \(a_0 = t\). Using naturality of the unit
+  (\cref{lem:toSheafify_const_restrict}), it follows that
+  \(\eta_W(a_0) = \eta_W(t) = y|_W\). Thus \(\eta_V(a_0)\) and \(y\)
+  restrict identically over the cover, hence coincide.
 \end{proof}
 
 % NOTE (iter-194 reviewer): The companion Lean substrate helper
@@ -355,11 +419,15 @@ synthesis on the underlying space \(C.\mathtt{left.toTopCat}\).
   % cost: ~100-150 LOC of project-side `j_!` scaffolding OR a Mathlib
   % upstream PR. The Lean file
   % `AlgebraicJacobian/RiemannRoch/H1Vanishing.lean` carries this
-  % declaration as a typed sorry at L613-618. This block is pinned
-  % here so that `sync_leanok` and the lean-vs-blueprint-checker can
-  % track its closure status independently of the headline theorem
-  % below (which depends on it transitively via the private
-  % auxiliary `HModule_flasque_subsingleton_aux`).
+  % declaration at L756--784 (the typed sorry sits at L784). This block
+  % is pinned here so that `sync_leanok` and the lean-vs-blueprint-checker
+  % can track its closure status independently. The general-degree
+  % vanishing theorem `thm:H1_vanishing_flasque` still depends on it
+  % transitively via the private auxiliary
+  % `HModule_flasque_subsingleton_aux` (its `succ` case); the headline
+  % degree-one skyscraper vanishing
+  % `lem:H1_skyscraperSheaf_finrank_eq_zero_main` does NOT, since it now
+  % routes through the base-case-factored `lem:H1_flasque_eq_zero`.
   See the lemma statement above for the proof sketch; the formalisation
   is deferred to a future iteration after a Mathlib \(j_!\)
   construction is available.
@@ -411,6 +479,13 @@ synthesis on the underlying space \(C.\mathtt{left.toTopCat}\).
 \begin{proof}
   \uses{def:isFlasque_sheaf}
   \leanok
+  % NOTE (iter-001 review): \leanok reflects sync's direct-body check
+  % (this proof's own term is sorry-free). BUT lean_verify shows the
+  % formalized induction transitively carries `sorryAx` via the `succ`
+  % case's use of `IsFlasque.injective_flasque` (lem:isFlasque_injective,
+  % a typed sorry pending Mathlib's missing `j_!`). NOT yet axiom-clean.
+  % A sorry-free i=1 path exists in principle (factor the n=0 base case
+  % out of the induction) but is not formalized.
   We follow Hartshorne's induction. Embed \(\mathcal F\) into an
   injective object \(\mathcal I\) of the abelian category
   \(\mathrm{Sheaf}\;(\Opens.\mathtt{grothendieckTopology}\;X)\;
@@ -489,6 +564,59 @@ synthesis on the underlying space \(C.\mathtt{left.toTopCat}\).
   % LOC apiece.
 \end{proof}
 
+\begin{lemma}\leanok
+[Degree-one flasque vanishing, base-case factored]
+  \label{lem:H1_flasque_eq_zero}
+  \lean{AlgebraicGeometry.Scheme.HModule_flasque_one_eq_zero}
+  \uses{lem:injectiveSES_shortExact,
+        lem:ext_one_eq_zero_of_hom_surjective_of_injective,
+        lem:isFlasque_shortExact_app_surjective}
+  Let \(X\) be a topological space and let \(\mathcal F\) be a flasque
+  sheaf of \(\bar k\)-modules on \(X\). Then
+  \[
+    \dim_{\bar k}\, \HModule\;\bar k\;\mathcal F\;1 \;=\; 0.
+  \]
+
+  \textit{Project-bespoke base-case factoring of
+  \cref{thm:H1_vanishing_flasque} at \(i = 1\).} This degree-one
+  statement is proved \emph{directly} from the canonical injective
+  embedding, without the induction on degree whose higher step depends on
+  \cref{lem:isFlasque_injective}. It is therefore the route through which
+  the headline closed-point skyscraper vanishing is obtained, keeping the
+  latter independent of the still-open injective-flasqueness lemma.
+\end{lemma}
+
+\begin{proof}\leanok
+  \uses{lem:injectiveSES_shortExact,
+        lem:ext_one_eq_zero_of_hom_surjective_of_injective,
+        lem:isFlasque_shortExact_app_surjective}
+  Embed \(\mathcal F\) into its canonical injective object, giving the
+  short exact sequence
+  \[
+    0 \to \mathcal F \to \mathcal I \to \mathcal C \to 0,
+    \qquad \mathcal I = \mathrm{Injective.under}\,\mathcal F,
+  \]
+  short exact by \cref{lem:injectiveSES_shortExact} and with injective
+  middle term \(\mathcal I\). Since \(\mathcal F\) is flasque, the
+  section-level map \(\Gamma(X, \mathcal I) \to \Gamma(X, \mathcal C)\) is
+  surjective by \cref{lem:isFlasque_shortExact_app_surjective} at the
+  whole space \(U = X\); because a \(\bar k\)-linear map out of the
+  rank-one constant coefficient sheaf is determined by the image of its
+  generator, this section-level surjectivity is exactly surjectivity of
+  the post-composition
+  \(\mathrm{Hom}(-, \mathcal I) \to \mathrm{Hom}(-, \mathcal C)\). The
+  degree-one collapse of the covariant \(\Ext\) long exact sequence with
+  injective middle term
+  (\cref{lem:ext_one_eq_zero_of_hom_surjective_of_injective}) then forces
+  every element of
+  \(\Ext^1(-, \mathcal F) = \HModule\;\bar k\;\mathcal F\;1\) to vanish.
+  Hence \(\HModule\;\bar k\;\mathcal F\;1\) is the zero module and its
+  \(\bar k\)-dimension is \(0\). The argument never invokes
+  \cref{lem:isFlasque_injective}: the injectivity used is that of the
+  Mathlib-provided injective hull \(\mathrm{Injective.under}\,\mathcal F\),
+  not flasqueness of an arbitrary injective sheaf.
+\end{proof}
+
 \section{Skyscraper sheaves are flasque}
 \label{sec:H1Vanishing_skyscraperFlasque}
 
@@ -520,7 +648,7 @@ synthesis on the underlying space \(C.\mathtt{left.toTopCat}\).
 
   % NOTE (iter-197 lean-vs-blueprint-checker M-2): The Lean signature
   % `Scheme.skyscraperSheaf_eq_pushforward_const` (file
-  % `AlgebraicJacobian/RiemannRoch/H1Vanishing.lean`, L818) is
+  % `AlgebraicJacobian/RiemannRoch/H1Vanishing.lean`, L1181) is
   % materially weaker than the mathematical statement displayed above:
   % the Lean conclusion is
   %     `Nonempty (skyscraperSheaf P A ≅
@@ -719,7 +847,7 @@ synthesis on the underlying space \(C.\mathtt{left.toTopCat}\).
   % (`skyscraperSheaf_eq_pushforward`, `closedPoint_closure_irreducible`,
   % `isFlasque_pushforward`, `isFlasque_constant_irreducible`) in
   % `\uses{...}`. The Lean closure at
-  % `AlgebraicJacobian/RiemannRoch/H1Vanishing.lean:903-939` takes a
+  % `AlgebraicJacobian/RiemannRoch/H1Vanishing.lean:1265-1301` takes a
   % direct route via `skyscraperPresheaf_map` on a `P.point ∈ V` case
   % split (the `P.point ∈ V` branch closes via `eqToHom` being an iso;
   % the `P.point ∉ V` branch closes via the codomain being terminal /
@@ -753,7 +881,7 @@ synthesis on the underlying space \(C.\mathtt{left.toTopCat}\).
 [\(H^1\) of a closed-point skyscraper sheaf has dimension zero]
   \label{lem:H1_skyscraperSheaf_finrank_eq_zero_main}
   \lean{AlgebraicGeometry.Scheme.H1_skyscraperSheaf_finrank_eq_zero}
-  \uses{thm:H1_vanishing_flasque, lem:skyscraperSheaf_isFlasque}
+  \uses{lem:H1_flasque_eq_zero, lem:skyscraperSheaf_isFlasque}
 
   Let \(C\) be a smooth proper geometrically irreducible curve over
   \(\bar k\) and let \(P \in C\) be a closed point. Then
@@ -766,7 +894,7 @@ synthesis on the underlying space \(C.\mathtt{left.toTopCat}\).
   \bar k\;\bar k))\;1\).
 
   \textit{Project-bespoke assembly} of the two substrate inputs of this
-  chapter (\cref{thm:H1_vanishing_flasque} and
+  chapter (\cref{lem:H1_flasque_eq_zero} and
   \cref{lem:skyscraperSheaf_isFlasque}). The chapter's external source
   is Hartshorne~III.2 Proposition~2.5 applied to the flasque skyscraper
   sheaf — both inputs are quoted verbatim in their own lemma blocks
@@ -774,19 +902,30 @@ synthesis on the underlying space \(C.\mathtt{left.toTopCat}\).
 \end{theorem}
 
 \begin{proof}
-  \uses{thm:H1_vanishing_flasque, lem:skyscraperSheaf_isFlasque}
+  \uses{lem:H1_flasque_eq_zero, lem:skyscraperSheaf_isFlasque}
   \leanok
+  % NOTE: this headline routes through the base-case-factored degree-one
+  % lemma `lem:H1_flasque_eq_zero` (`HModule_flasque_one_eq_zero`), NOT
+  % through the general induction `HModule_flasque_eq_zero`. The
+  % degree-one lemma is proved directly from the canonical injective
+  % embedding, so it does not touch the still-open
+  % `IsFlasque.injective_flasque`; the headline is therefore axiom-clean
+  % once the degree-one lemma is closed. (The general theorem
+  % `thm:H1_vanishing_flasque` still carries `sorryAx` via its `succ`
+  % case, but it is no longer on this critical path.)
   The closed-point skyscraper sheaf
   \(k(P) = \mathtt{skyscraperSheaf}\;P\;(\Module.\mathtt{of}\;\bar k\;
-  \bar k)\) is flasque (\cref{lem:skyscraperSheaf_isFlasque}). By the
-  flasque-cohomology vanishing theorem
-  (\cref{thm:H1_vanishing_flasque}) applied at \(i = 1\) on the
-  underlying topological space \(C.\mathtt{left.toTopCat}\),
+  \bar k)\) is flasque (\cref{lem:skyscraperSheaf_isFlasque}). Applying
+  the base-case-factored degree-one flasque vanishing
+  (\cref{lem:H1_flasque_eq_zero}) on the underlying topological space
+  \(C.\mathtt{left.toTopCat}\) gives directly
   \[
-    \HModule\;\bar k\;(k(P))\;1 \;=\; 0.
+    \dim_{\bar k} \HModule\;\bar k\;(k(P))\;1 \;=\; 0,
   \]
-  Taking \(\Module.\mathtt{finrank}\;\bar k\) of the zero module gives
-  the claimed identity \(\dim_{\bar k} H^1(C, k(P)) = 0\).
+  which is the claimed identity \(\dim_{\bar k} H^1(C, k(P)) = 0\).
+  Routing through \cref{lem:H1_flasque_eq_zero} rather than the general
+  induction \cref{thm:H1_vanishing_flasque} keeps this vanishing
+  independent of \cref{lem:isFlasque_injective}.
 \end{proof}
 
 \section{Lean substrate helpers}
@@ -803,7 +942,8 @@ collects the explicit presheaf maps that build the one-point inner iso
 
 \subsection{Long-exact-sequence substrate for flasque vanishing}
 
-\begin{definition}[Canonical injective-embedding short complex]
+\begin{definition}\leanok
+[Canonical injective-embedding short complex]
   \label{def:injectiveSES}
   \lean{AlgebraicGeometry.Scheme.injectiveSES}
   \uses{def:Scheme_HModule}
@@ -820,11 +960,13 @@ collects the explicit presheaf maps that build the one-point inner iso
   induction runs.
 \end{definition}
 
-\begin{proof} Proved directly in Lean (a definitional packaging of the
+\begin{proof}\leanok
+ Proved directly in Lean (a definitional packaging of the
   injective-embedding morphism with the cokernel projection).
 \end{proof}
 
-\begin{lemma}[Injective-embedding short complex is short exact]
+\begin{lemma}\leanok
+[Injective-embedding short complex is short exact]
   \label{lem:injectiveSES_shortExact}
   \lean{AlgebraicGeometry.Scheme.injectiveSES_shortExact}
   \uses{def:injectiveSES}
@@ -833,11 +975,13 @@ collects the explicit presheaf maps that build the one-point inner iso
   epimorphism, and the sequence is exact at the middle term.
 \end{lemma}
 
-\begin{proof} Proved directly in Lean (the mono/epi/exactness data of
+\begin{proof}\leanok
+ Proved directly in Lean (the mono/epi/exactness data of
   the canonical injective embedding and its cokernel).
 \end{proof}
 
-\begin{lemma}[Degree-one Ext vanishing from Hom-surjectivity with injective middle term]
+\begin{lemma}\leanok
+[Degree-one Ext vanishing from Hom-surjectivity with injective middle term]
   \label{lem:ext_one_eq_zero_of_hom_surjective_of_injective}
   \lean{AlgebraicGeometry.ext_one_eq_zero_of_hom_surjective_of_injective}
   \uses{def:Scheme_HModule}
@@ -849,12 +993,14 @@ collects the explicit presheaf maps that build the one-point inner iso
   base case of the long-exact-sequence collapse.
 \end{lemma}
 
-\begin{proof} Proved directly in Lean; the structural skeleton of the
+\begin{proof}\leanok
+ Proved directly in Lean; the structural skeleton of the
   degree-one case of \cref{thm:H1_vanishing_flasque}, via the covariant
   \(\Ext\) long exact sequence and the injectivity of \(S_2\).
 \end{proof}
 
-\begin{lemma}[Injective sheaves have vanishing higher cohomology]
+\begin{lemma}\leanok
+[Injective sheaves have vanishing higher cohomology]
   \label{lem:HModule_injective_finrank_eq_zero}
   \lean{AlgebraicGeometry.Scheme.HModule_injective_finrank_eq_zero}
   \uses{def:Scheme_HModule}
@@ -865,12 +1011,14 @@ collects the explicit presheaf maps that build the one-point inner iso
   long-exact-sequence chase.
 \end{lemma}
 
-\begin{proof} Proved directly in Lean, from the injective-dimension
+\begin{proof}\leanok
+ Proved directly in Lean, from the injective-dimension
   subsingleton instance and finrank-of-subsingleton; it is the
   injective-acyclicity input of \cref{thm:H1_vanishing_flasque}.
 \end{proof}
 
-\begin{lemma}[Subsingleton carrier for flasque vanishing]
+\begin{lemma}\leanok
+[Subsingleton carrier for flasque vanishing]
   \label{lem:HModule_flasque_subsingleton_aux}
   \lean{AlgebraicGeometry.Scheme.HModule_flasque_subsingleton_aux}
   \uses{def:isFlasque_sheaf, lem:injectiveSES_shortExact,
@@ -886,7 +1034,8 @@ collects the explicit presheaf maps that build the one-point inner iso
   at one lower degree.
 \end{lemma}
 
-\begin{proof} Proved directly in Lean by induction on \(n\): the base
+\begin{proof}\leanok
+ Proved directly in Lean by induction on \(n\): the base
   case \(n = 0\) invokes
   \cref{lem:ext_one_eq_zero_of_hom_surjective_of_injective} on the
   canonical injective short exact sequence
@@ -900,7 +1049,8 @@ collects the explicit presheaf maps that build the one-point inner iso
 
 \subsection{The \(\mathrm{forget}_2\) bridge to Mathlib flasqueness}
 
-\begin{definition}[Sheaf-compose of an additive functor is additive]
+\begin{definition}\leanok
+[Sheaf-compose of an additive functor is additive]
   \label{def:sheafCompose_additive}
   \lean{AlgebraicGeometry.sheafCompose_additive}
   \uses{def:isFlasque_sheaf}
@@ -910,11 +1060,13 @@ collects the explicit presheaf maps that build the one-point inner iso
   categories is additive.
 \end{definition}
 
-\begin{proof} Proved directly in Lean (additivity checked on the
+\begin{proof}\leanok
+ Proved directly in Lean (additivity checked on the
   underlying presheaf level).
 \end{proof}
 
-\begin{definition}[Sheaf-compose of an additive functor preserves zero morphisms]
+\begin{definition}\leanok
+[Sheaf-compose of an additive functor preserves zero morphisms]
   \label{def:sheafCompose_preservesZero}
   \lean{AlgebraicGeometry.sheafCompose_preservesZero}
   \uses{def:sheafCompose_additive}
@@ -922,11 +1074,13 @@ collects the explicit presheaf maps that build the one-point inner iso
   \(\mathrm{sheafCompose}\;J\;F\) preserves zero morphisms.
 \end{definition}
 
-\begin{proof} Proved directly in Lean, as a consequence of additivity
+\begin{proof}\leanok
+ Proved directly in Lean, as a consequence of additivity
   (\cref{def:sheafCompose_additive}).
 \end{proof}
 
-\begin{definition}[Sheaf-compose of a finite-limit-preserving functor preserves finite limits]
+\begin{definition}\leanok
+[Sheaf-compose of a finite-limit-preserving functor preserves finite limits]
   \label{def:sheafCompose_preservesFiniteLimits}
   \lean{AlgebraicGeometry.sheafCompose_preservesFiniteLimits}
   \uses{def:isFlasque_sheaf}
@@ -937,12 +1091,14 @@ collects the explicit presheaf maps that build the one-point inner iso
   exact short complex.
 \end{definition}
 
-\begin{proof} Proved directly in Lean: the canonical factorisation
+\begin{proof}\leanok
+ Proved directly in Lean: the canonical factorisation
   through the fully faithful sheaf-to-presheaf functor preserves and
   reflects finite limits.
 \end{proof}
 
-\begin{lemma}[Project flasqueness transfers to Mathlib flasqueness via \(\mathrm{forget}_2\)]
+\begin{lemma}\leanok
+[Project flasqueness transfers to Mathlib flasqueness via \(\mathrm{forget}_2\)]
   \label{lem:isFlasque_toAddCommGrpCat}
   \lean{AlgebraicGeometry.Scheme.IsFlasque.toAddCommGrpCat}
   \uses{def:isFlasque_sheaf}
@@ -955,12 +1111,14 @@ collects the explicit presheaf maps that build the one-point inner iso
   forgetful functor.
 \end{lemma}
 
-\begin{proof} Proved directly in Lean (epi-iff-surjective in
+\begin{proof}\leanok
+ Proved directly in Lean (epi-iff-surjective in
   \(\mathrm{AddCommGrp}\) applied to the sectionwise-surjective
   restriction maps of \cref{def:isFlasque_sheaf}).
 \end{proof}
 
-\begin{lemma}[Sections-surjectivity from a flasque leftmost term, Hartshorne~II.1~Ex.~1.16(b)]
+\begin{lemma}\leanok
+[Sections-surjectivity from a flasque leftmost term, Hartshorne~II.1~Ex.~1.16(b)]
   \label{lem:isFlasque_shortExact_app_surjective}
   \lean{AlgebraicGeometry.Scheme.IsFlasque.shortExact_app_surjective}
   \uses{def:isFlasque_sheaf, lem:isFlasque_toAddCommGrpCat,
@@ -973,7 +1131,8 @@ collects the explicit presheaf maps that build the one-point inner iso
   1.16(b) input consumed inside the flasque-vanishing argument.
 \end{lemma}
 
-\begin{proof} Proved directly in Lean via the \(\mathrm{forget}_2\)
+\begin{proof}\leanok
+ Proved directly in Lean via the \(\mathrm{forget}_2\)
   bridge: \cref{lem:isFlasque_toAddCommGrpCat} transfers flasqueness to
   the \(\mathrm{AddCommGrp}\) level, the bridge functor sends the short
   exact sequence to an exact short complex
@@ -986,7 +1145,8 @@ collects the explicit presheaf maps that build the one-point inner iso
 
 \subsection{Explicit presheaf maps for the one-point inner iso}
 
-\begin{definition}[Constant-to-skyscraper presheaf map on \(\PUnit\)]
+\begin{definition}\leanok
+[Constant-to-skyscraper presheaf map on \(\PUnit\)]
   \label{def:alphaConstToSkyPUnit}
   \lean{AlgebraicGeometry.alphaConstToSkyPUnit}
   \uses{lem:isFlasque_constant_irreducible}
@@ -998,11 +1158,13 @@ collects the explicit presheaf maps that build the one-point inner iso
   of \cref{lem:skyscraperSheaf_iso_constantSheaf_punit}.
 \end{definition}
 
-\begin{proof} Proved directly in Lean (an explicit presheaf morphism;
+\begin{proof}\leanok
+ Proved directly in Lean (an explicit presheaf morphism;
   naturality checked on the unique non-identity inclusion).
 \end{proof}
 
-\begin{definition}[Skyscraper-to-constant presheaf map on \(\PUnit\)]
+\begin{definition}\leanok
+[Skyscraper-to-constant presheaf map on \(\PUnit\)]
   \label{def:betaSkyToConstPUnit}
   \lean{AlgebraicGeometry.betaSkyToConstPUnit}
   \uses{lem:isFlasque_constant_irreducible}
@@ -1014,11 +1176,13 @@ collects the explicit presheaf maps that build the one-point inner iso
   sheafification, of \cref{lem:skyscraperSheaf_iso_constantSheaf_punit}.
 \end{definition}
 
-\begin{proof} Proved directly in Lean (an explicit presheaf morphism;
+\begin{proof}\leanok
+ Proved directly in Lean (an explicit presheaf morphism;
   naturality checked on the unique non-identity inclusion).
 \end{proof}
 
-\begin{lemma}[Composition of the two presheaf maps is the sheafification unit]
+\begin{lemma}\leanok
+[Composition of the two presheaf maps is the sheafification unit]
   \label{lem:alpha_beta_eq_toSheafify}
   \lean{AlgebraicGeometry.alphaConstToSkyPUnit_comp_betaSkyToConstPUnit_eq_toSheafify}
   \uses{def:alphaConstToSkyPUnit, def:betaSkyToConstPUnit}
@@ -1029,7 +1193,8 @@ collects the explicit presheaf maps that build the one-point inner iso
   \cref{lem:skyscraperSheaf_iso_constantSheaf_punit} commute.
 \end{lemma}
 
-\begin{proof} Proved directly in Lean (a pointwise check on the two
+\begin{proof}\leanok
+ Proved directly in Lean (a pointwise check on the two
   opens of \(\PUnit\), the non-empty branch collapsing the identity
   composite to the sheafification unit).
 \end{proof}

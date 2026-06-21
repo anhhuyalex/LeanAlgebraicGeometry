@@ -1,0 +1,150 @@
+[
+  {
+    "timestamp": "2026-06-20T07:55:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "pushforward_lax_mu_comparison_lhs_tmul"
+    },
+    "session": {
+      "id": "session_37",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "outer δ/counit telescope steps 3-4 (δ-leg reindex+comp_δ peel; counit-pair tensorHom split; open-immersion triangle cancellation) — each is another instantiate-then-erw round against carrier-diamond objects on a >4800-LOC file, ~20k-token goal queries",
+      "key_lemmas_used": [
+        "rightAdjointLaxMonoidal_μ",
+        "homEquiv_unit",
+        "Functor.map_comp",
+        "PresheafOfModules.comp_app",
+        "ModuleCat.hom_comp",
+        "LinearMap.comp_apply",
+        "tensorObj_map_tmul",
+        "pushforward_map_app_apply",
+        "pushforwardPushforwardAdj_unit_app_app_apply (hU)",
+        "restrictScalars_δ_app_tmul (new)",
+        "pushforwardPushforwardAdj_counit_app_app_apply (new)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "STEP-2 section split: rw map_comp + comp_app then erw hom_comp+comp_apply",
+        "code_tried": "rw [Functor.map_comp, PresheafOfModules.comp_app]; erw [ModuleCat.hom_comp, LinearMap.comp_apply]",
+        "line_number": "4400",
+        "result": "success",
+        "insight": "splits LHS into (G.map (ε⊗ε)).app W ( (G.map δ).app W ( (GX⊗GY).map cu.op (m⊗ₜn) ) ); committed"
+      },
+      {
+        "attempt": 2,
+        "strategy": "STEP-1 tensor split via tensorObj_map_tmul on the heavy ⊗ object",
+        "code_tried": "erw [PresheafOfModules.Monoidal.tensorObj_map_tmul]  (bare) — then set GA := …",
+        "line_number": "4400",
+        "result": "failed",
+        "insight": "carrier diamond: bare rw/erw silent no-op (objects typed PresheafOfModules X.ringCatSheaf.obj, defeq-not-syntactic to _ ⋙ forget₂); `set GA :=` infers that type and MonoidalCategoryStruct synth FAILS"
+      },
+      {
+        "attempt": 3,
+        "strategy": "abstract-ring ∀-have h1 keyed on R ⋙ forget₂ then instantiate + erw",
+        "code_tried": "have h1 : ∀ {R : …ᵒᵖ ⥤ CommRingCat.{u}} (P Q : PresheafOfModules (R ⋙ forget₂ …)) …, … := by intro …; exact tensorObj_map_tmul …; (h1c := h1 GX GY cu.op m n); erw [h1c]",
+        "line_number": "4400",
+        "result": "success",
+        "insight": "abstract-ring head matches the MonoidalCategoryStruct instance syntactically (dodges diamond); erw bridges the residual X.presheaf vs sheafToPresheaf defeq. REUSABLE TEMPLATE"
+      },
+      {
+        "attempt": 4,
+        "strategy": "STEP-2 reindex outer ε leg via pushforward_map_app_apply (plain rw)",
+        "code_tried": "rw [PresheafOfModules.pushforward_map_app_apply]",
+        "line_number": "4454",
+        "result": "success",
+        "insight": "reindexes (G.map (ε⊗ε)).app W → (ε_A⊗ₘε_B).app (op ((Opens.map f.base).obj W.unop)); committed"
+      },
+      {
+        "attempt": 5,
+        "strategy": "second rw pushforward_map_app_apply for inner δ leg",
+        "code_tried": "rw [pushforward_map_app_apply, pushforward_map_app_apply, Functor.OplaxMonoidal.comp_δ]",
+        "line_number": "4454",
+        "result": "failed",
+        "insight": "second rw does NOT fire on inner δ leg — after first rewrite the inner coercion is ConcreteCategory.hom, not ModuleCat.Hom.hom; next iter must conv into the inner application"
+      }
+    ],
+    "next_steps": "Steps 3-4: (3) reindex inner (G.map δ).app W via conv+pushforward_map_app_apply, peel δ Gβ = RS.map(δ pf0)≫δ RS via Functor.OplaxMonoidal.comp (δ pf0=𝟙 by rfl), discharge δ RS on pure tensor by NEW restrictScalars_δ_app_tmul (instantiate-then-erw); (4) split counit pair via ModuleCat tensorHom_tmul, collapse each hadj'.counit leg by NEW pushforwardPushforwardAdj_counit_app_app_apply; final open-immersion triangle cancel (adj.left/right_triangle on opens) → m⊗ₜn = RHS (pushforward_lax_mu_comparison_rhs_tmul, proven)."
+  },
+  {
+    "timestamp": "2026-06-20T07:40:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "pushforwardPushforwardAdj_counit_app_app_apply"
+    },
+    "session": {
+      "id": "session_37",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "",
+      "key_lemmas_used": [
+        "rfl"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "naive mirror of unit lemma: binder y : N.obj U",
+        "code_tried": "(y : N.obj U) : ((counit.app N).app U).hom y = (N.map (adj.unit.app U.unop).op).hom y := by rfl",
+        "line_number": "4143",
+        "result": "failed",
+        "lean_error": "Application type mismatch at .hom y (lake 4149/4150) — counit input is the BIG object, not N.obj U",
+        "insight": "counit is NOT symmetric to unit; unit takes input from SMALL M.obj U, counit from composite ((pushforward ψ ⋙ pushforward φ).obj N).obj U"
+      },
+      {
+        "attempt": 2,
+        "strategy": "correct binder to composite object",
+        "code_tried": "(y : ((PresheafOfModules.pushforward ψ ⋙ PresheafOfModules.pushforward φ).obj N).obj U) : … := by rfl",
+        "line_number": "4143",
+        "result": "success",
+        "insight": "mirrors Mathlib pushforwardPushforwardAdj_counit_app_val_app; closes by rfl; lake-verified"
+      }
+    ],
+    "next_steps": "Consumed by lhs_tmul telescope step 4 (counit-pair collapse). Needs blueprint block — already has lem:pushforwardpushforwardadj_counit_app_app_apply (authored plan iter-037)."
+  },
+  {
+    "timestamp": "2026-06-20T07:48:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "restrictScalars_δ_app_tmul"
+    },
+    "session": {
+      "id": "session_37",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "",
+      "key_lemmas_used": [
+        "Functor.Monoidal.μ_δ",
+        "restrictScalars_μ_app_tmul"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "δ = inv μ on pure tensor; RHS bare m ⊗ₜ[R] n",
+        "code_tried": "… = m ⊗ₜ[(R ⋙ forget₂ …).obj W] n := by …",
+        "line_number": "2137",
+        "result": "failed",
+        "lean_error": "failed to synthesize Module ((R ⋙ forget₂ …).obj W) (M₁.obj W) (lake 2146) — m is an S-module; R-structure only exists via restrictScalars",
+        "insight": "RHS m ⊗ₜ[R] n is ill-typed bare; μ version dodges this because its m⊗ₜ[R]n is the INPUT (elaborated against μ domain)"
+      },
+      {
+        "attempt": 2,
+        "strategy": "ascribe RHS to codomain object so R-instance resolves through restrictScalars",
+        "code_tried": "= (m ⊗ₜ n : ↑(((PresheafOfModules.restrictScalars α).obj M₁ ⊗ (PresheafOfModules.restrictScalars α).obj M₂).obj W)) := by rw [...]; exact ...",
+        "line_number": "2137",
+        "result": "success",
+        "insight": "codomain ascription resolves the R-module instance via restrictScalars; set_option backward.isDefEq.respectTransparency false; lake-verified (Build completed 8321 jobs)"
+      }
+    ],
+    "next_steps": "Consumed by lhs_tmul telescope step 3 (δ RS pure-tensor). NEEDS blueprint block (1-to-1 coverage debt) — δ-twin of lem:restrictscalars_mu_app_tmul; deps Functor.Monoidal.μ_δ + restrictscalars_mu_app_tmul."
+  }
+]

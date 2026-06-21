@@ -1,0 +1,162 @@
+[
+  {
+    "timestamp": "2026-06-21T11:14:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "moduleTensorPowAdd_assoc"
+    },
+    "session": {
+      "id": "session_35",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "associator_naturality_right_assoc",
+        "whisker_exchange_assoc",
+        "associator_inv_naturality_right_assoc",
+        "BraidedCategory.braiding_naturality_left",
+        "monoidal"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Paste iter-034 banked 95% hom-level script (compiles through step (3) rw [hhex]); close residual step (4) braiding transposition with whisker_exchange then monoidal",
+        "code_tried": "-- (4) commute β_a=(β_ L^i F) past inner merge (Tbc/μ_{j,k}) via whisker_exchange, then monoidal",
+        "line_number": "4039",
+        "result": "partial",
+        "insight": "iter-034 diagnosis was INCOMPLETE: there are TWO atom-interchanges left after monoidal, not one — monoidal does coherence but NOT whisker_exchange of two non-structural atoms on disjoint factors"
+      },
+      {
+        "attempt": 2,
+        "strategy": "Two explicit interchanges then monoidal: (T1) top swap T_{F,c}⁻¹ (whiskerLeft on F⊗L^k) ↔ T_{a,b}⁻¹ (whiskerRight on L^i⊗L^j) via ← associator_naturality_right_assoc + ← whisker_exchange_assoc; (T2) β_a past inner merge T_{b,c};μ_{j,k} via associator_inv_naturality_right_assoc + whisker_exchange_assoc β_a μ + whisker_exchange_assoc β_a T_{b,c}; then monoidal",
+        "code_tried": "rw [← associator_naturality_right_assoc, ← whisker_exchange_assoc T_ab.inv T_Fc.inv]; rw [associator_inv_naturality_right_assoc L^i F μ_jk, associator_inv_naturality_right_assoc L^i F T_bc, whisker_exchange_assoc β_a μ_jk, whisker_exchange_assoc β_a T_bc]; monoidal",
+        "line_number": "4039",
+        "result": "success",
+        "insight": "Recipe: associator_(inv_)naturality_right_assoc exposes (X⊗Y)◁ form adjacent to braiding/atom; whisker_exchange_assoc f g performs the interchange (← for reverse). Diamond-free: keep tensorPowAdd/moduleTensorPowAdd .hom OPAQUE, plain rw throughout, no generic-M _core. #print axioms = {propext, Classical.choice, Quot.sound}"
+      }
+    ],
+    "next_steps": "DONE. Load-bearing module hexagon closed; abort-clock question (does A close) answered YES in 1 real-attempt iter."
+  },
+  {
+    "timestamp": "2026-06-21T11:14:10Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "moduleSectionAction_mul_smul"
+    },
+    "session": {
+      "id": "session_35",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "gSMul_smul_apply",
+        "gMul_mul_apply",
+        "sectionsMul_whiskerRight_natural",
+        "sectionsMul_whiskerLeft_natural",
+        "tensorObjAssoc_hom_sectionsMul",
+        "moduleTensorPowAdd_assoc",
+        "vadd_eq_add"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Mirror sectionsMul_mul_assoc (B7) at module level: simp only [vadd_eq_add, gSMul_smul_apply, gMul_mul_apply]; RIGHT slide whiskerRight_natural; LEFT slide whiskerLeft_natural; B5 backwards ← tensorObjAssoc_hom_sectionsMul; final congrArg of moduleTensorPowAdd_assoc at base element",
+        "code_tried": "simp only [vadd_eq_add, gSMul_smul_apply, gMul_mul_apply]; rw [sectionsMul_whiskerRight_natural ...]; rw [sectionsMul_whiskerLeft_natural ...]; rw [← tensorObjAssoc_hom_sectionsMul ...]; exact congrArg (fun iso => (iso.hom.val.app op⊤).hom z) (moduleTensorPowAdd_assoc F L i j k)",
+        "line_number": "4191",
+        "result": "success",
+        "insight": "vadd_eq_add is REQUIRED — GSMul lands degree in i +ᵥ j, must normalize to i+j or syntactic rw misses. Needs set_option maxRecDepth 4000 in BEFORE the docstring (module congrArg defeq bigger than ring analogue; plain 4000 not maxHeartbeats). #print axioms clean."
+      }
+    ],
+    "next_steps": "DONE (B compatibility leg). B unitality moduleSectionAction_one_smul still gated on moduleTensorPowAdd_zero_left."
+  },
+  {
+    "timestamp": "2026-06-21T11:14:20Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "moduleTensorPowAdd_zero_left"
+    },
+    "session": {
+      "id": "session_35",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "unitModule X is defeq but NOT syntactically equal to 𝟙_ X.Modules; braiding_tensorUnit_left/monoidal special-case 𝟙_ and do not fire; rw [show unitModule X = 𝟙_ from rfl] fails 'motive is not type correct' (unitModule X sits in dependent λ_/α_ type positions). Compounds tensorPowAdd_zero_left's unit friction with a braiding β_{𝟙,F}.",
+      "key_lemmas_used": [
+        "tensorPowAdd_zero_left",
+        "braiding_tensorUnit_left"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "State moduleTensorPowAdd_zero_left = tensorObjUnitIso ≪≫ eqToIso; after Iso.ext, rw [moduleTensorPowAdd, tensorPowAdd_zero_left] + bridge-simp; reduce to unit-coherence residual then monoidal",
+        "code_tried": "/-- Left-unit coherence of the action comparison (module analogue of tensorPowAdd_zero_left) -/ ... rw [moduleTensorPowAdd, tensorPowAdd_zero_left]; simp [bridges]; ... monoidal",
+        "line_number": "~4123 (reverted)",
+        "result": "failed",
+        "insight": "Residual middle (α_ unit F L^k).inv ≫ (λ_F≫ρ_F⁻¹)▷L^k ≫ (α_ F unit L^k).hom ≫ F◁(λ_ L^k).hom = (λ_ (F⊗L^k)).hom does NOT close by monoidal because the α_ atoms carry unitModule X not 𝟙_. Reverted the decl to keep file 0-sorry. Worked-out close path banked in task_result: have hβ : (β_ (unitModule X) F).hom = (λ_F).hom ≫ (ρ_F).inv := braiding_tensorUnit_left F (defeq-typechecks, AVOIDS rw friction); state middle over 𝟙_ explicitly + monoidal, then change/convert (NOT rw) to bridge to unitModule X goal; mirror tensorPowAdd_zero_left's change/erw/unitors_equal."
+      }
+    ],
+    "next_steps": "Next iter: state the unit-coherence middle block over 𝟙_ X.Modules explicitly (prove by monoidal), then change/convert to the unitModule X goal. Use hβ via braiding_tensorUnit_left. This unblocks B-unitality and C."
+  },
+  {
+    "timestamp": "2026-06-21T11:14:30Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "moduleSectionAction_one_smul"
+    },
+    "session": {
+      "id": "session_35",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Gated on moduleTensorPowAdd_zero_left (blocked above).",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Not attempted — gated. Once zero_left lands, mirror sectionsMul_one_mul verbatim: rw [gSMul_smul_apply, gOne_one_eq, moduleTensorPowAdd_zero_left]; change ...; rw [moduleSectionsCast_sectionsCast]; exact tensorObjUnitIso_hom_sectionsMul (moduleTensorPow F L k) x",
+        "code_tried": "(not attempted)",
+        "line_number": "n/a",
+        "result": "partial",
+        "insight": "Recipe fully worked out in task_result; mechanical once zero_left lands."
+      }
+    ],
+    "next_steps": "Blocked behind moduleTensorPowAdd_zero_left; do not assign until that lands."
+  },
+  {
+    "timestamp": "2026-06-21T11:14:40Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "sectionGradedModule_gmodule"
+    },
+    "session": {
+      "id": "session_35",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Gated on both moduleSectionAction legs (one_smul blocked).",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Not attempted — gated. Assemble via DirectSum.Gmodule.mk / structure literal: toGdistribMulAction from one_smul/mul_smul routed through moduleGradedMonoid_eq_of_cast; smul_add/smul_zero/add_smul/zero_smul bilinear-for-free (GSMul.smul = Γ(iso)∘sectionsMul, both additive; may need erw like gsemiring bilinearity). Imports already added.",
+        "code_tried": "(not attempted)",
+        "line_number": "n/a",
+        "result": "partial",
+        "insight": "Final assembly node; mechanical once both action legs land."
+      }
+    ],
+    "next_steps": "Blocked behind moduleSectionAction_one_smul; final SNAP-S1 deliverable."
+  }
+]

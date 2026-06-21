@@ -1,0 +1,158 @@
+[
+  {
+    "timestamp": "2026-06-20T07:00:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "tensorObjWhiskerRightIso_tensorBraiding_natural"
+    },
+    "session": {
+      "id": "session_22",
+      "model": "opus-4.8"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "tensorObjWhiskerRightIso_eq",
+        "tensorObjWhiskerLeftIso_eq",
+        "tensorBraiding_eq",
+        "tensorObjAssoc",
+        "associator_naturality_left",
+        "whisker_exchange",
+        "associator_inv_naturality_left"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "route-(b): apply Iso.ext; one simp only with _eq bridges + tensorObjAssoc + hom/inv distribution + bridge cancellations telescopes to canonical naturality of sigma_Y in Y; close with rw[associator_naturality_left_assoc, <- whisker_exchange_assoc, associator_inv_naturality_left_assoc]",
+        "code_tried": "(e ▷ P) ▷ Q ≪≫ σ_B = σ_A ≪≫ (e ▷ Q) ▷ P; apply Iso.ext; simp only [...]; rw [associator_naturality_left_assoc, ← whisker_exchange_assoc, associator_inv_naturality_left_assoc]",
+        "line_number": "2086",
+        "result": "success",
+        "insight": "This is the diamond-crossing mechanism that blocked iters 018-021. NO β=id. #print axioms = [propext,Classical.choice,Quot.sound]. Also delivered _assoc reassociated variant axiom-clean."
+      }
+    ],
+    "next_steps": "Consumed in tensorPowAdd_assoc succ (ii-a flip). Needs blueprint coverage (block lem:tensorObjWhiskerRightIso_tensorBraiding_natural @1386 exists; leanok restored)."
+  },
+  {
+    "timestamp": "2026-06-20T07:00:01Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "tensorPowAdd_assoc"
+    },
+    "session": {
+      "id": "session_22",
+      "model": "opus-4.8"
+    },
+    "findings": {
+      "blocker": "Residual (iii): canonical braided coherence on 4-letter word L^k,L,L^m',L^m'' after half-telescoping; ~6 residual tensorObjIso bridges per side separated from partners by associator/braiding; needs non-looping bridge-slide then hexagon_forward+pentagon+whisker_exchange (one braiding β_{L,L^m'}, same permutation, NO β=id).",
+      "key_lemmas_used": [
+        "tensorObjWhiskerRightIso_tensorBraiding_natural",
+        "tensorObjWhiskerRightIso_eqToIso",
+        "eqToIso_self",
+        "tensorObjWhiskerRightIso_trans_assoc",
+        "tensorPowAdd_assoc_succ_reindex",
+        "tensorPowAdd_succ"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "seam collapse: tensorObjWhiskerRightIso_eqToIso turns right-whiskered reindexer into bare eqToIso; <- Iso.trans_assoc + eqToIso_trans merges with inverse reindexer of succ_reindex; simp[tensorPow_succ, eqToIso_self] collapses self-eqToIso",
+        "code_tried": "rw [tensorObjWhiskerRightIso_eqToIso]; simp only [Iso.trans_assoc]; rw [← Iso.trans_assoc (eqToIso _) (eqToIso _), eqToIso_trans]",
+        "line_number": "3370",
+        "result": "partial",
+        "insight": "A4 double-whisker now sits directly before σ_B"
+      },
+      {
+        "attempt": 2,
+        "strategy": "(ii-a) flip via _assoc variant transposes A4 WR(WR μ ▷ L) L^m'' → WR(WR μ ▷ L^m'') L exposing single ih leg; fold via trans_assoc; derive ih2 (ih with trailing reindexer transposed via rw[<-ih];simp); rewrite ih core",
+        "code_tried": "rw [tensorObjWhiskerRightIso_trans_assoc ...]; (ih2 substitution); simp only [tensorObjWhiskerRightIso_trans, tensorObjWhiskerRightIso_eqToIso, eqToIso_trans]",
+        "line_number": "3380",
+        "result": "partial",
+        "insight": "ih substituted; trailing reindexers collapsed"
+      },
+      {
+        "attempt": 3,
+        "strategy": "canonicalize (iii): apply Iso.ext + _eq-bridge simp only reduces both sides to pure canonical morphisms; two μ atoms μ_{m',m''},μ_{k,m'+m''} opaque in matching positions, common tensorObjIso≫eqToIso suffix; partial telescope of bridge hom-inv pairs straddling braidings",
+        "code_tried": "apply Iso.ext; simp only [_eq bridges...]; simp only [← comp_whiskerRight_assoc, ← whiskerLeft_comp_assoc, Iso.hom_inv_id_assoc, ...]",
+        "line_number": "3394",
+        "result": "partial",
+        "insight": "Collapses tio.hom≫tio.inv≫β→β etc. Left at honest typed sorry @3394: half-telescoped canonical coherence residual. Diamond crossing SOLVED. coherence tactic not imported; blind simp[whisker_exchange] loops."
+      }
+    ],
+    "next_steps": "Sorry plateau 5 for iters 017-022 (6 flat). HARD GATE: iter-023 must escalate to USER per plan-iter-022 if sorry stays 5. Next mechanical step: non-looping bridge-slide (associator_naturality_*_assoc / braiding_naturality / whisker_exchange_assoc) until hom-inv partners adjacent+cancel, then hexagon_forward+pentagon."
+  },
+  {
+    "timestamp": "2026-06-20T07:00:02Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "sectionsMul_mul_assoc"
+    },
+    "session": {
+      "id": "session_22",
+      "model": "opus-4.8"
+    },
+    "findings": {
+      "blocker": "Gated solely on tensorPowAdd_assoc (B6) closing; not attempted this iter.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Do not re-assign until B6 closes."
+  },
+  {
+    "timestamp": "2026-06-20T07:00:03Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "tensorBraiding_self_eq_id_of_isInvertible"
+    },
+    "session": {
+      "id": "session_22",
+      "model": "opus-4.8"
+    },
+    "findings": {
+      "blocker": "[IsInvertible L] comm-gated FUTURE; no consumer.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Deferred FUTURE (comm chain)."
+  },
+  {
+    "timestamp": "2026-06-20T07:00:04Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "tensorPowAdd_comm"
+    },
+    "session": {
+      "id": "session_22",
+      "model": "opus-4.8"
+    },
+    "findings": {
+      "blocker": "[IsInvertible L] comm-gated FUTURE; sectionsMul_mul_comm FALSE for general L; no consumer.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Deferred FUTURE (comm chain)."
+  },
+  {
+    "timestamp": "2026-06-20T07:00:05Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "sectionsMul_mul_comm"
+    },
+    "session": {
+      "id": "session_22",
+      "model": "opus-4.8"
+    },
+    "findings": {
+      "blocker": "[IsInvertible L] comm-gated FUTURE; no consumer.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "Deferred FUTURE (comm chain)."
+  }
+]

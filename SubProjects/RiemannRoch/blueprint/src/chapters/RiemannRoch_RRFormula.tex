@@ -20,8 +20,8 @@ that close the project's headline RR bridge
   \(g(C) = 0\) is isomorphic to \(\mathbb P^1_{\bar k}\).}
 \]
 The bridge consumed by
-\cref{prop:rigidity_genus0_curve_to_AV} of
-\texttt{AbelianVarietyRigidity.tex} is the Hartshorne~IV.1.3.5 chain:
+\cref{thm:genus_zero_curve_iso_p1} of
+\texttt{AbelianVarietyRigidity.lean} is the Hartshorne~IV.1.3.5 chain:
 the Weil-divisor group \(\mathrm{Div}(C)\) and the degree map $\deg \colon \mathrm{Div}(C)
 \to \mathbb Z$ (\texttt{RR.1}, \cref{def:divisor_degree}); the
 Riemann--Roch dimension formula in genus~\(0\)
@@ -33,54 +33,10 @@ Riemann--Roch dimension formula in genus~\(0\)
 ``rational curve \(\Rightarrow \cong \mathbb P^1\)'' classification via
 \texttt{Proj.fromOfGlobalSections} (\texttt{RR.4}).
 
-% NOTE (Serre duality vs. direct \(\chi\) — iter-173 sub-phase choice).
-% This chapter proves the RR formula via the \emph{direct \(\chi\)
-% inductive proof} (Hartshorne IV.1.3 step ``Next, let \(D\) be any
-% divisor\ldots'', p.~296), \emph{not} via Serre duality. The reason is
-% strictly Mathlib-side: Mathlib (snapshot \texttt{b80f227}) ships no
-% dualizing sheaf \(\omega_X\) on a scheme and no Serre duality theorem
-% \(H^i(X, \mathcal F) \cong H^{n-i}(X, \omega_X \otimes \mathcal F^\vee)^*\);
-% routing through that machinery would force a multi-iter sub-build
-% strictly heavier than the genus-\(0\) critical path requires. The
-% direct \(\chi\) proof depends only on additivity of the Euler
-% characteristic on a short exact sequence of coherent sheaves (a
-% standard preadditive-category fact), the genus base case
-% \(\chi(\mathcal O_C) = 1 - g\), and the closed-point skyscraper
-% identity \(\chi(k(P)) = 1\).
-
-% NOTE (Genus-\(0\) carve-out vs. general \(g\) — iter-173 sub-phase
-% choice). The chapter restricts the headline theorem
-% \cref{thm:euler_char_eq_deg_plus_one_minus_genus} to the genus-\(0\) specialisation
-% \(\ell(D) = \deg(D) + 1\) for \(\deg(D) \geq 0\). The general-\(g\)
-% statement \(\ell(D) - \ell(K - D) = \deg(D) + 1 - g\) is downstream of
-% \texttt{RR.2} (it requires the canonical divisor \(K\) and Serre
-% duality / the \(K - D\) pairing) and is \emph{not} needed for the
-% genus-\(0\) critical path: \texttt{RR.3} consumes only
-% \cref{thm:riemannRoch_genus_zero}, and \texttt{RR.4} consumes
-% \texttt{RR.3}. The intermediate \(\chi\)-identity
-% \cref{thm:euler_char_eq_deg_plus_one_minus_genus} is stated and
-% sketched for general \(g\) (the inductive argument is genus-uniform);
-% its full closure on a general-\(g\) curve waits for the project's
-% subsequent Riemann--Roch chapter, but the proof body in
-% \texttt{AlgebraicJacobian/RiemannRoch/RRFormula.lean} pins the
-% \emph{statement} for general \(g\) and may close the body initially
-% under a \(g = 0\) hypothesis.
-
 \paragraph{Standing hypotheses.} Throughout this chapter, \(\bar k\) is an
 algebraically closed field and \(C\) is a smooth proper geometrically
-irreducible curve over \(\bar k\). Concretely, the Lean signatures
-(\texttt{AlgebraicJacobian/RiemannRoch/RRFormula.lean}) carry the same
-typeclass package as the rest of the project's curve API:
-\begin{quote}
-  \texttt{\{kbar : Type u\} [Field kbar] [IsAlgClosed kbar]\\
-   (C : Over (Spec (.of kbar))) [IsProper C.hom]\\
-   \phantom{}\quad[SmoothOfRelativeDimension 1 C.hom]\\
-   \phantom{}\quad[GeometricallyIrreducible C.hom] [IsIntegral C.left]}
-\end{quote}
-The genus \(g(C)\) is the one defined in \cref{def:genus} of
-\texttt{Genus.tex}, namely \(g(C) = \dim_{\bar k} H^1(C, \mathcal O_C)\)
-via the project's \(\Module\bar k\)-flavoured sheaf cohomology
-(\texttt{AlgebraicGeometry.genus}).
+irreducible curve over \(\bar k\). The genus \(g(C)\) is defined as
+\(g(C) = \dim_{\bar k} H^1(C, \mathcal O_C)\) (see \cref{def:genus}).
 
 \section{The Euler characteristic of a coherent sheaf on a curve}
 
@@ -124,16 +80,6 @@ via the project's \(\Module\bar k\)-flavoured sheaf cohomology
   \cref{def:l_invariant}), so the two terms are honest natural numbers and
   the difference is a well-defined integer.
 
-  \paragraph{Lean signature scope.} The Lean definition
-  \texttt{AlgebraicGeometry.Scheme.eulerCharacteristic} takes a coherent
-  sheaf \(\mathcal F\) on \(C\) and returns an integer; the natural input
-  shape is the project's \(\Module \bar k\)-valued sheaf-cohomology
-  wrapper \(\HModule \bar k\) (\cref{def:Scheme_HModule}) applied to a
-  \(\Module \bar k\)-flavoured carrier built from \(\mathcal F\), with
-  \(\dim_{\bar k}\) extracted via \(\Module.\mathtt{finrank}\). The
-  declaration is \texttt{noncomputable} (inherited from
-  \(\Module.\mathtt{finrank}\) and from the \(\Ext\)-based cohomology
-  construction).
 \end{definition}
 
 \section{The \(\ell\)-invariant of a Weil divisor}
@@ -170,16 +116,6 @@ via the project's \(\Module\bar k\)-flavoured sheaf cohomology
   chapter never uses the projective-space interpretation; \(\ell(D)\) is
   the only quantity it needs.
 
-  \paragraph{Lean signature scope.} The Lean definition
-  \texttt{AlgebraicGeometry.Scheme.WeilDivisor.l} accepts a divisor
-  \(D : C.\mathtt{WeilDivisor}\) (\cref{def:codim1_cycles}) and returns
-  \(\Module.\mathtt{finrank}\;\bar k\;(H^0(C, \mathcal O_C(D)))\),
-  computed through the same \(\Module \bar k\)-valued sheaf-cohomology
-  pipeline as \cref{def:eulerChar_curve}. The associated invertible
-  sheaf \(\mathcal O_C(D)\) is the line bundle of \texttt{RR.3} (sibling
-  chapter, to be added); the present chapter's prose and Lean
-  signature reference \(\mathcal O_C(D)\) by name and consume only its
-  \(H^0\) functor. The declaration is \texttt{noncomputable}.
 \end{definition}
 
 \section{The \(\chi\) identity: \(\chi(\mathcal O_C(D)) = \deg(D) + 1 - g\)}
@@ -200,11 +136,51 @@ on a closed-point skyscraper sheaf \(k(P)\). Pinning each as its own
 Lean declaration lets the prover attack the three substrate gaps
 independently of the parent inductive argument.
 
+\begin{lemma}
+
+\leanok
+[Alternating finrank sum on a six-term exact sequence]
+  \label{lem:finrank_alternating_six_term}
+  \lean{AlgebraicGeometry.finrank_alternating_six_term}
+  \textit{Project-bespoke linear-algebra core (no external source named);
+  the rank-nullity heart of Euler-characteristic additivity.}
+  Let \(k\) be a field and let
+  \[
+    0 \to V_0 \xrightarrow{f_0} V_1 \xrightarrow{f_1} V_2
+      \xrightarrow{f_2} V_3 \xrightarrow{f_3} V_4
+      \xrightarrow{f_4} V_5 \to 0
+  \]
+  be an exact sequence of finite-dimensional \(k\)-vector spaces: the
+  first map \(f_0\) is injective, the last map \(f_4\) is surjective, and
+  the sequence is exact at each of the four interior nodes
+  \(V_1, V_2, V_3, V_4\). Then the alternating sum of \(k\)-dimensions
+  vanishes:
+  \[
+    \dim_k V_0 - \dim_k V_1 + \dim_k V_2
+      - \dim_k V_3 + \dim_k V_4 - \dim_k V_5 \;=\; 0.
+  \]
+\end{lemma}
+
+\begin{proof}
+  At each map \(f_i\) the rank--nullity theorem gives
+  \(\dim_k V_i = \dim_k(\operatorname{im} f_i) + \dim_k(\ker f_i)\).
+  Injectivity of \(f_0\) makes \(\ker f_0 = 0\); surjectivity of \(f_4\)
+  makes \(\operatorname{im} f_4 = V_5\), so \(\dim_k(\operatorname{im} f_4)
+  = \dim_k V_5\); and exactness at each interior node identifies
+  \(\ker f_i = \operatorname{im} f_{i-1}\), whence
+  \(\dim_k(\ker f_i) = \dim_k(\operatorname{im} f_{i-1})\). Substituting
+  these six relations into the alternating sum cancels every
+  \(\dim_k(\operatorname{im} f_i)\) against the matching
+  \(\dim_k(\ker f_{i+1})\) term in pairs, leaving \(0\). (No
+  sheaf-cohomology input enters; this is the pure linear-algebra core.)
+\end{proof}
+
 \begin{lemma}\leanok
 [Additivity of the Euler characteristic on a short exact sequence]
   \label{lem:euler_char_shortExact_add}
   \lean{AlgebraicGeometry.Scheme.eulerCharacteristic_shortExact_add}
-  \uses{def:eulerChar_curve, def:Scheme_HModule}
+  \uses{def:eulerChar_curve, def:Scheme_HModule,
+        lem:finrank_alternating_six_term}
   % SOURCE: [Hartshorne], IV.1, p.~296 (inside the proof of Theorem~1.3,
   % the citation ``III, Ex.~5.1'' for the additivity of \(\chi\) on a
   % short exact sequence) (read from
@@ -220,14 +196,26 @@ independently of the parent inductive argument.
     0 \to \mathcal F_1 \to \mathcal F_2 \to \mathcal F_3 \to 0
   \]
   be a short exact sequence in the category of \(\Module \bar k\)-valued
-  sheaves on \(C\). Then
+  sheaves on \(C\). Assume the six cohomology groups
+  \(H^0(C, \mathcal F_i)\) and \(H^1(C, \mathcal F_i)\) (\(i = 1, 2, 3\))
+  are finite-dimensional \(\bar k\)-vector spaces --- equivalently, that
+  \(\mathcal F_1, \mathcal F_2, \mathcal F_3\) are coherent, so that
+  Serre's coherent-cohomology finiteness theorem on the proper
+  \(\bar k\)-scheme \(C\) applies (the same finiteness that makes
+  \(\chi\) well defined in \cref{def:eulerChar_curve}). Then
   \[
     \chi(\mathcal F_2) \;=\; \chi(\mathcal F_1) + \chi(\mathcal F_3).
   \]
+  \emph{Without a finiteness assumption the statement is false:} the two
+  cohomology dimensions in \(\chi(\mathcal F) = \dim H^0 - \dim H^1\) need
+  not be finite for an arbitrary \(\Module \bar k\)-valued sheaf, so the
+  alternating sum that yields additivity is not even well defined. The
+  hypothesis is therefore intrinsic to the lemma, matching the coherence
+  requirement that \cref{def:eulerChar_curve} already imposes on \(\chi\).
 \end{lemma}
 
 \begin{proof}
-  \uses{def:eulerChar_curve}
+  \uses{def:eulerChar_curve, lem:finrank_alternating_six_term}
   Apply the project-side \(\Module \bar k\)-flavoured covariant Ext-LES
   (Mathlib's \texttt{Abelian.Ext.covariantSequence}) to the constant-sheaf
   test object \(L = (\mathrm{constantSheaf}\;J\;\_)(\Module.\mathtt{of}\;
@@ -239,20 +227,23 @@ independently of the parent inductive argument.
     \to H^1(\mathcal F_1) \to H^1(\mathcal F_2) \to H^1(\mathcal F_3)
     \to H^2(\mathcal F_1) \to H^2(\mathcal F_2) \to H^2(\mathcal F_3)
   \]
-  is exact in the category of \(\bar k\)-vector spaces. Grothendieck
+  is exact in the category of \(\bar k\)-vector spaces. Two reductions
+  truncate it to six terms: monomorphicity of
+  \(\mathcal F_1 \to \mathcal F_2\) makes the leading map
+  \(H^0(\mathcal F_1) \to H^0(\mathcal F_2)\) injective, and Grothendieck
   vanishing \(H^i(C, \mathcal F) = 0\) for \(i \geq 2\) on the
-  one-dimensional scheme \(C\) (Hartshorne~III.2.7) truncates the
-  sequence to a six-term exact sequence
+  one-dimensional scheme \(C\) (Hartshorne~III.2.7) kills the three
+  \(H^2\) terms, forcing \(H^1(\mathcal F_2) \to H^1(\mathcal F_3)\) to be
+  surjective. Hence the exact sequence
   \[
-    0 \to K_0 \to H^0(\mathcal F_1) \to H^0(\mathcal F_2) \to
+    0 \to H^0(\mathcal F_1) \to H^0(\mathcal F_2) \to
     H^0(\mathcal F_3) \to H^1(\mathcal F_1) \to H^1(\mathcal F_2)
-    \to H^1(\mathcal F_3) \to 0
+    \to H^1(\mathcal F_3) \to 0 .
   \]
-  (with \(K_0 = 0\) the kernel of the first map, kept here only as a
-  bookkeeping placeholder). Rank-counting on a six-term exact sequence
-  of finite-dimensional \(\bar k\)-vector spaces — iterated applications
-  of \(\mathtt{Submodule.finrank\_quotient\_add\_finrank}\) at each
-  intermediate kernel/image quotient — yields the alternating identity
+  By the finiteness hypothesis all six terms are finite-dimensional
+  \(\bar k\)-vector spaces, so the alternating-finrank identity for a
+  six-term exact sequence (\cref{lem:finrank_alternating_six_term})
+  applies and gives
   \[
     \dim H^0(\mathcal F_1) - \dim H^0(\mathcal F_2) + \dim H^0(\mathcal F_3)
     - \dim H^1(\mathcal F_1) + \dim H^1(\mathcal F_2) - \dim H^1(\mathcal F_3)
@@ -263,18 +254,6 @@ independently of the parent inductive argument.
   (\cref{def:eulerChar_curve}), to
   \(\chi(\mathcal F_2) = \chi(\mathcal F_1) + \chi(\mathcal F_3)\).
 
-  % NOTE: gated on project-side LES carrier + finiteness machinery.
-  % Mathlib `b80f227` ships `Abelian.Ext.covariantSequence` but not (a)
-  % the `ModuleCat kbar`-flavoured LES carrier specialised to the
-  % project's sheaf-cohomology pipeline `Scheme.HModule`, (b) Grothendieck
-  % vanishing `H^i(C, F) = 0` for `i ≥ 2` at the `Ext`-cohomology level
-  % consumed by `HModule`, nor (c) the six-term rank-counting bridge
-  % composed of `Submodule.finrank_quotient_add_finrank` invocations.
-  % The Lean helper `eulerCharacteristic_shortExact_add` therefore
-  % carries a Tier-3 honest typed sorry; its closure lands once the
-  % three substrate pieces are in place. Off the genus-0 critical path
-  % (the parent theorem `thm:euler_char_eq_deg_plus_one_minus_genus`
-  % is the only consumer in `RR.2`).
 \end{proof}
 
 \begin{lemma}\leanok
@@ -295,7 +274,6 @@ independently of the parent inductive argument.
 
 \begin{proof}
   \uses{def:eulerChar_curve}
-  \leanok
   An isomorphism \(e \colon \mathcal F \xrightarrow{\;\cong\;} \mathcal G\)
   induces, in each cohomological degree \(n \in \mathbb N\), a
   \(\bar k\)-linear equivalence
@@ -326,16 +304,17 @@ independently of the parent inductive argument.
   \uses{def:Scheme_HModule_zero_linearEquiv,
         def:Scheme_constantSheafGammaHom_linearEquiv,
         thm:Scheme_SheafGammaObj_linearEquiv_top}
-  Iter-188 Lane H named substrate. Let \(C\) be a smooth proper
+  Let \(C\) be a smooth proper
   geometrically irreducible curve over \(\bar k\) and \(P \in C\) a closed
   point. Then
   \[
     \dim_{\bar k}\, H^0(C, \mathtt{skyscraperSheaf}\, P\,
       (\Module.\mathtt{of}\, \bar k\, \bar k)) \;=\; 1.
   \]
-  Closed axiom-clean iter-188 via the three-step \(\bar k\)-linear-
+  Closed axiom-clean via the four-step \(\bar k\)-linear-
   equivalence chain \texttt{HModule\_zero\_linearEquiv}
   \(\to\) \texttt{constantSheafGammaHom\_linearEquiv}
+  \(\to\) \texttt{homFromOne\_linearEquiv}
   \(\to\) \texttt{SheafGammaObj\_linearEquiv\_top}, followed by
   \texttt{LinearEquiv.finrank\_eq} and \texttt{Module.finrank\_self}
   on the dite-resolved skyscraper presheaf evaluation at \(\top\).
@@ -348,22 +327,15 @@ independently of the parent inductive argument.
   \label{lem:H1_skyscraperSheaf_finrank_eq_zero}
   \lean{AlgebraicGeometry.Scheme.H1_skyscraperSheaf_finrank_eq_zero}
   \uses{lem:H1_skyscraperSheaf_finrank_eq_zero_main}
-  Iter-188 Lane H named substrate (typed-sorry blocker; committed
-  RR.2.H\(^1\) STRATEGY sub-phase). Let \(C\) be as above. Then
+  Let \(C\) be as above. Then
   \[
     \dim_{\bar k}\, H^1(C, \mathtt{skyscraperSheaf}\, P\,
       (\Module.\mathtt{of}\, \bar k\, \bar k)) \;=\; 0.
   \]
-  Mathematically: the closed-point skyscraper sheaf is flasque (any
-  pushforward from a one-point space is flasque; Hartshorne~III.2.5(c)),
-  and flasque sheaves have vanishing higher cohomology on any
-  topological space (Hartshorne~III.2.5).
-  Gated on either (a) upstream Mathlib
-  \texttt{Sheaf.flasque\_vanishing\_cohomology} at the
-  \texttt{Ext}-cohomology level for sheaves valued in an abelian
-  category with enough injectives, or (b) a project-side
-  flasque-cohomology bridge (~150-300 LOC; the committed
-  \cref{chap:RR_H1Vanishing}-style sub-build).
+  The closed-point skyscraper sheaf is flasque (any pushforward from a
+  one-point space is flasque; Hartshorne~III.2.5(c)), and flasque sheaves
+  have vanishing higher cohomology on any topological space
+  (Hartshorne~III.2.5; see \cref{chap:RR_H1Vanishing}).
 \end{lemma}
 
 \begin{lemma}\leanok
@@ -399,7 +371,6 @@ independently of the parent inductive argument.
   \uses{def:eulerChar_curve,
         lem:H0_skyscraperSheaf_finrank_eq_one,
         lem:H1_skyscraperSheaf_finrank_eq_zero}
-  \leanok
   By the definition of \(\chi\)
   (\cref{def:eulerChar_curve}),
   \[
@@ -412,36 +383,16 @@ independently of the parent inductive argument.
   by the prover.
 
   \emph{H\(^0\) half} — \(\dim_{\bar k} H^0(C, k(P)) = 1\).
-  Compose the project's three-step \(\bar k\)-linear-equivalence chain
+  The global-sections functor gives a chain of linear equivalences
   \[
     H^0(C, k(P))
     \;\xrightarrow{\;\cong\;}\;
-    \mathrm{Hom}_{\mathrm{Sh}}\!\bigl(
-      (\mathrm{constantSheaf}\;J\;\_)(\Module.\mathtt{of}\;\bar k\;\bar k),\,
-      k(P)
-    \bigr)
-    \;\xrightarrow{\;\cong\;}\;
     \Gamma(C, k(P))
     \;\xrightarrow{\;\cong\;}\;
-    (k(P))(C),
+    (k(P))(C).
   \]
-  realised by the project lemmas
-  \texttt{Scheme.HModule\_zero\_linearEquiv},
-  \texttt{Scheme.constantSheafGammaHom\_linearEquiv}, and
-  \texttt{Scheme.SheafGammaObj\_linearEquiv\_top} (the last step
-  identifies the abstract \(\Gamma\) functor with the underlying
-  presheaf evaluation at the top open \(\top\), i.e.\ at the whole
-  underlying space of \(C\)). Applying
-  \(\mathtt{LinearEquiv.finrank\_eq}\) along this chain reduces the
-  goal to
-  \(\dim_{\bar k} (k(P))(C) = 1\). The closed point
-  \(P\) lies in the top open of \(C\), so the skyscraper presheaf
-  evaluates at the top open to its stalk
-  \(\Module.\mathtt{of}\;\bar k\;\bar k\) by definition, and
-  \(\dim_{\bar k} \bar k = 1\) closes the half. This half is
-  axiom-clean closure projection (\(\sim 30\text{--}60\) LOC) against
-  the existing project chain; it is the natural target for the
-  iteration that follows the present blueprint expansion.
+  Since \(P\) lies in the whole space \(C\), the skyscraper sheaf evaluates
+  at \(C\) to its stalk \(\bar k\), and \(\dim_{\bar k} \bar k = 1\).
 
   \emph{H\(^1\) half} — \(\dim_{\bar k} H^1(C, k(P)) = 0\).
   Mathematically, the closed-point skyscraper sheaf is flasque (any
@@ -451,26 +402,12 @@ independently of the parent inductive argument.
   (Hartshorne~III.2.5). Hence \(H^1(C, k(P)) = 0\) as a
   \(\bar k\)-vector space.
 
-  % NOTE: gated on Mathlib flasque cohomology.
-  % Mathlib `b80f227` does NOT ship an `H^n(X, F) = 0 for flasque F`
-  % lemma at the `ModuleCat`-flavoured `Abelian.Ext`-cohomology level
-  % used by the project's `Scheme.HModule kbar` pipeline. The closure
-  % depends on either (a) an upstream Mathlib
-  % `Sheaf.flasque_vanishing_cohomology` contribution at the
-  % `Ext`-cohomology level for sheaves with values in an abelian
-  % category with enough injectives, or (b) a project-side flasque-
-  % cohomology bridge (~150-300 LOC, off the genus-0 critical path).
-  % Until one of the two lands, the H¹ half is a typed-sorry blocker
-  % independent of the H⁰ half — i.e. the prover can attack the H⁰
-  % half against the existing project chain without waiting for the
-  % H¹ machinery, and the present skyscraper lemma waits for the H¹
-  % gap to clear.
-
   Combining the two halves through the definition of \(\chi\),
   \(\chi(k(P)) = 1 - 0 = 1\), closes the lemma.
 \end{proof}
 
-\begin{lemma}[Global sections of the structure sheaf are one-dimensional]
+\begin{lemma}\leanok
+[Global sections of the structure sheaf are one-dimensional]
   \label{lem:finrank_H0_toModuleKSheaf_eq_one}
   \lean{AlgebraicGeometry.Scheme.finrank_H0_toModuleKSheaf_eq_one}
   \uses{def:Scheme_HModule, def:Scheme_toModuleKSheaf}
@@ -499,7 +436,8 @@ independently of the parent inductive argument.
   Proved directly in Lean.
 \end{proof}
 
-\begin{lemma}[\(\chi\)-additivity across a short exact sequence with skyscraper cokernel]
+\begin{lemma}\leanok
+[\(\chi\)-additivity across a short exact sequence with skyscraper cokernel]
   \label{lem:euler_char_of_shortExact_skyscraper}
   \lean{AlgebraicGeometry.Scheme.eulerCharacteristic_of_shortExact_skyscraper}
   \uses{def:eulerChar_curve, lem:euler_char_shortExact_add,
@@ -539,12 +477,11 @@ independently of the parent inductive argument.
 
 The base case and the single-point inductive step of the
 \(\chi\)-identity \cref{thm:euler_char_eq_deg_plus_one_minus_genus} are
-pinned as three named Lean lemmas. Each references the line bundle
-\(\mathcal O_C(D)\) of \texttt{RR.3} (\cref{def:sheafOf}) and so carries a
-typed-sorry transitivity inherited from that sibling chapter; the
-arithmetic scaffolding around \(\chi\) is, however, honest.
+pinned as three named lemmas. Each references the line bundle
+\(\mathcal O_C(D)\) (\cref{def:sheafOf}).
 
-\begin{lemma}[Base case of the \(\chi\)-identity]
+\begin{lemma}\leanok
+[Base case of the \(\chi\)-identity]
   \label{lem:euler_char_sheafOf_zero}
   \lean{AlgebraicGeometry.Scheme.eulerCharacteristic_sheafOf_zero}
   \uses{def:eulerChar_curve, lem:finrank_H0_toModuleKSheaf_eq_one,
@@ -575,7 +512,8 @@ arithmetic scaffolding around \(\chi\) is, however, honest.
   (\cref{def:genus}). Hence \(\chi(\mathcal O_C(0)) = 1 - g(C)\).
 \end{proof}
 
-\begin{lemma}[Unit inductive step of the \(\chi\)-identity]
+\begin{lemma}\leanok
+[Unit inductive step of the \(\chi\)-identity]
   \label{lem:euler_char_sheafOf_succ}
   \lean{AlgebraicGeometry.Scheme.eulerCharacteristic_sheafOf_succ}
   \uses{def:eulerChar_curve, lem:euler_char_of_shortExact_skyscraper,
@@ -604,7 +542,8 @@ arithmetic scaffolding around \(\chi\) is, however, honest.
   \(\chi(\mathcal O_C([Y] + D)) = \chi(\mathcal O_C(D)) + 1\).
 \end{proof}
 
-\begin{lemma}[General single-point inductive step of the \(\chi\)-identity]
+\begin{lemma}\leanok
+[General single-point inductive step of the \(\chi\)-identity]
   \label{lem:euler_char_sheafOf_single_add}
   \lean{AlgebraicGeometry.Scheme.eulerCharacteristic_sheafOf_single_add}
   \uses{def:eulerChar_curve, lem:euler_char_sheafOf_succ, def:sheafOf}
@@ -695,7 +634,6 @@ arithmetic scaffolding around \(\chi\) is, however, honest.
 % On the other hand, \(\deg D + P = \deg D + 1\), so our formula is true
 % for \(D\) if and only if it is true for \(D + P\), as required."
 \begin{proof}
-  \leanok
   \uses{def:eulerChar_curve, def:l_invariant,
     lem:euler_char_shortExact_add, lem:euler_char_iso,
     lem:euler_char_skyscraperSheaf}
@@ -723,11 +661,9 @@ arithmetic scaffolding around \(\chi\) is, however, honest.
   proper geometrically irreducible curve over the algebraically
   closed field \(\bar k\), so its connected components agree with its
   geometrically connected components, and $H^0(C, \mathcal O_C)
-  \cong \bar k$ as $\bar k$-vector spaces (the Hartshorne~I.3.4
-  statement that ``\(H^0(X, \mathcal O_X) = k\) for any projective
-  variety'' over an algebraically closed field; the Mathlib home is
-  the project's \(H^0\)-bridge in
-  \texttt{Cohomology\_StructureSheafModuleK.tex}). Substituting these
+  \cong \bar k$ as $\bar k$-vector spaces (Hartshorne~I.3.4: $H^0(X,
+  \mathcal O_X) = k$ for any projective variety over an algebraically
+  closed field). Substituting these
   two values gives \(1 - g = 1 - g\), as required.
 
   \emph{Inductive step (Hartshorne's ``\(D \leftrightsquigarrow D + P\)''
@@ -789,29 +725,6 @@ arithmetic scaffolding around \(\chi\) is, however, honest.
   from \(D = 0\) to every \(D \in \mathrm{Div}(C)\) by induction on the (signed)
   number of generators in the expression of \(D\).
 
-  \emph{Lean reference note on the three substrate lemmas.} The
-  inductive step of this proof consumes three substantive substrate
-  lemmas, each pinned to its own Lean declaration in
-  \texttt{AlgebraicJacobian/RiemannRoch/RRFormula.lean}: the additivity
-  \cref{lem:euler_char_shortExact_add} (\(\chi\) on a short
-  exact sequence, gated on the project-side
-  \(\Module \bar k\)-flavoured Ext-LES carrier + Grothendieck
-  vanishing + six-term rank-counting), the iso-invariance
-  \cref{lem:euler_char_iso} (\(\chi\) on
-  isomorphism classes, axiom-clean against Mathlib's
-  \(\Ext\)-postcomposition API; closed iter-186), and the skyscraper
-  identity \cref{lem:euler_char_skyscraperSheaf}
-  (\(\chi(k(P)) = 1\), splitting into an H\(^0\) half closed against
-  the project's existing \(H^0\)-bridge and an H\(^1\) half gated on
-  Mathlib flasque-cohomology — see the lemma's annotated proof body).
-  Mathlib \texttt{b80f227} provides the Euler-characteristic API
-  \texttt{Mathlib.Algebra.Homology.EulerCharacteristic}
-  (\texttt{HomologicalComplex.eulerChar},
-  \texttt{GradedObject.eulerChar}) but does \emph{not} ship the
-  specific additivity statement
-  \texttt{CategoryTheory.ShortExact.eulerChar\_additive} at the
-  \(\Module \bar k\)-flavoured sheaf-cohomology level the project
-  consumes; the additivity lemma is the project-side bridge.
 \end{proof}
 
 \section{The Riemann--Roch formula in genus zero}
@@ -851,7 +764,6 @@ arithmetic scaffolding around \(\chi\) is, however, honest.
 \end{theorem}
 
 \begin{proof}
-  \leanok
   
   Specialising
   \cref{thm:euler_char_eq_deg_plus_one_minus_genus} to the genus-\(0\)
@@ -876,34 +788,17 @@ arithmetic scaffolding around \(\chi\) is, however, honest.
 
   \emph{The \(H^1\)-vanishing input.} On a smooth proper geometrically
   irreducible curve \(C / \bar k\) with \(g(C) = 0\), the vanishing
-  \(H^1(C, \mathcal O_C(D)) = 0\) for \(\deg(D) \geq 0\) is the Hartshorne
-  formulation Lemma~1.2 read covariantly: \(\ell(D) \neq 0\) forces
-  \(\deg(D) \geq 0\); equivalently, for a curve where every
-  degree-\(0\)-or-higher invertible sheaf is generated by global
-  sections after a single point-twist, \(H^1\) of the twist must vanish
-  by the long exact sequence of the skyscraper extension at any
-  closed point. In the chain of sub-build chapters, this \(H^1\)
-  vanishing is the natural content of \texttt{RR.3} (sibling chapter
-  \texttt{RiemannRoch\_OcOfD.tex}, to be added), where the line
-  bundle \(\mathcal O_C(D)\) and its cohomology are constructed; once
-  \texttt{RR.3} is closed, the present theorem inherits the
-  vanishing as an instance, and the proof closes verbatim as
-  displayed. Pending \texttt{RR.3}, the Lean signature
-  \texttt{l\_eq\_degree\_plus\_one\_of\_genus\_zero} threads the
-  \(H^1\)-vanishing hypothesis explicitly as a named premise; the
-  iteration that closes \texttt{RR.3} then drops the premise in a
-  follow-up signature simplification.
+  \(H^1(C, \mathcal O_C(D)) = 0\) for \(\deg(D) \geq 0\) follows from
+  the \(\chi\)-identity and the fact that \(\ell(D) = \chi(\mathcal O_C(D)) +
+  \dim H^1 \geq 0\) forces \(H^1 = 0\) when \(\chi = \deg(D) + 1 > 0\).
+  The cohomology of \(\mathcal O_C(D)\) is constructed in \texttt{RR.3}
+  (\cref{chap:RiemannRoch_OcOfD}).
 
-  \emph{Sub-build note for \texttt{RR.4}.} The downstream consumer of
-  this theorem is the genus-\(0\) classification
-  \cref{prop:rigidity_genus0_curve_to_AV} of
-  \texttt{AbelianVarietyRigidity.tex}: with \(\ell(D) = \deg(D) + 1\)
-  and the degree-zero principal-divisor identity
-  (\cref{thm:principal_deg_zero}), Hartshorne's Example~1.3.5 chain
-  produces a degree-\(1\) morphism \(C \to \mathbb P^1_{\bar k}\) via
-  \texttt{Proj.fromOfGlobalSections} applied to the two-dimensional
-  \(H^0(C, \mathcal O_C([P]))\), which is then upgraded to an
-  isomorphism in \texttt{RR.4}.
+  \emph{Context for \texttt{RR.4}.} With \(\ell(D) = \deg(D) + 1\) and
+  the degree-zero principal-divisor identity (\cref{thm:principal_deg_zero}),
+  Hartshorne's Example~1.3.5 chain produces a degree-\(1\) morphism
+  \(C \to \mathbb P^1_{\bar k}\), which is then upgraded to an isomorphism
+  in \texttt{RR.4} (\cref{thm:genus_zero_curve_iso_p1}).
 \end{proof}
 
 \section{Out of scope}

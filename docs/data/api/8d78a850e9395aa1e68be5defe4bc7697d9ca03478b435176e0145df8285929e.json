@@ -1,0 +1,139 @@
+[
+  {
+    "timestamp": "2026-06-20T11:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "tensorPowAdd_assoc"
+    },
+    "session": {
+      "id": "session_25",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "tensorPowAdd_assoc_succ_core",
+        "tensorObjWhiskerRightIso_eq",
+        "tensorObjWhiskerLeftIso_eq",
+        "tensorPowAdd_succ",
+        "tensorObjWhiskerRightIso_tensorObj",
+        "MonoidalCategory.pentagon"
+      ],
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ],
+      "note": "B6 — 8-iter plateau (017->024) BROKEN. Succ case closed via generic-M core + exact (M:=LocalizedMonoidal). Statement un-weakened (forall L, no IsInvertible). Verified axiom-clean first-hand via lean_verify."
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Build generic-M core tensorPowAdd_assoc_succ_core standalone (no LocalizedMonoidal/X.Modules comp-instance diamond present when M is a free var), then wire into succ branch via exact with M pinned to LocalizedMonoidal so isDefEq bridges the rfl-defeq diamond.",
+        "code_tried": "private lemma tensorPowAdd_assoc_succ_core {M}[Category M][MonoidalCategory M] (...~17 bridge isos, 6 mu morphisms, foldhyp, hmu5...) : <canonical pentagon hom eqn> := by rw [hmu5]; have foldhyp' := (cancel_epi iABCL.inv).mp foldhyp; simp only [Category.assoc, Iso.hom_inv_id_assoc, whiskerLeft_hom_inv_assoc, inv_hom_whiskerRight_assoc]; rw [foldhyp']; simp only [...comp_whiskerRight, whiskerLeft_comp, hom_inv_whiskerRight_assoc, whiskerLeft_hom_inv_assoc]; rw [<- associator_inv_naturality_left_assoc]; simp only [whisker_assoc, whisker_exchange_assoc]; monoidal",
+        "line_number": "3072-3108 (core); 3251-3259 (exact wire); set_option maxRecDepth 4000 at 3114",
+        "lean_error": "none",
+        "goal_before": "succ-case canonical pentagon residual (tensorObjIso bridges, mu-atom homs, alpha, whiskerings)",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "monoidal ALONE stalls — cannot peel non-structural mu-atoms nor cancel opaque iso pairs; needs the explicit fold (foldhyp'=ihRh) + ONE associator_inv_naturality_left + whisker_exchange BEFORE monoidal. Staging into sub-lemmas (plan directive) was unnecessary — closes in one chain. exact's isDefEq crosses the comp-instance diamond that rw/simp/erw/hc-bridge all fail on."
+      }
+    ],
+    "next_steps": "B6 done. Unblocks B7 sectionsMul_mul_assoc ingredient (3). B7 still needs ingredient (2) = mu-slide naturality of whiskered sectionsMul."
+  },
+  {
+    "timestamp": "2026-06-20T11:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "tensorPowAdd_assoc_succ_core"
+    },
+    "session": {
+      "id": "session_25",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "monoidal",
+        "associator_inv_naturality_left_assoc",
+        "whisker_exchange_assoc",
+        "cancel_epi"
+      ],
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ],
+      "note": "NEW private generic-M coherence core. Helper-exempt (no blueprint pin needed per lvbc). Coverage-debt candidate for planner."
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Develop standalone via lean_run_code in a generic monoidal M (single category instance => no diamond).",
+        "code_tried": "see tensorPowAdd_assoc attempt 1",
+        "line_number": "3072",
+        "lean_error": "iterated: type-mismatch on intermediate atom ordering, 'simp made no progress', 'unsolved goals' — resolved by reordering simp sets and inserting the single associator_inv_naturality_left rewrite",
+        "result": "success",
+        "insight": "Building in generic M removes the LocalizedMonoidal/X.Modules diamond from the error-prone development phase entirely; lean_run_code iterates fast there."
+      }
+    ],
+    "next_steps": "Add 1-to-1 blueprint coverage entry (optional, helper-exempt)."
+  },
+  {
+    "timestamp": "2026-06-20T11:30:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "sectionsMul_mul_assoc"
+    },
+    "session": {
+      "id": "session_25",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Ingredient (2) unbuilt: mu-slide naturality of whiskered sectionsMul (general comparison Gamma(mu) in place of single eta, analogue of B2/B3). Ingredients (1)=B5 tensorObjAssoc_hom_sectionsMul and (3)=B6 tensorPowAdd_assoc are now both DONE.",
+      "key_lemmas_used": [
+        "gMul_mul_apply",
+        "tensorObjAssoc_hom_sectionsMul (B5)",
+        "tensorPowAdd_assoc (B6, now closed)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Not attempted this iter — full lane budget went to B6. B7 honest typed sorry retained.",
+        "code_tried": "simp only [gMul_mul_apply]; sorry",
+        "line_number": "3264-3289",
+        "result": "partial",
+        "insight": "Now the SOLE in-cone open SNAP sorry. Closest target: assemble (1)+(3) [done] with the new (2) mu-slide helper, mirroring sectionsMul_mul_one (hmu_n0 reindexing)."
+      }
+    ],
+    "next_steps": "iter-026: build the mu-slide naturality helper, then assemble B7 mirroring sectionsMul_mul_one."
+  },
+  {
+    "timestamp": "2026-06-20T11:30:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "sectionsMul_mul_comm / tensorPowAdd_comm / tensorBraiding_self_eq_id_of_isInvertible"
+    },
+    "session": {
+      "id": "session_25",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Invertibility-gated FUTURE work, NO consumer. sectionsMul_mul_comm is FALSE for general L (section ring = free tensor algebra); the [IsInvertible L] version is the real target, gated on tensorBraiding_self_eq_id_of_isInvertible (beta_{L,L}=1, local-to-global, NOT at top). Honest typed sorries, signatures correctly [IsInvertible L]-gated."
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Deferred (no consumer until GCommSemiring assembly is built).",
+        "code_tried": "honest typed sorry at the precise residual",
+        "line_number": "3301/3315/3336",
+        "result": "partial",
+        "insight": "Plan agent should NOT re-assign — gated, no consumer."
+      }
+    ],
+    "next_steps": "Defer until GCommSemiring assembly has a consumer."
+  }
+]

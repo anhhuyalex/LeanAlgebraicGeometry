@@ -1,57 +1,44 @@
 # Pending Tasks
 <!-- Current open-task set, last-known state only. Per-attempt detail → iter sidecars. -->
 
-## Seed 1 — `pullbackTensorIsoOfLocallyTrivial` (D4′ chart-chase) — `TensorObjSubstrate.lean` — ACTIVE iter-033 (SOLO lane)
-STATE: body CLOSED. K1 residual `hmon` DECOMPOSED; **η-side CLOSED iter-028**; μ-side RHS + comparison-assembly
-CLOSED iter-029; **`pushforward_mu_appIso_collapse` CLOSED iter-031** (via new axiom-clean abstract helper
-`deltaConjOfMuComparison` + one-line `exact`; see task_done). **SOLE residual = `lhs_tmul`** (sorry@L4362).
-This is the import-chain ROOT; co-dispatching it with downstream lanes caused the iter-029 build-race
-(ARCHON_MEMORY), so it runs ALONE. **iter-032 deferred it to iter-033** because iter-032's mandated SOLO lane
-is the STUCK Terminal (TensorObjInverse, which imports this root — cannot co-run a root-churn). Blueprint
-`lem:pushforward_lax_mu_comparison_lhs_tmul` REWORDED + EXPANDED iter-032 (writer `lhs-tmul` + clean: statement
-→ per-section comparison form; first proof step = identify `hadj'` with `pushforwardPushforwardAdjunction` so
-the unit value lemma applies). iter-033 must land it (pc032: 4-iter recurring blocker, CHURNING).
-- **`pushforward_lax_mu_comparison_lhs_tmul`** (`lem:pushforward_lax_mu_comparison_lhs_tmul`, sorry@L4362)
-  — THE genuine residual (multi-hundred-LOC mate seam). Per-section comparison (let-chain + fixed `W`,
-  `tensor_ext` INSIDE — UNSTATABLE as a standalone pure-tensor lemma, module-instance trap). iter-029 committed
-  `tensor_ext` + `rw [Adjunction.rightAdjointLaxMonoidal_μ, Adjunction.homEquiv_unit]` (mate → explicit
-  `unit ≫ G.map(δGβ ≫ counit⊗counit)`); iter-031 committed the verified sectionwise split `rw [comp_app,
-  hom_comp, comp_apply]` (opaque mate-μ now the explicit 3-leg form). RESIDUAL = sectionwise value of the unfolded
-  mate on `m⊗ₜn`. **iter-033 NEXT STEP (the 4-iter wall):** un-`let` `hadj'` (or `change` to the
-  `pushforwardPushforwardAdjunction` form) so `pushforwardPushforwardAdj_unit_app_app_apply` keys on the unit leg;
-  then δGβ leg → `Functor.OplaxMonoidal.comp_δ` + `restrictScalars_μ_app_tmul`/`forget₂_restrictScalars_μ_hom_tmul`;
-  counit pair → bijective `f.appIso`. All via `erw` (no whnf), mirroring `pushforwardComp_lax_μ` for a MATE LHS.
-  Routing through `hadj'.IsMonoidal` is CIRCULAR.
-- Pin: `AlgebraicGeometry.Scheme.Modules.pullbackTensorIsoOfLocallyTrivial`. Blueprint §"K1 monoidal-mate
-  bridge". Reference: Stacks `lemma-tensor-product-pullback` — `references/stacks-modules.tex`.
+## Seed 1 — `pullbackTensorIsoOfLocallyTrivial` (D4′) — `TensorObjSubstrate.lean` — DONE iter-042 → see task_done.md
+DELIVERED: root GREEN (`lake build` EXIT 0, 8321 jobs), sorry-free. K1 `hδ` via `isIso_oplaxδ_of_conj` ←
+`pushforward_mu_appIso_collapse` (δ-conjugation on `deltaConjOfMuComparison`), SUPERSEDING the phantom
+`pullbackTensorMap_presheafDelta_eq`/`pullbackTensorComparison`. K1 witness PUBLIC (L4770). iters 039–041
+"delivered" were LSP stale-green — `lake build` is the only authority. Blueprint reconciled iter-043.
 
-## Terminal — `exists_tensorObj_inverse` (`lem:tensorobj_inverse_invertible`) — prover DEFERRED to iter-034 (effort-break iter-033)
-STATE: descent skeleton BUILT; collapse MECHANISM PROVEN (iter-028); **import chain GREEN since iter-031**.
-**pc032 reversal LIVE: route CONFIRMED STUCK (math/infra, not infra-flake).** iter-032's first clean green-window
-SOLO lane closed only S1 of `trivialisation_restrict_compat` (chart morphism `j=resLE`, reindex endpoints
-`hobjU`/`hobjV` — all proved in-proof) and replaced the bare sorry with a 4-square scaffold ending in a scoped
-sorry. The block is NOT a tactic gap — it is 5 bespoke per-constituent restriction-naturality squares. **iter-033
-corrective = blueprint EFFORT-BREAK (NOT a 4th blind prover lane):** split `lem:trivialisation_restrict_compat`
-into 5 named squares + telescope (effort-breaker `trivcompat-squares`). iter-034 then proves S2
-`tensorObj_restrict_iso` square first as the structural template. Both cocycle connectors EXIST:
-`homOfLocalCompat_restrictFunctor_map` (DualInverse:786), `image_preimage_of_le` (DualInverse:519). Two sorries:
-- **`trivialisation_restrict_compat` (`TensorObjInverse.lean` L183 sorry@~L244)** — restriction-functor
-  naturality of the trivialisation iso-chain. S1 CLOSED iter-032 (chart morphism `j`+reindex endpoints, kept as
-  scaffold — telescope consumes them). Residual = 5 per-constituent restrict-naturality squares against `j`
-  (tensorObj_restrict_iso; dual_restrict_iso≫dualIsoOfIso eM; dual_unit_iso; tensorObj_unit_iso; +
-  blueprint-OMITTED `uι`=restrictFunctorIsoPullback≫pullbackUnitIso). Each is a composite pullback+sheafification
-  iso, NO codebase precedent. effort-broken into sub-lemmas iter-033. Mirror `restrictIsoUnitOfLE`
-  (`analogies/cocycle-a.md` §A); memory [[restrictfunctor-glued-morphism-pattern]] (`SheafOfModules.Hom.ext`
-  before `PresheafOfModules.hom_ext`; `eqToHom_comp_iff`+`exact`-matched naturality; forward `rw [naturality]`
-  fails on X-vs-restrict defeq). DEAD probes (iter-032): subst/rcases on `hVU:V≤U` (not eqn),
-  `simp[restrictIsoUnitOfLE]`, `congr 1`/`Iso.eq_inv_comp`/`Hom.ext`.
-- **Cocycle `exists_tensorObj_inverse` (`TensorObjInverse.lean` sorry@~L438, `first | <derivation> | sorry`)** —
-  **FULL iso-algebra reduction DERIVED + written in-code iter-029, hedged iter-030** (paper- + abstract-verified
-  `/- Planner strategy -/` block): `erw [trivialisation_restrict_compat …]` reduces both overlap legs to one `t`;
-  `dualIsoOfIso_trans` + insert `dual_unit_iso ≪≫ dual_unit_iso.symm = 𝟙` ⇒ `dualLeg eMj = dualLeg eMi ≪≫ sConj`;
-  `tensorObjIsoOfIso_trans` factors RHS; the residual is EXACTLY `tensorObj_unit_self_duality_collapse t`
-  (sorry-free). iter-032: on the green tree, verify the `first` branch fires + **strip the `| sorry` hedge**;
-  transitively gated on `trivialisation_restrict_compat`. NEVER sheafify-the-eval (d.2 dead-end).
+## ROOT gap-fill — `conjugateEquiv_restrictFunctorComp_inv` (`TensorObjSubstrate.lean`) — DONE iter-048 → see task_done.md
+CLOSED public, axiom-clean (lake EXIT 0). iter-046 "irreducible" verdict overturned (abstract
+`leftAdjointCompIso`-on-`pushforwardComp` route; NEVER `ext` the conjugate-headed goal). Now consumable by terminal.
+
+## Terminal — `exists_tensorObj_inverse` (`lem:tensorobj_inverse_invertible`) — `TensorObjInverse.lean` — GREEN-mod-sorry (6); B1-crux engine iter-051
+STATE: **Bridge B2 FULLY CLOSED iter-050** (the 044–049 blocker, gone) — `restrictFunctorIsoPullback_comp_compat`
++ `_hom` helper sorry-free, 6 axiom-clean lemmas (5 per-leg + assembled). Sorry 7→6. The iter-049/050 HARD STOP
+(B2 `_hom` survives → refactor) is SATISFIED (`_hom` closed) and does NOT apply to B1-crux. progress-critic
+terminal051: **CONVERGING, dispatch=OK**.
+Current 6 sorries: B1-crux `H1inv_app_eq_pullbackVal_restrict` (L493), squares S2/S3/S4a/S4b
+(L594/L616/L640/L656), `trivialisation_restrict_compat` (L787).
+- **iter-051 PRIMARY = B1-crux** `H1inv_app_eq_pullbackVal_restrict` (L493) — the sole "engine" sorry; squares
+  ride it + B2. Body reduced (iter-045) to the isolated CRUX unit identity. Route (in-code L466–492; blueprint
+  `lem:h1inv_app_eq_pullbackval_restrict`): `rw [pullbackValIso, restrictFunctorIsoPullback]; simp; rw
+  [sheafificationCompPullback_eq_leftAdjointUniq]` (root L1511) → `leftAdjointUniq_trans`/`conjugateEquiv_comp`
+  coherence + `leftAdjointUniqUnitEta` (root L1531) for the SCPB unit leg. Crosses the presheaf/sheaf
+  SHEAFIFICATION BOUNDARY — harder than B2's clean restrict/pullback world. iter-050 conjugate toolkit (c₅,
+  reindexCongr, whiskers, LHS-collapse keystone `conjugateEquiv_restrictFunctorIsoPullback_hom`) now available.
+  **B1-crux HARD STOP (AUTONOMOUS): if it survives with no advance, effort-break the unit identity AND/OR
+  mathlib-analogist cross-domain on "sheafification-unit intertwines presheaf/sheaf adjoint-uniqueness"; NOT user
+  escalation, NOT the restrictCompReindex→pullback refactor (wrong target — that addressed B2, done).**
+- **S2** (L594) — B1 (body closed) + `pullbackTensorMap_restrict`/`_natural` + B2. **S4b** (L656) — S2+S4c+left-unitor.
+- **S4c** `trivialisation_uIota_restrict_compat` — CLOSED iter-041, sorry-free (transitively on B2).
+- **S3** (L616) / **S4a** (L640) — dual gap, thin-poset `subsingleton` route (b) UNVERIFIED; if it stalls,
+  leave clean-sorry. Route (a) full `pullbackDualMap` cone (~150–250 LOC) deferred.
+- **`trivialisation_restrict_compat`** (L787) — telescope of the 5 squares; only after they close. DEAD probes:
+  `restrictFunctorComp.hom.naturality φ` (morphism, iter-040); subst/rcases on `hVU:V≤U`, `simp[restrictIsoUnitOfLE]`,
+  `congr 1`/`Iso.eq_inv_comp`/`Hom.ext`. `erw`/term-`exact` not `rw` ([[tensorobjinverse-red-at-source]]).
+- **Cocycle `exists_tensorObj_inverse`** — CLOSED modulo `trivialisation_restrict_compat` (iter-038, green). Full
+  iso-algebra reduction in-code; `have ht` uses term-mode `exact` (every `rw`/`simp` of a category lemma misses on
+  the defeq-not-syntactic SheafOfModules `≫`). NEVER sheafify-the-eval (d.2 dead-end). DEAD: `rfl`, `simp
+  [tensorObjIsoOfIso_trans/refl, dualIsoOfIso_trans/refl]` (iso-level, goal is `.val.app`-section level).
 - **Residual B** — CLOSED iter-026. Recipe `rem:dual_discharges_inverse`. Non-critical branch (seed-3
   `map_add` rides seed-1→K1).
 

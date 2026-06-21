@@ -1,0 +1,67 @@
+[
+  {
+    "timestamp": "2026-06-21T03:25:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/SmoothStalkDVR.lean",
+      "theorem": "AlgebraicGeometry.finrank_cotangentSpace_stalk_eq_one_of_smooth"
+    },
+    "session": {
+      "id": "session_11",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "Algebra.finrank_cotangentSpace_localization_eq_one_of_isStandardSmooth_dim_one",
+        "isLocalization_stalk_standardSmooth_chart_of_smooth",
+        "TopCat.Presheaf.algebra_section_stalk",
+        "RingHom.domain_nontrivial",
+        "Algebra.IsStandardSmoothOfRelativeDimension.isStandardSmooth",
+        "Algebra.FiniteType.of_surjective",
+        "IsAlgClosed.algebraMap_bijective_of_finiteType",
+        "Algebra.algebraMap_residueField_surjective_of_isLocalization_atPrime",
+        "isClosed_singleton_of_coheight_eq_one",
+        "IsAffineOpen.primeIdealOf_isMaximal_of_isClosed",
+        "subsingleton_kaehlerDifferential_of_algebraMap_bijective",
+        "subsingleton_h1Cotangent_of_algebraMap_bijective"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Apply abstract bridge finrank_cotangentSpace_localization_eq_one_of_isStandardSmooth_dim_one at k=kbar, S=Γ(C.left,V), T=stalk x, M=primeCompl; obtain chart via isLocalization_stalk_standardSmooth_chart_of_smooth, instances via algebraize",
+        "code_tried": "obtain ⟨V,hV,hxV,ψ,hψ,hLoc⟩ := isLocalization_stalk_standardSmooth_chart_of_smooth C x; letI instST := algebra_section_stalk ⟨x,hxV⟩; algebraize [ψ, (algebraMap S T).comp ψ]; refine finrank_cotangentSpace_localization_eq_one_of_isStandardSmooth_dim_one ...",
+        "line_number": "335",
+        "lean_error": "failed to synthesize instance Subsingleton (Algebra.H1Cotangent kbar (IsLocalRing.ResidueField (stalk x)))",
+        "goal_before": "Module.finrank (ResidueField (stalk x)) (CotangentSpace (stalk x)) = 1",
+        "goal_after": "two Subsingleton obligations on kaehlerDifferential / H1Cotangent of kbar→κ(x)",
+        "result": "partial",
+        "insight": "Bridge applies but leaves residue-field Subsingleton obligations; planner-feared diamond (bridge scalar-tower Algebra kbar κ(x) vs scheme residueFieldAlgebra) surfaces here"
+      },
+      {
+        "attempt": 2,
+        "strategy": "GOTCHA found: `set S/T` before algebraize renames ψ→ψ✝ and kills @[algebraize]-driven standard-smooth instance synthesis; work inline with ↑Γ(C.left,V) and ↑(stalk x)",
+        "code_tried": "removed `set S`/`set T`; algebraize [ψ, (algebraMap ↑Γ(C.left,V) ↑(stalk x)).comp ψ]; haveI : Nontrivial ↑Γ(C.left,V) := (algebraMap S T).domain_nontrivial",
+        "line_number": "335",
+        "lean_error": null,
+        "goal_before": "same",
+        "goal_after": "standard-smooth + finite-type instances now synthesize; Subsingleton obligations remain",
+        "result": "partial",
+        "insight": "Inline names preserve algebraize instance synthesis (Algebra.IsStandardSmoothOfRelativeDimension 1 kbar S)"
+      },
+      {
+        "attempt": 3,
+        "strategy": "DISSOLVE the diamond: prove bijectivity of the bridge's OWN algebraize residue-field map directly, never invoking residueFieldAlgebra. New helper for S↠κ(T) surjectivity at maximal localisation; x closed ⇒ p maximal; FiniteType κ(x) over kbar; IsAlgClosed bijection",
+        "code_tried": "Algebra.algebraMap_residueField_surjective_of_isLocalization_atPrime (Bezout-style via IsLocalRing.residue_surjective + IsLocalization.mk'_surjective + AtPrime.to_map_mem_maximal_iff); p maximal via isClosed_singleton_of_coheight_eq_one + IsAffineOpen.primeIdealOf_isMaximal_of_isClosed; FiniteType.of_surjective; algebraMap_bijective_of_finiteType; subsingleton_{kaehlerDifferential,h1Cotangent}_of_algebraMap_bijective hbij",
+        "line_number": "335",
+        "lean_error": null,
+        "goal_before": "same",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Subsingletons land in EXACTLY the algebraize instance the bridge resolves ⇒ no defeq/algebra_ext reconciliation needed. lean_verify: {propext, Classical.choice, Quot.sound}. lake build success."
+      }
+    ],
+    "next_steps": "Scheme pin CLOSED. iter-012: wire into OcOfD L632 substrate (import SmoothStalkDVR; instIsRegularInCodimensionOneOfSmooth via stalk_isDVR_of_smooth which itself uses this pin). Planner: blueprint-writer to retarget lem:cotangentSpace_finrank_eq_one_of_smooth prose+\\uses to the surjectivity route (drop stale codimOne_point_residueField_eq_kbar \\uses) and blueprint the new helper."
+  }
+]

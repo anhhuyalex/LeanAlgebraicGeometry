@@ -1,0 +1,99 @@
+[
+  {
+    "timestamp": "2026-06-20T08:51:18Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "exists_tensorObj_inverse"
+    },
+    "session": {
+      "id": "session_38",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "was RED-at-source (uncompilable) iters ~030-038; now green-mod-sorry, closed modulo trivialisation_restrict_compat",
+      "key_lemmas_used": [
+        "Iso.hom_inv_id_assoc",
+        "Iso.ext",
+        "Iso.trans_hom",
+        "Iso.symm_hom"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "dedent cocycle derivation block to the tactic column to kill parse error",
+        "code_tried": "sed -i '429,473 s/^   //' (3-space dedent from 9 to 6 spaces)",
+        "line_number": "429-473",
+        "lean_error": "before: 'unexpected identifier; expected ')', ',' or ':'' at 399:38 (block read as simp-arg continuation)",
+        "result": "success",
+        "insight": "9-space tactic indent inside a 6-space `by` block parsed L429 `erw` as a continuation of the prior `simp only` argument list; re-aligning to 6 spaces removed the parse error, surfacing the real residual error."
+      },
+      {
+        "attempt": 2,
+        "strategy": "original have ht rewrite chain",
+        "code_tried": "rw [ht_def, ← Iso.trans_assoc, Iso.self_symm_id, Iso.refl_trans]",
+        "line_number": "438",
+        "lean_error": "Tactic `rewrite` failed: Did not find an occurrence of the pattern",
+        "result": "failed",
+        "insight": "SheafOfModules `≫`/`Iso.hom`/`Iso.inv` composites are defeq-but-not-syntactic; every `rw`/`simp` of a category/Iso lemma silently fails to pattern-match even when the goal displays as exactly that pattern."
+      },
+      {
+        "attempt": 3,
+        "strategy": "lower to hom-level via Iso.ext then close in term mode",
+        "code_tried": "apply Iso.ext; rw [ht_def]; simp only [Iso.trans_hom, Iso.symm_hom]; exact Iso.hom_inv_id_assoc eMi eMj.hom",
+        "line_number": "437-443",
+        "lean_error": "",
+        "result": "success",
+        "insight": "`apply Iso.ext` + `simp only [Iso.trans_hom, Iso.symm_hom]` reduces to `eMi.hom ≫ eMi.inv ≫ eMj.hom = eMj.hom`; term-mode `exact` discharges via unification through the defeq that `rw` cannot key-match. hfact/hiso/hchain compiled as-is — only `ht` needed the term-mode fix. No re-hedging."
+      }
+    ],
+    "next_steps": "iter-040 (Route-B even slot, root frozen): add project-local restriction-composition iso `M.restrict (j ≫ f) ≅ (M.restrict f).restrict j` (absent from project + Mathlib SheafOfModules API — verified by grep + loogle) as the keystone for all 5 telescope squares; then scaffold S2-S4c stub signatures; then prove S2 first as template; wire telescope into trivialisation_restrict_compat."
+  },
+  {
+    "timestamp": "2026-06-20T08:51:18Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "trivialisation_restrict_compat"
+    },
+    "session": {
+      "id": "session_38",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "5 precedent-less restrict-naturality square lemmas (S2/S3/S4a/S4b/S4c) each needing a restriction-composition iso M.restrict (j ≫ f) ≅ (M.restrict f).restrict j that is ABSENT from project + Mathlib",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "assess STRETCH 5-square scaffold; search for the keystone restriction-composition iso",
+        "code_tried": "grep restrictFunctorComp/restrictComp/restrict_comp over project + Mathlib Algebra/Category/ModuleCat/Sheaf/; loogle \"SheafOfModules.restrict (?g ≫ ?f)\"",
+        "line_number": "183-244",
+        "lean_error": "no results (keystone iso absent)",
+        "result": "failed",
+        "insight": "Without the restriction-composition iso the 5 stub signatures cannot be written cleanly; a mistyped signature turns the now-green file RED, which the directive forbids. Left the honest sorry rather than add precedent-less risky stubs."
+      }
+    ],
+    "next_steps": "iter-040: build the restriction-composition iso first (keystone), then scaffold + prove S2 as template (blueprint 6502-6563), then S3/S4a/S4b/S4c, then assemble telescope."
+  },
+  {
+    "timestamp": "2026-06-20T08:51:18Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjSubstrate.lean",
+      "theorem": "pushforward_lax_mu_comparison_lhs_tmul"
+    },
+    "session": {
+      "id": "session_38",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Route-A (root-churning) not dispatched this iter; iter-038 was the Route-B even-slot per the binding interleave schedule. Residual = telescope steps 3-4 (δ-leg peel + counit-pair collapse + open-immersion triangle cancel) from iter-037.",
+      "key_lemmas_used": []
+    },
+    "attempts": [],
+    "next_steps": "iter-039 (Route-A odd slot, SOLO): continue lhs_tmul telescope steps 3-4 using restrictScalars_δ_app_tmul + pushforwardPushforwardAdj_counit_app_app_apply (both landed iter-037), via the wall-#1 fvar-keyed-`have`+`erw` recipe."
+  }
+]

@@ -25,6 +25,77 @@ Current scope and live state live in [`PROGRESS.md`](PROGRESS.md) and
 ## Knowledge Base
 
 ### Proof Patterns (reusable across targets)
+- **Conjugate-telescope CLOSED Bridge B2 (iter-050) — the leg-by-leg recipe, fully landed.** Confirms the
+  iter-049 prediction (`mateEquiv_hcomp`/`vcomp` NOT needed). To prove a NatTrans equality between two left
+  adjoints of a common right adjoint G whose RHS chain has fixed `(C,D)`: `apply (conjugateEquiv (pPA …)
+  (rA …)).injective`; collapse the LHS to `𝟙` with the keystone **`conjugateEquiv_restrictFunctorIsoPullback_hom`**
+  (`conjugateEquiv … (leftAdjointUniq …).hom = 𝟙`, itself proved by `Equiv.apply_eq_iff_eq_symm_apply` +
+  `simp only [restrictFunctorIsoPullback, Adjunction.leftAdjointUniq, conjugateIsoEquiv_symm_apply_inv,
+  Iso.refl_inv]`); then **N explicit `← conjugateEquiv_comp` splits** through the intermediate adjunctions
+  G₀..G₆ (Lean can't infer the middle adj₂ — thread each explicitly); rewrite each leg with its
+  pushforward-world value (comp legs ↦ `conjugateEquiv_restrictFunctorComp_inv` / `conjugateEquiv_pullbackComp_hom`;
+  whisker legs c₃/c₄ ↦ `conjugateEquiv_whiskerRight/Left` + the LHS keystone + `Functor.whisker{Left,Right}_id'`;
+  congruence legs c₁/c₆ ↦ `conjugateEquiv_reindexCongr` = `subst h; simp only [pullbackCongr, eqToIso_refl,
+  conjugateEquiv_id, Iso.symm_hom]; convert conjugateEquiv_id …; ext; simp`); cancel the `pushforwardComp`
+  hom/inv pair with `Iso.inv_hom_id_assoc`; finish with `conjugateEquiv_reindexCongr`. Build EXIT 0,
+  axiom-clean (both auditors confirmed). The `pushforwardComp_reindex_telescope` "5th lemma" was done INLINE,
+  never extracted (its blueprint `\lean{}` is dangling).
+- **`conjugateEquiv` distributes LEG-BY-LEG when the whole comparison chain has fixed `(C,D)` (iter-049,
+  the B2-helper/B1-crux telescope recipe — supersedes `b2mate045.md`):** when proving a NatTrans identity
+  between two left adjoints of a common right adjoint, where EVERY intermediate functor in the RHS chain
+  lives over the SAME `(C,D)` (here `X.Modules ⥤ V.Modules`), apply `conjugateEquiv`-injectivity onto the
+  shared right adjoint, then distribute the conjugate **leg-by-leg via `← conjugateEquiv_comp`** through the
+  explicit intermediate adjunctions — `mateEquiv_hcomp`/`mateEquiv_vcomp`/`iterated_mateEquiv_conjugateEquiv`
+  are **NOT needed** (the b2mate045 hcomp plan was wrong). Per-leg conjugate targets are all existing lemmas:
+  composition-comparison legs ↦ `conjugateEquiv_restrictFunctorComp_inv` (restrict) / inverse of
+  `conjugateEquiv_pullbackComp_inv` (pullback); whisker legs ↦ `unit_leftAdjointUniq_hom_app`; congruence
+  (eqToHom/`*Congr`) legs ↦ `pushforwardCongr`/eqToHom. The product telescopes to `𝟙` (comp·comp⁻¹ cancel;
+  congruences cancel against the reindex). Lean can't infer the intermediate adj₂ from a bare `rw` — thread
+  each `← conjugateEquiv_comp` split explicitly (~60–100 LOC bookkeeping, no missing ingredient). To reduce
+  the `.hom.app A` statement to the bare NatTrans identity first: `have hNat … := …; have happ := congr_app
+  hNat A; simpa only [NatTrans.comp_app, Functor.whiskerRight_app, Functor.whiskerLeft_app] using happ`.
+- **Carrier-diamond map-level finish: `rw [helper, Functor.map_comp ×N] + rfl`, NOT `congrArg (F).map`
+  (iter-049):** to discharge a `(pushforward V.ι).map (LHS) = (pushforward V.ι).map (RHS)` goal across the
+  heavy sheafification-laden `pushforward` carrier diamond, use `congr 1` (cancel the shared unit prefix)
+  then `rw [<hom-level helper>, Functor.map_comp, …×N]; rfl`. `exact congrArg (pushforward V.ι).map (helper …)`
+  blows the recursion/whnf depth limit on the heavy functor. (Pairs with `unit_leftAdjointUniq_hom_app.symm`
+  to replace `pullbackPushforwardAdjunction.unit` by `restrictAdjunction.unit ≫ pushforward.map (…)`.)
+- **Restrict-side conjugate-of-composition via ABSTRACT `leftAdjointCompIso` instantiation (iter-048,
+  closes `conjugateEquiv_restrictFunctorComp_inv`):** to prove `conjugateEquiv adj_comp adj_fg
+  (restrictFunctorComp f g).hom = (pushforwardComp f g).hom` — the restrict-world mirror of Mathlib's
+  `conjugateEquiv_pullbackComp_inv` — **never `ext` the conjugate-headed goal** (it whnf-bombs the
+  `SheafOfModules.pushforward` carrier diamond, root AND terminal alike, even at 1.6M hb +
+  `respectTransparency false`). Instead: `rw [show (restrictFunctorComp f g).hom =
+  (Adjunction.leftAdjointCompIso (restrictAdjunction g) (restrictAdjunction f) (restrictAdjunction
+  (f≫g)) (pushforwardComp f g)).inv from ?_]`; the main goal closes by `exact
+  Adjunction.conjugateEquiv_leftAdjointCompIso_inv _ _ _ _` (Mathlib `CompositionIso.lean`). The
+  residual `(restrictFunctorComp f g).hom = (leftAdjointCompIso …).inv` is a CONCRETE iso-hom equality
+  — the conjugate head is gone, so `ext M U : 3` is safe — discharged sectionwise by `simp only
+  [Adjunction.leftAdjointCompIso, conjugateIsoEquiv_symm_apply_inv, …, pushforwardComp_hom_app_app]`
+  + `erw [Hom.comp_app, restrictAdjunction_unit/counit_app_app, pushforward_map_app]` (every
+  `SheafOfModules ≫` / `.app`-value seam needs `erw`, plain `rw`/`simp only [Hom.comp_app]` MISSES),
+  merged at MAP level (`← M.presheaf.map_comp`, carrier never forced) and closed by `all_goals first
+  | rfl | (congr 1; exact Subsingleton.elim _ _)` (thin-poset; the closing `rfl` is heartbeat-flaky
+  through the diamond so the `Subsingleton.elim` branch is the robust fallback). KEY INSIGHT: the
+  iter-046 "circular / no abstract shortcut" claim was wrong — `leftAdjointCompIso` is *instantiated
+  on `pushforwardComp`*, not equated definitionally with `restrictFunctorComp`. Private `:= rfl`
+  helper `restrictFunctor_map_app'` (`((restrictFunctor f).map φ).app U = φ.app (f ''ᵁ U)`) drives the
+  reduction.
+- **Functor-image tensor distribution across carrier diamonds — `exact map_tensorHom_comp3 (C := …⋙ forget₂) …`
+  (B1 keystone close, iter-045):** to split `a.map ((η;p;ρ⁻¹) ⊗ (η;p;ρ⁻¹))` into the three-factor
+  `a.map(η⊗η) ; a.map(p⊗p) ; a.map(ρ⁻¹⊗ρ⁻¹)` form, **pin the monoidal category `(C := _root_.PresheafOfModules
+  (… ⋙ forget₂ CommRingCat RingCat))` and apply by `exact`**. `rw`/`simp only [← Functor.map_comp]` FAIL
+  ("did not find pattern" — the object between `η` and `forget p` is a defeq-not-syntactic carrier diamond);
+  `erw [← Functor.map_comp]`/`erw [← tensorHom_comp_tensorHom]` WHNF-BOMB (unfold `η` into `toSheafify`
+  internals); `rw [tensorHom_comp3]` fails `MonoidalCategory` synth. `exact` lets the kernel discharge every
+  diamond (incl. `𝟙 _.obj` vs `𝟙 _.val`) by defeq. ⚠ LSP reported this clean while `lake build` caught the
+  real `MonoidalCategory` synth failure — trust only `lake build`.
+- **`leftAdjointUniq` adjoint-uniqueness equation → `homEquiv`-injectivity + TERM `unit_leftAdjointUniq_hom_app`
+  (iter-045):** to prove `(adj₁.leftAdjointUniq adj₂).inv.app X = <RHS>`, `apply adj₂.homEquiv _ _ |>.injective;
+  rw [leftAdjointUniq_inv_app]; simp only [homEquiv_unit]; refine Eq.trans (unit_leftAdjointUniq_hom_app _ _ X) ?_`
+  reduces to a unit identity. `unit_leftAdjointUniq_hom_app` works ONLY as a term (`Eq.trans`), never as `rw`
+  (defeq-not-syntactic carrier; same as root `htri'`). The residual is pure mate-calculus
+  (`conjugateEquiv_comp`/`mateEquiv_hcomp`/`leftAdjointUniq_trans` + `leftAdjointUniqUnitEta`).
 - **Unit-naturality fold + generic-`exact` device (the D3′ Sq4 leaf unblock — CLOSED iter-019):** for a
   goal carrying leading sheafification units (`η`) + `forget` over the `SheafOfModules` carrier, apply
   `η` unit naturality on EACH leg to factor out a common leading `η ≫ forget(·)`, collapsing to a clean
@@ -283,8 +354,145 @@ Current scope and live state live in [`PROGRESS.md`](PROGRESS.md) and
   fire on the `⊗ₘ` form), `← Category.assoc`, `tensorHom_comp_tensorHom`; (3) `congr_arg₂ (·≫·) (congr_arg₂
   tensorHom h₁ h₂) hμ` assembles the final TAILLESS 2-factor equality defeq when neither `rw` nor `simp` can
   contract it. A load-bearing `show` to the clean instance form is needed before `rw [hLHS]` will key-match.
+- **fvar-keyed-`have` + `erw` fires a blocked `rfl` value-lemma (WALL #1 CRACKED, iter-036 — the 4-iter
+  `lhs_tmul` unit-leg blocker):** an `rfl` value-lemma (`pushforwardPushforwardAdj_unit_app_app_apply`:
+  `((adj.unit.app M).app U).hom x = (M.map (adj.counit.app U.unop).op).hom x`) refuses to fire on a heavy
+  tensor object `M = G(Gβ A) ⊗ G(Gβ B)` through a `hadj'`/`hadj` let-fvar. ALL of these are DEAD: bare
+  `rw [lemma]` ("did not find pattern"), `simp only [lemma]` ("no progress"), `simp only [hadj',hadj,lemma]`
+  (unfolds the fvar but lemma stays unused), a fresh `have … (Z := …⊗…)` (WALL #2: synthInstance
+  `MonoidalCategoryStruct (PresheafOfModules X.ringCatSheaf.obj)` — writing `⊗` re-elaborates the base ring
+  to the bad carrier head), explicit `M`/`x` from `m⊗ₜn` ("application type mismatch, ?M uninferable"), and
+  the fvar-keyed `have` + plain `rw` ("did not find pattern"). **WORKS:** state a ∀-`have hU` whose LHS is
+  keyed on the goal's OWN fvar (`(hadj'.unit.app M).app U`, with NO `⊗` written → dodges WALL #2), prove it
+  `fun M U x => lemma _ _ _ _ _ M U x` (defeq through the fvar, leading args inferred from expected type),
+  then **`erw [hU]`** — `erw` supplies the coercion/instance defeq that `rw` lacks. General recipe for any
+  value-lemma blocked by the *let-fvar-shadow + heavy-object* combination; earmarked to also fire
+  `tensorObj_map_tmul` and the future counit `rfl`-dual in the `lhs_tmul` outer telescope.
+- **Instantiate-then-`erw` template for carrier-diamond value lemmas (iter-037 — generalizes wall-#1; fired
+  `tensorObj_map_tmul` on the heavy `⊗`).** When a value-lemma must fire on objects typed
+  `PresheafOfModules X.ringCatSheaf.obj` (defeq-not-syntactic to `_ ⋙ forget₂ _ _`): state a ∀-`have h1` over
+  an ABSTRACT ring functor `R` so `R ⋙ forget₂ _ _` matches the `MonoidalCategoryStruct` instance head
+  *syntactically* (dodges the diamond), prove it `by intro …; exact <lemma> …`, INSTANTIATE at the goal's
+  concrete objects (`h1c := h1 <GX> <GY> …`), then **`erw [h1c]`** (bridges the residual `X.presheaf` vs
+  `(sheafToPresheaf …).obj X.sheaf` defeq). DEAD: bare `rw`/`erw`/`simp only` (silent no-op); `set GA := …`
+  to fold tensor factors (infers the bad `X.ringCatSheaf.obj` type → `MonoidalCategoryStruct` synth FAILS).
+- **Counit/δ helper TYPE fixes on the `pushforwardPushforwardAdj`/`restrictScalars` seam (iter-037).** (a) The
+  presheaf counit value-lemma `pushforwardPushforwardAdj_counit_app_app_apply` is NOT a symmetric mirror of the
+  unit: its input comes from the BIG composite object — binder `(y : ((pushforward ψ ⋙ pushforward φ).obj N).obj U)`,
+  NOT `N.obj U` (naive mirror → lake 4149/4150 application type mismatch); closes by `rfl` (mirrors Mathlib
+  `…_counit_app_val_app`). (b) For `restrictScalars_δ_app_tmul` (δ-twin of the μ lemma, `δ = inv μ` via
+  `Functor.Monoidal.μ_δ`) the RHS `m ⊗ₜ n` is ILL-TYPED bare (`m` is an S-module; the R-structure exists only
+  via `restrictScalars` → lake 2146 `failed to synthesize Module (R.obj W) (M₁.obj W)`) — ASCRIBE it to the
+  codomain object: `(m ⊗ₜ n : ↑(((restrictScalars α).obj M₁ ⊗ (restrictScalars α).obj M₂).obj W))`. (The μ
+  version dodges this because its `m ⊗ₜ[R] n` is the INPUT, elaborated against μ's domain.)
+- **LSP STALE-GREEN on the >4800-LOC `TensorObjSubstrate.lean` (iter-037 — cost a near-miss).**
+  `mcp__archon-lean-lsp__lean_diagnostic_messages` reported ZERO errors at three checkpoints while `lake build`
+  was actually RED (the new helpers had ill-typed statements). The LSP returns a stale/partial result on this
+  heavy file. **ALWAYS confirm with `lake build` before declaring green** — do not trust LSP "no errors" alone.
+- **`SheafOfModules` rewrite-by-category-lemma is a DEAD tactic class → reduce to hom-level + term-mode
+  `exact` (iter-038, repaired TensorObjInverse `have ht`).** In the `SheafOfModules` category `≫` /
+  `Iso.hom` / `Iso.inv` composites are **defeq-but-not-syntactic**, so EVERY `rw`/`simp` of a category or
+  `Iso` lemma (`← Iso.trans_assoc`, `Iso.self_symm_id`, `Iso.hom_inv_id_assoc`, even `← Category.assoc`)
+  silently fails to pattern-match even when the goal *displays as exactly that pattern*. FIX: `apply
+  Iso.ext` + `simp only [Iso.trans_hom, Iso.symm_hom]` to lower to the hom-level goal, then close with a
+  **term-mode `exact <category lemma>`** (`exact Iso.hom_inv_id_assoc eMi eMj.hom`) — unification crosses
+  the defeq that `rw`/`simp`/`erw` cannot key-match. (Iso-level instance of the `comp_cancel_mid` /
+  apply-by-`exact` device.)
+- **Tactic-block indentation discipline (iter-038 — caused TensorObjInverse parse error 399:38, RED for
+  ~8 iters).** A tactic indented deeper than its `by`-block's tactic column is swallowed as the *previous*
+  tactic's argument; the resulting parse error is reported at the **following** line, not at the indent.
+  Keep all derivation tactics at the block column (here: dedent L429–473 from 9 to 6 spaces).
+- **`lhs_tmul` telescope closure — Steps 3–4 + triangle-cancel (iter-039, CLOSED the K1 seam):** the durable
+  recipe for collapsing an adjunction-mate pure-tensor value over the carrier diamond.
+  (1) **δ/μ/counit composite-peel by direct `erw` under `respectTransparency false`:** to peel one factor of
+  a composite oplax `δ Gβ = (rs β').map(δ pf0) ≫ δ(rs β')` (with `δ pf0 = 𝟙`), `erw [pushforward_map_app_apply,
+  restrictScalars_δ_app_tmul …]` defeq-matches the SINGLE-factor helper against the whole composite directly —
+  manual identity-factor peeling (`comp_δ`+`map_id`+`id_comp`) silently no-ops / motive-fails in the carrier
+  diamond. (2) **counit pair:** `erw [Monoidal.tensorHom_app, ModuleCat.MonoidalCategory.tensorHom_tmul]`
+  splits the pure tensor, then a fvar-keyed ∀-`have hC` (binder over the BIG composite object, `U : (Opens
+  Y)ᵒᵖ`) discharges each leg via `pushforwardPushforwardAdj_counit_app_app_apply` — **pin ALL three explicit
+  args (`N`,`U`,`y`)**, any metavar → `erw` whnf heartbeat explosion; cumulative cost forces `maxHeartbeats
+  1600000`. (3) **closing:** `erw […rhs_tmul]; congr 1` splits `a ⊗ₜ b = m ⊗ₜ n` into factor equalities; each
+  factor closes via an abstract-`P` `have hfac`: `ConcreteCategory.congr_hom (P.map_comp co uo) z` forms the
+  `ModuleCat` `≫` INDIRECTLY (manual `P.map co ≫ P.map uo` fails to typecheck through the defeq-not-syntactic
+  `restrictScalars`-codomain intermediate), `Subsingleton.elim` on the `Opens Y` poset collapses `co ≫ uo = 𝟙`
+  (far cheaper than the literal adjunction-triangle identity), `conv` handles the dependent motive, and
+  `P.map_id` collapses as a TERM (`(ConcreteCategory.congr_hom (P.map_id _) z).trans (id_apply z)`). DEAD (do
+  not retry): `← ConcreteCategory.comp_apply` / `← LinearMap.comp_apply` / `← ModuleCat.hom_comp` / `←
+  CategoryTheory.comp_apply` to combine `P.map uo (P.map co z)` — ALL fail (the `≫` lives behind a
+  defeq-through-`⋙` that won't unfold); abstract `pushforward₀_restrictScalars_δ_app_tmul` helper (composite
+  input-tmul un-elaborable as `TensorProduct`).
+- **Restriction-naturality square via the restrict↔pullback bridge (S4c CLOSED iter-041 — the reframe that
+  the squares route through the project's own base-change laws).** To prove a `restrict V.ι`-square commutes
+  with the chart `j` (`j ≫ U.ι = V.ι`), do NOT chase the `restrict`-world directly (no `restrictFunctorComp`
+  naturality gives it — iter-040). Instead **route through the `pullback` world via a reindex-coherence
+  bridge** B2 `restrictFunctorIsoPullback_comp_compat` (`(restrictFunctorIsoPullback V.ι).app A =
+  restrictCompReindex j hjι A ≪≫ (restrictFunctor j).mapIso ((rfip U.ι).app A) ≪≫ (rfip j).app _ ≪≫
+  (pullbackComp j U.ι).app A ≪≫ (pullbackCongr hjι).app A`). For the UNIT square (S4c): `simp only
+  [unitRestrictIso, Functor.mapIso_trans]; rw [B2 …]` cancels the shared restrict-prefix, leaving (i) a
+  naturality slide `(restrictFunctorIsoPullback j).hom.naturality (pullbackUnitIso U.ι).hom` applied via
+  `reassoc_of%`, and (ii) the pullback-side unit composition law = the PROVEN root
+  `pullbackObjUnitToUnit_comp j U.ι` (`(pullbackUnitIso f).hom = pullbackObjUnitToUnit f` defeq). Close:
+  `apply Iso.ext; simp only [Iso.trans_hom, Functor.mapIso_hom, Category.assoc, Iso.app_hom];
+  rw [reassoc_of% hslideH]; rw [← hunitH]; rfl` — **trailing `rfl` mandatory** (`rw`'s reducible auto-rfl
+  leaves the `SheafOfModules`-defeq goal). ⚠ The `pullbackCongr hjι` eqToHom shim: `subst hjι` FAILS (`V.ι`
+  not a variable) → package as `∀ {Yv} (f₁ f₂) (h : f₁ = f₂), …` then `subst h; simp [pullbackCongr]` (the
+  morphisms must be genuine variables for `subst`). B2 itself stays an open sorry (RHS `leftAdjointUniq`
+  unit chase); S4c is "CLOSED mod B2". The ⊗-squares (S2) also need bridge B1
+  `tensorObj_restrict_iso_eq_pullbackTensorMap` (iso↔map) which is ROOT-PRIVACY blocked — see Known Blockers.
 
 ### Known Blockers (do not retry without a structural change)
+- **~~Bridge B2 (`restrictFunctorIsoPullback_comp_compat`/`_hom`)~~ — CLOSED iter-050.** The multi-iter
+  (044–049) terminal blocker is gone: `_hom` is sorry-free + axiom-clean, consumer already closed. The
+  fine-grained conjugate-telescope corrective worked (see Proof Patterns). Sorry 7→6. Do NOT re-open or
+  re-dispatch any B2 round.
+- **LIVE: B1 crux `H1inv_app_eq_pullbackVal_restrict` (TensorObjInverse L437, sorry@493) — sheafification
+  boundary, NOT the B2 family.** It is now the sole "engine" sorry; squares S2–S4b + cocycle all ride it.
+  Advanced to the isolated unit-coherence goal (`refine Eq.trans (unit_leftAdjointUniq_hom_app _ hadj
+  M.val) ?_`). The residual crosses the presheaf/sheaf boundary (`pushforwardPushforwardAdj` vs
+  `pullbackPushforwardAdjunction` vs `sheafificationAdjunction`) — do NOT chase it as a verbatim B2 copy.
+  Route: `rw [pullbackValIso, restrictFunctorIsoPullback]` + `simp` + `sheafificationCompPullback_eq_leftAdjointUniq`
+  + `leftAdjointUniqUnitEta`. First real `prove` attempt is warranted (single isolated goal); fine-grain the
+  sheafification leg only if it churns one round.
+- **~~CARRIER-DIAMOND GAP-FILL ESCALATION (iter-046, HARD STOP)~~ — RESOLVED iter-048.**
+  `conjugateEquiv_restrictFunctorComp_inv` is **PROVED, public, axiom-clean in root
+  `TensorObjSubstrate.lean`** (L4943; `lake build` EXIT 0 8321 jobs; `#print axioms` =
+  {propext, Classical.choice, Quot.sound}, no `sorryAx` — independently re-verified this review).
+  **The iter-046 "irreducible to library algebra" verdict was WRONG.** The working route never
+  sectionwise-chases the conjugate goal: rewrite `(restrictFunctorComp f g).hom` to
+  `(Adjunction.leftAdjointCompIso (restrictAdjunction g) (restrictAdjunction f)
+  (restrictAdjunction (f≫g)) (pushforwardComp f g)).inv`, close the conjugate head by
+  `Adjunction.conjugateEquiv_leftAdjointCompIso_inv`, and the residual is a CONCRETE iso-hom
+  equality whose `ext M U : 3` no longer whnf-bombs (the conjugate head is gone). The bomb was
+  **at `ext` on the conjugate-headed goal** — AVOID it; do the abstract rewrite first. The "no
+  abstract shortcut / circular" reasoning failed to spot that `leftAdjointCompIso` can be
+  *instantiated on `pushforwardComp`* rather than equated definitionally with `restrictFunctorComp`.
+  See Proof Patterns below. **DOWNSTREAM (iter-049 must-fix):** the public root decl now COLLIDES
+  with a leftover `private` sorry-stub of the same FQ name in `TensorObjInverse.lean` (L216) →
+  terminal file is RED (`error: a non-private declaration … has already been declared`). Delete the
+  stub (L207–259 docstring+lemma+sorry) and consume the root lemma; this restores terminal to
+  green-mod-sorry (7) and immediately enables B2 + B1-crux via the conjugate-distribution recipe.
+- **ROOT PRIVACY GATE — the route surfaces these ONE AT A TIME; B1 advances per de-private (iter-041→044 history).**
+  `tensorObj_restrict_iso_eq_pullbackTensorMap` (TensorObjInverse L270) bottoms out on root sheafification/
+  comparison internals that are `private` in the frozen `TensorObjSubstrate.lean`. **GATE #1 (δ-conjugation):
+  RESOLVED iter-044** — `pushforward_mu_appIso_collapse` (L4678) + chain de-privatized → now PUBLIC; B1's
+  proof body GENUINELY discharges the δ-conjugation (compiles, L280–327). **GATE #2 (current, iter-044): the
+  per-leg residual** (`sorry` L328) needs `sheafifyTensorUnitIso` (def L1040) + `sheafifyTensorUnitIso_hom_eq'`
+  (lemma L1837) to collapse the `sheafifyTensorUnitIso.hom` factor — BOTH still `private` (grep-confirmed).
+  Public `sheafifyTensorUnitIso_hom_natural` (L1896) only *commutes* the factor, cannot *remove* it. UNBLOCK =
+  ADDITIVE de-`private` via a `refactor` SOLO lane (root churn → build-race; freeze downstream). **Lesson: the
+  iter-041→043 "witness public ≠ equation accessible" gate is REAL and RECURS — de-private a BATCH of the root
+  internals (`sheafifyTensorUnitIso`/`_hom_eq'` + the `pullbackValIso`/`sheafificationCompPullback` helpers the
+  per-leg close needs) rather than chasing one gate per iter.** After GATE #2: close via
+  `sheafifyTensorUnitIso_hom_eq'` + `← Functor.map_comp` + `tensorHom_comp_tensorHom` → per-leg
+  `H1.inv.app = η ≫ forget pullbackValIso.hom ≫ forget ρ.inv` (PUBLIC `pullbackValIso_hom_natural` L1861 +
+  `sheafificationCompPullback_eq_leftAdjointUniq` L1511). B2/S3/S4a are independent of this gate. DEAD
+  downstream: `subst hjι`/`clear_value j` on the `j ≫ U.ι = V.ι` chart shim; coherence `simp` alone on B2's RHS;
+  B2 via `unit_leftAdjointUniq_hom_app` (CIRCULAR — goal becomes B2 itself, iter-044).
+- **Sorry count: trust `lake build`, NOT LSP — in BOTH directions (iter-043).** The lean-auditor (Sonnet/LSP)
+  claimed the real count was "likely 9" (asserting sorry must propagate through `rw`/`erw` into S4c L372 +
+  cocycle L586). `lake build` is authoritative: exactly **7** sorry-using decls; L372/L586 carry NO transitive
+  sorry. LSP over-counted. Settle every sorry-count claim with `lake build … | grep 'uses \`sorry\`'`.
 - **⚠ plan-validate NOOPs a build-fix objective whose TARGET DECLARATION is sorry-free (iter-030 — cost a
   whole iter, twin of the iter-026 connector dispatch bug).** The DualInverse L219 one-token fix
   (`← map_smul` → `← LinearMap.map_smul`) lives inside `linearEndo_apply_comm` / `presheafDualUnitIso_naturality`,
@@ -316,6 +524,55 @@ Current scope and live state live in [`PROGRESS.md`](PROGRESS.md) and
   `simp only [restrictIsoUnitOfLE]` (no cancellation); `congr 1`/`Iso.eq_inv_comp`/`SheafOfModules.Hom.ext`
   (no match — goal already at `.val.app` section level). Mirror `restrictIsoUnitOfLE` (TensorObjSubstrate L424),
   `analogies/cocycle-a.md` §A.
+  **iter-038 UPDATE — file REPAIRED to green-mod-sorry; keystone identified = ONE missing iso, not the
+  squares.** TensorObjInverse.lean was RED-at-source iters ~030–038 (parse error + unsolved goals — the
+  whole downstream chain never compiled); iter-038 repaired it (`lake build` EXIT 0, 8324 jobs) so the
+  cocycle `exists_tensorObj_inverse` now closes modulo this lone honest sorry (NO `first|…|sorry` hedge —
+  the iter-033 dead-code-hedge concern is GONE). The blocking residual is now precisely ONE missing
+  declaration: a restriction-**composition** iso `M.restrict (j ≫ f) ≅ (M.restrict f).restrict j` for
+  `Scheme.Modules`, on which ALL 5 square *signatures* depend. **Verified ABSENT** from project + Mathlib
+  `Algebra/Category/ModuleCat/Sheaf/` (grep: no `restrictFunctorComp`/`restrictComp`/`restrict_comp`;
+  `loogle "SheafOfModules.restrict (?g ≫ ?f)"` → no results) — may reduce to a Mathlib `pullbackComp`.
+  SEQUENCE (iter-040 Route-B even slot, root frozen): build that keystone iso FIRST → scaffold the 5 stub
+  signatures with it + `eqToHom (image_preimage_of_le …)` for ϱ → prove S2 (`tensorObj_restrict_iso`,
+  blueprint ~6502–6563) as template → S3/S4a/S4b/S4c → wire telescope. Do NOT add precedent-less stub
+  signatures before the keystone exists (re-RED's the now-green file).
+  **iter-040 UPDATE — 5 squares + 2 helper defs SCAFFOLDED green-mod-sorry; the "squares come FREE"
+  premise is DISPROVEN (type-error).** Route B SOLO decomposed the monolith (sorry 1→6): the 5 named
+  square-lemmas (S2 `tensorObj_restrict_iso_restrict_compat`, S3 `dual_restrict_iso_restrict_compat`
+  [clean core, RENAMED from blueprint's bundled `…_dualIsoOfIso_…`], S4a `dual_unit_iso_restrict_compat`,
+  S4b `tensorObj_unit_iso_restrict_compat`, S4c `trivialisation_uIota_restrict_compat`) all TYPECHECK
+  (`lake build` EXIT 0), proofs all `sorry`, none yet wired into the target (orphaned). **The reindex iso
+  `ρ` is the ONLY thing the keystone gives:** `restrictCompReindex j hjι A : A.restrict V.ι ≅
+  (A.restrict U.ι).restrict j` := `(restrictFunctorCongr hjι).symm.app A ≪≫ (restrictFunctorComp j U.ι).app A`.
+  Plus `unitRestrictIso f : restrict 𝒪_X f ≅ 𝒪_Y` := `restrictFunctorIsoPullback f ≫ pullbackUnitIso f`.
+  ⚠ **DEAD (do not retry): `(restrictFunctorComp j U.ι).hom.naturality φ` does NOT give the constituent
+  squares** — it is naturality in a MORPHISM `φ` of X-modules (the restrict-COMPOSITION square); the
+  constituent `.hom` is a morphism of `(U:Scheme)`-modules → literal type error. Each square needs the
+  immersion-naturality of its constituent iso (a 4-leg `restrictFunctorIsoPullback ≫ sheafificationCompPullback
+  ≫ leftAdjointUniq ≫ restrictScalars-δ` chart-chase) — genuine depth, NOT free. ⚠ `IsOpenImmersion j` for
+  `j = resLE (𝟙 X) U V` is NOT auto-synthesized → `haveI := by rw [hj, Scheme.Hom.resLE_id]; infer_instance`.
+  iter-042 SEQUENCE: prove S4c FIRST (most tractable — reduces to a finite `pullbackUnitIso`/`pullbackComp`/
+  `pushforwardComp` coherence, no chart-chase) → S2 (Stacks "pullback ⊗ functorial") → S3/S4a/S4b mirror →
+  wire all 5 + section-level `eqToHom` telescope into the target (a 6th obligation). ESCALATION: the
+  keystone-optimism deflated 2 iters running (iter-039 promised ~1–2, iter-040 produced statements only) —
+  consider effort-breaker on S4c or mathlib-analogist (cross-domain) on immersion-naturality of composite
+  pullback/sheafification isos before another raw prove-round. Blueprint debt: S3 `\lean{}` now DANGLES
+  (names a comment-only decl); `restrictCompReindex`/`unitRestrictIso` need `\lean{}` blocks.
+  **iter-041 UPDATE — S4c CLOSED (mod B2); the "squares route through TWO new bridges" reframe WORKS;
+  ⊗-side now gated on ROOT-PRIVACY, not a tactic gap.** Route B SOLO added two named bridge lemmas and
+  closed one square (file sorry 6→7, but one square eliminated): **B2** `restrictFunctorIsoPullback_comp_compat`
+  (the restrict↔pullback reindex coherence — LHS discharged in-body, RHS `leftAdjointUniq`-across-composition
+  unit chase ~40–60 LOC is the residual sorry; lynchpin S2/S3/S4c all `\cref` it) and **B1**
+  `tensorObj_restrict_iso_eq_pullbackTensorMap` (iso↔map promotion). **S4c `trivialisation_uIota_restrict_compat`
+  is now a SORRY-FREE body** (lean-auditor + lvb-checker confirm honest) via B2 alone — recipe in Proof Patterns
+  below. **B1 is BLOCKED ONLY by ROOT PRIVACY:** its deep content `δ = e.hom` is the `hcompat` `have` *inside*
+  the `private` `pullbackTensorMap_isIso_of_isOpenImmersion` (root L4812, FROZEN); B1 had to take
+  `(hiso : IsIso (pullbackTensorMap f M N))` as an EXPLICIT hyp because the witness can't be cited. **iter-042
+  unblock = a thin ADDITIVE root edit** (de-`private` the isIso witness, or export `hcompat`/`δ=e.hom`) → B1
+  closes → S2 → S4b; schedule via the `refactor` subagent in the plan phase (sorry-free-decl edits don't
+  dispatch as prover lanes). S3/S4a (dual gap, route b) are independent of the B1/B2 chain. DEAD: re-deriving
+  `δ=e.hom` downstream in TensorObjInverse (>100-LOC mate calculus — strictly cheaper as the root extraction).
 - **K1 `pushforward_lax_mu_comparison` — mate route CIRCULAR (re-confirmed iter-028):** the lemma compares
   the adjunction **mate** `Adjunction.rightAdjointLaxMonoidal hadj'` (LHS) against the **composition**
   structure `presheafPushforwardLaxMonoidal φ'` (RHS) on the SAME functor `pushforward φ'`. Unfolding the
@@ -367,6 +624,29 @@ Current scope and live state live in [`PROGRESS.md`](PROGRESS.md) and
   | sorry` — the `| sorry` is DEAD CODE** (the first branch always fires; sorry-proved lemmas are valid
   rewrite sources in Lean 4), so `exists_tensorObj_inverse` is sorry-contaminated via the rewrite through the
   sorry'd `trivialisation_restrict_compat`; the L469–472 comment misdescribes it.
+  **iter-036 UPDATE — WALL #1 CRACKED; `lhs_tmul` is now an unblocked outer telescope, NOT a stuck wall.**
+  The iter-033 escalation/"no more helper cycles" verdict is OVERTURNED. The SOLO Route A lane discharged
+  the inner unit leg in committed green-mod-sorry code (build 8321 jobs clean; sync +125 markers) via the
+  fvar-keyed-`have` + `erw [hU]` recipe (see Proof Patterns). The iter-035 directive's "abstract `{C D :
+  Type*}` helper" model was WRONG (the unit value is irreducibly PresheafOfModules-specific `.app W`/`⊗ₜ`);
+  the prover correctly attacked the double-wall directly. Residual = the OUTER δ/counit telescope (4 steps,
+  documented in-code @ TensorObjSubstrate L4356–4378): (1) `tensorObj_map_tmul` on the pure tensor (fvar-keyed
+  `have`+`erw`, head `…Monoidal.tensorObj` ≠ `⊗`); (2) `Functor.map_comp` split + `pushforward_map_app_apply`
+  reindex; (3) δ Gβ collapse via `restrictScalars_μ_app`/`forget₂_restrictScalars_μ_hom_tmul`; (4) NEW helper
+  `pushforwardPushforwardAdj_counit_app_app_apply` (counit `rfl`-dual of the unit lemma) via the same recipe;
+  then `pushforward_lax_mu_comparison_rhs_tmul` (PROVEN) closes. RE-CONFIRMED CIRCULAR (do not retry): the
+  whole-morphism `(★)` route = `Adjunction.map_μ_comp_counit_app_tensor` needs `hadj'.IsMonoidal` which
+  consumes this lemma. Coverage debt: the new counit helper needs a blueprint `\label`/`\lean`/`\uses` block
+  BEFORE its prover lane (lvb-substrate036 flagged its absence).
+  **iter-039 — ✅ CLOSED, axiom-clean, lake EXIT 0 (verified by review, 8324-job whole tree).**
+  `pushforward_lax_mu_comparison_lhs_tmul` is sorry-free → seed-1 `pullbackTensorIsoOfLocallyTrivial`
+  transitively sorry-free; project-wide sorry 2→1 (sole leaf now Route B `trivialisation_restrict_compat`).
+  Steps 3–4 + closing landed (see the new Proof Pattern "lhs_tmul telescope closure"). No new top-level
+  declarations (one abstract δ helper tried then removed); only config add = `set_option maxHeartbeats
+  1600000`. lvb-substrate039 PASS (faithful both ways, `lean_verify` no sorryAx); lean-auditor iter039
+  proof HONEST (all 4 local `have`s real/used/non-circular). **Route A is DONE — do NOT re-open
+  `TensorObjSubstrate.lean` for proving.** Residual coverage/cleanup: 6 stale `.lean` header/doc comments
+  still call `lhs_tmul`/closed sorries "active" (auditor iter039 MAJOR; deterministic refactor-route fix).
 - ~~**K1 `pullbackTensorMap_isIso_of_isOpenImmersion` carrier diamond**~~: **RESOLVED iter-023** — see the
   "Carrier-diamond RESOLVED via defeq-composite re-ascription" Proof Pattern above (Gβ composite +
   `zeta:=false` + `erw`). The full K1 mate calculus is now PROVEN and compiles; the SOLE residual is
@@ -510,6 +790,14 @@ Current scope and live state live in [`PROGRESS.md`](PROGRESS.md) and
   (`sheafificationCompPullback h` followed by sheafified `PresheafOfModules.pullbackComp.hom`) and
   functor-associator cleanup.
 
+### Name-collision RED (iter-048 gotcha)
+- A `private lemma Foo.bar` in file B whose FULL qualified name equals a **non-private** decl
+  `Foo.bar` imported from file A does NOT get safely name-mangled away — Lean errors
+  `a non-private declaration 'Foo.bar' has already been declared` and file B goes RED. So once a
+  scaffolded gap-fill is promoted to a public root decl, the terminal's `private` stub of the SAME
+  name MUST be deleted in the same/next iter or the consumer file stops building. (Confirmed via
+  `lake build`, NOT LSP — LSP also flagged it but the authoritative signal is the build error.)
+
 ### Extraction mechanics (non-obvious gotchas)
 - **Confirmed truncation bug:** the extraction's Lean-decl remover truncated DualInverse.lean's
   entire §C tail mid-`/-- … -/` docstring, committing a non-compiling file (`unterminated comment`)
@@ -519,6 +807,131 @@ Current scope and live state live in [`PROGRESS.md`](PROGRESS.md) and
   similarly truncated — worth a one-shot sweep.**
 
 ## Last Updated
+2026-06-21T11:50:00Z (iter-050)
+
+2026-06-21T10:30:00Z (iter-049 review — **collision RED cleared; B2 PROVED mod helper; sorry 8→7.**
+`lake build …TensorObjInverse` EXIT 0 (8324 jobs, 7 sorries, 0 axioms, re-verified). Deleted the iter-046
+collision stub (green); **B2 `restrictFunctorIsoPullback_comp_compat` now sorry-free in its own body**,
+delegating the mate-calculus to a NEW extracted helper `restrictFunctorIsoPullback_comp_compat_hom`
+(1 sorry L260 = the `hNat` conjugate telescope). Residual fully planned: `conjugateEquiv_comp` distributes
+LEG-BY-LEG over 7 fixed-`(C,D)` adjunctions (NO `mateEquiv_hcomp`/`vcomp`; overturns `b2mate045.md`);
+per-leg targets all present (c₂=keystone, c₅=inv `conjugateEquiv_pullbackComp_inv`, c₃/c₄=`unit_leftAdjointUniq_hom_app`,
+c₁/c₆=`pushforwardCongr`/eqToHom); ~60–100 LOC bookkeeping, shared with B1-crux. NEXT = effort-break `hNat`
+into per-leg sub-lemmas; do NOT re-dispatch a plain whole-`hNat` round. lean-auditor iter049 (0 must-fix,
+2 major = stale B1/B2 docstrings — `.lean` cleanup is prover-domain), lvb iter049 (signatures faithful, no
+drift/laundering; MAJOR coverage debt = both cruxes lack a blueprint block → writer dispatch next iter).
+Manual marker: B2 prose `% NOTE: (iter-049)` mechanism-drift (`conjugateEquiv_comp`, not `mateEquiv_vcomp`).
+sync_leanok +27/−0 (8015931). doctor clean. Narrative in `iter/iter-049/review.md`.)
+2026-06-21T17:30:00Z (iter-048 review — **KEYSTONE CLOSED; iter-046 "irreducible" verdict OVERTURNED.**
+`conjugateEquiv_restrictFunctorComp_inv` PROVED, public, axiom-clean in root `TensorObjSubstrate.lean`
+(L4943; `lake build` EXIT 0 8321 jobs; #print axioms = propext/Classical.choice/Quot.sound, no sorryAx —
+independently re-verified). Working route = abstract `leftAdjointCompIso` instantiation +
+`conjugateEquiv_leftAdjointCompIso_inv`; NEVER `ext` the conjugate-headed goal. Root stays sorry-free.
+**SIDE EFFECT (iter-049 must-fix, VERIFIED via `lake build`):** the public root decl now COLLIDES with the
+leftover `private` sorry-stub of the same FQ name in `TensorObjInverse.lean` L216 → terminal RED
+(`non-private declaration … already declared`). Delete stub L207–259 → restores terminal to 7 sorries
+green-mod-sorry + unblocks B2/B1-crux. lean-auditor iter048 (2 must-fix = the collision build error + the
+stub's false "irreducible" comment, BOTH resolved by the same deletion; 4 major stale-comments), lvb
+substrate048 PASS (keystone faithful, signature verbatim, `\leanok` correct). Manual markers: keystone
+`\leanok` override (sync withheld it due to the name collision resolving `\lean{}` to the sorry-stub),
+stale iter-046 `% NOTE:` replaced, prose-route `% NOTE:` added. sync_leanok −27/+0 (collision-driven).
+gaps=0, unmatched=106, doctor clean. Narrative in `iter/iter-048/review.md`.)
+2026-06-21T08:05:00Z (iter-046 review — **HARD STOP TRIGGERED; obstruction localized to one out-of-lane gap-fill.**
+Sorry 7→8 (REGRESSION by the directive's Step-0 scaffold; no original sorry closed). `lake build …TensorObjInverse`
+EXIT 0 (green-mod-sorry, 8). Prover scaffolded `conjugateEquiv_restrictFunctorComp_inv` (restrict-side mirror of
+`conjugateEquiv_pullbackComp_inv`, the lemma BOTH B2 + B1-crux reduce to), LSP-verified its sectionwise reduction
+to a trivial thin-poset identity — but it `whnf`-BOMBS in real `lake build` through the `SheafOfModules.pushforward`
+carrier diamond (4×, incl. 1.6M hb + respectTransparency false) AND is irreducible to library algebra
+(`restrictFunctorComp` ≠ `leftAdjointCompIso`). Both audits confirm honest sorry (no laundering); exactly 8, no
+transitive hiding. ESCALATE: root/`mathlib-build` lane — make `restrictFunctorComp` a `leftAdjointCompIso` ⇒ gap-fill
+by `rfl`, or prove in root. Do NOT dispatch a 7th plain terminal prover. Details: `iter/iter-046/review.md`.)
+
+2026-06-21T06:35:00Z (iter-045 review — **B1 KEYSTONE CLOSED (body sorry-free); GATE #2 cleared; residual = 1 mate crux.**
+Sorry 7→7, `lake build …TensorObjInverse` EXIT 0 (8324 jobs). Refactor `deprivate-sheafunit045` made
+`sheafifyTensorUnitIso`/`_hom_eq`/`_hom_eq'` PUBLIC; B1 (`tensorObj_restrict_iso_eq_pullbackTensorMap`)
+body now SORRY-FREE (both reviewers confirm), via `sheafifyTensorUnitIso_hom_eq'` collapse + new helper
+`H1inv_app_eq_pullbackVal_restrict` + `map_tensorHom_comp3`. Residual EXTRACTED into that helper, reduced
+(verified) to ONE `leftAdjointUniq`/mate-calculus unit crux — SAME family as B2. Flat-7 = sorry relocated.
+Reviewers: must-fix none; stale B1 `% NOTE:` PRUNED this review; stale B1 Lean docstring + S4c comment →
+next prover (review can't edit .lean). REC: shared `leftAdjointUniqUnitEta`-style helper closes the B1
+crux AND B2 together (7→5). Details: `iter/iter-045/review.md`.)
+
+2026-06-21T05:00:00Z (iter-044 review — **δ-conjugation GATE RESOLVED (de-private worked); B1 advanced; GATE #2 found.**
+Sorry 7→7, `lake build …TensorObjInverse` EXIT 0 (8324 jobs). `pushforward_mu_appIso_collapse` now PUBLIC
+(grep-confirmed L4678); B1's δ-conjugation GENUINELY discharged in a ~25-line compiling proof (L280–327),
+residual isolated to ONE per-leg `sorry` (L328) hard-blocked on the NEXT private pair `sheafifyTensorUnitIso`
+(L1040) + `sheafifyTensorUnitIso_hom_eq'` (L1837). B2 confirmed CIRCULAR under `unit_leftAdjointUniq` shortcut.
+Reviewers: B1 honest/0-must-fix (vs-bp); auditor 1 must-fix elsewhere (`RelPicFunctor.PicSharp` PUnit stub).
+Stale B1 `% NOTE:` corrected. Recommend BATCH de-private refactor before next B1 round. Details:
+`iter/iter-044/review.md`.)
+
+2026-06-21T03:51:00Z (iter-043 review — **0 closed; ROOT-PRIVACY gate VERIFIED, "B1 unblocked" premise FALSE.**
+Sorry 7→7, `lake build …TensorObjInverse` EXIT 0. B1 signature corrected to blueprint form (dropped stale
+`hiso`, cites public IsIso witness); B2 reduced to explicit mate-coherence residual (~80-120 LOC, the one
+fully-unblocked sorry). Grep-confirmed the δ-conjugation chain (`pushforward_mu_appIso_collapse` etc.) is ALL
+`private` in the frozen root — B1/S2/S4b/telescope blocked; unblock = additive de-`private` root edit. Auditor
+LSP "likely 9 sorries" REFUTED by lake build (exactly 7). `% NOTE:` added to B1 blueprint proof block. Details:
+`iter/iter-043/review.md`.)
+
+2026-06-20T13:30:00Z (iter-041 review — **S4c CLOSED mod B2; bridge reframe validated; ⊗-side now gated on
+ROOT-PRIVACY.** Route B SOLO closed the unit square `trivialisation_uIota_restrict_compat` (sorry-free body)
+via new bridge B2 `restrictFunctorIsoPullback_comp_compat`; added B1 `tensorObj_restrict_iso_eq_pullbackTensorMap`
+(iso↔map, ROOT-PRIVACY blocked — needs iter-042 thin additive root extraction of the `private`
+`pullbackTensorMap_isIso_of_isOpenImmersion`). File sorry 6→7 (−1 square, +2 bridges). lake EXIT 0. Both
+reviewers confirm honest; review fixed the B1 `\lean{}` pin mismatch. Details: `iter/iter-041/review.md`.)
+
+2026-06-20T12:08:55Z (iter-040 review — **DECOMPOSITION, no closure; keystone over-sold.** Route B SOLO
+split the monolith `trivialisation_restrict_compat` into 5 named square-lemmas (S2–S4c) + 2 reusable
+helper defs (`restrictCompReindex` ρ, `unitRestrictIso` uι) + the `IsOpenImmersion j` chart instance — all
+TYPECHECK, `lake build …TensorObjInverse` EXIT 0 (8324 jobs), green-mod-sorry. Active sorry **1→6**
+(intended fine-grain; 0 closed, squares orphaned). **KEY: the iter-039 "squares come FREE via
+`restrictFunctorComp.hom.naturality`" premise was DISPROVEN by the prover (type-error) — the keystone gives
+only the reindex iso ρ; each square is a genuine 4-leg immersion-naturality chart-chase.** Keystone-optimism
+deflated 2 iters running → ESCALATION live (iter-039 plan's "2nd consecutive PARTIAL" trigger). Reviewers:
+lean-auditor iter040 HONEST (0 axioms; 1 must-fix = target sorry load-bearing; 2 major = orphaned squares +
+stale iter-206/218/225/226 docstrings); lvb-tensorobjinverse040 5/6 faithful, 2 must-fix (S3 `\lean{}`
+DANGLES → blueprint-side restate; S2–S4c sketches mis-sell residual as free) + 1 major (ρ/uι coverage debt).
+sync +4/−0 (5e8a0e8). Doctor clean. iter-042: prove S4c FIRST (finite pullback coherence), then S2; consider
+effort-breaker/mathlib-analogist first. Narrative in `iter/iter-040/review.md`.)
+2026-06-20T11:20:00Z (iter-039 review — **MILESTONE: seed-1 CLOSED, no regression.** SOLO Route A closed
+`pushforward_lax_mu_comparison_lhs_tmul` (the 4-iter K1 bottleneck, open since iter-032) → seed-1
+`pullbackTensorIsoOfLocallyTrivial` transitively **sorry-free**; project-wide active sorry **2→1** (sole leaf
+now Route B `trivialisation_restrict_compat`). Review independently verified: `lake build …TensorObjSubstrate`
+8321 jobs + whole-tree `…TensorObjInverse` 8324 jobs, both EXIT 0; `lean_verify` axiom-clean (no sorryAx).
+Landed Steps 3–4 + triangle-cancel closing (new Proof Pattern "lhs_tmul telescope closure": direct-`erw`
+composite-peel under `respectTransparency false`; fvar-keyed `hC` all-args-pinned + `maxHeartbeats 1600000`;
+abstract-`P` `hfac` via `ConcreteCategory.congr_hom`+`Subsingleton.elim` on the `Opens Y` poset). No new
+top-level decls (one abstract δ helper tried then removed). sync +67/−0 (2f5b626). Reviewers 0 must-fix:
+lvb-substrate039 PASS (faithful both ways; 4 minor prose-precision — closing uses the poset route not the
+literal triangle identity, unit displayed as `hadj'.counit` but Lean uses the geometric opens-adjunction
+counit), lean-auditor iter039 proof HONEST (6 MAJOR = stale `.lean` header/doc comments calling closed
+sorries "active" → refactor-route; TensorObjInverse clean). Doctor clean, gaps=0, unmatched=106 (no new
+debt). No manual markers. **Route A DONE — pivot to Route B iter-040 (de-risked via `restrictFunctorComp`).**
+Narrative in `iter/iter-039/review.md`.)
+2026-06-20T08:51:00Z (iter-038 review — **STRUCTURAL REPAIR, no regression.** SOLO Route B (repair-first)
+took `TensorObjInverse.lean` from RED-at-source (parse error 399:38 + unsolved goals — never compiled in
+project history, ~iters 030–038) to **green-mod-sorry** (`lake build` EXIT 0, 8324 jobs; sync +17 / 0bf1584).
+The cocycle `exists_tensorObj_inverse` now closes modulo the lone honest `trivialisation_restrict_compat`
+sorry — no `first|…|sorry` hedge. Fixes: dedent cocycle block L429–473 to the 6-space tactic column (parse
+err) + rewrite `have ht` via term-mode `exact Iso.hom_inv_id_assoc` (SheafOfModules `≫` defeq-not-syntactic).
+Active sorry 2→2 (none closed). KB: SheafOfModules term-mode-`exact` device, indentation parse trap,
+trivialisation_restrict_compat keystone = ONE missing restriction-composition iso (absent project+Mathlib).
+Reviewers 0 must-fix (tensorobjinverse038 FAITHFUL 12/12; iter038 1 major = stale comment). Narrative in
+`iter/iter-038/review.md`.)
+2026-06-20T08:00:00Z (iter-037 review — **REAL PARTIAL PROGRESS, no regression.** SOLO Route A landed BOTH
+missing helpers (`pushforwardPushforwardAdj_counit_app_app_apply` rfl, `restrictScalars_δ_app_tmul`) + 2
+verified `lhs_tmul` telescope moves, committed green-mod-sorry (build 8321 jobs; sync +1 ee78653). Residual =
+telescope steps 3–4 (tools now in-file). KB updated: instantiate-then-`erw` template, counit/δ type fixes,
+LSP stale-green trap. Reviewers 0 must-fix (substrate037 / iter037). Narrative in `iter/iter-037/review.md`.)
+2026-06-20T06:05:00Z (iter-036 review — **REAL PARTIAL PROGRESS; WALL #1 CRACKED, no regression.** SOLO
+Route A lane discharged the `lhs_tmul` inner unit leg in committed green-mod-sorry code (build 8321 jobs;
+sync +125/−0 0f45496 — recovers the iter-033 −141 strip) via the fvar-keyed-`have` + `erw [hU]` recipe
+(new Proof Pattern). The 4-iter double-wall #1 is broken; iter-033 escalation OVERTURNED. Sorry 2→2;
+residual = outer δ/counit telescope (4 documented steps, needs new counit `rfl`-helper). Route B untouched
+(SOLO-only; root-churn race). Reviewers: lvb-substrate036 CLEAN (0 red flags; minor coverage debt = no
+`\lean{}` for the future counit helper), lean-auditor iter036 (`have hU`/`erw` block SOUND, comment a legit
+roadmap; 2 MAJOR stale TensorObjSubstrate file-headers L161/L162 → refactor route). Doctor clean, gaps=0,
+unmatched=106. No manual markers. Full narrative → `iter/iter-036/review.md`.)
 2026-06-20T04:10:00Z (iter-033 review — **NET REGRESSION; SOLO `lhs_tmul` lane committed RED.** The single
 corrective test (`pushforward_lax_mu_comparison_lhs_tmul` SOLO) left TensorObjSubstrate RED
 (synthInstanceFailed L4369) ⇒ sync −141/+0 (b3a0e11) stripped every dependent `\leanok`. The added

@@ -1,0 +1,194 @@
+[
+  {
+    "timestamp": "2026-06-20T08:49:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "tensorPowAdd (def re-orientation)"
+    },
+    "session": {
+      "id": "session_23",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "pow_add orientation",
+        "tensorObjRightUnitor",
+        "tensorObjAssoc",
+        "tensorObjWhiskerRightIso"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "ROOT-CAUSE REFACTOR: recurse tensorPowAdd on the 2nd index m' (canonical pow_add orientation) instead of the 1st index m, eliminating the braiding that the 1st-index recursion forced",
+        "code_tried": "match m' with | 0 => tensorObjRightUnitor (tensorPow L m) | (c+1) => (tensorObjAssoc (tensorPow L m) (tensorPow L c) L).symm ≪≫ tensorObjWhiskerRightIso (tensorPowAdd L m c) L",
+        "line_number": "2147",
+        "result": "success",
+        "insight": "braiding ELIMINATED — new L stays at right edge of source AND target; m+0=m, m+(c+1)=(m+c)+1 both rfl ⇒ no eqToIso, no tensorBraiding. lean_verify axiom-clean. The 6-iter braided wall (017→022) was a definitional artifact."
+      }
+    ],
+    "next_steps": "n/a — delivered"
+  },
+  {
+    "timestamp": "2026-06-20T08:49:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "tensorPowAdd_zero_left"
+    },
+    "session": {
+      "id": "session_23",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "MonoidalCategory.leftUnitor_tensor",
+        "MonoidalCategory.leftUnitor_naturality_assoc",
+        "tensorObjIso_succ_reindex"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "NEW left-unit coherence lemma (no longer the base clause after refactor); induction on n, base = unitors_equal, succ = leftUnitor_tensor fold",
+        "code_tried": "induction n; succ: rw [hsucc, ih]; apply Iso.ext; simp only [...]; have hlt : α⁻¹ ≫ (λ ▷ L) = λ_{(L^c)⊗L} := by monoidal; rw [reassoc_of% hlt]; erw [leftUnitor_naturality_assoc]; congr 1; congr 1; exact tensorObjIso_succ_reindex L (Nat.zero_add c).symm",
+        "line_number": "3001",
+        "lean_error": "(intermediate) Type mismatch on eqToHom motive — fixed by changing reindexer to congrArg (fun i => tensorObj (tensorPow L i) L) h",
+        "result": "success",
+        "insight": "FULLY CLOSED axiom-clean. New helper tensorObjIso_succ_reindex (subst h; simp) discharges the 0+c=c reindex residue. Braiding-free (left-unit triangle, NOT hexagon)."
+      }
+    ],
+    "next_steps": "n/a — delivered; consumed by sectionsMul_one_mul"
+  },
+  {
+    "timestamp": "2026-06-20T08:49:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "sectionsMul_one_mul / sectionsMul_mul_one"
+    },
+    "session": {
+      "id": "session_23",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "tensorPowAdd_zero_left",
+        "tensorPowAdd_zero_right (rfl)",
+        "tensorObjUnitIso_hom_sectionsMul",
+        "tensorObjRightUnitor_hom_sectionsMul",
+        "sectionsCast_self"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "repair both unit laws after the refactor; one_mul via tensorPowAdd_zero_left + unit-iso section partner; mul_one via the now-rfl tensorPowAdd_zero_right + right-unitor section partner",
+        "code_tried": "rw [gMul_mul_apply, gOne_one_eq, tensorPowAdd_zero_left L n]; ...  /  rw [gMul_mul_apply, gOne_one_eq]; have hμn0 := tensorPowAdd_zero_right L n; ...; exact sectionsCast_self L (add_zero n) a",
+        "line_number": "3056 / 3073",
+        "result": "success",
+        "insight": "BOTH axiom-clean. mul_one collapses to rfl-chain (tensorPowAdd_zero_right is now rfl) — the old inductive proof + canonical_runit_core are dead. Stale comment 'single remaining gap' @3082 left behind (minor)."
+      }
+    ],
+    "next_steps": "n/a — delivered"
+  },
+  {
+    "timestamp": "2026-06-20T08:49:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "tensorPowAdd_assoc"
+    },
+    "session": {
+      "id": "session_23",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "succ branch open (sorry @3230): goal is now BRAIDING-FREE (confirmed — built entirely from tensorObjAssoc/whiskerRight/whiskerLeft + folded tensorPowAdd + eqToIso; NO tensorBraiding). Residual is the categorified-pow_add pentagon. The iso-level Iso.trans_assoc that would cancel the α'' ≪≫ α''.symm pair is blocked by the trailing dependently-typed eqToIso(add_assoc m m' (c+1)) — ill-typed motive ('pattern not found'). NOT a comp-instance diamond (← Iso.trans_assoc fires).",
+      "key_lemmas_used": [
+        "tensorPowAdd_succ",
+        "tensorObjWhiskerRightIso_tensorObj (NEW)",
+        "tensorObjWhiskerLeftIso_trans",
+        "ihR := congrArg (·▷L) ih"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "base case (m''=0): rw eqToIso_refl + Subsingleton.elim; apply Iso.ext; canonical simp; htri (α≫◁ρ = ρ) + double rightUnitor_naturality slide; rfl",
+        "code_tried": "rw [Subsingleton.elim ... rfl, eqToIso_refl, Iso.trans_refl]; apply Iso.ext; simp only [tensorPowAdd_zero_right, ...]; erw [rightUnitor_naturality]; rw [reassoc_of% htri]; erw [rightUnitor_naturality_assoc, Iso.inv_hom_id_assoc]; rfl",
+        "line_number": "3163",
+        "result": "success",
+        "insight": "BASE CASE CLOSED axiom-clean (braiding-free ρ-naturality)."
+      },
+      {
+        "attempt": 2,
+        "strategy": "succ case (m''=c+1): unfold both succ-clauses (tensorPowAdd_succ), distribute outer right-whisker over L^{c+1}=L^c⊗L via new helper tensorObjWhiskerRightIso_tensorObj, fold ihR; close pentagon with monoidal",
+        "code_tried": "have ihR := congrArg (fun i => tensorObjWhiskerRightIso i L) ih; simp only [tensorObjWhiskerRightIso_trans] at ihR; simp only [tensorPow_succ, tensorPowAdd_succ, tensorObjWhiskerRightIso_tensorObj, tensorObjWhiskerLeftIso_trans, Iso.trans_assoc]; sorry",
+        "line_number": "3190",
+        "lean_error": "rw [Iso.trans_assoc] / [Iso.self_symm_id_assoc] 'pattern not found' — dependently-typed eqToIso(add_assoc) blocks the iso-level motive",
+        "result": "partial",
+        "insight": "groundwork compiles; goal confirmed braiding-free. VALIDATED UNBLOCK this iter on the sibling tensorPowAdd_zero_left succ: drop to hom level via apply Iso.ext → canonical simp (eqToIso→eqToHom, α''.hom≫α''.inv cancels via Iso.hom_inv_id_assoc — no dependent-≪≫ issue) → fold ih/ihR by rw → congr 1 peel → tensorObjIso_succ_reindex-style subst for the (m+m')+c=m+(m'+c) reindexer → monoidal."
+      }
+    ],
+    "next_steps": "execute the hom-level route (apply Iso.ext first, mirroring the zero_left succ closure proven this iter); if the pentagon resists monoidal, effort-break the (m+m')+c reindexer into a named subst helper then monoidal."
+  },
+  {
+    "timestamp": "2026-06-20T08:49:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "sectionsMul_mul_assoc"
+    },
+    "session": {
+      "id": "session_23",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "B7 — gated solely on full B6 (tensorPowAdd_assoc succ). Section-level assembly mirrors sectionsMul_mul_one: ingredients (1)=B5 + (3)=B6 named; only the (2) section-slide remains. sorry @3260.",
+      "key_lemmas_used": [
+        "tensorObjAssoc_hom_sectionsMul",
+        "tensorPowAdd_assoc"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "not re-attempted this iter (gated on B6)",
+        "code_tried": "sorry",
+        "line_number": "3235",
+        "result": "partial",
+        "insight": "honest typed sorry, statement un-weakened (lean-auditor confirmed)."
+      }
+    ],
+    "next_steps": "unblock once B6 succ closes; then assemble like sectionsMul_mul_one."
+  },
+  {
+    "timestamp": "2026-06-20T08:49:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "tensorBraiding_self_eq_id_of_isInvertible / tensorPowAdd_comm / sectionsMul_mul_comm"
+    },
+    "session": {
+      "id": "session_23",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "DEFERRED FUTURE — sectionsMul_mul_comm is FALSE for general L (section ring = free tensor algebra); comm holds only for [IsInvertible L]. No consumer; not on the goal cone. 3 sorries @3278/3293/3335, all correctly [IsInvertible L]-gated (lean-auditor + lvbc confirmed).",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "not attempted (deferred, no consumer)",
+        "code_tried": "sorry",
+        "line_number": "3272/3286/3307",
+        "result": "partial",
+        "insight": "do NOT re-assign; gated on invertibility + cohomology-independent FUTURE."
+      }
+    ],
+    "next_steps": "leave deferred until a consumer appears."
+  }
+]

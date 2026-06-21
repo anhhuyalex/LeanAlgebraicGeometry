@@ -55,6 +55,31 @@ lemma tensorObjIsoOfIso_refl {X : Scheme.{u}} (M N : X.Modules) :
     MonoidalCategory.id_tensorHom_id, CategoryTheory.Functor.map_id]
   rfl
 
+/-- **Generic 3-fold tensor/composition interchange.** In any monoidal category, the tensor of two
+3-step composites distributes as the 3-step composite of tensors.  Stated explicitly (with the
+three-fold `≫` shape) so a single `rw` matches the per-leg `(η ≫ pbv ≫ ρ⁻¹) ⊗ₘ (…)` form that the
+bare `tensorHom_comp_tensorHom` rewrite fails to key on under a sheafification `Functor.map`. -/
+lemma tensorHom_comp3 {C : Type*} [Category C] [MonoidalCategory C]
+    {a₀ a₁ a₂ a₃ b₀ b₁ b₂ b₃ : C} (a : a₀ ⟶ a₁) (b : a₁ ⟶ a₂) (c : a₂ ⟶ a₃)
+    (d : b₀ ⟶ b₁) (e : b₁ ⟶ b₂) (g : b₂ ⟶ b₃) :
+    MonoidalCategory.tensorHom (a ≫ b ≫ c) (d ≫ e ≫ g)
+      = MonoidalCategory.tensorHom a d ≫ MonoidalCategory.tensorHom b e
+        ≫ MonoidalCategory.tensorHom c g := by
+  rw [MonoidalCategory.tensorHom_comp_tensorHom, MonoidalCategory.tensorHom_comp_tensorHom]
+
+/-- **`F.map` of a 3-fold tensor/composition interchange.** The image under any functor of a tensor
+of two 3-step composites is the 3-step composite of the `F.map`-images of the per-step tensors.
+Bundles `tensorHom_comp3` with `Functor.map_comp`; applied via `exact` so the functor-carrier
+defeq (`(𝟙 _.obj)` vs `(𝟙 _.val)`) and the per-leg intermediate-object diamonds are absorbed
+definitionally rather than fought with `rw`/`erw`. -/
+lemma map_tensorHom_comp3 {C D : Type*} [Category C] [MonoidalCategory C] [Category D] (F : C ⥤ D)
+    {a₀ a₁ a₂ a₃ b₀ b₁ b₂ b₃ : C} (a : a₀ ⟶ a₁) (b : a₁ ⟶ a₂) (c : a₂ ⟶ a₃)
+    (d : b₀ ⟶ b₁) (e : b₁ ⟶ b₂) (g : b₂ ⟶ b₃) :
+    F.map (MonoidalCategory.tensorHom (a ≫ b ≫ c) (d ≫ e ≫ g))
+      = F.map (MonoidalCategory.tensorHom a d) ≫ F.map (MonoidalCategory.tensorHom b e)
+        ≫ F.map (MonoidalCategory.tensorHom c g) := by
+  rw [tensorHom_comp3, F.map_comp, F.map_comp]
+
 /-- **Presheaf-level: `dualIsoOfIso` is contravariantly functorial (composition).**
 Sectionwise, `dualIsoOfIso e` is precomposition by `pushforward₀.map e.hom`, and
 precomposition is contravariant: `precomp (a ≫ b) = precomp b ∘ precomp a` (so the
@@ -165,12 +190,632 @@ lemma tensorObjIsoOfIso_comp_unit_iso {X : Scheme.{u}}
   rw [← Category.assoc]
   exact congrArg (· ≫ _) hmap
 
-/-! ## Cocycle-A helpers for `exists_tensorObj_inverse` (iter-028 stubs)
+/-! ## Cocycle-A helpers for `exists_tensorObj_inverse`
 
 `trivialisation_restrict_compat` reduces the sectionwise overlap equation
 (residual-A step 1) from the `(U i).ι⁻¹`-vs-`(U j).ι⁻¹` form to a single-open-`V`
 equation, enabling `tensorObj_unit_self_duality_collapse` to close the `g·g⁻¹ = 1`
 cancellation (step 2). -/
+
+/-- **Reindexing iso `ρ_A` (the keystone identification).** For the chart `j : V ⟶ U` with
+`j ≫ U.ι = V.ι`, the `V`-restriction of an `X`-module `A` is canonically the `j`-restriction of its
+`U`-restriction: `A.restrict V.ι ≅ (A.restrict U.ι).restrict j`.  Built from the keystone
+`restrictFunctorComp j U.ι` (`Mathlib`) post-composed with the `j ≫ U.ι = V.ι` congruence
+`restrictFunctorCongr`.  This is the `ρ` of the blueprint S2–S4c squares, on both flanks of each. -/
+private noncomputable def restrictCompReindex {X : Scheme.{u}} {U V : X.Opens}
+    (j : (V : Scheme) ⟶ (U : Scheme)) [IsOpenImmersion j] (hjι : j ≫ U.ι = V.ι) (A : X.Modules) :
+    A.restrict V.ι ≅ (A.restrict U.ι).restrict j :=
+  (restrictFunctorCongr hjι).symm.app A ≪≫ (restrictFunctorComp j U.ι).app A
+
+/-! ### Step A — atomic per-leg conjugate computations for the B2 telescope
+
+The natural-transformation identity `hNat` of `restrictFunctorIsoPullback_comp_compat_hom`
+is proved by conjugating both sides onto the common right adjoint `pushforward V.ι` and
+distributing leg-by-leg via `conjugateEquiv_comp`.  Each per-leg conjugate value is one of
+the following atomic claims (blueprint `lem:conjugateequiv_*`). -/
+
+/-- **c₅ (blueprint `lem:conjugateequiv_pullbackcomp_hom`): conjugate of the pullback-composition
+hom.** Mirror of Mathlib's `conjugateEquiv_pullbackComp_inv`: applying `conjugateEquiv` (in the
+swapped adjunction order, so it accepts `.hom : L₁ ⟶ L₂`) to `(pullbackComp f g).hom` gives the
+*inverse* of the pushforward-composition iso.  Obtained from `conjugateEquiv_pullbackComp_inv` by
+the `conjugateEquiv_comm` cancellation `hom ; inv = 𝟙`. -/
+lemma conjugateEquiv_pullbackComp_hom {X Y Z : Scheme.{u}} (f : X ⟶ Y) (g : Y ⟶ Z)
+    [IsOpenImmersion f] [IsOpenImmersion g] :
+    conjugateEquiv (pullbackPushforwardAdjunction (f ≫ g))
+        ((pullbackPushforwardAdjunction g).comp (pullbackPushforwardAdjunction f))
+        (pullbackComp f g).hom
+      = (pushforwardComp f g).inv := by
+  have hcomm := conjugateEquiv_comm
+    ((pullbackPushforwardAdjunction g).comp (pullbackPushforwardAdjunction f))
+    (pullbackPushforwardAdjunction (f ≫ g))
+    (α := (pullbackComp f g).inv) (β := (pullbackComp f g).hom)
+    (Iso.hom_inv_id _)
+  rw [conjugateEquiv_pullbackComp_inv] at hcomm
+  -- hcomm : (pushforwardComp f g).hom ≫ conjugateEquiv … (pullbackComp f g).hom = 𝟙
+  rw [← cancel_epi (pushforwardComp f g).hom, hcomm, Iso.hom_inv_id]
+
+/-- **LHS of the B2 telescope: the conjugate of `restrictFunctorIsoPullback f` is the identity.**
+`restrictFunctorIsoPullback f = leftAdjointUniq (restrictAdjunction f) (pullbackPushforwardAdjunction f)`,
+both adjoint to the common `pushforward f`; the conjugate of a `leftAdjointUniq` hom onto the shared
+right adjoint is the identity. -/
+lemma conjugateEquiv_restrictFunctorIsoPullback_hom {X Y : Scheme.{u}} (f : Y ⟶ X)
+    [IsOpenImmersion f] :
+    conjugateEquiv (pullbackPushforwardAdjunction f) (restrictAdjunction f)
+        (restrictFunctorIsoPullback f).hom
+      = 𝟙 (pushforward f) := by
+  rw [Equiv.apply_eq_iff_eq_symm_apply]
+  simp only [restrictFunctorIsoPullback, Adjunction.leftAdjointUniq, Iso.symm_hom,
+    conjugateIsoEquiv_symm_apply_inv, Iso.refl_inv]
+
+/-- **c₃ (blueprint `lem:conjugateequiv_restrictfunctorisopullback_whiskerright`): conjugate of the
+`f`-comparison whiskered by `restrict j`.** The leg `whiskerRight (restrictFunctorIsoPullback f).hom
+(restrictFunctor j)`, conjugated through the composite adjunctions `(pPA f).comp (rA j) →
+(rA f).comp (rA j)`, is the identity: by `conjugateEquiv_whiskerRight` it becomes
+`whiskerLeft (pushforward j)` of the (identity) conjugate of `restrictFunctorIsoPullback f`. -/
+lemma conjugateEquiv_restrictFunctorIsoPullback_whiskerRight {X Y Z : Scheme.{u}}
+    (f : Y ⟶ X) (j : Z ⟶ Y) [IsOpenImmersion f] [IsOpenImmersion j] :
+    conjugateEquiv ((pullbackPushforwardAdjunction f).comp (restrictAdjunction j))
+        ((restrictAdjunction f).comp (restrictAdjunction j))
+        (Functor.whiskerRight (restrictFunctorIsoPullback f).hom (restrictFunctor j))
+      = 𝟙 _ := by
+  rw [conjugateEquiv_whiskerRight, conjugateEquiv_restrictFunctorIsoPullback_hom,
+    Functor.whiskerLeft_id']
+
+/-- **c₄ (blueprint `lem:conjugateequiv_restrictfunctorisopullback_whiskerleft`): conjugate of the
+`j`-comparison whiskered into `pullback f`.** The leg `whiskerLeft (pullback f)
+(restrictFunctorIsoPullback j).hom`, conjugated through `(pPA f).comp (pPA j) → (pPA f).comp (rA j)`,
+is the identity: by `conjugateEquiv_whiskerLeft` it becomes `whiskerRight` of the (identity)
+conjugate of `restrictFunctorIsoPullback j`. -/
+lemma conjugateEquiv_restrictFunctorIsoPullback_whiskerLeft {X Y Z : Scheme.{u}}
+    (f : Y ⟶ X) (j : Z ⟶ Y) [IsOpenImmersion f] [IsOpenImmersion j] :
+    conjugateEquiv ((pullbackPushforwardAdjunction f).comp (pullbackPushforwardAdjunction j))
+        ((pullbackPushforwardAdjunction f).comp (restrictAdjunction j))
+        (Functor.whiskerLeft (pullback f) (restrictFunctorIsoPullback j).hom)
+      = 𝟙 _ := by
+  rw [conjugateEquiv_whiskerLeft, conjugateEquiv_restrictFunctorIsoPullback_hom,
+    Functor.whiskerRight_id']
+
+/-- **c₁/c₆ (blueprint `lem:conjugateequiv_reindexcongr`): the two flanking reindex congruences
+cancel.** The conjugate of the `pullbackCongr` leg (c₆, pullback world) composed with the conjugate
+of the `restrictFunctorCongr` leg (c₁, restrict world) — both transports along the single equality
+`f = f'` — telescopes to the identity on `pushforward f'`.  Proved by `subst` on the equality, after
+which both congruences are identities. -/
+lemma conjugateEquiv_reindexCongr {X Yv : Scheme.{u}} (f f' : Yv ⟶ X)
+    [IsOpenImmersion f] [IsOpenImmersion f'] (h : f = f') :
+    conjugateEquiv (pullbackPushforwardAdjunction f') (pullbackPushforwardAdjunction f)
+          (pullbackCongr h).hom ≫
+        conjugateEquiv (restrictAdjunction f) (restrictAdjunction f')
+          (restrictFunctorCongr h).symm.hom
+      = 𝟙 (pushforward f') := by
+  subst h
+  simp only [pullbackCongr, eqToIso_refl, Iso.refl_hom, conjugateEquiv_id, Category.id_comp,
+    Iso.symm_hom]
+  convert conjugateEquiv_id (restrictAdjunction f)
+  ext M U
+  simp
+
+/-- **B2 `.hom`-level content (`restrictFunctorIsoPullback` pseudonaturality, `.hom.app A` form).**
+The single `restrictFunctorIsoPullback V.ι` comparison map factors, through the chart composite
+`j ≫ U.ι = V.ι`, as the two-step restrict→pullback comparison reindexed by `restrictFunctorComp` on
+the restrict side and `pullbackComp`/`pullbackCongr` on the pullback side.  This is the genuine
+mate-calculus content of B2 (the iso version reduces to this by the `restrictAdjunction V.ι` unit
+triangle).  Both sides are maps `(restrictFunctor V.ι).obj A ⟶ (pullback V.ι).obj A`. -/
+private lemma restrictFunctorIsoPullback_comp_compat_hom {X : Scheme.{u}} {U V : X.Opens}
+    (j : (V : Scheme) ⟶ (U : Scheme)) [IsOpenImmersion j] (hjι : j ≫ U.ι = V.ι) (A : X.Modules) :
+    (restrictFunctorIsoPullback V.ι).hom.app A
+      = (restrictFunctorCongr hjι).symm.hom.app A
+          ≫ (restrictFunctorComp j U.ι).hom.app A
+          ≫ (restrictFunctor j).map ((restrictFunctorIsoPullback U.ι).hom.app A)
+          ≫ (restrictFunctorIsoPullback j).hom.app ((pullback U.ι).obj A)
+          ≫ (pullbackComp j U.ι).hom.app A
+          ≫ (pullbackCongr hjι).hom.app A := by
+  -- Reduce the `.app A` statement to the underlying NatTrans equality (the per-leg `mapIso`/whisker
+  -- bookkeeping `c₃ = whiskerRight`, `c₄ = whiskerLeft` is discharged here by `NatTrans.comp_app`);
+  -- the genuine mate-calculus content is the NatTrans identity `hNat`.
+  have hNat : (restrictFunctorIsoPullback V.ι).hom
+      = (restrictFunctorCongr hjι).symm.hom
+          ≫ (restrictFunctorComp j U.ι).hom
+          ≫ Functor.whiskerRight (restrictFunctorIsoPullback U.ι).hom (restrictFunctor j)
+          ≫ Functor.whiskerLeft (pullback U.ι) (restrictFunctorIsoPullback j).hom
+          ≫ (pullbackComp j U.ι).hom
+          ≫ (pullbackCongr hjι).hom := by
+    -- Both sides are NatTrans `restrictFunctor V.ι ⟶ pullback V.ι`, between left adjoints of the
+    -- common right adjoint `pushforward V.ι`.  Apply `conjugateEquiv` injectivity onto `pushforward V.ι`
+    -- (every intermediate functor in the RHS chain is `X.Modules ⥤ V.Modules`, so the whole chain lives
+    -- over the FIXED `(C,D) = (X.Modules, V.Modules)` and `conjugateEquiv_comp` distributes leg-by-leg
+    -- — `mateEquiv_hcomp` is NOT needed once the per-leg intermediate adjunctions are supplied).
+    apply (conjugateEquiv (pullbackPushforwardAdjunction V.ι) (restrictAdjunction V.ι)).injective
+    -- LHS collapses to `𝟙 (pushforward V.ι)` by `conjugateEquiv_restrictFunctorIsoPullback_hom`.
+    rw [conjugateEquiv_restrictFunctorIsoPullback_hom]
+    -- Goal: `𝟙 (pushforward V.ι)
+    --          = conjugateEquiv (pPA V.ι) (rA V.ι) (c₁ ≫ c₂ ≫ c₃ ≫ c₄ ≫ c₅ ≫ c₆)`.
+    -- RHS distributes by `← conjugateEquiv_comp` through the intermediate adjunctions
+    --   G₀=`rA V.ι`  G₁=`rA (j≫U.ι)`  G₂=`(rA U.ι).comp (rA j)`  G₃=`(pPA U.ι).comp (rA j)`
+    --   G₄=`(pPA U.ι).comp (pPA j)`  G₅=`pPA (j≫U.ι)`  G₆=`pPA V.ι`
+    -- giving the reversed product of per-leg conjugates, each a KNOWN map:
+    --   • c₂ (`restrictFunctorComp j U.ι).hom`) ↦ `(pushforwardComp j U.ι).hom` — the now-public root
+    --       keystone `conjugateEquiv_restrictFunctorComp_inv j U.ι` (matches G₁↦G₂ EXACTLY);
+    --   • c₅ (`pullbackComp j U.ι).hom`) ↦ `(pushforwardComp j U.ι).inv` — inverse of the Mathlib
+    --       `conjugateEquiv_pullbackComp_inv j U.ι` (which gives the conjugate of `.inv`);
+    --   • c₃,c₄ (whisker of `restrictFunctorIsoPullback U.ι`/`j`) ↦ `pushforwardComp`-whiskered units via
+    --       `unit_leftAdjointUniq_hom_app` at `U.ι`/`j`;
+    --   • c₁,c₆ (`restrictFunctorCongr`/`pullbackCongr` from `hjι`) ↦ `pushforwardCongr`/eqToHom.
+    -- The product telescopes (the `(pushforwardComp j U.ι).hom ≫ (pushforwardComp j U.ι).inv` from c₂,c₅
+    -- cancels; the `pushforwardCongr` from c₁,c₆ cancel against the `j≫U.ι` reindex) to `𝟙`.
+    -- Distribute the conjugation leg-by-leg via `← conjugateEquiv_comp` through G₀..G₆.
+    rw [← conjugateEquiv_comp (pullbackPushforwardAdjunction V.ι)
+          (restrictAdjunction (j ≫ U.ι)) (restrictAdjunction V.ι),
+        ← conjugateEquiv_comp (pullbackPushforwardAdjunction V.ι)
+          ((restrictAdjunction U.ι).comp (restrictAdjunction j)) (restrictAdjunction (j ≫ U.ι)),
+        ← conjugateEquiv_comp (pullbackPushforwardAdjunction V.ι)
+          ((pullbackPushforwardAdjunction U.ι).comp (restrictAdjunction j))
+          ((restrictAdjunction U.ι).comp (restrictAdjunction j)),
+        ← conjugateEquiv_comp (pullbackPushforwardAdjunction V.ι)
+          ((pullbackPushforwardAdjunction U.ι).comp (pullbackPushforwardAdjunction j))
+          ((pullbackPushforwardAdjunction U.ι).comp (restrictAdjunction j)),
+        ← conjugateEquiv_comp (pullbackPushforwardAdjunction V.ι)
+          (pullbackPushforwardAdjunction (j ≫ U.ι))
+          ((pullbackPushforwardAdjunction U.ι).comp (pullbackPushforwardAdjunction j))]
+    -- c₂ ↦ (pushforwardComp).hom (keystone), c₅ ↦ (pushforwardComp).inv (c₅ lemma),
+    -- c₃,c₄ ↦ whiskered conjugates of `restrictFunctorIsoPullback` = 𝟙.
+    rw [conjugateEquiv_restrictFunctorComp_inv, conjugateEquiv_pullbackComp_hom,
+        conjugateEquiv_restrictFunctorIsoPullback_whiskerRight,
+        conjugateEquiv_restrictFunctorIsoPullback_whiskerLeft]
+    simp only [Category.id_comp, Category.comp_id]
+    -- Cancel the `(pushforwardComp).inv ≫ (pushforwardComp).hom` pair, leaving the two reindex
+    -- congruences conj(c₆) ≫ conj(c₁), which telescope to `𝟙` by `conjugateEquiv_reindexCongr`.
+    simp only [Category.assoc, Iso.inv_hom_id_assoc]
+    rw [conjugateEquiv_reindexCongr (j ≫ U.ι) V.ι hjι]
+  have happ := congr_app hNat A
+  simpa only [NatTrans.comp_app, Functor.whiskerRight_app, Functor.whiskerLeft_app] using happ
+
+/-- **B2 (blueprint `lem:restrictfunctorisopullback_comp_compat`): the `restrictFunctorIsoPullback`
+NatIso is pseudonatural across the chart composite `j ≫ U.ι = V.ι`.**
+
+The `V`-restriction-to-pullback comparison factors, through the reindex `ρ = restrictCompReindex j hjι`
+on the `restrict` side and `pullbackComp`/`pullbackCongr` on the `pullback` side, as the two-step
+comparison (first restrict-to-pullback along `U.ι`, transported by `restrict j`, then along `j`).
+This is the shared reindex bridge for all of S2/S4c: it converts the `restrict`-world reindex
+`restrictCompReindex` (= `restrictFunctorComp`) used to state the squares into the `pullback`-world
+reindex `pullbackComp` in which the proven composition laws (`pullbackTensorMap_restrict`,
+`pullbackObjUnitToUnit_comp`) live. Both sides are isos `restrictFunctor V.ι ≅ pullback V.ι`; the
+identity is the `leftAdjointUniq`-coherence of `restrictFunctorIsoPullback` across composition. -/
+private lemma restrictFunctorIsoPullback_comp_compat {X : Scheme.{u}} {U V : X.Opens}
+    (j : (V : Scheme) ⟶ (U : Scheme)) [IsOpenImmersion j] (hjι : j ≫ U.ι = V.ι) (A : X.Modules) :
+    (restrictFunctorIsoPullback V.ι).app A
+      = restrictCompReindex j hjι A
+          ≪≫ (restrictFunctor j).mapIso ((restrictFunctorIsoPullback U.ι).app A)
+          ≪≫ (restrictFunctorIsoPullback j).app ((pullback U.ι).obj A)
+          ≪≫ (pullbackComp j U.ι).app A
+          ≪≫ (pullbackCongr hjι).app A := by
+  -- Both sides are isos `(restrictFunctor V.ι).obj A ≅ (pullback V.ι).obj A`.  Since
+  -- `restrictFunctor V.ι` and `pullback V.ι` are both left adjoint to `pushforward V.ι`, an iso
+  -- between them is pinned down by the `leftAdjointUniq` characterisation
+  -- `homEquiv_leftAdjointUniq_hom_app`: it suffices to check both `.hom`s have the same image under
+  -- `(restrictAdjunction V.ι).homEquiv`, namely `(pullbackPushforwardAdjunction V.ι).unit.app A`.
+  -- CLOSED (iter-050): the LHS discharges to `(pullbackPushforwardAdjunction V.ι).unit.app A` via
+  -- `homEquiv_leftAdjointUniq_hom_app`; the residual `.hom`-level naturality identity is exactly the
+  -- now-proved `restrictFunctorIsoPullback_comp_compat_hom` (the leg-by-leg conjugate telescope).
+  apply Iso.ext
+  apply (restrictAdjunction V.ι).homEquiv _ _ |>.injective
+  conv_lhs => rw [show ((restrictFunctorIsoPullback V.ι).app A).hom
+    = ((restrictAdjunction V.ι).leftAdjointUniq (pullbackPushforwardAdjunction V.ι)).hom.app A
+    from rfl, Adjunction.homEquiv_leftAdjointUniq_hom_app]
+  rw [Adjunction.homEquiv_unit]
+  simp only [Iso.trans_hom, Functor.mapIso_hom, Functor.map_comp, Category.assoc,
+    restrictCompReindex, Iso.app_hom]
+  -- LHS = `(pullbackPushforwardAdjunction V.ι).unit.app A`.  Replace it by the `restrictFunctorIsoPullback
+  -- V.ι` unit-triangle so both sides become `restrictAdj.unit.app A ≫ (pushforward V.ι).map (-)`; cancel
+  -- the shared prefix and merge the RHS legs back into a single `(pushforward V.ι).map`.  The residual is
+  -- the genuine `.hom`-level naturality identity, discharged by `restrictFunctorIsoPullback_comp_compat_hom`.
+  rw [show (pullbackPushforwardAdjunction V.ι).unit.app A
+      = (restrictAdjunction V.ι).unit.app A
+          ≫ (pushforward V.ι).map ((restrictFunctorIsoPullback V.ι).hom.app A)
+      from (Adjunction.unit_leftAdjointUniq_hom_app (restrictAdjunction V.ι)
+        (pullbackPushforwardAdjunction V.ι) A).symm]
+  congr 1
+  rw [restrictFunctorIsoPullback_comp_compat_hom j hjι A, Functor.map_comp, Functor.map_comp,
+    Functor.map_comp, Functor.map_comp, Functor.map_comp]
+  rfl
+
+-- The `homEquiv` unfolding over the heavy sheafification-laden adjunctions is heartbeat-heavy.
+set_option maxHeartbeats 1600000 in
+/-- **Part III of the B1-crux: the sheaf pullback unit, transported by `forget`, factors as the
+presheaf pullback unit followed by sheafification and the `pullbackValIso` comparison.**
+
+For an open immersion `f`, the unit of the *sheaf*-level adjunction `pullback f ⊣ pushforward f`
+(`SheafOfModules`), pushed through the forgetful functor to presheaves, equals the *presheaf*-level
+pullback–pushforward unit composed with the sheafification unit `η` and the sheaf comparison
+`pullbackValIso f M` (transported through `forget`).  This is the genuine sheafification-boundary
+content of the B1 crux `H1inv_app_eq_pullbackVal_restrict`; the remaining legs of that crux
+(restriction-side `unit_leftAdjointUniq`, the `forget`/`pushforward` functoriality) are formal.
+
+Proof route: both sides are maps `M.val ⟶ (pushforward φ').obj (forget ((pullback f).obj M))`.
+The RHS is `unit ≫ (pushforward φ').map (η ≫ forget pbv) = homEquiv (η ≫ forget pbv)` for the
+presheaf pullback adjunction, so by `homEquiv`-injectivity it suffices to show
+`homEquiv.symm (forget (sheaf-unit)) = η ≫ forget pbv`, a presheaf-level counit/unit identity in
+the sheafification–pullback square. -/
+private lemma sheafPullbackUnit_forget_eq {X Y : Scheme.{u}} (f : Y ⟶ X) [IsOpenImmersion f]
+    (M : X.Modules) :
+    letI φ' : (X.presheaf ⋙ forget₂ CommRingCat RingCat) ⟶
+        (TopologicalSpace.Opens.map f.base).op ⋙ (Y.presheaf ⋙ forget₂ CommRingCat RingCat) :=
+        (f.toRingCatSheafHom).hom
+    (SheafOfModules.forget X.ringCatSheaf).map ((pullbackPushforwardAdjunction f).unit.app M)
+      = (PresheafOfModules.pullbackPushforwardAdjunction φ').unit.app M.val
+        ≫ (PresheafOfModules.pushforward φ').map
+            ((PresheafOfModules.sheafificationAdjunction (R := Y.ringCatSheaf)
+                (𝟙 Y.ringCatSheaf.val)).unit.app ((PresheafOfModules.pullback φ').obj M.val)
+              ≫ (SheafOfModules.forget Y.ringCatSheaf).map (pullbackValIso f M).hom) := by
+  -- The RHS is `unit ≫ (pushforward φ').map (η ≫ forget pbv)`.  Transpose across the presheaf
+  -- pullback–pushforward adjunction by its triangle identity `eq_unit_comp_map_iff`:
+  --   `g = unit ≫ G.map f  ↔  (pullback φ').map g ≫ counit = f`.
+  apply (Adjunction.eq_unit_comp_map_iff
+      (PresheafOfModules.pullbackPushforwardAdjunction (f.toRingCatSheafHom).hom) _ _).mpr
+  -- Remaining: the presheaf-level counit/unit identity at the sheafification–pullback square:
+  --   `(pullback φ').map (forget (sheaf-unit)) ≫ counit = η ≫ forget pbv`.
+  rw [pullbackValIso]
+  simp only [Iso.trans_hom, Iso.symm_hom, Functor.mapIso_hom, Functor.map_comp]
+  rw [← Functor.map_comp, sheafificationCompPullback_eq_leftAdjointUniq]
+  -- REDUCED GOAL (iter-051, fully explicit; the SOLE residual of the entire B1 crux):
+  --   `(pullback φ').map (forget (pullbackAdj_sheaf.unit.app M)) ≫ counit_pre.app _`
+  --     `= η_Y.app (pullback φ' M.val)`
+  --       `≫ forget ((A.leftAdjointUniq B).inv.app M.val ≫ (pullback_sheaf f).map (ε_X.app M))`
+  -- with `A = sheafAdj_X.comp pullbackPushforwardAdjunction_sheaf`,
+  --      `B = pullbackPushforwardAdjunction_pre φ' .comp sheafAdj_Y`,
+  --      `ε_X = sheafAdj_X.counit`.  This is the `pullbackIso`-comparison mate identity: the
+  -- *abstract* sheaf pullback unit `pullbackPushforwardAdjunction f` (`Adjunction.ofIsRightAdjoint`,
+  -- hence opaque to `simp`) must be related to the *concrete* `PullbackConstruction.adjunction φ`
+  -- (whose `homEquiv` is `sheafAdj_X ∘ pullbackAdj_pre ∘ forget`) via
+  -- `Scheme.Modules.pullbackIso φ = leftAdjointUniq (pullbackPushforwardAdjunction f)
+  -- (PullbackConstruction.adjunction φ)` and the `unit_leftAdjointUniq`/`leftAdjointUniq_hom_app_counit`
+  -- family — the same mate calculus as the root `leftAdjointUniqUnitEta` / `pullbackObjUnitToUnit_comp`.
+  -- `aesop_cat` reduces `forget _.map` to `.val` but cannot close (it is not formal).
+  -- All other B1-crux content (Parts I/II/IV, the transposition, the `pullbackValIso` unfold) is
+  -- discharged above; this single explicit identity is what remains.
+  sorry
+
+-- The `homEquiv`/`leftAdjointUniq` unfolding over the heavy sheafification-laden adjunctions is
+-- heartbeat-heavy; bump past the default.
+set_option maxHeartbeats 1600000 in
+/-- **Per-leg sheafification of the presheaf adjoint-uniqueness comparison `H1.inv` (B1 residual).**
+For an open immersion `f`, the presheaf-level `leftAdjointUniq` comparison `H1.inv.app M.val`
+(`pushforward β ≅ pullback φ'`, the linchpin `H1` of `tensorObj_restrict_iso` Step 4) factors, after
+the sheafification unit `η`, as the sheaf-level per-leg reindex
+`pullbackValIso ≫ (restrictFunctorIsoPullback)⁻¹` (transported through `forget`).  This is the
+leg-wise sheafification bookkeeping that B1's residual reduces to once the δ-conjugation content is
+discharged (it is the per-factor identity behind the `M`/`N` legs of the residual `tensorHom`).
+
+Proof strategy (`homEquiv`-injective on `pullbackPushforwardAdjunction φ'`): `H1.inv` is the
+`leftAdjointUniq` whose defining unit-triangle is `pullbackPPAdj.unit ≫ pushforward.map H1.inv =
+hadj.unit`; it suffices to verify the RHS satisfies the same triangle, reducing to the interplay of
+the sheafification unit with the `sheafificationCompPullback` device (= `pullbackValIso`) and the
+restriction adjunction (= `restrictFunctorIsoPullback`). -/
+private lemma H1inv_app_eq_pullbackVal_restrict {X Y : Scheme.{u}} (f : Y ⟶ X) [IsOpenImmersion f]
+    (M : X.Modules) :
+    letI φ' : (X.presheaf ⋙ forget₂ CommRingCat RingCat) ⟶
+        (TopologicalSpace.Opens.map f.base).op ⋙ (Y.presheaf ⋙ forget₂ CommRingCat RingCat) :=
+        (f.toRingCatSheafHom).hom
+    let α : Y.presheaf ⟶ f.opensFunctor.op ⋙ X.presheaf :=
+      { app := fun U => (f.appIso U.unop).inv }
+    let β : Y.ringCatSheaf.obj ⟶ f.opensFunctor.op ⋙ X.ringCatSheaf.obj :=
+      Functor.whiskerRight α (forget₂ CommRingCat RingCat)
+    let hadj : PresheafOfModules.pushforward β ⊣ PresheafOfModules.pushforward φ' :=
+      PresheafOfModules.pushforwardPushforwardAdj f.isOpenEmbedding.isOpenMap.adjunction β φ'
+        (by ext U x; exact congr($((f.app_appIso_inv _).symm).hom x))
+        (by ext U x; exact congr($(f.appIso_inv_app_presheafMap U.unop) x))
+    (hadj.leftAdjointUniq (PresheafOfModules.pullbackPushforwardAdjunction φ')).inv.app M.val
+      = (PresheafOfModules.sheafificationAdjunction (R := Y.ringCatSheaf)
+            (𝟙 Y.ringCatSheaf.val)).unit.app ((PresheafOfModules.pullback φ').obj M.val) ≫
+        (SheafOfModules.forget Y.ringCatSheaf).map (pullbackValIso f M).hom ≫
+        (SheafOfModules.forget Y.ringCatSheaf).map ((restrictFunctorIsoPullback f).app M).inv := by
+  intro α β hadj
+  -- `H1.inv` is `(pullbackPPAdj.leftAdjointUniq hadj).hom` (`leftAdjointUniq_inv_app`).  Both sides
+  -- are maps `pullback.obj M.val ⟶ pushforward β.obj M.val`; `pullbackPPAdj` is an adjunction onto
+  -- `pushforward φ'`, so by `homEquiv`-injectivity it suffices to compare their `homEquiv`-images.
+  -- The LHS image is `hadj.unit.app M.val` (defining triangle `unit_leftAdjointUniq_hom_app`); the
+  -- RHS image expands by `homEquiv_unit`.  This reduces the per-leg to the CRUX unit identity below.
+  apply (PresheafOfModules.pullbackPushforwardAdjunction (Hom.toRingCatSheafHom f).hom).homEquiv _ _
+    |>.injective
+  rw [Adjunction.leftAdjointUniq_inv_app]
+  simp only [Adjunction.homEquiv_unit]
+  refine Eq.trans (Adjunction.unit_leftAdjointUniq_hom_app _ hadj M.val) ?_
+  -- CRUX unit identity (the genuine geometric content, all other B1 steps now discharged):
+  --   `hadj.unit.app M.val`
+  --     `= pullbackPPAdj.unit.app M.val`
+  --       `≫ pushforward φ'.map (η_P ≫ forget (pullbackValIso f M).hom ≫ forget ρ_M.inv)`
+  -- connecting the presheaf restriction unit `hadj.unit` (LHS) with the presheaf pullback unit
+  -- `pullbackPPAdj.unit` composed with the sheafification unit `η`, the `sheafificationCompPullback`
+  -- device (= `pullbackValIso`) and the sheaf-level `restrictFunctorIsoPullback` (= `ρ`).  Both
+  -- `restrictFunctorIsoPullback f` and the (sheaf) `restrictAdjunction f` are `pushforwardPushforwardAdj`
+  -- /`leftAdjointUniq` over `pushforward f`, so this is the "sheafification intertwines the presheaf and
+  -- sheaf adjoint-uniqueness comparisons" coherence: unfold `pullbackValIso` (=
+  -- `sheafificationCompPullback.symm ≫ pullback.mapIso counit`, with `sheafificationCompPullback_eq_leftAdjointUniq`)
+  -- and `restrictFunctorIsoPullback` (= `restrictAdjunction.leftAdjointUniq pullbackPushforwardAdjunction`),
+  -- then push `hadj.unit`/`pullbackPPAdj.unit` through the sheafification adjunction triangle
+  -- (`sheafificationAdjunction`) against `restrictAdjunction.unit`.
+  --
+  -- VERIFIED REDUCTION (iter-045, via `lean_multi_attempt`): after
+  --   `rw [pullbackValIso, restrictFunctorIsoPullback]; simp only [Iso.trans_hom, Iso.symm_hom,`
+  --   `  Functor.mapIso_hom, Functor.map_comp]; rw [sheafificationCompPullback_eq_leftAdjointUniq]`
+  -- the goal is a pure `leftAdjointUniq`/composite-adjunction coherence: `pullbackValIso.inv` becomes
+  -- the `leftAdjointUniq` of `(sheafification.comp pullbackPPAdj_sheaf)` vs
+  -- `(pullbackPPAdj_pre.comp sheafification)`, and `restrictFunctorIsoPullback` the `leftAdjointUniq`
+  -- of `restrictAdjunction` vs `pullbackPushforwardAdjunction`.  Closing it is the SAME mate-calculus
+  -- family as B2 (`analogies/b2mate045.md`): `conjugateEquiv_comp` / `mateEquiv_hcomp` /
+  -- `iterated_mateEquiv_conjugateEquiv` + `leftAdjointUniq_trans`, plus `leftAdjointUniqUnitEta`
+  -- (root L1531) for the `sheafificationCompPullback` unit leg.  ~80–120 LOC mate-calculus; the
+  -- surrounding B1 machinery (δ-conjugation, per-leg merge, `tensorHom_comp3` distribution) is now
+  -- ALL discharged, so this unit coherence is the sole remaining content of the B1 keystone.
+  --
+  -- ASSEMBLY (iter-051): the crux is the `forget`-transport of the *sheaf*-level
+  -- `unit_leftAdjointUniq` identity for `restrictFunctorIsoPullback`, with the pullback-unit leg
+  -- replaced by its sheafification factorisation `sheafPullbackUnit_forget_eq` (Part III).
+  --   (I)  `hadj.unit.app M.val = forget (restrictAdjunction f).unit.app M`           [rfl]
+  --   (II) sheaf `unit_leftAdjointUniq_hom_app` ⇒ `restrictAdj.unit = pullbackAdj.unit ≫ ρ⁻¹`
+  --   (III) `sheafPullbackUnit_forget_eq` : `forget (pullback-sheaf unit) = pre-unit ≫ η ≫ pbv`
+  --   (IV) `forget (pushforward f).map = (pushforward φ').map ∘ forget`               [rfl]
+  -- The trailing `ρ⁻¹` leg matches the crux's `forget ρ.inv` leg; the rest telescopes.
+  -- NB: `X.Modules`/`Y.Modules` are `SheafOfModules`, whose `≫` is defeq-but-not-syntactic, so
+  -- `rw [Category.assoc]`/`rw [Functor.map_comp]` MISS at this level; every category-lemma step is
+  -- applied in TERM mode (via `:=` / `Eq.trans`), which unifies up to defeq.
+  have hII : (restrictAdjunction f).unit.app M
+        ≫ (pushforward f).map ((restrictFunctorIsoPullback f).hom.app M)
+      = (pullbackPushforwardAdjunction f).unit.app M :=
+    Adjunction.unit_leftAdjointUniq_hom_app _ _ M
+  -- `(pushforward f).map ρ.hom ≫ (pushforward f).map ρ.inv = 𝟙` (term mode).
+  have key : (pushforward f).map ((restrictFunctorIsoPullback f).hom.app M)
+        ≫ (pushforward f).map ((restrictFunctorIsoPullback f).inv.app M) = 𝟙 _ :=
+    (CategoryTheory.Functor.map_comp (pushforward f) _ _).symm.trans
+      ((congrArg (pushforward f).map (Iso.hom_inv_id_app (restrictFunctorIsoPullback f) M)).trans
+        (CategoryTheory.Functor.map_id (pushforward f) _))
+  have hII2 : (restrictAdjunction f).unit.app M
+      = (pullbackPushforwardAdjunction f).unit.app M
+        ≫ (pushforward f).map ((restrictFunctorIsoPullback f).inv.app M) := by
+    rw [← hII]
+    exact (Eq.trans (Category.assoc _ _ _)
+      (Eq.trans (congrArg (fun t => (restrictAdjunction f).unit.app M ≫ t) key)
+        (Category.comp_id _))).symm
+  -- The B1 crux (`forget`-transport of the sheaf `unit_leftAdjointUniq`).  The only `rw`s are the
+  -- two atom-subterm rewrites (Part I `rfl`-show, Part II `hII2`); every category-lemma step
+  -- (`map_comp`, `assoc`) — which `rw` MISSES on the `SheafOfModules` `≫` seam — is applied in TERM
+  -- mode (unifies up to defeq), as is Part IV (`forget ∘ pushforward = pushforward φ' ∘ forget`).
+  rw [show hadj.unit.app M.val
+        = (SheafOfModules.forget X.ringCatSheaf).map ((restrictAdjunction f).unit.app M) from rfl,
+    hII2]
+  -- Goal: `forget (u_p ≫ pushforward.map ρ.inv) = RHS`.
+  -- (a) split `forget` over `≫` (Part IV folds `forget ∘ pushforward` into `pushforward φ' ∘ forget`):
+  refine Eq.trans (CategoryTheory.Functor.map_comp (SheafOfModules.forget X.ringCatSheaf)
+    ((pullbackPushforwardAdjunction f).unit.app M)
+    ((pushforward f).map ((restrictFunctorIsoPullback f).inv.app M))) ?_
+  -- Goal: `forget u_p ≫ (pushforward φ').map (forget ρ.inv) = RHS`.
+  -- (b) Part III rewrites the first leg `forget u_p`:
+  refine Eq.trans (congrArg (fun t => t
+      ≫ (PresheafOfModules.pushforward (f.toRingCatSheafHom).hom).map
+          ((SheafOfModules.forget Y.ringCatSheaf).map ((restrictFunctorIsoPullback f).inv.app M)))
+    (sheafPullbackUnit_forget_eq f M)) ?_
+  -- Goal: `(u_pre ≫ Q.map (η ≫ forget pbv)) ≫ Q.map (forget ρ.inv) = u_pre ≫ Q.map (η ≫ forget pbv ≫ forget ρ.inv)`.
+  -- (c) assoc, then merge the two `Q.map` legs and re-associate inside:
+  exact Eq.trans (Category.assoc _ _ _)
+    (congrArg (fun t => (PresheafOfModules.pullbackPushforwardAdjunction
+        (f.toRingCatSheafHom).hom).unit.app M.val ≫ t)
+      ((CategoryTheory.Functor.map_comp _ _ _).symm.trans
+        (congrArg (PresheafOfModules.pushforward (f.toRingCatSheafHom).hom).map
+          (Category.assoc _ _ _))))
+
+-- The `erw` per-leg rewrite + `pushforward_mu_appIso_collapse` over the sheafification-laden
+-- `leftAdjointUniq` carriers is heartbeat-heavy; bump past the default.
+set_option maxHeartbeats 1600000 in
+/-- **B1 (blueprint `lem:tensorobj_restrict_iso_eq_pullback_tensor_map`): the tensor-restriction
+iso is the `restrictFunctorIsoPullback`-conjugate of the pullback-tensor comparison map.**
+
+For an open immersion `f` the comparison `pullbackTensorMap f M N` is invertible by the **public**
+witness `pullbackTensorMap_isIso_of_isOpenImmersion` (root `TensorObjSubstrate.lean`, L4770), cited
+here directly as the `asIso` proof — the stale explicit `hiso` hypothesis is therefore dropped
+(signature now matches the blueprint).  The structural iso `tensorObj_restrict_iso` decomposes as the
+`restrictFunctorIsoPullback`-app on `M⊗N`, then `asIso (pullbackTensorMap f M N)`, then the per-leg
+reindex by `(restrictFunctorIsoPullback f).app` on each tensor factor.  This promotes the *iso* world
+(`tensorObj_restrict_iso`) to the *map* world (`pullbackTensorMap`) in which the proven composition law
+`pullbackTensorMap_restrict` lives.
+
+**STATUS (iter-044): δ-conjugation DISCHARGED; reduced to a per-leg sheafification residual.**
+The δ-conjugation lemmas (`pushforward_mu_appIso_collapse`, `deltaConjOfMuComparison`,
+`isIso_oplaxδ_of_conj`) were de-privatized iter-044, so the genuine geometric content of B1 is now
+proved here in-line: cancel the shared `restrictFunctorIsoPullback`-prefix, read `(μIso Gβ).inv = δ Gβ`,
+apply the public `pushforward_mu_appIso_collapse`, cancel `H1.inv ≫ H1.hom`, and cancel the shared
+`sheafCompPb ; a_Y.map δ` prefix against the unfolded `pullbackTensorMap`.  What remains is a SINGLE,
+well-isolated per-leg reconciliation (see the residual comment in the body).
+
+**STATUS (iter-051): CLOSED at this level.** The `sheafifyTensorUnitIso` collapse uses the public
+`sheafifyTensorUnitIso_hom_eq'`, and the per-leg helper `H1inv_app_eq_pullbackVal_restrict` is now
+itself proven; this lemma's body is sorry-free at this level (it rides transitively only the single
+reduced residual `sheafPullbackUnit_forget_eq`, the sheafification-pullback-unit mate identity). -/
+private lemma tensorObj_restrict_iso_eq_pullbackTensorMap {X Y : Scheme.{u}} (f : Y ⟶ X)
+    [IsOpenImmersion f] (M N : X.Modules) :
+    tensorObj_restrict_iso f M N
+      = (restrictFunctorIsoPullback f).app (tensorObj M N)
+          ≪≫ @asIso _ _ _ _ (pullbackTensorMap f M N)
+              (pullbackTensorMap_isIso_of_isOpenImmersion f M N)
+          ≪≫ tensorObjIsoOfIso ((restrictFunctorIsoPullback f).app M).symm
+              ((restrictFunctorIsoPullback f).app N).symm := by
+  -- Witness instance for `asIso` (public).
+  haveI : IsIso (pullbackTensorMap f M N) := pullbackTensorMap_isIso_of_isOpenImmersion f M N
+  simp only [tensorObj_restrict_iso]
+  apply Iso.ext
+  simp only [Iso.trans_hom, Category.assoc]
+  congr 1
+  -- After cancelling the shared `restrictFunctorIsoPullback`-prefix, the goal is the tail identity
+  --   `(sheafCompPb).hom ≫ sheafification.map((H1.app).symm.hom ≫ (μIso Gβ).symm.hom)`
+  --     `= pullbackTensorMap f M N ≫ tensorObjIsoOfIso ρM.symm ρN.symm`.
+  -- Expose the `.hom`s of the mapIso/tensorObjIsoOfIso and read `(μIso Gβ).inv = δ Gβ`.
+  simp only [Functor.mapIso_hom, Iso.trans_hom, Iso.symm_hom, asIso_hom,
+    Functor.Monoidal.μIso_inv, tensorObjIsoOfIso, MonoidalCategory.tensorIso_hom]
+  -- Apply the (now public) δ-conjugation `pushforward_mu_appIso_collapse`:
+  --   `δ Gβ A B = H1.hom.app(A⊗B) ≫ δ(pullback φ') A B ≫ (H1.inv.app A ⊗ₘ H1.inv.app B)`,
+  -- then cancel `H1.inv.app(M⊗N) ≫ H1.hom.app(M⊗N) = 𝟙` inside the sheafification.map.
+  rw [pushforward_mu_appIso_collapse f M.val N.val, Iso.app_inv]
+  erw [Iso.inv_hom_id_app_assoc]
+  -- LHS = `sheafCompPb.hom ≫ a_Y.map (δ(pullback φ') ≫ (H1.inv.app M.val ⊗ₘ H1.inv.app N.val))`.
+  erw [Functor.map_comp]
+  -- Expand the RHS `pullbackTensorMap` into its 4-fold composite, then cancel the shared prefix
+  --   `sheafCompPb.hom ≫ a_Y.map (δ(pullback φ'))`.
+  simp only [pullbackTensorMap, Category.assoc]
+  congr 1
+  congr 1
+  -- RESIDUAL (per-leg reconciliation).  Goal:
+  --   `a_Y.map (H1.inv.app M.val ⊗ₘ H1.inv.app N.val)`
+  --     `= sheafifyTensorUnitIso.hom`
+  --       `≫ a_Y.map (forget (pullbackValIso f M).hom ⊗ₘ forget (pullbackValIso f N).hom)`
+  --       `≫ a_Y.map (forget ρM.inv ⊗ₘ forget ρN.inv)`.
+  -- Both privacy gates are now CLEARED (iter-045): `sheafifyTensorUnitIso` + `_hom_eq'` are public.
+  -- STEP 1 (mechanical): collapse the `sheafifyTensorUnitIso.hom` factor and merge the three
+  -- `a_Y.map` legs into ONE, reducing the goal to the per-leg presheaf identity
+  --   `H1.inv.app A = η_{pullback A} ≫ forget (pullbackValIso f ⟨A⟩).hom ≫ forget ρ_⟨A⟩.inv`.
+  rw [sheafifyTensorUnitIso_hom_eq']
+  -- STEP 2: rewrite each `H1.inv` leg by the per-leg helper `H1inv_app_eq_pullbackVal_restrict`
+  -- (`erw`: the `leftAdjointUniq` carrier matches only up to defeq instance/proof terms).
+  erw [H1inv_app_eq_pullbackVal_restrict f M, H1inv_app_eq_pullbackVal_restrict f N]
+  -- LHS = `a_Y.map ((η ≫ pbv_M ≫ ρM⁻¹) ⊗ (η ≫ pbv_N ≫ ρN⁻¹))`.  Distribute the per-leg composites
+  -- across the tensor and split the `a_Y.map` via the bundled `map_tensorHom_comp3`, giving exactly
+  -- the RHS three-factor form.  Applied by `exact` so the functor-carrier defeq (`(𝟙 _.obj)` vs
+  -- `(𝟙 _.val)`) and the per-leg intermediate-object diamonds are absorbed definitionally.
+  exact map_tensorHom_comp3
+    (C := _root_.PresheafOfModules (Y.presheaf ⋙ forget₂ CommRingCat RingCat)) _ _ _ _ _ _ _
+
+/-- **S2 (blueprint `lem:tensorobj_restrict_iso_restrict_compat`): the tensor-restriction
+comparison commutes with further restriction along the chart `j : V ⟶ U` (`j ≫ U.ι = V.ι`).**
+
+Modulo the reindexing iso `ρ = restrictCompReindex j hjι`, the `V`-built tensor-restriction iso
+equals the `restrict j`-image of the `U`-built one.  This is the "pullback commutes with `⊗`
+functorially" Stacks lemma, specialised to the immersion composite `j ≫ U.ι = V.ι`. -/
+private lemma tensorObj_restrict_iso_restrict_compat {X : Scheme.{u}} {U V : X.Opens}
+    (j : (V : Scheme) ⟶ (U : Scheme)) [IsOpenImmersion j] (hjι : j ≫ U.ι = V.ι)
+    (M N : X.Modules) :
+    tensorObj_restrict_iso V.ι M N
+      = restrictCompReindex j hjι (tensorObj M N)
+          ≪≫ (restrictFunctor j).mapIso (tensorObj_restrict_iso U.ι M N)
+          ≪≫ tensorObj_restrict_iso j (M.restrict U.ι) (N.restrict U.ι)
+          ≪≫ tensorObjIsoOfIso (restrictCompReindex j hjι M).symm
+              (restrictCompReindex j hjι N).symm := by
+  -- The constituent `tensorObj_restrict_iso` is a 4-step chart-chase
+  -- (`restrictFunctorIsoPullback ≫ sheafificationCompPullback ≫ strip ≫ H1∘H2`); proving this
+  -- square requires the immersion-naturality of each of those four legs (the Stacks
+  -- "pullback commutes with ⊗ functorially").  Not free from `restrictFunctorComp.hom.naturality`
+  -- (that gives naturality in a MORPHISM of X-modules, not in the immersion `j`).  RESIDUAL.
+  sorry
+
+/-- **S3-core (blueprint `lem:dual_restrict_iso_dualisoofiso_restrict_compat`, dual-restriction
+leg): `dual_restrict_iso` commutes with further restriction along the chart `j`.**
+
+Modulo the reindexing iso `ρ = restrictCompReindex j hjι` (and its `dualIsoOfIso`-image on the dual
+side, contravariant), the `V`-built dual-restriction iso equals the `restrict j`-image of the
+`U`-built one.  The full blueprint S3 (which bundles the `(dualIsoOfIso e^M)⁻¹` transport and the
+refinement `e^M ↦ restrictIsoUnitOfLE hVU e^M`) follows from this core plus contravariant
+functoriality `dualIsoOfIso_trans` and the identity `restrictIsoUnitOfLE hVU e^M = (restrict j) e^M`
+(both already available), threaded in the telescope. -/
+private lemma dual_restrict_iso_restrict_compat {X : Scheme.{u}} {U V : X.Opens}
+    (j : (V : Scheme) ⟶ (U : Scheme)) [IsOpenImmersion j] (hjι : j ≫ U.ι = V.ι)
+    (M : X.Modules) :
+    dual_restrict_iso V.ι M
+      = restrictCompReindex j hjι (dual M)
+          ≪≫ (restrictFunctor j).mapIso (dual_restrict_iso U.ι M)
+          ≪≫ dual_restrict_iso j (M.restrict U.ι)
+          ≪≫ dualIsoOfIso (restrictCompReindex j hjι M) := by
+  -- `dual_restrict_iso` is the image of the internal-hom restriction structural iso under the
+  -- 4-step `restrict`/`pullback`/`sheafification` chart-chase (`DualInverse.lean:166`); its
+  -- immersion-naturality is the same depth of residual as S2.  RESIDUAL.
+  sorry
+
+/-- **Unit-restriction identification.** For an open immersion `f : Y ⟶ X`, the restriction of the
+global unit `𝒪_X` to `Y` is `𝒪_Y`: `(𝒪_X).restrict f ≅ 𝒪_Y`.  This is `uι(f)` of the blueprint
+(`(restrictFunctorIsoPullback f).app 𝒪_X ≪≫ pullbackUnitIso f`); also the unit identification used
+on the chart-scheme side of S4a/S4b. -/
+private noncomputable def unitRestrictIso {X Y : Scheme.{u}} (f : Y ⟶ X) [IsOpenImmersion f] :
+    restrict (SheafOfModules.unit X.ringCatSheaf) f ≅ SheafOfModules.unit Y.ringCatSheaf :=
+  (restrictFunctorIsoPullback f).app (SheafOfModules.unit X.ringCatSheaf) ≪≫ pullbackUnitIso f
+
+/-- **S4a (blueprint `lem:dual_unit_iso_restrict_compat`): `dual_unit_iso` commutes with further
+restriction along the chart `j`.** Modulo the unit-restriction identification `unitRestrictIso j`
+and its `dualIsoOfIso`-image, the `V`-built dual-unit contraction equals the `restrict j`-image of
+the `U`-built one.  Template: `presheafDualUnitIso_naturality` (the unit-side naturality core). -/
+private lemma dual_unit_iso_restrict_compat {X : Scheme.{u}} {U V : X.Opens}
+    (j : (V : Scheme) ⟶ (U : Scheme)) [IsOpenImmersion j] (_hjι : j ≫ U.ι = V.ι) :
+    dual_unit_iso (Y := (V : Scheme))
+      = dualIsoOfIso (unitRestrictIso j)
+          ≪≫ (dual_restrict_iso j (SheafOfModules.unit (U : Scheme).ringCatSheaf)).symm
+          ≪≫ (restrictFunctor j).mapIso (dual_unit_iso (Y := (U : Scheme)))
+          ≪≫ unitRestrictIso j := by
+  -- `dual_unit_iso = sheafification.mapIso presheafDualUnitIso ≪≫ counit`; immersion-naturality
+  -- of `presheafDualUnitIso` against `j` (cf. the proved `presheafDualUnitIso_naturality` against a
+  -- unit automorphism) plus `dual_restrict_iso` naturality.  RESIDUAL.
+  sorry
+
+/-- **S4b (blueprint `lem:tensorobj_unit_iso_restrict_compat`): the unit self-tensor (left unitor)
+commutes with further restriction along the chart `j`.** Modulo `unitRestrictIso j` and the
+tensor-restriction comparison (S2), the `V`-built unit contraction equals the `restrict j`-image of
+the `U`-built one. -/
+private lemma tensorObj_unit_iso_restrict_compat {X : Scheme.{u}} {U V : X.Opens}
+    (j : (V : Scheme) ⟶ (U : Scheme)) [IsOpenImmersion j] (_hjι : j ≫ U.ι = V.ι) :
+    tensorObj_unit_iso (X := (V : Scheme))
+      = tensorObjIsoOfIso (unitRestrictIso j).symm (unitRestrictIso j).symm
+          ≪≫ (tensorObj_restrict_iso j (SheafOfModules.unit (U : Scheme).ringCatSheaf)
+                (SheafOfModules.unit (U : Scheme).ringCatSheaf)).symm
+          ≪≫ (restrictFunctor j).mapIso (tensorObj_unit_iso (X := (U : Scheme)))
+          ≪≫ unitRestrictIso j := by
+  -- `tensorObj_unit_iso = sheafification.mapIso (λ_ 𝟙_) ≪≫ counit`; immersion-naturality of the
+  -- presheaf left unitor + S2.  RESIDUAL.
+  sorry
+
+/-- **S4c (blueprint `lem:trivialisation_uiota_restrict_compat`): the global-unit comparison
+`uι = unitRestrictIso` commutes with further restriction along the chart `j`.** Modulo
+`ρ = restrictCompReindex j hjι` on the source and `unitRestrictIso j` on the target,
+`unitRestrictIso V.ι = ρ ≪≫ (restrict j)(unitRestrictIso U.ι) ≪≫ unitRestrictIso j`. This is the
+`pullbackComp`/`restrictFunctorComp` coherence of `pullbackUnitIso`. -/
+private lemma trivialisation_uIota_restrict_compat {X : Scheme.{u}} {U V : X.Opens}
+    (j : (V : Scheme) ⟶ (U : Scheme)) [IsOpenImmersion j] (hjι : j ≫ U.ι = V.ι) :
+    unitRestrictIso V.ι
+      = restrictCompReindex j hjι (SheafOfModules.unit X.ringCatSheaf)
+          ≪≫ (restrictFunctor j).mapIso (unitRestrictIso U.ι)
+          ≪≫ unitRestrictIso j := by
+  -- **Reframe (iter-041):** route through the `pullback` world via B2
+  -- (`restrictFunctorIsoPullback_comp_compat`).  After unfolding `unitRestrictIso` and rewriting the
+  -- `V.ι`-comparison by B2, the shared `restrict`-prefix cancels and the goal reduces to:
+  --   (i) `hslideH` — naturality of `restrictFunctorIsoPullback j` against `pullbackUnitIso U.ι`
+  --       (closes outright), and
+  --   (ii) `hunitH` — the pullback-side unit composition law, which is the PROVEN
+  --       `pullbackObjUnitToUnit_comp j U.ι` (`(pullbackUnitIso f).hom = pullbackObjUnitToUnit f`
+  --       definitionally) transported by the `pullbackCongr hjι` eqToHom (the `V.ι = j ≫ U.ι` shim).
+  simp only [unitRestrictIso, Functor.mapIso_trans]
+  rw [restrictFunctorIsoPullback_comp_compat j hjι (SheafOfModules.unit X.ringCatSheaf)]
+  -- (i) the `restrictFunctorIsoPullback j` naturality slide (proven outright).
+  have hslideH := (restrictFunctorIsoPullback j).hom.naturality (pullbackUnitIso U.ι).hom
+  -- (ii) the pullback-side unit composition law (= `pullbackObjUnitToUnit_comp` + eqToHom transport).
+  -- RESIDUAL: the only un-discharged step.  `(pullbackUnitIso f).hom` is defeq
+  -- `pullbackObjUnitToUnit f.toRingCatSheafHom`, so this is exactly `pullbackObjUnitToUnit_comp j U.ι`
+  -- after cancelling the `pullbackComp` prefix; the residual is the `pullbackCongr hjι` eqToHom shim
+  -- identifying `pullbackUnitIso V.ι` with `pullbackUnitIso (j ≫ U.ι)`.
+  have hunitH : (pullbackComp j U.ι).hom.app (SheafOfModules.unit X.ringCatSheaf) ≫
+        (pullbackCongr hjι).hom.app (SheafOfModules.unit X.ringCatSheaf) ≫
+        (pullbackUnitIso V.ι).hom
+      = (pullback j).map (pullbackUnitIso U.ι).hom ≫ (pullbackUnitIso j).hom := by
+    -- The `pullbackCongr hjι` eqToHom transport: `(pullbackUnitIso V.ι)` pulled back across
+    -- `V.ι = j ≫ U.ι` is `(pullbackUnitIso (j ≫ U.ι))` (proved by `subst` once the morphisms are
+    -- genuine variables).
+    have transport : ∀ {Yv : Scheme.{u}} (f₁ f₂ : Yv ⟶ X) (h : f₁ = f₂),
+        (pullbackCongr h).hom.app (SheafOfModules.unit X.ringCatSheaf) ≫ (pullbackUnitIso f₂).hom
+          = (pullbackUnitIso f₁).hom := by
+      intro Yv f₁ f₂ h; subst h; simp [pullbackCongr]
+    rw [transport (j ≫ U.ι) V.ι hjι]
+    -- `(pullbackUnitIso f).hom = pullbackObjUnitToUnit f` definitionally, so this is the PROVEN
+    -- composition law `pullbackObjUnitToUnit_comp j U.ι` after cancelling the `pullbackComp` prefix.
+    have hc := pullbackObjUnitToUnit_comp j U.ι
+    rw [show (pullbackUnitIso (j ≫ U.ι)).hom
+          = SheafOfModules.pullbackObjUnitToUnit (j ≫ U.ι).toRingCatSheafHom from rfl, hc]
+    rw [← Category.assoc, Iso.hom_inv_id_app, Category.id_comp]
+    rfl
+  apply Iso.ext
+  simp only [Iso.trans_hom, Functor.mapIso_hom, Category.assoc, Iso.app_hom]
+  rw [reassoc_of% hslideH]
+  rw [← hunitH]; rfl
 
 /-- Naturality of the contraction chain in the open (residual-A step 1).
 
@@ -215,32 +860,40 @@ private lemma trivialisation_restrict_compat {X : Scheme.{u}} {L : X.Modules}
   have hVU' : V ≤ (𝟙 X) ⁻¹ᵁ U := hVU
   set j : (V : Scheme) ⟶ (U : Scheme) := Scheme.Hom.resLE (𝟙 X) U V hVU' with hj
   have hjι : j ≫ U.ι = V.ι := by rw [hj, Scheme.Hom.resLE_comp_ι, Category.comp_id]
+  -- `j` is an open immersion (it is `X.homOfLE hVU` up to the identity-preimage identification),
+  -- so the keystone restriction-composition NatIso `restrictFunctorComp j U.ι` applies.
+  haveI hji : IsOpenImmersion j := by rw [hj, Scheme.Hom.resLE_id]; infer_instance
   -- **The reindexing obstacle (blueprint ¶1).** The two a-priori-distinct opens `U.ι ⁻¹ᵁ V` and
   -- `V.ι ⁻¹ᵁ V` both name "V seen as a chart"; their direct images coincide as `V` only up to the
   -- equality-of-opens `image_preimage_of_le`, which sits on both flanks of every constituent and
   -- must be threaded telescopically.  These are the two endpoints the outer `eqToHom`s transport.
   have hobjU : U.ι ''ᵁ (U.ι ⁻¹ᵁ V) = V := image_preimage_of_le U hVU
   have hobjV : V.ι ''ᵁ (V.ι ⁻¹ᵁ V) = V := image_preimage_of_le V le_rfl
-  -- **The genuine residual (blueprint ¶2–3): the four-constituent restriction-naturality.**
-  -- The trivialisation chain `(L ⊗ L⁻¹)|_U ≅ 𝒪_U` is, in order,
-  --   (1) `tensorObj_restrict_iso U.ι`  (commute `⊗` past `(-)|_U`),
-  --   (2) `dual_restrict_iso U.ι ≫ dualIsoOfIso eM`  (dual restriction + transport by `eM`),
-  --   (3) `dual_unit_iso`  (identify `ℋom(𝒪_U,𝒪_U)` with `𝒪_U`),
-  --   (4) `tensorObj_unit_iso`  (the left unitor),
-  -- then `(uι U).inv = (restrictFunctorIsoPullback U.ι ≫ pullbackUnitIso U.ι).inv`.  Each is the
-  -- image of a structural iso under the restriction functor; its naturality square against `j`
-  -- commutes, and `restrictIsoUnitOfLE hVU eM` is `(restrict j) eM`, so the V-chain IS the
-  -- `restrict j`-image of the U-chain.  Composing the four squares in order, threading `hobjU` /
-  -- `hobjV` so adjacent reindexings cancel, yields the claim at the `.val.app`/section level.
+  -- **The genuine residual (blueprint ¶2–3): the five-constituent restriction-naturality.**
+  -- The trivialisation chain `(L ⊗ L⁻¹)|_U ≅ 𝒪_U`, then `(uι U).inv`, is — in order — the five
+  -- constituents, each NOW scaffolded ABOVE as a named, typechecked square-lemma (the blueprint
+  -- S2–S4c targets), each parametrised by the chart `j` (`j ≫ U.ι = V.ι`) and proved "modulo ρ"
+  -- with `ρ = restrictCompReindex j hjι` / `unitRestrictIso`:
+  --   S2 `tensorObj_restrict_iso_restrict_compat`     (commute `⊗` past `(-)|_U`),
+  --   S3 `dual_restrict_iso_restrict_compat`          (dual restriction; eM/dualIsoOfIso telescoped),
+  --   S4a `dual_unit_iso_restrict_compat`             (identify `ℋom(𝒪_U,𝒪_U)` with `𝒪_U`),
+  --   S4b `tensorObj_unit_iso_restrict_compat`        (the left unitor),
+  --   S4c `trivialisation_uIota_restrict_compat`      (the global-unit comparison `uι`).
+  -- TELESCOPE PLAN (once the five squares close): rewrite the V-chain by S2/S3/S4a/S4b/S4c so each
+  -- becomes `restrict j`(U-constituent) conjugated by ρ; bifunctoriality `tensorObjIsoOfIso_trans`
+  -- splits the `tensorObjIsoOfIso eM (…)` into the eM-leg (whose V-refinement IS
+  -- `restrictIsoUnitOfLE hVU eM = (restrict j) eM`) and the dual-chain leg; adjacent ρ's cancel
+  -- telescopically (target ρ of each square = source ρ of the next), leaving only the outer
+  -- `eqToHom`s `hobjU`/`hobjV`; evaluate `.val.app` over the preimage open `U.ι ⁻¹ᵁ V`.
   --
-  -- BLOCKER: the four naturality squares are not yet available as lemmas — each constituent (1)–(4)
-  -- is a *composite* iso through `pullback` + `sheafification` (`tensorObj_restrict_iso` alone is a
-  -- 4-step chart-chase), and there is no per-constituent `restrict`-naturality lemma in the
-  -- codebase.  Building them (one named sub-lemma per square, then the telescope) is the
-  -- bounded-but-real residual.  Probes (`subst`/`congr 1`/
-  -- `Iso.eq_inv_comp`/`SheafOfModules.Hom.ext`) confirm no off-the-shelf reduction fires here:
-  -- `congr 1` splits it into the object equality `hobjU`/`hobjV` plus two `HEq` legs (the chart-
-  -- dependent section maps), which is exactly the four-square telescope restated.
+  -- BLOCKER (iter-040 finding, corrects the analogist's "free" premise): each square is a *genuine*
+  -- residual, NOT free from `restrictFunctorComp.hom.naturality`.  That naturality is in a MORPHISM
+  -- of X-modules; the squares need naturality in the IMMERSION `j` of composite
+  -- `pullback`+`sheafification` chart-chases (verified: `apply Iso.ext; simp [tensorObj_restrict_iso]`
+  -- on S2 explodes into the full `restrictFunctorIsoPullback ≫ sheafificationCompPullback ≫
+  -- leftAdjointUniq ≫ restrictScalars-δ` comparison; S4c into a `pushforwardComp`/
+  -- `pullbackObjUnitToUnit` coherence).  The keystone `restrictFunctorComp j U.ι` (now applicable —
+  -- `IsOpenImmersion j` installed above) supplies only the reindex `ρ`, not the per-leg naturality.
   sorry
 
 /-- **B1: conjugating `dualIsoOfIso s` by `dual_unit_iso` recovers `s`** (the degenerate
@@ -424,101 +1077,58 @@ lemma exists_tensorObj_inverse {X : Scheme.{u}} {L : X.Modules}
       -- single transition `t`, and (B) cancels it, leaving the canonical contraction on both
       -- legs — hence equal on the overlap.  ESCALATED (iter-026, one-genuine-attempt rule):
       -- flagged for a mathlib-analogist consult on building (A)+(B); see task_results.
-      /- Planner strategy (iter-028):
-         1. `simp only [hf_def, he, huι, heN, heM]` (already present above) exposes the two
-            leg composites in the `eqToHom`-conjugated `presheaf.map ≫ app ≫ presheaf.map`
-            form matching the domain of `trivialisation_restrict_compat`.
-         2. Apply `trivialisation_restrict_compat hVi (eM i)` (rewrite LHS) and
-            `trivialisation_restrict_compat hVj (eM j)` (rewrite RHS) to reduce both legs to the
-            single-open-`V` form:
-              LHS = fOver V (restrictIsoUnitOfLE hVi (eM i))
-              RHS = fOver V (restrictIsoUnitOfLE hVj (eM j))
-            (where `fOver V eM' = (tensorObj_restrict_iso V.ι L (dual L) ≪≫
-            tensorObjIsoOfIso eM' (dual_restrict_iso V.ι L ≪≫ (dualIsoOfIso eM').symm ≪≫
-            dual_unit_iso) ≪≫ tensorObj_unit_iso).hom ≫ ((restrictFunctorIsoPullback V.ι).app
-            (SheafOfModules.unit X.ringCatSheaf) ≪≫ pullbackUnitIso V.ι).inv`, sectionwise
-            at `op (V.ι ⁻¹ᵁ V)`).
-         3. Set `t := (restrictIsoUnitOfLE hVi (eM i)).symm ≪≫ restrictIsoUnitOfLE hVj (eM j)`.
-            Bifunctoriality (`tensorObjIsoOfIso_trans`) + `dualIsoOfIso_trans` make the M-leg
-            discrepancy `t` and the N-leg discrepancy `dual_unit_iso.symm ≪≫ (dualIsoOfIso t).symm
-            ≪≫ dual_unit_iso`; then `tensorObj_unit_self_duality_collapse t` cancels both.
-
-         PRECISE iso-algebra bridge (derived iter-029, validated on paper; awaiting a build
-         window — both sibling deps `TensorObjSubstrate.lean`/`DualInverse.lean` were mid-edit
-         this session so the steps below could not be machine-checked yet):
-         Write `eMi := restrictIsoUnitOfLE hVi (eM i)`, `eMj := restrictIsoUnitOfLE hVj (eM j)`,
-         and `t := eMi.symm ≪≫ eMj`, so `eMi ≪≫ t = eMj` (via `Iso.self_symm_id`).
-         The two legs differ ONLY in the middle `tensorObjIsoOfIso` factor (the
-         `tensorObj_restrict_iso`, `tensorObj_unit_iso`, `uι V` legs are shared), so it reduces
-         to the iso equation
-           `tensorObjIsoOfIso eMi (dualLeg eMi) ≪≫ tensorObj_unit_iso
-              = tensorObjIsoOfIso eMj (dualLeg eMj) ≪≫ tensorObj_unit_iso`,
-         where `dualLeg e := dual_restrict_iso V.ι L ≪≫ (dualIsoOfIso e).symm ≪≫ dual_unit_iso`.
-         KEY FACTORISATION: by `dualIsoOfIso_trans` (order flips) `(dualIsoOfIso eMj).symm
-           = (dualIsoOfIso eMi).symm ≪≫ (dualIsoOfIso t).symm`, so inserting `dual_unit_iso ≪≫
-           dual_unit_iso.symm = 𝟙` gives `dualLeg eMj = dualLeg eMi ≪≫ sConj` with
-           `sConj := dual_unit_iso.symm ≪≫ (dualIsoOfIso t).symm ≪≫ dual_unit_iso`.
-         Then `tensorObjIsoOfIso_trans` factors the RHS as
-           `tensorObjIsoOfIso eMi (dualLeg eMi) ≪≫ tensorObjIsoOfIso t sConj`, and
-           `tensorObjIsoOfIso t sConj ≪≫ tensorObj_unit_iso = tensorObj_unit_iso` is EXACTLY
-           `tensorObj_unit_self_duality_collapse t` (now sorry-free — its B1 leg
-           `dualUnitIso_dualIsoOfIso` was closed iter-029). So the RHS collapses to the LHS. ∎
-         The sectionwise goal lifts to this iso equation by `congrArg` on the shared
-         `(toPresheaf _).map (·).hom ≫ (uι V).inv).val` `.app`-and-eqToHom wrapper.
-      -/
-      -- The body below is the full iso-algebra reduction; it is wrapped in `first | … | sorry`
-      -- because the derivation is gated on `trivialisation_restrict_compat`: once that lemma is
-      -- sorry-free, the `erw` calls in the first branch fire and the `| sorry` fallback becomes
-      -- dead code.  See `task_results/AlgebraicJacobian_Picard_TensorObjInverse.lean.md`.
-      first
-      | (-- Reduce BOTH overlap legs to the single-open-`V` form (`trivialisation_restrict_compat`
-         -- applied to `i` and `j`), killing the `(U i).ι⁻¹` vs `(U j).ι⁻¹` reindexing.
-         erw [trivialisation_restrict_compat hVi (eM i),
-            trivialisation_restrict_compat hVj (eM j)]
-         -- The two legs now differ only in the trivialisation refined to `V`.
-         set eMi := restrictIsoUnitOfLE hVi (eM i) with hMi
-         set eMj := restrictIsoUnitOfLE hVj (eM j) with hMj
-         -- Transition unit `t : 𝒪_V ≅ 𝒪_V` with `eMi ≪≫ t = eMj`.
-         set t : SheafOfModules.unit (V : Scheme).ringCatSheaf ≅
-             SheafOfModules.unit (V : Scheme).ringCatSheaf := eMi.symm ≪≫ eMj with ht_def
-         have ht : eMi ≪≫ t = eMj := by
-           rw [ht_def, ← Iso.trans_assoc, Iso.self_symm_id, Iso.refl_trans]
-         -- Factor the dual leg of `eMj` as `dualLeg eMi ≪≫ sConj` by inserting `du ≪≫ du.symm = 𝟙`.
-         have hfact :
-             dual_restrict_iso V.ι L ≪≫
-                 ((dualIsoOfIso eMi).symm ≪≫ (dualIsoOfIso t).symm) ≪≫ dual_unit_iso
-               = (dual_restrict_iso V.ι L ≪≫ (dualIsoOfIso eMi).symm ≪≫ dual_unit_iso) ≪≫
-                 (dual_unit_iso.symm ≪≫ (dualIsoOfIso t).symm ≪≫ dual_unit_iso) := by
-           apply Iso.ext
-           simp only [Iso.trans_hom, Iso.symm_hom, Category.assoc]
-           rw [Iso.hom_inv_id_assoc]
-         -- Core iso equation: the two `tensorObjIsoOfIso ≪≫ tensorObj_unit_iso` middles agree.
-         -- RHS collapses to LHS via `dualIsoOfIso_trans` (order flips) + `tensorObjIsoOfIso_trans`
-         -- + `tensorObj_unit_self_duality_collapse t` (the `g·g⁻¹ = 1` cancellation).
-         have hiso :
-             tensorObjIsoOfIso eMi
-                 (dual_restrict_iso V.ι L ≪≫ (dualIsoOfIso eMi).symm ≪≫ dual_unit_iso) ≪≫
-               tensorObj_unit_iso
-             = tensorObjIsoOfIso eMj
-                 (dual_restrict_iso V.ι L ≪≫ (dualIsoOfIso eMj).symm ≪≫ dual_unit_iso) ≪≫
-               tensorObj_unit_iso := by
-           rw [← ht, dualIsoOfIso_trans, Iso.trans_symm, hfact, tensorObjIsoOfIso_trans,
-             Iso.trans_assoc, tensorObj_unit_self_duality_collapse t]
-         -- Lift to the shared `tensorObj_restrict_iso ≪≫ … ≪≫ tensorObj_unit_iso` wrapper.
-         have hchain :
-             tensorObj_restrict_iso V.ι L (dual L) ≪≫
-                 tensorObjIsoOfIso eMi
-                   (dual_restrict_iso V.ι L ≪≫ (dualIsoOfIso eMi).symm ≪≫ dual_unit_iso) ≪≫
-                 tensorObj_unit_iso
-               = tensorObj_restrict_iso V.ι L (dual L) ≪≫
-                 tensorObjIsoOfIso eMj
-                   (dual_restrict_iso V.ι L ≪≫ (dualIsoOfIso eMj).symm ≪≫ dual_unit_iso) ≪≫
-                 tensorObj_unit_iso :=
-           congrArg (fun w => tensorObj_restrict_iso V.ι L (dual L) ≪≫ w) hiso
-         -- Both legs are now `((wrapper).hom ≫ (uι V).inv).val.app _` conjugated by the SAME
-         -- `eqToHom`s; rewriting the wrapper iso makes them syntactically identical.
-         rw [hchain])
-      | sorry) with hεdef
+      -- Reduce BOTH overlap legs to the single-open-`V` form (`trivialisation_restrict_compat`
+      -- applied to `i` and `j`), killing the `(U i).ι⁻¹` vs `(U j).ι⁻¹` reindexing.
+      erw [trivialisation_restrict_compat hVi (eM i),
+         trivialisation_restrict_compat hVj (eM j)]
+      -- The two legs now differ only in the trivialisation refined to `V`.
+      set eMi := restrictIsoUnitOfLE hVi (eM i) with hMi
+      set eMj := restrictIsoUnitOfLE hVj (eM j) with hMj
+      -- Transition unit `t : 𝒪_V ≅ 𝒪_V` with `eMi ≪≫ t = eMj`.
+      set t : SheafOfModules.unit (V : Scheme).ringCatSheaf ≅
+          SheafOfModules.unit (V : Scheme).ringCatSheaf := eMi.symm ≪≫ eMj with ht_def
+      have ht : eMi ≪≫ t = eMj := by
+        apply Iso.ext
+        rw [ht_def]
+        simp only [Iso.trans_hom, Iso.symm_hom]
+        -- `≫` in `SheafOfModules` is defeq-but-not-syntactic, so `rw`/`simp` of category
+        -- lemmas fail to pattern-match; term-mode `exact` discharges via unification.
+        exact Iso.hom_inv_id_assoc eMi eMj.hom
+      -- Factor the dual leg of `eMj` as `dualLeg eMi ≪≫ sConj` by inserting `du ≪≫ du.symm = 𝟙`.
+      have hfact :
+          dual_restrict_iso V.ι L ≪≫
+              ((dualIsoOfIso eMi).symm ≪≫ (dualIsoOfIso t).symm) ≪≫ dual_unit_iso
+            = (dual_restrict_iso V.ι L ≪≫ (dualIsoOfIso eMi).symm ≪≫ dual_unit_iso) ≪≫
+              (dual_unit_iso.symm ≪≫ (dualIsoOfIso t).symm ≪≫ dual_unit_iso) := by
+        apply Iso.ext
+        simp only [Iso.trans_hom, Iso.symm_hom, Category.assoc]
+        rw [Iso.hom_inv_id_assoc]
+      -- Core iso equation: the two `tensorObjIsoOfIso ≪≫ tensorObj_unit_iso` middles agree.
+      -- RHS collapses to LHS via `dualIsoOfIso_trans` (order flips) + `tensorObjIsoOfIso_trans`
+      -- + `tensorObj_unit_self_duality_collapse t` (the `g·g⁻¹ = 1` cancellation).
+      have hiso :
+          tensorObjIsoOfIso eMi
+              (dual_restrict_iso V.ι L ≪≫ (dualIsoOfIso eMi).symm ≪≫ dual_unit_iso) ≪≫
+            tensorObj_unit_iso
+          = tensorObjIsoOfIso eMj
+              (dual_restrict_iso V.ι L ≪≫ (dualIsoOfIso eMj).symm ≪≫ dual_unit_iso) ≪≫
+            tensorObj_unit_iso := by
+        rw [← ht, dualIsoOfIso_trans, Iso.trans_symm, hfact, tensorObjIsoOfIso_trans,
+          Iso.trans_assoc, tensorObj_unit_self_duality_collapse t]
+      -- Lift to the shared `tensorObj_restrict_iso ≪≫ … ≪≫ tensorObj_unit_iso` wrapper.
+      have hchain :
+          tensorObj_restrict_iso V.ι L (dual L) ≪≫
+              tensorObjIsoOfIso eMi
+                (dual_restrict_iso V.ι L ≪≫ (dualIsoOfIso eMi).symm ≪≫ dual_unit_iso) ≪≫
+              tensorObj_unit_iso
+            = tensorObj_restrict_iso V.ι L (dual L) ≪≫
+              tensorObjIsoOfIso eMj
+                (dual_restrict_iso V.ι L ≪≫ (dualIsoOfIso eMj).symm ≪≫ dual_unit_iso) ≪≫
+              tensorObj_unit_iso :=
+        congrArg (fun w => tensorObj_restrict_iso V.ι L (dual L) ≪≫ w) hiso
+      -- Both legs are now `((wrapper).hom ≫ (uι V).inv).val.app _` conjugated by the SAME
+      -- `eqToHom`s; rewriting the wrapper iso makes them syntactically identical.
+      rw [hchain]) with hεdef
   -- `ε` is a global iso since it restricts to the iso `f x` on each cover member `U x`
   -- (**B-bridge** `isIso_of_isIso_restrict`).  The restriction-agreement
   -- `(restrictFunctor (U x).ι).map ε = f x` is the defining gluing property of

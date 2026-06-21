@@ -1,0 +1,259 @@
+[
+  {
+    "timestamp": "2026-06-20T07:25:49Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/H1Vanishing.lean",
+      "theorem": "Scheme.HModule_flasque_one_eq_zero"
+    },
+    "session": {
+      "id": "session_2",
+      "model": "opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "HModule_flasque_subsingleton_aux (zero case)",
+        "IsFlasque.shortExact_app_surjective",
+        "ext_one_eq_zero_of_hom_surjective_of_injective",
+        "Module.finrank_zero_of_subsingleton",
+        "Injective.injective_under"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Factor the zero (i=1) case out of the existing strong-induction carrier HModule_flasque_subsingleton_aux into a standalone lemma, avoiding the succ branch that pulls in injective_flasque",
+        "code_tried": "def Scheme.HModule_flasque_one_eq_zero (hF : IsFlasque F) : finrank kbar (HModule kbar F 1) = 0 := ... (base case: injectiveSES + shortExact_app_surjective at U=⊤ + ext_one_eq_zero...)",
+        "line_number": "~590",
+        "result": "success",
+        "insight": "The zero branch of HModule_flasque_subsingleton_aux was already a complete, injective_flasque-FREE proof of i=1 (only uses Mathlib's Injective.injective_under hull); it just needed lifting out of the induction. lean_verify: [propext, Classical.choice, Quot.sound]"
+      }
+    ],
+    "next_steps": "Done. Blueprinted as lem:H1_flasque_eq_zero."
+  },
+  {
+    "timestamp": "2026-06-20T07:25:41Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/H1Vanishing.lean",
+      "theorem": "Scheme.H1_skyscraperSheaf_finrank_eq_zero"
+    },
+    "session": {
+      "id": "session_2",
+      "model": "opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "HModule_flasque_one_eq_zero",
+        "skyscraperSheaf_isFlasque"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Repoint the headline body from HModule_flasque_eq_zero (...) 1 le_rfl (which inherits sorryAx via the succ-case injective_flasque) to the new base-case-factored HModule_flasque_one_eq_zero",
+        "code_tried": "Scheme.HModule_flasque_one_eq_zero (Scheme.skyscraperSheaf_isFlasque C P)",
+        "line_number": "~883",
+        "result": "success",
+        "insight": "Resolves iter-001 CRITICAL #1: headline previously carried sorryAx transitively. Review re-verified first-hand via lean_verify -> [propext, Classical.choice, Quot.sound], NO sorryAx."
+      }
+    ],
+    "next_steps": "Headline H1-skyscraper-vanishing piece is now axiom-clean. The general induction thm:H1_vanishing_flasque (HModule_flasque_eq_zero) STILL carries sorryAx via injective_flasque (S5 j_! gap) but the headline no longer depends on it."
+  },
+  {
+    "timestamp": "2026-06-20T07:43:23Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/WeilDivisor.lean",
+      "theorem": "rationalMap_order_finite_support"
+    },
+    "session": {
+      "id": "session_2",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "residual affine ring core isolated to new helper finite_order_support_affine (still sorry)",
+      "key_lemmas_used": [
+        "isCompact_iff_finite_and_eq_biUnion_affineOpens",
+        "QuasiCompact.compactSpace_of_compactSpace",
+        "Set.Finite.biUnion",
+        "Opens.mem_iSup",
+        "finite_order_support_on_affineOpen"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Add [CompactSpace X] to the false-as-typed signature (iter-001 finding), then close the f≠0 branch via a finite affine cover from compactness",
+        "code_tried": "added [CompactSpace X] binder to rationalMap_order_finite_support + 7 consumers; body: isCompact_iff_finite_and_eq_biUnion_affineOpens on ⊤ -> finite affine cover -> support ⊆ ⋃ chart-supports -> Set.Finite.biUnion",
+        "line_number": "~787",
+        "result": "success",
+        "insight": "false-signature fix CONFIRMED by lvb-checker: blueprint lem:rationalMap_order_finite_support already states the quasi-compact hyp. Body now sorry-free; the irreducible core pushed into finite_order_support_affine."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Add global instance instCompactSpaceLeftOfIsProper so curve-side/cross-file consumers get [CompactSpace C.left] for free",
+        "code_tried": "instance instCompactSpaceLeftOfIsProper {S} [CompactSpace S] {C : Over S} [IsProper C.hom] : CompactSpace C.left := QuasiCompact.compactSpace_of_compactSpace C.hom",
+        "result": "success",
+        "insight": "Fires at all C.left sites (first-order key on Comma.left); full lake build of OCofP+RationalCurveIso+WeilDivisor (8333 jobs) green."
+      }
+    ],
+    "next_steps": "Assign finite_order_support_affine in mathlib-build mode (affine Spec stalk=localization + ordFrac=adic-valuation bridge, ~150-300 LOC)."
+  },
+  {
+    "timestamp": "2026-06-20T07:41:52Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/WeilDivisor.lean",
+      "theorem": "finite_order_support_on_affineOpen"
+    },
+    "session": {
+      "id": "session_2",
+      "model": "opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "finite_order_support_affine",
+        "Scheme.PrimeDivisor.ofOpen/restrictToOpen/order_eq_order_restrict/ext",
+        "Scheme.Opens.functionFieldIso",
+        "Set.eq_empty_iff_forall_notMem"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Open-chart finiteness: empty U -> empty set; nonempty U -> integral affine chart, image of nonzero-order locus of pulled-back function under ofOpen",
+        "code_tried": "rcases Set.eq_empty_or_nonempty (U:Set X); empty branch via Set.eq_empty_iff_forall_notMem; nonempty: Nonempty U.toScheme := hNe.to_subtype -> IsIntegral/IsRegularInCodim1 instances -> finite_order_support_affine image",
+        "line_number": "~816",
+        "result": "success",
+        "insight": "Initial attempt used Unknown constant Set.eq_empty_iff_forall_not_mem; corrected to ...notMem (Mathlib rename). Helper is fully sorry-free; only depends on the residual finite_order_support_affine."
+      }
+    ],
+    "next_steps": "Needs blueprint block (unmatched)."
+  },
+  {
+    "timestamp": "2026-06-20T07:40:10Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/WeilDivisor.lean",
+      "theorem": "finite_order_support_affine"
+    },
+    "session": {
+      "id": "session_2",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Mathlib b80f227 lacks packaged affine-scheme stalk=localization + ordFrac=adic-valuation bridge; project order-naturality covers only open-immersion stalkIso, not affine isoSpec",
+      "key_lemmas_used": [
+        "Ideal.finite_minimalPrimes_of_isNoetherianRing (verified to exist)"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "State the affine Spec core (prime divisors of Spec R = height-1 primes; ord_Z(g)≠0 forces p_Z ∈ minimalPrimes(a·b)) and leave a documented typed sorry",
+        "code_tried": "finite_order_support_affine: {Z : V.PrimeDivisor | ord_Z g ≠ 0}.Finite := sorry (with full informal route in docstring)",
+        "line_number": "~787",
+        "lean_error": "n/a (typed sorry, honest)",
+        "result": "partial",
+        "insight": "lvb-checker confirms statement faithful, not a placeholder masking a wrong claim. Smallest possible isolation of Hartshorne II.6.1 ring core. No API key for informal-agent (env empty)."
+      }
+    ],
+    "next_steps": "mathlib-build sub-lane: build isoSpec-naturality of order + O_{V,Z}=Localization.AtPrime + ordFrac=p-adic valuation. DO NOT re-assign inline."
+  },
+  {
+    "timestamp": "2026-06-20T07:37:25Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/RRFormula.lean",
+      "theorem": "Scheme.eulerCharacteristic_shortExact_add"
+    },
+    "session": {
+      "id": "session_2",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "single residual hvan : Subsingleton (Abelian.Ext L S.X₁ 2) = Grothendieck H²-vanishing (S3), no Mathlib support",
+      "key_lemmas_used": [
+        "finrank_alternating_six_term",
+        "Module.Finite.of_surjective"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Fix the false-as-typed signature (iter-001 finding): add a 5-instance FiniteDimensional package as hypotheses, remove the 6 by-sorry haveIs, derive the 6th (H¹(X₃)) in-body",
+        "code_tried": "added [FiniteDimensional kbar (HModule kbar S.X₁ 0)] ... S.X₂ 1 ; sixth via Module.Finite.of_surjective f₄ hf₄",
+        "line_number": "377",
+        "result": "partial",
+        "insight": "Skyscraper H¹ is only public as finrank=0 (does NOT imply FiniteDimensional); underlying Subsingleton is private. Deriving H¹(X₃) from f₄ surjectivity avoids needing it. lvb-checker: blueprint package matches; body sorry-free modulo hvan."
+      }
+    ],
+    "next_steps": "hvan stays single documented S3 sorry. Statement is now TRUE (was false-as-typed)."
+  },
+  {
+    "timestamp": "2026-06-20T07:37:28Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/RRFormula.lean",
+      "theorem": "Scheme.eulerCharacteristic_of_shortExact_skyscraper"
+    },
+    "session": {
+      "id": "session_2",
+      "model": "opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "H0_skyscraperSheaf_finrank_eq_one",
+        "HModule_linearEquiv_of_iso",
+        "LinearEquiv.finrank_eq",
+        "FiniteDimensional.of_finrank_eq_succ"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Transport FiniteDimensional across e : S.X₃ ≅ k(P) via Module.Finite.equiv / .finiteDimensional",
+        "code_tried": "Module.Finite.equiv (HModule_linearEquiv_of_iso e 0).symm",
+        "result": "failed",
+        "lean_error": "failed to synthesize Module.Finite kbar (HModule ... skyscraperSheaf ...); then deterministic typeclass timeout (20000 heartbeats)",
+        "insight": "HModule_linearEquiv_of_iso introduces its own HasSheafify/HasExt binders that don't key-match the ambient H0 instance during synthesis, even though defeq."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Sidestep at finrank level (needs no FiniteDimensional instance)",
+        "code_tried": "apply FiniteDimensional.of_finrank_eq_succ (n:=0); rw [(HModule_linearEquiv_of_iso e 0).finrank_eq]; exact H0_skyscraperSheaf_finrank_eq_one C P",
+        "result": "success",
+        "insight": "finrank transport via LinearEquiv.finrank_eq matches up to defeq even where typeclass SYNTHESIS times out. Caller now fully discharges its finiteness share."
+      }
+    ],
+    "next_steps": "Done."
+  },
+  {
+    "timestamp": "2026-06-20T07:32:14Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/RRFormula.lean",
+      "theorem": "Scheme.eulerCharacteristic_sheafOf_succ"
+    },
+    "session": {
+      "id": "session_2",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "four S2 Serre coherent-cohomology finiteness instances on proper kbar-scheme C; sheafOf itself is a typed sorry in OcOfD (RR.3)",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Supply the four caller-required finiteness instances (HModule kbar S.X₁/S.X₂ at deg 0,1) as documented typed sorries; rest of inductive χ-step sorry-free",
+        "code_tried": "haveI : FiniteDimensional kbar (Scheme.HModule kbar S.X₁ 0) := by sorry (×4, with full Serre III.5.2 docstring)",
+        "line_number": "~770",
+        "result": "partial",
+        "insight": "S2 Serre finiteness has no Mathlib support; honest typed sorries per directive. lvb-checker: not laundered, blueprint-acknowledged."
+      }
+    ],
+    "next_steps": "S2 substrate lane: decide general Serre vs subsheaf-of-K_C route; blueprint chapter not yet written."
+  }
+]

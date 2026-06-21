@@ -1,0 +1,219 @@
+[
+  {
+    "timestamp": "2026-06-21T10:10:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+      "theorem": "AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.finite_orderConstraintFail_affine"
+    },
+    "session": {
+      "id": "session_16",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "Scheme.WeilDivisor.principal",
+        "Scheme.WeilDivisor.principal_apply",
+        "Finsupp.mem_support_iff",
+        "Finset.finite_toSet",
+        "Scheme.RationalMap.order_zero"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Blueprint route used affine `finite_order_support_affine` — but it is `private` in WeilDivisor.lean, inaccessible from OcOfD. Pivoted to GLOBAL finiteness of the principal-divisor support `principal g hg` (a Finsupp) on the proper curve; a violator has ord_Q g ≠ 0 ∨ D Q ≠ 0, both sets finite.",
+        "code_tried": "refine (Scheme.WeilDivisor.principal g hg).support.finite_toSet.union ... ; un-omitted [IsProper C.hom]",
+        "line_number": "1258",
+        "result": "success",
+        "insight": "Global principal-divisor finiteness is strictly stronger than the affine bridge and avoids the private cross-file lemma; cost = keeping [IsProper C.hom]. Blueprint prose now diverges (B0)."
+      }
+    ],
+    "next_steps": "Blueprint prose + \\uses edges need rewrite to principal-divisor route (NOTE added)."
+  },
+  {
+    "timestamp": "2026-06-21T10:10:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+      "theorem": "AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.exists_open_mem_carrierSubmoduleSheaf"
+    },
+    "session": {
+      "id": "session_16",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "AlgebraicGeometry.isClosed_singleton_of_coheight_eq_one",
+        "AlgebraicGeometry.krullDim_curve_le_one",
+        "Set.Finite.isClosed_biUnion",
+        "Scheme.PrimeDivisor.ext",
+        "exists_isAffineOpen_mem_and_subset"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "g=0 → U=⊤. Else affine W∋P.point; bad set B finite (B0); each prime-divisor point is closed (coheight=1 ⇒ isClosed_singleton), so Z=⋃_{Q∈B}{Q.point} closed; U:=W⊓Zᶜ. P.point∈U since constraint holds at P.",
+        "code_tried": "set Zc := ⟨(⋃ Q ∈ B,{Q.point})ᶜ, hZclosed.isOpen_compl⟩; refine ⟨W ⊓ Zc, ...⟩",
+        "line_number": "1306",
+        "result": "success",
+        "insight": "P.point∉⊥ extraction needed `have hbot' : (W⊓Zc)=⊥ := hbot; rw[hbot']` — `TopologicalSpace.Opens.not_mem_bot` does not exist; direct membership rewrite works."
+      }
+    ],
+    "next_steps": "none — closed axiom-clean."
+  },
+  {
+    "timestamp": "2026-06-21T10:10:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+      "theorem": "AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.iSup_carrierSubmoduleSheaf_eq_orderAtPSubmodule"
+    },
+    "session": {
+      "id": "session_16",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "iSup_le",
+        "Submodule.mem_iSup_of_mem",
+        "exists_open_mem_carrierSubmoduleSheaf"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "le_antisymm. ≤ via iSup_le: each leg's order constraint at Q=P (using P.point∈U). ≥: B1 gives realising open, then mem_iSup_of_mem.",
+        "code_tried": "apply le_antisymm; · apply iSup_le ...; · intro g hg; obtain ⟨U,...⟩ := exists_open_mem_carrierSubmoduleSheaf ...; exact Submodule.mem_iSup_of_mem _ ...",
+        "line_number": "1371",
+        "result": "success",
+        "insight": "Directed-iSup identification reduces to the B1 surjectivity + pointwise constraint; clean two-sided containment."
+      }
+    ],
+    "next_steps": "none — closed axiom-clean."
+  },
+  {
+    "timestamp": "2026-06-21T10:10:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+      "theorem": "AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.carrierSheaf_stalk_iso_iSup"
+    },
+    "session": {
+      "id": "session_16",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "Limits.colimit.desc",
+        "Limits.colimit.ι_desc",
+        "TopCat.Presheaf.germ",
+        "TopCat.Presheaf.germ_exist",
+        "ConcreteCategory.isIso_iff_bijective",
+        "injective_iff_map_eq_zero",
+        "Submodule.mem_iSup_of_directed",
+        "asIso"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Germ-API bijective descent (per analogies/stalk-colimit.md). Build φ:stalk⟶ModuleCat.of kbar M via colimit.desc of descent cocone with legs Submodule.inclusion; naturality via new helper carrierPresheaf_map_coe. Inj via injective_iff_map_eq_zero; surj via mem_iSup_of_directed (family directed through U⊓V).",
+        "code_tried": "φ := colimit.desc _ {pt:=ModuleCat.of kbar M, ι:={app:=fun U => ModuleCat.ofHom (Submodule.inclusion ...), naturality:=...}}; haveI:IsIso φ := by rw[ConcreteCategory.isIso_iff_bijective]; exact ⟨hinj,hsurj⟩; exact asIso φ",
+        "line_number": "1167",
+        "result": "success",
+        "insight": "Cocone naturality went through several simp formulations; final form `simp only [Functor.comp_map, ModuleCat.hom_comp, Functor.const_obj_obj, Functor.const_obj_map, Category.comp_id]; exact carrierPresheaf_map_coe ...`. `ModuleCat.isIso_iff_bijective` is `ConcreteCategory.isIso_iff_bijective`."
+      }
+    ],
+    "next_steps": "none — closed axiom-clean (the stretch seam-A goal)."
+  },
+  {
+    "timestamp": "2026-06-21T10:10:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+      "theorem": "AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.carrierSheaf_stalk_eq"
+    },
+    "session": {
+      "id": "session_16",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "carrierSheaf_stalk_iso_iSup",
+        "iSup_carrierSubmoduleSheaf_eq_orderAtPSubmodule",
+        "eqToIso"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Compose seam A with B-seam: stalk ≅ ⨆Γ(U) (seam A) then ⨆Γ(U)=orderAtPSubmodule (B) via eqToIso.",
+        "code_tried": "carrierSheaf_stalk_iso_iSup D P ≪≫ eqToIso (by rw [iSup_carrierSubmoduleSheaf_eq_orderAtPSubmodule])",
+        "line_number": "1402",
+        "result": "success",
+        "insight": "Binding leaf — feared 200-400 LOC, no Mathlib API — fully closed as a 2-line composition once seams A+B existed. lean_verify: {propext, Classical.choice, Quot.sound}."
+      }
+    ],
+    "next_steps": "Unblocks G2/G3 cokernel leaves (cokernel_stalk_at_iso_kbar, cokernel_skyscraper_hom)."
+  },
+  {
+    "timestamp": "2026-06-21T10:10:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+      "theorem": "AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.carrierPresheaf_map_coe"
+    },
+    "session": {
+      "id": "session_16",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "Submodule.inclusion",
+        "dif_neg"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Extract reusable helper from inline carrierPresheaf_isSheaf map_val: away from ⊥ the restriction map is Submodule.inclusion, identity on underlying K(C)-value.",
+        "code_tried": "lemma carrierPresheaf_map_coe ... : (((carrierPresheaf D).map g).hom x).1 = x.1",
+        "line_number": "1134",
+        "result": "success",
+        "insight": "New helper — NO blueprint entry (coverage debt, flagged for planner). Reusable by sibling cokernel-stalk leaves."
+      }
+    ],
+    "next_steps": "Planner: add \\label/\\lean/\\uses block between def:sheafOf_carrierPresheaf and lem:carrierSheaf_stalk_iso_iSup."
+  },
+  {
+    "timestamp": "2026-06-21T10:10:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+      "theorem": "AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.carrierSheaf_zero_iso_toModuleKSheaf"
+    },
+    "session": {
+      "id": "session_16",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Deep independent theorem (Hartshorne II.6.3A: regular functions = ord_Q≥0 at every prime divisor on a normal curve). Mathlib gap pinned but multi-step ~150-250 LOC; not a quick close. Planner explicitly deferred this iter.",
+      "key_lemmas_used": [
+        "IsDedekindDomain.HeightOneSpectrum.mem_integers_of_valuation_le_one"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Mathlib due-diligence search only (not coded). Found mem_integers_of_valuation_le_one as the hard 'algebraic Hartogs' direction. Wiring needs: per-chart Dedekind domain (smooth⇒regular dim-1), HeightOneSpectrum.valuation = RationalMap.order, sheaf gluing, natural-iso assembly.",
+        "code_tried": "(search only — leansearch 'element of fraction field with nonnegative valuation at all height one primes belongs to ring')",
+        "line_number": "1560",
+        "result": "partial",
+        "insight": "Left as typed sorry. Best dispatched as a dedicated mathlib-build/prove lane, not a quick close. No informal-agent key available."
+      }
+    ],
+    "next_steps": "Dedicated lane: Dedekind-per-chart + valuation=order + gluing development."
+  }
+]

@@ -1,0 +1,154 @@
+[
+  {
+    "timestamp": "2026-06-21T07:58:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "conjugateEquiv_restrictFunctorComp_inv"
+    },
+    "session": {
+      "id": "session_46",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Sectionwise reduction to a trivial thin-poset (Opensᵒᵖ) identity is VERIFIED via LSP, but BOTH the reduction prefix and finish whnf-timeout in real `lake build` through the SheafOfModules.pushforward carrier diamond, even at maxHeartbeats 1600000 + backward.isDefEq.respectTransparency false. Irreducible to library algebra: restrictFunctorComp is NOT defined as Adjunction.leftAdjointCompIso (unlike pullbackComp), so no rfl/abstract shortcut exists.",
+      "key_lemmas_used": [
+        "conjugateEquiv_apply_app",
+        "restrictFunctorComp_hom_app_app",
+        "pushforwardComp_hom_app_app",
+        "restrictAdjunction_unit_app_app",
+        "restrictAdjunction_counit_app_app",
+        "Hom.comp_app",
+        "pushforward_map_app"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Scaffold gap-fill statement (directive Step 0), restrict-side mirror of conjugateEquiv_pullbackComp_inv; fix arrow direction (.hom not .inv since restrictFunctorComp runs opposite to pullbackComp)",
+        "code_tried": "conjugateEquiv ((restrictAdjunction g).comp (restrictAdjunction f)) (restrictAdjunction (f ≫ g)) (restrictFunctorComp f g).hom = (pushforwardComp f g).hom",
+        "line_number": "216",
+        "lean_error": "first tried .inv → Application type mismatch (restrictFunctorComp.inv has reversed type); fixed to .hom → typechecks",
+        "result": "partial",
+        "insight": "Direction fix required vs Mathlib pullback version"
+      },
+      {
+        "attempt": 2,
+        "strategy": "Sectionwise reduction via ext + simp + erw",
+        "code_tried": "ext M : 2; simp only [conjugateEquiv_apply_app]; ext U : 1; simp only [Hom.comp_app, pushforward_map_app, Adjunction.comp_counit_app, restrictFunctorComp_hom_app_app, pushforwardComp_hom_app_app]; erw [restrictAdjunction_unit_app_app, restrictAdjunction_counit_app_app]",
+        "line_number": "220",
+        "lean_error": "LSP: reduces cleanly to residual `M'.presheaf.map (homOfLE).op ≫ map(eqToHom).op ≫ ((restrictFunctor f).map counit_g ≫ counit_f).app U = 𝟙` (thin-poset trivial). lake build: (deterministic) timeout at whnf, 200000 heartbeats",
+        "result": "partial",
+        "insight": "Reduction is correct but the elaboration whnf-bombs the carrier diamond"
+      },
+      {
+        "attempt": 3,
+        "strategy": "Raise heartbeat ceiling",
+        "code_tried": "set_option maxHeartbeats 1600000 in <same proof>",
+        "line_number": "215",
+        "lean_error": "(deterministic) timeout at whnf, 1600000 heartbeats reached",
+        "result": "failed",
+        "insight": "Even 8× heartbeats insufficient"
+      },
+      {
+        "attempt": 4,
+        "strategy": "Disable defeq transparency respect",
+        "code_tried": "set_option backward.isDefEq.respectTransparency false in set_option maxHeartbeats 1600000 in <same>",
+        "line_number": "215",
+        "lean_error": "(deterministic) timeout at whnf, 1600000 heartbeats",
+        "result": "failed",
+        "insight": "Carrier diamond is irreducible in this file; documented sorry + escalation is the only honest exit"
+      }
+    ],
+    "next_steps": "ESCALATE out of terminal-file prover lane: prove in root TensorObjSubstrate.lean (carrier-diamond home defeq, simp(zeta:=false)+erw recipe) OR make restrictFunctorComp an Adjunction.leftAdjointCompIso in Mathlib (yields the lemma by rfl). Then re-export and consume in TensorObjInverse."
+  },
+  {
+    "timestamp": "2026-06-21T07:58:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "restrictFunctorIsoPullback_comp_compat"
+    },
+    "session": {
+      "id": "session_46",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "B2 reduces to the same gap-fill conjugateEquiv_restrictFunctorComp_inv (load-bearing) plus further thin-poset section collapses that hit the identical carrier-diamond whnf bomb. Cannot close until the gap-fill is proven in root/Mathlib.",
+      "key_lemmas_used": [
+        "conjugateEquiv_comp",
+        "mateEquiv_hcomp",
+        "iterated_mateEquiv_conjugateEquiv",
+        "leftAdjointUniq_trans"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Unchanged from iter-045; not re-attempted — blocked on shared gap-fill",
+        "code_tried": "sorry (body unchanged)",
+        "line_number": "306",
+        "lean_error": "n/a — not attempted, depends on conjugateEquiv_restrictFunctorComp_inv",
+        "result": "failed",
+        "insight": "B2 + B1-crux both rest on the same load-bearing conjugate identity; with it blocked neither can close"
+      }
+    ],
+    "next_steps": "Blocked downstream of conjugateEquiv_restrictFunctorComp_inv. Do NOT re-assign as a terminal-file prover task until the gap-fill lands in root/Mathlib."
+  },
+  {
+    "timestamp": "2026-06-21T07:58:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "H1inv_app_eq_pullbackVal_restrict"
+    },
+    "session": {
+      "id": "session_46",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Same mate-calculus family as B2; reduces to the conjugateEquiv_restrictFunctorComp_inv gap-fill.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Unchanged from iter-045; not re-attempted — shared blocker",
+        "code_tried": "sorry (body unchanged from iter-045 reduction)",
+        "line_number": "380",
+        "lean_error": "n/a — not attempted",
+        "result": "failed",
+        "insight": "B1-crux helper shares the conjugate gap-fill with B2"
+      }
+    ],
+    "next_steps": "Blocked downstream of the same gap-fill; defer until root/Mathlib lane lands it."
+  },
+  {
+    "timestamp": "2026-06-21T07:58:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "S2_S3_S4a_S4b_telescope"
+    },
+    "session": {
+      "id": "session_46",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Downstream of B1/B2; session consumed by the gap-fill diagnosis.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Not attempted this iter (4 remaining sorries: S2 L484, S3 L506, S4a L530, S4b L546, telescope L677)",
+        "code_tried": "n/a",
+        "line_number": "484",
+        "lean_error": "n/a",
+        "result": "failed",
+        "insight": "Out of scope once the shared gap-fill blocked the keystone"
+      }
+    ],
+    "next_steps": "Downstream of B1/B2; unblock the gap-fill first."
+  }
+]

@@ -8,6 +8,243 @@
 
 ### Proof Patterns (reusable across targets)
 
+- **★★★ iter-036 — SNAP-S1 MODULE LANE FULLY CLOSED (B-unit)+(C), axiom-clean; file 0-sorry, build
+  green 2632.** `M(X,L,F)=⊕_m Γ(F⊗L^{⊗m})` is `DirectSum.Gmodule` over `Γ_*(X,L)` ∀L,F. Three reusable
+  recipes landed:
+  (i) **`moduleTensorPowAdd_zero_left`** (base-case left unit): put **`tensorPow_zero` in the opening
+  `simp only`** alongside the `_eq` bridges + `tensorPowAdd_zero_left` — it collapses `L^0` to the unit and
+  the B0/B2 bridges to a common `B0.inv` prefix. Goal then sits over `unitModule X`; finish via `hgen`
+  reindex-slide (`F◁eqToHom ≫ T'.hom = T.hom ≫ eqToHom`) + mid-square stated over `𝟙_` (proved by
+  `monoidal`) transported by defeq + `reassoc_of% hmid; leftUnitor_naturality_assoc; hgen; Iso.inv_hom_id_assoc`.
+  (ii) **`unitModule X ≠ 𝟙_` syntactically** (only defeq): `leftUnitor_naturality`/`braiding_tensorUnit_left`/
+  `monoidal` special-case `𝟙_` so a positional `rw` on the `unitModule X` whisker FAILS ("pattern not
+  found"). Fix: state the unit sub-square over `𝟙_`, prove by `monoidal`, transport by `change`/defeq (NOT
+  `rw [show unitModule X = 𝟙_ …]` = motive-not-type-correct).
+  (iii) **★ STATEMENT-elaboration whnf bomb:** a bare `GradedMonoid.GOne.one` projection passed as the
+  `+ᵥ`-graded `GSMul.smul` argument times out at `whnf` (200k heartbeats) during *statement* elaboration —
+  `maxRecDepth`/`maxHeartbeats`/`vadd_eq_add` do NOT help. Fix: spell **`(1 : sectionDeg L 0)`** (defeq to
+  `GOne.one` via `gOne_one_eq`). Then proof mirrors `sectionsMul_one_mul`.
+  (C) `sectionGradedModule_gmodule` = field-port via module bridge `moduleGradedMonoid_eq_of_cast` (mirror of
+  ring's `gradedMonoid_eq_of_cast`), `set_option maxRecDepth 4000 in`. Dead-code helpers
+  `tensorBraiding_naturality_{left,right}` (iter-034 flag) confirmed DELETED this iter.
+
+- **★★★ iter-035 — MODULE hexagon `moduleTensorPowAdd_assoc` (A) CLOSED axiom-clean + (B-compat)
+  `moduleSectionAction_mul_smul` CLOSED.** Pasting the iter-034 banked 95% script: the residual after
+  `monoidal` was TWO `whisker_exchange` interchanges, NOT one — **`monoidal` does coherence
+  (associators/unitors) but NOT interchange of two non-structural atoms on disjoint factors.** Closing
+  sequence before final `monoidal`: (T1) top swap `T_{F,c}⁻¹`(WL on `F⊗Lᵏ`)↔`T_{a,b}⁻¹`(WR on `Lⁱ⊗Lʲ`) via
+  `rw[← associator_naturality_right_assoc, ← whisker_exchange_assoc T_ab.inv T_Fc.inv]`; (T2) `β_{Lⁱ,F}` past
+  inner merge `T_{b,c};μ_{j,k}` via `rw[associator_inv_naturality_right_assoc Lⁱ F μ, associator_inv_
+  naturality_right_assoc Lⁱ F T_bc, whisker_exchange_assoc β μ, whisker_exchange_assoc β T_bc]`. Recipe:
+  `associator_(inv_)naturality_right_assoc` exposes the `(X⊗Y)◁` form adjacent to the braiding/atom, then
+  `whisker_exchange_assoc f g` interchanges (`←` for reverse). (B-compat) = exact `sectionsMul_mul_assoc`
+  (B7) mirror at module level; **`vadd_eq_add` mandatory** (GSMul degree is `i +ᵥ j`); `set_option
+  maxRecDepth 4000 in` goes BEFORE the docstring (module congrArg defeq > ring). ⚠ The 2 iter-034 helpers
+  `tensorBraiding_naturality_{left,right}` turned out DEAD CODE (never called — `moduleTensorPowAdd_assoc`
+  uses canonical `BraidedCategory.braiding_naturality_left` directly); delete next prover touch.
+  **(B-unit)+(C) BLOCKED on `moduleTensorPowAdd_zero_left`:** `unitModule X` is defeq but NOT syntactically
+  `𝟙_ X.Modules` ⇒ `braiding_tensorUnit_left`/`monoidal` (special-case `𝟙_`) don't fire and `rw[show
+  unitModule X = 𝟙_ from rfl]` fails "motive not type correct" (sits in dependent `λ_`/`α_`). Banked
+  close: `have hβ := braiding_tensorUnit_left F` (defeq-typechecks) for the single braiding; state the
+  `monoidal`-needing middle over `𝟙_` explicitly then `change`/`convert` (NOT `rw`); mirror
+  `tensorPowAdd_zero_left`'s `change`/`erw`/`unitors_equal`.
+
+- **★★★ iter-034 — MODULE hexagon `moduleTensorPowAdd_assoc` (A) ~95%: keep `.hom` OPAQUE ⇒ NO
+  `_core` NEEDED.** Unlike B6/comm chain, the module symmetric-monoidal hexagon `β_{L^i,F}` (distinct
+  objects, does NOT collapse under invertibility) is proven WITHOUT the generic-`M` `_core` abstraction:
+  keep `tensorPowAdd`/`moduleTensorPowAdd` `.hom` as OPAQUE μ atoms (do NOT unfold `tensorPowAdd_succ`)
+  ⇒ the LocalizedMonoidal/X.Modules comp-instance diamond never appears ⇒ plain `rw` works throughout.
+  Route (compiles through step 3, verified): `apply Iso.ext; simp only [moduleTensorPowAdd, ..._eq
+  bridges, ...]`; (1) slide `μ_{i,j}` to F-side via `BraidedCategory.braiding_naturality_left` converting
+  `β_{L^{i+j},F}→β_{tensorObj L^i L^j,F}`; (2) inject pentagon `tensorPowAdd_assoc L i j k` under `F◁`
+  via `cancel_epi (hp')` + hand-built `hgen` eqToHom-slide; (3) canonicalize `β_{L^i⊗L^j,F}` then SPLIT
+  via `BraidedCategory.hexagon_reverse` (correct splitter for `β_{X⊗Y,Z}`, tensor on LEFT); (4) REMAINING
+  = commute `β_{L^i,F}` past inner `μ_{j,k}` merge via `whisker_exchange` (`monoidal` CANNOT do braiding
+  transpositions) then `monoidal`. `associator_naturality_middle_assoc` EXISTS+fires. Companions
+  `tensorBraiding_naturality_{left,right}` (private, axiom-clean) = iso naturality of `tensorBraiding`
+  via `_eq` bridges + `BraidedCategory.braiding_naturality_{left,right}_assoc`. ⚠ `lean_multi_attempt`
+  BROKEN in `have`-rich proofs ("Unknown identifier") — use file edits + `lean_diagnostic_messages`.
+
+- **★★★ iter-031 — BOTH braided walls CLOSED; phase (ii) GCommSemiring leg COMPLETE; file SORRY-FREE.**
+  The generic-`M` core idiom (proven on B6 pentagon iter-025) ALSO closes the two braided coherence walls
+  (`tensorPowAdd_succ_left_braided` succ + `tensorPowAdd_comm` succ). **Template:** reduce the iso goal to
+  canonical homs via `_eq` bridges + `apply Iso.ext`; state a `private …_core {M}[MonoidalCategory M]` with
+  every `tensorObjIso` bridge as an Iso arg, atoms (β,μ) as morphism args, reindex/symmetry as hyps; then
+  `refine core (M := LocalizedMonoidal (sheafificationMon X) (sheafificationW X) (localizationUnitIso X))
+  _×16 ?hyp`. Pinning `M` collapses every `≫`/`▷`/`◁`/`α_` to ONE comp instance ⇒ dissolves the
+  `LocalizedMonoidal`/`X.Modules` diamond and lets whisker-distribution fire.
+  (1) **brick 1′ succ** core finisher = distribute+cancel `simp` → `rw[hk]` →
+  `rw[← associator_inv_naturality_left_assoc]` → `simp[whisker_assoc, whisker_exchange_assoc]` → `monoidal`.
+  KEY = invertibility-collapsed hexagon `hβ'`: brick-2 forward hexagon + `hwlrefl` (`WL_A(β_{L,L})=𝟙` via
+  PRIMARY) collapses the `α≪≫α⁻¹` pair → `β_{L,A⊗L} = α⁻¹ ≪≫ WR(β_{L,A})L`.
+  (2) **`tensorPowAdd_comm` succ** core finisher = `reassoc_of% hsymm` telescoping, **NO `monoidal`**;
+  `hsymm : β_{L^m,L} ≫ β_{L,L^m} = 𝟙` from `tensorBraiding_symm`. ⚠ NEVER mix forward `whiskerLeft_comp`
+  with `← whiskerLeft_comp_assoc` (loop: "Possibly looping simp theorem").
+  ⚠ **β-split MUST be hand-built-first** via brick 2 `tensorBraiding_hexagon_forward` (canonical-first kills
+  `braiding_tensor_right_hom` — hand-built `tensorObj` 2nd factor). ⚠ **Reindex eqToHom:** `subst`/`rw` FAIL
+  on the dependent motive; use generalize helper `gen` + `rintro … rfl` + `exact gen (show … from by omega)`
+  (explicit `show`, not bare `by omega`); two trailing eqToHom → `convert gen … using 2; exact eqToHom_trans
+  _ _` (bare `exact gen` → 200000-heartbeat isDefEq timeout). **Capstone** `sectionGradedRing_gcommSemiring`
+  = field-port over `gsemiring`, `mul_comm := gradedMonoid_eq_of_cast L (add_comm …) (sectionsMul_mul_comm …)`.
+
+- **★★ iter-030 — 2 axiom-clean β-symmetry bricks DELIVERED; brick 1′ base CLOSED, succ = the B6 wall.**
+  (1) **`tensorBraiding_symm` (β∘β=𝟙 for the hand-built braiding):** `X.Modules` has NO registered
+  `SymmetricCategory` instance (only `braidedCategory` `local instance`), so `SymmetricCategory.symmetry`
+  cannot fire on `β_` in `X.Modules`. Descend through the presheaf: `apply Iso.ext; rw [tensorBraiding,
+  tensorBraiding]; simp only [Iso.trans_hom, Functor.mapIso_hom, Iso.refl_hom]; exact term-mode
+  (sheafification.map_comp _ _).symm.trans ((congrArg sheafification.map hsymm).trans (map_id))` with
+  `hsymm := SymmetricCategory.symmetry (C := MonoidalPresheaf X) _ _`. ⚠ `rw [← sheafification.map_comp]`
+  FAILS on the comp-instance diamond — use the term-mode `.trans` chain. (2) **`braiding_canonical_self_eq_
+  id_of_isInvertible` (canonical `(β_ L L).hom = 𝟙`):** read off PRIMARY `tensorBraiding_self_eq_id_of_
+  isInvertible` through `tensorBraiding_eq`: `h := congrArg Iso.hom (tensorBraiding_eq L L); rw [PRIMARY] at
+  h; simp only [Iso.refl_hom, Iso.trans_hom, Iso.symm_hom] at h; rw [eq_comm, Iso.inv_comp_eq] at h; exact
+  (cancel_mono (tensorObjIso L L).hom).mp (h.trans (Category.id_comp _).symm)`. (3) **brick 1′
+  `tensorPowAdd_succ_left_braided` (order-reversing) base `m=0` CLOSED:** replace `β_{L,𝟙}` by unitors
+  (`tensorObjRightUnitor_eq_braiding_unit`), canonical descent (KEY: `tensorPow_zero` IN the simp set so
+  `L^0`/`unitModule X` unify + bridges telescope), finish `simp only [← Category.assoc]; rw [← Iso.comp_inv_
+  eq, ← MonoidalCategory.rightUnitor_naturality]; simp only [Category.assoc]; congr 1; monoidal`. (4) **⚠
+  succ DEAD END (do NOT retry):** canonical-FIRST descent makes the braiding `β_ L (tensorObj (L^k) L)`
+  whose 2nd factor is HAND-BUILT `tensorObj`, so `BraidedCategory.braiding_tensor_right_hom` (pattern
+  `(β_ X (Y⊗Z)).hom`) never fires. Split the braiding at the HAND-BUILT level via brick 2
+  `tensorBraiding_hexagon_forward` BEFORE descent; the succ is then the B6-scale opaque-μ wall (needs a
+  generic-`M` core like `tensorPowAdd_assoc_succ_core` to cancel `μ_{c,k}▷L` across the comp diamond, then
+  `monoidal`).
+- **★★ iter-029 — comm succ DECOMPOSED; 2 axiom-clean bricks; the glue needs the order-REVERSING recursion.**
+  (1) **Descending a Mathlib braided coherence to the hand-built braiding** (`tensorBraiding_hexagon_forward`,
+  the forward hexagon; mirror of base helper `tensorObjRightUnitor_eq_braiding_unit`): `rw` the `_eq` bridges
+  (`tensorBraiding_eq`, whisker `_eq`) → `Iso.ext` → expand to hom-level → cancel `tensorObjIso` bridge pairs
+  via `simp only [Iso.hom_inv_id_assoc, whiskerLeft_hom_inv_assoc, hom_inv_whiskerRight_assoc]` → residual
+  canonical identity via `BraidedCategory.{braiding_naturality_right,hexagon_forward}_assoc` (convert
+  `β_ F (A.tensorObj B)`→canonical `β_ F (A⊗B)`, trailing `▷F` bridge pair cancels). (2) **Isolation pattern**
+  for `X = P.symm ≪≫ S ≪≫ R.symm` from `P ≪≫ X ≪≫ R = S`: `apply Iso.ext; have hb := congrArg Iso.hom L;
+  simp only [Iso.trans_hom, Iso.symm_hom] at hb ⊢; rw [Iso.eq_inv_comp, Iso.eq_comp_inv]; exact hb` (arbitrary
+  composite `S`). (3) **Dependent-motive dodge:** never `rw` the OBJECT `tensorPow (c+1) → tensorObj (L^c) L`
+  ("motive not type correct"); `rw [show <iso at tensorPow(c+1)> = <iso at tensorObj> from rfl]` — rewrite the
+  whole ISO (fixed type, defeq). (4) **DEAD END (do NOT repeat):** the order-PRESERVING first-index recursion
+  `μ_{c+1,m}=μ_{c,1+m}∘(L^c◁ν_m)∘α` (= B6 pentagon at `(c,1,m)`, `tensorPowAdd_succ_left`) is correct infra but
+  injects a stray opaque `μ_{1,m}` (grows with `m`, never on the LHS) ⇒ unclosable for the comm glue. The glue
+  needs the **order-REVERSING** `μ_{c+1,m}=α≪≫(L^c◁β_{L,L^m})≪≫α⁻¹≪≫(μ_{c,m}▷L)≪≫reindex`, invertibility-gated
+  (consumes `β_{L,L}=𝟙`). Given it, the comm succ residual `(*)` closes via `SymmetricCategory.symmetry`
+  (`Braided/Basic.lean:369`) + associator cancel + `monoidal`. Brick 1′ proof = induction on `m`, succ splits
+  `β_{L,L^{m+1}}` via `BraidedCategory.braiding_tensor_right_hom` (`Basic.lean:~96`).
+- **★★★ iter-028 — `tensorBraiding_self_eq_id_of_isInvertible` DELIVERED axiom-clean (the gated comm
+  brick, Stacks 01CR; basis-local sheafification descent, Route A).** Three reusable sub-patterns:
+  (1) **Ring-spelling diamond dissolution** — when a generic `ModuleCat` helper needs
+  `Module.Invertible R M` but the call site spells the ring two defeq-but-syntactically-distinct ways
+  (`X.presheaf.obj (op U)` vs `X.sheaf.obj ⋙ forget₂ … (op U)`), pass the `Module.Invertible` instance as
+  an EXPLICIT argument (`hM`), NOT via `haveI`/instance search — it unifies by defeq and sidesteps the
+  `failed to synthesize CommSemiring/Module` that instance synthesis throws on the wrong spelling.
+  (2) **Sheaf-descent of a presheaf-morphism equation** — `(PresheafOfModules.toPresheaf _).map_injective`
+  → `TopCat.Sheaf.hom_ext _ _ hbasis` (the UNDERLYING `Ab` sheaf via `SheafOfModules.toSheaf`, plus the
+  `IsInvertible`-carried basis; **NOT `Scheme.Modules.hom_ext`, which is the ⊤-trap**) → per-basis-open the
+  component is `𝟙` (`erw [PresheafOfModules.toPresheaf_map_app_apply]`; `erw [braiding_hom_app]` — plain
+  `rw` no-match). (3) **Sheafified-iso = 𝟙 via the adjunction** — `Iso.ext` → `change sheafification.map
+  f.hom = 𝟙` → `(sheafificationAdjunction …).homEquiv ….injective` → `rw [Adjunction.homEquiv_unit ×2];
+  erw [CategoryTheory.Functor.map_id, Category.comp_id]` (plain `rw`/`simp` FAIL on the `𝟙`) →
+  `(unit.naturality f.hom).symm.trans (descent_eqn)`. Prereq: `IsInvertible` re-signed (iter-028) to a
+  `Prop` carrying `∃ ι (U:ι→Opens), Opens.IsBasis (range U) ∧ ∀i, Module.Invertible Γ(X,Uᵢ) Γ(L,Uᵢ)` as
+  data. Uses `Module.Invertible.tensorProductComm_eq_refl` (`Mathlib.RingTheory.PicardGroup`).
+- **★★★ iter-027 — graded-RING ASSEMBLY DELIVERED, axiom-clean ∀L (the deliverable, Stacks 01CV).**
+  Pattern for building a `DirectSum.GSemiring` on a sheaf-section tensor-power family once the coherence
+  chain is closed (field-port of `Mathlib.LinearAlgebra.TensorPower.Basic`): (1) **class-valued defs MUST be
+  `@[reducible]`** (carrier depends on the free `L` ⇒ cannot be a global instance — same as TensorPower).
+  (2) **GMonoid layer** = the three hypothesis-free coherence clauses (`one_mul`/`mul_one`/`mul_assoc`) each
+  wrapped by `gradedMonoid_eq_of_cast` (transport-mediated eq → dependent-pair eq); `gnpow` takes the Mathlib
+  default. (3) **Bilinearity fields need `erw`, NOT `rw`/`simp only`** — the `TensorProduct.{tmul_zero,
+  zero_tmul,tmul_add,add_tmul}` rewrites do not fire under `simp only` across the `ModuleCat.Hom.hom`/`DFunLike`
+  coercion of `sectionsMul`/`tensorPowAdd`; working clause = `simp only [gMul_mul_apply]; erw [TensorProduct.
+  tmul_zero, map_zero, map_zero]` (push through the `TensorProduct` step then BOTH `ModuleCat` morphisms).
+  (4) **`natCast := fun n => n • (GOne.one : sectionDeg L 0)`**, laws `zero_nsmul`/`succ_nsmul`. (5) **Sanity
+  `Semiring` check must be a `Nonempty (Semiring (DirectSum ℕ (family)))` THEOREM, not an `example`** — an
+  `example` is elaborated as a def and triggers codegen on the noncomputable carrier ("failed to compile,
+  consider noncomputable"); the `⨁ m, ...` big-operator binder also mis-elaborates here, use `DirectSum ℕ f`.
+  Import `Mathlib.Algebra.DirectSum.Ring` for `DirectSum.GSemiring` (not transitive). **`\leanok` is per-decl
+  sorry-freeness, NOT transitive `\uses`-closure** — a fully-proved decl whose blueprint `\uses` cites a
+  bundled lemma carrying an unrelated sorried clause still earns `\leanok` (manual override if sync's
+  closure-check skips it).
+- **★★★ iter-026 — B7 `sectionsMul_mul_assoc` FULLY CLOSED, axiom-clean (`[propext, Classical.choice,
+  Quot.sound]`, verified first-hand). ⇒ the ENTIRE B1–B7 ∀L associativity coherence of `⊕ₘ Γ(L^⊗m)`
+  is complete. SNAP 4→3 sorries.** Closing technique = **section/element-level assembly that dodges
+  the comp-instance diamond entirely** (contrast B6, which needed the generic-`M` core to dodge it):
+  a pure `rw`-chain `simp only [gMul_mul_apply]` → RIGHT slide `sectionsMul_whiskerRight_natural` →
+  LEFT slide `sectionsMul_whiskerLeft_natural` → `rw [← tensorObjAssoc_hom_sectionsMul …]` (B5
+  backwards) → `exact congrArg (fun i => (i.hom.val.app (op⊤)).hom z) (tensorPowAdd_assoc L na nb nc)`
+  (B6 iso-pentagon at a common base element `z`). **WHY it closes with no `monoidal`/`simp`/diamond
+  gymnastics:** at the section (element) level, functor-comp / `Iso.trans_hom` / `sectionsCast_apply`
+  are all `rfl`, so both sides are literally `Γ(·)(z)` for the two pentagon composites and the
+  `congrArg` of the iso-level coherence lands directly. **LESSON: when a coherence can be stated AND
+  consumed at the element level, do so — the `LocalizedMonoidal`/`X.Modules` diamond is a
+  morphism-level artifact that never surfaces on elements.** The two μ-slide helpers
+  `sectionsMul_whisker{Right,Left}_natural` (private, iso form `e : F ≅ F'`) are the EXACT parallel of
+  `tensorBraiding_hom_sectionsMul`: `sectionsMul F G = η_{F⊗_p G}.app(op⊤)`,
+  `(tensorObjWhiskerRightIso e G).hom = sheafification.map (whiskerRight (toPresheaf e.hom)(toPresheaf G))`,
+  slide = η-naturality along that presheaf whisker; `e1`/`hw` = rfl; NO diamond (recipes a/b/c NOT needed).
+- **★★ iter-025 — B6 `tensorPowAdd_assoc` FULLY CLOSED, axiom-clean (`[propext, Classical.choice,
+  Quot.sound]`, `lean_verify`-confirmed first-hand); 8-iter plateau (017→024) BROKEN. SNAP 5→4 sorries.**
+  The succ-case canonical pentagon was discharged by NEW `private lemma tensorPowAdd_assoc_succ_core
+  {M}[Category M][MonoidalCategory M]` (~L3072; ~17 bridge isos + 6 `μ` morphisms + `foldhyp` + `hμ5`),
+  wired by `exact … (M := LocalizedMonoidal (sheafificationMon X) (sheafificationW X)
+  (localizationUnitIso X)) (5 goal-only isos pinned explicit) (foldhyp := ihRh) (hμ5 := …)` under
+  `set_option maxRecDepth 4000 in`. **REUSABLE — generic-`M` core + pinned `exact` crosses the
+  `LocalizedMonoidal`/`X.Modules` comp-instance diamond** (the close path scoped in iter-024, now
+  EXECUTED): (a) abstract the stalled canonical hom-equation to a free monoidal `M` — develop there
+  (ONE instance ⇒ NO diamond ⇒ `lean_run_code` iterates fast), close with explicit fold (`foldhyp'` =
+  `(cancel_epi …).mp foldhyp`) + cancellation `simp` + `rw [foldhyp']` + ONE
+  `← associator_inv_naturality_left_assoc` + `simp [whisker_assoc, whisker_exchange_assoc]` THEN
+  `monoidal`. **`monoidal` ALONE STALLS** — it cannot peel the non-structural `μ`-atoms nor cancel the
+  opaque `tensorObjIso`-bridge pairs; the explicit fold + one associator-naturality + whisker-exchange
+  are mandatory before it. (b) Wire via `exact core (M := LocalizedMonoidal …)` with `maxRecDepth 4000`
+  (stack-depth, NOT the forbidden heartbeat bump) and goal-only isos pinned so heads align ⇒ `exact`'s
+  `isDefEq` bridges the rfl-defeq diamond that `rw`/`simp`/`erw`/`hc`-bridge ALL fail on (200k-whnf
+  timeout). Same idiom as B4 `tensorObjAssoc_eta_factor_sheaf` and ★. **Staging into sub-lemmas (the
+  plan's directive) was UNNECESSARY** — the monolithic generic-`M` core closes in one chain once built
+  in the diamond-free generic setting; the size-ceiling the prover hit in iters 018–024 was a tooling
+  artifact of developing ON the diamond, removed by abstracting OFF it. The two close-path entries below
+  (iters 023/024) are now EXECUTED/SUPERSEDED — kept as derivation history.
+- **★ iter-023 ROOT-CAUSE REFACTOR — recursion ORIENTATION, not tactics, was the bottleneck (SNAP, sorry
+  5→5 but braided obstruction class ELIMINATED).** The 6-iter braided wall (iters 017–022) in
+  `tensorPowAdd_assoc` was a DEFINITIONAL ARTIFACT: `tensorPowAdd` recursed on the **1st** index `m` while
+  `tensorPow` grows on the right and `Nat.add` recurses on its 2nd arg ⇒ the succ clause was forced to
+  thread a `tensorBraiding` to migrate the freshly-added `L`. **Fix: recurse on the 2nd index `m'`**
+  (canonical `pow_add` orientation): base `m+0=m` (`rfl`) = `tensorObjRightUnitor`; succ `m+(c+1)=(m+c)+1`
+  (`rfl`) = `(tensorObjAssoc …).symm ≪≫ (tensorPowAdd L m c ▷ L)`. ⇒ NO braiding, NO `eqToIso`. Effects:
+  `tensorPowAdd_zero_right`/`_succ` become genuine `rfl`; `tensorPowAdd_assoc` becomes a pure braiding-free
+  pentagon; the whole 018–022 σ-naturality/diamond tower is RETIRED; `canonical_runit_core` goes DEAD. NO
+  Mathlib braided-coherence tactic exists ⇒ the refactor was NECESSARY (mathlib-analogist
+  `tensorpowadd-orient`, `lean_run_code`-verified). **Lesson:** when a categorical coherence proof keeps
+  hitting the SAME structural residual (here a braiding) for K iters, suspect the DEFINITION's recursion
+  orientation before the tactics — align it with the canonical Mathlib orientation (`pow_add`: induct the
+  2nd arg). The braided-coherence KB entries BELOW (iters 018–021) are now SUPERSEDED for this target
+  (kept as "do-not-reproduce" history of the dead 1st-index route).
+- **Braiding-free `tensorPowAdd` coherence — the `eqToIso(reindex)` blocks the ISO level, so close at the
+  HOM level (iter-023, VALIDATED on `tensorPowAdd_zero_left` succ; the B6-succ residual @3230 awaits the
+  same recipe).** After unfolding both 2nd-index succ-clauses (`tensorPowAdd_succ`) and distributing the
+  outer right-whisker over `L^{c+1}=L^c⊗L` (new helper `tensorObjWhiskerRightIso_tensorObj` = hand-built
+  `whiskerRight_tensor`: `e ▷ (A⊗B) = α⁻¹ ≪≫ ((e▷A)▷B) ≪≫ α`), the `α'' ≪≫ α''.symm` pair WOULD cancel by
+  `Iso.self_symm_id_assoc`, but the trailing `eqToIso(add_assoc/zero_add)` reindexer blocks the iso-level
+  `Iso.trans_assoc` ("pattern not found"). **⚠ iter-024 CORRECTION — the iter-023 "NOT a comp-instance
+  diamond" claim was WRONG.** iter-024 re-diagnosed the B6-succ residual precisely (via `lean_multi_attempt`,
+  prover task_result + `analogies`): after the canonical `Iso.ext`+`simp only` reduction the goal LHS
+  contains `ihRh.LHS` MODULO the telescope `α_.hom ≫ AB◁tC.hom ≫ tR.hom ≫ tR.inv ≫ AB◁tC.inv ≫ α_.inv = 𝟙`
+  (`tR = tensorObjIso (L^{m+m'}) ((L^c)⊗L)`); the `≫` at the **`tR.hom ≫ tR.inv` junction mixes the native
+  `X.Modules` comp with the `LocalizedMonoidal` comp** (the comp-instance diamond) — so `rw`/`simp`/explicit
+  `Iso.trans_assoc`/the `hc` comp-bridge all "no-match", and `erw [Iso.trans_assoc]` deterministically times
+  out >200k whnf. **CLOSE PATH (FULLY SCOPED, same-file precedent `tensorObjAssoc_eta_factor_sheaf`
+  ~L2530-2640): abstract the fully-canonical hom equation to a generic `{M}[Category M][MonoidalCategory M]`
+  lemma `tensorPowAdd_assoc_succ_core` (ONE category instance ⇒ `simp [Category.assoc, Iso.hom_inv_id_assoc,
+  whisker_exchange_assoc, associator_naturality_*]`+`rw[foldhyp]`+`monoidal` all fire), then `exact … ihRh`
+  (its `isDefEq` bridges the rfl-defeq diamond that `rw`/`simp` cannot). NB unfold RHS atom `μ_{m,m'+(c+1)}`
+  via `tensorPowAdd_succ` (force `m'+(c+1) ⤳ (m'+c)+1` with `simp only [Nat.add_succ]`/`conv`) to expose the
+  `ihRh` RHS atom first.** The banked iter-024 reduction (`ihRh` fold relation + inline `key`
+  `eqToIso→WR(eqToIso,L)` reindex-align + canonical `Iso.ext` reduction) compiles and lands the goal at this
+  pentagon residual. The OLD hom-fold route (below) is SUPERSEDED by the generic-`M` `exact`.
+  **OLD RECIPE (iter-023, superseded): `apply Iso.ext` to drop to hom level FIRST**
+  — there `eqToIso→eqToHom` and `α''.hom ≫ α''.inv` cancels cleanly by `Iso.hom_inv_id_assoc`; then a
+  canonical `simp only` bridge (the `_eq` route-(b) bridges + `whiskerRight/LeftIso_hom/inv`,
+  `Iso.hom_inv_id_assoc`, `hom_inv_whiskerRight_assoc`, `whiskerLeft_hom_inv_assoc`,
+  `Iso.cancel_iso_inv_left`), fold `ih`/`ihR` by `rw`, `congr 1` peel, discharge the `+`-reindexer with a
+  `subst` helper (`tensorObjIso_succ_reindex`: `subst h; simp` — type the `eqToHom` motive as
+  `congrArg (fun i => tensorObj (tensorPow L i) L) h`, NOT `congrArg (tensorPow L) …`), and `monoidal`.
 - **B6-succ `tensorPowAdd_assoc` braided coherence — the hom-level telescope is diamond-blocked; the
   iso-level route is NOT diamond-free either (iter-018, SNAP; partial, still open).** Two synonym
   comp/whisker diamonds gate the succ case. (a) After `apply Iso.ext` + the enhanced telescoping
@@ -28,6 +265,57 @@
   Such helpers must re-expose the synonym head (`change`/`show` onto `MonoidalPresheaf X`-comp) BEFORE any
   `rw`/`simp`. The residual math is genuinely the canonical braided-pentagon (assoc-∀L: `hexagon_forward`
   +`pentagon`+`whisker_exchange`, NO β=id).
+- **Route (b) RESOLVES the whiskering-synonym diamond for the functoriality helpers (iter-020, SNAP;
+  analogist-VERIFIED, `analogies/whisker-synonym.md`).** The iso-level functoriality helpers
+  (`tensorObjWhiskerRightIso_trans/_refl`, `…LeftIso_trans/_refl`) are proved NOT by re-exposing the
+  `MonoidalPresheaf X` synonym head (route (a) = the iter-018 DEAD END above) but by **routing through the
+  already-proven canonical bridges**: `rw [tensorObjWhiskerRightIso_eq ×n]; apply Iso.ext; simp`. The `_eq`
+  bridges already absorbed the synonym crossing ⇒ the residual is uniformly `X.Modules`-comp (single head)
+  ⇒ `comp_whiskerRight`/`whiskerLeft_comp` (both `@[simp]`) fire directly; no `hc`, no synonym re-entry. All
+  4 helpers axiom-clean. **Consumer idiom (B6-succ):** distribute at iso level BEFORE `Iso.ext` —
+  `rw [show tensorPowAdd (k+1) m' = <5-seg composite> from rfl]; simp only [tensorPow_succ,
+  tensorObjWhiskerRightIso_trans]`. **`tensorPow_succ` FIRST is essential** (missing from the analogist
+  sketch): plain `rw [tensorObjWhiskerRightIso_trans]` won't fire — the outer whisker's implicit source
+  `tensorObj (tensorPow (k+1)) _` differs by IOTA-reduction from the unfolded segment's source `tensorObj
+  (tensorObj (tensorPow k) L) _` (`rw` matches at reducible transparency); `erw` fires but over-unfolds
+  `tensorObjAssoc` → `whnf` heartbeat timeout. `simp only [tensorPow_succ]` aligns the source, then plain
+  `_trans` fires controlled (tensorObjAssoc stays folded), keeping `tensorPowAdd k _` FOLDED so `ih` can
+  later apply. Residual after this = the braided pentagon (still open; effort-breaker target — steps:
+  (i) succ-reindex `tensorPowAdd (k+1+m') m''` via `Nat.succ_add`+`eqToIso`, (ii) `whisker_exchange` to
+  surface `ih`, (iii) `hexagon_forward`+`pentagon`).
+- **Effort-breaker (i) CLOSED + exact `ih`-bridge VERIFIED (iter-021, SNAP; sorry 5→5, B6-succ residual
+  pinpointed to ONE braiding-slide).** The breaker's step (i) is realised by 3 axiom-clean `private`
+  helpers: `tensorPowAdd_reindex_fst` (first-index reindex of μ past two `eqToIso`s; `subst h; simp`),
+  `tensorPowAdd_assoc_succ_reindex` (`rw [reindex_fst L (Nat.succ_add k m') m'']; rfl` — the trailing `rfl`
+  is REQUIRED to clear the residual `eqToIso` pair; MECHANICAL, no braided coherence), `tensorPowAdd_succ`
+  (definitional succ-clause as a `rfl` rewrite). Succ-case body: `rw [tensorPowAdd_assoc_succ_reindex …,
+  tensorPowAdd_succ …]` puts BOTH outer comparisons in explicit succ form ⇒ every remaining `tensorPowAdd`
+  is one of the 4 FOLDED inductive atoms `μ_{k,m'}/μ_{k+m',m''}/μ_{m',m''}/μ_{k,m'+m''}`. **Iso-level
+  whiskered-`ih` bridge:** `have ihR := congrArg (fun e => tensorObjWhiskerRightIso e L) ih; simp only
+  [tensorObjWhiskerRightIso_trans] at ihR` — `lean_goal`-VERIFIED ihR's 2nd seg = goal LHS B4 verbatim,
+  3rd seg = goal RHS D4 verbatim ⇒ `ihR` IS the literal bridge. **ONLY residual obstruction:** goal LHS A4
+  `(μ_{k,m'} ▷ L) ▷ L^m''` vs ihR's first term `(μ_{k,m'} ▷ L^m'') ▷ L` — transpose new `L` past `L^m''`,
+  sliding A4 past braiding `β_{L,L^m''}`; the hom-level `whisker_exchange` crosses the
+  hand-built-whisker/`tensorObjIso` diamond (didn't discharge in budget). FINE re-break: (ii-a) a NAMED
+  `tensorObjWhiskerRightIso(-)(L^m'')`-natural-vs-`tensorBraiding` bridge via `tensorObjWhiskerRightIso_eq`
+  +`tensorBraiding_eq` (route-b, NOT synonym side), (ii-b) `whisker_exchange`, (iii) `hexagon_forward`
+  +`pentagon` (NO `β=id`).
+- **(ii-a) DELIVERED — the diamond-crossing transposition naturality is axiom-clean; B6-succ diamond SOLVED
+  (iter-022, SNAP; sorry 5→5).** `tensorObjWhiskerRightIso_tensorBraiding_natural`: for `e : A ≅ B`, fixed
+  `P Q`, `(e ▷ P) ▷ Q ≪≫ σ_B = σ_A ≪≫ (e ▷ Q) ▷ P` with `σ_Y = α_{Y,P,Q} ≪≫ (Y ◁ β_{P,Q}) ≪≫ α_{Y,Q,P}⁻¹`.
+  **Route-b recipe (REPRODUCIBLE, axiom-clean):** `apply Iso.ext`; ONE `simp only` with the `_eq` bridges
+  (`tensorObjWhiskerRightIso_eq`/`…LeftIso_eq`/`tensorBraiding_eq`) + `tensorObjAssoc` + hom/inv distribution
+  + bridge cancellations telescopes to the canonical naturality of `σ` in `Y`; then `rw
+  [associator_naturality_left_assoc, ← whisker_exchange_assoc, associator_inv_naturality_left_assoc]`. NO
+  `β=id`. This crosses the `MonoidalPresheaf X`/`X.Modules` synonym diamond that blocked iters 018–021.
+  **Succ consumer (verified reduction, ends at ONE typed sorry):** seam-collapse (`tensorObjWhiskerRightIso_eqToIso`
+  = WR-of-`eqToIso` → bare `eqToIso`, then `eqToIso_trans`/`eqToIso_self` merge+cancel the reindexers) →
+  (ii-a) flip (`…_natural_assoc`) → fold (`tensorObjWhiskerRightIso_trans_assoc`) + `ih`/`ih2` → canonicalize
+  (`Iso.ext` + `_eq`-bridge `simp only`) → partial telescope of bridge hom-inv pairs straddling braidings.
+  **Residual (iii):** clean canonical coherence, ~6 `tensorObjIso` bridges/side each separated from its
+  partner by `α`/`β`; close by bridge-slide (`associator_naturality_*_assoc`/`braiding_naturality`/
+  `whisker_exchange_assoc`) to make hom-inv partners adjacent+cancel, then `hexagon_forward`+`pentagon` (one
+  braiding `β_{L,L^m'}`, NO `β=id`). DON'T retry: `coherence` not imported; blind `simp [whisker_exchange]` loops.
 - **Head-pin closes a LARGE concrete monoidal coherence across the comp-diamond — RESOLVES the
   comp-instance-diamond saga (iter-017, SNAP; ★ `tensorObjAssoc_eta_factor_sheaf` CLOSED axiom-clean,
   ending the 4-iter 013–016 wall).** When `exact <generic-coherence> …` (here
@@ -1937,6 +2225,68 @@
 
 ### Known Blockers (do not retry without a structural change)
 
+- **SNAP-S1 module `mul_smul` (iter-032) — do NOT route through `sectionMul_coherent` "with 3rd factor F".**
+  TYPE-INCORRECT: `sectionMul_coherent` quantifies over POWERS of L, not an arbitrary module factor F. The
+  module action `moduleTensorPowAdd` is BRAIDING-LADEN (`β_{L^i,F}` over DISTINCT objects) whereas
+  `tensorPowAdd_assoc` is braiding-free. `β_{L^i,F}` does NOT collapse under invertibility (no `β=𝟙`
+  shortcut — that only holds for `β_{L,L}` on equal objects). Correct route (effort-breaker iter-032):
+  (A) `moduleTensorPowAdd_assoc` (NEW iso-level module hexagon, B6 `tensorPowAdd_assoc` analogue via the
+  generic-`M` `_core` idiom, β-split HAND-BUILT-first) ← (B) `moduleSectionAction_coherent` (reuses proven
+  `tensorBraiding_hom_sectionsMul` distinct-obj slide) ← (C) `sectionGradedModule_gmodule` (`DirectSum.Gmodule`,
+  `import Mathlib.Algebra.DirectSum.Module`). CAPPED stretch: ABORT-to-finalize if (A) stalls >2 iters
+  (out-of-goal, no verified consumer).
+
+- **`tensorPowAdd_comm` succ-hexagon (iter-028, the SINGLE remaining comm-chain sorry @L3682) — do NOT
+  retry the naive `rw [tensorPowAdd_succ, ih]`.** Verified-in-session: after unfolding the LHS the goal is
+  `α⁻¹ ≪≫ WR(β_{L^m,L^c} ≪≫ μ_{c,m} ≪≫ reindex) L = β_{L^m,L^{c+1}} ≪≫ μ_{c+1,m} ≪≫ reindex`, whose RHS
+  `μ_{c+1,m} = tensorPowAdd L (c+1) m` is a **1st-index** successor — UNREACHABLE from the 2nd-index
+  recursion (`ih` gives `μ_{c,m}`, `tensorPowAdd_succ` is 2nd-index). REQUIRED structural prereqs before any
+  prover round: (1) build `tensorPowAdd_succ_left : μ_{c+1,m} ≅ …μ_{c,m}…` (1st-index recursion char., via
+  `tensorPowAdd_assoc`/`tensorObjAssoc` + `tensorPow_succ`); (2) descended `BraidedCategory.hexagon_forward`
+  (sheafification-descent pattern of `tensorObjRightUnitor_eq_braiding_unit`) + `β_{L,L}=𝟙`
+  (`tensorBraiding_self_eq_id_of_isInvertible`, available). `monoidal` tactic does NOT handle braidings.
+  This is the BRAIDED ANALOGUE of the B6 pentagon (the 8-iter 017→024 wall) and is INTRINSICALLY braided
+  (cannot be re-oriented away — comm IS the braiding) ⇒ genuine multi-iter target; use `effort-breaker`.
+  **iter-029 UPDATE:** decomposed + 2 bricks delivered axiom-clean (`tensorBraiding_hexagon_forward`,
+  `tensorPowAdd_succ_left`); the succ goal is now the precise residual `(*)`. **The blueprinted/effort-broken
+  order-PRESERVING `tensorPowAdd_succ_left` is a DEAD END for the glue (stray opaque `μ_{1,m}`; zero
+  call-sites).** The true missing lemma is **brick 1′ = order-REVERSING recursion**
+  `μ_{c+1,m}=α≪≫(L^c◁β_{L,L^m})≪≫α⁻¹≪≫(μ_{c,m}▷L)≪≫reindex`, `[IsInvertible L]`-gated (consumes `β_{L,L}=𝟙`),
+  proved by induction on `m` (succ splits `β_{L,L^{m+1}}` via `BraidedCategory.braiding_tensor_right_hom`).
+  NOT yet a blueprint lemma — blueprint-writer must add it + re-sketch the succ proof BEFORE the next prover
+  round (lvbc-iter029 MAJOR). Given brick 1′, `(*)` closes via `SymmetricCategory.symmetry` + `monoidal`.
+- **sync_leanok OVER-STRIP recurs on heavy edits to `Picard_SectionGradedRing.tex` (iter-029: removed 31,
+  blanket-stripped ~30 DONE proof-`\leanok`).** Heartbeat-glitch: sync's per-chapter `lake build` times out on
+  this large chapter and conservatively strips proof markers. The review agent restores via the exclusion
+  principle (file has exactly 1 sorry `tensorPowAdd_comm` ⇒ every other formalized decl is axiom-clean ⇒
+  restore all non-empty proof `\leanok` except `tensorPowAdd_comm`/`sectionMul_coherent`/`gcommSemiring`/
+  `gmodule`). Durable fix is SYNC-SIDE (raise build budget / non-destructive on timeout). Will recur each iter
+  the chapter is edited.
+- **`tensorPowAdd`/`tensorPowAdd_assoc` 1st-index recursion (SUPERSEDED iter-023) — DEAD, do not revive.**
+  The 1st-index orientation forces a `tensorBraiding` in the succ clause ⇒ braided pentagon with no Mathlib
+  closer (6 wasted iters 017–022). The 2nd-index (`pow_add`) orientation is the live def. Corollary: the
+  `private` helper `canonical_runit_core` (@2964) is now DEAD code (sole consumer `sectionsMul_mul_one`
+  re-proved by a `rfl`-chain) — a `refactor` lane should delete it + its stale docstring; do NOT build new
+  proofs on it. Also stale (describe the dead 1st-index/braiding route): planner-strategy block @2077–2138,
+  `tensorPowAdd` docstring @2142–2146, "single remaining gap" comment @3082.
+- **`sync_leanok` CORRUPTS `Picard_SectionGradedRing.tex` every iter (10th consecutive, iter-023) — now
+  build-breaking, not just cosmetic.** (iter-023: removed 24 / added 1; proof-block `\leanok` → 1; build-
+  breaking `\(`/`\)` corruption @1543 [`tensorBraiding_hom_sectionsMul` proof, opener eaten] — review
+  restored 24 proof-block `\leanok` + repaired @1544's `\(\Gamma(\beta…)\circ` opener.
+  iter-022: removed 25 / added 1; chapter → ZERO proof-block `\leanok`;
+  1 `\uses`-bearing block corrupted — @983 `lem:sheafTensorPow_add` → `\begin{proof}  <labels>}` — review
+  repaired @983's `\uses{` opener + restored 26 proof-block `\leanok`. iter-021: removed 24 / added 1; 5
+  `\uses`-bearing blocks corrupted, review repaired 25.) Each iter the
+  deterministic sync removes ~24 proof-block `\leanok`
+  from genuinely-closed, `lean_verify`-axiom-clean lemmas (module builds green). As of iter-020 the defect
+  ESCALATED: on the 12 proof blocks carrying a `\uses{}` list it destroys the `\leanok\uses{` prefix →
+  malformed `\begin{proof}    <labels>}` (dangling labels, no `\uses{` opening), which the blueprint-doctor
+  reports as crash-level (plastex `Label '' could not be resolved` → leanblueprint depgraph `RecursionError`;
+  the blueprint never finishes building). Review repairs it each iter (`\begin{proof}\leanok\uses{…}` /
+  `\begin{proof}\leanok`, labels intact) but the next sync re-corrupts. **Durable fix is sync-side (user):
+  the strip regex must not eat the `\uses{` opening, and ideally skip already-axiom-clean decls on this
+  large/slow file.** Do NOT treat the resulting bare-labels as a prose defect — they are a tooling artifact.
+
 - **[iter-019 — B6-succ `tensorPowAdd_assoc` (@3151): PROVER LAYER EXHAUSTED on the whiskering-synonym
   diamond. ESCALATION GATE TRIGGERED — do NOT re-assign a bounded prover round.]** 5 iters (015–019) at
   the `MonoidalPresheaf X` / `X.PresheafOfModules` whiskering-synonym diamond on the succ-case braided
@@ -2718,7 +3068,153 @@
   enforced corrective is a mathlib-analogist consult on the reframing keystone, not a prove round.
 
 ## Last Updated
-2026-06-20T (iter-019 review) — **B6-succ `tensorPowAdd_assoc` 0-EDIT NO-PROGRESS (sorry 5→5, plateau 3
+2026-06-21T (iter-036 review) — **SNAP-S1 MODULE LANE FULLY CLOSED, axiom-clean.** (B-unit)
+`moduleSectionAction_one_smul` + base `moduleTensorPowAdd_zero_left` + (C) `sectionGradedModule_gmodule`
+all SOLVED (`lean_verify` `{propext,Classical.choice,Quot.sound}`); file 0-sorry, cold build green 2632.
+`M(X,L,F)=⊕Γ(F⊗L^{⊗m})` is `DirectSum.Gmodule` over `Γ_*(X,L)` ∀L,F. Capped stretch closed in 3
+real-attempt iters. Both review subagents PASS 0 must-fix (lean-auditor 8 files 0 crit; lvbc module lane
+faithfully formalized). Review fixed stale `% NOTE:`; dead-code helpers `tensorBraiding_naturality_{left,
+right}` confirmed DELETED. No live prover frontier left in SectionGradedRing.lean; only 4 χ sorries
+deferred in QuotScheme.lean (need cohomology scope). Narrative: `iter/iter-036/review.md`. ⟨prior⟩
+2026-06-21T (iter-035 review) — **SNAP-S1 (A) `moduleTensorPowAdd_assoc` CLOSED axiom-clean + (B-compat)
+`moduleSectionAction_mul_smul` CLOSED** (both `lean_verify` `{propext,Classical.choice,Quot.sound}`); full
+graded-module scaffolding + 2 imports. Abort-clock question answered YES in 1 real-attempt iter. Residual
+after `monoidal` was TWO `whisker_exchange` interchanges (iter-034 diagnosed 1). **(B-unit)+(C) BLOCKED on
+`moduleTensorPowAdd_zero_left`** (`unitModule X ≠ 𝟙_` syntactic friction; banked close path). Review fixed
+the `lem:moduleSectionAction_coherent` `\lean{}` (two-clause form) + `% NOTE:`. lean-auditor 0 must-fix (7
+stale-comment majors + the 2 iter-034 helpers now DEAD CODE → recommendations); lvbc 1 blueprint must-fix
+(handled + writer follow-ups). Narrative: `iter/iter-035/review.md`. ⟨prior⟩ 2026-06-21T (iter-034 review)
+— **SNAP-S1 (A) `moduleTensorPowAdd_assoc` ~95% (first real attempt, CONVERGING).** 2 axiom-clean private helpers shipped (`tensorBraiding_naturality_{left,right}`); full
+hom-level hexagon proof compiles through the `hexagon_reverse` split, reverted with 1 residual braiding
+transposition banked in task_results (file stays 0-sorry). KEY: keep `tensorPowAdd.hom` OPAQUE ⇒ no
+comp-instance diamond ⇒ no `_core` needed (see Proof Patterns ★★★ iter-034). lean-auditor 0 must-fix
+(7 stale-comment majors → recommendations); lvbc PASS. Abort clock 1 of >2. Narrative:
+`iter/iter-034/review.md`. ⟨prior⟩ 2026-06-21T (iter-032 review) — **NO PROVER LANE (blueprint-prep iter).** Plan-phase HARD GATE FAILED on
+the new SNAP-S1 graded-module lane: the `mul_smul` sketch was TYPE-INCORRECT (`sectionMul_coherent` "with
+3rd factor F" — that lemma quantifies over POWERS of L; `moduleTensorPowAdd` braiding-laden vs braiding-free
+`tensorPowAdd_assoc`). Corrected SAME iter via effort-breaker into the sound (A) `moduleTensorPowAdd_assoc`
+← (B) `moduleSectionAction_coherent` ← (C) `sectionGradedModule_gmodule` `\uses`-chain (effort_local
+1611→1229); blueprint-writer added `commSemiring_nonempty`; blueprint-clean 3 edits. No `.lean` touched;
+`SectionGradedRing.lean` SORRY-FREE; global SNAP 4 χ. sync +2/−2 (over-strip did NOT recur). Both Lean
+reviewers skipped (no `.lean` modified — rationale in `iter/iter-032/review.md`). CAPPED stretch: ABORT-to-
+finalize if (A) stalls >2 iters. Prover deferred to iter-033 (mandatory gate re-confirm first). Narrative:
+`iter/iter-032/review.md`. ⟨prior⟩ 2026-06-21T (iter-031 review) — **★★★ PHASE (ii) COMPLETE: `sectionGradedRing_gcommSemiring` SHIPPED
+axiom-clean; `SectionGradedRing.lean` SORRY-FREE.** Both braided walls closed in one iter via the pinned
+generic-`M` core idiom: `tensorPowAdd_succ_left_braided` (brick 1′ succ) + `tensorPowAdd_comm` succ →
+`sectionsMul_mul_comm` (auto) → `gcommSemiring` + `commSemiring_nonempty`. 6 decls, all `[propext,
+Classical.choice, Quot.sound]` (verified first-hand). Sorry 2→0; global SNAP 5→4 (only 4 χ in QuotScheme).
+Cold build GREEN (2626 jobs). lean-auditor CLEAN (0/2/3, 2 stale `.lean` docstrings → recommendations);
+lvbc FAITHFUL (0 must-fix). Manual: `\leanok` on `lem:sectionMul_coherent` stmt+proof (sync missed the
+multi-line 4-target block; all targets now closed). sync over-strip did NOT recur (+4/−0). Coverage debt:
+2 private cores + `commSemiring_nonempty`. Narrative: `iter/iter-031/review.md`. ⟨prior⟩ 2026-06-21T (iter-030 review) — 2 axiom-clean β-symmetry bricks (`tensorBraiding_symm`,
+`braiding_canonical_self_eq_id_of_isInvertible`); brick 1′ `tensorPowAdd_succ_left_braided` base CLOSED,
+succ = B6-scale opaque-μ wall (documented sorry). File sorry 1→2 (new scaffold). Cold build GREEN.
+lean-auditor PASS; lvbc FAITHFUL (restore 33 over-stripped `\leanok` — done; repaired sync-eaten `\uses{`
+opener on `gsemiring` proof). Narrative: `iter/iter-030/review.md`. ⟨prior⟩ 2026-06-21T (iter-029 review) — **comm succ-hexagon DECOMPOSED; 2 bricks delivered axiom-clean; the glue
+needs brick 1′ (order-REVERSING recursion).** `tensorBraiding_hexagon_forward` (forward hexagon) +
+`tensorPowAdd_succ_left` (order-PRESERVING) both `[propext, Classical.choice, Quot.sound]` (verified). The
+`tensorPowAdd_comm` succ reduced to a single precise residual `(*)`; file sorry 1→1, global SNAP 5. **KEY:
+the order-PRESERVING brick is a DEAD END for the glue (stray `μ_{1,m}`, zero call-sites) — the true missing
+lemma is brick 1′ `μ_{c+1,m}=α≪≫(L^c◁β_{L,L^m})≪≫α⁻¹≪≫(μ_{c,m}▷L)≪≫reindex` (`[IsInvertible L]`), NOT yet
+blueprinted ⇒ blueprint-writer adds it + re-sketches succ BEFORE next prover (lvbc-iter029 MAJOR).**
+lean-auditor PASS 0/0/1; lvbc PASS 0 must-fix/1 major(blueprint)/1 minor. **sync_leanok OVER-STRIP recurred
+(−31): manually restored 30 proof-`\leanok` via exclusion principle; durable fix is sync-side.** See
+`iter/iter-029/review.md`. ⟨prior⟩ 2026-06-21T (iter-028 review) — **PRIMARY comm brick `tensorBraiding_self_eq_id_of_isInvertible`
+(`lem:braiding_eq_id_of_invertible`, Stacks 01CR) DELIVERED axiom-clean** (verified first-hand
+`[propext, Classical.choice, Quot.sound]`). Basis-local sheafification descent (Route A) via 4 ModuleCat/
+presheaf helpers; `IsInvertible` re-signed to carry trivializing basis as data. Comm-chain sorry 3→1,
+global SNAP 7→5. `tensorPowAdd_comm` base PROVED + `sectionsMul_mul_comm` own sorry REMOVED (reduced to
+`tensorPowAdd_comm`, sorryAx-only transitively). ONE remaining sorry = `tensorPowAdd_comm` succ-HEXAGON
+(L3682; 1st-index `μ_{c+1,m}` unreachable from 2nd-index ih — needs `tensorPowAdd_succ_left` + descended
+`hexagon_forward`; braided analogue of B6 pentagon, multi-iter). lean-auditor CLEAN 0/0/2; lvbc PASS
+0 must-fix (2 major blueprint debts: transport-prose over-claim → blueprint-writer; stale `% NOTE`
+iter-018 → FIXED). sync_leanok 4th consecutive CLEAN (+6/−0). `sectionGradedRing_gcommSemiring` correctly
+deferred (no-sorry invariant). See `iter/iter-028/review.md`. ⟨prior⟩ 2026-06-20T (iter-027 review) — **GRADED-RING ASSEMBLY DELIVERED, axiom-clean ∀L (the deliverable,
+Stacks 01CV).** `sectionGradedRing_g{monoid,semiring}` (`@[reducible]`) + `sectionGradedRing_semiring_nonempty`
++ STRETCH foundation iso `moduleTensorPowAdd` — all `[propext, Classical.choice, Quot.sound]` (verified
+first-hand). 4 new decls, 0 new sorries; SNAP cone sorry 3→3 (deliverable was new construction). GSemiring
+built field-port of `TensorPower.Basic`: `@[reducible]` class defs + `gradedMonoid_eq_of_cast` for the 3
+monoid axioms + bilinearity via `erw` (not `rw`/`simp only`) + `natCast = n•GOne.one` + `Nonempty Semiring`
+sanity (avoids codegen). lean-auditor 0 crit/major, lvbc PASS 0 must-fix. Added `\leanok` to
+`lem:sectionGradedRing_gsemiring` (manual override; `\leanok` = per-decl, not transitive `\uses`). Next
+critical path = GCommSemiring (iter-028, invertible L — gated on re-signing `IsInvertible` to carry cover as
+data). See `iter/iter-027/review.md`. ⟨prior⟩ 2026-06-20T (iter-026 review) — **B7 `sectionsMul_mul_assoc` FULLY CLOSED, axiom-clean (verified
+first-hand: `[propext, Classical.choice, Quot.sound]`, no `sorryAx`). ⇒ the ENTIRE B1–B7 ∀L
+associativity coherence of `⊕ₘ Γ(L^⊗m)` is complete; SNAP 4→3 sorries (global 8→7). Closed via 2 new
+private μ-slide helpers (`sectionsMul_whisker{Right,Left}_natural`) + element-level `rw`-assembly that
+sidesteps the comp-instance diamond (B6's `congrArg` lands at the section level where everything is
+`rfl`). lean-auditor CLEAN (0 crit/major), lean-vs-blueprint-checker PASS (0 must-fix). Remaining 3
+SNAP sorries = `[IsInvertible L]` comm chain (no consumer, `sectionsMul_mul_comm` FALSE ∀ general L);
+4 χ (QuotScheme) deferred to cohomology leg. Goal seed `Grassmannian.represents` DELIVERED (iter-001).
+See `iter/iter-026/review.md`.** ⟨prior⟩ 2026-06-20T (iter-025 review) — **B6 `tensorPowAdd_assoc` FULLY CLOSED, axiom-clean (`lean_verify`
+first-hand: `[propext, Classical.choice, Quot.sound]`, no `sorryAx`; statement un-weakened ∀L). The
+8-iter plateau (017→024) is BROKEN. SNAP 5→4 sorries (global 9→8). Close = NEW generic-`M` core
+`tensorPowAdd_assoc_succ_core` + `exact (M := LocalizedMonoidal …)` under `maxRecDepth 4000` — the
+iter-024-scoped path EXECUTED; staging into sub-lemmas proved unnecessary (monolith closes in one
+chain off the diamond). Both verifiers clean: lvbc PASS 0-red-flags (faithful, helper-exempt, 4
+sorries honest); lean-auditor 0-critical/4-major/1-minor (majors = STALE history comments only, NOT
+proof defects; `maxRecDepth`/`maxHeartbeats 800000` legitimate). sync_leanok CLEAN this iter (added 2,
+removed 0, no corruption) — 11-iter over-strip streak BROKEN, no manual repair. B7 `sectionsMul_mul_assoc`
+now the sole in-cone target (ingredients (1)=B5 & (3)=B6 done; only (2) `μ`-slide remains). 3 comm +
+4 χ deferred. Build GREEN (2439 jobs); goal seed `Grassmannian.represents` DELIVERED.** (Full iter
+narrative: `iter/iter-025/review.md`. Prior entry below.)
+
+2026-06-20T (iter-024 review) — **B6-succ `tensorPowAdd_assoc` blocker RE-DIAGNOSED (iter-023 "not a
+diamond" guess was WRONG — it IS the comp-instance diamond at one `tR.hom ≫ tR.inv` junction) + compiling
+reduction banked + generic-`M` `exact` close path scoped (precedent `tensorObjAssoc_eta_factor_sheaf`); NO
+sorry closed. Sorry 5→5 (global 9), plateau 8 iters (017→024), build GREEN. Cleanup (obj C) resolved all 3
+iter-023 stale-guidance majors (dead `canonical_runit_core` deleted, docstrings fixed). lean-auditor CLEAN
+(0 defects, banked reduction GENUINE, 0 laundering); lvbc 0-must-fix (faithful; 1 major dangling
+`canonical_runit_core` pin NEUTRALIZED by review). sync_leanok over-strip + @965 corruption REPAIRED (11th
+iter, 23 `\leanok` restored). DECISION POINT: iter-025 EXECUTE generic-`M` extract + `exact` under HARD
+GATE → escalate to USER if B6-succ still fails.** (Full iter narrative: `iter/iter-024/review.md`. Prior entry below.)
+
+(prior) 2026-06-20T (iter-023 review) — **ROOT-CAUSE REFACTOR: `tensorPowAdd` re-oriented to 2nd-index recursion ⇒
+braiding ELIMINATED (the 6-iter wall was a definitional artifact). `tensorPowAdd_zero_left` + both unit
+laws newly closed, base case closed, 018–022 braided tower retired; B6-succ residual is now a braiding-free
+pentagon with a HOM-level closure route validated on the `_zero_left` sibling. Sorry 5→5 (global 9), build
+GREEN, all probed decls axiom-clean. lean-auditor 0-must-fix (3 major = stale comments / dead
+`canonical_runit_core`); lvbc 0-must-fix faithful. sync_leanok over-strip + corruption REPAIRED (10th
+iter).** (Full iter narrative: `iter/iter-023/review.md`.)
+
+(prior) 2026-06-20T (iter-022 review) — **B6-succ `tensorPowAdd_assoc`: (ii-a) DELIVERED axiom-clean — the
+diamond crossing that blocked iters 018–021 is SOLVED; succ reduced to ONE half-telescoped canonical (iii)
+coherence (sorry 5→5, global 9).** plan-iter-022 fired the iter-021 gate (progress-critic STUCK) →
+effort-breaker FINE re-break (ii)→(ii-a)+(ii-b) + co-dispatched prover. Prover delivered
+`tensorObjWhiskerRightIso_tensorBraiding_natural` (ii-a, route-b, axiom-clean) + 3 axiom-clean private helpers
++ a ~45-line verified succ reduction ending at one honest inline sorry @3394. lean-auditor 0-critical (2 major
+= stale .lean DEFERRED comments), lvbc 0-must-fix (1 major = 2 dangling `\lean{}` pins `…_succ_interchange`/
+`…_succ_coherence`, decls inlined). sync over-strip 9th iter (repaired @983 corruption + restored 26 `\leanok`).
+**HARD GATE: iter-023 must escalate to USER (sorry flat 5 for 017→022, 6 iters).** Per-iter narrative:
+`iter/iter-022/review.md`.
+
+### (prior) 2026-06-20T (iter-021 review) — **B6-succ `tensorPowAdd_assoc` effort-breaker (i) CLOSED + exact `ih`-bridge
+VERIFIED, partial, no close (sorry 5→5, global 9).** plan-iter-021 gate FIRED (progress-critic CHURNING) →
+effort-breaker split succ into (i)/(ii)/(iii) + co-dispatched prover. Prover landed 3 axiom-clean `private`
+helpers (`tensorPowAdd_reindex_fst`/`…_assoc_succ_reindex`/`…_succ`), reduced the succ goal to its 4 folded
+inductive atoms, and `lean_goal`-VERIFIED `ihR := ih ▷ L` as the literal bridge (B4/D4 match). Residual =
+ONE inline `sorry` @3261: slide goal A4 `(μ▷L)▷L^m''` past `β_{L,L^m''}` ((ii) interchange, diamond), then
+four-letter `hexagon+pentagon` ((iii), NO β=id). NEXT GATE (pre-committed): FINE re-break (ii)+(iii) — (ii-a)
+named `WR(-)(L^m'')`-vs-`tensorBraiding` bridge via `_eq` route, (ii-b) `whisker_exchange`, (iii)
+hexagon+pentagon; NO monolith retry. Both review subagents dispatched: lean-auditor CLEAN (0/0/1),
+lean-vs-blueprint-checker faithful/no-must-fix (2 major = DANGLING `\lean{}` pins on interchange/coherence).
+★/B5/B6-base re-`lean_verify` axiom-clean; build GREEN. **sync_leanok 8th-iter over-strip+CORRUPTION**
+(removed 24, 5 `\uses` blocks corrupted) — review repaired all 25 + 2 `% NOTE`s on dangling pins; durable
+sync-side fix still needed. Per-iter narrative: `iter/iter-021/review.md`.
+
+### (prior) 2026-06-20T (iter-020 review) — **B6-succ `tensorPowAdd_assoc` route (b) DELIVERED, partial, no close
+(sorry 5→5).** Analogist gate executed: route (b) (whisker functoriality via the `_eq` bridges) VERIFIED ⇒
+ONE prover round warranted. Prover landed 4 axiom-clean `private` helpers (L2028–2053) + the controlled
+iso-level distribution (`tensorPow_succ`-first source-align, then `tensorObjWhiskerRightIso_trans`),
+exposing the folded inductive atom; `rw [ih]` "did not find pattern" @3207 = the genuine braided pentagon.
+NEXT GATE (pre-committed): effort-breaker on `lem:tensorPowAdd_assoc` (3 seams: succ-reindex / whisker_exchange-
+surface-ih / hexagon+pentagon); NO more unconstrained prover rounds, NO route (a). ★/B5 re-`lean_verify`
+axiom-clean; build GREEN. Both review subagents PASS (0 must-fix). **sync_leanok 7th-iter defect ESCALATED
+to build-breaking CORRUPTION** (destroyed `\leanok\uses{` on 12 blocks → malformed `\uses`); review repaired
+all 24, urgent sync-side fix needed (new Known-Blocker bullet). dag unmatched 332→336 (+4 private helpers).
+Per-iter narrative: `iter/iter-020/review.md`.
+
+### (prior) 2026-06-20T (iter-019 review) — **B6-succ `tensorPowAdd_assoc` 0-EDIT NO-PROGRESS (sorry 5→5, plateau 3
 iters).** Bounded final prover attempt (re-exposed-head iso-level recipe) produced ZERO edits — the helper
 chain was never constructed within budget; prover read goal @3151 (canonical braided pentagon, ~1.2M-char),
 forced a green build, committed nothing. **Pre-committed escalation gate (plan-iter-019) TRIGGERED:** next

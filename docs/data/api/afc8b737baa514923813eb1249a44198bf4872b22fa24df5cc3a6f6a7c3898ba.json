@@ -1,0 +1,143 @@
+[
+  {
+    "timestamp": "2026-06-21T04:52:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "tensorObj_restrict_iso_eq_pullbackTensorMap"
+    },
+    "session": {
+      "id": "session_44",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Root decls `sheafifyTensorUnitIso` (TensorObjSubstrate.lean L1040) and `sheafifyTensorUnitIso_hom_eq'` (L1837) are `private` -> invisible from TensorObjInverse.lean. Needed to collapse the residual `sheafifyTensorUnitIso.hom` factor (public `sheafifyTensorUnitIso_hom_natural` only commutes, cannot remove it).",
+      "key_lemmas_used": [
+        "pushforward_mu_appIso_collapse",
+        "pullbackTensorMap_isIso_of_isOpenImmersion",
+        "Iso.inv_hom_id_app_assoc",
+        "Functor.map_comp"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Cancel shared restrictFunctorIsoPullback-prefix via Iso.ext + congr 1",
+        "code_tried": "simp only [tensorObj_restrict_iso]; apply Iso.ext; simp only [Iso.trans_hom, Category.assoc]; congr 1",
+        "line_number": "282-285",
+        "result": "success",
+        "insight": "Reduces to tail identity; restrictFunctorIsoPullback prefix cancels cleanly."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Discharge δ-conjugation via now-public pushforward_mu_appIso_collapse, cancel H1.inv;H1.hom",
+        "code_tried": "rw [pushforward_mu_appIso_collapse f M.val N.val, Iso.app_inv]; erw [Iso.inv_hom_id_app_assoc]",
+        "line_number": "295-296",
+        "result": "success",
+        "insight": "iter-044 de-private of δ-conjugation worked; geometric content of B1 genuinely discharged. Plain rw of Iso.inv_hom_id_app_assoc fails (.app args Monoidal.tensorObj vs ⊗ defeq-not-syntactic) -> rw [Iso.app_inv] first then erw."
+      },
+      {
+        "attempt": 3,
+        "strategy": "Split sheafified composite, unfold pullbackTensorMap, cancel shared sheafCompPb;a_Y.map δ prefix",
+        "code_tried": "erw [Functor.map_comp]; simp only [pullbackTensorMap, Category.assoc]; congr 1; congr 1",
+        "line_number": "298-303",
+        "result": "partial",
+        "insight": "rw [Functor.map_comp] fails (defeq-not-syntactic sheaf carrier) -> must erw. Isolates the entire remaining gap to ONE per-leg residual at L328."
+      },
+      {
+        "attempt": 4,
+        "strategy": "Close per-leg residual (collapse sheafifyTensorUnitIso.hom factor)",
+        "code_tried": "needs sheafifyTensorUnitIso_hom_eq' (private, root L1837)",
+        "line_number": "328",
+        "result": "failed",
+        "insight": "Hard-blocked: sheafifyTensorUnitIso + sheafifyTensorUnitIso_hom_eq' are private in frozen root. Category-1 inaccessible-ingredient stop, not difficulty. Public sheafifyTensorUnitIso_hom_natural commutes the factor but cannot remove it."
+      }
+    ],
+    "next_steps": "Refactor lane: de-private `sheafifyTensorUnitIso` (L1040) + `sheafifyTensorUnitIso_hom_eq'` (L1837) in TensorObjSubstrate.lean (additive, no signature change). Then close via sheafifyTensorUnitIso_hom_eq' + ← Functor.map_comp + tensorHom_comp_tensorHom, reducing to per-leg H1.inv.app = η ≫ forget pullbackValIso.hom ≫ forget ρ.inv (pullbackValIso_hom_natural L1861 + sheafificationCompPullback_eq_leftAdjointUniq L1511)."
+  },
+  {
+    "timestamp": "2026-06-21T04:52:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "restrictFunctorIsoPullback_comp_compat"
+    },
+    "session": {
+      "id": "session_44",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Genuine ~80-120 LOC mate-calculus coherence (pseudofunctoriality of restrictFunctorComp/pullbackComp against leftAdjointUniq). The obvious unit_leftAdjointUniq shortcut makes the goal CIRCULAR (becomes the .hom.app-level form of B2 itself).",
+      "key_lemmas_used": [
+        "mateEquiv_vcomp",
+        "leftAdjointUniq_trans"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Merge six pushforward V.ι .map factors then reduce via unit_leftAdjointUniq_hom_app",
+        "code_tried": "simp only [← Functor.map_comp]; rw [Adjunction.unit_leftAdjointUniq_hom_app]",
+        "line_number": "243",
+        "result": "failed",
+        "lean_error": "unused simp lemma (doesn't fire inside pushforward.map/restrictFunctor.map); reducing LHS pullback-unit to restrict-unit form makes goal circular",
+        "insight": "B2 is the genuine mate-pseudofunctoriality residual; not closable by the obvious shortcut."
+      }
+    ],
+    "next_steps": "B2 independent of privacy gate (the one fully-unblocked sorry). Needs explicit mateEquiv_vcomp / leftAdjointUniq_trans coherence chase, ~80-120 LOC. Candidate for effort-breaker decomposition."
+  },
+  {
+    "timestamp": "2026-06-21T04:52:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "tensorObj_restrict_iso_restrict_compat"
+    },
+    "session": {
+      "id": "session_44",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Downstream of B1 residual (consumes the eq via rw); gated until B1's per-leg sorry closes (i.e. until the new de-private lands).",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "untouched this iter (gated on B1)",
+        "code_tried": "n/a",
+        "line_number": "350",
+        "result": "failed",
+        "insight": "S2 is downstream of B1; not free from restrictFunctorComp.hom.naturality (gives morphism-naturality, not immersion-naturality)."
+      }
+    ],
+    "next_steps": "Hold until B1 closes."
+  },
+  {
+    "timestamp": "2026-06-21T04:52:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "trivialisation_restrict_compat"
+    },
+    "session": {
+      "id": "session_44",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Telescope wiring all five squares (S2/S3/S4a/S4b + S4c); only after they close.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "untouched this iter (gated on all squares)",
+        "code_tried": "n/a",
+        "line_number": "543",
+        "result": "failed",
+        "insight": "Terminal cocycle gating lemma; downstream of every square."
+      }
+    ],
+    "next_steps": "Hold until S2/S3/S4a/S4b close."
+  }
+]

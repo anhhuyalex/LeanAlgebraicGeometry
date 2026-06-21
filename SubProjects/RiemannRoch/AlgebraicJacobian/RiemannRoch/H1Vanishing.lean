@@ -124,6 +124,142 @@ theorem Scheme.IsFlasque.pushforward
   intro U V h
   exact hF ((Opens.map f).map (homOfLE h)).le
 
+/-! ### iter-198 Lane H substrate: non-empty branch of `constant_of_irreducible`
+
+The three private helpers below close the non-empty branch of
+`Scheme.IsFlasque.constant_of_irreducible` (Route B of the blueprint:
+direct sheafification analysis, no Mathlib upstream needed). The key
+mathematical fact is that on an **irreducible** space a locally-constant
+section over a non-empty open is globally constant, i.e. the
+sheafification unit `toSheafify` of the constant presheaf is **bijective**
+on every non-empty open. We split this into:
+
+* `toSheafify_const_restrict` — naturality of the unit on the constant
+  presheaf (restriction of `toSheafify c` is again `toSheafify c`);
+* `toSheafify_const_app_injective_of_ne_bot` — injectivity at a non-empty
+  open, from local injectivity of `toSheafify` (the equalizer sieve of two
+  distinct constants is empty, hence cannot cover a non-empty open);
+* `toSheafify_const_app_surjective_of_ne_bot` — surjectivity at a non-empty
+  open, from local surjectivity of `toSheafify` plus separatedness of the
+  sheaf and the fact that any two non-empty opens of an irreducible space
+  meet (so the locally-chosen constants agree).
+-/
+
+open CategoryTheory in
+/-- Restriction of the sheafification unit on a constant presheaf: for
+`W ≤ W'` and a constant `c : A`, restricting `toSheafify c` from `W'` to
+`W` gives `toSheafify c` at `W`. This is naturality of the unit together
+with the constant presheaf having identity restriction maps. -/
+private theorem toSheafify_const_restrict
+    {kbar : Type u} [Field kbar] {X : TopCat.{u}}
+    (A : ModuleCat.{u} kbar) {W' W : TopologicalSpace.Opens X}
+    (hWW : W ≤ W') (c : A) :
+    (((constantSheaf (Opens.grothendieckTopology X)
+          (ModuleCat.{u} kbar)).obj A).val.map (homOfLE hWW).op).hom
+        (((toSheafify (Opens.grothendieckTopology X)
+            ((Functor.const ((TopologicalSpace.Opens X)ᵒᵖ)).obj A)).app
+          (Opposite.op W')).hom c)
+      = ((toSheafify (Opens.grothendieckTopology X)
+          ((Functor.const ((TopologicalSpace.Opens X)ᵒᵖ)).obj A)).app
+          (Opposite.op W)).hom c := by
+  have hnat := (toSheafify (Opens.grothendieckTopology X)
+      ((Functor.const ((TopologicalSpace.Opens X)ᵒᵖ)).obj A)).naturality
+      (homOfLE hWW).op
+  simp only [Functor.const_obj_map] at hnat
+  have happ := congrArg (fun (m : A ⟶ _) => ModuleCat.Hom.hom m c) hnat
+  exact happ.symm
+
+open CategoryTheory in
+/-- The sheafification unit of the constant presheaf is injective on every
+non-empty open of an irreducible space. -/
+private theorem toSheafify_const_app_injective_of_ne_bot
+    {kbar : Type u} [Field kbar] {X : TopCat.{u}} [IrreducibleSpace X]
+    (A : ModuleCat.{u} kbar) {W : TopologicalSpace.Opens X} (hW : W ≠ ⊥)
+    {a b : A}
+    (hab : ((toSheafify (Opens.grothendieckTopology X)
+          ((Functor.const ((TopologicalSpace.Opens X)ᵒᵖ)).obj A)).app
+          (Opposite.op W)).hom a
+        = ((toSheafify (Opens.grothendieckTopology X)
+          ((Functor.const ((TopologicalSpace.Opens X)ᵒᵖ)).obj A)).app
+          (Opposite.op W)).hom b) :
+    a = b := by
+  have hmem := CategoryTheory.Presheaf.equalizerSieve_mem
+    (Opens.grothendieckTopology X)
+    (toSheafify (Opens.grothendieckTopology X)
+      ((Functor.const ((TopologicalSpace.Opens X)ᵒᵖ)).obj A)) a b hab
+  obtain ⟨x, hx⟩ := (TopologicalSpace.Opens.ne_bot_iff_nonempty W).mp hW
+  obtain ⟨U, f, hf, hU⟩ := hmem x hx
+  simpa [CategoryTheory.Presheaf.equalizerSieve] using hf
+
+open CategoryTheory in
+/-- The sheafification unit of the constant presheaf is surjective on every
+non-empty open of an irreducible space (a locally-constant section is
+globally constant). -/
+private theorem toSheafify_const_app_surjective_of_ne_bot
+    {kbar : Type u} [Field kbar] {X : TopCat.{u}} [IrreducibleSpace X]
+    (A : ModuleCat.{u} kbar) {V : TopologicalSpace.Opens X} (hV : V ≠ ⊥) :
+    Function.Surjective
+      (((toSheafify (Opens.grothendieckTopology X)
+          ((Functor.const ((TopologicalSpace.Opens X)ᵒᵖ)).obj A)).app
+        (Opposite.op V)).hom) := by
+  intro y
+  -- `toSheafify` is locally surjective, so `imageSieve y` covers `V`.
+  have himg := CategoryTheory.Presheaf.imageSieve_mem (Opens.grothendieckTopology X)
+    (toSheafify (Opens.grothendieckTopology X)
+      ((Functor.const ((TopologicalSpace.Opens X)ᵒᵖ)).obj A)) y
+  -- pick a non-empty member `U₀` of the cover, with local constant `a₀`.
+  obtain ⟨x, hxV⟩ := (TopologicalSpace.Opens.ne_bot_iff_nonempty V).mp hV
+  obtain ⟨U₀, f₀, hf₀, hxU₀⟩ := himg x hxV
+  obtain ⟨a₀, ha₀⟩ := hf₀
+  have hU₀ne : U₀ ≠ ⊥ := by
+    rw [TopologicalSpace.Opens.ne_bot_iff_nonempty]; exact ⟨x, hxU₀⟩
+  refine ⟨a₀, ?_⟩
+  -- `toSheafify_V a₀ = y` by separatedness of the sheaf on the cover.
+  refine ((constantSheaf (Opens.grothendieckTopology X)
+    (ModuleCat.{u} kbar)).obj A).isSeparated V _ himg _ y ?_
+  intro W g hg
+  obtain ⟨t, ht⟩ := hg
+  -- On each member `W` of the cover, the local constants `a₀` (from `U₀`)
+  -- and `t` (from `W`) agree, hence the restrictions of `toSheafify_V a₀`
+  -- and `y` to `W` coincide.
+  by_cases hWbot : W = ⊥
+  · -- restriction lands in the terminal (zero) object over `⊥`.
+    subst hWbot
+    have hzero : Limits.IsZero
+        (((constantSheaf (Opens.grothendieckTopology X)
+            (ModuleCat.{u} kbar)).obj A).obj.obj
+          (Opposite.op (⊥ : TopologicalSpace.Opens X))) :=
+      (TopCat.Sheaf.isTerminalOfEqEmpty _ rfl).isZero
+    exact (ModuleCat.subsingleton_of_isZero hzero).elim _ _
+  · -- `W` non-empty: `a₀ = t` by injectivity at the non-empty `W ⊓ U₀`.
+    have hWU₀ : W ⊓ U₀ ≠ ⊥ := by
+      rw [TopologicalSpace.Opens.ne_bot_iff_nonempty]
+      have hWne := (TopologicalSpace.Opens.ne_bot_iff_nonempty W).mp hWbot
+      have hU₀ne' := (TopologicalSpace.Opens.ne_bot_iff_nonempty U₀).mp hU₀ne
+      have hpre := (PreirreducibleSpace.isPreirreducible_univ (X := (X : Type u)))
+        (W : Set X) (U₀ : Set X) W.2 U₀.2 (by simpa using hWne) (by simpa using hU₀ne')
+      simpa using hpre
+    have hat : a₀ = t := by
+      apply toSheafify_const_app_injective_of_ne_bot A hWU₀
+      -- both `toSheafify_{W⊓U₀} a₀` and `toSheafify_{W⊓U₀} t` equal `y|_{W⊓U₀}`.
+      refine (toSheafify_const_restrict A (inf_le_right) a₀).symm.trans ?_
+      refine Eq.trans ?_ (toSheafify_const_restrict A (inf_le_left) t)
+      -- goal: `F.map(W⊓U₀≤U₀)(toSheafify_{U₀} a₀) = F.map(W⊓U₀≤W)(toSheafify_W t)`.
+      rw [congrArg (((constantSheaf (Opens.grothendieckTopology X)
+          (ModuleCat.{u} kbar)).obj A).obj.map (homOfLE (inf_le_right : W ⊓ U₀ ≤ U₀)).op).hom ha₀,
+        congrArg (((constantSheaf (Opens.grothendieckTopology X)
+          (ModuleCat.{u} kbar)).obj A).obj.map (homOfLE (inf_le_left : W ⊓ U₀ ≤ W)).op).hom ht]
+      -- now both sides are double restrictions of `y`; collapse the nested
+      -- restrictions and use that `(Opens X)ᵒᵖ` is thin.
+      erw [← ConcreteCategory.comp_apply, ← ConcreteCategory.comp_apply,
+        ← Functor.map_comp, ← Functor.map_comp]
+      exact congrArg (fun m => (ConcreteCategory.hom
+        ((sheafify (Opens.grothendieckTopology X)
+          ((Functor.const ((TopologicalSpace.Opens X)ᵒᵖ)).obj A)).map m)) y)
+        (Subsingleton.elim _ _)
+    refine (toSheafify_const_restrict A (leOfHom g) a₀).trans ?_
+    rw [hat]; exact ht
+
 /-- **Constant sheaf on an irreducible topological space is flasque**
 (Hartshorne II.1, Exercise 1.16(a)).
 
@@ -174,8 +310,15 @@ theorem Scheme.IsFlasque.constant_of_irreducible
           (Opposite.op (⊥ : TopologicalSpace.Opens X))) : Type u) :=
       ModuleCat.subsingleton_of_isZero hzero
     exact ⟨0, Subsingleton.elim _ _⟩
-  · -- non-empty branch: requires sheafification-unit-iso on irreducible space.
-    sorry
+  · -- non-empty branch: reduce surjectivity of the restriction map to
+    -- surjectivity of the sheafification unit `toSheafify` at the non-empty
+    -- open `V` (closed by `toSheafify_const_app_surjective_of_ne_bot`), via
+    -- naturality of the unit on the constant presheaf.
+    obtain ⟨a₀, ha₀⟩ := toSheafify_const_app_surjective_of_ne_bot A hV y
+    refine ⟨((toSheafify (Opens.grothendieckTopology X)
+        ((CategoryTheory.Functor.const ((TopologicalSpace.Opens X)ᵒᵖ)).obj A)).app
+        (Opposite.op U)).hom a₀, ?_⟩
+    rw [toSheafify_const_restrict A h a₀]; exact ha₀
 
 /-- **Injective sheaves have vanishing higher cohomology** (axiom-clean
 helper, Hartshorne III §1).
@@ -615,6 +758,29 @@ theorem Scheme.IsFlasque.injective_flasque
     [HasSheafify (Opens.grothendieckTopology X) (ModuleCat.{u} kbar)]
     (I : Sheaf (Opens.grothendieckTopology X) (ModuleCat.{u} kbar))
     [Injective I] : Scheme.IsFlasque I := by
+  -- Reduce to: for `V ≤ U`, the restriction `I(U) → I(V)` is surjective.
+  intro U V h
+  -- The classical proof realises this restriction as the image, under
+  -- `Hom(-, I)`, of the extension-by-zero monomorphism
+  -- `j_{V!} 𝒪_V ↪ j_{U!} 𝒪_U` (equivalently, the free `ModuleCat kbar`-sheaf
+  -- on the representable-of-`V` ↪ representable-of-`U`); injectivity of `I`
+  -- then makes `Hom(j_{U!}𝒪_U, I) → Hom(j_{V!}𝒪_V, I)` surjective, and the
+  -- `j_{(-)!} ⊣ restriction` adjunction identifies these Hom-sets with
+  -- `I(U)` and `I(V)`.
+  --
+  -- **Missing Mathlib ingredient (confirmed iter-198).** Mathlib snapshot
+  -- `b80f227` ships NO extension-by-zero functor `j_!` (the left adjoint to
+  -- the open-immersion restriction) for `Sheaf (Opens X) (ModuleCat kbar)`:
+  -- the only open-immersion adjunction available is
+  -- `AlgebraicGeometry.Scheme.Modules.restrictAdjunction`
+  -- (restriction ⊣ pushforward), which is the *wrong* direction. The
+  -- `j_! ⊣ restriction` adjunction (≈100–150 LOC of project-local
+  -- scaffolding, or a Mathlib upstream PR) is the precise blocker; the
+  -- alternative sketch is recorded in `informal/injective_flasque.md`.
+  -- No informal-agent API key is configured this run, so that route could
+  -- not be consulted. The headline degree-1 vanishing
+  -- (`H1_skyscraperSheaf_finrank_eq_zero`) does **not** depend on this lemma
+  -- (it uses only the `n = 0` base case of `HModule_flasque_subsingleton_aux`).
   sorry
 
 /-- **Auxiliary subsingleton lemma for `HModule_flasque_eq_zero`**
@@ -775,6 +941,103 @@ theorem Scheme.HModule_flasque_eq_zero
   obtain ⟨n, rfl⟩ : ∃ n, n + 1 = i := ⟨i - 1, by omega⟩
   have hsub : Subsingleton (Scheme.HModule kbar F (n + 1)) :=
     Scheme.HModule_flasque_subsingleton_aux n hF
+  exact Module.finrank_zero_of_subsingleton
+
+/-- **Degree-one flasque vanishing, base-case factored** (Hartshorne
+III.2, Proposition 2.5 at `i = 1`).
+
+For a flasque sheaf `F` of `kbar`-modules on `X`,
+`dim_{kbar} HModule kbar F 1 = 0`. This is the `i = 1` instance of
+`HModule_flasque_eq_zero`, proved **directly** from the canonical
+injective embedding `0 → F → Injective.under F → cokernel → 0` of
+`Scheme.injectiveSES`, *without* the degree-induction whose `succ` step
+routes through the still-open `IsFlasque.injective_flasque` (the `j_!`
+gap, S5). The injectivity used here is only that of the Mathlib-provided
+injective hull `Injective.under F` (`Injective.injective_under`), never
+flasqueness of an arbitrary injective sheaf.
+
+This is the route through which the headline closed-point skyscraper
+vanishing `H1_skyscraperSheaf_finrank_eq_zero` is obtained, keeping it
+axiom-clean (independent of `injective_flasque`).
+
+The proof factors the `zero` case of `HModule_flasque_subsingleton_aux`:
+1.16(b) at `U = ⊤` (`IsFlasque.shortExact_app_surjective`) gives
+section-level surjectivity, lifted to `Hom`-from-the-constant-sheaf
+surjectivity via the explicit `constantSheafAdj` (terminal `⊤ ∈ Opens X`
+by `Preorder.isTerminalTop`) and the rank-1 free structure of
+`ModuleCat.of kbar kbar` (`LinearMap.toSpanSingleton`); then the
+degree-one collapse of the covariant `Ext` LES with injective middle term
+(`ext_one_eq_zero_of_hom_surjective_of_injective`) forces every element of
+`HModule kbar F 1` to vanish.
+
+Blueprint reference: `lem:H1_flasque_eq_zero`. -/
+theorem Scheme.HModule_flasque_one_eq_zero
+    {kbar : Type u} [Field kbar] {X : TopCat.{u}}
+    [HasSheafify (Opens.grothendieckTopology X) (ModuleCat.{u} kbar)]
+    [HasExt (Sheaf (Opens.grothendieckTopology X) (ModuleCat.{u} kbar))]
+    {F : Sheaf (Opens.grothendieckTopology X) (ModuleCat.{u} kbar)}
+    (hF : Scheme.IsFlasque F) :
+    Module.finrank kbar (Scheme.HModule kbar F 1) = 0 := by
+  have hsub : Subsingleton (Scheme.HModule kbar F 1) := by
+    refine ⟨fun x y => ?_⟩
+    -- i = 1 case: use ext_one_eq_zero_of_hom_surjective_of_injective on the
+    -- canonical injective SES `0 → F → Injective.under F → cokernel → 0`.
+    have hSES := Scheme.injectiveSES_shortExact F
+    -- Injective.under F is injective by Mathlib's instance.
+    have hI_inj : Injective (Scheme.injectiveSES F).X₂ := Injective.injective_under F
+    -- 1.16(b) at U = ⊤ gives section-level surjectivity, which we lift to
+    -- Hom-from-(constantSheaf k)-surjectivity via the explicit `constantSheaf
+    -- ⊣ (sheafSections at ⊤)` adjunction (`constantSheafAdj` with terminal
+    -- `⊤ ∈ Opens X` via `Preorder.isTerminalTop`) and the rank-1 free
+    -- structure of `ModuleCat.of kbar kbar`.
+    have hsurj : Function.Surjective
+        (fun (f : (constantSheaf (Opens.grothendieckTopology X)
+            (ModuleCat.{u} kbar)).obj (ModuleCat.of kbar kbar) ⟶
+            (Scheme.injectiveSES F).X₂) => f ≫ (Scheme.injectiveSES F).g) := by
+      intro g
+      -- Set up the adjunction at the terminal `⊤ ∈ Opens X`.
+      let hT : Limits.IsTerminal (⊤ : TopologicalSpace.Opens X) :=
+        Preorder.isTerminalTop (TopologicalSpace.Opens X)
+      let adj := constantSheafAdj (Opens.grothendieckTopology X)
+        (ModuleCat.{u} kbar) hT
+      -- 1.16(b) at U = ⊤ gives section-level surjectivity.
+      have h_b_top : Function.Surjective
+          (((Scheme.injectiveSES F).g.hom.app
+            (Opposite.op (⊤ : TopologicalSpace.Opens X))).hom) :=
+        Scheme.IsFlasque.shortExact_app_surjective hSES hF ⊤
+      -- Convert `g` to a section-level morphism via `adj.homEquiv`.
+      let g_sec : ModuleCat.of kbar kbar ⟶
+          (Scheme.injectiveSES F).X₃.val.obj
+            (Opposite.op (⊤ : TopologicalSpace.Opens X)) :=
+        adj.homEquiv _ _ g
+      -- Pick the value of `g_sec` at `1 : kbar`.
+      let s₃ : (Scheme.injectiveSES F).X₃.val.obj
+          (Opposite.op (⊤ : TopologicalSpace.Opens X)) := g_sec.hom 1
+      -- Apply 1.16(b) at ⊤ to get a lift in `X₂`.
+      obtain ⟨s₂, hs₂⟩ := h_b_top s₃
+      -- Construct the section-level lift `f_sec : kbar ⟶ X₂.val.obj (op ⊤)`.
+      let f_sec : ModuleCat.of kbar kbar ⟶
+          (Scheme.injectiveSES F).X₂.val.obj
+            (Opposite.op (⊤ : TopologicalSpace.Opens X)) :=
+        ModuleCat.ofHom (LinearMap.toSpanSingleton kbar _ s₂)
+      -- Lift `f_sec` back to a sheaf-level morphism via `adj.homEquiv.symm`.
+      refine ⟨(adj.homEquiv _ _).symm f_sec, ?_⟩
+      -- Verify `(adj.homEquiv.symm f_sec) ≫ S.g = g` by applying `adj.homEquiv`.
+      apply (adj.homEquiv _ _).injective
+      rw [Adjunction.homEquiv_naturality_right, Equiv.apply_symm_apply]
+      change f_sec ≫ ((sheafSections (Opens.grothendieckTopology X)
+        (ModuleCat.{u} kbar)).obj (Opposite.op ⊤)).map (Scheme.injectiveSES F).g = g_sec
+      -- Verify the section-level equation at the linear map level.
+      -- Two `kbar`-linear maps from `kbar` agree iff they agree at `1`.
+      apply ModuleCat.hom_ext
+      ext
+      -- Goal (post `LinearMap.ext_ring`): both sides applied at `1`.
+      change ((Scheme.injectiveSES F).g.hom.app (Opposite.op ⊤)).hom
+          ((LinearMap.toSpanSingleton kbar _ s₂) 1) = g_sec.hom 1
+      rw [LinearMap.toSpanSingleton_apply_one]
+      exact hs₂
+    rw [ext_one_eq_zero_of_hom_surjective_of_injective _ hSES hsurj x,
+        ext_one_eq_zero_of_hom_surjective_of_injective _ hSES hsurj y]
   exact Module.finrank_zero_of_subsingleton
 
 /-! ## §2. Skyscraper sheaves are flasque -/
@@ -1169,6 +1432,6 @@ theorem Scheme.H1_skyscraperSheaf_finrank_eq_zero
         (Scheme.HModule kbar
           (skyscraperSheaf (C := ModuleCat.{u} kbar) P.point
             (ModuleCat.of kbar kbar)) 1) = 0 :=
-  Scheme.HModule_flasque_eq_zero (Scheme.skyscraperSheaf_isFlasque C P) 1 le_rfl
+  Scheme.HModule_flasque_one_eq_zero (Scheme.skyscraperSheaf_isFlasque C P)
 
 end AlgebraicGeometry

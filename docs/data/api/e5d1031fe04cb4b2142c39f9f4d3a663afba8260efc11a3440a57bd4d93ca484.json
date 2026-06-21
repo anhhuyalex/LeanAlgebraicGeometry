@@ -1,0 +1,154 @@
+[
+  {
+    "timestamp": "2026-06-20T10:32:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/WeilDivisor.lean",
+      "theorem": "finite_order_support_affine"
+    },
+    "session": {
+      "id": "session_4",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "IsAffineOpen.isLocalization_stalk",
+        "IsAffineOpen.fromSpec_primeIdealOf",
+        "AlgebraicGeometry.functionField_isScalarTower",
+        "AlgebraicGeometry.functionField_isFractionRing_of_isAffineOpen",
+        "Scheme.ringKrullDim_stalk_eq_coheight",
+        "IsLocalization.AtPrime.ringKrullDim_eq_height",
+        "Ideal.finite_setOf_isPrime_height_one_mem_or",
+        "Ring.ordFrac_eq_one_of_notMem",
+        "IsFractionRing.div_surjective",
+        "Set.Finite.of_finite_image"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Full AG scheme->ring bridge (i)(ii)(iii): set R=Gamma(V,top), inject support {Z | ord_Z g != 0} into finite set of height-1 primes containing numerator/denominator of g=a/b via Z |-> (hV.primeIdealOf <Z.point,_>).asIdeal, close with Set.Finite.of_finite_image",
+        "code_tried": "R := Gamma(V,top); IsFractionRing.div_surjective g -> g=a/b; injection into Ideal.finite_setOf_isPrime_height_one_mem_or; injectivity via hV.fromSpec_primeIdealOf",
+        "line_number": "892",
+        "lean_error": "push_neg deprecation warning (error_count 1) on first build",
+        "goal_before": "{Z : V.PrimeDivisor | Scheme.RationalMap.order Z g != 0}.Finite",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "The earlier CHURNING (iter-002/003) assumed an explicit O_{V,Z} ~= Localization.AtPrime ring-iso + ordFrac_ringEquiv transport. NOT needed: IsAffineOpen.isLocalization_stalk gives the stalk as an abstract IsLocalization.AtPrime directly, so ordFrac applies with no transport."
+      },
+      {
+        "attempt": 2,
+        "strategy": "Fix push_neg deprecation: replace `push_neg at hcon` with `rw [not_or] at hcon`; replace injectivity `rwa [..., ...]` with `simpa only [hV.fromSpec_primeIdealOf]`",
+        "code_tried": "rw [not_or] at hcon; simpa only [hV.fromSpec_primeIdealOf] using hpt",
+        "line_number": "892",
+        "lean_error": null,
+        "goal_before": "{Z | order Z g != 0}.Finite (with push_neg deprecation)",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Build clean (0 errors, 0 warnings); lean_verify -> {propext, Classical.choice, Quot.sound}. M1 headline CLOSED axiom-clean; the iter-002/003 authorized-gap escalation is no longer needed."
+      }
+    ],
+    "next_steps": "M1 affine core CLOSED. Remaining WeilDivisor sorries (principal_degree_zero L1438, degree_positivePart_principal_eq_finrank L2035) are S4 ramification-inertia (Hartshorne II.6.9), explicitly deferred. ordFrac_eq_one_of_notMem owes a blueprint block."
+  },
+  {
+    "timestamp": "2026-06-20T10:30:18Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/WeilDivisor.lean",
+      "theorem": "Ring.ordFrac_eq_one_of_notMem"
+    },
+    "session": {
+      "id": "session_4",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "IsLocalization.map_units",
+        "Ring.ordFrac_of_isUnit",
+        "div_one"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Abstract ring-theoretic step-(iii) core: for IsLocalization.AtPrime A pp with common fraction field K, a,b not in pp => units in A => ordFrac A (a/b) = 1. Push through scalar tower R->A->K, apply Ring.ordFrac_of_isUnit",
+        "code_tried": "a,b not in pp -> IsLocalization.map_units A units; ordFrac_of_isUnit; div_one",
+        "line_number": "860",
+        "lean_error": null,
+        "goal_before": "Ring.ordFrac A (algebraMap R K a / algebraMap R K b) = 1",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Stated abstractly over IsLocalization.AtPrime A pp (not literal Localization.AtPrime) so it applies to the structure-sheaf stalk with no explicit ring-iso transport. 7-line proof; axiom-clean. This is the lemma that unblocked the whole lane."
+      }
+    ],
+    "next_steps": "Owes a blueprint block lem:ordFrac_eq_one_of_notMem in subsec:affine_bridge_ingredients; add to the \\uses of lem:finite_order_support_affine's proof (planner blueprint-writer)."
+  },
+  {
+    "timestamp": "2026-06-20T10:18:44Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+      "theorem": "isDiscreteValuationRing_stalk_of_finrank_cotangentSpace_eq_one"
+    },
+    "session": {
+      "id": "session_4",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "IsLocalRing.finrank_CotangentSpace_eq_one_iff",
+        "instIsNoetherianRingCarrierStalkCommRingCatPresheafOfIsLocallyNoetherian",
+        "instIsDomainCarrierStalkCommRingCatPresheafOfIsIntegral"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Scheme-stalk wrapper of Mathlib's finrank_CotangentSpace_eq_one_iff: for X [IsIntegral][IsLocallyNoetherian], x:X, finrank kappa(x) (CotangentSpace (stalk x)) = 1 -> IsDiscreteValuationRing (stalk x). The 3 stalk typeclass facts (IsLocalRing, IsNoetherianRing, IsDomain) resolve by inference.",
+        "code_tried": "have hone : finrank ... = 1 := by exact_mod_cast hfr; exact IsLocalRing.finrank_CotangentSpace_eq_one_iff.mp hone",
+        "line_number": "142",
+        "lean_error": null,
+        "goal_before": "IsDiscreteValuationRing (X.presheaf.stalk x)",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "lean_verify -> {propext, Classical.choice, Quot.sound}. Packages the entire codim-1 DVR substrate of sheafOf so the ONLY remaining mathematical input is the single numeric fact finrank kappa(x) (m_x/m_x^2) = 1, bypassing IsRegularLocalRing entirely (the iter-004 re-scope mandate)."
+      }
+    ],
+    "next_steps": "Owes a \\lean{}-pinned blueprint block (live-path, currently unmatched). Do NOT repoint lem:stalk_isDVR_of_smooth onto it -- signatures differ (this takes finrank=1 as hyp; stalk_isDVR_of_smooth takes smoothness and must derive finrank=1 internally). Suggest splitting lem:stalk_isDVR_of_smooth into cotangent-input + DVR-endpoint, pin this to the endpoint."
+  },
+  {
+    "timestamp": "2026-06-20T10:19:20Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+      "theorem": "sheafOf"
+    },
+    "session": {
+      "id": "session_4",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Residual substrate gap RETARGETED (not closed): the sheafOf D!=0 branch now carries one typed sorry `finrank kappa(Y.point) (CotangentSpace (stalk Y.point)) = 1` (L635). This is the conormal isomorphism m_x/m_x^2 ~= Omega_{C/kbar,x} (x) kappa(x) at a rational point (Hartshorne II.8.7) -- a genuine multi-theorem Mathlib gap, NOT a wiring step. Mathlib ships none of the 3 ingredients (Omega locally free rank 1 for the stalk localization; codim-1 pt is kbar-rational; the conormal iso itself). No regularity shortcut either: IsRegularLocalRing-from-smoothness and FormallySmooth=>regular are both absent from Mathlib (loogle empty).",
+      "key_lemmas_used": [
+        "isDiscreteValuationRing_stalk_of_finrank_cotangentSpace_eq_one"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Retarget the substrate sorry from off-path IsRegularLocalRing (Stacks 056S/00TT, declared off-path iter-004) to the sharp on-route finrank cotangent = 1, then route DVR through the new wiring lemma. IsLocallyNoetherian derived from properness in scope.",
+        "code_tried": "haveI : IsLocallyNoetherian C.left; have hfin : finrank kappa(Y.point) (CotangentSpace (stalk Y.point)) = 1 := sorry; exact isDiscreteValuationRing_stalk_of_finrank_cotangentSpace_eq_one ... hfin",
+        "line_number": "635",
+        "lean_error": null,
+        "goal_before": "IsDiscreteValuationRing (C.left.presheaf.stalk Y.point) (within IsRegularInCodimensionOne witness)",
+        "goal_after": "finrank kappa(Y.point) (CotangentSpace (stalk Y.point)) = 1 (single isolated sorry)",
+        "result": "partial",
+        "insight": "Build clean. Sorry count 4->4 (unchanged) but the gap is now sharp + blueprint-endorsed: removes dependence on the off-path IsRegularLocalRing intermediate. lvb-checker + lean-auditor both confirm the sorry is SHARP, not laundered."
+      }
+    ],
+    "next_steps": "Conormal iso m/m^2 ~= Omega(x)kappa is the lynchpin (Hartshorne II.8.7) -- a Mathlib-grade development on its own. This is the 2nd properly-blueprinted iter on this substrate; informal-agent unavailable (no LLM key in env). Recommend planner either schedule a dedicated conormal-iso build lane OR mark lem:cotangentSpace_finrank_eq_one_of_smooth a mathematician-authorised gap (parallel to lem:serre_finiteness_mathlib_gap)."
+  }
+]

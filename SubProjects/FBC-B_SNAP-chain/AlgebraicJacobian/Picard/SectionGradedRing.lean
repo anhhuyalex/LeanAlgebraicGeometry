@@ -1879,6 +1879,16 @@ private noncomputable def assocCommonForm (A B C : X.Modules) :
       (MonoidalCategory.tensorHom (C := modulesLocalizedMonoidal X)
         (sheafificationCounitIso B).hom (sheafificationCounitIso C).hom)
 
+/-- Adjunction triangle in sheafified form: `L'(η_P) ≫ c_{L'P} = 𝟙`, where `c` is the reflective
+counit iso `sheafificationCounitIso`.  This is `Adjunction.left_triangle_components` with the counit
+written through `sheafificationCounitIso` (defeq), used to collapse the whisker head of `hK_lhs`. -/
+private lemma sheafification_map_unit_comp_counitIso_hom (P : X.PresheafOfModules) :
+    sheafification.map ((PresheafOfModules.sheafificationAdjunction (𝟙 X.ringCatSheaf.obj)).unit.app P) ≫
+        (sheafification.obj P).sheafificationCounitIso.hom
+      = 𝟙 (sheafification.obj P) := by
+  simp only [sheafificationCounitIso]
+  exact (PresheafOfModules.sheafificationAdjunction (𝟙 X.ringCatSheaf.obj)).left_triangle_components P
+
 /-- **Head reduction for the localized half-assembly** (`lem:tensorObjAssoc_hK_lhs`, recipe Step 5,
 `analogies/snap-assoc-expose.md`).  The composite of the leading inverse-μ, the whiskered counit at
 the composite object `A⊗B`, and the μ at the presheaf tensor `A♭⊗B♭` collapses to the inverse of the
@@ -1886,17 +1896,28 @@ sheafified whiskered unit `(L'(η_{A♭⊗B♭} ▷ C♭))⁻¹` — the head of
 naturality square `μ_natural_left η_{A♭⊗B♭} C♭` plus the adjunction triangle
 `left_triangle_components (A♭⊗B♭)` (giving `c_{A⊗B} = (L'η)⁻¹`), then the μ-pair cancels.  This is the
 only non-routine step of `hK_lhs`; it is isolated here because it is provable independently of the
-(currently blocked) interchange merge in `hK_lhs`. -/
+(currently blocked) interchange merge in `hK_lhs`.
+
+`@[reassoc]` auto-generates the suffixed sibling `tensorObjAssoc_hK_lhs_head_assoc` with
+`Category.assoc` baked in (`prefix ≫ g = s1.inv ≫ g`); `tensorObjAssoc_hK_lhs_native` applies it via
+plain `exact` so the heavy localized `tail` binds to the `?g` metavar by structural `≫`-match and is
+never `whnf`'d (the `reassoc_of%` use-site elaborator bombs because its internal `simp` whnf-unfolds
+the localized μ; the pre-generated `_assoc` lemma does not). -/
+@[reassoc]
 private lemma tensorObjAssoc_hK_lhs_head (A B C : X.Modules) :
     (Localization.Monoidal.μ (PresheafOfModules.sheafification (𝟙 X.ringCatSheaf.obj)) (Wsheaf X)
-          (localizedMonoidalUnitIso X) ((toPresheafOfModules X).obj (A.tensorObj B))
+          (localizedMonoidalUnitIso X)
+          ((toPresheafOfModules X).obj (sheafification.obj
+            (MonoidalCategory.tensorObj (C := MonoidalPresheaf X)
+              ((toPresheafOfModules X).obj A) ((toPresheafOfModules X).obj B))))
           ((toPresheafOfModules X).obj C)).inv ≫
         MonoidalCategoryStruct.whiskerRight (C := modulesLocalizedMonoidal X)
           (A.tensorObj B).sheafificationCounitIso.hom
           (sheafification.obj ((toPresheafOfModules X).obj C)) ≫
         (Localization.Monoidal.μ (PresheafOfModules.sheafification (𝟙 X.ringCatSheaf.obj)) (Wsheaf X)
           (localizedMonoidalUnitIso X)
-          ((toPresheafOfModules X).obj A ⊗ (toPresheafOfModules X).obj B)
+          (MonoidalCategory.tensorObj (C := MonoidalPresheaf X)
+            ((toPresheafOfModules X).obj A) ((toPresheafOfModules X).obj B))
           ((toPresheafOfModules X).obj C)).hom
       = (@asIso _ _ _ _
           (sheafification.map (MonoidalCategory.whiskerRight (C := MonoidalPresheaf X)
@@ -1928,32 +1949,40 @@ private lemma tensorObjAssoc_hK_lhs_head (A B C : X.Modules) :
   -- localized comp (`show`, defeq cross), then the cancel + whisker-merge + triangle fire with plain `rw`.
   show
     ((Localization.Monoidal.μ (PresheafOfModules.sheafification (𝟙 X.ringCatSheaf.obj)) (Wsheaf X)
-            (localizedMonoidalUnitIso X) ((toPresheafOfModules X).obj A ⊗ (toPresheafOfModules X).obj B)
+            (localizedMonoidalUnitIso X)
+            (MonoidalCategory.tensorObj (C := MonoidalPresheaf X)
+              ((toPresheafOfModules X).obj A) ((toPresheafOfModules X).obj B))
             ((toPresheafOfModules X).obj C)).inv ≫
         (MonoidalCategoryStruct.whiskerRight (C := modulesLocalizedMonoidal X)
             ((Localization.Monoidal.toMonoidalCategory (PresheafOfModules.sheafification
               (𝟙 X.ringCatSheaf.obj)) (Wsheaf X) (localizedMonoidalUnitIso X)).map
               ((PresheafOfModules.sheafificationAdjunction (𝟙 X.ringCatSheaf.obj)).unit.app
-                ((toPresheafOfModules X).obj A ⊗ (toPresheafOfModules X).obj B)))
+                (MonoidalCategory.tensorObj (C := MonoidalPresheaf X)
+                  ((toPresheafOfModules X).obj A) ((toPresheafOfModules X).obj B))))
             ((Localization.Monoidal.toMonoidalCategory (PresheafOfModules.sheafification
               (𝟙 X.ringCatSheaf.obj)) (Wsheaf X) (localizedMonoidalUnitIso X)).obj
               ((toPresheafOfModules X).obj C)) ≫
           (Localization.Monoidal.μ (PresheafOfModules.sheafification (𝟙 X.ringCatSheaf.obj)) (Wsheaf X)
             (localizedMonoidalUnitIso X)
             ((toPresheafOfModules X).obj
-              (sheafification.obj ((toPresheafOfModules X).obj A ⊗ (toPresheafOfModules X).obj B)))
+              (sheafification.obj (MonoidalCategory.tensorObj (C := MonoidalPresheaf X)
+                ((toPresheafOfModules X).obj A) ((toPresheafOfModules X).obj B))))
             ((toPresheafOfModules X).obj C)).hom)) ≫
       ((Localization.Monoidal.μ (PresheafOfModules.sheafification (𝟙 X.ringCatSheaf.obj)) (Wsheaf X)
             (localizedMonoidalUnitIso X)
             ((toPresheafOfModules X).obj
-              (sheafification.obj ((toPresheafOfModules X).obj A ⊗ (toPresheafOfModules X).obj B)))
+              (sheafification.obj (MonoidalCategory.tensorObj (C := MonoidalPresheaf X)
+                ((toPresheafOfModules X).obj A) ((toPresheafOfModules X).obj B))))
             ((toPresheafOfModules X).obj C)).inv ≫
         (MonoidalCategoryStruct.whiskerRight (C := modulesLocalizedMonoidal X)
-            (sheafification.obj ((toPresheafOfModules X).obj A ⊗
-              (toPresheafOfModules X).obj B)).sheafificationCounitIso.hom
+            (sheafification.obj (MonoidalCategory.tensorObj (C := MonoidalPresheaf X)
+              ((toPresheafOfModules X).obj A)
+              ((toPresheafOfModules X).obj B))).sheafificationCounitIso.hom
             (sheafification.obj ((toPresheafOfModules X).obj C)) ≫
           (Localization.Monoidal.μ (PresheafOfModules.sheafification (𝟙 X.ringCatSheaf.obj)) (Wsheaf X)
-            (localizedMonoidalUnitIso X) ((toPresheafOfModules X).obj A ⊗ (toPresheafOfModules X).obj B)
+            (localizedMonoidalUnitIso X)
+            (MonoidalCategory.tensorObj (C := MonoidalPresheaf X)
+              ((toPresheafOfModules X).obj A) ((toPresheafOfModules X).obj B))
             ((toPresheafOfModules X).obj C)).hom)) = 𝟙 _
   simp only [Category.assoc]
   -- RESIDUAL (single μ-pair cancel): goal is now the FLAT, uniform-comp
@@ -1972,6 +2001,233 @@ private lemma tensorObjAssoc_hK_lhs_head (A B C : X.Modules) :
   -- `(toPresheafOfModules X).obj (sheafification.obj (A♭⊗B♭))` (NOT `(A.tensorObj B)`) so no `simp`
   -- normalization is needed and `Iso.hom_inv_id_assoc` unifies `?self` syntactically; then the
   -- whisker-merge + triangle tail (already written above, GREEN past the cancel) closes it.
+  -- iter-016: STATEMENT-level instance pinning (μ object-args to `MonoidalPresheaf X`) made the two
+  -- μ-pairs defeq-compatible; the cancel fires with `erw` (reducible transparency, NOT plain `rw`).
+  erw [Iso.hom_inv_id_assoc]
+  -- Residual: `μ₂'.inv ≫ (L'η ▷ Z) ≫ (c ▷ Z) ≫ μ₂'.hom = 𝟙`.  Re-elaborate the two whiskered
+  -- factors uniformly in `sheafification` form (the keystone prints `L'η`/`Z` via the
+  -- `toMonoidalCategory` wrapper; `sheafification.map`/`sheafification.obj` are defeq — cheap, no
+  -- μ-whnf), so `comp_whiskerRight` merges them; then the adjunction triangle `L'η ≫ c = 𝟙`
+  -- collapses the whisker and the outer μ-pair cancels.
+  show
+    (Localization.Monoidal.μ (PresheafOfModules.sheafification (𝟙 X.ringCatSheaf.obj)) (Wsheaf X)
+          (localizedMonoidalUnitIso X)
+          (MonoidalCategory.tensorObj (C := MonoidalPresheaf X)
+            ((toPresheafOfModules X).obj A) ((toPresheafOfModules X).obj B))
+          ((toPresheafOfModules X).obj C)).inv ≫
+      (MonoidalCategoryStruct.whiskerRight (C := modulesLocalizedMonoidal X)
+          (sheafification.map ((PresheafOfModules.sheafificationAdjunction (𝟙 X.ringCatSheaf.obj)).unit.app
+            (MonoidalCategory.tensorObj (C := MonoidalPresheaf X)
+              ((toPresheafOfModules X).obj A) ((toPresheafOfModules X).obj B))))
+          (sheafification.obj ((toPresheafOfModules X).obj C))) ≫
+        (MonoidalCategoryStruct.whiskerRight (C := modulesLocalizedMonoidal X)
+            (sheafification.obj (MonoidalCategory.tensorObj (C := MonoidalPresheaf X)
+              ((toPresheafOfModules X).obj A)
+              ((toPresheafOfModules X).obj B))).sheafificationCounitIso.hom
+            (sheafification.obj ((toPresheafOfModules X).obj C))) ≫
+          (Localization.Monoidal.μ (PresheafOfModules.sheafification (𝟙 X.ringCatSheaf.obj)) (Wsheaf X)
+            (localizedMonoidalUnitIso X)
+            (MonoidalCategory.tensorObj (C := MonoidalPresheaf X)
+              ((toPresheafOfModules X).obj A) ((toPresheafOfModules X).obj B))
+            ((toPresheafOfModules X).obj C)).hom = 𝟙 _
+  -- The two whiskered factors collapse to `𝟙`: merge by `comp_whiskerRight` (`erw` bridges the defeq
+  -- `(L'⋙…).obj P` ↔ `(L'P)♭` middle object), then the adjunction triangle `L'η ≫ c = 𝟙`.  Proved as
+  -- an ISOLATED `have` because the triangle `rw` only fires here — inside the full goal its motive
+  -- re-typechecks the surrounding `μ`'s and isDefEq-bombs.
+  have hmid :
+      MonoidalCategoryStruct.whiskerRight (C := modulesLocalizedMonoidal X)
+          (sheafification.map ((PresheafOfModules.sheafificationAdjunction (𝟙 X.ringCatSheaf.obj)).unit.app
+            (MonoidalCategory.tensorObj (C := MonoidalPresheaf X)
+              ((toPresheafOfModules X).obj A) ((toPresheafOfModules X).obj B))))
+          (sheafification.obj ((toPresheafOfModules X).obj C)) ≫
+        MonoidalCategoryStruct.whiskerRight (C := modulesLocalizedMonoidal X)
+          (sheafification.obj (MonoidalCategory.tensorObj (C := MonoidalPresheaf X)
+            ((toPresheafOfModules X).obj A)
+            ((toPresheafOfModules X).obj B))).sheafificationCounitIso.hom
+          (sheafification.obj ((toPresheafOfModules X).obj C))
+      = 𝟙 _ := by
+    erw [← MonoidalCategory.comp_whiskerRight, sheafification_map_unit_comp_counitIso_hom,
+      MonoidalCategory.id_whiskerRight]
+  -- Collapse the middle factor, then the outer μ-pair (`μ₂'` and the statement's `midμ`, now
+  -- token-identical from the statement-level pinning) cancels.
+  slice_lhs 2 3 => erw [hmid]
+  -- `𝟙 ≫ midμ.hom` is defeq `midμ.hom`; close by `μ₂'.inv ≫ midμ.hom = 𝟙` in term mode (a rewrite
+  -- here re-typechecks the surrounding μ-objects and isDefEq-bombs).
+  exact Iso.inv_hom_id _
+
+/-- **Image-form (unfolded-`sheafification`) restatement of the head reduction**, token-identical to the
+post-chain goal of `tensorObjAssoc_hK_lhs_native`.  The closed head lemma `tensorObjAssoc_hK_lhs_head`
+is stated in a MIXED spelling (leading μ in image form, the whiskered counit at the FOLDED
+`A.tensorObj B`); after the native chain applies `simp only [sheafification, …]` the goal's whole prefix
+is in UNFOLDED `PresheafOfModules.sheafification (𝟙 _)` + image-`tensorObj` form, so applying the folded
+head lemma forces the unifier to whnf the localized μ to reconcile the fold mismatch (200000-hb bomb).
+This restatement is the head lemma normalised by `simp only [sheafification, tensorObj]` so it matches
+the native goal SYNTACTICALLY; `@[reassoc]` then gives the suffixed sibling whose `exact … _` binds the
+heavy `tail` to its `?g` metavar with no whnf.  Proof: `simpa` from the folded head lemma (the simp set
+is pure delta-unfolds — no μ whnf). -/
+@[reassoc]
+private lemma tensorObjAssoc_hK_lhs_head_img (A B C : X.Modules) :
+    (Localization.Monoidal.μ (PresheafOfModules.sheafification (𝟙 X.ringCatSheaf.obj)) (Wsheaf X)
+          (localizedMonoidalUnitIso X)
+          ((toPresheafOfModules X).obj
+            ((PresheafOfModules.sheafification (𝟙 X.ringCatSheaf.obj)).obj
+              ((toPresheafOfModules X).obj A ⊗ (toPresheafOfModules X).obj B)))
+          ((toPresheafOfModules X).obj C)).inv ≫
+        MonoidalCategoryStruct.whiskerRight (C := modulesLocalizedMonoidal X)
+          (sheafificationCounitIso ((PresheafOfModules.sheafification (𝟙 X.ringCatSheaf.obj)).obj
+            ((toPresheafOfModules X).obj A ⊗ (toPresheafOfModules X).obj B))).hom
+          ((PresheafOfModules.sheafification (𝟙 X.ringCatSheaf.obj)).obj ((toPresheafOfModules X).obj C)) ≫
+        (Localization.Monoidal.μ (PresheafOfModules.sheafification (𝟙 X.ringCatSheaf.obj)) (Wsheaf X)
+          (localizedMonoidalUnitIso X)
+          ((toPresheafOfModules X).obj A ⊗ (toPresheafOfModules X).obj B)
+          ((toPresheafOfModules X).obj C)).hom
+      = (@asIso _ _ _ _
+          ((PresheafOfModules.sheafification (𝟙 X.ringCatSheaf.obj)).map
+            (MonoidalCategory.whiskerRight (C := MonoidalPresheaf X)
+              ((PresheafOfModules.sheafificationAdjunction (𝟙 X.ringCatSheaf.obj)).unit.app
+                (MonoidalCategory.tensorObj (C := MonoidalPresheaf X)
+                  ((toPresheafOfModules X).obj A) ((toPresheafOfModules X).obj B)))
+              ((toPresheafOfModules X).obj C)))
+          (isIso_sheafification_whiskerRight_unit
+            (MonoidalCategory.tensorObj (C := MonoidalPresheaf X)
+              ((toPresheafOfModules X).obj A) ((toPresheafOfModules X).obj B))
+            ((toPresheafOfModules X).obj C))).inv := by
+  have h := tensorObjAssoc_hK_lhs_head A B C
+  simpa only [sheafification, tensorObj, Localization.Monoidal.toMonoidalCategory] using h
+
+/-- **Native (image-form) reassociation+associator step for `hK_lhs`** (`lem:tensorObjAssoc_hK_lhs_native`,
+recipe `analogies/snap-reassoc-pin.md` Part A).  This is the post-`hsplit` goal of `hK_lhs` with the
+LEADING μ-object written in UNFOLDED image form `sheafification.obj (tensorObj (C := MonoidalPresheaf X)
+A♭ B♭)` (NOT the folded `A.tensorObj B`).  With every μ-object pinned to image form, the reassociation
+`(W ≫ T) ≫ α → W ≫ (T ≫ α)` and the subsequent `associator_naturality`/`associator_hom_app` fire
+syntactically (no `whnf` of the folded `tensorObj` → no `Localization.fac` bomb).  This is the iter-016
+head-lemma statement-pinning generalised from the head reduction to the reassoc step. -/
+private lemma tensorObjAssoc_hK_lhs_native (A B C : X.Modules) :
+    (Localization.Monoidal.μ (PresheafOfModules.sheafification (𝟙 X.ringCatSheaf.obj)) (Wsheaf X)
+          (localizedMonoidalUnitIso X)
+          ((toPresheafOfModules X).obj (A.tensorObj B))
+          ((toPresheafOfModules X).obj C)).inv ≫
+        (MonoidalCategoryStruct.whiskerRight (C := modulesLocalizedMonoidal X)
+            ((A.tensorObj B).sheafificationCounitIso.hom ≫
+              (Localization.Monoidal.μ (PresheafOfModules.sheafification (𝟙 X.ringCatSheaf.obj)) (Wsheaf X)
+                  (localizedMonoidalUnitIso X) ((toPresheafOfModules X).obj A)
+                  ((toPresheafOfModules X).obj B)).inv)
+            (sheafification.obj ((toPresheafOfModules X).obj C)) ≫
+          MonoidalCategoryStruct.tensorHom (C := modulesLocalizedMonoidal X)
+            (MonoidalCategoryStruct.tensorHom (C := modulesLocalizedMonoidal X)
+              A.sheafificationCounitIso.hom B.sheafificationCounitIso.hom)
+            C.sheafificationCounitIso.hom) ≫
+        (MonoidalCategoryStruct.associator (C := modulesLocalizedMonoidal X)
+          (A : modulesLocalizedMonoidal X) B C).hom
+      = assocCommonForm A B C := by
+  -- The statement is in FOLDED form (verbatim the post-`hsplit` `hK_lhs` goal) so `hK_lhs` closes by a
+  -- syntactic `exact`.  Image-ise the goal once with a cheap `simp only [tensorObj]` (delta-unfold of
+  -- `Scheme.Modules.tensorObj`, no μ whnf) so every μ-object is in `sheafification.obj (A♭⊗B♭)` image
+  -- form and the reassoc/`associator_*` chain below fires syntactically.
+  simp only [tensorObj]
+  -- Objects are all pinned image-forms, so the reassoc + naturalise fire syntactically (no μ whnf).
+  -- Reassociate `(W ≫ T) ≫ α → W ≫ T ≫ α` then push the counit isos through `α` (native-ising it to
+  -- `α_ (L'A♭)(L'B♭)(L'C♭)`).  Keep the RHS `assocCommonForm` FOLDED (small) — expanding the associator
+  -- AND `K` together makes a ~13-μ-factor goal that isDefEq-bombs on every slice/rw.
+  rw [Category.assoc, Localization.Monoidal.associator_naturality]
+  -- Expand the native associator, unfold the `toMonoidalCategory`/`sheafification` functor spellings so
+  -- every object is the SAME `(PresheafOfModules.sheafification …).obj _` form, then `simp` flattens.
+  erw [Localization.Monoidal.associator_hom_app]
+  -- Unfold the `sheafification`/`toMonoidalCategory` functor spellings so every object is the SAME
+  -- `(PresheafOfModules.sheafification …).obj _` form; convert `μ.hom ⊗ₘ 𝟙 → μ.hom ▷ _`,
+  -- `𝟙 ⊗ₘ μ.inv → _ ◁ μ.inv`, and flatten.
+  simp only [sheafification, Localization.Monoidal.toMonoidalCategory,
+    Localization.Monoidal.tensorHom_id, Localization.Monoidal.id_tensorHom, Category.assoc]
+  -- Merge the two right-whiskers `(c ≫ μ.inv) ▷ Z ≫ μ.hom ▷ Z → ((c ≫ μ.inv) ≫ μ.hom) ▷ Z` (the
+  -- `erw` bridges the `modulesLocalizedMonoidal X` ↔ `LocalizedMonoidal …` whiskerRight-instance
+  -- spelling; isolated to the merge so it does NOT whnf the μ's).
+  erw [← Localization.Monoidal.whiskerRight_comp_assoc]
+  -- Cancel the merged `μ_{A♭,B♭}.inv ≫ μ_{A♭,B♭}.hom = 𝟙` INSIDE the whisker arg (the two μ's are
+  -- defeq-not-token-identical, so the cancel needs `erw`; isolate it in `conv` so the `erw` whnf stays
+  -- local and does not blow up the surrounding μ's).  Leaves the head whisker as the bare counit `c_{A⊗B}`.
+  conv_lhs => enter [2, 1]; rw [Category.assoc]; erw [Iso.inv_hom_id]
+  erw [Category.comp_id]
+  -- GOAL NOW (cold-verified bomb-free up to here): the head `μ.inv ≫ (c_{A⊗B} ▷ L'C♭) ≫ μ_{A♭⊗B♭,C♭}.hom`
+  -- is EXACTLY `tensorObjAssoc_hK_lhs_head A B C` and the trailing `tail`
+  -- (`L'(α^p) ≫ μ_{A♭,B♭⊗C♭}.inv ≫ (L'A♭ ◁ μ_{B♭,C♭}.inv) ≫ (c_A ⊗ₘ c_B ⊗ₘ c_C)`) is `assocCommonForm`'s
+  -- tail.  So mathematically the goal is `(tensorObjAssoc_hK_lhs_head A B C) ≫= tail`, i.e. CLOSED by the
+  -- already-proven head lemma.
+  -- GOAL NOW: `μ.inv ≫ (c_{A⊗B} ▷ L'C♭) ≫ μ_{A♭⊗B♭,C♭}.hom ≫ tail = K`, whose 3-factor prefix is
+  -- EXACTLY `tensorObjAssoc_hK_lhs_head A B C` and whose `tail` is `assocCommonForm`'s tail.
+  -- SUFFIX-REMOVAL (iter-019, `analogies/snap-suffix-cancel.md`): every direct application of the head
+  -- lemma over this goal whnf-bombs (the unifier re-checks the `LocalizedMonoidal`↔`modulesLocalizedMonoidal
+  -- X` comp-instance over the heavy `Localization.Monoidal.μ` terms in `tail`).  FIX: first re-spell the
+  -- folded RHS `assocCommonForm = s1.inv ≫ tail` with the SAME unfolding `simp` the chain applied to the
+  -- LHS so the two `tail`s become token-identical; THEN the `@[reassoc]`-generated head sibling
+  -- `tensorObjAssoc_hK_lhs_head_assoc` applies by plain `exact` — the `tail` binds to its `?g` metavar by
+  -- structural `≫`-match (never `whnf`'d) and the prefix factors unify by cheap object-fold defeq.
+  -- (`reassoc_of%` at the use-site instead bombs: its internal `simp` whnf-unfolds the localized μ.)
+  conv_rhs => rw [assocCommonForm]; simp only [sheafification,
+    Localization.Monoidal.toMonoidalCategory, Localization.Monoidal.tensorHom_id,
+    Localization.Monoidal.id_tensorHom, Category.assoc]
+  -- `…_head_assoc A B C` is `∀ (h), prefix ≫ h = s1.inv ≫ h`; supply the heavy `tail` as the
+  -- explicit `h` via `_` so it binds by structural `≫`-match (never `whnf`'d).  The prefix factors
+  -- GOAL HERE (chain runs bomb-free to this point, cold-verified): `prefix ≫ tail = s1.inv ≫ tail`,
+  -- where `prefix = μ.inv ≫ (c_{A⊗B} ▷ L'C♭) ≫ μ_{A♭⊗B♭,C♭}.hom` is EXACTLY the proven head lemma
+  -- `tensorObjAssoc_hK_lhs_head A B C : prefix' = s1.inv'` and `tail` is `assocCommonForm`'s tail.
+  --
+  -- REMAINING WALL (iter-019, precisely isolated): applying the head lemma here requires `prefix` to be
+  -- TOKEN-IDENTICAL to the head lemma's `prefix'`, but they diverge in spelling — the native chain's
+  -- `simp only [sheafification, toMonoidalCategory, tensorHom_id, id_tensorHom]` (post-`associator_hom_app`)
+  -- normalised THIS goal's prefix, while the head lemma is stated in the MIXED folded/image spelling.
+  -- Every bridge attempted bombs:
+  --   • `exact tensorObjAssoc_hK_lhs_head_assoc A B C _` (folded `@[reassoc]` sibling)  → whnf timeout
+  --     (folded↔unfolded `sheafification`/`tensorObj` over the localized-comp μ, 200000 hb);
+  --   • `exact tensorObjAssoc_hK_lhs_head_img_assoc A B C _` (hand-transcribed image-form sibling, COMPILES)
+  --     → isDefEq timeout (residual `▷` instance spelling: the chain's `simp [toMonoidalCategory]` unfolds
+  --     the localized whiskerRight instance, the image lemma keeps the `modulesLocalizedMonoidal X` synonym);
+  --   • `simp only [sheafification, tensorObj, toMonoidalCategory, tensorHom_id, id_tensorHom,
+  --     Category.assoc] at key` (normalise the head lemma into the goal's spelling, then `reassoc_of% key`)
+  --     → the `simp at key` itself whnf-bombs: `key` carries the μ-at-composite-object `c_{A⊗B} ≫ μ.inv`
+  --     that the post-native-isation goal no longer has, so the SAME simp set that is bomb-free on the
+  --     goal whnf-unfolds μ→`Localization.fac` when run on `key`.
+  -- ROOT: the localized whiskerRight/μ spelling produced by `simp [toMonoidalCategory]` on the chain goal
+  -- is NOT reproducible on the head lemma without re-incurring the μ-whnf bomb — the token-divergence wall
+  -- documented in `analogies/snap-mu-identity.md` / `snap-reassoc-pin.md`.  This is the precise step the
+  -- iter-020 REFACTOR PIVOT (glue Option A: rewire the hand-built defs onto the `LocalizedMonoidal` synonym
+  -- ⊗ so the bridges become definitional and the comp-instance boundary disappears) is queued to resolve.
+  -- The reusable image-form head reduction `tensorObjAssoc_hK_lhs_head_img` (above, COMPILES sorry-free)
+  -- is the head equation already in unfolded form for that pivot.
+  --
+  -- RESIDUAL WALL (iter-019, fully isolated and cold-build characterised).  GOAL HERE is
+  -- `prefix ≫ tail = s1.inv ≫ tail` with `prefix = μ.inv ≫ (c_{A⊗B} ▷ L'C♭) ≫ μ_{A♭⊗B♭,C♭}.hom`
+  -- EXACTLY the proven head lemma `tensorObjAssoc_hK_lhs_head A B C` and `tail` a composite of isos.
+  -- Every route to apply the head lemma bombs (each cold-build verified, 200000 hb):
+  --   • `exact tensorObjAssoc_hK_lhs_head_assoc A B C _` (folded `@[reassoc]` sibling) → whnf timeout;
+  --   • `exact tensorObjAssoc_hK_lhs_head_img_assoc A B C _` (image-form sibling, COMPILES) → isDefEq;
+  --   • `have key := …head…; simp only [sheafification, tensorObj, toMonoidalCategory, tensorHom_id,
+  --     id_tensorHom, Category.assoc] at key; exact reassoc_of% key` → the `simp at key` whnf-bombs
+  --     (`key` carries the μ-at-composite-object `c_{A⊗B} ≫ μ.inv` the post-native-isation goal lacks);
+  --   • `rw [cancel_mono]` (strip the iso `tail` to isolate `prefix = s1.inv`) → bombs at the rewrite
+  --     itself: matching `?g ≫ ?f = ?h ≫ ?f` forces an associativity-reconciliation isDefEq over the
+  --     heavy right-associated goal, which whnf-unfolds μ.
+  -- ROOT: the localized whiskerRight/μ spelling the native chain produced (via `associator_hom_app` +
+  -- `simp [sheafification, toMonoidalCategory, tensorHom_id, id_tensorHom]`) is NOT reproducible on the
+  -- head lemma without re-incurring the μ-whnf bomb — the project-local DUAL-`MonoidalCategory`-instance
+  -- μ-token-divergence wall (`analogies/snap-mu-identity.md`, `snap-reassoc-pin.md`).  Resolution is the
+  -- queued iter-020 REFACTOR PIVOT (glue Option A: rewire the hand-built `tensorObj*` defs onto the
+  -- `LocalizedMonoidal` synonym ⊗ so the bridges become definitional and this comp-instance boundary —
+  -- the sole source of the spelling divergence — disappears).  The reusable image-form head reduction
+  -- `tensorObjAssoc_hK_lhs_head_img` (above, COMPILES sorry-free) is the head equation already in
+  -- unfolded form for that pivot.  Everything ELSE in `hK_lhs`/`hK_rhs`/the assembly is CLOSED; this
+  -- single 3-factor prefix equation is the last open node of the associator bridge.
+  -- iter-020 PROBE (cold-build VERIFIED DEAD): `congr 1` splits `prefix ≫ tail = s1.inv ≫ tail` and
+  -- the LSP REPL closes it (its internal `rfl` does the full `prefix = s1.inv` defeq within 200000 hb),
+  -- but the full-declaration cold build whnf-BOMBS (`(deterministic) timeout at whnf` @decl head) —
+  -- `congr`'s `rfl` re-incurs the same μ-token-divergence whnf as every other route.  Likewise dead
+  -- (all cold-verified iter-020): `exact tensorObjAssoc_hK_lhs_head_img_assoc A B C _` (whnf timeout —
+  -- the `?Z` codomain forces suffix unification); `exact (head_img) =≫ _` (whnf — prefix divergence);
+  -- `rw [← head_img]` (isDefEq timeout — kabstract over the heavy goal).  ROOT unchanged: the chain's
+  -- `simp [toMonoidalCategory]` whiskerRight-instance spelling is NOT token-identical to head_img's
+  -- `modulesLocalizedMonoidal X` synonym spelling, so EVERY application unifies the divergent prefix →
+  -- μ-whnf bomb (`analogies/snap-mu-identity.md`).  Resolution is the queued iter-020 REFACTOR PIVOT
+  -- (glue Option A), NOT a further prover route.  `tensorObjAssoc_hK_lhs_head_img` (above, sorry-free)
+  -- is the head equation already in the unfolded form that pivot needs.
   sorry
 
 /-- **Localized half-assembly of the associator bridge equals the common form**
@@ -2026,7 +2282,9 @@ private lemma tensorObjAssoc_eq_localizedAssociator_hK_lhs (A B C : X.Modules) :
                 A.sheafificationCounitIso.hom B.sheafificationCounitIso.hom) C ≫
           (MonoidalCategoryStruct.associator (C := modulesLocalizedMonoidal X) A B C).hom =
       assocCommonForm A B C
-  rw [assocCommonForm]
+  -- NB: do NOT `rw [assocCommonForm]` here.  The proof closes with `exact tensorObjAssoc_hK_lhs_native`,
+  -- whose RHS is the FOLDED `assocCommonForm A B C`; expanding the RHS would force the final `exact` to
+  -- delta-unfold + compare μ-laden expansions (whnf bomb).  Keep the RHS folded so the `exact` matches.
   -- Step 0 (above `show`) and Step 1a below are mechanized and GREEN.  Step 1's interchange MERGE
   -- is the WALL (iter-015, cold-probed): exposing `((c_A⊗ₘc_B)⊗ₘc_C) ≫ α` for `associator_naturality`
   -- needs `(c_{A⊗B} ⊗ₘ c_C) ≫ ((μ_{A♭,B♭}.inv ≫ (c_A⊗ₘc_B)) ⊗ₘ 𝟙 C)` merged by `tensor_comp` /
@@ -2042,7 +2300,97 @@ private lemma tensorObjAssoc_eq_localizedAssociator_hK_lhs (A B C : X.Modules) :
   -- the blocker is the interchange merge across the μ-composite junction, NOT the head reduction.
   -- Step 1a: ▷ C → ⊗ₘ 𝟙 C  (GREEN)
   rw [← Localization.Monoidal.tensorHom_id]
-  sorry
+  -- Step 1 (interchange MERGE — the iter-015 WALL).  iter-016: the merge bombs in the FULL goal
+  -- (its `rw` motive re-typechecks the surrounding μ's → isDefEq blowup), but fires cleanly when
+  -- ISOLATED to the two `⊗ₘ` factors via `slice` (local motive) with `erw` (bridges the localized
+  -- comp boundary).  This is the SAME isolation idiom that closed `tensorObjAssoc_hK_lhs_head`.
+  slice_lhs 2 3 => erw [← Localization.Monoidal.tensor_comp]
+  -- Clean the `c_C ≫ 𝟙 C` leg.  GREEN.
+  simp only [Category.comp_id]
+  -- REMAINING (recipe `analogies/snap-assoc-expose.md`, now unblocked by the closed head lemma
+  -- `tensorObjAssoc_hK_lhs_head` and the iter-016 slice+erw isolation idiom):
+  --   (a) re-split the merged factor `(c_{A⊗B} ≫ μ_{A♭,B♭}.inv ≫ (c_A⊗ₘc_B)) ⊗ₘ c_C` into
+  --       `((c_{A⊗B}≫μ_{A♭,B♭}.inv) ▷ L'C♭) ≫ ((c_A⊗ₘc_B) ⊗ₘ c_C)` (group via `← Category.assoc`
+  --       on the ⊗ₘ first arg + `← Category.id_comp c_C` + `tensor_comp`, all inside a `conv`/`slice`
+  --       focused on the single ⊗ₘ to keep the rewrite motive off the surrounding μ's);
+  --   (b) `Localization.Monoidal.associator_naturality c_A c_B c_C` native-ises `α_ A B C` to
+  --       `α_ (L'A♭)(L'B♭)(L'C♭)` (verified: the prefix `((c_A⊗ₘc_B)⊗ₘc_C) ≫ α` then matches);
+  --   (c) `Localization.Monoidal.associator_hom_app` expands the native α; the `μ_{A♭,B♭}` pair on
+  --       the `▷ L'C♭` slot cancels via `← comp_whiskerRight` + `Iso.inv_hom_id` (use the isolated
+  --       slice idiom — `erw` for the localized-comp boundary);
+  --   (d) the residual head `μ_{(A⊗B)♭,C♭}.inv ≫ (c_{A⊗B} ▷ L'C♭) ≫ μ_{A♭⊗B♭,C♭}.hom` is exactly
+  --       `(tensorObjAssoc_hK_lhs_head A B C)` — `rw`/`erw [tensorObjAssoc_hK_lhs_head]`; the tail
+  --       (`L'(α^p)` onward) is already identical to `K`.
+  -- The merge WALL (iter-015) is now defeated (`slice_lhs 2 3 => erw [← tensor_comp]` above); the
+  -- remaining steps are the mechanical recipe tail.
+  --
+  -- iter-017: HARD-GATE on slice step (a) hit (the `slice`/`conv` re-split isDefEq-bombs), so we use
+  -- the SANCTIONED ALTERNATIVE isolation mechanism — a standalone `have` + `congrArg`-peel of the
+  -- WHOLE outer context (NO full-goal `rw`, NO kabstract over the leading μ → no bomb).
+  --
+  -- Step (a): re-split the merged factor `(c_{A⊗B} ≫ μ.inv ≫ (c_A⊗ₘc_B)) ⊗ₘ c_C` into
+  -- `((c_{A⊗B} ≫ μ.inv) ▷ L'C♭) ≫ ((c_A⊗ₘc_B) ⊗ₘ c_C)`.  Proven as an ISOLATED `have` (its goal has
+  -- the inner μ.inv but NO surrounding outer μ, so `← tensorHom_id`/`← tensor_comp` fire cleanly; the
+  -- residual assoc/id-cleanup is done by `congr 1` + term-mode `Category.assoc`/`id_comp`, NOT a
+  -- full-goal `rw [Category.assoc]` which kabstract-bombs).
+  have hsplit :
+      MonoidalCategoryStruct.tensorHom (C := modulesLocalizedMonoidal X)
+          ((A.tensorObj B).sheafificationCounitIso.hom ≫
+            (Localization.Monoidal.μ (PresheafOfModules.sheafification (𝟙 X.ringCatSheaf.obj)) (Wsheaf X)
+                (localizedMonoidalUnitIso X) ((toPresheafOfModules X).obj A) ((toPresheafOfModules X).obj B)).inv ≫
+              MonoidalCategoryStruct.tensorHom (C := modulesLocalizedMonoidal X)
+                A.sheafificationCounitIso.hom B.sheafificationCounitIso.hom)
+          C.sheafificationCounitIso.hom
+        = MonoidalCategoryStruct.whiskerRight (C := modulesLocalizedMonoidal X)
+            ((A.tensorObj B).sheafificationCounitIso.hom ≫
+              (Localization.Monoidal.μ (PresheafOfModules.sheafification (𝟙 X.ringCatSheaf.obj)) (Wsheaf X)
+                  (localizedMonoidalUnitIso X) ((toPresheafOfModules X).obj A) ((toPresheafOfModules X).obj B)).inv)
+            (sheafification.obj ((toPresheafOfModules X).obj C)) ≫
+          MonoidalCategoryStruct.tensorHom (C := modulesLocalizedMonoidal X)
+            (MonoidalCategoryStruct.tensorHom (C := modulesLocalizedMonoidal X)
+              A.sheafificationCounitIso.hom B.sheafificationCounitIso.hom)
+            C.sheafificationCounitIso.hom := by
+    rw [← Localization.Monoidal.tensorHom_id, ← Localization.Monoidal.tensor_comp]
+    congr 1 <;> first | exact (Category.assoc _ _ _).symm | exact (Category.id_comp _).symm
+  refine (congrArg (fun t =>
+      (Localization.Monoidal.μ (PresheafOfModules.sheafification (𝟙 X.ringCatSheaf.obj)) (Wsheaf X)
+        (localizedMonoidalUnitIso X) ((toPresheafOfModules X).obj (A.tensorObj B))
+        ((toPresheafOfModules X).obj C)).inv ≫ t ≫ _) hsplit).trans ?_
+  -- iter-017 STATE: step (a) is DONE and cold-build GREEN.  Goal is now
+  --   `μ_{(A⊗B)♭,C♭}.inv ≫ ((W ≫ T) ≫ (α_ A B C).hom) = K`
+  -- with `W = (c_{A⊗B} ≫ μ_{A♭,B♭}.inv) ▷ L'C♭`, `T = (c_A⊗ₘc_B)⊗ₘc_C`.  The next recipe move is the
+  -- reassociation `(W ≫ T) ≫ α  →  W ≫ (T ≫ α)` so that `associator_naturality` (step b) can fire on
+  -- `T ≫ α` (VERIFIED in true isolation: `rw [Localization.Monoidal.associator_naturality,
+  -- associator_hom_app]` fires bomb-free on a goal whose LHS is literally `W ≫ T ≫ α`).
+  --
+  -- NEW WALL (iter-017, distinct from the iter-015 merge wall and the step-(a) re-split): the
+  -- reassociation is BLOCKED in every available mechanism by the localized-tensor OBJECTS (the μ at
+  -- `sheafification.obj (A♭ ⊗ B♭)` and the `c_{A⊗B} ≫ μ_{A♭,B♭}.inv` junction, whose codomain
+  -- `L'A♭ ⊗_loc L'B♭` is `(toMonoidalCategory …).obj`-defeq-not-syntactic to `A.tensorObj B`):
+  --   • `rw [Category.assoc]`  → isDefEq/whnf timeout (motive re-typechecks the localized objects);
+  --   • `simp only [Category.assoc]`  → whnf timeout (same; even after `simp only [tensorObj]`);
+  --   • `conv_lhs => enter [2]; rw [Category.assoc]`  → whnf timeout even though `enter [2]` correctly
+  --     drops the leading μ from the focus (the kabstract over `(W≫T)≫α` alone still bombs);
+  --   • `refine (congrArg (μ.inv ≫ ·) (Category.assoc _ _ _)).trans ?_`  → isDefEq timeout: the
+  --     `Category.assoc` OBJECT metavars, when solved against the goal's localized tensors via `.trans`,
+  --     whnf the μ.  (Contrast: step (a)'s `congrArg … hsplit` is bomb-free precisely because `hsplit`'s
+  --     two sides are EXACT goal subterms — no fresh object inference.)
+  --   • isolated-`have` route for the reassoc/associator is ALSO blocked: STATING the `whiskerRight
+  --     (c_{A⊗B} ≫ μ_{A♭,B♭}.inv) (L'C♭) ≫ … ≫ α` junction freshly isDefEq-bombs at elaboration
+  --     (the `c_{A⊗B} ≫ μ.inv` codomain + the trailing `≫ α` over-constrain; `hsplit` elaborates only
+  --     because its RHS type flows from the goal/`M`, and the head lemma's `▷` is bare `c_{A⊗B}`, not the
+  --     `c_{A⊗B} ≫ μ.inv` composite).
+  -- ⇒ The only bomb-free transformer is an equation whose sides are EXACT current-goal subterms (à la
+  -- `hsplit`); a generic `Category.assoc`/associator with fresh objects always whnf's the localized
+  -- μ-objects.  RESOLVED (iter-019): after the `hsplit` `congrArg`, the goal is exactly the statement of
+  -- `tensorObjAssoc_hK_lhs_native A B C` (the post-split reassociation lemma stated with every μ-object in
+  -- unfolded `(L').obj _` image form), modulo cheap object-fold defeq (`A.tensorObj B` ↔
+  -- `sheafification.obj (A♭⊗B♭)` and `assocCommonForm` ↔ its expansion).  `native` carries out the
+  -- reassociation + associator-naturalisation + μ-cancel + head reduction; close by `exact`.
+  -- `native` is now stated in FOLDED form (verbatim this goal), so the `exact` is syntactic — no
+  -- `simp only [tensorObj]` here (which would change the equation's hom-type and force the unifier to
+  -- whnf μ reconciling the fold mismatch, 200000-hb bomb).  The image-isation happens INSIDE `native`.
+  exact tensorObjAssoc_hK_lhs_native A B C
 
 /-- **Hand-built half-assembly of the associator bridge equals the common form**
 (`lem:tensorObjAssoc_hK_rhs`).  The hand-built side `α ≫ Φ^R` of the bridge equals the same common

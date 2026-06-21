@@ -1,0 +1,685 @@
+% archon:covers AlgebraicJacobian/RiemannRoch/SmoothRegular.lean
+
+\chapter{Smooth local algebras and the DVR-stalk substrate}
+\label{chap:RiemannRoch_SmoothRegular}
+
+% SOURCE: [Hartshorne], Algebraic Geometry, II.8, Proposition 8.7, p.~173,
+% read from references/hartshorne-algebraic-geometry.pdf (PDF page 190 =
+% doc p.~173): the conormal isomorphism
+% $\mathfrak m/\mathfrak m^2 \cong \Omega_{B/k}\otimes_B k$ at a residue
+% field $B/\mathfrak m \cong k$.  The contingency regularity route below
+% additionally cites [Stacks Project], Tag 00TT (Algebra,
+% `lemma-characterize-smooth-over-field') and Tag 056S (Varieties,
+% `lemma-smooth-regular'), read from
+% references/stacks-regular-dvr-algebra.tex (lines 38612--38684) and
+% references/stacks-smooth-regular-varieties.tex (lines 4596--4614).
+
+\section{Purpose and standing hypotheses}
+
+This chapter isolates the commutative-algebra substrate behind the
+codimension-one regularity input of \cref{chap:RiemannRoch_OcOfD}: from the
+stalk \(\mathcal O_{C, x}\) of a smooth curve at a codimension-one point it
+manufactures a discrete valuation ring. The material is \emph{pure
+commutative algebra}: it speaks only of fields, \(k\)-algebras, their modules
+of K\"ahler differentials, and the residue dimension of the cotangent space.
+No scheme, sheaf, or curve enters here; the stalk-to-substrate bridge is
+performed in \cref{chap:RiemannRoch_OcOfD}, not here.
+
+\paragraph{The live route: the conormal isomorphism.} The discrete-valuation
+conclusion is reached through the cotangent-space comparison
+\[
+  \mathfrak m / \mathfrak m^2 \;\cong\; \Omega_{R/k} \otimes_R \kappa
+  \qquad (\text{Hartshorne~II.8.7}),
+\]
+valid at a residue field \(\kappa\) isomorphic to the ground field \(k\) ---
+the situation of a \(k\)-rational point over an algebraically closed \(k\).
+For \(R\) formally smooth over \(k\) this map is an isomorphism, so the
+residue dimension of the cotangent space equals the rank of the locally free
+module of differentials:
+\[
+  \operatorname{finrank}_\kappa
+    \bigl(\texttt{IsLocalRing.CotangentSpace}\ R\bigr)
+  \;=\;
+  \operatorname{finrank}_R \Omega_{R/k}.
+\]
+When the differentials have rank one --- the relative-dimension-one input
+threaded in from the smooth curve --- the cotangent space is one-dimensional,
+and the standard cotangent-space characterisation of discrete valuation rings
+finishes the argument. This route assembles results already present in
+Mathlib's cotangent-complex API; it never forms the Krull dimension and needs
+no regularity theory.
+
+\paragraph{A contingency route via regularity.} The closing section records an
+independent passage that first proves \emph{regularity} of the local ring by
+the Jacobian-criterion argument of Stacks~00TT and only then reads the
+cotangent dimension off the identity \(\dim_\kappa \mathfrak m/\mathfrak m^2 =
+\operatorname{spanFinrank} \mathfrak m = \operatorname{ringKrullDim} R\). That
+route is \emph{not} on the critical path of the headline cone below: it is
+superseded by the conormal isomorphism and is retained only as a fallback
+(admitting a short proof once the cotangent dimension is known to be one,
+since then \(1 = \dim_\kappa \mathfrak m/\mathfrak m^2 =
+\operatorname{ringKrullDim} R\) certifies regularity).
+
+\paragraph{Standing hypotheses.} Throughout, \(k\) is a field and \(R\) is a
+Noetherian local \(k\)-algebra. The phrase ``\(R\) is smooth over \(k\)''
+means that \(R\) is essentially of finite type over \(k\) and formally smooth
+over \(k\) --- equivalently, \(R\) is the localisation at a prime of a
+finite-type \(k\)-algebra \(S\) that is standard smooth over \(k\) on a basic
+open neighbourhood of that prime. We write \(\kappa = R / \mathfrak m\) for
+the residue field, \(\Omega_{R/k}\) for the module of K\"ahler differentials,
+and \(\operatorname{ringKrullDim} R\) for the Krull dimension. In the
+geometric application \(\kappa = k\) is algebraically closed.
+
+\section{The conormal isomorphism over a field-rational residue field}
+
+This section assembles the conormal isomorphism from Mathlib's cotangent
+complex. We first anchor the Mathlib ingredients, then state the
+isomorphism.
+
+\begin{lemma}[Smooth \(\Rightarrow\) formally smooth]
+  \label{lem:smooth_formallySmooth}
+  \lean{Algebra.Smooth.formallySmooth}
+  \mathlibok
+  \textit{Provided by Mathlib
+  (\texttt{Mathlib.RingTheory.Smooth.Basic}).}
+  If a \(k\)-algebra \(A\) is smooth over \(k\) (\(\texttt{Algebra.Smooth}\
+  k\ A\)) then it is formally smooth over \(k\)
+  (\(\texttt{Algebra.FormallySmooth}\ k\ A\)). This is the structural
+  projection used to feed the formal-smoothness hypothesis of the conormal
+  isomorphism.
+\end{lemma}
+
+\begin{lemma}[Kernel of the residue map is the maximal ideal]
+  \label{lem:ker_residue_mathlib}
+  \lean{IsLocalRing.ker_residue}
+  \mathlibok
+  \textit{Provided by Mathlib
+  (\texttt{Mathlib.RingTheory.LocalRing.ResidueField.Basic}).}
+  For a local ring \(R\) with maximal ideal \(\mathfrak m\) and residue field
+  \(\kappa = R/\mathfrak m\), the kernel of the residue homomorphism
+  \(\texttt{residue}\ R : R \to \kappa\) is the maximal ideal:
+  \(\operatorname{ker}(\texttt{residue}\ R) = \mathfrak m\). This identifies
+  the source of the conormal map (the cotangent module
+  \(I/I^2\) of \(I = \operatorname{ker}(R \to \kappa)\)) with
+  \(\mathfrak m/\mathfrak m^2\).
+\end{lemma}
+
+\begin{lemma}[Formal smoothness of a perfect-field extension]
+  \label{lem:formallySmooth_of_perfectField_mathlib}
+  \lean{Algebra.FormallySmooth.of_perfectField}
+  \mathlibok
+  \textit{Provided by Mathlib
+  (\texttt{Mathlib.RingTheory.Smooth.Field}).}
+  If \(k\) is a perfect field and \(L\) is essentially of finite type over
+  \(k\) (\(\texttt{Algebra.EssFiniteType}\ k\ L\)), then \(L\) is formally
+  smooth over \(k\) (\(\texttt{Algebra.FormallySmooth}\ k\ L\)). Applied to
+  \(L = \kappa\): over an algebraically closed --- hence perfect --- field
+  \(k\), the residue field \(\kappa\) (in the application \(\kappa = k\)) is
+  formally smooth over \(k\).
+\end{lemma}
+
+\begin{lemma}[Formal smoothness kills first cotangent homology]
+  \label{lem:subsingleton_h1Cotangent_mathlib}
+  \lean{Algebra.FormallySmooth.subsingleton_h1Cotangent}
+  \mathlibok
+  \textit{Provided by Mathlib
+  (\texttt{Mathlib.RingTheory.Smooth.Basic}).}
+  If \(A\) is formally smooth over \(R\)
+  (\(\texttt{Algebra.FormallySmooth}\ R\ A\)) then the first Andr\'e--Quillen
+  (cotangent-complex) homology vanishes:
+  \(\texttt{Subsingleton}\ (\texttt{Algebra.H1Cotangent}\ R\ A)\). Applied to
+  \(\kappa\) formally smooth over \(k\), this gives
+  \(\texttt{Subsingleton}\ (\texttt{H1Cotangent}\ k\ \kappa)\).
+\end{lemma}
+
+\begin{lemma}[Conormal map injective iff first cotangent homology vanishes]
+  \label{lem:kerCotangentToTensor_injective_iff_mathlib}
+  \lean{Algebra.FormallySmooth.kerCotangentToTensor_injective_iff}
+  \mathlibok
+  \textit{Provided by Mathlib
+  (\texttt{Mathlib.RingTheory.Smooth.Basic}).}
+  Let \(R \to P \to A\) be \(k\)-algebra maps with \(P\) formally smooth over
+  \(R\) and \(\texttt{algebraMap}\ P\ A\) surjective, with kernel \(I\). Then
+  the conormal map
+  \(\texttt{kerCotangentToTensor}\ R\ P\ A : I/I^2 \to A \otimes_P
+  \Omega_{P/R}\) is injective if and only if
+  \(\texttt{Subsingleton}\ (\texttt{Algebra.H1Cotangent}\ R\ A)\). Applied
+  with \(P = R\), \(A = \kappa\), base \(R = k\), the residue surjection
+  \(R \to \kappa\) makes this the injectivity of the conormal map
+  \(\mathfrak m/\mathfrak m^2 \to \kappa \otimes_R \Omega_{R/k}\).
+\end{lemma}
+
+\begin{lemma}[Right-exact conormal sequence]
+  \label{lem:exact_kerCotangentToTensor_mapBaseChange_mathlib}
+  \lean{KaehlerDifferential.exact_kerCotangentToTensor_mapBaseChange}
+  \mathlibok
+  \textit{Provided by Mathlib
+  (\texttt{Mathlib.RingTheory.Kaehler.Basic}).}
+  For a surjective \(R\)-algebra homomorphism \(A \to B\) with kernel \(I\),
+  the conormal sequence
+  \[
+    I/I^2
+      \xrightarrow{\ \texttt{kerCotangentToTensor}\ R\ A\ B\ }
+    B \otimes_A \Omega_{A/R}
+      \xrightarrow{\ \texttt{mapBaseChange}\ R\ A\ B\ }
+    \Omega_{B/R}
+  \]
+  is exact (the second exact sequence of differentials, Hartshorne~II.8.4A).
+  Applied with \(A = R\), \(B = \kappa\), this is the right-exact sequence
+  \(\mathfrak m/\mathfrak m^2 \to \kappa \otimes_R \Omega_{R/k} \to
+  \Omega_{\kappa/k} \to 0\).
+\end{lemma}
+
+\begin{lemma}[Conormal isomorphism
+\(\mathfrak m/\mathfrak m^2 \cong \Omega_{R/k}\otimes_R\kappa\)]
+  \label{lem:conormal_cotangentSpace_baseChange_kaehler}
+  \lean{IsLocalRing.cotangentSpace_linearEquiv_baseChange_kaehler}
+  \leanok
+  \uses{lem:smooth_formallySmooth, lem:ker_residue_mathlib,
+        lem:formallySmooth_of_perfectField_mathlib,
+        lem:subsingleton_h1Cotangent_mathlib,
+        lem:kerCotangentToTensor_injective_iff_mathlib,
+        lem:exact_kerCotangentToTensor_mapBaseChange_mathlib}
+  % SOURCE: [Hartshorne], Algebraic Geometry, II.8, Proposition 8.7,
+  % p.~173 (read from references/hartshorne-algebraic-geometry.pdf,
+  % PDF page 190 = doc p.~173).
+  % SOURCE QUOTE: "Let $B$ be a local ring which contains a field $k$
+  % isomorphic to its residue field $B/\mathfrak{m}$. Then the map
+  % $\delta : \mathfrak{m}/\mathfrak{m}^2 \to \Omega_{B/k} \otimes_B k$ of
+  % (8.4A) is an isomorphism."
+  \textit{Source: Hartshorne, Algebraic Geometry, II.8.7.}
+  Let \(k\) be a field and \(R\) a Noetherian local \(k\)-algebra,
+  essentially of finite type and formally smooth over \(k\), with maximal
+  ideal \(\mathfrak m\) and residue field \(\kappa\), and suppose \(\kappa\)
+  is formally smooth over \(k\) (automatic when \(\kappa = k\), e.g.\ over an
+  algebraically closed \(k\) at a \(k\)-rational point). Then the conormal
+  map
+  \[
+    \delta : \mathfrak m / \mathfrak m^2 \longrightarrow
+      \Omega_{R/k} \otimes_R \kappa
+  \]
+  is a \(\kappa\)-linear isomorphism. Equivalently, the cotangent space
+  \(\texttt{IsLocalRing.CotangentSpace}\ R = \kappa \otimes_R
+  (\mathfrak m/\mathfrak m^2)\) is \(\kappa\)-linearly isomorphic to
+  \(\kappa \otimes_R \Omega_{R/k}\).
+\end{lemma}
+
+% SOURCE QUOTE PROOF: "According to (8.4A), the cokernel of $\delta$ is
+% $\Omega_{k/k} = 0$, so $\delta$ is surjective. To show that $\delta$ is
+% injective, it will be sufficient to show that the map
+% $\delta' : \operatorname{Hom}_k(\Omega_{B/k} \otimes k, k) \to
+% \operatorname{Hom}_k(\mathfrak{m}/\mathfrak{m}^2, k)$ of dual vector spaces
+% is surjective. The term on the left is isomorphic to
+% $\operatorname{Hom}_B(\Omega_{B/k}, k)$, which by definition of the
+% differentials, can be identified with the set $\operatorname{Der}_k(B, k)$
+% of $k$-derivations of $B$ to $k$. If $d : B \to k$ is a derivation, then
+% $\delta'(d)$ is obtained by restricting to $\mathfrak{m}$, and noting that
+% $d(\mathfrak{m}^2) = 0$. Now, to show that $\delta'$ is surjective, let
+% $h \in \operatorname{Hom}(\mathfrak{m}/\mathfrak{m}^2, k)$. For any
+% $b \in B$, we can write $b = \lambda + c$, $\lambda \in k$,
+% $c \in \mathfrak{m}$, in a unique way. Define $db = h(\bar{c})$, where
+% $\bar{c} \in \mathfrak{m}/\mathfrak{m}^2$ is the image of $c$. Then one
+% verifies immediately that $d$ is a $k$-derivation of $B$ to $k$, and that
+% $\delta'(d) = h$. Thus $\delta'$ is surjective, as required."
+\begin{proof}
+  \leanok
+  \uses{lem:smooth_formallySmooth, lem:ker_residue_mathlib,
+        lem:formallySmooth_of_perfectField_mathlib,
+        lem:subsingleton_h1Cotangent_mathlib,
+        lem:kerCotangentToTensor_injective_iff_mathlib,
+        lem:exact_kerCotangentToTensor_mapBaseChange_mathlib}
+  Realise \(\delta\) as Mathlib's
+  \(\texttt{kerCotangentToTensor}\ k\ R\ \kappa\). Its source is
+  \(I/I^2\) for \(I = \operatorname{ker}(R \to \kappa)\), and
+  \cref{lem:ker_residue_mathlib} identifies \(I = \mathfrak m\), so the source
+  is \(\mathfrak m / \mathfrak m^2\) and the target is
+  \(\kappa \otimes_R \Omega_{R/k}\), the base change of the differentials.
+
+  \emph{Injectivity.} Smoothness of \(R\) over \(k\) gives formal smoothness
+  (\cref{lem:smooth_formallySmooth}). The residue field \(\kappa\), being
+  essentially of finite type over the perfect field \(k\), is formally smooth
+  over \(k\) (\cref{lem:formallySmooth_of_perfectField_mathlib}; trivially so
+  when \(\kappa = k\)), whence the first cotangent homology vanishes,
+  \(\texttt{Subsingleton}\ (\texttt{H1Cotangent}\ k\ \kappa)\)
+  (\cref{lem:subsingleton_h1Cotangent_mathlib}). By
+  \cref{lem:kerCotangentToTensor_injective_iff_mathlib} (applied to the
+  surjection \(R \to \kappa\)) the map \(\delta\) is therefore injective. This
+  is Hartshorne's dual-derivation argument repackaged through the
+  cotangent-complex vanishing.
+
+  \emph{Surjectivity.} The conormal sequence
+  \(\mathfrak m/\mathfrak m^2 \to \kappa \otimes_R \Omega_{R/k} \to
+  \Omega_{\kappa/k} \to 0\) is exact
+  (\cref{lem:exact_kerCotangentToTensor_mapBaseChange_mathlib}). Since
+  \(\kappa = k\), the relative differentials \(\Omega_{\kappa/k} =
+  \Omega_{k/k}\) vanish, so the base-change map kills the middle term's
+  quotient and the range of \(\delta\) is everything; \(\delta\) is
+  surjective. (This is the cokernel computation
+  \(\operatorname{coker}\delta = \Omega_{k/k} = 0\) of the source proof.)
+
+  Being injective and surjective, \(\delta\) is a \(\kappa\)-linear
+  isomorphism. Applying \(\kappa \otimes_R (-)\) transports it to the stated
+  isomorphism \(\texttt{CotangentSpace}\ R = \kappa \otimes_R
+  (\mathfrak m/\mathfrak m^2) \cong \kappa \otimes_R \Omega_{R/k}\).
+\end{proof}
+
+\section{Cotangent dimension equals the K\"ahler rank}
+
+\begin{lemma}[Finite rank under base change]
+  \label{lem:finrank_baseChange_mathlib}
+  \lean{Module.finrank_baseChange}
+  \mathlibok
+  \textit{Provided by Mathlib
+  (\texttt{Mathlib.LinearAlgebra.Dimension.Constructions}).}
+  For a ring homomorphism \(R \to \kappa\) and an \(R\)-module \(M\), the
+  \(\kappa\)-rank of the base change equals the \(R\)-rank of \(M\):
+  \(\operatorname{finrank}_\kappa (\kappa \otimes_R M) =
+  \operatorname{finrank}_R M\).
+\end{lemma}
+
+\begin{lemma}[Cotangent dimension equals the differential rank]
+  \label{lem:finrank_cotangentSpace_eq_rank_kaehler}
+  \lean{IsLocalRing.finrank_cotangentSpace_eq_finrank_kaehler}
+  \leanok
+  \uses{lem:conormal_cotangentSpace_baseChange_kaehler,
+        lem:finrank_baseChange_mathlib}
+  \textit{Source: Hartshorne, Algebraic Geometry, II.8.7 (numerical
+  corollary).}
+  Under the hypotheses of
+  \cref{lem:conormal_cotangentSpace_baseChange_kaehler}, the residue-field
+  dimension of the cotangent space equals the \(R\)-rank of the
+  differentials:
+  \[
+    \operatorname{finrank}_\kappa
+      \bigl(\texttt{IsLocalRing.CotangentSpace}\ R\bigr)
+    \;=\;
+    \operatorname{finrank}_R \Omega_{R/k}.
+  \]
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  \uses{lem:conormal_cotangentSpace_baseChange_kaehler,
+        lem:finrank_baseChange_mathlib}
+  By \cref{lem:conormal_cotangentSpace_baseChange_kaehler} the cotangent
+  space \(\texttt{CotangentSpace}\ R\) is \(\kappa\)-linearly isomorphic to
+  \(\kappa \otimes_R \Omega_{R/k}\), so the two have equal
+  \(\kappa\)-dimension. The base-change rank identity
+  \cref{lem:finrank_baseChange_mathlib} computes
+  \(\operatorname{finrank}_\kappa (\kappa \otimes_R \Omega_{R/k}) =
+  \operatorname{finrank}_R \Omega_{R/k}\). Composing the two equalities
+  yields the claim.
+\end{proof}
+
+\section{From smooth and relative dimension one to a discrete valuation ring}
+
+The headline output of the chapter feeds the relative-dimension-one
+differential input through the cotangent comparison and finishes with the
+standard discrete-valuation characterisation. The rank-one input itself is
+supplied by the standard-smooth chart, whose differentials are free of rank
+equal to the relative dimension and localise to the differentials of the
+stalk.
+
+\begin{lemma}[Standard smooth \(\Rightarrow\) free differentials]
+  \label{lem:standardSmooth_kaehler_free}
+  \lean{Algebra.IsStandardSmooth.free_kaehlerDifferential}
+  \mathlibok
+  \textit{Provided by Mathlib
+  (\texttt{Mathlib.RingTheory.Smooth.StandardSmooth}).}
+  If \(S\) is a standard smooth \(R\)-algebra
+  (\(\texttt{Algebra.IsStandardSmooth}\ R\ S\)) then its module of K\"ahler
+  differentials \(\Omega_{S/R}\) is a free \(S\)-module
+  (\(\texttt{Module.Free}\ S\ \Omega_{S/R}\)).
+\end{lemma}
+
+\begin{lemma}[Rank of the differentials of a standard smooth algebra]
+  \label{lem:standardSmooth_kaehler_rank}
+  \lean{Algebra.IsStandardSmoothOfRelativeDimension.rank_kaehlerDifferential}
+  \mathlibok
+  \textit{Provided by Mathlib
+  (\texttt{Mathlib.RingTheory.Smooth.StandardSmooth}).}
+  If \(S\) is a nontrivial standard smooth \(R\)-algebra of relative
+  dimension \(n\)
+  (\(\texttt{Algebra.IsStandardSmoothOfRelativeDimension}\ n\ R\ S\)) then the
+  \(S\)-module rank of its differentials equals \(n\):
+  \(\operatorname{rank}_S \Omega_{S/R} = n\). Combined with
+  \cref{lem:standardSmooth_kaehler_free}, the differentials are free of rank
+  \(n\). For \(n = 1\) this is the relative-dimension-one input feeding the
+  cotangent comparison.
+\end{lemma}
+
+\begin{lemma}[Differentials localise]
+  \label{lem:kaehler_isLocalizedModule_mathlib}
+  \lean{KaehlerDifferential.isLocalizedModule}
+  \mathlibok
+  \textit{Provided by Mathlib
+  (\texttt{Mathlib.RingTheory.Kaehler.TensorProduct}).}
+  If \(S\) is a \(k\)-algebra and \(R\) is a localisation of \(S\) at a
+  submonoid \(p\) (\(\texttt{IsLocalization}\ p\ R\)), then \(\Omega_{R/k}\)
+  is the localisation of \(\Omega_{S/k}\) at \(p\) (it is an
+  \(\texttt{IsLocalizedModule}\) of the differentials of \(S\)). Hence
+  freeness and rank of the K\"ahler differentials transport from a
+  finite-type chart \(S\) to its localisation \(R = S_{\mathfrak q}\): if
+  \(\Omega_{S/k}\) is free of rank \(n\) then so is \(\Omega_{R/k}\).
+\end{lemma}
+
+\begin{lemma}[Smooth local \(k\)-algebra of relative dimension one
+\(\Rightarrow\) DVR]
+  \label{lem:smooth_stalk_isDVR}
+  \lean{Algebra.isDiscreteValuationRing_of_smooth_dim_one}
+  \leanok
+  \uses{lem:smooth_formallySmooth,
+        lem:finrank_cotangentSpace_eq_rank_kaehler,
+        lem:finrank_cotangentSpace_eq_one_iff_isDVR,
+        lem:standardSmooth_kaehler_free,
+        lem:standardSmooth_kaehler_rank,
+        lem:kaehler_isLocalizedModule_mathlib}
+  Let \(k\) be a field and \(R\) a Noetherian local \(k\)-algebra that is an
+  integral domain, smooth over \(k\) (essentially of finite type and formally
+  smooth), with residue field \(\kappa\) formally smooth over \(k\)
+  (automatic when \(\kappa = k\)), and suppose the differentials have rank
+  one: \(\operatorname{finrank}_R \Omega_{R/k} = 1\). Then \(R\) is a discrete
+  valuation ring (\(\texttt{IsDiscreteValuationRing}\ R\)).
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  \uses{lem:smooth_formallySmooth,
+        lem:finrank_cotangentSpace_eq_rank_kaehler,
+        lem:finrank_cotangentSpace_eq_one_iff_isDVR,
+        lem:standardSmooth_kaehler_free,
+        lem:standardSmooth_kaehler_rank,
+        lem:kaehler_isLocalizedModule_mathlib}
+  Smoothness of \(R\) over \(k\) gives formal smoothness
+  (\cref{lem:smooth_formallySmooth}), so the conormal comparison applies. By
+  \cref{lem:finrank_cotangentSpace_eq_rank_kaehler},
+  \[
+    \operatorname{finrank}_\kappa
+      \bigl(\texttt{CotangentSpace}\ R\bigr)
+    = \operatorname{finrank}_R \Omega_{R/k} = 1 .
+  \]
+  The ring \(R\) is a Noetherian local integral domain, so the
+  cotangent-space characterisation
+  \cref{lem:finrank_cotangentSpace_eq_one_iff_isDVR} (Mathlib's
+  \(\texttt{IsLocalRing.finrank\_CotangentSpace\_eq\_one\_iff}\)) converts the
+  value \(1\) into \(\texttt{IsDiscreteValuationRing}\ R\).
+
+  \emph{Provenance of the rank-one hypothesis.} In the geometric application
+  the input \(\operatorname{finrank}_R \Omega_{R/k} = 1\) is not assumed
+  abstractly but produced from the relative-dimension-one standard-smooth
+  chart \(S\) with \(R = S_{\mathfrak q}\): the chart differentials
+  \(\Omega_{S/k}\) are free of rank one
+  (\cref{lem:standardSmooth_kaehler_free},
+  \cref{lem:standardSmooth_kaehler_rank}), and they localise to
+  \(\Omega_{R/k}\) (\cref{lem:kaehler_isLocalizedModule_mathlib}), so
+  \(\Omega_{R/k}\) is free of rank one and
+  \(\operatorname{finrank}_R \Omega_{R/k} = 1\). This is the same geometric
+  datum the contingency regularity route also consumes, but here it enters as
+  a present module fact rather than feeding a regularity machine.
+\end{proof}
+
+\section{Contingency: smooth implies regular (off the critical path)}
+
+The remainder of the chapter records the regularity passage. It is
+\emph{superseded} by the conormal isomorphism above and is \emph{not} required
+by \cref{lem:smooth_stalk_isDVR} or by the headline cone of
+\cref{chap:RiemannRoch_OcOfD}; it is retained as a contingency, since
+once the cotangent dimension is known to be one the identity
+\(\dim_\kappa \mathfrak m/\mathfrak m^2 = \operatorname{ringKrullDim} R\)
+certifies regularity in reverse.
+
+\begin{theorem}
+
+\leanok
+[Smooth local \(k\)-algebra \(\Rightarrow\) regular local ring]
+  \label{thm:smooth_local_isRegularLocalRing}
+  \lean{Algebra.IsRegularLocalRing_of_smooth}
+  \uses{lem:smooth_formallySmooth, lem:standardSmooth_kaehler_free,
+        lem:standardSmooth_kaehler_rank,
+        lem:isRegularLocalRing_iff_finrank_cotangentSpace}
+  % SOURCE: [Stacks Project], Tag 00TT = Lemma 10.140.3
+  % (`algebra-lemma-characterize-smooth-over-field', Section 10.140
+  % ``Smooth algebras over fields''). Read from
+  % references/stacks-regular-dvr-algebra.tex, lines 38612--38630.
+  % SOURCE QUOTE: "Let $k$ be any field.
+  % Let $S$ be a finite type $k$-algebra.
+  % Let $X = \Spec(S)$.
+  % Let $\mathfrak q \subset S$ be a prime
+  % corresponding to $x \in X$.
+  % The following are equivalent:
+  % \begin{enumerate}
+  % \item The $k$-algebra $S$ is smooth at $\mathfrak q$ over $k$.
+  % \item We have
+  % $\dim_{\kappa(\mathfrak q)} \Omega_{S/k} \otimes_S \kappa(\mathfrak q)
+  % \leq \dim_x X$.
+  % \item We have
+  % $\dim_{\kappa(\mathfrak q)} \Omega_{S/k} \otimes_S \kappa(\mathfrak q)
+  % = \dim_x X$.
+  % \end{enumerate}
+  % Moreover, in this case the local ring $S_{\mathfrak q}$ is regular."
+  % SOURCE: [Stacks Project], Tag 056S = Lemma 33.25.3
+  % (`varieties-lemma-smooth-regular', Section 33.25 ``Schemes smooth over
+  % fields''). Read from
+  % references/stacks-smooth-regular-varieties.tex, lines 4596--4603.
+  % SOURCE QUOTE: "Let $X \to \Spec(k)$ be a smooth morphism where $k$ is a
+  % field. Then $X$ is a regular scheme."
+  \textit{Source: Stacks Project, Tag 00TT (Lemma 10.140.3, ``Moreover, in
+  this case the local ring \(S_{\mathfrak q}\) is regular'') and Tag 056S
+  (Lemma 33.25.3, smooth over a field implies regular). Contingency route,
+  not on the critical path.}
+  Let \(k\) be a field and let \(R\) be a Noetherian local \(k\)-algebra that
+  is smooth over \(k\): \(R\) is essentially of finite type over \(k\) and
+  formally smooth over \(k\), realised as the localisation \(R = S_{\mathfrak
+  q}\) of a finite-type \(k\)-algebra \(S\) at a prime \(\mathfrak q\) on a
+  basic open where \(S\) is standard smooth over \(k\). Then \(R\) is a
+  regular local ring (\(\texttt{IsRegularLocalRing}\ R\)).
+\end{theorem}
+
+% SOURCE QUOTE PROOF: "If $S$ is smooth at $\mathfrak q$ over $k$, then there
+% exists a $g \in S$, $g \not \in \mathfrak q$ such that $S_g$ is standard
+% smooth over $k$, see Lemma \ref{lemma-smooth-syntomic}. A standard smooth
+% algebra over $k$ has a module of differentials which is free of rank equal
+% to the dimension, see Lemma \ref{lemma-standard-smooth} (use that a
+% relative global complete intersection over a field has dimension equal to
+% the number of variables minus the number of equations). Thus we see that
+% (1) implies (3). To finish the proof of the lemma it suffices to show that
+% (2) implies (1) and that it implies that $S_{\mathfrak q}$ is regular.
+% \medskip\noindent
+% Assume (2). By Nakayama's Lemma \ref{lemma-NAK} we see that
+% $\Omega_{S/k, \mathfrak q}$ can be generated by $\leq \dim_x X$ elements.
+% We may replace $S$ by $S_g$ for some $g \in S$, $g \not \in \mathfrak q$
+% such that $\Omega_{S/k}$ is generated by at most $\dim_x X$ elements.
+% Let $K/k$ be an algebraically closed field extension such that there exists
+% a $k$-algebra map $\psi : \kappa(\mathfrak q) \to K$. Consider
+% $S_K = K \otimes_k S$. Let $\mathfrak m \subset S_K$ be the maximal ideal
+% corresponding to the surjection
+% $S_K = K \otimes_k S \to K \otimes_k \kappa(\mathfrak q)
+% \xrightarrow{\text{id}_K \otimes \psi} K$.
+% Note that $\mathfrak m \cap S = \mathfrak q$, in other words $\mathfrak m$
+% lies over $\mathfrak q$. By Lemma
+% \ref{lemma-dimension-at-a-point-preserved-field-extension} the dimension of
+% $X_K = \Spec(S_K)$ at the point corresponding to $\mathfrak m$ is
+% $\dim_x X$. By Lemma \ref{lemma-dimension-closed-point-finite-type-field}
+% this is equal to $\dim((S_K)_{\mathfrak m})$. By Lemma
+% \ref{lemma-differentials-base-change} the module of differentials of $S_K$
+% over $K$ is the base change of $\Omega_{S/k}$, hence also generated by at
+% most $\dim_x X = \dim((S_K)_{\mathfrak m})$ elements. By Lemma
+% \ref{lemma-characterize-smooth-kbar} we see that $S_K$ is smooth at
+% $\mathfrak m$ over $K$. By Lemma \ref{lemma-flat-base-change-locus-smooth}
+% this implies that $S$ is smooth at $\mathfrak q$ over $k$. This proves (1).
+% Moreover, we know by Lemma \ref{lemma-characterize-smooth-kbar} that the
+% local ring $(S_K)_{\mathfrak m}$ is regular. Since
+% $S_{\mathfrak q} \to (S_K)_{\mathfrak m}$ is flat we conclude from Lemma
+% \ref{lemma-flat-under-regular} that $S_{\mathfrak q}$ is regular."
+\begin{proof}
+  \uses{lem:smooth_formallySmooth, lem:standardSmooth_kaehler_free,
+        lem:standardSmooth_kaehler_rank,
+        lem:isRegularLocalRing_iff_finrank_cotangentSpace}
+  We follow Stacks~00TT. Smoothness of \(R = S_{\mathfrak q}\) over \(k\)
+  unfolds (\cref{lem:smooth_formallySmooth}) to a basic open on which the
+  finite-type chart \(S_g\) (\(g \notin \mathfrak q\)) is standard smooth over
+  \(k\); replacing \(S\) by \(S_g\), we may assume \(S\) itself is standard
+  smooth of some relative dimension \(n\).
+
+  \emph{Step 1 (differentials of the chart).} A standard smooth \(k\)-algebra
+  has a free module of K\"ahler differentials
+  (\cref{lem:standardSmooth_kaehler_free}), and when it is standard smooth of
+  relative dimension \(n\) the rank is exactly \(n\)
+  (\cref{lem:standardSmooth_kaehler_rank}). Thus \(\Omega_{S/k}\) is free of
+  rank \(n\), and \(\dim_{\kappa(\mathfrak q)} \Omega_{S/k} \otimes_S
+  \kappa(\mathfrak q) = n = \dim_x X\); this is the equality~(3) of the Stacks
+  quotation, and supplies the numerical input of the Jacobian criterion.
+
+  \emph{Step 2 (regularity at the prime, Stacks~00TT).} Stacks~00TT then
+  concludes that the local ring \(S_{\mathfrak q}\) is regular. Its argument
+  base-changes to an algebraically closed extension \(K / k\) with a
+  \(k\)-embedding \(\psi : \kappa(\mathfrak q) \to K\): at the maximal ideal
+  \(\mathfrak m \subset S_K = K \otimes_k S\) lying over \(\mathfrak q\), the
+  ring \(S_K\) is smooth over the algebraically closed field \(K\), so the
+  local ring \((S_K)_{\mathfrak m}\) is regular (smoothness over an
+  algebraically closed field at a closed point gives regularity, via the
+  Jacobian rank computation). Since \(S_{\mathfrak q} \to (S_K)_{\mathfrak m}\)
+  is faithfully flat, regularity descends to \(S_{\mathfrak q} = R\) (flat
+  local homomorphism with regular target and regular fibre forces a regular
+  source). This is precisely Tag~056S read pointwise: smooth over a field
+  forces every local ring to be regular.
+
+  \emph{Sub-gaps to decompose.} Two ingredients of Step~2 are genuine
+  commutative-algebra obligations that do not follow immediately from standard
+  results: (i) the
+  regularity of a local ring of a $K$-algebra smooth over an algebraically
+  closed field $K$ at a closed point (the Jacobian-criterion regularity,
+  Stacks~00TT, the closed-point smoothness-over-$\bar K$ case); and (ii) the descent of
+  regularity along the faithfully flat local map $S_{\mathfrak q} \to
+  (S_K)_{\mathfrak m}$ (flat descent of regularity, Stacks~00TT), together with the
+  transport of regularity from the finite-type chart to its localisation at
+  $\mathfrak q$. Hartshorne records the localisation half of (ii) as
+  Theorem~II.8.14A. These are the real sub-obligations of this theorem; the
+  remaining numerical content (Steps~1) is supplied by the standard results
+  below. Because the headline cone runs through the conormal isomorphism,
+  these sub-obligations need not be discharged for the discrete-valuation
+  conclusion.
+\end{proof}
+
+\subsection*{Cotangent dimension of a regular local ring}
+
+The regularity route reads the cotangent dimension off regularity, with no
+differential-theoretic input. It rests on two Mathlib facts: for a regular
+local ring the minimal number of generators of the maximal ideal equals the
+Krull dimension, and for any Noetherian local ring that minimal number equals
+the residue dimension of the cotangent space.
+
+\begin{lemma}[Regular local ring: spanFinrank of \(\mathfrak m\) equals
+Krull dimension]
+  \label{lem:isRegularLocalRing_spanFinrank_eq_ringKrullDim}
+  \lean{IsRegularLocalRing.spanFinrank_maximalIdeal}
+  \mathlibok
+  \textit{Provided by Mathlib
+  (\texttt{Mathlib.RingTheory.RegularLocalRing.Defs}).}
+  For a regular local ring \(R\) the minimal number of generators of the
+  maximal ideal equals the Krull dimension:
+  \(\operatorname{spanFinrank}(\mathfrak m_R) =
+  \operatorname{ringKrullDim} R\) (as elements of \(\mathbb N \cup
+  \{\infty\}\)). This is, in effect, the defining numerical property of a
+  regular local ring.
+\end{lemma}
+
+\begin{lemma}[spanFinrank of \(\mathfrak m\) equals cotangent dimension]
+  \label{lem:spanFinrank_eq_finrank_cotangentSpace}
+  \lean{IsLocalRing.spanFinrank_maximalIdeal_eq_finrank_cotangentSpace}
+  \mathlibok
+  \textit{Provided by Mathlib
+  (\texttt{Mathlib.RingTheory.Nakayama} /
+  \texttt{Mathlib.RingTheory.LocalRing.CotangentSpace}).}
+  For a Noetherian local ring \(R\) the minimal number of generators of the
+  maximal ideal equals the residue-field dimension of the cotangent space:
+  \(\operatorname{spanFinrank}(\mathfrak m_R) =
+  \operatorname{finrank}_{\kappa}
+  \bigl(\texttt{IsLocalRing.CotangentSpace}\ R\bigr)\), the latter being
+  \(\dim_\kappa \mathfrak m_R / \mathfrak m_R^2\). This is Nakayama's lemma in
+  its minimal-generators form.
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[Cotangent dimension of a regular local ring equals its Krull dimension]
+  \label{lem:finrank_cotangent_eq_ringKrullDim_of_regular}
+  \lean{IsRegularLocalRing.finrank_cotangentSpace_eq_ringKrullDim}
+  \uses{lem:isRegularLocalRing_spanFinrank_eq_ringKrullDim,
+        lem:spanFinrank_eq_finrank_cotangentSpace}
+  Let \(R\) be a regular local ring. Then the residue-field dimension of the
+  cotangent space equals the Krull dimension:
+  \[
+    \operatorname{finrank}_{\kappa}
+      \bigl(\texttt{IsLocalRing.CotangentSpace}\ R\bigr)
+    \;=\;
+    \operatorname{ringKrullDim} R .
+  \]
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:isRegularLocalRing_spanFinrank_eq_ringKrullDim,
+        lem:spanFinrank_eq_finrank_cotangentSpace}
+        \leanok
+  A regular local ring is Noetherian, so
+  \cref{lem:spanFinrank_eq_finrank_cotangentSpace} gives
+  \(\operatorname{spanFinrank}(\mathfrak m_R) = \operatorname{finrank}_\kappa
+  (\texttt{CotangentSpace}\ R)\), and
+  \cref{lem:isRegularLocalRing_spanFinrank_eq_ringKrullDim} gives
+  \(\operatorname{spanFinrank}(\mathfrak m_R) = \operatorname{ringKrullDim}
+  R\). Transitivity of equality yields the claim. (Mathlib also packages this
+  composite directly as the forward direction of
+  \cref{lem:isRegularLocalRing_iff_finrank_cotangentSpace}.)
+\end{proof}
+
+\begin{lemma}[Regularity criterion via cotangent dimension]
+  \label{lem:isRegularLocalRing_iff_finrank_cotangentSpace}
+  \lean{IsRegularLocalRing.iff_finrank_cotangentSpace}
+  \mathlibok
+  \textit{Provided by Mathlib
+  (\texttt{Mathlib.RingTheory.RegularLocalRing.Defs}).}
+  For a Noetherian local ring \(R\), regularity is equivalent to the
+  cotangent dimension matching the Krull dimension:
+  \(\texttt{IsRegularLocalRing}\ R \iff \operatorname{finrank}_\kappa
+  (\texttt{IsLocalRing.CotangentSpace}\ R) = \operatorname{ringKrullDim} R\).
+  The forward direction is exactly
+  \cref{lem:finrank_cotangent_eq_ringKrullDim_of_regular}; the reverse
+  direction supplies the regularity certificate consumed in Step~2 of
+  \cref{thm:smooth_local_isRegularLocalRing}, and is also the cheap closure of
+  that theorem once the cotangent dimension is pinned to one by the conormal
+  route.
+\end{lemma}
+
+\subsection*{A normality fallback}
+
+If the Jacobian-criterion regularity of
+\cref{thm:smooth_local_isRegularLocalRing} proves harder to formalise than
+the discrete-valuation-ring conclusion of \cref{lem:smooth_stalk_isDVR}
+requires, the dimension-one case admits a further alternative that never
+mentions regularity. A \(k\)-algebra smooth over a field is geometrically
+normal, hence (being a local domain) integrally closed in its fraction
+field; a Noetherian local integrally closed domain possessing a unique
+nonzero prime --- automatic in Krull dimension one --- is a discrete
+valuation ring. In Mathlib this is the clause
+``\(\texttt{IsIntegrallyClosed}\ R \wedge \exists!\, P,\ P \neq \bot \wedge
+P.\texttt{IsPrime}\)'' of the discrete-valuation-ring \texttt{TFAE}
+(\cref{lem:isDiscreteValuationRing_TFAE}). This route is recorded as a further
+contingency; the live target is \cref{lem:smooth_stalk_isDVR} via the conormal
+isomorphism.
+
+\begin{lemma}[Discrete valuation ring characterisations]
+  \label{lem:isDiscreteValuationRing_TFAE}
+  \lean{IsDiscreteValuationRing.TFAE}
+  \mathlibok
+  \textit{Provided by Mathlib
+  (\texttt{Mathlib.RingTheory.DiscreteValuationRing.TFAE}).}
+  For a Noetherian local integral domain \(R\) that is not a field, the
+  following are equivalent: \(R\) is a discrete valuation ring; \(R\) is a
+  valuation ring; \(R\) is a Dedekind domain; \(R\) is integrally closed with
+  a unique nonzero prime ideal; the maximal ideal of \(R\) is principal; the
+  cotangent space \(\mathfrak m / \mathfrak m^2\) is one-dimensional over the
+  residue field; every nonzero ideal of \(R\) is a power of the maximal
+  ideal. The integrally-closed clause is the basis of the normality fallback
+  route above.
+\end{lemma}

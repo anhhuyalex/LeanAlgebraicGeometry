@@ -1,0 +1,205 @@
+[
+  {
+    "timestamp": "2026-06-21T08:18:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "tensorPowAdd_succ_left_braided"
+    },
+    "session": {
+      "id": "session_31",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "tensorPowAdd_succ_left_braided_core",
+        "tensorBraiding_hexagon_forward",
+        "tensorBraiding_self_eq_id_of_isInvertible",
+        "tensorObjWhiskerRightIso_trans"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Invertibility-collapsed hexagon split of beta_{L,L^k⊗L}: brick-2 forward hexagon hβ' + hwlrefl (WL_A(β_{L,L})=𝟙 via PRIMARY) collapses α≪≫α⁻¹, leaving β_{L,A⊗L}=α⁻¹≪≫WR(β_{L,A})L",
+        "code_tried": "have hwlrefl : tensorObjWhiskerLeftIso (tensorPow L k) (Iso.refl ...) = Iso.refl ...; rw [show tensorBraiding L (tensorPow L (k+1)) = tensorBraiding L (tensorObj (tensorPow L k) L) from rfl, hβ']",
+        "line_number": "3771",
+        "lean_error": null,
+        "result": "partial",
+        "insight": "β-split MUST be hand-built-first via brick 2; canonical-first kills braiding_tensor_right_hom (verified dead end iter-030)"
+      },
+      {
+        "attempt": 2,
+        "strategy": "simp-only with whisker-iso trans lemmas to normalize then Iso.ext",
+        "code_tried": "simp only [tensorObjWhiskerRightIso_trans, tensorObjWhiskerLeftIso_trans, Iso.trans_assoc]; apply Iso.ext; simp only [...]",
+        "line_number": "3771",
+        "lean_error": "`simp` made no progress",
+        "result": "failed",
+        "insight": "leading whisker-trans simp made no progress; drop it, go straight to Iso.ext + canonical hom unfold"
+      },
+      {
+        "attempt": 3,
+        "strategy": "Iso.ext to hom level + tensorObj*Iso_eq bridges to reach canonical morphism goal, then generic-M core",
+        "code_tried": "apply Iso.ext; simp only [Iso.trans_hom, ..., tensorObjWhiskerRightIso_eq, tensorObjWhiskerLeftIso_eq, tensorObjAssoc, ...]; refine tensorPowAdd_succ_left_braided_core (M := LocalizedMonoidal ...) _ _ ... ?hk",
+        "line_number": "3771",
+        "lean_error": null,
+        "result": "success",
+        "insight": "mirror of tensorPowAdd_assoc_succ_core: pin M:=LocalizedMonoidal so all isos resolve to ONE comp instance; core finisher = distribute+cancel simp; rw[hk]; rw[←associator_inv_naturality_left_assoc]; simp[whisker_assoc,whisker_exchange_assoc]; monoidal"
+      },
+      {
+        "attempt": 4,
+        "strategy": "hk reindex c+1+k=c+(k+1): subst on dependent eqToHom",
+        "code_tried": "have e : c+1+k = c+(k+1) := by omega; subst e; rfl",
+        "line_number": "3814",
+        "lean_error": "subst failed: invalid equality proof (c+1+k = c+(k+1) not of form x=t)",
+        "result": "failed",
+        "insight": "subst/rw FAIL on the dependent eqToHom motive; need a generalize helper"
+      },
+      {
+        "attempt": 5,
+        "strategy": "generalize reindex via gen helper + rintro rfl",
+        "code_tried": "have gen : ∀ {n1 n2} (hn : n1=n2), eqToHom (congrArg (tensorPow L) hn.symm) ▷ L ≫ (...).hom = (...).hom ≫ eqToHom ...; rintro n1 n2 rfl; simp; exact gen (show c+1+k = c+(k+1) from by omega)",
+        "line_number": "3814",
+        "lean_error": null,
+        "result": "success",
+        "insight": "gen with rintro rfl + explicit `show ... from by omega` (NOT bare `by omega` — omega can't infer the metavar indices)"
+      }
+    ],
+    "next_steps": "Brick 1′ fully closed; consumed by tensorPowAdd_comm succ."
+  },
+  {
+    "timestamp": "2026-06-21T08:09:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "tensorPowAdd_comm"
+    },
+    "session": {
+      "id": "session_31",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "tensorPowAdd_comm_succ_core",
+        "tensorPowAdd_succ_left_braided",
+        "tensorBraiding_hexagon_forward",
+        "tensorBraiding_symm"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "succ: rw[hβ] (descended hexagon split of β_{L^m,L^{c+1}}), distribute whisker, substitute brick 1′ for μ_{c+1,m}, reduce to canonical via Iso.ext + bridges, then generic-M core",
+        "code_tried": "rw [show ...braiding L (tensorPow L (c+1)) = ...braiding L (tensorObj (tensorPow L c) L) from rfl]; rw [hβ]; simp only [tensorObjWhiskerRightIso_trans]; rw [tensorPowAdd_succ_left_braided L c m]; apply Iso.ext; simp only [...]; refine tensorPowAdd_comm_succ_core (M := LocalizedMonoidal ...) _ ... ?hsymm ?hk",
+        "line_number": "3886",
+        "lean_error": null,
+        "result": "success",
+        "insight": "same pinned generic-M core idiom as brick 1′; core uses hsymm:βm1≫β1m=𝟙 to collapse opposite braidings"
+      },
+      {
+        "attempt": 2,
+        "strategy": "core finisher with forward whiskerLeft_comp + ←whiskerLeft_comp_assoc + hsymm",
+        "code_tried": "simp only [MonoidalCategory.comp_whiskerRight, MonoidalCategory.whiskerLeft_comp, Category.assoc, ..., ← MonoidalCategory.whiskerLeft_comp_assoc, hsymm, ...]; rw [hk]; monoidal",
+        "line_number": "3834",
+        "lean_error": "Possibly looping simp theorem: `← whiskerLeft_comp_assoc` (caused by whiskerLeft_comp and Category.assoc)",
+        "result": "failed",
+        "insight": "⚠ NEVER mix forward whiskerLeft_comp with ←whiskerLeft_comp_assoc — they loop; also `monoidal` not needed here"
+      },
+      {
+        "attempt": 3,
+        "strategy": "core finisher via reassoc_of% hsymm telescoping, NO monoidal",
+        "code_tried": "simp only [Category.assoc, Iso.hom_inv_id_assoc, Iso.inv_hom_id_assoc, MonoidalCategory.hom_inv_whiskerRight_assoc, MonoidalCategory.inv_hom_whiskerRight_assoc, ← MonoidalCategory.whiskerLeft_comp_assoc, reassoc_of% hsymm, Iso.hom_inv_id, MonoidalCategory.whiskerLeft_id, Category.id_comp]; rw [hk]",
+        "line_number": "3834",
+        "lean_error": null,
+        "result": "success",
+        "insight": "reassoc_of% hsymm telescopes the opposite braidings cleanly; drop forward comp_whiskerRight/whiskerLeft_comp to break the loop; capstone is pure rewriting, no `monoidal`"
+      },
+      {
+        "attempt": 4,
+        "strategy": "hsymm proof: β_{L^m,L}≫β_{L,L^m}=𝟙 from tensorBraiding_symm",
+        "code_tried": "have h := congrArg Iso.hom (tensorBraiding_symm (L.tensorPow m) L); simpa only [Iso.trans_hom, Iso.refl_hom] using h",
+        "line_number": "3911",
+        "lean_error": null,
+        "result": "success",
+        "insight": "tensorBraiding_symm (iter-030) is the symmetry ingredient; congrArg Iso.hom + simpa Iso.trans/refl_hom"
+      },
+      {
+        "attempt": 5,
+        "strategy": "hk reindex m+c=c+m with two trailing eqToHom",
+        "code_tried": "convert gen (show m+c = c+m from by omega) using 2; exact eqToHom_trans _ _",
+        "line_number": "3936",
+        "lean_error": "direct `exact gen ...` → isDefEq 200000-heartbeat timeout; `simp only [eqToHom_trans]; exact gen` → unsolved",
+        "result": "success",
+        "insight": "two trailing eqToHom: use `convert gen ... using 2` then `exact eqToHom_trans _ _` (NOT bare exact — defeq times out; NOT simp[eqToHom_trans] first — leaves goal)"
+      }
+    ],
+    "next_steps": "tensorPowAdd_comm fully axiom-clean; unblocks sectionsMul_mul_comm + gcommSemiring."
+  },
+  {
+    "timestamp": "2026-06-21T08:12:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "sectionsMul_mul_comm"
+    },
+    "session": {
+      "id": "session_31",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "tensorPowAdd_comm",
+        "iso_trans_hom_val_app_apply",
+        "sectionsCast_apply",
+        "sectionsCast_sectionsCast"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "element-level read-off (mirror B7 sectionsMul_mul_assoc): already-reduced body just needed tensorPowAdd_comm closed",
+        "code_tried": "rw [tensorPowAdd_comm L na nb, iso_trans_hom_val_app_apply, iso_trans_hom_val_app_apply, ← sectionsCast_apply, sectionsCast_sectionsCast]; exact Nat.add_comm nb na",
+        "line_number": "3951",
+        "lean_error": null,
+        "result": "success",
+        "insight": "the comm read-off was fully reduced in iter-028 to depend only on tensorPowAdd_comm; closing the latter auto-closed this (element level, no LocalizedMonoidal diamond)"
+      }
+    ],
+    "next_steps": "Consumed by sectionGradedRing_gcommSemiring."
+  },
+  {
+    "timestamp": "2026-06-21T08:13:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "sectionGradedRing_gcommSemiring"
+    },
+    "session": {
+      "id": "session_31",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "sectionGradedRing_gsemiring",
+        "gradedMonoid_eq_of_cast",
+        "sectionsMul_mul_comm"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "GCommSemiring = field-port over gsemiring; mul_comm clause via gradedMonoid_eq_of_cast + sectionsMul_mul_comm (mirrors gsemiring assembly)",
+        "code_tried": "@[reducible] noncomputable def sectionGradedRing_gcommSemiring (L : X.Modules) [IsInvertible L] : DirectSum.GCommSemiring (sectionDeg L) := { sectionGradedRing_gsemiring L with mul_comm := fun a b => gradedMonoid_eq_of_cast L (add_comm a.1 b.1) (sectionsMul_mul_comm L a.2 b.2) }",
+        "line_number": "3991",
+        "lean_error": null,
+        "result": "success",
+        "insight": "THE deliverable: ⊕_m Γ(X,L^⊗m) is a graded CommSemiring for invertible L (Stacks 01CV). + sectionGradedRing_commSemiring_nonempty wrapper. Build green (2626 jobs), axiom-clean."
+      }
+    ],
+    "next_steps": "Phase (ii) COMPLETE. Remaining project sorries: 4 χ (QuotScheme cohomology leg) + STRETCH Gmodule (braided hexagon)."
+  }
+]

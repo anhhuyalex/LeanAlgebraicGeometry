@@ -1,4 +1,7 @@
 import Mathlib.Algebra.GradedMonoid
+import Mathlib.Algebra.DirectSum.Ring
+import Mathlib.Algebra.DirectSum.Module
+import Mathlib.Algebra.Module.GradedModule
 import Mathlib.Algebra.Category.Grp.Basic
 import Mathlib.LinearAlgebra.TensorProduct.Map
 import Mathlib.LinearAlgebra.TensorProduct.Associator
@@ -14,6 +17,7 @@ import Mathlib.Algebra.Category.ModuleCat.Monoidal.Symmetric
 import Mathlib.Algebra.Category.ModuleCat.ChangeOfRings
 import Mathlib.Algebra.Category.Grp.ZModuleEquivalence
 import Mathlib.AlgebraicGeometry.Modules.Sheaf
+import Mathlib.RingTheory.PicardGroup
 
 /-!
 # Section graded ring infrastructure, Layer 1: tensor powers of a sheaf of modules
@@ -56,9 +60,11 @@ of the objectwise (presheaf) tensor product, following
   braiding isomorphisms of the sheaf tensor product.
 
 The comparison isomorphism `L^{⊗m} ⊗ L^{⊗m'} ≅ L^{⊗(m+m')}`
-(`lem:sheafTensorPow_add`) is **deferred**: see the handoff note before the end
-of the file for the single missing ingredient (strong-monoidality of the module
-sheafification functor) and the launching pad assembled here.
+(`lem:sheafTensorPow_add`, here `tensorPowAdd`) is **built** (iter-007 monoidal-localization pivot:
+the sheaf tensor product inherits a full `MonoidalCategory`/`SymmetricCategory` structure via
+`CategoryTheory.Localization.Monoidal`).  On top of it this file assembles the section graded
+semiring `Γ_*(X,L)` (∀ `L`), its commutative upgrade for invertible `L`, and the graded module
+`M(X,L,F) = ⊕_m Γ(F ⊗ L^{⊗m})`.
 -/
 
 universe u
@@ -124,19 +130,27 @@ noncomputable def moduleTensorPow (F L : X.Modules) (m : ℕ) : X.Modules :=
 @[simp] private lemma moduleTensorPow_zero (F L : X.Modules) :
     moduleTensorPow F L 0 = tensorObj F (unitModule X) := rfl
 
-/-- An **invertible** sheaf of modules (`def:isInvertible`, [Stacks, Tag 01CR]): `L` is
-`⊗`-invertible, i.e. there is a sheaf of `𝒪_X`-modules `N` and an isomorphism
-`L ⊗ N ≅ 𝒪_X` (`tensorObj L N ≅ unitModule X`).  Over a scheme — where every stalk is a
-local ring — this is equivalent to `L` being locally free of rank one (a line bundle).
-It is the line-bundle hypothesis under which the section graded ring becomes commutative
+/-- An **invertible** sheaf of modules (`def:isInvertible`, [Stacks, Tag 01CR]): `L` carries a
+**trivializing basis** — a basis `{Uᵢ}` of opens of `X` on each of which the section module
+`Γ(L, Uᵢ)` is an invertible `Γ(X, Uᵢ)`-module (equivalently, locally free of rank one,
+[Stacks, Tag 01CR]).  Over a scheme every stalk is a local ring, so an invertible module over a
+local ring is free of rank one (`CommRing.Pic.instFreeOfSubsingleton`).  This is the
+line-bundle hypothesis under which the section graded ring becomes commutative
 (`lem:sectionGradedRing_gcommSemiring`); for a general sheaf the section ring is the free
 tensor algebra on `Γ(X,L)` and is non-commutative, which is why Stacks defines `Γ_*(X,𝓛)`
-only for invertible `𝓛`.  The single arithmetic consequence the commutativity proof consumes
-is the trivial self-braiding `β_{L,L} = 𝟙` (`tensorBraiding_self_eq_id_of_isInvertible`,
-`lem:braiding_eq_id_of_invertible`). -/
+only for invertible `𝓛`.  The sole arithmetic consequence consumed is the trivial
+self-braiding `β_{L,L} = 𝟙` (`tensorBraiding_self_eq_id_of_isInvertible`,
+`lem:braiding_eq_id_of_invertible`), proved by basis-local descent via
+`Module.Invertible.tensorProductComm_eq_refl` — crucially, the braiding is never evaluated at
+the global open `⊤` (where `Γ(X, L)` need not be invertible). -/
 class IsInvertible (L : X.Modules) : Prop where
-  /-- `L` admits a `⊗`-inverse: a sheaf `N` with `L ⊗ N ≅ 𝒪_X`. -/
-  exists_tensorInv : ∃ N : X.Modules, Nonempty (tensorObj L N ≅ unitModule X)
+  /-- There exists an indexed basis `{Uᵢ}` of opens of `X` such that the section module
+  `Γ(L, Uᵢ)` is an invertible `Γ(X, Uᵢ)`-module for each `i`. -/
+  exists_trivializing_basis :
+    ∃ (ι : Type u) (U : ι → TopologicalSpace.Opens X),
+      TopologicalSpace.Opens.IsBasis (Set.range U) ∧
+      ∀ i, Module.Invertible ↥(X.presheaf.obj (Opposite.op (U i)))
+                              ↥(L.val.obj (Opposite.op (U i)))
 
 /-! ### Unitor and braiding isomorphisms of the sheaf tensor product
 
@@ -868,120 +882,24 @@ bookkeeping.  Once `relTensorActL`/`relTensorActR`/`relTensorProj` land, lift th
 -/
 
 /-
-### The tensor-power comparison isomorphism `tensorPowAdd` — DEFERRED (handoff)
+### The tensor-power comparison isomorphism `tensorPowAdd` — BUILT (iter-007 pivot)
 
-The canonical comparison isomorphism (`lem:sheafTensorPow_add`, [Stacks, Tag 01CU])
+HISTORICAL NOTE.  Earlier iterations left the comparison isomorphism
+(`lem:sheafTensorPow_add`, [Stacks, Tag 01CU])
 
   `tensorPowAdd (L : X.Modules) (m m' : ℕ) :`
   `  tensorObj (tensorPow L m) (tensorPow L m') ≅ tensorPow L (m + m')`
 
-is **not** provided in this iteration.  Per the `mathlib-build` discipline it is
-left *absent* rather than backed by a `sorry`.  Its proof is by induction on `m`:
-
-* **base case `m = 0`** — FULLY AVAILABLE, axiom-clean:
-  `tensorObjUnitIso (tensorPow L m') ≪≫ eqToIso (by rw [Nat.zero_add])`
-  (left unitor `unitModule X ⊗ L^{⊗m'} ≅ L^{⊗m'}`, transported along `0 + m' = m'`).
-
-* **inductive step `m = k+1`** — needs the sheaf-level **associator**
-  `tensorObj (tensorObj A B) C ≅ tensorObj A (tensorObj B C)`.  Concretely, with
-  `A = L^{⊗k}`, `B = L^{⊗m'}`, one must produce
-  `(A ⊗ L) ⊗ B ≅ (A ⊗ B) ⊗ L` (= associator, then `tensorBraiding`, then
-  associator⁻¹), combine with the inductive hypothesis `L^{⊗(k+m')} ≅ A ⊗ B`
-  and `Nat.succ_add`.  Everything here EXCEPT the associator is already built
-  (`tensorBraiding`, `tensorPow_succ`).
-
-THE SINGLE MISSING INGREDIENT is the associator, equivalently the
-**strong-monoidality of the module sheafification functor**
-`sheafification : X.PresheafOfModules ⥤ X.Modules`: the canonical maps
-`sheafification.obj (P ⊗ Q) ⟶ sheafification.obj ((sheafification.obj P).val ⊗ Q)`
-— obtained by applying `sheafification` to `η_P ⊗ 𝟙_Q`, where
-`η = (PresheafOfModules.sheafificationAdjunction (𝟙 _)).unit` — are isomorphisms.
-This holds because `η_P ⊗ 𝟙_Q` is inverted by sheafification: it is a stalkwise
-isomorphism (tensor commutes with the filtered-colimit stalks and `η_P` is a
-stalk iso), even though it need not be locally *injective* (tensoring is only
-right exact).  Mathlib (pinned commit) supplies the abstract
-`CategoryTheory.Localization.Monoidal` machinery but **not** its instantiation for
-the presheaf-of-modules sheafification localizer, nor a stalkwise-iso criterion
-for morphisms of sheaves of modules; building either is the next-iteration task.
-
-LAUNCHING PAD (all axiom-clean, BUILT ABOVE): `sheafificationCounitIso`,
-`tensorObjUnitIso`, `tensorObjRightUnitor`, `tensorBraiding`, `sectionsMul` (the
-lax-monoidal multiplication, which does NOT need the associator), and — NEW in
-iter-052 — the localization-criterion reduction `isIso_sheafification_map_iff`,
-together with `localIso_toPresheaf_map_unit` and `isIso_sheafification_map_unit`.
-
-ITER-052 STATUS — the crux `isIso_sheafification_whiskerRight_unit`
-(`IsIso (sheafification.map (η_P ▷ Q))`) is now reduced to exactly ONE abelian
-statement, and the un-whiskered special case is CLOSED:
-
-* `isIso_sheafification_map_iff f : IsIso (sheafification.map f) ↔ J.W (toPresheaf.map f)`
-  (axiom-clean) turns the crux into the purely abelian local-isomorphism claim
-      `J.W ((PresheafOfModules.toPresheaf _).map (η_P ▷ Q))`
-  where `J = opensTopology X` and `J.W` is the local-iso class on abelian-group
-  presheaves on `X`.  Hence the crux is precisely
-      `(isIso_sheafification_map_iff _).mpr (?_ : J.W (toPresheaf.map (η_P ▷ Q)))`.
-* `localIso_toPresheaf_map_unit` proves the `η_P ∈ J.W` half (the underlying abelian
-  map of the unit IS `toSheafify`, a local iso), and `isIso_sheafification_map_unit`
-  closes the un-whiskered `IsIso (sheafification.map η_P)`.
-
-THE REMAINING GAP is the single abelian fact
-      `J.W (toPresheaf.map (η_P)) → J.W (toPresheaf.map (η_P ▷ Q))`,
-i.e. *the relative-tensor right-whiskering of an abelian local isomorphism by `Q` is
-again an abelian local isomorphism*.  Note `toPresheaf.map (η_P ▷ Q)` is the
-underlying map of `(η_P).app U ⊗_{R(U)} 𝟙_{Q(U)}` (relative `R(U)`-tensor), NOT the
-abelian `ℤ`-tensor whiskering, so Mathlib's `GrothendieckTopology.W.whiskerRight`
-(`Sites/Monoidal.lean`, for the `ℤ`-tensor on `Cᵒᵖ ⥤ Ab`) does not apply directly.
-All three routes to bridge relative-⊗ to abelian-⊗ are confirmed blocked on a
-DISTINCT Mathlib-absent brick (verified by local search this iter):
-
-  (a) **abelian-`J.W` coequalizer transfer** (snap-route Analogue 1): needs
-      `P ⊗_{R} Q ≅ coequalizer (P ⊗_ℤ R ⊗_ℤ Q ⇉ P ⊗_ℤ Q)` in `Cᵒᵖ ⥤ Ab`,
-      naturally, identified with the Mathlib relative-tensor whiskering.  NO
-      tensor-product-as-coequalizer presentation exists in pinned Mathlib
-      (`grep coequalizer` over `LinearAlgebra/TensorProduct`, `Algebra/Category`
-      returns nothing).  This is the lowest-absent-infra route (it reuses the
-      present `GrothendieckTopology.W.monoidal` for `ℤ`).
-  (b) **Day's reflection / closed** (snap-assoc Analogue 2): needs
-      `MonoidalClosed (PresheafOfModules R₀)` — ABSENT (only `Rep`/functor-category
-      closed instances exist; module presheaves carry restriction-of-scalars).
-  (c) **stalkwise-iso** (snap-route Analogue 2): needs a stalk theory for
-      `X.Modules` + `(F⊗G)_x ≅ F_x ⊗ G_x` — module-sheaf stalks ABSENT.
-
-ITER-053 PROGRESS — the OBJECTWISE half of route (a)'s brick is now BUILT, axiom-clean,
-in `namespace RelativeTensorCoequalizer` above (`isColimitCofork`).  Concretely, for a
-commutative ring `S` and `S`-modules `M, N`, the relative tensor `M ⊗[S] N` is exhibited
-as the coequalizer **in `AddCommGrpCat`** of the two `S`-action maps
-`M ⊗[ℤ] (S ⊗[ℤ] N) ⇉ M ⊗[ℤ] N`:
-  * `actN`/`actM`/`actLmap`/`actRmap` — the two action maps (`ℤ`-linear);
-  * `projL` (surjective, `projL_surjective`) — the quotient map `M ⊗[ℤ] N ↠ M ⊗[S] N`;
-  * `piMor` (an `Epi`, `piMor_epi`), `cofork`, and `isColimitCofork` — the cofork plus its
-    universal property, the latter proved from `TensorProduct.liftAddHom` (existence) and
-    epi-cancellation of `piMor` (uniqueness).
-This is the genuinely Mathlib-absent mathematical core (`TensorProduct.liftAddHom` is the
-abelian universal property; there is no tensor-as-coequalizer lemma in pinned Mathlib).
-
-NEXT-ITER TASK (presheaf promotion + crux): lift `isColimitCofork` from a single object to
-the functor category `Cᵒᵖ ⥤ AddCommGrpCat`, where colimits are computed objectwise
-(`CategoryTheory.Limits.evaluationJointlyReflectsColimits` /
-`Functor.preservesColimit` of `(evaluation _ _).obj U`).  Steps:
-  1. Assemble `actN`/`actM`/`projL` into NATURAL transformations of `Cᵒᵖ ⥤ AddCommGrpCat`
-     between the `ℤ`-tensor presheaves `P ⊗_ℤ R₀ ⊗_ℤ Q ⇉ P ⊗_ℤ Q` (objectwise = the maps
-     above at `U`; naturality = compatibility with restriction, which holds because each map
-     is built from the module action, natural in `U`).
-  2. Identify the apex `U ↦ P(U) ⊗_{R₀(U)} Q(U)` with `(toPresheaf R₀).obj (P ⊗_p Q)`
-     (Mathlib `PresheafOfModules.Monoidal.tensorObj`, via `tensorObj_obj` /
-     `tensorObj_map_tmul`), giving `relativeTensorCoequalizerIso`
-     (`lem:relativeTensor_as_coequalizer`).
-  3. Identify `toPresheaf.map (η_P ▷ Q)` with the map of coequalizers induced by whiskering
-     the two rows with `η_P ⊗_ℤ (-)`; abelian sheafification `a` (left adjoint) preserves the
-     coequalizer, and `GrothendieckTopology.W.monoidal` inverts the `ℤ`-whiskered rows, so the
-     induced map lands in `J.W` — closing `isIso_sheafification_whiskerRight_unit` via
-     `(isIso_sheafification_map_iff _).mpr`.
-Then ride the associator/`tensorPowAdd` (hence `sectionMul_coherent` and the graded-ring
-assembly) on top — these wait only on the crux.
-
-(Routes (b) Day's-closed and (c) stalkwise remain blocked on `MonoidalClosed
-(PresheafOfModules R₀)` / module-sheaf stalks respectively — do not pursue.)
+deferred, pending the sheaf-level **associator** — equivalently the strong-monoidality of the module
+sheafification functor.  The iter-007 pivot resolved this directly: the sheaf tensor product inherits
+a full `MonoidalCategory`/`SymmetricCategory` structure on `X.Modules` from Mathlib's
+`CategoryTheory.Localization.Monoidal` machinery (the sheafification localizer), so `tensorObjAssoc`
+is the *canonical* associator transported along the bridge `tensorObjIso` and `tensorPowAdd` is built
+unconditionally (see `tensorPowAdd`, `tensorPowAdd_assoc`, etc. below).  The abandoned
+`RelativeTensorCoequalizer` route (presenting the relative tensor as an abelian coequalizer to invert
+`η_P ▷ Q` through `GrothendieckTopology.W.monoidal`) is no longer on the critical path; the
+`namespace RelativeTensorCoequalizer` helpers above are retained only as inherited coverage debt to be
+resolved at merge — do not extend them.
 -/
 
 /-! ## Project-local Mathlib supplement — relative-tensor whiskering preserves `J.W`
@@ -2032,11 +1950,33 @@ private lemma tensorObjWhiskerRightIso_trans {F F' F'' : X.Modules}
   rw [tensorObjWhiskerRightIso_eq, tensorObjWhiskerRightIso_eq, tensorObjWhiskerRightIso_eq]
   apply Iso.ext; simp
 
+/-- Trailing-composed form of `tensorObjWhiskerRightIso_trans`: collapses two adjacent right
+whiskerings occurring as a prefix of a longer `≪≫` chain.  Used in the `tensorPowAdd_assoc` succ
+case to fold the doubled `ih` leg back into a single right-whisker. -/
+private lemma tensorObjWhiskerRightIso_trans_assoc {F F' F'' : X.Modules}
+    (e : F ≅ F') (f : F' ≅ F'') (G : X.Modules) {W : X.Modules}
+    (r : tensorObj F'' G ≅ W) :
+    tensorObjWhiskerRightIso e G ≪≫ tensorObjWhiskerRightIso f G ≪≫ r
+      = tensorObjWhiskerRightIso (e ≪≫ f) G ≪≫ r := by
+  rw [tensorObjWhiskerRightIso_trans, Iso.trans_assoc]
+
 /-- Reflexivity of the hand-built right-whiskering: `tensorObjWhiskerRightIso (Iso.refl F) G` is the
 identity iso.  Route (b), via the canonical bridge. -/
 private lemma tensorObjWhiskerRightIso_refl (F G : X.Modules) :
     tensorObjWhiskerRightIso (Iso.refl F) G = Iso.refl _ := by
   rw [tensorObjWhiskerRightIso_eq]; apply Iso.ext; simp
+
+/-- Right-whiskering a reindexing `eqToIso` is the corresponding object-level `eqToIso`.  Lets the
+reindexers straddling the inductive seam (`tensorPowAdd_succ` ↔ `tensorPowAdd_assoc_succ_reindex`)
+merge and cancel so the `(ii-a)` transposition lemma can fire on the bare double-whisker. -/
+private lemma tensorObjWhiskerRightIso_eqToIso {F F' : X.Modules} (h : F = F') (G : X.Modules) :
+    tensorObjWhiskerRightIso (eqToIso h) G = eqToIso (congrArg (fun Z => tensorObj Z G) h) := by
+  subst h; simp [tensorObjWhiskerRightIso_refl]
+
+/-- An `eqToIso` between an object and itself is the identity (proof irrelevance).  Used to collapse
+the seam reindexer of the `tensorPowAdd_assoc` succ case once the two inverse reindexers merge. -/
+private lemma eqToIso_self {Y : X.Modules} (h : Y = Y) : eqToIso h = Iso.refl Y := by
+  simp
 
 /-- Functoriality of the hand-built left-whiskering under iso-composition: route (b), via the
 canonical bridge `tensorObjWhiskerLeftIso_eq`.  Mirror of `tensorObjWhiskerRightIso_trans`. -/
@@ -2052,91 +1992,31 @@ private lemma tensorObjWhiskerLeftIso_refl (F G : X.Modules) :
     tensorObjWhiskerLeftIso F (Iso.refl G) = Iso.refl _ := by
   rw [tensorObjWhiskerLeftIso_eq]; apply Iso.ext; simp
 
-/- Planner strategy for `tensorPowAdd` (`lem:sheafTensorPow_add`, blueprint L1158–L1243):
-
-INDUCTION ON m (blueprint proof block L1186–L1222):
-
-BASE CASE (m = 0):
-  tensorObj (tensorPow L 0) (tensorPow L m')
-    = tensorObj (unitModule X) (tensorPow L m')   [by tensorPow_zero]
-  Iso: tensorObjUnitIso (tensorPow L m') ≪≫ eqToIso (by simp [Nat.zero_add])
-
-INDUCTIVE STEP (m = k+1, IH : tensorObj (tensorPow L k) (tensorPow L m') ≅ tensorPow L (k+m')):
-  tensorObj (tensorPow L (k+1)) (tensorPow L m')
-    = tensorObj (tensorObj (tensorPow L k) L) (tensorPow L m')   [by tensorPow_succ]
-
-  Step (a) — ASSOCIATOR (left-to-right):
-    tensorObjAssoc (tensorPow L k) L (tensorPow L m')
-    gives tensorObj (tensorPow L k) (tensorObj L (tensorPow L m'))
-
-  Step (b) — BRAIDING on the inner factor:
-    sheafification.mapIso
-      (BraidedCategory.braiding (C := MonoidalPresheaf X)
-        ((toPresheafOfModules X).obj L)
-        ((toPresheafOfModules X).obj (tensorPow L m')))
-    OR equivalently `tensorBraiding L (tensorPow L m')` (already in file, private),
-    whiskered to act on the right factor of tensorPow L k.
-    After this: tensorObj (tensorPow L k) (tensorObj (tensorPow L m') L).
-
-  Step (c) — INVERSE ASSOCIATOR:
-    (tensorObjAssoc (tensorPow L k) (tensorPow L m') L).symm
-    gives tensorObj (tensorObj (tensorPow L k) (tensorPow L m')) L.
-
-  Step (d) — WHISKER IH BY L ON THE RIGHT:
-    Need tensorObj (tensorPow L (k + m')) L ≅ tensorPow L ((k+m')+1).
-    Since tensorPow L ((k+m')+1) = tensorObj (tensorPow L (k+m')) L (by tensorPow_succ),
-    this is just `Iso.refl _` (or `eqToIso rfl`).
-    The IH itself: sheafification.mapIso applied to
-        MonoidalCategory.whiskerRight (C := MonoidalPresheaf X)
-          <presheaf-level map lifting IH> ((toPresheafOfModules X).obj L)
-    — but IH is a sheaf-level iso, so lifting to presheaf level is non-trivial.
-    ALTERNATIVE: define the sheaf-level whiskering endofunctor
-        fun F => tensorObj F L
-    as a Lean Functor and apply `Functor.mapIso` to IH; or use `Iso.mk` building hom/inv
-    from the presheaf-level morphisms obtained from IH.hom/IH.inv via
-        sheafification.map (whiskerRight ((toPresheafOfModules X).map IH.hom) (toPresheaf L))
-    (here (toPresheafOfModules X).map : X.Modules ⥤ X.PresheafOfModules is the right adjoint,
-    already called `toPresheafOfModules X`).
-
-  Step (e) — REINDEX:
-    eqToIso (by omega : (k + m') + 1 = (k + 1) + m')   [Nat.succ_add]
-    composes on the target to land in tensorPow L ((k+1) + m').
-
-IMPLEMENTATION NOTE: Lean's `Nat.rec` for ℕ-indexed Iso families works cleanly as a
-  `match m with | 0 => ... | k+1 => ...` in a `noncomputable def`.  The `eqToIso` steps are
-  the index-bookkeeping glue; `omega` closes all arithmetic goals.
-
-CARRIER IDIOMS (same as tensorObjAssoc above; additionally):
-  • `tensorPow_zero`/`tensorPow_succ` are `@[simp] private lemma`s in this file; use them
-    via `rw [tensorPow_succ]` or `show ... = tensorObj ... ...` to unfold.
-  • Step (d)'s sheaf-level right-whisker: verify `(toPresheafOfModules X).map` exists
-    (it is the forgetful `SheafOfModules → PresheafOfModules` functor) before using it.
-  • If `(toPresheafOfModules X).map IH.hom` causes universe issues, build the inner
-    morphism at the presheaf level directly from the sorry body using `sheafification.map`.
--/
 /-- The tensor-power comparison isomorphism `L^⊗m ⊗ L^⊗m' ≅ L^⊗(m+m')` for the sheaf tensor
 power `tensorPow` (`lem:sheafTensorPow_add`, [Stacks, Tag 01CU]).
 
-Proof by induction on `m`: the base case `m = 0` uses the left-unitor `tensorObjUnitIso`
-(already in file, axiom-clean); the inductive step uses `tensorObjAssoc` (above), the braiding
-`tensorBraiding` (in file), and sheaf-level right-whiskering of the inductive hypothesis.
-See the planner strategy comment above for the step-by-step construction and carrier-idiom
-checklist. -/
+Defined by recursion on the SECOND index `m'` (iter-023 root-cause refactor — the canonical
+`pow_add` orientation), which is **braiding-free**: both `tensorPow` and `Nat.add` grow on the
+right, so the freshly-added `L` stays at the right edge of source and target with no `tensorBraiding`
+and no `eqToIso` reindexer.  Base `m' = 0` (`m + 0 = m`, `rfl`) is the right unitor
+`tensorObjRightUnitor`; succ `m' = c+1` (`m + (c+1) = (m+c)+1`, `rfl`) is the inverse associator
+`tensorObjAssoc.symm` followed by the inductive comparison `μ_{m,c}` right-whiskered by `L`.
+The earlier first-index recursion forced a braiding (a definitional artifact); recursing on the
+second index eliminates it, making `tensorPowAdd_assoc` a pure braiding-free pentagon. -/
 noncomputable def tensorPowAdd (L : X.Modules) (m m' : ℕ) :
     tensorObj (tensorPow L m) (tensorPow L m') ≅ tensorPow L (m + m') :=
-  match m with
+  match m' with
   | 0 =>
-    -- Base case: the left unitor, reindexed along `0 + m' = m'`.
-    tensorObjUnitIso (tensorPow L m') ≪≫
-      eqToIso (congrArg (tensorPow L) (Nat.zero_add m').symm)
-  | (k + 1) =>
-    -- (a) associator, (b) braiding under the left factor, (c) inverse associator,
-    -- (d) inductive hypothesis whiskered by `L` on the right, (e) reindexing.
-    tensorObjAssoc (tensorPow L k) L (tensorPow L m') ≪≫
-      tensorObjWhiskerLeftIso (tensorPow L k) (tensorBraiding L (tensorPow L m')) ≪≫
-      (tensorObjAssoc (tensorPow L k) (tensorPow L m') L).symm ≪≫
-      tensorObjWhiskerRightIso (tensorPowAdd L k m') L ≪≫
-      eqToIso (congrArg (tensorPow L) (Nat.succ_add k m').symm)
+    -- Base case `m + 0 = m` (`rfl`): the right unitor on `L^{⊗m}`.
+    tensorObjRightUnitor (tensorPow L m)
+  | (c + 1) =>
+    -- Succ case `m + (c+1) = (m+c)+1` (`rfl`): inverse associator (regroup the freshly-added `L`
+    -- to the right edge) then the inductive comparison `μ_{m,c}` whiskered by `L` on the right.
+    -- NO braiding, NO `eqToIso`: both `tensorPow` and `Nat.add` grow on the right, so recursing on
+    -- the SECOND index keeps the new `L` at the right edge of source and target (canonical
+    -- `pow_add` orientation, `Mathlib.Algebra.Group.Defs`).
+    (tensorObjAssoc (tensorPow L m) (tensorPow L c) L).symm ≪≫
+      tensorObjWhiskerRightIso (tensorPowAdd L m c) L
 
 /-! ### Section components and index-equality transport
 (`def:sectionsCast`, `lem:sectionsCast_refl`, `lem:gradedMonoid_eq_of_cast`,
@@ -2935,82 +2815,89 @@ private lemma tensorObjAssoc_hom_sectionsMul (A B C : X.Modules)
   -- the ModuleCat associator reassociates the elementary tensor definitionally, so this is `rfl`.
   rfl
 
-/-- Canonical right-unit/braiding coherence in the inherited symmetric monoidal structure on
-`X.Modules`: the composite `α ≫ (a ◁ β) ≫ α⁻¹ ≫ (ρ ▷ m)` equals `ρ_{a⊗m}`.  This is the
-canonical core of the `μ_{n,0} = ρ` right-unit coherence of `tensorPowAdd`; it follows from the
-braiding–left-unitor coherence (`braiding_leftUnitor`) and the Mac Lane triangle. -/
-@[reassoc]
-private lemma canonical_runit_core (a m : X.Modules) :
-    (α_ a m (unitModule X)).hom ≫ (a ◁ (β_ m (unitModule X)).hom) ≫
-      (α_ a (unitModule X) m).inv ≫ ((ρ_ a).hom ▷ m) = (ρ_ (a ⊗ m)).hom := by
-  -- prove the `𝟙_`-form (where `braiding_leftUnitor`/`triangle` fire syntactically) and transfer
-  -- to the `unitModule X` form by defeq (`unitModule X = 𝟙_ X.Modules`).
-  have key : (α_ a m (𝟙_ X.Modules)).hom ≫ (a ◁ (β_ m (𝟙_ X.Modules)).hom) ≫
-      (α_ a (𝟙_ X.Modules) m).inv ≫ ((ρ_ a).hom ▷ m) = (ρ_ (a ⊗ m)).hom := by
-    have hβ : (β_ m (𝟙_ X.Modules)).hom = (ρ_ m).hom ≫ (λ_ m).inv := by
-      rw [← braiding_leftUnitor m]; simp
-    rw [hβ]; simp
-  exact key
-
 /-- Right-unit coherence of the tensor-power comparison family: the degree-`(n,0)` comparison
-`μ_{n,0}` is the right unitor.  (Uses `tensorPow L 0 = unitModule X` and `n + 0 = n`, both `rfl`, so
-the two sides share the type `tensorObj (tensorPow L n) (unitModule X) ≅ tensorPow L n`.)  Proved by
-induction on `n` mirroring the recursion of `tensorPowAdd`. -/
+`μ_{n,0}` is the right unitor.  After the iter-023 second-index refactor this is the literal base
+clause of `tensorPowAdd`, hence `rfl` (`lem:tensorPowAdd_zero_right`). -/
 private lemma tensorPowAdd_zero_right (L : X.Modules) (n : ℕ) :
-    tensorPowAdd L n 0 = tensorObjRightUnitor (tensorPow L n) := by
+    tensorPowAdd L n 0 = tensorObjRightUnitor (tensorPow L n) := rfl
+
+/-- Index-reindexing slide for the `tensorObjIso (L^·) L` family: an index equality `h : a = b`
+transports the comparison `(tensorObjIso (L^a) L).inv ≫ (eqToHom ▷ L) ≫ (tensorObjIso (L^b) L).hom`
+to the single reindexer `eqToHom` on `L^{·+1}`.  Proved by `subst` on the (fresh-variable) index
+equality.  Used to discharge the `0 + c = c` reindexing residue of the `tensorPowAdd_zero_left`
+succ case. -/
+private lemma tensorObjIso_succ_reindex (L : X.Modules) {a b : ℕ} (h : a = b) :
+    (tensorObjIso (tensorPow L a) L).inv ≫
+        eqToHom (congrArg (tensorPow L) h) ▷ L ≫ (tensorObjIso (tensorPow L b) L).hom
+      = eqToHom (congrArg (fun i => tensorObj (tensorPow L i) L) h) := by
+  subst h
+  simp
+
+/-- Left-unit coherence of the tensor-power comparison family (`lem:tensorPowAdd_zero_left`): the
+degree-`(0,n)` comparison `μ_{0,n}` is the left unitor, reindexed along `0 + n = n`.  After the
+iter-023 second-index refactor this is no longer the base clause (that role passed to
+`tensorPowAdd_zero_right`); it is proved by induction on `n` mirroring the new recursion.  The base
+case `n = 0` is the unit coherence `λ_𝟙 = ρ_𝟙` (`unitors_equal`) descended through sheafification;
+the succ case is the canonical left-unit triangle, discharged after the route-(b) `_eq` bridges by
+the `monoidal` tactic. -/
+private lemma tensorPowAdd_zero_left (L : X.Modules) (n : ℕ) :
+    tensorPowAdd L 0 n = tensorObjUnitIso (tensorPow L n) ≪≫
+      eqToIso (congrArg (tensorPow L) (Nat.zero_add n).symm) := by
   induction n with
   | zero =>
-    -- base: `μ_{0,0} = tensorObjUnitIso (unit) ≪≫ eqToIso` and the left unitor of the unit equals
-    -- its right unitor (`MonoidalCategory.unitors_equal`), descended through `sheafification`.
-    change tensorObjUnitIso (tensorPow L 0) ≪≫
-        eqToIso (congrArg (tensorPow L) (Nat.zero_add 0).symm)
-      = tensorObjRightUnitor (tensorPow L 0)
+    -- base: `μ_{0,0} = ρ_{𝟙}` (the new base clause) and `ρ_𝟙 = λ_𝟙` (`unitors_equal`), descended
+    -- through `sheafification`; the `eqToIso` along `0 + 0 = 0` is the identity.
     rw [Subsingleton.elim (congrArg (tensorPow L) (Nat.zero_add 0).symm)
         (rfl : tensorPow L 0 = tensorPow L (0 + 0)), eqToIso_refl, Iso.trans_refl]
-    change sheafification.mapIso (MonoidalCategory.leftUnitor (C := MonoidalPresheaf X)
+    change tensorObjRightUnitor (tensorPow L 0) = tensorObjUnitIso (tensorPow L 0)
+    change sheafification.mapIso (MonoidalCategory.rightUnitor (C := MonoidalPresheaf X)
           ((toPresheafOfModules X).obj (tensorPow L 0))) ≪≫ sheafificationCounitIso (tensorPow L 0)
-        = sheafification.mapIso (MonoidalCategory.rightUnitor (C := MonoidalPresheaf X)
+        = sheafification.mapIso (MonoidalCategory.leftUnitor (C := MonoidalPresheaf X)
           ((toPresheafOfModules X).obj (tensorPow L 0))) ≪≫ sheafificationCounitIso (tensorPow L 0)
     congr 2
     apply Iso.ext
-    exact MonoidalCategory.unitors_equal
-  | succ k ih =>
-    -- iter-009: rewire onto the inherited canonical structure via the bridge lemmas
-    -- (`tensorObjAssoc` is canonical `α_`; `tensorBraiding_eq`/`tensorObjRightUnitor_eq` and the
-    -- two whisker bridges rewrite the braiding/unitor/whiskerings to canonical `β_`/`ρ_`/`◁`/`▷`).
-    -- After bridging, `simp` cancels all the `tensorObjIso` bridge pairs (defeq across the
-    -- `LocalizedMonoidal`/`X.Modules` diamond), leaving the canonical right-unitor coherence
-    -- `canonical_runit_core` flanked by a single surviving bridge `tensorObjIso (L^k) L`, then
-    -- discharged by `canonical_runit_core` + right-unitor naturality + bridge cancellation.
-    rw [tensorPowAdd, ih, tensorObjRightUnitor_eq, tensorBraiding_eq,
-      tensorObjWhiskerLeftIso_eq, tensorObjWhiskerRightIso_eq, tensorObjRightUnitor_eq]
+    exact MonoidalCategory.unitors_equal.symm
+  | succ c ih =>
+    -- succ: unfold the new succ clause `μ_{0,c+1} = α⁻¹ ≪≫ (μ_{0,c} ▷ L)`, fold `ih`, bridge to
+    -- canonical `α_`/`λ_`/`▷`.  iter-023: this residual is **braiding-free** (left-unit triangle,
+    -- `MonoidalCategory.leftUnitor_tensor`), NOT a hexagon.
+    have hsucc : tensorPowAdd L 0 (c + 1) =
+        (tensorObjAssoc (tensorPow L 0) (tensorPow L c) L).symm ≪≫
+          tensorObjWhiskerRightIso (tensorPowAdd L 0 c) L := rfl
+    rw [hsucc, ih]
     apply Iso.ext
-    simp only [tensorObjAssoc, Iso.trans_hom, Iso.symm_hom, Iso.trans_inv, Iso.symm_inv,
+    simp only [tensorObjWhiskerRightIso_eq, tensorObjUnitIso_eq, tensorObjAssoc,
+      Iso.trans_hom, Iso.symm_hom, Iso.trans_inv, Iso.symm_inv,
       MonoidalCategory.whiskerLeftIso_hom, MonoidalCategory.whiskerRightIso_hom,
       MonoidalCategory.whiskerLeftIso_inv, MonoidalCategory.whiskerRightIso_inv,
-      MonoidalCategory.whiskerLeft_comp, Category.assoc,
-      Iso.hom_inv_id_assoc, MonoidalCategory.whiskerLeft_hom_inv_assoc]
-    -- defeq-matching `simp only` cancels the remaining `tensorObjIso` bridge pairs that the
-    -- previous syntactic pass cannot, leaving the canonical core flanked by `tensorObjIso (L^k) L`.
-    simp only [tensorPow_succ, tensorPow_zero, Nat.add_zero, MonoidalCategory.comp_whiskerRight,
-      eqToIso_refl, Iso.refl_hom, Category.comp_id, Category.assoc,
-      MonoidalCategory.hom_inv_whiskerRight_assoc, Iso.hom_inv_id_assoc,
-      MonoidalCategory.whiskerLeft_hom_inv_assoc, Iso.cancel_iso_inv_left]
-    rw [canonical_runit_core_assoc]
-    -- `(T.inv ▷ 𝟙) ≫ ρ ≫ T.hom = ρ`: ρ-naturality (`unitModule X = 𝟙_` absorbed by defeq on the
-    -- whiskered unit) then bridge cancellation `T.inv ≫ T.hom = 𝟙`.
-    have hnat : ((L.tensorPow k).tensorObjIso L).inv ▷ unitModule X ≫
-          (ρ_ (L.tensorPow k ⊗ L)).hom
-        = (ρ_ ((L.tensorPow k).tensorObj L)).hom ≫ ((L.tensorPow k).tensorObjIso L).inv :=
-      MonoidalCategory.rightUnitor_naturality _
-    rw [← Category.assoc, hnat, Category.assoc, Iso.inv_hom_id, Category.comp_id]
+      eqToIso.hom, eqToHom_map, Category.assoc,
+      Iso.hom_inv_id_assoc, MonoidalCategory.whiskerLeft_hom_inv_assoc,
+      MonoidalCategory.hom_inv_whiskerRight_assoc, Iso.cancel_iso_inv_left,
+      MonoidalCategory.comp_whiskerRight]
+    -- Telescope the `tensorObjIso` bridges; the `(B3.hom ▷ L) ≫ (B3.inv ▷ L)` pair cancels.  Residual:
+    --   `B1.inv ≫ unit ◁ B2.inv ≫ α⁻¹ ≫ (λ_{L^c} ▷ L) ≫ (eqToHom_c ▷ L) ≫ B4.hom
+    --      = B1.inv ≫ (λ_{(L^c)⊗L}).hom ≫ eqToHom_{c+1}`  (B1=tensorObjIso unit ((L^c)⊗L),
+    --   B2=tensorObjIso (L^c) L, B4=tensorObjIso (L^{0+c}) L).  NO braiding.
+    simp only [tensorPow_zero, tensorPow_succ, MonoidalCategory.comp_whiskerRight, Category.assoc,
+      MonoidalCategory.hom_inv_whiskerRight_assoc]
+    -- CLOSE ROUTE (iter-023): `α⁻¹ ≫ (λ_{L^c} ▷ L) = λ_{(L^c)⊗L}` (`leftUnitor_tensor`), then
+    -- `unit ◁ B2.inv ≫ λ = λ ≫ B2.inv` (`leftUnitor_naturality`), cancel the common `λ`, leaving the
+    -- pure reindexer identity `B2.inv ≫ (eqToHom_c ▷ L) ≫ B4.hom = eqToHom_{c+1}` (holds by `0+c = c`).
+    have hlt : (α_ (unitModule X) (L.tensorPow c) L).inv ≫ (λ_ (L.tensorPow c)).hom ▷ L
+        = (λ_ (L.tensorPow c ⊗ L)).hom := by monoidal
+    rw [reassoc_of% hlt]
+    erw [MonoidalCategory.leftUnitor_naturality_assoc]
+    -- cancel the common `B1.inv ≫ λ` prefix; the residual is the pure `0 + c = c` reindexer.
+    congr 1
+    congr 1
+    exact tensorObjIso_succ_reindex L (Nat.zero_add c).symm
 
 /-- Left unitality of the graded section multiplication (`lem:sectionMul_coherent`, left-unit case):
 for `a ∈ Γ(X, L^{⊗n})`, transporting `1 · a` along `0 + n = n` gives `a`.
 Mirrors `TensorPower.one_mul`. -/
 theorem sectionsMul_one_mul (L : X.Modules) {n : ℕ} (a : sectionDeg L n) :
     sectionsCast L (zero_add n) (GradedMonoid.GMul.mul GradedMonoid.GOne.one a) = a := by
-  rw [gMul_mul_apply, gOne_one_eq]
+  rw [gMul_mul_apply, gOne_one_eq, tensorPowAdd_zero_left L n]
   -- `tensorPowAdd L 0 n = tensorObjUnitIso ≪≫ eqToIso`; the inner cast pairs with the outer
   -- `sectionsCast` and the two cancel (`sectionsCast_sectionsCast`), leaving the left unitor.
   change sectionsCast L (zero_add n) (sectionsCast L (Nat.zero_add n).symm
@@ -3028,13 +2915,11 @@ Mirrors `TensorPower.mul_one`. -/
 theorem sectionsMul_mul_one (L : X.Modules) {n : ℕ} (a : sectionDeg L n) :
     sectionsCast L (add_zero n) (GradedMonoid.GMul.mul a GradedMonoid.GOne.one) = a := by
   rw [gMul_mul_apply, gOne_one_eq]
-  -- The right-unit coherence of the comparison family: the degree-`(n,0)` comparison is the
-  -- right unitor.  Both sides have type `tensorObj (L^{⊗n}) (unitModule X) ≅ tensorPow L (n+0)`
-  -- (using `tensorPow L 0 = unitModule X` and `n + 0 = n`).  This is proved by induction on `n`
-  -- mirroring the recursion of `tensorPowAdd` (base = the unit/left–right-unitor coherence on the
-  -- monoidal unit; step = the triangle identity relating the associator, braiding and unitor,
-  -- descended from the presheaf symmetric monoidal coherence through sheafification).  The single
-  -- remaining gap of `sectionsMul_mul_one`.
+  -- The right-unit coherence of the comparison family: the degree-`(n,0)` comparison IS the right
+  -- unitor.  After the iter-023 second-index refactor this is the literal `m' = 0` base clause of
+  -- `tensorPowAdd`, so `tensorPowAdd L n 0 = tensorObjRightUnitor (tensorPow L n)` holds by `rfl`
+  -- (`tensorPowAdd_zero_right`) — NO induction, NO braiding, NO triangle.  The degreewise statement
+  -- then follows from `tensorObjRightUnitor_hom_sectionsMul` (axiom-clean) + `sectionsCast_self`.
   have hμn0 : tensorPowAdd L n 0 = tensorObjRightUnitor (tensorPow L n) :=
     tensorPowAdd_zero_right L n
   have hinner : ((tensorPowAdd L n 0).hom.val.app (Opposite.op ⊤)).hom
@@ -3061,6 +2946,90 @@ private lemma tensorObjIso_tensorPowAdd_reindex (L : X.Modules) (m' m'' : ℕ) {
   subst hs
   simp
 
+/-- Definitional succ-clause of the comparison `μ = tensorPowAdd` (the second-index `(c+1)`-branch
+of the iter-023 refactored recursion), packaged as a rewrite lemma.  `rfl`. -/
+private lemma tensorPowAdd_succ (L : X.Modules) (m c : ℕ) :
+    tensorPowAdd L m (c + 1) =
+      (tensorObjAssoc (tensorPow L m) (tensorPow L c) L).symm ≪≫
+      tensorObjWhiskerRightIso (tensorPowAdd L m c) L := rfl
+
+/-- Right-whiskering by a tensor-object factors through the associator (hand-built analogue of the
+canonical `MonoidalCategory.whiskerRight_tensor`): `e ▷ (A ⊗ B) = α⁻¹ ≪≫ ((e ▷ A) ▷ B) ≪≫ α`.  This
+is the iso-level distribution used to fold the inductive hypothesis in the succ case of
+`tensorPowAdd_assoc` (it exposes the single right-whisker `WR(e) A` that `ih` consumes).  Proved by
+the route-(b) bridge recipe + the canonical `whiskerRight_tensor`. -/
+private lemma tensorObjWhiskerRightIso_tensorObj {F F' : X.Modules} (e : F ≅ F')
+    (A B : X.Modules) :
+    tensorObjWhiskerRightIso e (tensorObj A B)
+      = (tensorObjAssoc F A B).symm ≪≫
+          tensorObjWhiskerRightIso (tensorObjWhiskerRightIso e A) B ≪≫ tensorObjAssoc F' A B := by
+  apply Iso.ext
+  simp only [tensorObjWhiskerRightIso_eq, tensorObjAssoc, Iso.trans_hom, Iso.symm_hom,
+    Iso.trans_inv, Iso.symm_inv, MonoidalCategory.whiskerRightIso_hom,
+    MonoidalCategory.whiskerRightIso_inv, MonoidalCategory.whiskerLeftIso_hom,
+    MonoidalCategory.whiskerLeftIso_inv, Category.assoc, MonoidalCategory.comp_whiskerRight,
+    Iso.hom_inv_id_assoc, MonoidalCategory.hom_inv_whiskerRight_assoc,
+    MonoidalCategory.whiskerLeft_hom_inv_assoc, Iso.cancel_iso_inv_left]
+  -- canonical `whiskerRight_tensor` (regroup `(e ▷ A) ▷ B` to `e ▷ (A⊗B)`), then `whisker_exchange`
+  -- slides `e ▷ -` past the bridge `T = tensorObjIso A B`, which cancels (`Iso.inv_hom_id`).
+  rw [← MonoidalCategory.whiskerRight_tensor_assoc]
+  rw [← MonoidalCategory.whisker_exchange_assoc]
+  rw [← MonoidalCategory.whiskerLeft_comp_assoc, Iso.inv_hom_id,
+    MonoidalCategory.whiskerLeft_id, Category.id_comp]
+
+/-- **Generic-`M` core of the succ-case canonical pentagon residual of `tensorPowAdd_assoc`.**
+Stated over an arbitrary monoidal category `M` so that all `≫`/`▷`/`◁`/`α_` resolve to a single
+uniform category instance (no `LocalizedMonoidal`/`X.Modules` comp-instance diamond), making the
+fold + cancellation + associator-naturality simp set fire.  Plugged into the succ branch by `exact`
+(the instance diamond is `rfl`-defeq, so `exact`'s `isDefEq` bridges it; cf.
+`tensorObjAssoc_associator_counit_coherence`).  `foldhyp` is the whiskered inductive hypothesis
+`ihRh`; `hμ5` is the second-index succ-unfold of the right comparison atom `μ_{m,m'+(c+1)}`.  The
+proof folds `foldhyp` (after cancelling its `iABCL.inv` epi prefix), substitutes `hμ5`, telescopes
+the bridge `hom`/`inv` pairs, and closes the residual associator-naturality square with one
+`associator_inv_naturality_left` slide + `whisker_assoc`/`whisker_exchange` + `monoidal`. -/
+private lemma tensorPowAdd_assoc_succ_core
+    {M : Type*} [Category M] [MonoidalCategory M]
+    {a b cc l ab abc bc r Pab Pcl Pbc Pbcl Pabc Q8
+      Q1 Q2 Q3 Q4 Q5 Q6 Q7 Q9 Q10 : M}
+    (iAB_CL : Pab ⊗ Pcl ≅ Q1) (iCL : cc ⊗ l ≅ Pcl)
+    (iAB_C : Pab ⊗ cc ≅ Pabc) (iab_C : ab ⊗ cc ≅ Q2) (iab_CL : ab ⊗ Pcl ≅ Q3)
+    (iABC_L : abc ⊗ l ≅ Q4) (iR_L : r ⊗ l ≅ Q5)
+    (iAB : a ⊗ b ≅ Pab) (iB_CL : b ⊗ Pcl ≅ Pbcl) (iB_C : b ⊗ cc ≅ Pbc)
+    (iBC_L : bc ⊗ l ≅ Q6) (iA_S : a ⊗ Q6 ≅ Q7)
+    (iABCL : Pabc ⊗ l ≅ Q8) (iA_BC : a ⊗ Pbc ≅ Q9) (iA_bc : a ⊗ bc ≅ Q10)
+    (μ1 : Pab ⟶ ab) (μ2 : Q2 ⟶ abc) (μ3 : Q10 ⟶ r) (μ4 : Pbc ⟶ bc) (μ5 : Q7 ⟶ Q5)
+    (e : abc ⟶ r)
+    (foldhyp :
+      iABCL.inv ≫ (iAB_C.inv ≫ μ1 ▷ cc ≫ iab_C.hom) ▷ l ≫ μ2 ▷ l ≫ e ▷ l ≫ iR_L.hom
+        = iABCL.inv ≫ (iAB_C.inv ≫ iAB.inv ▷ cc ≫ (α_ a b cc).hom ≫ a ◁ iB_C.hom ≫ iA_BC.hom) ▷ l
+            ≫ (iA_BC.inv ≫ a ◁ μ4 ≫ iA_bc.hom) ▷ l ≫ μ3 ▷ l ≫ iR_L.hom)
+    (hμ5 : iA_S.hom ≫ μ5
+        = a ◁ iBC_L.inv ≫ (α_ a bc l).inv ≫ iA_bc.hom ▷ l ≫ μ3 ▷ l ≫ iR_L.hom) :
+    iAB_CL.inv ≫ Pab ◁ iCL.inv ≫ (α_ Pab cc l).inv ≫ iAB_C.hom ▷ l
+        ≫ (iAB_C.inv ≫ μ1 ▷ cc ≫ iab_C.hom) ▷ l ≫ iab_C.inv ▷ l ≫ (α_ ab cc l).hom
+        ≫ ab ◁ iCL.hom ≫ iab_CL.hom
+        ≫ (iab_CL.inv ≫ ab ◁ iCL.inv ≫ (α_ ab cc l).inv ≫ iab_C.hom ▷ l ≫ μ2 ▷ l ≫ iABC_L.hom)
+        ≫ iABC_L.inv ≫ e ▷ l ≫ iR_L.hom
+      = iAB_CL.inv ≫ iAB.inv ▷ Pcl ≫ (α_ a b Pcl).hom ≫ a ◁ iB_CL.hom
+        ≫ a ◁ (iB_CL.inv ≫ b ◁ iCL.inv ≫ (α_ b cc l).inv ≫ iB_C.hom ▷ l ≫ μ4 ▷ l ≫ iBC_L.hom)
+        ≫ iA_S.hom ≫ μ5 := by
+  rw [hμ5]
+  have foldhyp' := (cancel_epi iABCL.inv).mp foldhyp
+  simp only [Category.assoc, Iso.hom_inv_id_assoc,
+    MonoidalCategory.whiskerLeft_hom_inv_assoc, MonoidalCategory.inv_hom_whiskerRight_assoc]
+  rw [foldhyp']
+  simp only [Category.assoc, MonoidalCategory.comp_whiskerRight, MonoidalCategory.whiskerLeft_comp,
+    MonoidalCategory.hom_inv_whiskerRight_assoc,
+    MonoidalCategory.whiskerLeft_hom_inv_assoc]
+  rw [← MonoidalCategory.associator_inv_naturality_left_assoc]
+  simp only [Category.assoc, MonoidalCategory.whisker_assoc, MonoidalCategory.whisker_exchange_assoc]
+  monoidal
+
+-- The final `exact tensorPowAdd_assoc_succ_core (M := LocalizedMonoidal …) …` in the succ branch
+-- discharges the canonical pentagon via a head-aligned `isDefEq` across the `instCategory`/
+-- `LocalizedMonoidal` rfl-diamond; pinning `M` makes it short-circuit, but it still recurses past the
+-- default `maxRecDepth = 512` (a stack-depth bound, NOT the forbidden heartbeat bump).
+set_option maxRecDepth 4000 in
 /-- **Associativity constraint for the tensor-power comparison** (`lem:tensorPowAdd_assoc`): the
 two bracketings of `L^⊗m ⊗ L^⊗m' ⊗ L^⊗m''` into `L^⊗(m+m'+m'')` agree:
 `(μ_{m,m'} ▷ L^m'') ≫ μ_{m+m',m''}` (reindexed by `(m+m')+m'' = m+(m'+m'')`) equals
@@ -3078,133 +3047,251 @@ private lemma tensorPowAdd_assoc (L : X.Modules) (m m' m'' : ℕ) :
       = tensorObjAssoc (tensorPow L m) (tensorPow L m') (tensorPow L m'') ≪≫
         tensorObjWhiskerLeftIso (tensorPow L m) (tensorPowAdd L m' m'') ≪≫
         tensorPowAdd L m (m' + m'') := by
-  -- Canonical pentagon induction on `m` (SOUND ∀L).  Analogue of `tensorPowAdd_zero_right`'s
-  -- bridge-telescoping: rewrite the whiskerings to canonical `▷`/`◁` via `tensorObjWhiskerRightIso_eq`
-  -- / `tensorObjWhiskerLeftIso_eq`, cancel adjacent `tensorObjIso` bridge pairs with the full-defeq
-  -- `simp only` (`Iso.hom_inv_id_assoc` / `whiskerLeft_hom_inv_assoc` / `hom_inv_whiskerRight_assoc`),
-  -- leaving `MonoidalCategory.pentagon` of the inherited `monoidalCategory X.Modules`.
-  induction m with
+  -- iter-023 braiding-free pentagon induction on the LAST index `m''` (mirrors the refactored
+  -- second-index recursion of `tensorPowAdd`).  Both bracketings are composites of canonical
+  -- associators and right-whiskers ONLY — no braiding — so after the route-(b) `_eq` bridges rewrite
+  -- the hand-built constructs to canonical `α_`/`ρ_`/`λ_`/`▷`/`◁` and the `tensorObjIso` bridge pairs
+  -- telescope, the residual is the canonical pentagon, closed by `monoidal`.
+  induction m'' with
   | zero =>
-    -- `tensorPow 0 = unitModule X = 𝟙_`, `tensorPowAdd 0 X = tensorObjUnitIso ≪≫ eqToIso`.  Bridge the
-    -- hand-built unitor/whiskerings to canonical `λ_`/`◁`/`▷` (via `tensorObjUnitIso_eq` and the two
-    -- whisker bridges) and `tensorObjAssoc` to canonical `α_`.  PARTIAL: this `simp only` telescopes
-    -- the `tensorObjIso` bridge pairs and reduces the obligation to the explicit canonical unit-triangle
-    -- coherence relating `α_ (𝟙_) (L^m') (L^m'')` to `λ_` (`MonoidalCategory.triangle` /
-    -- `leftUnitor_tensor`), modulo the `0 + m' = m'` reindexing `eqToIso`s.  The residual is
-    -- diamond-free (all in `X.Modules` `≪≫`/`α_`/`λ_`), unlike ★.
-    simp only [tensorPowAdd, tensorObjWhiskerRightIso_eq, tensorObjWhiskerLeftIso_eq,
-      tensorObjUnitIso_eq]
+    -- base `m'' = 0`: `μ_{·,0} = ρ` (`tensorPowAdd_zero_right`, rfl); the `add_assoc _ _ 0`
+    -- reindexer is the identity.  The residual right-unit triangle / ρ-naturality closes by
+    -- `monoidal`.
+    rw [Subsingleton.elim (congrArg (tensorPow L) (add_assoc m m' 0))
+        (rfl : tensorPow L (m + m' + 0) = tensorPow L (m + (m' + 0))), eqToIso_refl, Iso.trans_refl]
     apply Iso.ext
-    simp only [tensorObjAssoc, Iso.trans_hom, Iso.symm_hom, MonoidalCategory.whiskerLeftIso_hom,
-      MonoidalCategory.whiskerRightIso_hom, Category.assoc, Iso.hom_inv_id_assoc,
-      Iso.cancel_iso_inv_left, tensorPow_zero]
-    -- Slide the two left-unitors out through the `tensorObjIso`/`tensorPowAdd` composite
-    -- (`leftUnitor_naturality`; `erw` bridges the `𝟙_ = unitModule X` head defeq), then collapse
-    -- `α_ 𝟙 ≫ λ_(⊗)` to `λ_ ▷` (the unit triangle).
-    erw [MonoidalCategory.leftUnitor_naturality_assoc,
-      MonoidalCategory.leftUnitor_naturality_assoc]
-    have htri : (α_ (𝟙_ X.Modules) (L.tensorPow m') (L.tensorPow m'')).hom ≫
-          (λ_ (L.tensorPow m' ⊗ L.tensorPow m'')).hom
-        = (λ_ (L.tensorPow m')).hom ▷ L.tensorPow m'' := by simp
-    erw [reassoc_of% htri]
-    -- Expand all right-whiskers; the `(bU.inv ≫ λ) ▷ Pm''` prefix is now common to both sides,
-    -- leaving exactly the `0 + m' = m'` reindexing tail discharged by the reindex helper.
-    simp only [MonoidalCategory.comp_whiskerRight, Category.assoc]
-    refine congrArg _ (congrArg _ ?_)
-    exact tensorObjIso_tensorPowAdd_reindex L m' m'' (Nat.zero_add m') (add_assoc 0 m' m'')
-      (Nat.zero_add (m' + m'')).symm
-  | succ k ih =>
-    -- Inductive step: `tensorPowAdd (k+1) X` unfolds (succ branch) to the 5-segment associator/
-    -- braiding/whisker composite.  After `tensorObjWhiskerRightIso_eq`/`tensorObjWhiskerLeftIso_eq`
-    -- bridge the whiskerings to canonical `▷`/`◁`, `ih` rewrites the inner `tensorPowAdd k _`, and the
-    -- adjacent `tensorObjIso` bridges telescope, the obligation collapses to a canonical
-    -- pentagon/hexagon coherence of the inherited monoidal structure (SOUND ∀L: both bracketings are
-    -- the SAME permutation of the `(k+1)+m'+m''` identical `L`-factors), the reindexing `eqToIso`s
-    -- matching the two ends.  Diamond-free (all in `X.Modules` canonical `≫`/`α_`/`β_`/`◁`/`▷`).
-    -- PARTIAL (iter-017): the verified expansion below rewrites BOTH sides to the canonical
-    -- bridge form (the same first move that closed the base case).  The remaining obligation is the
-    -- braided coherence relating the `(k+1)`-bracketing — which threads `tensorBraiding L (L^m')`
-    -- through `α_`/the `tensorObjIso (L^k) (-)` bridges — to the `k`-bracketing supplied by `ih`.
-    -- NEXT: `rw [ih]` (or its hom-level image) after telescoping the `tensorObjIso (L^k ⊗ L^m') L`
-    -- /`tensorObjIso (L^k) (L^m' ⊗ L)` bridge pairs straddling the braiding, then `MonoidalCategory`
-    -- `pentagon`/`hexagon_forward` + `whisker_exchange`; the `eqToIso` reindexers (`Nat.succ_add`,
-    -- `add_assoc`) discharge by the `tensorObjIso_tensorPowAdd_reindex`-style `subst` helper.
+    simp only [tensorPowAdd_zero_right, add_zero, tensorObjWhiskerRightIso_eq,
+      tensorObjWhiskerLeftIso_eq, tensorObjRightUnitor_eq, tensorObjAssoc, Iso.trans_hom,
+      Iso.symm_hom, MonoidalCategory.whiskerLeftIso_hom, MonoidalCategory.whiskerRightIso_hom,
+      Category.assoc, Iso.hom_inv_id_assoc, Iso.cancel_iso_inv_left]
+    -- cancel the unit-side `tensorObjIso` bridge pairs, then close by ρ-naturality on both sides
+    -- flanking the right-unit triangle (`htri`), and the surviving bridge `B = tensorObjIso (L^m) (L^m')`
+    -- cancels via `Iso.inv_hom_id`.  No braiding.
+    simp only [tensorPow_zero, MonoidalCategory.whiskerLeft_comp, Category.assoc,
+      Iso.hom_inv_id_assoc, MonoidalCategory.whiskerLeft_hom_inv_assoc]
+    -- `erw` bridges the `unitModule X = 𝟙_ X.Modules` head defeq that blocks plain `rw`.
+    erw [MonoidalCategory.rightUnitor_naturality]
+    have htri : (α_ (L.tensorPow m) (L.tensorPow m') (unitModule X)).hom ≫
+        L.tensorPow m ◁ (ρ_ (L.tensorPow m')).hom = (ρ_ (L.tensorPow m ⊗ L.tensorPow m')).hom := by
+      monoidal
+    rw [reassoc_of% htri]
+    -- second ρ-naturality slide (`_assoc` form: `ρ` is mid-chain) brings the bridge `B.inv` adjacent
+    -- to `B.hom` (`Iso.inv_hom_id_assoc`, matched up to the `m'+0 = m'` defeq by `erw`); the residual
+    -- `ρ ≫ μ_{m,m'} = ρ ≫ μ_{m,m'+0}` is `rfl` (`m'+0 = m'`).
+    erw [MonoidalCategory.rightUnitor_naturality_assoc, Iso.inv_hom_id_assoc]
+    rfl
+  | succ c ih =>
+    -- succ `m'' = c+1`.  iter-023 refactor CONFIRMED: this residual is **braiding-free** — the goal
+    -- below is built ENTIRELY from `tensorObjAssoc` (canonical `α_`), `tensorObjWhiskerRightIso`/
+    -- `tensorObjWhiskerLeftIso` and the folded `tensorPowAdd` atoms + `eqToIso` reindexers, with NO
+    -- `tensorBraiding` anywhere (the old first-index recursion forced a `β`; the second-index
+    -- recursion does not).  So the reverse signal (a reappearing braiding ⇒ refactor wrong) is ABSENT;
+    -- the obligation is the pure categorified-`pow_add` pentagon.
     --
-    -- iter-018 ADVANCE: the enhanced telescoping `simp only` below (adds `tensorBraiding_eq` and the
-    -- `.inv`-direction bridge/whisker lemmas `Iso.trans_inv`/`Iso.symm_inv`/`whiskerLeftIso_inv`/
-    -- `whiskerRightIso_inv` + the cancellation lemmas `Iso.hom_inv_id_assoc`/`whiskerLeft_hom_inv_assoc`
-    -- /`Iso.cancel_iso_inv_left`) rewrites BOTH sides fully to the canonical form: the braiding is now
-    -- the canonical `β_ L (L^m')` / `β_ L (L^{m'+m''})`, every `tensorObjAssoc` is expanded to its
-    -- `α_`+bridge form, and many adjacent `tensorObjIso` bridge pairs are already cancelled.  The
-    -- residual is the canonical braided-pentagon coherence on `L^k, L, L^m', L^m''` with the surviving
-    -- `tensorObjIso` bridges and the `tensorPowAdd k _` atoms (to be consumed by `ih`).
+    -- GROUNDWORK (compiles): unfold both second-index succ-clauses (`μ_{·,c+1} = α⁻¹ ≪≫ (μ_{·,c} ▷ L)`,
+    -- `tensorPowAdd_succ`), distribute the outer right-whisker over `L^{c+1} = L^c ⊗ L`
+    -- (`tensorObjWhiskerRightIso_tensorObj`, the new helper) and the left-whisker
+    -- (`tensorObjWhiskerLeftIso_trans`); `ihR` is `ih` whiskered `▷ L` and distributed.  After this the
+    -- goal LHS carries the adjacent pair `α'' ≪≫ α''.symm` (`α'' = tensorObjAssoc (L^{m+m'}) (L^c) L`)
+    -- whose cancellation exposes `WR(WR μ_{m,m'} (L^c)) L ≪≫ WR(μ_{m+m',c}) L`, i.e. the first two
+    -- factors of `ihR`'s LHS — the fold point.
     --
-    -- PRECISE REMAINING BLOCKER (iter-018, diagnosed via `lean_multi_attempt`):
-    --   (a) The leading segment `(tensorObjAssoc (L^k) L (L^m')).hom ▷ L^m''` does NOT distribute under
-    --       `MonoidalCategory.comp_whiskerRight` (verified: `rw [comp_whiskerRight_assoc]` reports
-    --       "pattern `(?f ≫ ?g) ▷ ?Z ≫ ?h` not found", and `rw [← comp_whiskerRight]` reports
-    --       "pattern `?f ▷ ?Z ≫ ?g ▷ ?Z` not found").  This is the comp/monoidal-struct diamond:
-    --       the `≫` *inside* this segment is the native `instCategory`-comp produced by `Iso.trans_hom`
-    --       on the hand-built `tensorObjAssoc`/`tensorObjIso` isos, whereas the canonical `▷` and the
-    --       `≫`s in the (already-distributed) tail are the `LocalizedMonoidal`-monoidal comp.  The
-    --       `hc`-bridge of `analogies/comp-instance-diamond.md` (keyed to either head) does NOT fire on
-    --       this junction (unlike on ★), so the leading `b(L^k, L⊗L^m').hom ▷ L^m''` cannot be cancelled
-    --       against the following `b(L^k, L⊗L^m').inv ▷ L^m''`.
-    --   (b) Even past (a), `ih` is NOT directly applicable: the goal carries the DOUBLE right-whisker
-    --       `(tensorPowAdd k m').hom ▷ L ▷ L^m''` (the new `L`-factor whiskered first, then `L^m''`),
-    --       while `ih`'s LHS supplies the SINGLE whisker `tensorObjWhiskerRightIso (tensorPowAdd k m')
-    --       (L^m'') ≪≫ tensorPowAdd (k+m') m''`.  Bridging the two needs the L-vs-`L^m''` whisker
-    --       interchange (`whisker_exchange`) + reassociation, AND `tensorPowAdd (k+1+m') m''` must first
-    --       be unfolded via `k+1+m' = (k+m')+1` to expose its `tensorPowAdd (k+m') m''` core.
-    --   ISO-LEVEL ROUTE for the next prover (prove BEFORE `Iso.ext`, keeping `tensorPowAdd k _` FOLDED
-    --   so `rw [ih]` fires on `tensorObjWhiskerRightIso (tensorPowAdd k m') (L^m'') ≪≫
-    --   tensorPowAdd (k+m') m''`): needs functoriality helpers
-    --     `tensorObjWhiskerRightIso (e ≪≫ f) G = tensorObjWhiskerRightIso e G ≪≫ tensorObjWhiskerRightIso f G`
-    --     (+ `_refl`, + `tensorObjWhiskerLeftIso` analogues).  WARNING (iter-018, verified): these
-    --   helpers are NOT diamond-free — at the presheaf level the `▷`/`◁ᵢ` carry the `MonoidalPresheaf X`
-    --   synonym head while `comp_whiskerRight (C := MonoidalPresheaf X)` / `whiskerLeftIso_trans
-    --   (C := MonoidalPresheaf X)` fail to match (the synonym head is lost after `dsimp`, exactly the
-    --   `MonoidalPresheaf X` vs `X.PresheafOfModules` analogue of (a)).  They must be proved by first
-    --   re-exposing the synonym head (e.g. restating via `sheafification.mapIso (whiskerRightIso …)` and
-    --   a `change`/`show` onto `MonoidalPresheaf X`-comp) — NOT by a plain `rw`/`simp`.  After the
-    --   helpers + `rw [ih]`, the residual canonical coherence closes by `hexagon_forward` + `pentagon`
-    --   + `whisker_exchange` (NO `β = id`), with `Nat.succ_add`/`add_assoc` reindexers via a `subst`
-    --   helper (mirror `tensorObjIso_tensorPowAdd_reindex`).
-    -- iter-020 route (b), STEP 2 (iso-level distribution — VERIFIED, real progress):
-    -- unfold `tensorPowAdd (k+1) m'` (succ branch) and distribute the outer right-whisker over the
-    -- 5-segment composite at ISO level, keeping `tensorPowAdd k m'` FOLDED.  Plain `rw` is blocked by
-    -- the `tensorPow (k+1) = tensorObj (tensorPow k) L` iota-defeq in the outer whisker's implicit
-    -- source (rw keyed-matches at reducible transparency), and `erw` over-unfolds `tensorObjAssoc`
-    -- into its `α_`/`tensorObjIso` pieces and times out — so we FIRST align the source with
-    -- `tensorPow_succ`, then `tensorObjWhiskerRightIso_trans` fires controlled (tensorObjAssoc stays
-    -- folded).
-    rw [show L.tensorPowAdd (k+1) m' =
-        tensorObjAssoc (L.tensorPow k) L (L.tensorPow m') ≪≫
-        tensorObjWhiskerLeftIso (L.tensorPow k) (tensorBraiding L (L.tensorPow m')) ≪≫
-        (tensorObjAssoc (L.tensorPow k) (L.tensorPow m') L).symm ≪≫
-        tensorObjWhiskerRightIso (L.tensorPowAdd k m') L ≪≫
-        eqToIso (congrArg (tensorPow L) (Nat.succ_add k m').symm) from rfl]
-    simp only [tensorPow_succ, tensorObjWhiskerRightIso_trans]
-    -- LHS now exposes the folded inductive atom in its 4th segment as the DOUBLE right-whisker
-    --   `tensorObjWhiskerRightIso (tensorObjWhiskerRightIso (tensorPowAdd k m') L) (L^m'')`
-    --   ( = `(tensorPowAdd k m' ▷ L) ▷ L^m''` canonically ),
-    -- whereas `ih`'s LHS supplies the SINGLE whisker `tensorObjWhiskerRightIso (tensorPowAdd k m')
-    -- (L^m'') ≪≫ tensorPowAdd (k+m') m''`.  PRECISE REMAINING BLOCKER (for the effort-breaker):
-    -- bridging the double whisker to `ih` is the genuine braided-pentagon residual — it needs
-    --   (i) also unfolding `tensorPowAdd (k+1+m') m''` via `k+1+m' = (k+m')+1` (`Nat.succ_add`,
-    --       an index rewrite that drags an `eqToIso` reindexer through the goal type), exposing its
-    --       own 4th segment `tensorObjWhiskerRightIso (tensorPowAdd (k+m') m'') L`;
-    --   (ii) at hom level (`apply Iso.ext`), interchanging `(− ▷ L) ▷ L^m''` with the trailing
-    --        `(tensorPowAdd (k+m') m'') ▷ L` via `whisker_exchange` + associator naturality so the
-    --        `(tensorPowAdd k m' ▷ L^m'') ≫ tensorPowAdd (k+m') m''` of `ih` becomes a literal
-    --        subterm, then `rw [ih]` (its `.hom` image);
-    --   (iii) discharging the surviving canonical coherence on `L^k, L, L^m', L^m''` by
-    --         `hexagon_forward` + `pentagon` + `whisker_exchange` (NO `β = id`), with the
-    --         `Nat.succ_add`/`add_assoc` reindexers via a `subst` helper mirroring
-    --         `tensorObjIso_tensorPowAdd_reindex`.
-    -- The 4 functoriality helpers + this controlled distribution are the STEP-1/STEP-2 deliverable;
-    -- STEP (ii)'s `whisker_exchange`-reassociation against `ih` is the remaining coherence atom.
-    sorry
+    -- REMAINING BLOCKER (iter-024, PRECISELY LOCALIZED via `lean_multi_attempt` — it is the
+    -- `LocalizedMonoidal`/`X.Modules` **comp-instance diamond**, NOT a dependent-`eqToIso` motive as the
+    -- iter-023 note guessed).  The reduction below is BANKED groundwork (every step verified to fire):
+    --   • `ihRh` = `ih` whiskered `▷ L` (`ihR`), pushed to `.hom` and canonicalised — relates the four
+    --     atoms `μ_{m,m'}`,`μ_{m+m',c}`,`μ_{m',c}`,`μ_{m,m'+c}` at hom level.  WORKS.
+    --   • `key` rewrites the trailing dependent `eqToIso (add_assoc m m' (c+1))` to
+    --     `WR(eqToIso (add_assoc m m' c), L)` (`tensorObjWhiskerRightIso_eqToIso` + `rfl`), making the
+    --     goal's trailing factor match `ihRh`'s.  WORKS (`rw [key]` fires).
+    --   • `Iso.ext` + the canonical `simp only` bridge set reduces the goal to a FULLY-CANONICAL hom
+    --     equation (only `α_`/`▷`/`◁`/`tensorObjIso`-bridges/`μ`-atom-homs/`eqToHom`).  WORKS.
+    -- At that point `ihRh.LHS` is a subterm of the goal LHS *modulo* the telescope
+    -- `Tr.hom ≫ Tr.inv` (`Tr = tensorObjIso (L^{m+m'}) ((L^c)⊗L)`) collapsing to `𝟙`.  That single
+    -- `Iso.hom_inv_id_assoc` CANNOT fire: the `≫` at that junction mixes the native `X.Modules`-comp
+    -- (from the `tensorObjWhiskerRightIso_tensorObj` distribution) with the `LocalizedMonoidal`-comp
+    -- (from the `tensorPowAdd_succ` unfold).  CONFIRMED dead for this junction: `rw`/`simp`/`simp [hc]`
+    -- (comp-bridge, both directions)/explicit-arg `Iso.trans_assoc` all fail to match `(?f ≫ ?g) ≫ ?h`
+    -- / `e.hom ≫ e.inv ≫ ?`; `erw [Iso.trans_assoc]` times out (>200k whnf — the diamond `isDefEq`).
+    -- This is the SAME diamond `tensorObjAssoc_eta_factor_sheaf` (this file, ~L2637) solved by
+    -- abstracting the whole canonical equation to a *generic* monoidal `M` and closing via `exact`
+    -- (whose `isDefEq` bridges the rfl-defeq diamond; `rw`/`simp` cannot).
+    -- NEXT (the path, fully scoped): state `private lemma tensorPowAdd_assoc_succ_core {M}[Cat M]
+    -- [Mon M] (…isos/μ-homs…) (foldhyp : <ihRh>) : <canonical hom equation> := by
+    --   simp only [Category.assoc, Iso.hom_inv_id_assoc, MonoidalCategory.whisker_exchange_assoc,
+    --     MonoidalCategory.associator_naturality_*]; rw [foldhyp]; … ; monoidal`,
+    -- then `exact tensorPowAdd_assoc_succ_core … ihRh` here.  NB the RHS atom `μ_{m,m'+(c+1)}` must be
+    -- unfolded via `tensorPowAdd_succ` (its index `m'+(c+1)` is DEFEQ to `(m'+c)+1`) to expose
+    -- `μ_{m,m'+c}` (the `ihRh` RHS atom) before the generic statement is read off.
+    have ihR := congrArg (fun i => tensorObjWhiskerRightIso i L) ih
+    simp only [tensorObjWhiskerRightIso_trans] at ihR
+    -- `ihRh` : the canonicalised hom image of the whiskered inductive hypothesis (the fold relation).
+    have ihRh : _ = _ := congrArg Iso.hom ihR
+    simp only [Iso.trans_hom, Iso.symm_hom, tensorObjWhiskerRightIso_eq, tensorObjWhiskerLeftIso_eq,
+      tensorObjAssoc, MonoidalCategory.whiskerRightIso_hom, MonoidalCategory.whiskerLeftIso_hom,
+      eqToIso.hom, Category.assoc, Iso.hom_inv_id_assoc] at ihRh
+    -- `key` : align the trailing dependent reindexer with `ihRh`'s `WR(eqToIso, L)` trailing factor.
+    have key : eqToIso (congrArg (tensorPow L) (add_assoc m m' (c + 1)))
+        = tensorObjWhiskerRightIso (eqToIso (congrArg (tensorPow L) (add_assoc m m' c))) L := by
+      rw [tensorObjWhiskerRightIso_eqToIso]; rfl
+    simp only [tensorPow_succ, tensorPowAdd_succ, tensorObjWhiskerRightIso_tensorObj,
+      tensorObjWhiskerLeftIso_trans, Iso.trans_assoc]
+    rw [key]
+    refine Iso.ext ?_
+    -- Fully-canonical hom goal: `α_`/`▷`/`◁`/`tensorObjIso`-bridges/`μ`-atom-homs/`eqToHom` only.
+    simp only [Iso.trans_hom, Iso.symm_hom, Iso.trans_inv, Iso.symm_inv,
+      tensorObjWhiskerRightIso_eq, tensorObjWhiskerLeftIso_eq, tensorObjAssoc,
+      MonoidalCategory.whiskerRightIso_hom, MonoidalCategory.whiskerLeftIso_hom,
+      MonoidalCategory.whiskerRightIso_inv, MonoidalCategory.whiskerLeftIso_inv,
+      eqToIso.hom, Category.assoc, Iso.hom_inv_id_assoc]
+    -- Canonical-pentagon residual.  Closed (iter-025) via the generic-`M` core
+    -- `tensorPowAdd_assoc_succ_core`, pinned to the `LocalizedMonoidal` synonym so `exact`'s `isDefEq`
+    -- bridges the `X.Modules` comp-instance diamond (`rw`/`simp`/`erw`/`hc` all confirmed dead here).
+    -- `ihRh` supplies `foldhyp`; `hμ5` is the second-index succ-unfold of the right comparison atom
+    -- `μ_{m,m'+(c+1)}` (`tensorPowAdd_succ` (DEFEQ index `m'+(c+1) = (m'+c)+1`) + `tensorObjAssoc`/
+    -- `tensorObjWhiskerRightIso_eq` telescoping, the two surviving `tensorObjIso` pairs cancelling).
+    have hdef : L.tensorPowAdd m (m' + (c + 1))
+        = (tensorObjAssoc (L.tensorPow m) (L.tensorPow (m' + c)) L).symm ≪≫
+          tensorObjWhiskerRightIso (L.tensorPowAdd m (m' + c)) L := rfl
+    have hμ5 : ((L.tensorPow m).tensorObjIso ((L.tensorPow (m' + c)).tensorObj L)).hom
+          ≫ (L.tensorPowAdd m (m' + (c + 1))).hom
+        = L.tensorPow m ◁ ((L.tensorPow (m' + c)).tensorObjIso L).inv
+          ≫ (α_ (L.tensorPow m) (L.tensorPow (m' + c)) L).inv
+          ≫ ((L.tensorPow m).tensorObjIso (L.tensorPow (m' + c))).hom ▷ L
+          ≫ (L.tensorPowAdd m (m' + c)).hom ▷ L
+          ≫ ((L.tensorPow (m + (m' + c))).tensorObjIso L).hom := by
+      rw [hdef]
+      simp only [tensorObjAssoc, tensorObjWhiskerRightIso_eq, Iso.trans_hom, Iso.symm_hom,
+        Iso.trans_inv, Iso.symm_inv, MonoidalCategory.whiskerRightIso_hom,
+        MonoidalCategory.whiskerRightIso_inv, MonoidalCategory.whiskerLeftIso_inv, Category.assoc,
+        Iso.hom_inv_id_assoc]
+      exact Iso.hom_inv_id_assoc _ _
+    exact tensorPowAdd_assoc_succ_core
+      (M := LocalizedMonoidal (sheafificationMon X) (sheafificationW X) (localizationUnitIso X))
+      (iAB_CL :=
+        ((L.tensorPow m).tensorObj (L.tensorPow m')).tensorObjIso ((L.tensorPow c).tensorObj L))
+      (iCL := (L.tensorPow c).tensorObjIso L)
+      (iab_CL := (L.tensorPow (m + m')).tensorObjIso ((L.tensorPow c).tensorObj L))
+      (iABC_L := (L.tensorPow (m + m' + c)).tensorObjIso L)
+      (iB_CL := (L.tensorPow m').tensorObjIso ((L.tensorPow c).tensorObj L))
+      (foldhyp := ihRh) (hμ5 := hμ5)
+
+/-- **Right-whisker naturality of the section product** (`lem:sectionsMul_whiskerRight_natural`),
+iso form.  General-morphism analogue of `sectionsMul_whiskerRight_unit` (which is the special case
+`e = η`): for an iso `e : F ≅ F'`, sliding `Γ(e.hom)` out of the first tensor factor of the outer
+`sectionsMul` turns it into the whiskered comparison `Γ((tensorObjWhiskerRightIso e G).hom)`.
+Proved exactly like `tensorBraiding_hom_sectionsMul`: by `η`-naturality of the sheafification unit
+along the *presheaf* right-whiskering `(toPresheaf e.hom) ▷_p (toPresheaf G)` (whose sheafification
+IS `(tensorObjWhiskerRightIso e G).hom` by `rfl`), plus the objectwise whisker formula at the top
+open (`x ⊗ y ↦ Γ(e.hom)(x) ⊗ y`, `rfl`).  The slide used in the associativity leg of
+`sectionsMul_mul_assoc` to move an inner `Γ(μ)` out of the first factor. -/
+private lemma sectionsMul_whiskerRight_natural {F F' : X.Modules} (e : F ≅ F') (G : X.Modules)
+    (x : ↥(F.val.obj (Opposite.op ⊤))) (y : ↥(G.val.obj (Opposite.op ⊤))) :
+    (sectionsMul F' G).hom
+        (((e.hom.val.app (Opposite.op ⊤)).hom x)
+          ⊗ₜ[(X.sheaf.obj ⋙ forget₂ CommRingCat RingCat).obj (Opposite.op ⊤)] y)
+      = ((tensorObjWhiskerRightIso e G).hom.val.app (Opposite.op ⊤)).hom
+          ((sectionsMul F G).hom
+            (x ⊗ₜ[(X.sheaf.obj ⋙ forget₂ CommRingCat RingCat).obj (Opposite.op ⊤)] y)) := by
+  -- η-naturality along the presheaf right-whiskering of `toPresheaf e.hom` by `toPresheaf G`.
+  have hmor :
+      (PresheafOfModules.sheafificationAdjunction (𝟙 X.ringCatSheaf.obj)).unit.app
+          (MonoidalCategory.tensorObj (C := MonoidalPresheaf X)
+            ((toPresheafOfModules X).obj F) ((toPresheafOfModules X).obj G))
+        ≫ (tensorObjWhiskerRightIso e G).hom.val
+      = (MonoidalCategory.whiskerRight (C := MonoidalPresheaf X)
+            ((toPresheafOfModules X).map e.hom) ((toPresheafOfModules X).obj G))
+        ≫ (PresheafOfModules.sheafificationAdjunction (𝟙 X.ringCatSheaf.obj)).unit.app
+            (MonoidalCategory.tensorObj (C := MonoidalPresheaf X)
+              ((toPresheafOfModules X).obj F') ((toPresheafOfModules X).obj G)) := by
+    have e1 : (tensorObjWhiskerRightIso e G).hom.val
+        = (SheafOfModules.forget X.ringCatSheaf
+              ⋙ PresheafOfModules.restrictScalars (𝟙 X.ringCatSheaf.obj)).map
+            ((PresheafOfModules.sheafification (𝟙 X.ringCatSheaf.obj)).map
+              (MonoidalCategory.whiskerRight (C := MonoidalPresheaf X)
+                ((toPresheafOfModules X).map e.hom) ((toPresheafOfModules X).obj G))) :=
+      rfl
+    rw [e1]
+    exact ((PresheafOfModules.sheafificationAdjunction (𝟙 X.ringCatSheaf.obj)).unit.naturality
+      (MonoidalCategory.whiskerRight (C := MonoidalPresheaf X)
+        ((toPresheafOfModules X).map e.hom) ((toPresheafOfModules X).obj G))).symm
+  -- The presheaf right-whisker at the top open: `x ⊗ y ↦ Γ(e.hom)(x) ⊗ y`.
+  have hw : ((MonoidalCategory.whiskerRight (C := MonoidalPresheaf X)
+        ((toPresheafOfModules X).map e.hom) ((toPresheafOfModules X).obj G)).app
+          (Opposite.op ⊤)).hom
+        (x ⊗ₜ[(X.sheaf.obj ⋙ forget₂ CommRingCat RingCat).obj (Opposite.op ⊤)] y)
+      = (((e.hom.val.app (Opposite.op ⊤)).hom x)
+          ⊗ₜ[(X.sheaf.obj ⋙ forget₂ CommRingCat RingCat).obj (Opposite.op ⊤)] y :
+          ↥(MonoidalCategory.tensorObj (C := MonoidalPresheaf X)
+            ((toPresheafOfModules X).obj F') ((toPresheafOfModules X).obj G)
+              |>.obj (Opposite.op ⊤))) :=
+    rfl
+  -- Evaluate the morphism identity `hmor` at the top open on `x ⊗ y`.
+  have key := congrArg
+    (fun (φ : MonoidalCategory.tensorObj (C := MonoidalPresheaf X)
+          ((toPresheafOfModules X).obj F) ((toPresheafOfModules X).obj G)
+        ⟶ (tensorObj F' G).val) =>
+      (φ.app (Opposite.op ⊤)).hom
+        (x ⊗ₜ[(X.sheaf.obj ⋙ forget₂ CommRingCat RingCat).obj (Opposite.op ⊤)] y)) hmor
+  exact ((congrArg (sectionsMul F' G).hom hw).symm).trans key.symm
+
+/-- **Left-whisker naturality of the section product** (`lem:sectionsMul_whiskerLeft_natural`),
+iso form.  General-morphism analogue of `sectionsMul_whiskerLeft_unit`: for an iso `e : G ≅ G'`,
+sliding `Γ(e.hom)` out of the second tensor factor of the outer `sectionsMul` turns it into the
+whiskered comparison `Γ((tensorObjWhiskerLeftIso F e).hom)`.  Left-handed mirror of
+`sectionsMul_whiskerRight_natural`: η-naturality along the presheaf left-whiskering
+`(toPresheaf F) ◁_p (toPresheaf e.hom)`, plus the objectwise whisker formula
+(`x ⊗ y ↦ x ⊗ Γ(e.hom)(y)`).  The slide used in the associativity leg of `sectionsMul_mul_assoc`
+to move an inner `Γ(μ)` out of the second factor. -/
+private lemma sectionsMul_whiskerLeft_natural (F : X.Modules) {G G' : X.Modules} (e : G ≅ G')
+    (x : ↥(F.val.obj (Opposite.op ⊤))) (y : ↥(G.val.obj (Opposite.op ⊤))) :
+    (sectionsMul F G').hom
+        (x ⊗ₜ[(X.sheaf.obj ⋙ forget₂ CommRingCat RingCat).obj (Opposite.op ⊤)]
+          ((e.hom.val.app (Opposite.op ⊤)).hom y))
+      = ((tensorObjWhiskerLeftIso F e).hom.val.app (Opposite.op ⊤)).hom
+          ((sectionsMul F G).hom
+            (x ⊗ₜ[(X.sheaf.obj ⋙ forget₂ CommRingCat RingCat).obj (Opposite.op ⊤)] y)) := by
+  -- η-naturality along the presheaf left-whiskering of `toPresheaf e.hom` by `toPresheaf F`.
+  have hmor :
+      (PresheafOfModules.sheafificationAdjunction (𝟙 X.ringCatSheaf.obj)).unit.app
+          (MonoidalCategory.tensorObj (C := MonoidalPresheaf X)
+            ((toPresheafOfModules X).obj F) ((toPresheafOfModules X).obj G))
+        ≫ (tensorObjWhiskerLeftIso F e).hom.val
+      = (MonoidalCategory.whiskerLeft (C := MonoidalPresheaf X)
+            ((toPresheafOfModules X).obj F) ((toPresheafOfModules X).map e.hom))
+        ≫ (PresheafOfModules.sheafificationAdjunction (𝟙 X.ringCatSheaf.obj)).unit.app
+            (MonoidalCategory.tensorObj (C := MonoidalPresheaf X)
+              ((toPresheafOfModules X).obj F) ((toPresheafOfModules X).obj G')) := by
+    have e1 : (tensorObjWhiskerLeftIso F e).hom.val
+        = (SheafOfModules.forget X.ringCatSheaf
+              ⋙ PresheafOfModules.restrictScalars (𝟙 X.ringCatSheaf.obj)).map
+            ((PresheafOfModules.sheafification (𝟙 X.ringCatSheaf.obj)).map
+              (MonoidalCategory.whiskerLeft (C := MonoidalPresheaf X)
+                ((toPresheafOfModules X).obj F) ((toPresheafOfModules X).map e.hom))) :=
+      rfl
+    rw [e1]
+    exact ((PresheafOfModules.sheafificationAdjunction (𝟙 X.ringCatSheaf.obj)).unit.naturality
+      (MonoidalCategory.whiskerLeft (C := MonoidalPresheaf X)
+        ((toPresheafOfModules X).obj F) ((toPresheafOfModules X).map e.hom))).symm
+  -- The presheaf left-whisker at the top open: `x ⊗ y ↦ x ⊗ Γ(e.hom)(y)`.
+  have hw : ((MonoidalCategory.whiskerLeft (C := MonoidalPresheaf X)
+        ((toPresheafOfModules X).obj F) ((toPresheafOfModules X).map e.hom)).app
+          (Opposite.op ⊤)).hom
+        (x ⊗ₜ[(X.sheaf.obj ⋙ forget₂ CommRingCat RingCat).obj (Opposite.op ⊤)] y)
+      = (x ⊗ₜ[(X.sheaf.obj ⋙ forget₂ CommRingCat RingCat).obj (Opposite.op ⊤)]
+          ((e.hom.val.app (Opposite.op ⊤)).hom y) :
+          ↥(MonoidalCategory.tensorObj (C := MonoidalPresheaf X)
+            ((toPresheafOfModules X).obj F) ((toPresheafOfModules X).obj G')
+              |>.obj (Opposite.op ⊤))) :=
+    rfl
+  -- Evaluate the morphism identity `hmor` at the top open on `x ⊗ y`.
+  have key := congrArg
+    (fun (φ : MonoidalCategory.tensorObj (C := MonoidalPresheaf X)
+          ((toPresheafOfModules X).obj F) ((toPresheafOfModules X).obj G)
+        ⟶ (tensorObj F G').val) =>
+      (φ.app (Opposite.op ⊤)).hom
+        (x ⊗ₜ[(X.sheaf.obj ⋙ forget₂ CommRingCat RingCat).obj (Opposite.op ⊤)] y)) hmor
+  exact ((congrArg (sectionsMul F G').hom hw).symm).trans key.symm
 
 /-- Associativity of the graded section multiplication (`lem:sectionMul_coherent`, associativity):
 transporting `(a · b) · c` along `(na + nb) + nc = na + (nb + nc)` gives `a · (b · c)`.
@@ -3216,25 +3303,188 @@ theorem sectionsMul_mul_assoc (L : X.Modules) {na nb nc : ℕ}
       GradedMonoid.GMul.mul a (GradedMonoid.GMul.mul b c) := by
   -- Unfold the degreewise multiplication on both sides to `Γ(μ) ∘ sectionsMul`.
   simp only [gMul_mul_apply]
-  -- TRUE for arbitrary `L` (associativity of the tensor-algebra product), so — unlike
-  -- `sectionsMul_mul_comm` — this is a genuine difficulty, not an impossibility.  The goal is the
-  -- section-level associativity, which combines THREE ingredients:
-  --   (1) `tensorObjAssoc_hom_sectionsMul` (B5, above) — `Γ(α)` reassociates the iterated
-  --       `sectionsMul` factors `(a·b)·c ↦ a·(b·c)` at the level of `tensorObj`.  NOW ASSEMBLED
-  --       (iter-012): proven from B1 `presheafAssociator_top_apply` + B2 `sectionsMul_whiskerRight_unit`
-  --       + B3 `sectionsMul_whiskerLeft_unit` (both axiom-clean) + B4 `tensorObjAssoc_eta_factor`
-  --       (the morphism-level factorization, the single remaining sorry of that chain).
-  --   (2) `μ`-naturality of `sectionsMul` in each tensor factor — to slide the inner comparisons
-  --       `Γ(μ_{na,nb})` / `Γ(μ_{nb,nc})` past the outer `sectionsMul (L^{na+nb}) (L^nc)` /
-  --       `sectionsMul (L^na) (L^{nb+nc})` (η-naturality of the lax structure under whiskering).
-  --       STILL TO BUILD — the whiskered-`sectionsMul` naturality leg, analogous to B2/B3 but with a
-  --       general comparison `Γ(μ)` in place of a single `η`.
-  --   (3) the iso-level `tensorPowAdd_assoc` (B6, pentagon constraint, `lem:tensorPowAdd_assoc`) —
-  --       NOW a NAMED atom (iter-012, typed sorry at the canonical pentagon); consumed here modulo
-  --       the reindexing `sectionsCast (add_assoc …)`, the analogue of `hμn0` in `sectionsMul_mul_one`.
-  -- Assembly mirrors `sectionsMul_mul_one`: ingredient (1)=B5 + (3)=B6 are named; only the (2) slide
-  -- remains to be built before this closes.  See task_results.
-  sorry
+  -- ASSEMBLY (iter-026).  TRUE for arbitrary `L` (associativity of the tensor-algebra product).
+  -- Three ingredients combine, mirroring `sectionsMul_mul_one`:
+  --   (2a) RIGHT slide `sectionsMul_whiskerRight_natural` (e = μ_{na,nb}): move the inner
+  --        `Γ(μ_{na,nb})` out of the first factor of the outer `sectionsMul (L^{na+nb}) (L^nc)`,
+  --        turning it into `Γ(WR(μ_{na,nb}) (L^nc))` applied to `sectionsMul (L^na⊗L^nb) (L^nc) …`.
+  rw [sectionsMul_whiskerRight_natural (tensorPowAdd L na nb) (tensorPow L nc)
+        ((sectionsMul (tensorPow L na) (tensorPow L nb)).hom
+          (a ⊗ₜ[(X.sheaf.obj ⋙ forget₂ CommRingCat RingCat).obj (Opposite.op ⊤)] b)) c]
+  --   (2b) LEFT slide `sectionsMul_whiskerLeft_natural` (e = μ_{nb,nc}): move the inner
+  --        `Γ(μ_{nb,nc})` out of the second factor of the outer `sectionsMul (L^na) (L^{nb+nc})`.
+  rw [sectionsMul_whiskerLeft_natural (tensorPow L na) (tensorPowAdd L nb nc) a
+        ((sectionsMul (tensorPow L nb) (tensorPow L nc)).hom
+          (b ⊗ₜ[(X.sheaf.obj ⋙ forget₂ CommRingCat RingCat).obj (Opposite.op ⊤)] c))]
+  --   (1) B5 `tensorObjAssoc_hom_sectionsMul` (backwards): recognise the RHS iterated section
+  --       product `sectionsMul (L^na) (L^nb⊗L^nc) (a ⊗ sectionsMul (L^nb)(L^nc)(b⊗c))` as
+  --       `Γ(α) (sectionsMul (L^na⊗L^nb)(L^nc) (sectionsMul (L^na)(L^nb)(a⊗b) ⊗ c))`.
+  rw [← tensorObjAssoc_hom_sectionsMul (tensorPow L na) (tensorPow L nb) (tensorPow L nc) a b c]
+  --   (3) B6 `tensorPowAdd_assoc` (the iso-level pentagon) applied at the common base element
+  --       `z = sectionsMul (L^na⊗L^nb)(L^nc) (sectionsMul (L^na)(L^nb)(a⊗b) ⊗ c)`.  Both sides of
+  --       the goal are now `Γ(·)(z)` for the two pentagon composites, equal up to defeq (functor
+  --       composition / `Iso.trans_hom` / `sectionsCast_apply` are all `rfl`).
+  exact congrArg
+    (fun (i : tensorObj (tensorObj (tensorPow L na) (tensorPow L nb)) (tensorPow L nc)
+        ≅ tensorPow L (na + (nb + nc))) =>
+      (i.hom.val.app (Opposite.op ⊤)).hom
+        ((sectionsMul (tensorObj (tensorPow L na) (tensorPow L nb)) (tensorPow L nc)).hom
+          ((sectionsMul (tensorPow L na) (tensorPow L nb)).hom
+              (a ⊗ₜ[(X.sheaf.obj ⋙ forget₂ CommRingCat RingCat).obj (Opposite.op ⊤)] b)
+            ⊗ₜ[(X.sheaf.obj ⋙ forget₂ CommRingCat RingCat).obj (Opposite.op ⊤)] c)))
+    (tensorPowAdd_assoc L na nb nc)
+
+/-! ## Project-local Mathlib supplement — the section graded semiring (∀L, Stacks 01CV)
+
+Assembly of the graded-ring structure on `m ↦ Γ(X, L^{⊗m})` from the now-complete coherence
+chain.  Field-for-field port of `Mathlib.LinearAlgebra.TensorPower.Basic`, with `sectionsCast`
+in place of `TensorPower.cast` and the three hypothesis-free clauses of `sectionMul_coherent`
+(`sectionsMul_one_mul`/`sectionsMul_mul_one`/`sectionsMul_mul_assoc`) as the graded-monoid axioms.
+No invertibility hypothesis — the resulting semiring is in general non-commutative (the free
+tensor algebra on `Γ(X,L)`).  The `GCommSemiring` upgrade for invertible `L` is built
+(`sectionGradedRing_gcommSemiring`, below). -/
+
+/-- **Graded monoid structure on the section components** (`lem:sectionGradedRing_gsemiring`,
+GMonoid layer): the family `m ↦ Γ(X, L^{⊗m})` is a `GradedMonoid.GMonoid` under the degreewise
+multiplication `Γ(μ_{m,m'}) ∘ sectionsMul` (the `GMul` instance) and the unit `1 ∈ Γ(X,𝒪_X)` (the
+`GOne` instance).  The three graded-monoid axioms are the hypothesis-free unit/associativity
+clauses `sectionsMul_one_mul`, `sectionsMul_mul_one`, `sectionsMul_mul_assoc`, each routed through
+`gradedMonoid_eq_of_cast` (transport-mediated equality → dependent-pair equality).  The graded
+power `gnpow` takes its Mathlib default (mirrors `TensorPower.Basic`, which omits it).
+Project-local: Mathlib has no graded monoid on sheaf-section tensor powers. -/
+@[reducible] noncomputable def sectionGradedRing_gmonoid (L : X.Modules) :
+    GradedMonoid.GMonoid (sectionDeg L) :=
+  { (inferInstance : GradedMonoid.GMul (sectionDeg L)),
+    (inferInstance : GradedMonoid.GOne (sectionDeg L)) with
+    one_mul := fun a => gradedMonoid_eq_of_cast L (zero_add a.1) (sectionsMul_one_mul L a.2)
+    mul_one := fun a => gradedMonoid_eq_of_cast L (add_zero a.1) (sectionsMul_mul_one L a.2)
+    mul_assoc := fun a b c =>
+      gradedMonoid_eq_of_cast L (add_assoc a.1 b.1 c.1) (sectionsMul_mul_assoc L a.2 b.2 c.2) }
+
+/-- **Graded semiring structure on the section components** (`lem:sectionGradedRing_gsemiring`,
+[Stacks, Tag 01CV]): for an *arbitrary* `L : X.Modules`, the family `m ↦ Γ(X, L^{⊗m})` carries a
+`DirectSum.GSemiring`, so `⊕_m Γ(X, L^{⊗m})` is a semiring.  Extends `sectionGradedRing_gmonoid`
+with the bilinearity clauses — the degreewise multiplication `Γ(μ_{i,j}) ∘ sectionsMul` is the
+composite of the bilinear `sectionsMul` (a `TensorProduct`-based map) with the linear comparison
+`Γ(μ_{i,j})`, so it annihilates `0` and distributes over `+` (via `TensorProduct.tmul_zero`/
+`zero_tmul`/`tmul_add`/`add_tmul` + `map_zero`/`map_add`) — and the natural-number coercion
+`n ↦ n • 1` (the `n`-fold sum of the degree-`0` unit).  No commutativity clause enters: this layer
+exists for every `L` and is in general non-commutative.  Project-local infrastructure (Stacks 01CV
+graded ring `⊕ Γ(X,L^{⊗n})`); the `GCommSemiring` upgrade for invertible `L` is built below
+(`sectionGradedRing_gcommSemiring`). -/
+@[reducible] noncomputable def sectionGradedRing_gsemiring (L : X.Modules) :
+    DirectSum.GSemiring (sectionDeg L) :=
+  { sectionGradedRing_gmonoid L with
+    -- Bilinearity: `Γ(μ) ∘ sectionsMul` is the composite of additive maps; push `0`/`+` through
+    -- the `TensorProduct` step then through the two `ModuleCat` morphisms (`erw` to cross the
+    -- `ModuleCat.Hom.hom`/`DFunLike` coercion of `tensorPowAdd`/`sectionsMul`).
+    mul_zero := fun a => by
+      simp only [gMul_mul_apply]; erw [TensorProduct.tmul_zero, map_zero, map_zero]
+    zero_mul := fun b => by
+      simp only [gMul_mul_apply]; erw [TensorProduct.zero_tmul, map_zero, map_zero]
+    mul_add := fun a b c => by
+      simp only [gMul_mul_apply]; erw [TensorProduct.tmul_add, map_add, map_add]
+    add_mul := fun a b c => by
+      simp only [gMul_mul_apply]; erw [TensorProduct.add_tmul, map_add, map_add]
+    natCast := fun n => n • (GradedMonoid.GOne.one : sectionDeg L 0)
+    natCast_zero := by rw [zero_nsmul]
+    natCast_succ := fun n => by rw [succ_nsmul] }
+
+/-- Sanity confirmation of the deliverable (mirrors `TensorPower.Basic`'s closing `example`):
+the section graded semiring assembles the genuine `Semiring` on `⊕_m Γ(X, L^{⊗m})`
+(`def:sectionGradedRing`, the underlying additive structure of `Γ_*(X,L)`), obtained from the
+`GSemiring` via `DirectSum.toSemiring`.  Stated as `Nonempty` to avoid registering a global
+instance (the carrier family depends on `L`) and to sidestep codegen on the noncomputable term. -/
+theorem sectionGradedRing_semiring_nonempty (L : X.Modules) :
+    Nonempty (Semiring (DirectSum ℕ (sectionDeg L))) :=
+  ⟨letI := sectionGradedRing_gsemiring L; inferInstance⟩
+
+/-- **Action comparison isomorphism for the twisted family** (launching pad for
+`lem:sectionGradedModule_gmodule`): the degree-`(i,j)` action lands `L^{⊗i} ⊗ (F ⊗ L^{⊗j})` in
+`F ⊗ L^{⊗(i+j)} = moduleTensorPow F L (i+j)` by reassociating and braiding the `L^{⊗i}` factor
+past `F`, then merging the two line-bundle blocks via `tensorPowAdd`.  The braiding here is between
+the *distinct* objects `L^{⊗i}` and `F`, so it always exists (symmetric monoidal structure) — no
+invertibility hypothesis is needed for the module layer.  Project-local. -/
+noncomputable def moduleTensorPowAdd (F L : X.Modules) (i j : ℕ) :
+    tensorObj (tensorPow L i) (moduleTensorPow F L j) ≅ moduleTensorPow F L (i + j) :=
+  (tensorObjAssoc (tensorPow L i) F (tensorPow L j)).symm ≪≫
+    tensorObjWhiskerRightIso (tensorBraiding (tensorPow L i) F) (tensorPow L j) ≪≫
+    tensorObjAssoc F (tensorPow L i) (tensorPow L j) ≪≫
+    tensorObjWhiskerLeftIso F (tensorPowAdd L i j)
+
+/-! ### Trivializing-open braiding component (helpers for `tensorBraiding_self_eq_id_of_isInvertible`)
+
+The braiding of an invertible sheaf with itself becomes the identity after sheafification.
+The descent is local-to-global: on each trivializing open of the basis carried by `IsInvertible L`,
+the presheaf braiding component is the `ModuleCat` braiding `TensorProduct.comm`, which is the
+identity on an invertible module. -/
+
+/-- The `ModuleCat` self-braiding hom is the concrete `TensorProduct.comm` swap (no invertibility
+needed): both send `m ⊗ₜ m'` to `m' ⊗ₜ m`.  Project-local helper. -/
+private lemma moduleCat_braiding_hom_eq_comm {R : Type u} [CommRing R]
+    (M : ModuleCat.{u} R) :
+    (β_ M M).hom = ModuleCat.ofHom (TensorProduct.comm R M M).toLinearMap := by
+  apply ModuleCat.hom_ext
+  apply TensorProduct.ext'
+  intro m m'
+  rfl
+
+/-- On an **invertible** module the `ModuleCat` self-braiding is the identity, since
+`TensorProduct.comm` is the identity (`Module.Invertible.tensorProductComm_eq_refl`).  The
+invertibility is taken as an explicit argument so the project's `Γ(X,U)`-vs-`R.obj U`
+ring-spelling is reconciled by definitional unification rather than instance search.
+Project-local helper. -/
+private lemma moduleCat_braiding_self_hom_eq_id {R : Type u} [CommRing R]
+    (M : ModuleCat.{u} R) (hM : Module.Invertible R M) :
+    (β_ M M).hom = 𝟙 (M ⊗ M) := by
+  haveI := hM
+  rw [moduleCat_braiding_hom_eq_comm, Module.Invertible.tensorProductComm_eq_refl]
+  rfl
+
+/-- **Presheaf self-braiding is the identity on a trivializing open.**  On an open `U` where the
+section module `Γ(L, U)` is an invertible `Γ(X, U)`-module, the component at `op U` of the presheaf
+self-braiding of `L` is the identity.  By `PresheafOfModules.braiding_hom_app` the component is the
+`ModuleCat` braiding, which is `𝟙` by `moduleCat_braiding_self_hom_eq_id`.  Project-local helper for
+`tensorBraiding_self_eq_id_of_isInvertible`. -/
+private lemma braiding_self_app_eq_id_of_invertible (L : X.Modules)
+    (U : TopologicalSpace.Opens X)
+    (h : Module.Invertible ↥(X.presheaf.obj (Opposite.op U))
+                           ↥(L.val.obj (Opposite.op U))) :
+    (BraidedCategory.braiding (C := MonoidalPresheaf X)
+        ((toPresheafOfModules X).obj L) ((toPresheafOfModules X).obj L)).hom.app (Opposite.op U)
+      = 𝟙 _ := by
+  erw [PresheafOfModules.braiding_hom_app]
+  exact moduleCat_braiding_self_hom_eq_id _ h
+
+/-- **Descent equation for the self-braiding** (helper for `tensorBraiding_self_eq_id_of_isInvertible`):
+the presheaf self-braiding `β^{pre}` composed with the sheafification unit equals the unit.  Both
+land in a sheaf, and they agree on the trivializing basis carried by `IsInvertible L` (where
+`β^{pre}` is the identity, `braiding_self_app_eq_id_of_invertible`), so they are equal by sheaf
+separatedness (`TopCat.Sheaf.hom_ext`).  Project-local. -/
+private lemma braiding_comp_unit_eq_unit_of_isInvertible (L : X.Modules) [IsInvertible L] :
+    (BraidedCategory.braiding (C := MonoidalPresheaf X)
+        ((toPresheafOfModules X).obj L) ((toPresheafOfModules X).obj L)).hom
+      ≫ (PresheafOfModules.sheafificationAdjunction (𝟙 X.ringCatSheaf.obj)).unit.app
+          (MonoidalCategory.tensorObj (C := MonoidalPresheaf X)
+            ((toPresheafOfModules X).obj L) ((toPresheafOfModules X).obj L))
+      = (PresheafOfModules.sheafificationAdjunction (𝟙 X.ringCatSheaf.obj)).unit.app
+          (MonoidalCategory.tensorObj (C := MonoidalPresheaf X)
+            ((toPresheafOfModules X).obj L) ((toPresheafOfModules X).obj L)) := by
+  obtain ⟨ι, U, hbasis, hinv⟩ := IsInvertible.exists_trivializing_basis (L := L)
+  apply (PresheafOfModules.toPresheaf _).map_injective
+  refine TopCat.Sheaf.hom_ext _
+    ((SheafOfModules.toSheaf X.ringCatSheaf).obj (tensorObj L L)) hbasis ?_
+  intro i
+  rw [Functor.map_comp, NatTrans.comp_app]
+  have hb : ((PresheafOfModules.toPresheaf (X.sheaf.obj ⋙ forget₂ CommRingCat RingCat)).map
+        (BraidedCategory.braiding (C := MonoidalPresheaf X)
+          ((toPresheafOfModules X).obj L) ((toPresheafOfModules X).obj L)).hom).app
+          (Opposite.op (U i)) = 𝟙 _ := by
+    ext x
+    erw [PresheafOfModules.toPresheaf_map_app_apply]
+    rw [braiding_self_app_eq_id_of_invertible L (U i) (hinv i)]
+    rfl
+  rw [hb, Category.id_comp]
 
 /-- **Trivial self-braiding of an invertible sheaf** (`lem:braiding_eq_id_of_invertible`,
 [Stacks, Tag 01CR]): for an invertible `L`, the braiding of `L` with itself is the identity,
@@ -3244,30 +3494,355 @@ swap `TensorProduct.comm`, which is the identity on an invertible module
 (`Module.Invertible.tensorProductComm_eq_refl`); descending through sheafification gives the
 claim.  **Crucially the identity must NOT be checked at the global open `⊤`**: `Γ(X,L)` need
 not be an invertible `Γ(X,𝒪_X)`-module, so the local-to-global route is essential.  This is the
-single arithmetic input distinguishing the invertible (commutative) case; it is invertibility-gated
-FUTURE work (no consumer until the `GCommSemiring` assembly is built). -/
+single arithmetic input distinguishing the invertible (commutative) case; it is the consumed
+ingredient of the `GCommSemiring` assembly (`sectionGradedRing_gcommSemiring`, built below). -/
 lemma tensorBraiding_self_eq_id_of_isInvertible (L : X.Modules) [IsInvertible L] :
     tensorBraiding L L = Iso.refl (tensorObj L L) := by
-  -- Local-to-global: reduce to the trivializing cover supplied by `IsInvertible L`, where the
-  -- presheaf braiding is `TensorProduct.comm` on a free-rank-one module, hence the identity by
-  -- `Module.Invertible.tensorProductComm_eq_refl`; then descend through `sheafification`.
-  -- The trivializing-cover descent is invertibility-gated future work (no consumer yet).
-  sorry
+  -- Local-to-global: the presheaf self-braiding agrees with `𝟙` after composing with the
+  -- sheafification unit (`braiding_comp_unit_eq_unit_of_isInvertible`), so the sheafified braiding
+  -- is the identity by unit-injectivity of the sheafification adjunction.
+  apply Iso.ext
+  change sheafification.map
+      (BraidedCategory.braiding (C := MonoidalPresheaf X)
+        ((toPresheafOfModules X).obj L) ((toPresheafOfModules X).obj L)).hom
+    = 𝟙 (tensorObj L L)
+  -- Reduce to `sheafification.map β^{pre} = 𝟙` via the adjunction hom-equivalence.
+  apply (PresheafOfModules.sheafificationAdjunction (𝟙 X.ringCatSheaf.obj)).homEquiv
+    (MonoidalCategory.tensorObj (C := MonoidalPresheaf X)
+      ((toPresheafOfModules X).obj L) ((toPresheafOfModules X).obj L)) (tensorObj L L) |>.injective
+  rw [Adjunction.homEquiv_unit, Adjunction.homEquiv_unit]
+  erw [CategoryTheory.Functor.map_id, Category.comp_id]
+  -- `unit ≫ G.map (sheafification.map β^{pre}) = β^{pre} ≫ unit = unit` (descent).
+  exact ((PresheafOfModules.sheafificationAdjunction (𝟙 X.ringCatSheaf.obj)).unit.naturality
+      (BraidedCategory.braiding (C := MonoidalPresheaf X)
+        ((toPresheafOfModules X).obj L) ((toPresheafOfModules X).obj L)).hom).symm.trans
+    (braiding_comp_unit_eq_unit_of_isInvertible L)
+
+/-- **Right-unitor = braiding-then-left-unit** (base-case helper for `tensorPowAdd_comm`): the sheaf
+right unitor of `G` equals the self-braiding with the unit followed by the left-unit iso.  Descended
+through sheafification from the presheaf symmetric coherence `β_{G,𝟙} ≫ λ = ρ`
+(`MonoidalCategory.braiding_leftUnitor`).  Project-local. -/
+private lemma tensorObjRightUnitor_eq_braiding_unit (G : X.Modules) :
+    tensorObjRightUnitor G = tensorBraiding G (unitModule X) ≪≫ tensorObjUnitIso G := by
+  apply Iso.ext
+  change sheafification.map
+        (MonoidalCategory.rightUnitor (C := MonoidalPresheaf X)
+          ((toPresheafOfModules X).obj G)).hom ≫ (sheafificationCounitIso G).hom
+    = sheafification.map
+          (BraidedCategory.braiding (C := MonoidalPresheaf X)
+            ((toPresheafOfModules X).obj G) (𝟙_ (MonoidalPresheaf X))).hom ≫
+        (sheafification.map
+            (MonoidalCategory.leftUnitor (C := MonoidalPresheaf X)
+              ((toPresheafOfModules X).obj G)).hom ≫ (sheafificationCounitIso G).hom)
+  rw [← Category.assoc (sheafification.map _), ← CategoryTheory.Functor.map_comp]
+  congr 2
+  exact (CategoryTheory.braiding_leftUnitor _).symm
+
+/-- **Descended forward hexagon for the sheaf braiding** (`lem:tensorBraiding_hexagon_forward`):
+the hand-built braiding (`tensorBraiding`) and associator (`tensorObjAssoc`) satisfy the forward
+hexagon identity, mirroring `CategoryTheory.BraidedCategory.hexagon_forward` of the inherited
+symmetric structure.  Proved by rewriting every hand-built construct to its canonical counterpart
+conjugated by the bridge `tensorObjIso` (`tensorBraiding_eq`, `tensorObjAssoc` def,
+`tensorObjWhiskerRightIso_eq`, `tensorObjWhiskerLeftIso_eq`); the bridges telescope in inverse pairs,
+leaving the canonical hexagon.  Project-local; consumed by the succ case of `tensorPowAdd_comm`. -/
+private lemma tensorBraiding_hexagon_forward (F A B : X.Modules) :
+    tensorObjAssoc F A B ≪≫ tensorBraiding F (tensorObj A B) ≪≫ tensorObjAssoc A B F
+      = tensorObjWhiskerRightIso (tensorBraiding F A) B ≪≫ tensorObjAssoc A F B ≪≫
+          tensorObjWhiskerLeftIso A (tensorBraiding F B) := by
+  rw [tensorBraiding_eq, tensorBraiding_eq, tensorBraiding_eq,
+    tensorObjWhiskerRightIso_eq, tensorObjWhiskerLeftIso_eq]
+  apply Iso.ext
+  simp only [tensorObjAssoc, Iso.trans_hom, Iso.symm_hom,
+    MonoidalCategory.whiskerRightIso_hom, MonoidalCategory.whiskerLeftIso_hom, Category.assoc,
+    Iso.hom_inv_id_assoc]
+  rw [BraidedCategory.braiding_naturality_right_assoc]
+  rw [← MonoidalCategory.comp_whiskerRight_assoc, Iso.hom_inv_id,
+    MonoidalCategory.id_whiskerRight, Category.id_comp]
+  rw [BraidedCategory.hexagon_forward_assoc]
+  simp only [MonoidalCategory.comp_whiskerRight, MonoidalCategory.whiskerLeft_comp, Category.assoc,
+    MonoidalCategory.hom_inv_whiskerRight_assoc, MonoidalCategory.whiskerLeft_hom_inv_assoc]
+
+/-- **Symmetry of the hand-built braiding**: `β_{A,B} ≪≫ β_{B,A} = 𝟙`.  Descended from the symmetric
+structure on `X.Modules` (`SymmetricCategory.symmetry`) through the bridge `tensorBraiding_eq`; the
+inner `tensorObjIso B A` pair telescopes and the canonical symmetry collapses the braiding pair.
+Project-local; consumed by the succ case of `tensorPowAdd_comm` and `tensorPowAdd_succ_left_braided`. -/
+private lemma tensorBraiding_symm (A B : X.Modules) :
+    tensorBraiding A B ≪≫ tensorBraiding B A = Iso.refl (tensorObj A B) := by
+  apply Iso.ext
+  rw [tensorBraiding, tensorBraiding]
+  simp only [Iso.trans_hom, Functor.mapIso_hom, Iso.refl_hom]
+  have hsymm : (BraidedCategory.braiding (C := MonoidalPresheaf X)
+        ((toPresheafOfModules X).obj A) ((toPresheafOfModules X).obj B)).hom ≫
+      (BraidedCategory.braiding (C := MonoidalPresheaf X)
+        ((toPresheafOfModules X).obj B) ((toPresheafOfModules X).obj A)).hom = 𝟙 _ :=
+    SymmetricCategory.symmetry (C := MonoidalPresheaf X) _ _
+  exact (sheafification.map_comp _ _).symm.trans
+    ((congrArg sheafification.map hsymm).trans (sheafification.map_id _))
+
+/-- **Canonical self-braiding of an invertible sheaf is the identity** (named sub-brick): the
+*canonical* symmetric-monoidal braiding `β_ L L` of `X.Modules` is the identity on `L ⊗ L`.  This
+is the canonical-level image of the hand-built PRIMARY `tensorBraiding_self_eq_id_of_isInvertible`,
+read off through the bridge `tensorBraiding_eq`.  Project-local; the β-collapse input to the succ
+case of `tensorPowAdd_succ_left_braided` and the succ case of `tensorPowAdd_comm`. -/
+private lemma braiding_canonical_self_eq_id_of_isInvertible (L : X.Modules) [IsInvertible L] :
+    (β_ L L).hom = 𝟙 (L ⊗ L) := by
+  have h := congrArg Iso.hom (tensorBraiding_eq L L)
+  rw [tensorBraiding_self_eq_id_of_isInvertible] at h
+  simp only [Iso.refl_hom, Iso.trans_hom, Iso.symm_hom] at h
+  -- `h : 𝟙 = (tensorObjIso L L).inv ≫ (β_ L L).hom ≫ (tensorObjIso L L).hom`.
+  rw [eq_comm, Iso.inv_comp_eq] at h
+  -- `h : (β_ L L).hom ≫ (tensorObjIso L L).hom = (tensorObjIso L L).hom`.
+  exact (cancel_mono (tensorObjIso L L).hom).mp (h.trans (Category.id_comp _).symm)
+
+/-- **First-index successor recursion of the tensor-power comparison** (`lem:tensorPowAdd_succ_left`):
+the comparison `μ_{c+1,m}` is recovered from the lower comparison `μ_{c,1+m}` by peeling the
+freshly-added factor to the left, the first-index dual of the (second-index) definitional succ
+clause `tensorPowAdd_succ`.  Braiding-free and valid for arbitrary `L`.  Obtained by solving the
+B6 pentagon `tensorPowAdd_assoc` at indices `(c,1,m)` for `μ_{c+1,m}` — inverting the right-unit
+whisker `μ_{c,1} ▷ L^m`.  Project-local; consumed by the succ case of `tensorPowAdd_comm`. -/
+private lemma tensorPowAdd_succ_left (L : X.Modules) (c m : ℕ) :
+    tensorPowAdd L (c + 1) m ≪≫ eqToIso (congrArg (tensorPow L) (add_assoc c 1 m)) =
+      (tensorObjWhiskerRightIso (tensorPowAdd L c 1) (tensorPow L m)).symm ≪≫
+        tensorObjAssoc (tensorPow L c) (tensorPow L 1) (tensorPow L m) ≪≫
+        tensorObjWhiskerLeftIso (tensorPow L c) (tensorPowAdd L 1 m) ≪≫
+        tensorPowAdd L c (1 + m) := by
+  apply Iso.ext
+  have hh := congrArg Iso.hom (tensorPowAdd_assoc L c 1 m)
+  simp only [Iso.trans_hom, Iso.symm_hom, eqToIso.hom] at hh ⊢
+  rw [Iso.eq_inv_comp]
+  exact hh
+
+/-- **Generic-`M` core of the succ-case canonical hexagon residual of `tensorPowAdd_succ_left_braided`
+(brick 1′).**  Stated over an arbitrary monoidal category `M` so that all `≫`/`▷`/`◁`/`α_` resolve to a
+single uniform instance (no `LocalizedMonoidal`/`X.Modules` comp-instance diamond), making the
+`(…) ▷ l` / `a ◁ (…)` whisker distributions fire and the adjacent bridge `hom`/`inv` pairs (`iA1k'`,
+`ilK1`, `iaK1`) cancel.  After distribution the structural associators + the two opaque atoms `β`, `μ`
+sit in naturality-compatible positions; `hk` reconciles the trailing reindex bridges
+(`r1 ▷ l ≫ iT1 = iT2 ≫ r2`), then `monoidal` closes.  Plugged in by `exact` (the instance diamond is
+`rfl`-defeq, so `exact`'s `isDefEq` bridges it).  Braided analogue of `tensorPowAdd_assoc_succ_core`
+(no `foldhyp`: the inductive hypothesis is already substituted at iso level). -/
+private lemma tensorPowAdd_succ_left_braided_core
+    {M : Type*} [Category M] [MonoidalCategory M]
+    {a l k' K1 A1 Plk' Pak' ck Pckl T1 PT1l PlK1 PK1l PaK1 PT2l PA1K1 PA1k' : M}
+    (iA1K1 : A1 ⊗ K1 ≅ PA1K1) (i2 : k' ⊗ l ≅ K1) (iA1k' : A1 ⊗ k' ≅ PA1k')
+    (ial : a ⊗ l ≅ A1) (ilk' : l ⊗ k' ≅ Plk') (iak' : a ⊗ k' ≅ Pak')
+    (ickl : ck ⊗ l ≅ Pckl) (iT1 : T1 ⊗ l ≅ PT1l) (ilK1 : l ⊗ K1 ≅ PlK1)
+    (iK1l : K1 ⊗ l ≅ PK1l) (iaK1 : a ⊗ K1 ≅ PaK1) (iT2 : Pckl ⊗ l ≅ PT2l)
+    (β : Plk' ⟶ K1) (μ : Pak' ⟶ ck) (r1 : Pckl ⟶ T1) (r2 : PT2l ⟶ PT1l)
+    (hk : r1 ▷ l ≫ iT1.hom = iT2.hom ≫ r2) :
+    iA1K1.inv ≫ A1 ◁ i2.inv ≫ (α_ A1 k' l).inv ≫ iA1k'.hom ▷ l ≫
+        (iA1k'.inv ≫ ial.inv ▷ k' ≫ (α_ a l k').hom ≫ a ◁ ilk'.hom ≫ a ◁ β ≫ a ◁ i2.inv ≫
+          (α_ a k' l).inv ≫ iak'.hom ▷ l ≫ μ ▷ l ≫ ickl.hom ≫ r1) ▷ l ≫ iT1.hom
+      = iA1K1.inv ≫ ial.inv ▷ K1 ≫ (α_ a l K1).hom ≫ a ◁ ilK1.hom ≫
+        a ◁ (ilK1.inv ≫ l ◁ i2.inv ≫ (α_ l k' l).inv ≫ ilk'.hom ▷ l ≫ β ▷ l ≫ iK1l.hom) ≫
+        a ◁ iK1l.inv ≫ (α_ a K1 l).inv ≫ iaK1.hom ▷ l ≫
+        (iaK1.inv ≫ a ◁ i2.inv ≫ (α_ a k' l).inv ≫ iak'.hom ▷ l ≫ μ ▷ l ≫ ickl.hom) ▷ l ≫
+        iT2.hom ≫ r2 := by
+  simp only [MonoidalCategory.comp_whiskerRight, MonoidalCategory.whiskerLeft_comp, Category.assoc,
+    MonoidalCategory.hom_inv_whiskerRight_assoc, MonoidalCategory.whiskerLeft_hom_inv_assoc]
+  rw [hk]
+  rw [← MonoidalCategory.associator_inv_naturality_left_assoc]
+  simp only [Category.assoc, MonoidalCategory.whisker_assoc, MonoidalCategory.whisker_exchange_assoc]
+  monoidal
+
+/-- **Order-reversing first-index successor recursion** (`lem:tensorPowAdd_succ_left_braided`,
+brick 1′): for an invertible `L`, the comparison `μ_{c+1,m}` is recovered from the *lower* comparison
+`μ_{c,m}` by braiding the freshly-added left factor `L` past the block `L^{⊗m}` and applying
+`μ_{c,m}` on the right, framed by associators.  Unlike the order-*preserving*
+`tensorPowAdd_succ_left` (which surfaces opaque non-matching atoms), this surfaces exactly `μ_{c,m}`
+demanded by the inductive hypothesis of `tensorPowAdd_comm`, at the cost of a genuine braiding
+`β_{L,L^m}`; hence invertibility (consumed as `β_{L,L} = 𝟙`) enters here.  Proved by its own
+induction on `m` (braided analogue of the `tensorPowAdd_assoc` pentagon).  Project-local. -/
+private lemma tensorPowAdd_succ_left_braided (L : X.Modules) [IsInvertible L] (c m : ℕ) :
+    tensorPowAdd L (c + 1) m =
+      tensorObjAssoc (tensorPow L c) L (tensorPow L m) ≪≫
+        tensorObjWhiskerLeftIso (tensorPow L c) (tensorBraiding L (tensorPow L m)) ≪≫
+        (tensorObjAssoc (tensorPow L c) (tensorPow L m) L).symm ≪≫
+        tensorObjWhiskerRightIso (tensorPowAdd L c m) L ≪≫
+        eqToIso (congrArg (tensorPow L) (show c + m + 1 = c + 1 + m by omega)) := by
+  induction m with
+  | zero =>
+    have hbu : tensorBraiding L (tensorPow L 0)
+        = tensorObjRightUnitor L ≪≫ (tensorObjUnitIso L).symm := by
+      rw [tensorObjRightUnitor_eq_braiding_unit L]; simp
+    rw [tensorPowAdd_zero_right, tensorPowAdd_zero_right, hbu]
+    apply Iso.ext
+    simp only [tensorPow_zero, tensorObjRightUnitor_eq, tensorObjUnitIso_eq,
+      tensorObjWhiskerLeftIso_eq, tensorObjWhiskerRightIso_eq, tensorObjAssoc, Iso.trans_hom,
+      Iso.symm_hom, Iso.trans_inv, Iso.symm_inv, MonoidalCategory.whiskerLeftIso_hom,
+      MonoidalCategory.whiskerRightIso_hom, MonoidalCategory.whiskerLeftIso_inv,
+      MonoidalCategory.whiskerRightIso_inv, eqToIso.hom, Category.assoc, Iso.hom_inv_id_assoc]
+    simp
+    -- Clean canonical goal: `ρ_(L^c⊗L) = (bridge.inv ▷ 𝟙) ≫ [canonical coherence = ρ] ≫ bridge.hom`.
+    -- Reassociate, pull the trailing bridge to the left, apply right-unitor naturality to fold the
+    -- leading `bridge.inv ▷ 𝟙` into `ρ`, then the residual canonical coherence closes by `monoidal`.
+    simp only [← Category.assoc]
+    rw [← Iso.comp_inv_eq, ← MonoidalCategory.rightUnitor_naturality]
+    simp only [Category.assoc]
+    congr 1
+    monoidal
+  | succ k ih =>
+    rw [tensorPowAdd_succ, ih]
+    rw [show tensorPowAdd L c (k + 1) = (tensorObjAssoc (tensorPow L c) (tensorPow L k) L).symm ≪≫
+        tensorObjWhiskerRightIso (tensorPowAdd L c k) L from tensorPowAdd_succ L c k]
+    -- INVERTIBILITY-COLLAPSED hexagon split of `β_{L, L^k ⊗ L}` (`L^{k+1} = L^k ⊗ L` by `rfl`).
+    -- The forward hexagon (brick 2) gives `β_{L,A⊗L} = α⁻¹ ≪≫ WR(β_{L,A}) L ≪≫ α ≪≫ WL_A(β_{L,L}) ≪≫ α⁻¹`;
+    -- when `L` is invertible, `β_{L,L} = 𝟙` (PRIMARY) makes `WL_A(β_{L,L}) = 𝟙` and the `α ≪≫ α⁻¹` pair
+    -- collapses, leaving the clean `β_{L,A⊗L} = α⁻¹ ≪≫ WR(β_{L,A}) L`.
+    have hwlrefl : tensorObjWhiskerLeftIso (tensorPow L k) (Iso.refl (tensorObj L L))
+        = Iso.refl (tensorObj (tensorPow L k) (tensorObj L L)) := by
+      apply Iso.ext
+      simp only [tensorObjWhiskerLeftIso_eq, Iso.refl_hom, Iso.trans_hom, Iso.symm_hom,
+        MonoidalCategory.whiskerLeftIso_hom, MonoidalCategory.whiskerLeft_id, Category.id_comp,
+        Iso.inv_hom_id]
+    have hβ' : tensorBraiding L (tensorObj (tensorPow L k) L)
+        = (tensorObjAssoc L (tensorPow L k) L).symm ≪≫
+            tensorObjWhiskerRightIso (tensorBraiding L (tensorPow L k)) L := by
+      have hhex := tensorBraiding_hexagon_forward L (tensorPow L k) L
+      rw [tensorBraiding_self_eq_id_of_isInvertible, hwlrefl, Iso.trans_refl] at hhex
+      -- hhex : α ≪≫ tB ≪≫ α' = WR(β) L ≪≫ α'
+      apply Iso.ext
+      have hb := congrArg Iso.hom hhex
+      simp only [Iso.trans_hom] at hb
+      simp only [Iso.trans_hom, Iso.symm_hom]
+      rw [Iso.eq_inv_comp]
+      -- goal: α.hom ≫ tB.hom = WR.hom ; from hb cancel trailing α'.hom
+      exact (cancel_mono (tensorObjAssoc (tensorPow L k) L L).hom).mp (by
+        simpa only [Category.assoc] using hb)
+    rw [show tensorBraiding L (tensorPow L (k + 1))
+        = tensorBraiding L (tensorObj (tensorPow L k) L) from rfl, hβ']
+    apply Iso.ext
+    simp only [Iso.trans_hom, Iso.symm_hom, Iso.trans_inv, Iso.symm_inv,
+      tensorObjWhiskerRightIso_eq, tensorObjWhiskerLeftIso_eq, tensorObjAssoc,
+      MonoidalCategory.whiskerRightIso_hom, MonoidalCategory.whiskerLeftIso_hom,
+      MonoidalCategory.whiskerRightIso_inv, MonoidalCategory.whiskerLeftIso_inv,
+      eqToIso.hom, Category.assoc, Iso.hom_inv_id_assoc]
+    refine tensorPowAdd_succ_left_braided_core
+      (M := LocalizedMonoidal (sheafificationMon X) (sheafificationW X) (localizationUnitIso X))
+      _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ?hk
+    -- `hk`: reindex reconciliation `eqToHom ▷ L ≫ μ_bridge_{c+1+k} = μ_bridge_{c+(k+1)} ≫ eqToHom`,
+    -- the naturality of the tensor-power bridge family along `c+1+k = c+(k+1)`; proof-irrelevance lets
+    -- the constructed `eqToHom`s match the goal's anonymous reindexers.
+    have gen : ∀ {n1 n2 : ℕ} (hn : n1 = n2),
+        eqToHom (congrArg (L.tensorPow) hn.symm) ▷ L ≫ ((L.tensorPow n1).tensorObjIso L).hom
+          = ((L.tensorPow n2).tensorObjIso L).hom ≫
+              eqToHom (congrArg (fun n => (L.tensorPow n).tensorObj L) hn.symm) := by
+      rintro n1 n2 rfl
+      simp
+    exact gen (show c + 1 + k = c + (k + 1) from by omega)
+
+/-- **Generic-`M` core of the succ-case canonical hexagon residual of `tensorPowAdd_comm`.**  Stated
+over an arbitrary monoidal category `M` (single comp instance, no `LocalizedMonoidal`/`X.Modules`
+diamond at the `μ_{c+1,m}`-substitution junction).  After substituting brick 1′ for `μ_{c+1,m}`, the
+two halves' bridge `hom`/`inv` pairs telescope and the opposite braidings `βm1`, `β1m` (= `β_{L^m,L}`,
+`β_{L,L^m}`) collapse via the symmetry hypothesis `hsymm` (`βm1 ≫ β1m = 𝟙`); `hk` reconciles the
+reindex bridges, and `monoidal` closes.  Plugged in by `exact`.  Reindex/symmetry analogue of
+`tensorPowAdd_succ_left_braided_core`. -/
+private lemma tensorPowAdd_comm_succ_core
+    {M : Type*} [Category M] [MonoidalCategory M]
+    {mm a l Pal Pmc Pcm Pm1 P1m Pcm_sum Pmc_sum Pfin
+      Qmtcl QmcL QcmL Qtclm : M}
+    (imtcl : mm ⊗ Pal ≅ Qmtcl) (icl : a ⊗ l ≅ Pal) (imc : mm ⊗ a ≅ Pmc)
+    (imcL : Pmc_sum ⊗ l ≅ QmcL) (icm : a ⊗ mm ≅ Pcm) (im1 : mm ⊗ l ≅ Pm1)
+    (i1m : l ⊗ mm ≅ P1m) (itclm : Pal ⊗ mm ≅ Qtclm) (icmL : Pcm_sum ⊗ l ≅ QcmL)
+    (βmc : Pmc ⟶ Pcm) (βm1 : Pm1 ⟶ P1m) (β1m : P1m ⟶ Pm1) (μ : Pcm ⟶ Pcm_sum)
+    (r0 : Pcm_sum ⟶ Pmc_sum) (r2 : QcmL ⟶ Pfin) (rfinal : Pfin ⟶ QmcL)
+    (hsymm : βm1 ≫ β1m = 𝟙 Pm1)
+    (hk : r0 ▷ l ≫ imcL.hom = icmL.hom ≫ r2 ≫ rfinal) :
+    imtcl.inv ≫ mm ◁ icl.inv ≫ (α_ mm a l).inv ≫ imc.hom ▷ l ≫ βmc ▷ l ≫ μ ▷ l ≫ r0 ▷ l ≫ imcL.hom
+      = (imtcl.inv ≫ mm ◁ icl.inv ≫ (α_ mm a l).inv ≫ imc.hom ▷ l ≫ βmc ▷ l ≫ icm.inv ▷ l ≫
+            (α_ a mm l).hom ≫ a ◁ im1.hom ≫ a ◁ βm1 ≫ a ◁ i1m.inv ≫ (α_ a l mm).inv ≫
+            icl.hom ▷ mm ≫ itclm.hom) ≫
+          (itclm.inv ≫ icl.inv ▷ mm ≫ (α_ a l mm).hom ≫ a ◁ i1m.hom ≫ a ◁ β1m ≫ a ◁ im1.inv ≫
+            (α_ a mm l).inv ≫ icm.hom ▷ l ≫ μ ▷ l ≫ icmL.hom ≫ r2) ≫ rfinal := by
+  simp only [Category.assoc, Iso.hom_inv_id_assoc, Iso.inv_hom_id_assoc,
+    MonoidalCategory.hom_inv_whiskerRight_assoc, MonoidalCategory.inv_hom_whiskerRight_assoc,
+    ← MonoidalCategory.whiskerLeft_comp_assoc, reassoc_of% hsymm, Iso.hom_inv_id,
+    MonoidalCategory.whiskerLeft_id, Category.id_comp]
+  rw [hk]
 
 /-- **Commutativity constraint of the tensor-power comparison** (`lem:tensorPowAdd_comm`): for an
 invertible `L`, the comparison family is symmetric, `μ_{m,m'} = β_{L^m,L^m'} ≫ μ_{m',m}` after
 the reindexing `m' + m = m + m'`.  The invertibility hypothesis is essential — for a general
 sheaf the two sides realise different permutations of the `m + m'` identical `L`-factors; already
 at `m = m' = 1` it reduces to `β_{L,L} = 𝟙` (`tensorBraiding_self_eq_id_of_isInvertible`).
-Invertibility-gated FUTURE work (no consumer yet). -/
+Invertibility-gated; consumed by `sectionsMul_mul_comm` / `sectionGradedRing_gcommSemiring`. -/
 lemma tensorPowAdd_comm (L : X.Modules) [IsInvertible L] (m m' : ℕ) :
     tensorPowAdd L m m' =
       tensorBraiding (tensorPow L m) (tensorPow L m') ≪≫ tensorPowAdd L m' m ≪≫
         eqToIso (congrArg (tensorPow L) (Nat.add_comm m' m)) := by
-  -- Induction mirroring the recursion of `μ`; the residual canonical discrepancy is a
-  -- self-braiding `β_{L,L}` on a doubled `L`-factor, the identity by
-  -- `tensorBraiding_self_eq_id_of_isInvertible` for invertible `L`.  Gated future work.
-  sorry
+  -- Induction on the second index `m'`, mirroring the recursion of `μ = tensorPowAdd`.
+  induction m' with
+  | zero =>
+    -- Base `m' = 0`: `μ_{m,0} = ρ_{L^m}` (`tensorPowAdd_zero_right`), and the RHS is
+    -- `β_{L^m,𝟙} ≫ μ_{0,m} ≫ reindex = β ≫ λ ≫ reindex`.  The braiding-unit coherence
+    -- `tensorObjRightUnitor_eq_braiding_unit` makes `ρ = β ≫ λ`; the trailing `eqToIso`s along
+    -- `m = 0 + m = m + 0` collapse to the identity.
+    rw [tensorPowAdd_zero_right, tensorObjRightUnitor_eq_braiding_unit, tensorPowAdd_zero_left]
+    apply Iso.ext
+    simp only [Iso.trans_hom, eqToIso.hom]
+    congr 1
+    simp
+  | succ c ih =>
+    -- Succ `m' = c + 1`: the braided analogue of the `tensorPowAdd_assoc` pentagon (CLOSED iter-031).
+    -- Unfold the LHS by the 2nd-index succ clause + `ih`, split the RHS braiding `β_{L^m, L^{c+1}}`
+    -- (`L^{c+1} = L^c ⊗ L`) by the descended hexagon `hβ`, distribute the LHS right-whisker, then
+    -- substitute brick 1′ (`tensorPowAdd_succ_left_braided`) for `μ_{c+1,m}`.  The shared prefix
+    -- `α⁻¹_{L^m,L^c,L} ≪≫ WR(β_{L^m,L^c}) L` agrees on both sides; after descending to canonical the
+    -- opposite braidings `β_{L^m,L}`, `β_{L,L^m}` collapse by symmetry (`tensorBraiding_symm`) and the
+    -- residual is a reindex identity — discharged by the generic-`M` core `tensorPowAdd_comm_succ_core`
+    -- (which dissolves the `μ_{c+1,m}`-substitution comp-instance diamond).  Everything downstream
+    -- (`sectionsMul_mul_comm`, `sectionGradedRing_gcommSemiring`) consumes `tensorPowAdd_comm`.
+    rw [tensorPowAdd_succ, ih]
+    have hβ : (L.tensorPow m).tensorBraiding (tensorObj (L.tensorPow c) L) =
+        ((L.tensorPow m).tensorObjAssoc (L.tensorPow c) L).symm ≪≫
+          (tensorObjWhiskerRightIso ((L.tensorPow m).tensorBraiding (L.tensorPow c)) L ≪≫
+            (L.tensorPow c).tensorObjAssoc (L.tensorPow m) L ≪≫
+            tensorObjWhiskerLeftIso (L.tensorPow c) ((L.tensorPow m).tensorBraiding L)) ≪≫
+          ((L.tensorPow c).tensorObjAssoc L (L.tensorPow m)).symm := by
+      apply Iso.ext
+      have hb := congrArg Iso.hom (tensorBraiding_hexagon_forward (L.tensorPow m) (L.tensorPow c) L)
+      simp only [Iso.trans_hom] at hb
+      simp only [Iso.trans_hom, Iso.symm_hom]
+      rw [Iso.eq_inv_comp, Iso.eq_comp_inv]
+      simp only [Category.assoc]
+      exact hb
+    rw [show (L.tensorPow m).tensorBraiding (L.tensorPow (c + 1))
+        = (L.tensorPow m).tensorBraiding (tensorObj (L.tensorPow c) L) from rfl]
+    rw [hβ]
+    simp only [tensorObjWhiskerRightIso_trans]
+    rw [tensorPowAdd_succ_left_braided L c m]
+    apply Iso.ext
+    simp only [Iso.trans_hom, Iso.symm_hom, Iso.trans_inv, Iso.symm_inv,
+      tensorObjWhiskerRightIso_eq, tensorObjWhiskerLeftIso_eq, tensorObjAssoc,
+      MonoidalCategory.whiskerRightIso_hom, MonoidalCategory.whiskerLeftIso_hom,
+      MonoidalCategory.whiskerRightIso_inv, MonoidalCategory.whiskerLeftIso_inv,
+      eqToIso.hom, Category.assoc, Iso.hom_inv_id_assoc]
+    refine tensorPowAdd_comm_succ_core
+      (M := LocalizedMonoidal (sheafificationMon X) (sheafificationW X) (localizationUnitIso X))
+      _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ?hsymm ?hk
+    · -- `hsymm`: opposite self-braidings cancel (symmetry `β_{L^m,L} ≫ β_{L,L^m} = 𝟙`).
+      have h := congrArg Iso.hom (tensorBraiding_symm (L.tensorPow m) L)
+      simpa only [Iso.trans_hom, Iso.refl_hom] using h
+    · -- `hk`: reindex reconciliation of the trailing tensor-power bridge family.
+      have gen : ∀ {n1 n2 : ℕ} (hn : n1 = n2),
+          eqToHom (congrArg (L.tensorPow) hn.symm) ▷ L ≫ ((L.tensorPow n1).tensorObjIso L).hom
+            = ((L.tensorPow n2).tensorObjIso L).hom ≫
+                eqToHom (congrArg (fun n => (L.tensorPow n).tensorObj L) hn.symm) := by
+        rintro n1 n2 rfl
+        simp
+      convert gen (show m + c = c + m from by omega) using 2
+      exact eqToHom_trans _ _
+
+/-- Section-level functoriality of a composite of `X.Modules` isos at the top open: evaluating the
+`.hom` of a composite `f ≪≫ g` on a section is the composite of the two evaluations.  Project-local
+helper used to read off the iso-level `tensorPowAdd_comm` on elements. -/
+private lemma iso_trans_hom_val_app_apply {A B C : X.Modules} (f : A ≅ B) (g : B ≅ C)
+    (z : ↥(A.val.obj (Opposite.op ⊤))) :
+    ((f ≪≫ g).hom.val.app (Opposite.op ⊤)).hom z
+      = (g.hom.val.app (Opposite.op ⊤)).hom ((f.hom.val.app (Opposite.op ⊤)).hom z) := by
+  rw [Iso.trans_hom]
+  rfl
 
 /-- Commutativity of the graded section multiplication (`lem:sectionMul_coherent`, commutativity):
 transporting `a · b` along `na + nb = nb + na` gives `b · a`.
@@ -3275,19 +3850,20 @@ Section-level analogue of the `mul_comm` in `TensorPower.Basic`.
 
 **Invertibility-gated (iter-011 re-anchor).**  For an *arbitrary* `L : X.Modules` this statement
 is FALSE — the section graded ring is the free tensor algebra on `Γ(X,L)`, which is
-non-commutative (counterexample `L = 𝒪_X²`); see the obstacle analysis in the proof body and
-[Stacks, Tag, §17.25].  It becomes TRUE exactly when `L` is invertible (`IsInvertible L`,
-[Stacks, Tag 01CR]), the line-bundle case relevant to `Γ_*(X,𝓛)`.  The single arithmetic input
-is the trivial self-braiding `β_{L,L} = 𝟙` (`tensorBraiding_self_eq_id_of_isInvertible`); the
-proof is invertibility-gated FUTURE work (no consumer yet — the `GCommSemiring` assembly is
-unbuilt), so it is left as a typed `sorry` at the precise residual identity. -/
+non-commutative (counterexample `L = 𝒪_X²`); [Stacks, Tag, §17.25].  It becomes TRUE exactly when
+`L` is invertible (`IsInvertible L`, [Stacks, Tag 01CR]), the line-bundle case relevant to
+`Γ_*(X,𝓛)`.  The single arithmetic input is the trivial self-braiding `β_{L,L} = 𝟙`
+(`tensorBraiding_self_eq_id_of_isInvertible`, axiom-clean).  **COMPLETE (iter-031), axiom-clean** —
+the iso-level commutativity constraint `tensorPowAdd_comm` is read off on the base element
+`x = sectionsMul (L^na)(L^nb)(a ⊗ₜ b)` (the element-level `congrArg`/cast-cancellation pattern of B7
+`sectionsMul_mul_assoc`). -/
 theorem sectionsMul_mul_comm (L : X.Modules) [IsInvertible L] {na nb : ℕ}
     (a : sectionDeg L na) (b : sectionDeg L nb) :
     sectionsCast L (add_comm na nb) (GradedMonoid.GMul.mul a b) =
     GradedMonoid.GMul.mul b a := by
   -- Unfold the degreewise multiplication on both sides to `Γ(μ) ∘ sectionsMul`.
   simp only [gMul_mul_apply]
-  -- Push the proven section-level braiding naturality `tensorBraiding_hom_sectionsMul` into the RHS:
+  -- Push the proven section-level braiding naturality `tensorBraiding_hom_sectionsMul` into RHS:
   -- it rewrites `sectionsMul (L^nb) (L^na) (b ⊗ₜ a)` as `Γ(β)(sectionsMul (L^na) (L^nb) (a ⊗ₜ b))`,
   -- collapsing both sides to the single element `x := sectionsMul (L^na) (L^nb) (a ⊗ₜ b)`.
   rw [← tensorBraiding_hom_sectionsMul (tensorPow L na) (tensorPow L nb) a b]
@@ -3307,8 +3883,321 @@ theorem sectionsMul_mul_comm (L : X.Modules) [IsInvertible L] {na nb : ℕ}
   -- `m+n` identical `L`-factors, so symmetric-monoidal coherence does NOT equate them.  The
   -- statement becomes true (and provable from this reduction + `tensorBraiding_hom_sectionsMul`)
   -- once an invertibility hypothesis on `L` is added — equivalently once `β_{L,L} = 𝟙` is available.
-  -- See task_results and TO_USER.md.  Left as a typed `sorry` at the precise stuck point rather
-  -- than weakening the (mathematically unsound) signature, which is the user's call.
-  sorry
+  -- Rewrite the LHS comparison via `tensorPowAdd_comm` and cancel the reindexing casts.
+  rw [tensorPowAdd_comm L na nb, iso_trans_hom_val_app_apply, iso_trans_hom_val_app_apply,
+    ← sectionsCast_apply, sectionsCast_sectionsCast]
+  exact Nat.add_comm nb na
+
+/-- **Graded commutative semiring structure for an invertible line bundle**
+(`lem:sectionGradedRing_gcommSemiring`, [Stacks, Tag 01CV] commutative case): when `L` is invertible
+(`IsInvertible L`, [Stacks, Tag 01CR]), the section graded semiring `⊕_m Γ(X, L^{⊗m})` is *graded
+commutative* — `a · b = b · a` after the reindexing `i + j = j + i`.  Extends
+`sectionGradedRing_gsemiring` with the single graded `mul_comm` clause, supplied by the iso-level
+commutativity constraint `tensorPowAdd_comm` read off on sections (`sectionsMul_mul_comm`) and routed
+through `gradedMonoid_eq_of_cast`.  Invertibility is essential: for general `L` the section ring is
+the free tensor algebra on `Γ(X,L)`, which is non-commutative (see `sectionsMul_mul_comm`).
+Project-local: Mathlib has no graded commutative semiring on sheaf-section tensor powers. -/
+@[reducible] noncomputable def sectionGradedRing_gcommSemiring (L : X.Modules) [IsInvertible L] :
+    DirectSum.GCommSemiring (sectionDeg L) :=
+  { sectionGradedRing_gsemiring L with
+    mul_comm := fun a b =>
+      gradedMonoid_eq_of_cast L (add_comm a.1 b.1) (sectionsMul_mul_comm L a.2 b.2) }
+
+/-- Sanity confirmation of the commutative deliverable: for invertible `L`, the section graded
+commutative semiring assembles a genuine `CommSemiring` on `⊕_m Γ(X, L^{⊗m})` (the commutative
+`Γ_*(X,𝓛)`), via `DirectSum.toCommSemiring`.  Stated as `Nonempty` (the carrier family depends on
+`L`; sidesteps codegen on the noncomputable term). -/
+theorem sectionGradedRing_commSemiring_nonempty (L : X.Modules) [IsInvertible L] :
+    Nonempty (CommSemiring (DirectSum ℕ (sectionDeg L))) :=
+  ⟨letI := sectionGradedRing_gcommSemiring L; inferInstance⟩
+
+/-! ## Project-local Mathlib supplement — SNAP-S1 graded module `M(X,L,F)=⊕_m Γ(F⊗L^{⊗m})` -/
+
+/-- **SNAP-S1 module hexagon** (`lem:moduleTensorPowAdd_assoc`): the associativity coherence for the
+graded-module structure `M(X,L,F)=⊕_m Γ(F⊗L^{⊗m})`.  Project-local.  Genuine braided hexagon
+(`β_{L^i,F}` does not collapse since `F` need not be invertible). -/
+private lemma moduleTensorPowAdd_assoc (F L : X.Modules) (i j k : ℕ) :
+    tensorObjWhiskerRightIso (tensorPowAdd L i j) (moduleTensorPow F L k) ≪≫
+        moduleTensorPowAdd F L (i + j) k ≪≫
+        eqToIso (congrArg (moduleTensorPow F L) (add_assoc i j k))
+      = tensorObjAssoc (tensorPow L i) (tensorPow L j) (moduleTensorPow F L k) ≪≫
+        tensorObjWhiskerLeftIso (tensorPow L i) (moduleTensorPowAdd F L j k) ≪≫
+        moduleTensorPowAdd F L i (j + k) := by
+  apply Iso.ext
+  simp only [moduleTensorPowAdd, moduleTensorPow, Iso.trans_hom, Iso.symm_hom, Iso.trans_inv,
+    Iso.symm_inv,
+    tensorObjWhiskerRightIso_eq, tensorObjWhiskerLeftIso_eq, tensorBraiding_eq, tensorObjAssoc,
+    MonoidalCategory.whiskerRightIso_hom, MonoidalCategory.whiskerLeftIso_hom,
+    MonoidalCategory.whiskerRightIso_inv, MonoidalCategory.whiskerLeftIso_inv,
+    eqToIso.hom, Category.assoc, MonoidalCategory.comp_whiskerRight,
+    MonoidalCategory.whiskerLeft_comp,
+    Iso.hom_inv_id_assoc, MonoidalCategory.whiskerLeft_hom_inv_assoc,
+    MonoidalCategory.hom_inv_whiskerRight_assoc]
+  have hp := congrArg Iso.hom (tensorPowAdd_assoc L i j k)
+  simp only [Iso.trans_hom, Iso.symm_hom, Iso.trans_inv, Iso.symm_inv,
+    tensorObjWhiskerRightIso_eq, tensorObjWhiskerLeftIso_eq, tensorObjAssoc,
+    MonoidalCategory.whiskerRightIso_hom, MonoidalCategory.whiskerLeftIso_hom,
+    MonoidalCategory.whiskerRightIso_inv, MonoidalCategory.whiskerLeftIso_inv,
+    eqToIso.hom, Category.assoc, MonoidalCategory.comp_whiskerRight,
+    MonoidalCategory.whiskerLeft_comp, Iso.hom_inv_id_assoc,
+    MonoidalCategory.whiskerLeft_hom_inv_assoc,
+    MonoidalCategory.hom_inv_whiskerRight_assoc] at hp
+  -- (1) slide μ_{i,j} to the F-side; β_{L^{i+j},F} → β_{tensorObj L^i L^j,F}
+  rw [← MonoidalCategory.whisker_exchange_assoc,
+    MonoidalCategory.associator_inv_naturality_left_assoc,
+    ← MonoidalCategory.comp_whiskerRight_assoc,
+    BraidedCategory.braiding_naturality_left]
+  rw [MonoidalCategory.comp_whiskerRight_assoc, MonoidalCategory.whisker_assoc_assoc]
+  simp only [Iso.inv_hom_id_assoc]
+  -- (2) inject pentagon under F ◁
+  have hp' := (cancel_epi (((L.tensorPow i).tensorObj (L.tensorPow j)).tensorObjIso
+    (L.tensorPow k)).inv).mp hp
+  have hgen : ∀ {n1 n2 : ℕ} (hn : n1 = n2),
+      (F.tensorObjIso (L.tensorPow n1)).hom ≫
+          eqToHom (congrArg (fun n => F.tensorObj (L.tensorPow n)) hn)
+        = F ◁ eqToHom (congrArg (L.tensorPow) hn) ≫ (F.tensorObjIso (L.tensorPow n2)).hom := by
+    rintro n1 n2 rfl; simp
+  rw [hgen (add_assoc i j k), ← MonoidalCategory.whiskerLeft_comp_assoc,
+    ← MonoidalCategory.whiskerLeft_comp_assoc, ← MonoidalCategory.whiskerLeft_comp_assoc]
+  simp only [Category.assoc]
+  rw [hp']
+  -- (3) β_{tensorObj L^i L^j,F} → canonical β_{L^i⊗L^j,F}, then split via hexagon_reverse
+  simp only [MonoidalCategory.whiskerLeft_comp, Category.assoc]
+  rw [← MonoidalCategory.associator_naturality_middle_assoc,
+    ← MonoidalCategory.comp_whiskerRight_assoc,
+    ← BraidedCategory.braiding_naturality_left, MonoidalCategory.comp_whiskerRight_assoc]
+  have hhex : (β_ (L.tensorPow i ⊗ L.tensorPow j) F).hom
+      = (α_ (L.tensorPow i) (L.tensorPow j) F).hom ≫
+          (L.tensorPow i ◁ (β_ (L.tensorPow j) F).hom ≫
+            (α_ (L.tensorPow i) F (L.tensorPow j)).inv ≫ (β_ (L.tensorPow i) F).hom ▷ L.tensorPow j)
+          ≫ (α_ F (L.tensorPow i) (L.tensorPow j)).hom := by
+    rw [← BraidedCategory.hexagon_reverse]
+    simp
+  rw [hhex]
+  -- (4) Both legs differ from coherence by TWO interchanges of atoms on disjoint factors:
+  --   (T1) the top swap of `T_{F,c}⁻¹` (whiskerLeft on `F⊗Lᵏ`) with `T_{a,b}⁻¹` (whiskerRight on
+  --        `Lⁱ⊗Lʲ`), and (T2) `β_a = β_{Lⁱ,F}` past the inner merge `T_{b,c} ; μ_{j,k}`.
+  --   `monoidal` does coherence but not interchange of two non-structural atoms, so we do both
+  --   by hand (associator-naturality to expose the `(·⊗·)◁` form, then `whisker_exchange`),
+  --   then `monoidal`.
+  -- (T1) swap T_{F,c}⁻¹ before T_{a,b}⁻¹ on the RHS leg.
+  rw [← MonoidalCategory.associator_naturality_right_assoc (L.tensorPow i) (L.tensorPow j)
+        ((F.tensorObjIso (L.tensorPow k)).inv),
+      ← MonoidalCategory.whisker_exchange_assoc ((L.tensorPow i).tensorObjIso (L.tensorPow j)).inv
+        ((F.tensorObjIso (L.tensorPow k)).inv)]
+  -- (T2) reassociate `L^i ◁ F ◁ _` (RHS leg) into `(L^i ⊗ F) ◁ _`, then slide β_a leftward past
+  -- `μ_{j,k}` and `T_{b,c}` by interchange.
+  rw [MonoidalCategory.associator_inv_naturality_right_assoc (L.tensorPow i) F
+        (L.tensorPowAdd j k).hom,
+      MonoidalCategory.associator_inv_naturality_right_assoc (L.tensorPow i) F
+        ((L.tensorPow j).tensorObjIso (L.tensorPow k)).hom,
+      MonoidalCategory.whisker_exchange_assoc (β_ (L.tensorPow i) F).hom (L.tensorPowAdd j k).hom,
+      MonoidalCategory.whisker_exchange_assoc (β_ (L.tensorPow i) F).hom
+        ((L.tensorPow j).tensorObjIso (L.tensorPow k)).hom]
+  monoidal
+
+private lemma moduleTensorPowAdd_zero_left (F L : X.Modules) (k : ℕ) :
+    moduleTensorPowAdd F L 0 k = tensorObjUnitIso (moduleTensorPow F L k) ≪≫
+      eqToIso (congrArg (moduleTensorPow F L) (Nat.zero_add k).symm) := by
+  apply Iso.ext
+  simp only [moduleTensorPowAdd, moduleTensorPow, tensorPowAdd_zero_left, tensorPow_zero,
+    tensorObjUnitIso_eq, tensorObjWhiskerRightIso_eq, tensorObjWhiskerLeftIso_eq, tensorBraiding_eq,
+    tensorObjAssoc, Iso.trans_hom, Iso.symm_hom, Iso.trans_inv, Iso.symm_inv,
+    MonoidalCategory.whiskerRightIso_hom, MonoidalCategory.whiskerLeftIso_hom,
+    MonoidalCategory.whiskerRightIso_inv, MonoidalCategory.whiskerLeftIso_inv,
+    eqToIso.hom, Category.assoc, MonoidalCategory.comp_whiskerRight,
+    MonoidalCategory.whiskerLeft_comp,
+    Iso.hom_inv_id_assoc, MonoidalCategory.whiskerLeft_hom_inv_assoc,
+    MonoidalCategory.hom_inv_whiskerRight_assoc]
+  -- The reindexing slide for the `F ◁ eqToHom`/`tensorObjIso` family (mirror of the (A)-hexagon
+  -- `hgen`): fuse `F ◁ eqToHom ≫ T'.hom` into `T.hom ≫ eqToHom`.
+  have hgen : ∀ {n1 n2 : ℕ} (hn : n1 = n2),
+      (F.tensorObjIso (L.tensorPow n1)).hom ≫
+          eqToHom (congrArg (fun n => F.tensorObj (L.tensorPow n)) hn)
+        = F ◁ eqToHom (congrArg (L.tensorPow) hn) ≫ (F.tensorObjIso (L.tensorPow n2)).hom := by
+    rintro n1 n2 rfl; simp
+  -- The middle unit-coherence square, stated over the canonical unit `𝟙_` so that
+  -- `braiding_tensorUnit_left` + `monoidal` fire (they special-case `𝟙_`, not `unitModule X`); then
+  -- transported to the `unitModule X` goal by defeq.
+  have hmid₀ : (α_ (𝟙_ X.Modules) F (L.tensorPow k)).inv ≫
+        (β_ (𝟙_ X.Modules) F).hom ▷ L.tensorPow k ≫
+          (α_ F (𝟙_ X.Modules) (L.tensorPow k)).hom ≫ F ◁ (λ_ (L.tensorPow k)).hom
+      = (λ_ (F ⊗ L.tensorPow k)).hom := by
+    rw [show (β_ (𝟙_ X.Modules) F).hom = (λ_ F).hom ≫ (ρ_ F).inv from braiding_tensorUnit_left F]
+    monoidal
+  have hmid : (α_ (unitModule X) F (L.tensorPow k)).inv ≫
+        (β_ (unitModule X) F).hom ▷ L.tensorPow k ≫
+          (α_ F (unitModule X) (L.tensorPow k)).hom ≫ F ◁ (λ_ (L.tensorPow k)).hom
+      = (λ_ (F ⊗ L.tensorPow k)).hom := hmid₀
+  -- Left-unitor naturality of `T.inv` — stated over `𝟙_` then transported to `unitModule X` by
+  -- defeq (`leftUnitor_naturality` special-cases `𝟙_`, so a positional `rw` on the `unitModule X`
+  -- whisker fails to match).
+  have hlun₀ : (𝟙_ X.Modules) ◁ (F.tensorObjIso (L.tensorPow k)).inv ≫
+        (λ_ (F ⊗ L.tensorPow k)).hom
+      = (λ_ (F.tensorObj (L.tensorPow k))).hom ≫ (F.tensorObjIso (L.tensorPow k)).inv :=
+    MonoidalCategory.leftUnitor_naturality (F.tensorObjIso (L.tensorPow k)).inv
+  have hlun : (unitModule X) ◁ (F.tensorObjIso (L.tensorPow k)).inv ≫
+        (λ_ (F ⊗ L.tensorPow k)).hom
+      = (λ_ (F.tensorObj (L.tensorPow k))).hom ≫ (F.tensorObjIso (L.tensorPow k)).inv := hlun₀
+  rw [reassoc_of% hmid, reassoc_of% hlun, ← hgen (Nat.zero_add k).symm, Iso.inv_hom_id_assoc]
+
+/-! ### Graded-module carrier, transport and degreewise action (scaffolding for the `Gmodule`) -/
+
+/-- The carrier type of the graded module at degree `m`: the `Γ(X,𝒪_X)`-module of global sections of
+`F ⊗ L^{⊗m}` (`def:sheafModuleTwist`).  Module analogue of `sectionDeg`. -/
+abbrev moduleSectionDeg (F L : X.Modules) (m : ℕ) : Type u :=
+  ↥((moduleTensorPow F L m).val.obj (Opposite.op ⊤))
+
+/-- Index-equality transport of module-section components, the module analogue of `sectionsCast`:
+`Γ(X,-)` applied to the canonical iso `F⊗L^{⊗i} ≅ F⊗L^{⊗j}` from `h : i = j`. -/
+noncomputable def moduleSectionsCast (F L : X.Modules) {i j : ℕ} (h : i = j) :
+    moduleSectionDeg F L i ≃ₗ[↥(X.ringCatSheaf.obj.obj (Opposite.op ⊤))] moduleSectionDeg F L j :=
+  ((toPresheafOfModules X ⋙ PresheafOfModules.evaluation X.ringCatSheaf.obj
+    (Opposite.op ⊤)).mapIso (eqToIso (congrArg (moduleTensorPow F L) h))).toLinearEquiv
+
+/-- Transport along `rfl` is the identity (module analogue of `sectionsCast_refl`). -/
+@[simp] lemma moduleSectionsCast_refl (F L : X.Modules) (i : ℕ) :
+    moduleSectionsCast F L (rfl : i = i) = LinearEquiv.refl _ (moduleSectionDeg F L i) := by
+  ext x
+  rfl
+
+/-- Cast-mediated equality in the module graded sigma type (module analogue of
+`gradedMonoid_eq_of_cast`). -/
+lemma moduleGradedMonoid_eq_of_cast (F L : X.Modules)
+    {a b : GradedMonoid (moduleSectionDeg F L)}
+    (h : a.1 = b.1) (h2 : moduleSectionsCast F L h a.2 = b.2) : a = b := by
+  obtain ⟨i, x⟩ := a
+  obtain ⟨j, y⟩ := b
+  obtain rfl : i = j := h
+  simp only [moduleSectionsCast_refl, LinearEquiv.refl_apply] at h2
+  subst h2
+  rfl
+
+/-- Degreewise graded action `sectionDeg L i × moduleSectionDeg F L j → moduleSectionDeg F L (i+j)`,
+the section multiplication followed by global sections of the action comparison `a_{i,j}`
+(`def:moduleTensorPowAdd`).  Module analogue of the `GradedMonoid.GMul` instance on `sectionDeg`. -/
+noncomputable instance (F L : X.Modules) :
+    GradedMonoid.GSMul (sectionDeg L) (moduleSectionDeg F L) where
+  smul {i j} (r : sectionDeg L i) (x : moduleSectionDeg F L j) :=
+    ((moduleTensorPowAdd F L i j).hom.val.app (Opposite.op ⊤)).hom
+      ((sectionsMul (tensorPow L i) (moduleTensorPow F L j)).hom
+        (r ⊗ₜ[(X.sheaf.obj ⋙ forget₂ CommRingCat RingCat).obj (Opposite.op ⊤)] x))
+
+/-- Definitional unfolding of the graded action, as a rewrite handle for the coherence proofs. -/
+private lemma gSMul_smul_apply (F L : X.Modules) {i j : ℕ}
+    (r : sectionDeg L i) (x : moduleSectionDeg F L j) :
+    (GradedMonoid.GSMul.smul r x : moduleSectionDeg F L (i + j))
+      = ((moduleTensorPowAdd F L i j).hom.val.app (Opposite.op ⊤)).hom
+          ((sectionsMul (tensorPow L i) (moduleTensorPow F L j)).hom
+            (r ⊗ₜ[(X.sheaf.obj ⋙ forget₂ CommRingCat RingCat).obj (Opposite.op ⊤)] x)) :=
+  rfl
+
+/-- Definitional unfolding of the module section transport applied to an element. -/
+private lemma moduleSectionsCast_apply (F L : X.Modules) {i j : ℕ} (h : i = j)
+    (y : moduleSectionDeg F L i) :
+    moduleSectionsCast F L h y
+      = ((eqToIso (congrArg (moduleTensorPow F L) h)).hom.val.app (Opposite.op ⊤)).hom y :=
+  rfl
+
+/-- Two index transports along inverse equalities cancel (module analogue). -/
+private lemma moduleSectionsCast_sectionsCast (F L : X.Modules) {i j : ℕ} (h₁ : i = j) (h₂ : j = i)
+    (x : moduleSectionDeg F L i) :
+    moduleSectionsCast F L h₂ (moduleSectionsCast F L h₁ x) = x := by
+  obtain rfl := h₁
+  rw [Subsingleton.elim h₂ rfl]
+  simp only [moduleSectionsCast_refl, LinearEquiv.refl_apply]
+
+set_option maxRecDepth 4000 in
+/-- **Compatibility of the graded module action** (`lem:moduleSectionAction_coherent`, compatibility
+clause): transporting `(r·r')⋆x` along `(i+j)+k = i+(j+k)` gives `r⋆(r'⋆x)`.  Module analogue of
+`sectionsMul_mul_assoc` (B7): the same three-slide assembly with the action comparison `a` replacing
+the ring comparison `μ` on the legs touching `F`, closed by the iso-level hexagon
+`moduleTensorPowAdd_assoc` (A). -/
+theorem moduleSectionAction_mul_smul (F L : X.Modules) {i j k : ℕ}
+    (r : sectionDeg L i) (r' : sectionDeg L j) (x : moduleSectionDeg F L k) :
+    moduleSectionsCast F L (add_assoc i j k)
+        (GradedMonoid.GSMul.smul (GradedMonoid.GMul.mul r r') x)
+      = GradedMonoid.GSMul.smul r (GradedMonoid.GSMul.smul r' x) := by
+  -- Unfold the degreewise action/multiplication on both sides to `Γ(comparison) ∘ sectionsMul`;
+  -- normalize the `+ᵥ` (graded-action degree) to `+`.
+  simp only [vadd_eq_add, gSMul_smul_apply, gMul_mul_apply]
+  --   RIGHT slide (e = μ_{i,j}): move the inner `Γ(μ_{i,j})` out of the first factor of the outer
+  --   `sectionsMul (L^{i+j}) (F⊗L^k)`.
+  rw [sectionsMul_whiskerRight_natural (tensorPowAdd L i j) (moduleTensorPow F L k)
+        ((sectionsMul (tensorPow L i) (tensorPow L j)).hom
+          (r ⊗ₜ[(X.sheaf.obj ⋙ forget₂ CommRingCat RingCat).obj (Opposite.op ⊤)] r')) x]
+  --   LEFT slide (e = a_{j,k}): move the inner `Γ(a_{j,k})` out of the second factor of the outer
+  --   `sectionsMul (L^i) (F⊗L^{j+k})`.
+  rw [sectionsMul_whiskerLeft_natural (tensorPow L i) (moduleTensorPowAdd F L j k) r
+        ((sectionsMul (tensorPow L j) (moduleTensorPow F L k)).hom
+          (r' ⊗ₜ[(X.sheaf.obj ⋙ forget₂ CommRingCat RingCat).obj (Opposite.op ⊤)] x))]
+  --   B5 backwards: recognise the RHS iterated section product as `Γ(α)(…)`.
+  rw [← tensorObjAssoc_hom_sectionsMul (tensorPow L i) (tensorPow L j) (moduleTensorPow F L k)
+        r r' x]
+  --   (A) the iso-level module hexagon applied at the common base element.
+  exact congrArg
+    (fun (iso : tensorObj (tensorObj (tensorPow L i) (tensorPow L j)) (moduleTensorPow F L k)
+        ≅ moduleTensorPow F L (i + (j + k))) =>
+      (iso.hom.val.app (Opposite.op ⊤)).hom
+        ((sectionsMul (tensorObj (tensorPow L i) (tensorPow L j)) (moduleTensorPow F L k)).hom
+          ((sectionsMul (tensorPow L i) (tensorPow L j)).hom
+              (r ⊗ₜ[(X.sheaf.obj ⋙ forget₂ CommRingCat RingCat).obj (Opposite.op ⊤)] r')
+            ⊗ₜ[(X.sheaf.obj ⋙ forget₂ CommRingCat RingCat).obj (Opposite.op ⊤)] x)))
+    (moduleTensorPowAdd_assoc F L i j k)
+
+set_option maxRecDepth 4000 in
+/-- **Unitality of the graded module action** (`lem:moduleSectionAction_coherent`, unitality
+clause): transporting `1 ⋆ x` along `0 + k = k` gives `x`.  Module analogue of
+`sectionsMul_one_mul`: the
+degree-`(0,k)` action comparison `a_{0,k}` is the left unitor (`moduleTensorPowAdd_zero_left`), and
+the inner cast pairs with the outer `moduleSectionsCast` and cancels, leaving the left-unit law
+`tensorObjUnitIso_hom_sectionsMul`. -/
+theorem moduleSectionAction_one_smul (F L : X.Modules) {k : ℕ} (x : moduleSectionDeg F L k) :
+    moduleSectionsCast F L (zero_add k)
+        (GradedMonoid.GSMul.smul (1 : sectionDeg L 0) x) = x := by
+  -- NOTE: the graded unit is spelled `(1 : sectionDeg L 0)` rather than `GradedMonoid.GOne.one`
+  -- (defeq by `gOne_one_eq`): the bare `GradedMonoid.GOne.one` projection as an argument to the
+  -- `+ᵥ`-graded `GSMul.smul` triggers a whnf blow-up during *statement* elaboration.
+  rw [gSMul_smul_apply, moduleTensorPowAdd_zero_left F L k]
+  -- `moduleTensorPowAdd L 0 k = tensorObjUnitIso ≪≫ eqToIso`; the inner cast pairs with the outer
+  -- `moduleSectionsCast` and the two cancel, leaving the left unitor.
+  change moduleSectionsCast F L (zero_add k) (moduleSectionsCast F L (Nat.zero_add k).symm
+      (((tensorObjUnitIso (moduleTensorPow F L k)).hom.val.app (Opposite.op ⊤)).hom
+        ((sectionsMul (tensorPow L 0) (moduleTensorPow F L k)).hom
+          ((1 : ↥(X.ringCatSheaf.obj.obj (Opposite.op ⊤)))
+            ⊗ₜ[(X.sheaf.obj ⋙ forget₂ CommRingCat RingCat).obj (Opposite.op ⊤)] x)))) = x
+  rw [moduleSectionsCast_sectionsCast]
+  exact tensorObjUnitIso_hom_sectionsMul (moduleTensorPow F L k) x
+
+set_option maxRecDepth 4000 in
+/-- **Graded-module structure on the twisted section components**
+(`lem:sectionGradedModule_gmodule`,
+module analogue of [Stacks, Tag 01CV]): for an *arbitrary* `L : X.Modules` and any `F : X.Modules`,
+the family `m ↦ Γ(X, F ⊗ L^{⊗m})` is a `DirectSum.Gmodule` over the section graded monoid
+`m ↦ Γ(X, L^{⊗m})`, so `⊕_m Γ(X, F ⊗ L^{⊗m})` is a graded module over `Γ_*(X, L)`.  The degreewise
+action `Γ(a_{i,j}) ∘ sectionsMul` (the `GSMul` instance) satisfies the two `GMulAction` coherence
+clauses `moduleSectionAction_one_smul` / `moduleSectionAction_mul_smul` (routed, like the ring's
+`sectionGradedRing_gmonoid`, through `moduleGradedMonoid_eq_of_cast`), and the bilinearity clauses
+hold because `Γ(a_{i,j}) ∘ sectionsMul` is a composite of additive maps (push `0`/`+` through the
+`TensorProduct` step then the two `ModuleCat` morphisms — `erw` to cross the `DFunLike` coercion).
+Project-local: Mathlib has no graded module on sheaf-section twists. -/
+@[reducible] noncomputable def sectionGradedModule_gmodule (F L : X.Modules) :
+    letI := sectionGradedRing_gmonoid L
+    DirectSum.Gmodule (sectionDeg L) (moduleSectionDeg F L) :=
+  letI := sectionGradedRing_gmonoid L
+  { (inferInstance : GradedMonoid.GSMul (sectionDeg L) (moduleSectionDeg F L)) with
+    one_smul := fun b =>
+      moduleGradedMonoid_eq_of_cast F L (zero_add b.1) (moduleSectionAction_one_smul F L b.2)
+    mul_smul := fun a a' b =>
+      moduleGradedMonoid_eq_of_cast F L (add_assoc a.1 a'.1 b.1)
+        (moduleSectionAction_mul_smul F L a.2 a'.2 b.2)
+    smul_add := fun a b c => by
+      simp only [gSMul_smul_apply]; erw [TensorProduct.tmul_add, map_add, map_add]
+    smul_zero := fun a => by
+      simp only [gSMul_smul_apply]; erw [TensorProduct.tmul_zero, map_zero, map_zero]
+    add_smul := fun a a' b => by
+      simp only [gSMul_smul_apply]; erw [TensorProduct.add_tmul, map_add, map_add]
+    zero_smul := fun b => by
+      simp only [gSMul_smul_apply]; erw [TensorProduct.zero_tmul, map_zero, map_zero] }
 
 end AlgebraicGeometry.Scheme.Modules

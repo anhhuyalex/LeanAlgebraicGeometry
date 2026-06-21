@@ -1567,7 +1567,8 @@ counit isomorphisms (\cref{def:schemeModuleSheafification}).
 \begin{proof}
   \uses{def:tensorObjLocalizedIso, def:assocCommonForm,
     lem:localizationMonoidal_mu_mathlib,
-    lem:whiskeredUnit_eq_localizationMu_canonical}
+    lem:whiskeredUnit_eq_localizationMu_canonical,
+    lem:tensorObjAssoc_hK_lhs_head, lem:tensorObjAssoc_hK_lhs_native}
   Write \(a = \mathcal{A}^{\flat}, b = \mathcal{B}^{\flat}, c = \mathcal{C}^{\flat}\) and let
   \(c_{-}\) denote the sheafification counit isomorphisms. Expand the object identifications
   \(i_{-,-} = \mu^{-1}\,;\,(c \lotimes c)\) (\cref{def:tensorObjLocalizedIso}). The composite-object
@@ -1612,10 +1613,99 @@ counit isomorphisms (\cref{def:schemeModuleSheafification}).
   % associator_hom_app) are NO-MATCH on `α_ A B C`, and step 1's interchange MERGE is the active WALL
   % (whnf-timeout at the `c_{A⊗B} ≫ μ.inv` composite-object junction). iter-015 mechanized only Step 0
   % (`show`-uniform) + Step 1a (`tensorHom_id`), GREEN. Step 5 (head reduction) was extracted as the
-  % helper `tensorObjAssoc_hK_lhs_head` and reduced to a single μ-pair cancel (cancel_epi + keystone
-  % `_eq_mu'` + `show`-uniform), but its residual is two defeq-NOT-token-identical `μ_X` (hidden
-  % `Localization.fac` proof terms) — the same μ-syntactic-identity wall. hK_lhs-merge and the head-cancel
-  % are the SAME wall. Proof block remains unmarked (sorry).
+  % helper `tensorObjAssoc_hK_lhs_head` and reduced to a single μ-pair cancel. iter-016 UPDATE: the head
+  % `tensorObjAssoc_hK_lhs_head` is now CLOSED (cold-build green, `lem:tensorObjAssoc_hK_lhs_head` ).
+  % Root cause was NOT a hidden `Localization.fac` witness but a project-local DUAL `MonoidalCategory`
+  % instance making the two μ object-args token-divergent; fix = STATEMENT-level `(C := MonoidalPresheaf X)`
+  % pinning + `erw [Iso.hom_inv_id_assoc]` (NOT rw) with each step ISOLATED in a `slice`/`have`. The
+  % iter-015 interchange MERGE wall (step 1) is also DEFEATED (`slice_lhs 2 3 => erw [← tensor_comp]`).
+  % iter-017 UPDATE: HARD-GATE step (a) (the `tensor_comp` re-split) is now SOLVED + committed (cold-green)
+  % via an isolated `have hsplit` + `congrArg`-peel of the whole outer context (NOT `rw [hsplit]`/`conv`,
+  % which motive-bomb). But the NEXT move — reassoc `(W≫T)≫α → W≫(T≫α)` before `associator_naturality` —
+  % is a NEW WALL: EVERY reassoc mechanism (`rw`/`simp`/`conv`-`rw [Category.assoc]`/`congrArg`-with-fresh-
+  % objects) isDefEq/whnf-bombs on the localized-tensor μ-objects, and freshly STATING the
+  % `whiskerRight (c_{A⊗B}≫μ.inv) …` junction also bombs at elaboration. Step (b)
+  % (`associator_naturality`+`associator_hom_app`) is verified bomb-free ONCE the goal is right-associated,
+  % so the tail unblocks the moment a bomb-free reassoc exists. The proof is therefore NOT "one mechanical
+  % tail from closing" — it is blocked on a statement-pinned localized reassoc lemma (analogue of the
+  % iter-016 head fix) OR the queued durable dual-instance refactor. Proof block remains unmarked (sorry).
+\end{proof}
+
+\begin{lemma}
+
+\leanok
+[Head reduction of the localized associator half-assembly]
+  \label{lem:tensorObjAssoc_hK_lhs_head}
+  \lean{AlgebraicGeometry.Scheme.Modules.tensorObjAssoc_hK_lhs_head}
+  \uses{lem:localizationMonoidal_mu_mathlib,
+    lem:whiskeredUnit_eq_localizationMu_canonical, def:tensorObjLocalizedIso}
+  The isolated head of step~5 of \cref{lem:tensorObjAssoc_hK_lhs}: with
+  \(a=\mathcal{A}^{\flat}, b=\mathcal{B}^{\flat}, c=\mathcal{C}^{\flat}\), the composite of the
+  comparison \(\mu\)'s around the whiskered composite-object counit reduces to the inverse of the
+  whiskered unit,
+  \[
+    \mu_{(\mathcal{A}\otimes\mathcal{B})^{\flat},\,c}^{-1}\,;\,
+      \bigl(c_{\mathcal{A}\otimes\mathcal{B}} \rhd L'c\bigr)\,;\,
+      \mu_{a\otimes_p b,\,c}
+    \;=\; \bigl((\eta_{a\otimes_p b} \rhd c)^{\sharp}\bigr)^{-1}.
+  \]
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:localizationMonoidal_mu_mathlib,
+    lem:whiskeredUnit_eq_localizationMu_canonical}
+  Cancel the right-hand factor by the iso \((\eta_{a\otimes_p b}\rhd c)^{\sharp}\) and expand it through
+  the canonical-\(\mu\) keystone \cref{lem:whiskeredUnit_eq_localizationMu_canonical}. The composite-object
+  counit is \(c_{\mathcal{A}\otimes\mathcal{B}} = (L'\eta_{a\otimes_p b})^{-1}\) by the sheafification
+  adjunction triangle, and the two \(\mu\)-pairs cancel by \(\mu^{-1};\mu=\mathrm{id}\) once both
+  occurrences are built from the \emph{same} monoidal instance: the inner presheaf tensor
+  \(a\otimes_p b\) inside each \(\mu\) object-argument must be ascribed to the single canonical instance
+  (\texttt{MonoidalPresheaf}) at \emph{statement} level, matching the keystone, so the cancellation is the
+  pure-syntactic \texttt{Iso.hom\_inv\_id\_assoc}. The cancellation idiom and the dual-instance root cause
+  are recorded in \texttt{analogies/snap-mu-identity.md}.
+\end{proof}
+
+\begin{lemma}
+
+\leanok
+[Object-pinned native form of the localized associator half-assembly]
+  \label{lem:tensorObjAssoc_hK_lhs_native}
+  \lean{AlgebraicGeometry.Scheme.Modules.tensorObjAssoc_hK_lhs_native}
+  \uses{lem:localizationMonoidal_mu_mathlib, def:tensorObjLocalizedIso,
+    lem:tensorObjAssoc_hK_lhs_head, thm:localizedMonoidal_mathlib}
+  The reassociation-and-associator step of \cref{lem:tensorObjAssoc_hK_lhs}, stated entirely with its
+  comparison \(\mu\) object-arguments in \emph{unfolded image form}: every inner presheaf tensor is
+  written as \(L'(a\otimes_p b)\) (\(=\texttt{sheafification.obj}(\texttt{tensorObj}\,(C:=\texttt{MonoidalPresheaf}\,X)\,a\,b)\)),
+  never as the folded \(\mathcal A.\texttt{tensorObj}\,\mathcal B\). With objects in this form the
+  right-association \((W;T);\alpha = W;(T;\alpha)\), the localized associator naturality and
+  \texttt{associator\_hom\_app} all match \emph{syntactically}.
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:localizationMonoidal_mu_mathlib, lem:tensorObjAssoc_hK_lhs_head}
+  In the pinned image form, \texttt{simp only [Category.assoc]} right-associates without forcing any
+  \(\mu\) object open (no folded \(\mathcal A.\texttt{tensorObj}\,\mathcal B\) sits inside a \(\mu\)
+  object-argument, so no \texttt{whnf} of \(\mu\to\texttt{Localization.fac}\) fires); then
+  \texttt{Localization.Monoidal.associator\_naturality} on the three counits followed by
+  \texttt{associator\_hom\_app} natively rewrites the associator, leaving the \(\mu_{a\otimes_p b,\,c}\)
+  pair that the head lemma \cref{lem:tensorObjAssoc_hK_lhs_head} cancels. The object-phrasing discipline
+  (folded \(\mathcal A.\texttt{tensorObj}\,\mathcal B\) must never sit inside a \(\mu\)-object when a
+  reassoc/\texttt{associator\_*}/\texttt{Category.assoc} runs) and the empirical refutation of the
+  in-proof reassoc + the dual-instance-deletion refactor are recorded in
+  \texttt{analogies/snap-reassoc-pin.md}.
+  % NOTE: (iter-019) NOT yet fully closed. The reassoc -> naturalise -> associator-expand ->
+  % whisker-merge -> mu-cancel chain above is proven bomb-free (cold-build GREEN), but the FINAL step
+  % -- applying the proven head lemma to the reduced `tail` goal -- bombs (localized-comp isDefEq
+  % timeout, 200000 hb). One documented `sorry` remains in `tensorObjAssoc_hK_lhs_native` (Lean L2219).
+  % iter-019 UPDATE: the iter-018 suffix-peel plan FAILED. `cancel_mono` itself bombs at the rewrite
+  % (matching `?g ≫ ?f` forces an assoc-reconciliation isDefEq that whnf-unfolds μ); all FOUR bridge
+  % routes (folded `_head_assoc`, image-form `_head_img_assoc`, `simp at key`+`reassoc_of%`, and
+  % `cancel_mono`) cold-build-verified to bomb. Root cause = the dual-`MonoidalCategory`-instance
+  % μ-token-divergence (analogies/snap-mu-identity.md, snap-reassoc-pin.md). This route is now STUCK;
+  % the standing directive (pc019) is the iter-020 REFACTOR PIVOT (glue Option A: rewire the hand-built
+  % `tensorObj*` defs onto the `LocalizedMonoidal` synonym so the comp-instance boundary vanishes), NOT
+  % another prover round. The chapter convention is statement-`\leanok` only; this caveat is the honest
+  % open-proof signal.
 \end{proof}
 
 \begin{lemma}

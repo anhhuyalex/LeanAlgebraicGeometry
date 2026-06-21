@@ -36,8 +36,6 @@ invertible modules under tensor product, with no scheme-level analogue;
 maps but not divisors. Consequently this chapter, and the three siblings, are
 \emph{project-bespoke}: the only Mathlib tools they rely on are
 discrete-valuation rings, the function field, and the ambient scheme API.
-The audit grounding this scope decision is in
-\texttt{analogies/rrbridge-survey.md}.
 This chapter establishes the formal-sum data type
 \(\mathrm{Div}(X) = \bigoplus_{\substack{Z \subset X \\ \mathrm{codim} 1}} \mathbb Z\) on a
 Noetherian integral scheme \(X\) satisfying Hartshorne's condition \((*)\), the
@@ -67,63 +65,6 @@ For the degree map and for principal-divisor statements on a curve, we
 additionally assume \(X\) is a complete (i.e.\ proper) nonsingular curve over
 an algebraically closed field \(\bar k\), where Hartshorne's condition \((*)\) is
 automatic.
-\paragraph{Standing hypothesis \((*)\) in the Lean encoding (iter-173 pin).}
-Mathlib (as of \texttt{b80f227}) does not bundle Hartshorne's four-clause
-\((\ast)\) as a single typeclass. The chapter pins \((*)\) to a \emph{layered}
-typeclass set that the prover-agent threads through the Lean signatures in
-\texttt{AlgebraicJacobian/RiemannRoch/WeilDivisor.lean}:
-\begin{itemize}
-  \item \textbf{Basic formal-sum layer} (carrier of \ref{def:prime_divisor} and
-    \ref{def:codim1_cycles}, the additive group \(\mathrm{Div}(X)\), the degree
-    \ref{def:divisor_degree}, the degree-homomorphism
-    \ref{thm:divisor_degree_hom}, and \ref{def:divisor_closed_point}): the
-    only Mathlib typeclass invoked is \texttt{[IsIntegral X]}
-    (\texttt{Mathlib.AlgebraicGeometry.AffineScheme} via
-    \texttt{Mathlib.AlgebraicGeometry.Properties}). Integrality of \(X\) already
-    delivers \texttt{IrreducibleSpace X.carrier} (the carrier-level instance
-    chain), so \(X\) has a unique generic point and the function field
-    \texttt{X.functionField} (\texttt{Mathlib.AlgebraicGeometry.FunctionField})
-    is a field; separatedness and noetherianness are \emph{not} required for
-    the bare formal-sum data type.
-  \item \textbf{Order/principal layer} (\ref{def:order_at_point},
-    \ref{def:principal_divisor}, \ref{thm:principal_hom}): the Lean
-    signature additionally threads
-    \texttt{[IsLocallyNoetherian X]}
-    (\texttt{Mathlib.AlgebraicGeometry.Noetherian}) and Hartshorne's
-    regular-in-codimension-one clause. The latter has \emph{no} Mathlib
-    typeclass shipping it directly; the chapter's pin is the project-side
-    predicate ``for every \(x \in X\) with \(\mathrm{codim}_X \overline{\{x\}} = 1\) the
-    stalk \(\mathcal O_{X,x}\) is a discrete valuation ring'', encodable as
-    the conjunction
-    $\forall x,\; \texttt{Order.coheight}\,x = 1 \Rightarrow
-    \texttt{IsDiscreteValuationRing}\,(\mathcal O_{X,x})$. Iter-173 introduced
-    the \texttt{Scheme.IsRegularInCodimensionOne} class
-    (\ref{def:isRegularInCodimensionOne}) bundling this conjunction;
-    the order/principal lemmas downstream take this class as a typeclass
-    hypothesis when they require the DVR structure at codim-1 points.
-  \item \textbf{Curve layer} (\ref{thm:principal_deg_zero}): the standing
-    hypothesis tightens to a smooth proper geometrically irreducible curve
-    over \(\bar k\) with explicit integrality witness, namely
-    \begin{quote}
-      \texttt{\{kbar : Type u\} [Field kbar] [IsAlgClosed kbar]\\
-       (C : Over (Spec (.of kbar))) [IsProper C.hom]\\
-       \phantom{}\quad[SmoothOfRelativeDimension 1 C.hom]\\
-       \phantom{}\quad[GeometricallyIrreducible C.hom] [IsIntegral C.left]}
-    \end{quote}
-    matching the standing typeclass set used by the rest of the project's
-    curve API (\texttt{AlgebraicJacobian.Genus},
-    \texttt{AlgebraicJacobian.AbelianVarietyRigidity}). Hartshorne's \((*)\) is
-    automatic for this layer (\texttt{[IsLocallyNoetherian]} from finite type
-    over a field; regular-in-codim-1 from smoothness; separatedness from
-    properness; integrality threaded).
-\end{itemize}
-\noindent
-The \texttt{[IsIntegral X]} hypothesis is the only one threaded through the
-\emph{statement} of every Lean signature in
-\texttt{AlgebraicJacobian/RiemannRoch/WeilDivisor.lean} that mentions a
-function field, principal divisor, or order. The noetherian-and-DVR
-content lives inside the proof bodies (sub-build), where the prover threads
-the appropriate stronger hypothesis at the use site.
 \section{Codim-\(1\) cycle group}
 \begin{definition}
 \leanok
@@ -147,53 +88,6 @@ the appropriate stronger hypothesis at the use site.
   structure}, is automatically integral (irreducible, because the closure
   of a single point is irreducible, and reduced by construction); the only
   non-automatic condition is the codimension.
-  \paragraph{Lean encoding (iter-173 pin).} The Lean structure
-  \texttt{AlgebraicGeometry.Scheme.PrimeDivisor} bundles a point
-  \texttt{point : X} together with a codimension-one witness, encoded via
-  the Mathlib predicate
-  \[
-    \texttt{Order.coheight\ point\ =\ 1}
-  \]
-  on the specialisation preorder of the topological space underlying \(X\).
-  Concretely, Mathlib's preorder on \texttt{X.carrier} is defined by
-  ``\(x \leq y \iff y \rightsquigarrow x\)'' (i.e.\ \(x \in \overline{\{y\}}\);
-  see \texttt{Mathlib.Topology.Specialization} and
-  \texttt{Mathlib.Order.KrullDimension}). Under this convention the generic
-  point of an integral scheme is the unique \emph{maximal} element of the
-  preorder, so for the generic point \(\eta_Y\) of a prime divisor \(Y\) the
-  only point strictly above \(\eta_Y\) is the generic point \(\eta_X\) of \(X\),
-  and the chain \(\eta_Y < \eta_X\) has length one, giving
-  \texttt{Order.coheight\ \(\eta_Y\)\ =\ 1}. The DVR/integrality content of
-  ``the closure of \texttt{point} with the reduced subscheme structure is
-  integral'' is automatic from \(\overline{\{\,\texttt{point}\,\}}\) being
-  irreducible, so the Lean structure does not need a separate integrality
-  field. The iter-172 placeholder \texttt{isCodim1AndIntegral : True} in
-  \texttt{AlgebraicJacobian/RiemannRoch/WeilDivisor.lean:84--90} is to be
-  refined to \texttt{coheight : Order.coheight point = 1} (named field, type
-  \texttt{Prop}) in the iter-173 prover step, retaining the same
-  \texttt{point} field for downstream defeq.
-  \paragraph{Reference predicates considered and rejected.}
-  Two alternatives were considered and rejected at the iter-172
-  lean-vs-blueprint-checker stage:
-  \begin{itemize}
-    \item \texttt{IsIntegral\ (X.closedSubschemeOfPoint\ x)}: rejected
-      because Mathlib (\texttt{b80f227}) ships \emph{no}
-      \texttt{closedSubschemeOfPoint} constructor. The closest available
-      object is \texttt{AlgebraicGeometry.Scheme.IdealSheafData}
-      (\texttt{Mathlib.AlgebraicGeometry.IdealSheaf.Basic}), which packages
-      a quasi-coherent ideal sheaf but does not produce a reduced induced
-      subscheme on the closure of a point. Building that constructor is
-      itself a Mathlib-upstream-scale project (Stacks tag 01J9 ``reduced
-      induced scheme structure''), outside the scope of \texttt{RR.1}.
-    \item A bundled \texttt{Scheme.IdealSheafData}-based prime-divisor
-      carrier: rejected because the chapter only needs the generic-point
-      witness for downstream order/principal-divisor consumption; carrying
-      an \texttt{IdealSheafData} adds redundant data the chapter never
-      uses.
-  \end{itemize}
-  The \texttt{Order.coheight}-based encoding is therefore the
-  minimum-Mathlib-dependence pin compatible with the chapter's downstream
-  needs.
 \end{definition}
 \begin{definition}
 \leanok
@@ -221,16 +115,6 @@ the appropriate stronger hypothesis at the use site.
   (\ref{def:codim1_cycles}); an element \(D = \sum n_i Y_i\) with finitely
   many nonzero coefficients \(n_i \in \mathbb Z\) is called a \emph{Weil
   divisor}, and is \emph{effective} when all \(n_i \geq 0\).
-  \paragraph{Lean signature scope.} The Lean definition
-  \texttt{AlgebraicGeometry.Scheme.WeilDivisor X} is given for an arbitrary
-  scheme \texttt{X : Scheme} as the formal-sum data type
-  \texttt{X.PrimeDivisor \(\to_0\) \(\mathbb Z\)}; integrality of \(X\) is
-  \emph{not} required to form the additive group \(\mathrm{Div}(X)\) (it becomes
-  necessary only at the order/principal-divisor layer where the function
-  field appears). Hartshorne's \((*)\) is the standing convention in the
-  prose but is not threaded into the typeclass arguments of this base
-  declaration. See ``Standing hypothesis \((*)\) in the Lean encoding'' above
-  for the per-layer typeclass discipline.
 \end{definition}
 \begin{definition}
 \leanok
@@ -247,40 +131,38 @@ the appropriate stronger hypothesis at the use site.
   A scheme \(X\) is \emph{regular in codimension one} when for every point
   \(x \in X\) with \(\mathrm{codim}_X \overline{\{x\}} = 1\) (equivalently,
   \(\texttt{Order.coheight}\,x = 1\)) the local ring \(\mathcal O_{X,x}\) is
-  a discrete valuation ring. The Lean encoding bundles this conjunction as
-  a one-field \texttt{Prop} class so that downstream order / principal /
-  degree lemmas may consume it as a typeclass hypothesis.
+  a discrete valuation ring.
 \end{definition}
 \begin{definition}
+
+\leanok
 [DVR stalk from regularity in codimension one]
   \label{def:isRegularInCodimOne_dvrStalk}
   \lean{AlgebraicGeometry.Scheme.IsRegularInCodimensionOne.instIsDiscreteValuationRingStalk}
   \uses{def:isRegularInCodimensionOne, def:prime_divisor}
-  Bridge instance: for an integral scheme \(X\) satisfying
+  For an integral scheme \(X\) satisfying
   \(\texttt{IsRegularInCodimensionOne}\) (\ref{def:isRegularInCodimensionOne})
   and any prime divisor \(Y : X.\texttt{PrimeDivisor}\)
   (\ref{def:prime_divisor}), the stalk
-  \(\mathcal O_{X, Y.\texttt{point}}\) is a discrete valuation ring. This is
-  the direct unpacking of the defining field of the class, exposed so that
-  typeclass synthesis can supply the DVR structure at every codimension-one
-  point.
+  \(\mathcal O_{X, Y.\texttt{point}}\) is a discrete valuation ring,
+  a direct consequence of the definition of \(\texttt{IsRegularInCodimensionOne}\).
 \end{definition}
 \begin{proof}
-  Proved directly in Lean (unfolds the defining field of
-  \ref{def:isRegularInCodimensionOne}).
+  Follows directly from the definition of
+  \(\texttt{IsRegularInCodimensionOne}\) (\ref{def:isRegularInCodimensionOne}).
 \end{proof}
 \begin{definition}
+
+\leanok
 [Krull dimension \(\leq 1\) of a prime-divisor stalk]
   \label{def:isRegularInCodimOne_krullDimStalk}
   \lean{AlgebraicGeometry.Scheme.IsRegularInCodimensionOne.instKrullDimLEStalk}
   \uses{def:isRegularInCodimOne_dvrStalk, def:prime_divisor}
-  Bridge instance: for an integral scheme \(X\) satisfying
+  For an integral scheme \(X\) satisfying
   \(\texttt{IsRegularInCodimensionOne}\) and any prime divisor
   \(Y : X.\texttt{PrimeDivisor}\), the stalk
-  \(\mathcal O_{X, Y.\texttt{point}}\) has Krull dimension \(\leq 1\). This is
-  the typeclass form consumed by the order definition
-  (\ref{def:order_at_point}), obtained from the DVR structure
-  (\ref{def:isRegularInCodimOne_dvrStalk}) via the chain
+  \(\mathcal O_{X, Y.\texttt{point}}\) has Krull dimension \(\leq 1\), obtained
+  from the DVR structure (\ref{def:isRegularInCodimOne_dvrStalk}) via the chain
   ``DVR \(\Rightarrow\) principal ideal ring \(\Rightarrow\) Krull dimension
   \(\leq 1\)''.
 \end{definition}
@@ -290,8 +172,7 @@ the appropriate stronger hypothesis at the use site.
 \section{Open-immersion descent for prime divisors}
 \label{sec:open_immersion_descent}
 \textit{Source: Stacks Project tags 02IZ (stalk under open immersion) +
-01J6 (open immersion preserves regularity); cross-referenced with the
-project-local iter-183 substrate
+01J6 (open immersion preserves regularity); uses the project-local substrate
 \texttt{AlgebraicJacobian/Albanese/CoheightBridge.lean}.}
 
 The chapter's order / principal-divisor API is naturally stated on the
@@ -307,6 +188,8 @@ and the open-immersion descent of the \(\texttt{IsRegularInCodimensionOne}\)
 class.
 
 \begin{lemma}
+
+\leanok
 [Extensionality for prime divisors]
   \label{lem:primeDivisor_ext}
   \lean{AlgebraicGeometry.Scheme.PrimeDivisor.ext}
@@ -337,9 +220,8 @@ class.
   divisor \(Y : X.\texttt{PrimeDivisor}\), and a witness \(Y.\texttt{point} \in U\),
   the restriction \(Y |_U : U.\texttt{toScheme}.\texttt{PrimeDivisor}\) packages
   the point \(Y.\texttt{point}\) (viewed as a point of \(U\) via the open
-  inclusion) with the coheight witness from
-  \(\texttt{Order.coheight\_eq\_of\_isOpenEmbedding}\) (project-local
-  substrate, iter-183 \texttt{CoheightBridge.lean} L175--L185).
+  inclusion) with the coheight witness from the project-local substrate
+  \(\texttt{Order.coheight\_eq\_of\_isOpenEmbedding}\).
 \end{definition}
 \begin{definition}
 
@@ -377,6 +259,8 @@ class.
   field via subtype eta + structure eta.
 \end{lemma}
 \begin{lemma}
+
+\leanok
 [Point field of a restricted prime divisor]
   \label{lem:primeDivisor_restrictToOpen_point}
   \lean{AlgebraicGeometry.Scheme.PrimeDivisor.restrictToOpen_point}
@@ -392,6 +276,8 @@ class.
   Proved directly in Lean (the equality is definitional).
 \end{proof}
 \begin{lemma}
+
+\leanok
 [Point field of a pushed prime divisor]
   \label{lem:primeDivisor_ofOpen_point}
   \lean{AlgebraicGeometry.Scheme.PrimeDivisor.ofOpen_point}
@@ -412,10 +298,9 @@ class.
   \label{lem:primeDivisor_stalkIso}
   \lean{AlgebraicGeometry.Scheme.PrimeDivisor.stalkIso}
   \uses{def:primeDivisor_restrictToOpen}
-  % SOURCE: [Stacks Project], tag 02IZ (stalk is invariant under restriction
-  % to a non-empty open neighbourhood) (read from references/stacks-coherent.tex).
-  \textit{Source: Stacks Project, tag 02IZ, plus Mathlib's
-  \texttt{AlgebraicGeometry.Scheme.Opens.stalkIso}.}
+  \textit{Mathlib-backed: a thin wrapper around
+  \texttt{AlgebraicGeometry.Scheme.Opens.stalkIso} (stalk invariance under
+  restriction to a non-empty open neighbourhood).}
   For \(Y : X.\texttt{PrimeDivisor}\) with \(Y.\texttt{point} \in U\), the
   stalk presheaf of \(U.\texttt{toScheme}\) at the restricted point coincides,
   up to canonical isomorphism, with the stalk presheaf of \(X\) at
@@ -445,18 +330,6 @@ class.
   \(\texttt{IsDiscreteValuationRing.RingEquivClass.isDiscreteValuationRing}\)
   on the ring-equiv image.
 \end{theorem}
-\paragraph{Lean-side note.} The 8 axiom-clean iter-200 substrate
-declarations
-(\(\texttt{PrimeDivisor.ext}\), \(\texttt{restrictToOpen}\),
-\(\texttt{ofOpen}\), the two \(\texttt{@[simp]}\) field-extraction
-helpers \(\texttt{restrictToOpen\_point}\) /
-\(\texttt{ofOpen\_point}\), \(\texttt{equivOpen}\),
-\(\texttt{stalkIso}\), and the descent instance
-\(\texttt{IsRegularInCodimensionOne.instOpen}\)) consume the project-local
-substrate \(\texttt{Order.coheight\_eq\_of\_isOpenEmbedding}\)
-(\texttt{CoheightBridge.lean} L175--L185) and Mathlib's
-\(\texttt{Scheme.Opens.stalkIso}\). Realised cost: \(+120\) LOC over
-\texttt{WeilDivisor.lean} L153--L305 (iter-200).
 
 \subsection{Naturality of the order-of-vanishing across a ring isomorphism}
 \label{subsec:ordFrac_ringEquiv}
@@ -465,14 +338,14 @@ substrate \(\texttt{Order.coheight\_eq\_of\_isOpenEmbedding}\)
 order-of-vanishing API (\texttt{Mathlib.RingTheory.OrderOfVanishing.Basic},
 Stacks tag 02MD).}
 
-The Sub-build 2 algebraic substrate records that Mathlib's order-of-vanishing
-data --- the length valuation \(\texttt{ord}\), its monoid-with-zero extension
-\(\texttt{ordMonoidWithZeroHom}\), and the fraction-field hom
-\(\texttt{ordFrac}\) --- is natural across a ring isomorphism. These are
-project-local because Mathlib (as of \texttt{b80f227}) ships no naturality
-lemma for this family.
+Mathlib's order-of-vanishing data --- the length valuation \(\texttt{ord}\), its
+monoid-with-zero extension \(\texttt{ordMonoidWithZeroHom}\), and the
+fraction-field hom \(\texttt{ordFrac}\) --- is natural across a ring
+isomorphism.
 
 \begin{lemma}
+
+\leanok
 [Order length is invariant under a ring isomorphism]
   \label{lem:ord_ringEquiv}
   \lean{Ring.ord_ringEquiv}
@@ -489,6 +362,8 @@ lemma for this family.
   module length is preserved by surjective semilinear maps.
 \end{proof}
 \begin{lemma}
+
+\leanok
 [Non-zero divisors are preserved by a ring isomorphism]
   \label{lem:nonZeroDivisors_ringEquiv}
   \lean{Ring.nonZeroDivisors_ringEquiv}
@@ -503,6 +378,8 @@ lemma for this family.
   together with injectivity of \(e\).
 \end{proof}
 \begin{lemma}
+
+\leanok
 [The order monoid-with-zero hom is invariant under a ring isomorphism]
   \label{lem:ordMonoidWithZeroHom_ringEquiv}
   \lean{Ring.ordMonoidWithZeroHom_ringEquiv}
@@ -519,6 +396,8 @@ lemma for this family.
   Proved directly in Lean.
 \end{proof}
 \begin{lemma}
+
+\leanok
 [The fraction-field order-of-vanishing is invariant under a ring isomorphism]
   \label{lem:ordFrac_ringEquiv}
   \lean{Ring.ordFrac_ringEquiv}
@@ -558,99 +437,13 @@ lemma for this family.
   \((\texttt{genericPoint}\,U.\texttt{toScheme}).\texttt{val}
    = \texttt{genericPoint}\,X\)
   coming from \(\texttt{genericPoint\_eq\_of\_isOpenImmersion}\,U.\iota\).
-  This is the entry point Sub-build 3 (iter-202) uses to discharge
-  the \(\texttt{h\_compat}\) hypothesis of
-  \(\texttt{Scheme.PrimeDivisor.ordFrac\_stalkIso\_naturality}\)
-  (iter-201, private), promoting the parameterised Sub-build 2 naturality
-  to the canonical function-field iso of integral schemes.
+  This is the entry point that discharges the \(\texttt{h\_compat}\)
+  hypothesis of
+  \(\texttt{Scheme.PrimeDivisor.ordFrac\_stalkIso\_naturality}\),
+  promoting the parameterised naturality to the canonical function-field
+  iso of integral schemes.
 \end{definition}
 
-\paragraph{End-to-end map: Sub-builds 1--3 \(\Rightarrow\) closure of
-\(\texttt{rationalMap\_order\_finite\_support}\) (\ref{lem:rationalMap_order_finite_support}, non-zero branch L535).}
-The L535 closure target is: for an integral, locally-Noetherian scheme
-\(X\) satisfying \(\texttt{IsRegularInCodimensionOne}\) and a non-zero
-\(f \in X.\texttt{functionField}\),
-\((\texttt{Function.support}\,(Y \mapsto \texttt{order}\,Y\,f)).\texttt{Finite}\).
-Hartshorne II.6.1 / Stacks 02RV proves this by reducing to an
-affine open neighbourhood and citing height-1 prime decomposition
-on a Noetherian ring. The project decomposes the proof into three
-project-local Sub-builds plus a terminal closure step:
-
-\begin{itemize}
-  \item \textbf{Sub-build 1 (CLOSED iter-200, 8 axiom-clean decls
-    L153--L305).} Open-immersion descent of the
-    \(\texttt{PrimeDivisor}\) bundle: bijection between
-    prime divisors of \(X\) lying in an open \(U\) and prime divisors
-    of \(U.\texttt{toScheme}\); stalk-isomorphism wrapper around
-    Mathlib's \(\texttt{Scheme.Opens.stalkIso}\); descent of the
-    \(\texttt{IsRegularInCodimensionOne}\) class.
-  \item \textbf{Sub-build 2 (CLOSED iter-201, 6 axiom-clean decls
-    L247--L519).} Naturality of \(\texttt{Ring.ordFrac}\) across a
-    ring isomorphism \(R \simeq S\) of Noetherian-domain stalks of
-    Krull dim \(\leq 1\), with compatible fraction-field iso
-    \(K_R \simeq K_S\). The realised modular decomposition is
-    4 private \(\texttt{Ring.*}\) helpers
-    (\(\texttt{ord\_ringEquiv}\),
-     \(\texttt{nonZeroDivisors\_ringEquiv}\),
-     \(\texttt{ordMonoidWithZeroHom\_ringEquiv}\),
-     \(\texttt{ordFrac\_ringEquiv}\) anchor), plus the public
-    function-field iso \(\texttt{Scheme.Opens.functionFieldIso}\)
-    (\ref{def:functionFieldIso}) and the parameterised packaging
-    \(\texttt{Scheme.PrimeDivisor.ordFrac\_stalkIso\_naturality}\)
-    (private). The \(\texttt{ordFrac\_ringEquiv}\) anchor proof
-    case-splits on \(x = 0\); in the non-zero branch it obtains
-    \((a, b \in \mathrm{nzd}\,R)\) from
-    \(\texttt{IsLocalization.surj}\), lifts the numerator via
-    \(\texttt{mem\_nonZeroDivisors\_of\_ne\_zero}\), expresses both
-    sides as \(\texttt{mk'}\,K_R\,a\,\langle b, \cdot\rangle\) /
-    \(\texttt{mk'}\,K_S\,(e\,a)\,\langle e\,b, \cdot\rangle\), applies
-    \(\texttt{Ring.ordFrac\_eq\_div}\), and closes via
-    \(\texttt{ordMonoidWithZeroHom\_ringEquiv}\) on numerator and
-    denominator.
-  \item \textbf{Sub-build 3 (iter-202 target, \(\sim 30\)--\(60\) LOC).}
-    Discharge the \(\texttt{h\_compat}\) hypothesis of
-    \(\texttt{Scheme.PrimeDivisor.ordFrac\_stalkIso\_naturality}\)
-    by specialising \(e_K\) to
-    \(\texttt{Scheme.Opens.functionFieldIso}\,U\) (\ref{def:functionFieldIso}).
-    The compatibility reduces to a naturality of
-    \(\texttt{stalkSpecializes}\) (to the generic point) along the
-    open-immersion stalk iso \(\texttt{Scheme.Opens.stalkIso}\); the
-    morphism-level form is the equation
-    \(\texttt{stalkIso} \,\ggg\, \texttt{stalkSpecializes}\,(\text{gp}_X \rightsquigarrow Y)
-     = \texttt{stalkSpecializes}\,(\text{gp}_U \rightsquigarrow Y')
-       \,\ggg\, \texttt{functionFieldIso}\)
-    in \(\texttt{CommRingCat}\). Reference: Mathlib's
-    \(\texttt{PresheafedSpace.stalkMap.stalkSpecializes\_stalkMap\_assoc}\)
-    (\texttt{Geometry.RingedSpace.Stalks}). Naturality of
-    \(\texttt{Scheme.RationalMap.order}\) across the stalk iso of
-    Sub-build 1 follows by the resulting equation: for
-    \(Y : X.\texttt{PrimeDivisor}\) with \(Y.\texttt{point} \in U\)
-    and \(f \in X.\texttt{functionField}\),
-    \(\texttt{order}\,Y\,f
-     = \texttt{order}\,(\texttt{restrictToOpen}\,U\,Y\,h)\,f'\)
-    with \(f'\) the image of \(f\) under
-    \(X.\texttt{functionField} \simeq U.\texttt{toScheme}.\texttt{functionField}\).
-    Direct consumer of Sub-build 2.
-  \item \textbf{Terminal closure (iter-203 target, \(\sim 40\)--\(80\) LOC).}
-    Given a non-zero \(f \in X.\texttt{functionField}\):
-    (a) reduce to a finite affine cover \(X = \bigcup_{i = 1}^N U_i\)
-    (Hartshorne II.6 hypothesis; project-side
-    \texttt{[IsLocallyNoetherian X] + [CompactSpace X]} or just
-    \texttt{[IsNoetherian X]}); (b) by Sub-build 3, every
-    \(Y \in \texttt{support}\) lies in some \(U_i\) and has
-    \(\texttt{order}\,Y\,f = \texttt{order}\,(\texttt{restrictToOpen}\,
-     U_i\,Y\,h)\,f_i\) for \(f_i\) the corresponding fraction-field
-    element on \(U_i\); (c) each \(U_i\) is affine Noetherian, so the
-    height-1 prime decomposition of \(\mathrm{div}(f_i)\) in
-    \(\Gamma(U_i, \mathcal O)\) is finite by Mathlib's
-    \(\texttt{Ideal.finite\_minimalPrimes\_of\_isNoetherianRing}\)
-    applied to the principal ideal \((f_i)\); (d) bound
-    \(|\texttt{support}|\) by the sum of the finitely many
-    \(|\texttt{support of div}(f_i)|\) terms; (e) conclude finiteness.
-\end{itemize}
-
-The two declarations that realise Sub-build 3 (both
-Archon-original; landed axiom-clean iter-202) are pinned below.
 
 \begin{lemma}\leanok
 [Function-field-iso compatibility, morphism level]
@@ -678,6 +471,8 @@ Archon-original; landed axiom-clean iter-202) are pinned below.
 \end{proof}
 
 \begin{lemma}
+
+\leanok
 [Parameterised \(\texttt{ordFrac}\) naturality across the open-immersion stalk iso]
   \label{lem:ordFrac_stalkIso_naturality}
   \lean{AlgebraicGeometry.Scheme.PrimeDivisor.ordFrac_stalkIso_naturality}
@@ -730,18 +525,6 @@ Archon-original; landed axiom-clean iter-202) are pinned below.
   rewrite by the naturality lemma.
 \end{proof}
 
-The chain terminates: each Sub-build is bounded in scope to a
-specific project-local naturality / descent step; Sub-build 3 is a
-direct consumer of Sub-build 2 with no further branching; the
-terminal closure is bounded by the cardinality of a finite affine
-cover. The structural blocker around the
-\(\texttt{[IsLocallyNoetherian X]}\) vs.\
-\(\texttt{[IsNoetherian X]}\) hypothesis gap (consumer-propagation
-USER-blocked, see \texttt{STRATEGY.md} A.4.a row) does \emph{not}
-affect Sub-build 2 or Sub-build 3, which are stated on the open
-chart \(U.\texttt{toScheme}\) and consume only local hypotheses; the
-terminal closure step is where the hypothesis-strength choice
-becomes load-bearing.
 \section{Order of a rational function at a prime divisor}
 \begin{definition}
 \leanok
@@ -782,85 +565,6 @@ becomes load-bearing.
   scheme \(C\)); the local ring \(\mathcal O_{C, P}\) is a discrete valuation
   ring by smoothness, and \(\ord_P(f) = v_P(f)\) is the standard DVR
   valuation of \(f\) at \(P\).
-  \paragraph{Lean signature scope (iter-175 pin, per analogist
-  \texttt{dvr-rationalmap-order}).} The iter-175 Lean signature is
-  \begin{quote}
-    \texttt{noncomputable def order \{X : Scheme.\{u\}\} [IsIntegral X]\\
-    \phantom{}\quad[IsLocallyNoetherian X] (Y : X.PrimeDivisor)\\
-    \phantom{}\quad[Ring.KrullDimLE 1 (X.presheaf.stalk Y.point)]\\
-    \phantom{}\quad(f : X.functionField) : \(\mathbb Z\)}
-  \end{quote}
-  with \emph{no} \(f \neq 0\) hypothesis (junk-on-\(f = 0\) convention,
-  see below). The body is
-  \[
-    \texttt{order}\ Y\ f \;:=\;
-      \texttt{WithZero.log}\ \bigl(
-        \texttt{Ring.ordFrac}\ (X.\texttt{presheaf.stalk}\ Y.\texttt{point})\ f
-      \bigr).
-  \]
-  \emph{Mathlib API path.}
-  \begin{itemize}
-    \item \texttt{Ring.ordFrac R : K \(\to\!\!*_0\) \(\mathbb Z^{m_0}\)}
-      (with \(\mathbb Z^{m_0} = \texttt{WithZero (Multiplicative}\ \mathbb Z)\)),
-      from \texttt{Mathlib.RingTheory.OrderOfVanishing.Basic} (Stacks
-      tag~\texttt{02MD}), is Mathlib's canonical monoid-with-zero hom
-      extending the length-of-quotient valuation
-      \texttt{Ring.ord} from a Noetherian Krull-dim-\(\leq 1\) ring to
-      its fraction field via \texttt{Submonoid.LocalizationMap.lift\textsubscript{0}}.
-      For a DVR-uniformised local ring its value on \(r \in R\) is the
-      length of \(R/(r)\) (the DVR valuation); on \(a/b \in K\), it is
-      \(\texttt{ord}(a) - \texttt{ord}(b)\). The hypotheses
-      \texttt{[CommRing R] [Nontrivial R] [IsNoetherianRing R]\\
-      [Ring.KrullDimLE 1 R]} are exactly the typeclasses the body
-      synthesises from \([\texttt{IsIntegral}\ X]\) (delivers
-      \texttt{IsDomain} hence \texttt{Nontrivial} on the stalk via
-      \texttt{instIsDomainCarrierStalkCommRingCatPresheafOfIsIntegral},
-      and \texttt{IsFractionRing (X.presheaf.stalk Y.point)
-      X.functionField} via
-      \texttt{instIsFractionRingCarrierStalkCommRingCatPresheafFunctionField}),
-      from \([\texttt{IsLocallyNoetherian}\ X]\) (delivers
-      \texttt{IsNoetherianRing} on the stalk via
-      \texttt{instIsNoetherianRingCarrierStalkCommRingCatPresheafOfIsLocallyNoetherian}),
-      and from the explicitly threaded
-      \texttt{[Ring.KrullDimLE 1 (X.presheaf.stalk Y.point)]}.
-    \item \texttt{WithZero.log : \(\mathbb Z^{m_0} \to \mathbb Z\)}
-      from \texttt{Mathlib.Algebra.GroupWithZero.WithZero} is Mathlib's
-      canonical projection to the additive value group with
-      junk-on-zero: \texttt{log\_zero}: \(\log 0 = 0\);
-      \texttt{log\_mul}: \(\log(x \cdot y) = \log x + \log y\) for
-      \(x, y \neq 0\). This makes the downstream additive identities
-      \(v_Y(fg) = v_Y(f) + v_Y(g)\), \(v_Y(f^{-1}) = -v_Y(f)\),
-      \(v_Y(1) = 0\) available as named lemmas for
-      \ref{def:order_at_point}.
-  \end{itemize}
-  \emph{Junk-on-\(f = 0\) convention.} Setting \(f = 0\) in
-  \texttt{X.functionField} feeds \(0\) into
-  \texttt{Ring.ordFrac (X.presheaf.stalk Y.point)} (zero of the
-  monoid-with-zero hom; \texttt{Ring.ordFrac} maps \(0\) to
-  \(0 \in \mathbb Z^{m_0}\)); then \texttt{WithZero.log 0 = 0} so
-  \(\texttt{order}\ Y\ 0 = 0\). This is the canonical Mathlib junk
-  choice; no separate \(f \neq 0\) hypothesis is threaded on the
-  signature.
-  \emph{In-tree gap-fill (project-side; Mathlib upstream opportunity).}
-  Mathlib (as of \texttt{b80f227}) has no direct bridge from the
-  topological condition \(\texttt{Order.coheight}\ Y.\texttt{point} = 1\)
-  on \texttt{X.carrier} to the algebraic condition
-  \(\texttt{Ring.KrullDimLE 1 (X.presheaf.stalk Y.point)}\) on the
-  stalk. The missing fact (Stacks tag~\texttt{02IZ} / \texttt{005X}) is
-  the topological identity ``coheight of \(x\) in the scheme's
-  specialisation preorder equals the height of the prime ideal
-  corresponding to \(x\) in any affine chart''; the algebraic step
-  ``ideal height \(=\) stalk Krull dim'' is in Mathlib as
-  \texttt{IsLocalization.AtPrime.ringKrullDim\_eq\_height}
-  (\texttt{Mathlib.RingTheory.Ideal.Height}) and
-  \texttt{IsAffineOpen.isLocalization\_stalk}
-  (\texttt{Mathlib.AlgebraicGeometry.AffineScheme}). The iter-175
-  workaround is to thread the explicit instance
-  \texttt{[Ring.KrullDimLE 1 (X.presheaf.stalk Y.point)]} on
-  \texttt{order} (and downstream consumers); a future two-line
-  Mathlib upstream PR pinning the coheight-height bridge would let
-  the project drop the explicit argument in favour of synthesis from
-  \texttt{coheight Y.point = 1} via the \texttt{PrimeDivisor} carrier.
 \end{definition}
 \subsection{Valuation identities for the order function}
 \label{subsec:order_identities}
@@ -987,40 +691,6 @@ following identities feed the principal-divisor homomorphism
   Conversely, every prime divisor on \(C\) is of this form, so an arbitrary
   divisor on \(C\) is a finite formal \(\mathbb Z\)-linear combination
   \(\sum n_i [P_i]\) of closed points.
-  \paragraph{Lean signature scope (iter-174 pin).} The Lean signature
-  \texttt{AlgebraicGeometry.Scheme.WeilDivisor.ofClosedPoint} accepts a
-  scheme \texttt{C : Scheme.\{u\}}, a point \texttt{P : C}, and a
-  hypothesis \texttt{(\_hP : IsClosed (\{P\} : Set C))}. It does
-  \emph{not} typeclass-pin ``smooth proper curve over \(\bar k\)'' at the
-  carrier level, and it does \emph{not} thread the
-  one-dimensional-integral-scheme content into the declaration head.
-  Instead the iter-174 encoding is \emph{junk-defined} outside the
-  codim-\(1\) regime:
-  \[
-    \texttt{ofClosedPoint}\ P\ \_\!hP\ :=\
-      \begin{cases}
-        \texttt{Finsupp.single}\ \langle P, h\rangle\ 1 &
-          \text{if } h : \texttt{Order.coheight}\ P = 1,\\
-        0 & \text{otherwise.}
-      \end{cases}
-  \]
-  On the off-branch --- where \texttt{P} is not a codimension-one point
-  (e.g.\ \texttt{P} is the generic point of \texttt{C}, or a closed point
-  of codimension \(\geq 2\) on a higher-dimensional scheme) ---
-  \texttt{ofClosedPoint} returns the zero divisor \(0 \in \mathrm{Div}(C)\). This
-  convention lets the Lean signature avoid threading
-  \texttt{[OneDimensional C]} / \texttt{[IsIntegral C]} typeclass payload
-  at the declaration head; the well-definedness consumer must instead
-  invoke the bridge equation lemmas
-  \ref{lem:ofClosedPoint_eq_single} and \ref{lem:ofClosedPoint_eq_zero}
-  to expose the two branches at the point of use.
-  On the intended regime (one-dimensional integral scheme \(C\), \(P\) a
-  closed point), the chapter's mathematical statement
-  \([P] := 1 \cdot P \in \mathrm{Div}(C)\) is recovered by combining
-  \ref{def:divisor_closed_point} with the chain
-  \(\texttt{IsClosed \{P\}} \Rightarrow \texttt{Order.coheight}\ P = 1\)
-  that the prover threads inside the consumer (using the
-  one-dimensional-integrality content).
 \end{definition}
 \begin{lemma}
 \leanok
@@ -1093,22 +763,6 @@ following identities feed the principal-divisor homomorphism
   \(\deg(D) := \sum_i n_i \, [\kappa(P_i) : k]\) recovers the
   \emph{geometric} degree, but the project's RR bridge needs only the
   \(\bar k\) specialisation.
-  \paragraph{Lean signature scope.} The Lean definition
-  \texttt{AlgebraicGeometry.Scheme.WeilDivisor.degree} is given for an
-  arbitrary scheme \texttt{X : Scheme.\{u\}} as the literal sum of
-  coefficients via \texttt{Finsupp.sum D (fun \_ n => n)}; the typeclass
-  set ``smooth proper curve over \(\bar k\)'' is \emph{not} pinned on the
-  base declaration. Mathematically this assigns to every Weil divisor
-  \(D \in \mathrm{Div}(X)\) on any scheme \(X\) the integer-valued sum of its
-  multiplicities; for a smooth proper curve over \(\bar k\) this coincides
-  with the curve-theoretic degree of the prose (every closed point has
-  residue field \(\bar k\), so the residue-field-degree weight is identically
-  one). The chapter's prose pins the curve hypothesis for clarity and to
-  flag that, on a scheme with non-trivial residue-field extensions, the
-  bare-sum signature does \emph{not} compute the geometric degree; the
-  curve hypothesis is threaded at the call sites that consume
-  \texttt{degree} for arithmetic statements
-  (\ref{thm:principal_deg_zero}, \texttt{RR.2}--\texttt{RR.4}).
 \end{definition}
 \begin{theorem}
 \leanok
@@ -1135,6 +789,8 @@ following identities feed the principal-divisor homomorphism
   corresponding identities for finite sums of integers.
 \end{proof}
 \begin{lemma}
+
+\leanok
 [Degree homomorphism agrees with the degree map]
   \label{lem:degree_hom_apply}
   \lean{AlgebraicGeometry.Scheme.WeilDivisor.degree_hom_apply}
@@ -1149,6 +805,8 @@ following identities feed the principal-divisor homomorphism
   Proved directly in Lean (from \(\texttt{Finsupp.liftAddHom\_apply}\)).
 \end{proof}
 \begin{lemma}
+
+\leanok
 [Degree of the zero divisor]
   \label{lem:degree_zero}
   \lean{AlgebraicGeometry.Scheme.WeilDivisor.degree_zero}
@@ -1160,6 +818,8 @@ following identities feed the principal-divisor homomorphism
   so sends \(0\) to \(0\); use \ref{lem:degree_hom_apply}).
 \end{proof}
 \begin{lemma}
+
+\leanok
 [Degree is additive]
   \label{lem:degree_add}
   \lean{AlgebraicGeometry.Scheme.WeilDivisor.degree_add}
@@ -1172,6 +832,8 @@ following identities feed the principal-divisor homomorphism
   \ref{lem:degree_hom_apply}).
 \end{proof}
 \begin{lemma}
+
+\leanok
 [Degree of a negation]
   \label{lem:degree_neg}
   \lean{AlgebraicGeometry.Scheme.WeilDivisor.degree_neg}
@@ -1183,6 +845,8 @@ following identities feed the principal-divisor homomorphism
   \ref{lem:degree_hom_apply}).
 \end{proof}
 \begin{lemma}
+
+\leanok
 [Degree is subtractive]
   \label{lem:degree_sub}
   \lean{AlgebraicGeometry.Scheme.WeilDivisor.degree_sub}
@@ -1195,6 +859,8 @@ following identities feed the principal-divisor homomorphism
   \ref{lem:degree_hom_apply}).
 \end{proof}
 \begin{lemma}
+
+\leanok
 [Degree of a one-point divisor]
   \label{lem:degree_single}
   \lean{AlgebraicGeometry.Scheme.WeilDivisor.degree_single}
@@ -1213,14 +879,6 @@ following identities feed the principal-divisor homomorphism
 [Finite support of the order function — Hartshorne 6.1 / Stacks 02RV]
   \label{lem:rationalMap_order_finite_support}
   \lean{AlgebraicGeometry.rationalMap_order_finite_support}
-  % \lean{...} corrected iter-199 review: the iter-199 plan-phase
-  % pin used the wrong namespace (".Scheme.") and the Lean theorem at
-  % WeilDivisor.lean:357 sits in `namespace AlgebraicGeometry` only
-  % (Scheme.RationalMap closed at L159). The theorem is also declared
-  % `private` — sync_leanok may not resolve private decls cleanly. The
-  % chapter pin is retained as documentation for the future-closed
-  % version; the iter-199 plan agent's directive to consume this via
-  % the `[IsNoetherian X]` strengthening remains the closure path.
   \uses{def:order_at_point, def:prime_divisor}
   % SOURCE: [Hartshorne], II.6, Lemma~6.1, p.~131 (read from
   % references/hartshorne-algebraic-geometry.pdf, PDF page 148).
@@ -1229,9 +887,14 @@ following identities feed the principal-divisor homomorphism
   % many prime divisors \(Y\)."
   \textit{Source: Hartshorne, II.6, Lemma~6.1, p.~131 (a.k.a.\ Stacks 02RV).}
 
-  Let \(X\) be a Noetherian integral scheme that is regular in
-  codimension one, and let \(f \in K(X)\) be a nonzero rational function.
-  Then \(\{Y \in X^{(1)} \mid \ord_Y(f) \ne 0\}\) is finite.
+  Let \(X\) be an integral scheme that is regular in codimension one and is
+  \emph{Noetherian} --- equivalently, both \emph{locally Noetherian} and
+  \emph{quasi-compact}, i.e.\ admitting a finite affine cover. Let
+  \(f \in K(X)\) be a nonzero rational function. Then
+  \(\{Y \in X^{(1)} \mid \ord_Y(f) \ne 0\}\) is finite. Both hypotheses are
+  required: local Noetherianness makes each affine chart-ring Noetherian, and
+  quasi-compactness bounds the number of charts; dropping quasi-compactness
+  makes the conclusion false.
 \end{lemma}
 
 % SOURCE QUOTE PROOF: "Proof. Let \(U = \operatorname{Spec} A\) be an open
@@ -1242,7 +905,7 @@ following identities feed the principal-divisor homomorphism
 % subset of \(X\), so it can contain only finitely many prime divisors of
 % \(X\) [\dots]"
 \begin{proof}
-  \uses{def:order_at_point}
+  \uses{def:order_at_point, lem:finite_order_support_affine, lem:finite_order_support_on_affineOpen}
   Following Hartshorne II.6.1 / Stacks 02RV:
   \begin{enumerate}
   \item Pick a nonempty affine open \(U = \operatorname{Spec} R \subset X\) on
@@ -1263,18 +926,222 @@ following identities feed the principal-divisor homomorphism
     nonzero values to the order function.
   \item Combining (2) and (3) gives the finiteness of the support.
   \end{enumerate}
-  \emph{Hypothesis health.} The argument in (3) uses that \(X\) is
-  Noetherian as a topological space (so \(X \setminus U\) has finitely
-  many irreducible components). For \([X]\) only locally Noetherian +
-  integral (without quasi-compactness), one can produce
-  counter-examples with infinitely many disjoint codim-1 prime
-  divisors outside \(U\). The Lean signature thus takes
-  \texttt{[IsNoetherian X]} (or equivalently
-  \texttt{[IsLocallyNoetherian X] + [CompactSpace X]}). The hybrid
-  WeilDivisor file pins the public-facing declaration under the
-  weaker \texttt{[IsLocallyNoetherian X]} hypothesis and exposes the
-  \texttt{[CompactSpace X]} (or full Noetherian) strengthening
-  as the substantive sub-claim that this lemma resolves.
+  \emph{Why compactness is needed.} Finite support follows because a
+  compact (finite-affine-cover) scheme has only finitely many codimension-one
+  prime divisors meeting the support of \(\mathrm{div}(f)\): cover \(X\) by
+  finitely many affine opens \(U_1, \dots, U_N\); on each \(U_i\) step (2)
+  bounds the nonzero-order prime divisors meeting \(U_i\) by the finite set of
+  minimal primes of \((f)\) in the Noetherian ring \(\Gamma(U_i, \mathcal O)\);
+  every prime divisor \(Y\) meets at least one \(U_i\), so the support is a
+  finite union of finite sets. Quasi-compactness is genuinely necessary: a
+  non-quasi-compact integral locally Noetherian scheme can carry infinitely
+  many pairwise-disjoint codimension-one prime divisors outside a fixed affine
+  open \(U\), so a rational function may have infinitely many zeros or poles
+  and the conclusion \(\{Y \mid \ord_Y(f) \ne 0\}\) finite fails.
+\end{proof}
+
+\subsection{Affine bridge ingredients}
+\label{subsec:affine_bridge_ingredients}
+The affine finiteness core below rests on three Mathlib-supplied identifications
+that translate scheme-level data on \(V = \operatorname{Spec} R\) into
+ring-theoretic data on the Noetherian domain \(R\): the stalk of the structure
+sheaf is the localization at the corresponding prime, and the function field is
+the fraction field of \(R\).
+
+\begin{lemma}[Stalk of \(\operatorname{Spec} R\) is the localization at the prime]
+  \label{lem:structureSheaf_stalkIso}
+  \lean{AlgebraicGeometry.StructureSheaf.stalkIso}
+  \mathlibok
+  \textit{Provided by Mathlib.}
+  For a commutative ring \(R\) and a point \(x \in \operatorname{Spec} R\) --- i.e.\ a
+  prime ideal \(\mathfrak p_x = x.\mathtt{asIdeal}\) of \(R\) --- there is an
+  \(R\)-algebra isomorphism
+  \[
+    \mathrm{Localization.AtPrime}\,\mathfrak p_x
+    \;\xrightarrow{\ \sim\ }\;
+    \mathcal O_{\operatorname{Spec} R,\,x}
+  \]
+  between the localization of \(R\) at \(\mathfrak p_x\) and the stalk of the
+  structure sheaf at \(x\).
+\end{lemma}
+
+\begin{lemma}[Function field of \(\operatorname{Spec} R\) is the fraction field]
+  \label{lem:functionField_isFractionRing_of_affine}
+  \lean{AlgebraicGeometry.functionField_isFractionRing_of_affine}
+  \mathlibok
+  \textit{Provided by Mathlib.}
+  For an integral domain \(R\), the canonical map exhibits the function field of
+  \(\operatorname{Spec} R\) as the fraction field of \(R\): one has
+  \(\mathtt{IsFractionRing}\,R\,K(\operatorname{Spec} R)\), so
+  \(K(\operatorname{Spec} R) \cong \mathrm{Frac}(R)\).
+\end{lemma}
+
+\begin{lemma}\leanok
+[Affine ring-theoretic core of finite support]
+  \label{lem:finite_order_support_affine}
+  \lean{AlgebraicGeometry.finite_order_support_affine}
+  \uses{def:order_at_point, def:prime_divisor}
+  \textit{Source: Hartshorne, II.6.1 / Stacks 02RV, affine case.}
+  Let \(V = \operatorname{Spec} R\) be an affine integral locally Noetherian
+  scheme that is regular in codimension one, and let \(g \in K(V)^{\times}\) be a
+  nonzero rational function, written \(g = a/b\) with \(a, b \in R \setminus \{0\}\).
+  Then \(\{Z \in V^{(1)} \mid \ord_Z(g) \ne 0\}\) is finite.
+\end{lemma}
+\begin{proof}
+  \uses{def:order_at_point, def:prime_divisor, def:isRegularInCodimensionOne,
+    lem:structureSheaf_stalkIso, lem:functionField_isFractionRing_of_affine,
+    lem:ordFrac_eq_one_of_notMem,
+    lem:finite_height_one_primes_mem_or}
+  Write \(R := \Gamma(V, \mathcal O_V)\), a Noetherian integral domain (\(V\) is
+  integral, locally Noetherian, and affine), and identify
+  \(V \cong \operatorname{Spec} R\). The scheme-to-ring bridge decomposes into
+  three steps; the existing ring-theoretic count then closes the support.
+  \begin{enumerate}
+  \item[(i)] \emph{Prime divisor \(\leftrightarrow\) height-one prime.} A prime
+    divisor \(Z\) of \(V\) (\ref{def:prime_divisor}) is a codimension-one point.
+    Under \(V \cong \operatorname{Spec} R\) the point \(Z\) corresponds to a
+    prime ideal \(\mathfrak p_Z \subset R\) of height one (codimension one in
+    \(V\) corresponds to height one in \(R\)). Regularity in codimension one
+    (\ref{def:isRegularInCodimensionOne}) makes \(R_{\mathfrak p_Z}\) a
+    discrete valuation ring.
+  \item[(ii)] \emph{Stalk \(\cong\) localization; function field \(\cong\)
+    fraction field.} The stalk isomorphism
+    \(\mathcal O_{V, Z} \cong R_{\mathfrak p_Z}\)
+    (\ref{lem:structureSheaf_stalkIso}) and the function-field identification
+    \(K(V) \cong \mathrm{Frac}(R)\)
+    (\ref{lem:functionField_isFractionRing_of_affine}) carry the
+    order-of-vanishing data from the abstract stalk and function field onto the
+    explicit localization \(R_{\mathfrak p_Z} \hookrightarrow \mathrm{Frac}(R)\).
+  \item[(iii)] \emph{Order \(=\) valuation.} Under these isomorphisms
+    \(\ord_Z(g)\) is the \(\mathfrak p_Z\)-adic valuation
+    \(v_{\mathfrak p_Z}(g)\) on \(R_{\mathfrak p_Z}\). Writing \(g = a/b\) with
+    \(a, b \in R \setminus \{0\}\): if neither \(a\) nor \(b\) lies in
+    \(\mathfrak p_Z\) then both are units in \(R_{\mathfrak p_Z}\), so
+    \(\ord_Z(g) = 0\); contrapositively
+    \[
+      \ord_Z(g) \ne 0 \;\Longrightarrow\; a \in \mathfrak p_Z \ \lor\
+      b \in \mathfrak p_Z .
+    \]
+  \end{enumerate}
+  Hence \(Z \mapsto \mathfrak p_Z\) injects the support
+  \(\{Z \mid \ord_Z(g) \ne 0\}\) into the set of height-one primes of \(R\)
+  containing \(a\) or \(b\), which is finite by
+  \ref{lem:finite_height_one_primes_mem_or} (these primes are exactly the
+  minimal primes of \((a \cdot b)\)). The support is therefore finite. The
+  numerator/denominator decomposition \(g = a/b\) (not merely a regular \(f\))
+  is essential: zeros come from \(a\), poles from \(b\), and both are captured
+  by the height-one primes containing \(a\) or \(b\).
+
+  \emph{Residue-field independence.} The correspondence is insensitive to the
+  residue field \(\kappa(Z)\), so the finiteness holds for an arbitrary affine
+  integral locally-Noetherian regular-in-codimension-one scheme \(V\), with no
+  algebraically-closed-base hypothesis.
+\end{proof}
+
+\subsection{Ring-theoretic core: finitely many height-one primes divide a fixed
+element}
+\label{subsec:ring_core_finiteness}
+Step (iii)\(\to\)finiteness of \ref{lem:finite_order_support_affine} bottoms out
+in a purely ring-theoretic count: in a Noetherian integral domain only finitely
+many height-one primes can contain a fixed nonzero element (resp.\ one of two
+fixed nonzero elements). These are the axiom-clean substrate lemmas the affine
+bridge consumes.
+
+\begin{lemma}[Order one at a prime away from both numerator and denominator]
+  \label{lem:ordFrac_eq_one_of_notMem}
+  \lean{Ring.ordFrac_eq_one_of_notMem}
+  Let \(A\) be a localization of a Noetherian integral domain \(R\) at a prime
+  \(\mathfrak p\) (\(\texttt{IsLocalization.AtPrime}\,A\,\mathfrak p\)), with common
+  fraction field \(K\). If \(a \notin \mathfrak p\) and \(b \notin \mathfrak p\),
+  then \(\texttt{Ring.ordFrac}\,A\,\bigl(e_K a / e_K b\bigr) = 1\), where \(e_K\)
+  is the localization map \(R \to K\). Contrapositively, \(\texttt{ord}_Z(g) \neq 0
+  \Rightarrow a \in \mathfrak p_Z \lor b \in \mathfrak p_Z\) for \(g = a/b\) ---
+  the step-(iii) reduction the affine bridge uses to inject the order-support into
+  the finite height-one-prime set of \ref{lem:finite_height_one_primes_mem_or}.
+\end{lemma}
+\begin{proof}
+  \(a, b \notin \mathfrak p\) become units in \(A\)
+  (\(\texttt{IsLocalization.map\_units}\)); pushing them through the scalar tower
+  \(R \to A \to K\) makes \(e_K a / e_K b\) a unit in \(A\), so
+  \(\texttt{Ring.ordFrac\_of\_isUnit}\) gives order \(1\).
+\end{proof}
+
+\begin{lemma}[Finiteness of minimal primes over an ideal in a Noetherian ring]
+  \label{lem:finite_minimalPrimes_mathlib}
+  \lean{Ideal.finite_minimalPrimes_of_isNoetherianRing}
+  \mathlibok
+  \textit{Provided by Mathlib.}
+  In a Noetherian commutative ring \(R\), every ideal \(I\) has only finitely
+  many minimal primes: the set \(\mathrm{minimalPrimes}(I)\) is finite. This is
+  the Noetherian form of Krull's Hauptidealsatz count.
+\end{lemma}
+
+\begin{lemma}
+[Finiteness of height-one primes containing a fixed nonzero element]
+  \label{lem:finite_height_one_primes_mem}
+  \lean{Ideal.finite_setOf_isPrime_height_one_mem}
+  \uses{lem:finite_minimalPrimes_mathlib}
+  Let \(R\) be a Noetherian integral domain and \(a \in R\) nonzero. Then the set
+  \[
+    \{\mathfrak p \subseteq R \mid \mathfrak p \text{ prime},\
+      \mathrm{ht}\,\mathfrak p = 1,\ a \in \mathfrak p\}
+  \]
+  of height-one primes containing \(a\) is finite.
+\end{lemma}
+\begin{proof}
+  \uses{lem:finite_minimalPrimes_mathlib}
+  Every height-one prime \(\mathfrak p \ni a\) is a minimal prime over the
+  principal ideal \((a)\). Indeed, there exists a minimal prime
+  \(\mathfrak q \subseteq \mathfrak p\) over \((a)\), and
+  \(\mathfrak q \ne 0\) since \(a \ne 0\); if
+  \(\mathfrak q \subsetneq \mathfrak p\), the strict chain
+  \(0 \subsetneq \mathfrak q \subsetneq \mathfrak p\) gives
+  \(\mathrm{ht}\,\mathfrak p \ge 2\), contradicting \(\mathrm{ht}\,\mathfrak p = 1\).
+  Hence \(\mathfrak q = \mathfrak p\), so the set is contained in
+  \(\mathrm{minimalPrimes}(a)\), which is finite by
+  \ref{lem:finite_minimalPrimes_mathlib}.
+\end{proof}
+
+\begin{lemma}
+[Finiteness of height-one primes containing one of two fixed nonzero elements]
+  \label{lem:finite_height_one_primes_mem_or}
+  \lean{Ideal.finite_setOf_isPrime_height_one_mem_or}
+  \uses{lem:finite_height_one_primes_mem}
+  Let \(R\) be a Noetherian integral domain and \(a, b \in R\) both nonzero. Then
+  the set
+  \[
+    \{\mathfrak p \subseteq R \mid \mathfrak p \text{ prime},\
+      \mathrm{ht}\,\mathfrak p = 1,\ a \in \mathfrak p \ \lor\ b \in \mathfrak p\}
+  \]
+  is finite. This is the \(g = a/b\) consumable form fed to the affine support
+  count (\ref{lem:finite_order_support_affine}).
+\end{lemma}
+\begin{proof}
+  \uses{lem:finite_height_one_primes_mem}
+  The set is the union of the height-one primes containing \(a\) and those
+  containing \(b\); each is finite by \ref{lem:finite_height_one_primes_mem}
+  (applied to \(a \ne 0\) and to \(b \ne 0\)), and a union of two finite sets is
+  finite.
+\end{proof}
+
+\begin{lemma}\leanok
+[Open-chart finiteness of the order support]
+  \label{lem:finite_order_support_on_affineOpen}
+  \lean{AlgebraicGeometry.finite_order_support_on_affineOpen}
+  \uses{lem:finite_order_support_affine, lem:order_eq_order_restrict, lem:primeDivisor_ofOpen_point}
+  Let \(U \subseteq X\) be a nonempty affine open of an integral locally
+  Noetherian scheme \(X\) regular in codimension one, and \(f \in K(X)^{\times}\).
+  Then \(\{Y \in X^{(1)} \mid Y.\mathrm{point} \in U,\ \ord_Y(f) \ne 0\}\) is finite.
+\end{lemma}
+\begin{proof}
+  \uses{lem:finite_order_support_affine, lem:order_eq_order_restrict}
+  Transport along the open immersion \(U \hookrightarrow X\): a prime divisor of
+  \(X\) meeting \(U\) restricts to a prime divisor of the chart \(U\)
+  (\ref{lem:primeDivisor_ofOpen_point}), order is preserved
+  (\ref{lem:order_eq_order_restrict}), and the pulled-back function on the chart
+  has finite nonzero-order support by \ref{lem:finite_order_support_affine}.
+  The round-trip \(\mathrm{ofOpen} \circ \mathrm{restrictToOpen} = \mathrm{id}\)
+  identifies the two index sets.
 \end{proof}
 
 \begin{definition}
@@ -1311,6 +1178,8 @@ following identities feed the principal-divisor homomorphism
   sum over closed points.
 \end{definition}
 \begin{lemma}
+
+\leanok
 [Coefficient of a principal divisor is the order]
   \label{lem:principal_apply}
   \lean{AlgebraicGeometry.Scheme.WeilDivisor.principal_apply}
@@ -1325,6 +1194,8 @@ following identities feed the principal-divisor homomorphism
   Proved directly in Lean (from \(\texttt{Finsupp.ofSupportFinite\_coe}\)).
 \end{proof}
 \begin{lemma}
+
+\leanok
 [Principal divisor of the constant function one]
   \label{lem:principal_one}
   \lean{AlgebraicGeometry.Scheme.WeilDivisor.principal_one}
@@ -1335,6 +1206,30 @@ following identities feed the principal-divisor homomorphism
 \begin{proof}
   Proved directly in Lean: by \ref{lem:principal_apply} each coefficient is
   \(\ord_Y(1)\), which is \(0\) by \ref{lem:order_one}.
+\end{proof}
+\begin{lemma}
+
+\leanok
+[Principal divisor of the inverse is the negation]
+  \label{lem:principal_inv}
+  \lean{AlgebraicGeometry.Scheme.WeilDivisor.principal_inv}
+  \uses{def:principal_divisor, lem:principal_apply, lem:order_inv}
+  Let \(X\) satisfy \((*)\) and let \(f \in K(X)^{\times}\). Then the principal
+  divisor of \(f^{-1}\) is the negation of the principal divisor of \(f\):
+  \[
+    -\,\mathrm{div}(f) \;=\; \mathrm{div}(f^{-1}) \;\in\; \mathrm{Div}(X).
+  \]
+  Equivalently, the zeros of \(f^{-1}\) are exactly the poles of \(f\) and vice
+  versa. This is the divisor-level form of the per-prime-divisor valuation
+  identity \(v_Y(f^{-1}) = -v_Y(f)\), and it is the substrate for the
+  homomorphism law (\ref{thm:principal_hom}), the linear-equivalence symmetry,
+  and the zeros--poles bookkeeping in \ref{thm:principal_deg_zero}.
+\end{lemma}
+\begin{proof}
+  Proved directly in Lean coefficientwise: by \ref{lem:principal_apply} the
+  coefficient of each side at a prime divisor \(Y\) is \(-\ord_Y(f)\),
+  respectively \(\ord_Y(f^{-1})\), and these agree by the order-of-inverse
+  identity \(\ord_Y(f^{-1}) = -\ord_Y(f)\) (\ref{lem:order_inv}).
 \end{proof}
 \begin{theorem}
 \leanok
@@ -1371,7 +1266,7 @@ following identities feed the principal-divisor homomorphism
   \(v_Y(fg) = v_Y(f) + v_Y(g)\) and \(v_Y(f^{-1}) = -v_Y(f)\) for $f, g \in
   K(X)^{\times}$, and $v_Y(1) = 0$. Summing these identities over all prime
   divisors of \(X\) (a sum that has finite support on each factor by
-  \ref{thm:principal_hom}, so the support of the sum is the union
+  \ref{lem:rationalMap_order_finite_support}, so the support of the sum is the union
   of the two finite supports and remains finite) gives the three displayed
   identities.
 \end{proof}
@@ -1418,25 +1313,13 @@ following identities feed the principal-divisor homomorphism
   multiplies degrees by \(\deg(\varphi)\), we conclude
   $\deg(\mathrm{div}(f)) = \deg(\varphi) \cdot \deg([0] - [\infty]) = \deg(\varphi)
   \cdot 0 = 0$.
-  \emph{Sub-build note.} The two auxiliary statements ``the inclusion
-  \(\bar k(f) \subset K(C)\) defines a finite morphism \(C \to \mathbb P^1\)''
-  and ``pullback along a finite morphism of curves multiplies degrees by
-  the degree of the morphism'' (Hartshorne's Proposition~II.6.9, the
-  multiplicativity of degree) are themselves separable sub-lemmas of
-  \texttt{RR.1}; they are stated here for completeness and slotted to be
-  closed in a follow-up iteration. The signature
-  \texttt{AlgebraicGeometry.Scheme.WeilDivisor.principal\_degree\_zero}
-  is recorded as the public face of this theorem and is depended on by
-  the \texttt{RR.3}/\texttt{RR.4} chain.
+  The two auxiliary statements ``the inclusion \(\bar k(f) \subset K(C)\)
+  defines a finite morphism \(C \to \mathbb P^1\)'' and ``pullback along
+  a finite morphism of curves multiplies degrees by the degree of the
+  morphism'' (Hartshorne's Proposition~II.6.9) are sub-lemmas of this
+  chapter, and are depended on by the \texttt{RR.3}/\texttt{RR.4} chain.
 \end{proof}
 \section{Positive part of a Weil divisor}
-% NOTE (iter-190 plan-phase): added to host the Pin 2 corrective per
-% `task_results/AlgebraicJacobian_RiemannRoch_RationalCurveIso.lean.md`
-% (iter-189). `Hom.poleDivisor` is being refactored to return the
-% positive part of `principal (φ^* t_∞)` so that
-% `lem:degree_via_pole_divisor` is mathematically correct (the principal
-% divisor has degree 0 by `thm:principal_deg_zero`; only its
-% positive part can have positive degree).
 \begin{definition}
 
 
@@ -1455,14 +1338,11 @@ following identities feed the principal-divisor homomorphism
   \]
   Concretely, \((D)_0\) is obtained from \(D\) by replacing each coefficient
   \(n_Y\) with \(\max(n_Y, 0)\). Equivalently, in the \(\Finsupp{\mathrm{PrimeDivisor}(X)}{\mathbb Z}\)
-  presentation, the positive part is obtained either by the pointwise lattice
-  join with the zero divisor — \(\,(D)_0 = D \sqcup 0\,\) — or, equivalently
-  and more transparently for typeclass synthesis, by mapping the coefficients
-  through the zero-preserving function \(n \mapsto n \sqcup 0\):
-  \(\,(D)_0 = \mathtt{Finsupp.mapRange}\;(n \mapsto n \sqcup 0)\;D\). The two
-  forms agree by the universal property of \(\mathtt{Finsupp.mapRange}\). The
-  Lean implementation uses the \(\mathtt{mapRange}\) form to avoid the
-  noncomputable \(\Finsupp.\mathtt{semilatticeSup}\) synthesis. The complementary \emph{negative part}
+  presentation, the positive part is obtained by the pointwise lattice
+  join with the zero divisor — \(\,(D)_0 = D \sqcup 0\,\) — equivalently
+  by mapping coefficients through \(n \mapsto n \sqcup 0\):
+  \(\,(D)_0 = \mathtt{Finsupp.mapRange}\;(n \mapsto n \sqcup 0)\;D\). The
+  complementary \emph{negative part}
   \((D)_\infty\) is defined by \((D)_\infty := (-D)_0\), so that
   \(D = (D)_0 - (D)_\infty\) is the canonical decomposition into an
   effective (non-negative-coefficient) divisor minus an effective divisor.
@@ -1473,6 +1353,8 @@ following identities feed the principal-divisor homomorphism
   divisor is \(D\), in the case \(D = \mathrm{div}(f)\).
 \end{definition}
 \begin{lemma}
+
+\leanok
 [Positive part of the zero divisor]
   \label{lem:positivePart_zero}
   \lean{AlgebraicGeometry.Scheme.WeilDivisor.positivePart_zero}
@@ -1483,6 +1365,8 @@ following identities feed the principal-divisor homomorphism
   Proved directly in Lean (from \(\texttt{Finsupp.mapRange\_zero}\)).
 \end{proof}
 \begin{lemma}
+
+\leanok
 [Positive part of a one-point divisor]
   \label{lem:positivePart_single}
   \lean{AlgebraicGeometry.Scheme.WeilDivisor.positivePart_single}
@@ -1496,6 +1380,8 @@ following identities feed the principal-divisor homomorphism
   \(\max(0, 0) = 0\) the zero-preservation witness).
 \end{proof}
 \begin{lemma}
+
+\leanok
 [Degree of the positive part as a sum of capped coefficients]
   \label{lem:degree_positivePart_eq_sum_max}
   \lean{AlgebraicGeometry.Scheme.WeilDivisor.degree_positivePart_eq_sum_max}
@@ -1507,6 +1393,33 @@ following identities feed the principal-divisor homomorphism
 \begin{proof}
   Proved directly in Lean (unfold \ref{def:WeilDivisor_positivePart} and
   \ref{def:divisor_degree}; one step via \(\texttt{Finsupp.sum\_mapRange\_index}\)).
+\end{proof}
+\begin{lemma}
+
+\leanok
+[Degree splits into positive and negative parts]
+  \label{lem:degree_eq_degree_positivePart_sub}
+  \lean{AlgebraicGeometry.Scheme.WeilDivisor.degree_eq_degree_positivePart_sub}
+  \uses{def:WeilDivisor_positivePart, def:divisor_degree,
+    lem:degree_positivePart_eq_sum_max}
+  For every Weil divisor \(D \in \mathrm{Div}(X)\), the degree decomposes as the
+  degree of its positive part minus the degree of the positive part of its
+  negation:
+  \[
+    \deg(D) \;=\; \deg\bigl((D)_0\bigr) \;-\; \deg\bigl((-D)_0\bigr).
+  \]
+  Writing \((D)_\infty := (-D)_0\) for the negative part
+  (\ref{def:WeilDivisor_positivePart}), this is the degree-level form of the
+  canonical decomposition \(D = (D)_0 - (D)_\infty\) of a divisor into a
+  difference of two effective divisors --- the divisor of zeros minus the
+  divisor of poles in the case \(D = \mathrm{div}(f)\).
+\end{lemma}
+\begin{proof}
+  Proved directly in Lean. By \ref{lem:degree_positivePart_eq_sum_max} both
+  positive-part degrees are sums of capped coefficients; the
+  \((-D)\)-sum is turned into a \(D\)-sum via \(\texttt{Finsupp.sum\_neg\_index}\),
+  and the two sums are combined into one, which is then closed coefficientwise
+  by the integer identity \(n = \max(n,0) - \max(-n,0)\).
 \end{proof}
 \begin{lemma}
 [Capped sum equals the sum over positive-coefficient points]
@@ -1526,6 +1439,8 @@ following identities feed the principal-divisor homomorphism
   by a pointwise case-split on the sign of \(D_a\)).
 \end{proof}
 \begin{lemma}
+
+\leanok
 [A single simple zero forces positive-part degree at least one]
   \label{lem:one_le_degree_positivePart_principal_of_order_one}
   \lean{AlgebraicGeometry.Scheme.WeilDivisor.one_le_degree_positivePart_principal_of_order_one}
@@ -1544,6 +1459,8 @@ following identities feed the principal-divisor homomorphism
   non-negative.
 \end{proof}
 \begin{definition}
+
+\leanok
 [Projective line over \(\bar k\) is locally Noetherian]
   \label{def:projectiveLineBar_isLocallyNoetherian}
   \lean{AlgebraicGeometry.Scheme.WeilDivisor.instIsLocallyNoetherianProjectiveLineBar}
@@ -1560,6 +1477,8 @@ following identities feed the principal-divisor homomorphism
   Noetherian source.
 \end{proof}
 \begin{theorem}
+
+\leanok
 [Projective line over \(\bar k\) is regular in codimension one]
   \label{thm:projectiveLineBar_isRegularInCodimOne}
   \lean{AlgebraicGeometry.Scheme.WeilDivisor.isRegularInCodimOneProjectiveLineBar}
@@ -1593,31 +1512,6 @@ function equals the function-field extension degree]
         lem:degree_single, lem:positivePart_single,
         def:projectiveLineBar_isLocallyNoetherian,
         thm:projectiveLineBar_isRegularInCodimOne}
-  % NOTE (iter-194 refactor v2 `lane-i-localparameter-signature-v2`):
-  % the iter-193 `hlp`-augmented signature was diagnosed STILL false by
-  % the Lane I prover via counter-witness `K = K(C) = \bar k(u),
-  % t = u(u-1)`. Iter-194 plan-phase refactor reshapes the Lean
-  % signature per Option (b): drop the abstract `K` parameter and pin
-  % `t \in K(\mathbb P^1_{\bar k}) = (\text{ProjectiveLineBar
-  % kbar}).left.functionField`; replace `hlp` with the stronger
-  % uniformiser hypothesis
-  %   `hLPUnif : \exists Y_0 \in \text{PrimeDivisor}(\mathbb P^1_{\bar k}),
-  %     order(Y_0, t) = 1 \land
-  %     \forall Y, order(Y, t) > 0 \implies Y = Y_0`,
-  % i.e. \(t\) has a unique simple zero on \(\mathbb P^1\). This rules
-  % out the iter-193 counter-witness because (i) \(t = u(u-1)\) lives
-  % in \(K(\mathbb P^1)\) but has TWO simple zeros (\(\{u = 0\}\),
-  % \(\{u = 1\}\)), so the uniqueness clause fails; (ii) any
-  % function-field embedding `K = K(C)` is now disallowed at the type
-  % level. The consumer
-  % `AlgebraicGeometry.Scheme.Hom.poleDivisor_degree_eq_finrank`
-  % (`RationalCurveIso.lean`) supplies the witness via
-  % `localParameterAtInfty kbar = 1/u` (a Möbius transformation; simple
-  % zero only at \(\infty\)) as a typed sorry owed iter-194+. Refactor
-  % v2 net cost: \(+2\) typed-sorry typeclass instances on
-  % `ProjectiveLineBar` (\verb|IsLocallyNoetherian|,
-  % \verb|IsRegularInCodimensionOne|; both directly derivable from
-  % `SmoothOfRelativeDimension 1` ⟹ regular ⟹ Noetherian + DVR-stalks).
   % SOURCE: [Hartshorne], II.6, Proposition~6.9, p.~137 (multiplicativity
   % of degree under finite pullback) (read from
   % references/hartshorne-algebraic-geometry.pdf, PDF page 154).

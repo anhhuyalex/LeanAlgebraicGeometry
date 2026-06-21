@@ -1,4 +1,5 @@
 % archon:covers AlgebraicJacobian/RiemannRoch/OcOfD.lean
+% archon:covers AlgebraicJacobian/RiemannRoch/SmoothStalkDVR.lean
 
 \chapter{The invertible sheaf \(\mathcal O_C(D)\) of a Weil divisor (RR.2\(_\ast\))}
 \label{chap:RiemannRoch_OcOfD}
@@ -16,122 +17,86 @@
 
 \section{Setup and motivation}
 
-This chapter is a satellite of \texttt{RR.2}
-(\cref{chap:RiemannRoch_RRFormula}); together with \texttt{RR.1}
-(\cref{chap:RiemannRoch_WeilDivisor}), \texttt{RR.3}
-(\cref{chap:RiemannRoch_OCofP}), and \texttt{RR.4}
-(\texttt{RiemannRoch\_RationalCurveIso.tex}) it forms the four-stage
-sub-build closing the project's headline \emph{RR bridge}
-\[
-  \mathtt{genusZero\_curve\_iso\_P1}
-  \,\colon\,
-  \text{a smooth proper geometrically irreducible curve \(C / \bar k\) with
-  \(g(C) = 0\) is isomorphic to \(\mathbb P^1_{\bar k}\).}
-\]
-The Hartshorne~IV.1.3.5 chain consumed by \cref{prop:rigidity_genus0_curve_to_AV}
-of \texttt{AbelianVarietyRigidity.tex} relies on the invertible-sheaf
-functor
+This chapter is a satellite of \cref{chap:RiemannRoch_RRFormula};
+together with \cref{chap:RiemannRoch_WeilDivisor} and
+\cref{chap:RiemannRoch_OCofP}, it supplies the sheaf-theoretic
+infrastructure for the Riemann--Roch bridge: a smooth proper geometrically
+irreducible curve \(C / \bar k\) with \(g(C) = 0\) is isomorphic to
+\(\mathbb P^1_{\bar k}\) (\cref{thm:genus_zero_curve_iso_p1}).
+
+The genus-zero rigidity argument relies on the invertible-sheaf functor
 \[
   \mathcal O_C(-) \;\colon\; \mathrm{Div}(C) \;\longrightarrow\;
   \mathbf{Sh}(C, \mathbf{Mod}_{\bar k})
 \]
 sending a Weil divisor \(D = \sum_i n_i [P_i]\) to its associated invertible
-sheaf \(\mathcal O_C(D)\) on \(C\). The Lean entry-point
-\texttt{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf} of
-\texttt{AlgebraicJacobian/RiemannRoch/RRFormula.lean} (line~168) currently
-encodes this functor as a typed-\texttt{sorry} \texttt{noncomputable def}
-with no chapter pinning. This chapter supplies the missing pinning by
-blueprinting the Lean file \texttt{AlgebraicJacobian/RiemannRoch/OcOfD.lean}
-(to be created in iter-183), where the body of \texttt{sheafOf} and its
-three immediate corollaries will live.
+sheaf \(\mathcal O_C(D)\) on \(C\). This chapter constructs that functor and
+its three immediate corollaries: the structure-sheaf identification
+\(\mathcal O_C(0) = \mathcal O_C\) (\cref{lem:sheafOf_zero}), the
+closed-point comparison \(\mathcal O_C([P]) \cong
+\texttt{lineBundleAtClosedPoint}_P\) (\cref{def:lineBundleAtClosedPoint},
+\cref{lem:sheafOf_singlePoint}), and the inductive-step short exact
+sequence \(0 \to \mathcal O_C(D) \to \mathcal O_C(D+[Y]) \to k(Y) \to 0\)
+(\cref{lem:sheafOf_ses_single_add}).
 
-\paragraph{Why this chapter is gated to \texttt{RR.2}.} The
-\(\chi\)-identity proof of \cref{thm:euler_char_eq_deg_plus_one_minus_genus}
-in \texttt{RR.2} is an induction on the Weil divisor \(D\) via the
-``\(D \rightsquigarrow D + [Y]\)'' step of Hartshorne~IV.1.3. That step
-intrinsically references the body of \texttt{sheafOf}: it asks for the
-short exact sequence
+\paragraph{Relation to the Riemann--Roch induction.}
+The \(\chi\)-identity proof of
+\cref{thm:euler_char_eq_deg_plus_one_minus_genus} in
+\cref{chap:RiemannRoch_RRFormula} is an induction on the Weil divisor
+\(D\) via the \(D \rightsquigarrow D + [Y]\) step of Hartshorne~IV.1.3.
+That step requires the short exact sequence
 \[
   0 \to \mathcal O_C(D) \to \mathcal O_C(D + [Y]) \to k(Y)^{[\text{at } Y]}
   \to 0
 \]
-to be exact in \(\mathbf{Coh}(C)\), which is not a statement on the
-\emph{signature} of \texttt{sheafOf} but on its \emph{body}. The iter-181
-Lane H factoring of \texttt{RR.2} consequently
-landed two helper sorries
-(\texttt{eulerCharacteristic\_sheafOf\_zero},
-\texttt{eulerCharacteristic\_sheafOf\_succ}) that are
-\emph{intrinsically gated} on the body of \texttt{sheafOf}. Until this
-chapter pins the body, those helpers remain vacuous regardless of how
-much \(\chi\)-machinery \texttt{RR.2} adds on top.
+to be exact in \(\mathbf{Coh}(C)\); this is a property of the
+\emph{body} of the functor \(\mathcal O_C(-)\), not merely of its
+signature, and is the content of \cref{lem:sheafOf_ses_single_add}.
 
-\paragraph{Why this chapter is the entry-point for \texttt{RR.3}.} The
-existing \texttt{RR.3} chapter (\cref{chap:RiemannRoch_OCofP}) constructs
-the line bundle \(\mathcal O_C([P])\) associated to a \emph{closed point}
-\(P \in C\) directly, bypassing the Weil-divisor packaging. The
-\cref{lem:sheafOf_singlePoint} below makes this bypass mathematically
-coherent by exhibiting \(\mathcal O_C(D)\) at \(D = [P]\) as canonically
-isomorphic to \cref{def:lineBundleAtClosedPoint}. With this isomorphism in
-hand, \texttt{RR.3}'s downstream consumption of
-\(\dim_{\bar k} H^0(C, \mathcal O_C(P)) = 2\) via the
-\(\chi\)-identity routes through \texttt{sheafOf} cleanly.
+\paragraph{Relation to the line bundle at a closed point.}
+The chapter \cref{chap:RiemannRoch_OCofP} constructs the line bundle
+\(\mathcal O_C([P])\) associated to a \emph{closed point} \(P \in C\)
+directly, bypassing the Weil-divisor packaging.
+The \cref{lem:sheafOf_singlePoint} below makes this construction
+mathematically coherent with the general functor by exhibiting
+\(\mathcal O_C(D)\) at \(D = [P]\) as canonically \emph{isomorphic} to
+\cref{def:lineBundleAtClosedPoint}, via an isomorphism that is the identity
+on the common carrier \(K(C)\). This comparison enables the
+downstream use of \(\dim_{\bar k} H^0(C, \mathcal O_C(P)) = 2\)
+via the \(\chi\)-identity.
 
-\paragraph{Why this chapter is the entry-point for \texttt{RR.4}.} The
-two pins consumed by the \texttt{RR.4} chapter
-(\texttt{RiemannRoch\_RationalCurveIso.tex})
-that translate Riemann--Roch outputs into the function-field/degree
-language of \(C\) both reference \(\mathcal O_C(D)\) for general \(D\) (not
-just \(D = [P]\)): the function-field-degree bridge takes a divisor
-\(D \in \mathrm{Div}(C)\) and reads off \(\deg(D)\) from the
-\texttt{sheafOf}-associated invertible sheaf, while the
-Weil-divisor / line-bundle correspondence is the substance of
-Hartshorne's Proposition~6.15 (which the present chapter pins via
-\cref{lem:sheafOf_singlePoint}).
+\paragraph{Relation to the rational-curve isomorphism.}
+The chapter \cref{chap:RiemannRoch_RationalCurveIso} translates
+Riemann--Roch outputs into the function-field/degree language of \(C\);
+this translation references \(\mathcal O_C(D)\) for general \(D\) (not
+just \(D = [P]\)). The function-field-degree bridge reads off \(\deg(D)\)
+from the associated invertible sheaf, and the Weil-divisor / line-bundle
+correspondence (Hartshorne's Proposition~6.15) is the vehicle for that
+reading, pinned here via \cref{lem:sheafOf_singlePoint}.
 
 \paragraph{Standing hypotheses.} Throughout this chapter, \(\bar k\) is an
 algebraically closed field and \(C\) is a smooth proper geometrically
-irreducible curve over \(\bar k\). Concretely, the Lean signatures
-(\texttt{AlgebraicJacobian/RiemannRoch/OcOfD.lean}) carry the same
-typeclass package as the rest of the project's curve API:
-\begin{quote}
-  \texttt{\{kbar : Type u\} [Field kbar] [IsAlgClosed kbar]\\
-   (C : Over (Spec (.of kbar))) [IsProper C.hom]\\
-   \phantom{}\quad[SmoothOfRelativeDimension 1 C.hom]\\
-   \phantom{}\quad[GeometricallyIrreducible C.hom] [IsIntegral C.left]}
-\end{quote}
-The Weil divisor group \(\mathrm{Div}(C)\) is the one defined in
-\cref{def:codim1_cycles} of \texttt{RiemannRoch\_WeilDivisor.tex}; the
-prime-divisor data type is \cref{def:prime_divisor}; the order
+irreducible curve over \(\bar k\). The Weil divisor group
+\(\mathrm{Div}(C)\) is the one defined in \cref{def:codim1_cycles}; the
+prime-divisor notion is \cref{def:prime_divisor}; the order
 \(\ord_Q(f)\) at a prime divisor \(Q\) is \cref{def:order_at_point}; the
 principal divisor \(\div(f)\) of a non-zero rational function is
 \cref{def:principal_divisor}; the closed-point divisor \([P]\) is
-\cref{def:divisor_closed_point}. The line bundle at a closed point
-already constructed in \texttt{RR.3} is
-\cref{def:lineBundleAtClosedPoint}, and the present chapter's
-\cref{lem:sheafOf_singlePoint} makes the comparison
-\(\mathcal O_C([P]) = \mathcal O_C(D)|_{D = [P]}\) explicit.
+\cref{def:divisor_closed_point}. The line bundle at a closed point is
+\cref{def:lineBundleAtClosedPoint}, and \cref{lem:sheafOf_singlePoint}
+makes the comparison
+\(\mathcal O_C(D)|_{D = [P]} \cong \texttt{lineBundleAtClosedPoint}_P\)
+explicit.
 
-\paragraph{Route alignment with iter-182 \texttt{ocofp-sheaf-internalhom}
-analogy.} The iter-182 api-alignment analogy
-\texttt{analogies/ocofp-sheaf-internalhom.md} surveyed three candidate
-Mathlib paths for the closed-point specialisation \(\mathcal O_C([P])\):
-(i)~\texttt{Sheaf-internal-Hom} on \(\mathbf{SheafOfModules}\) (rejected:
-no \texttt{IdealSheafData \(\to\) SheafOfModules} realiser in Mathlib,
-no \(\mathbf{SheafOfModules}\) dual functor in Mathlib);
-(ii)~the abstract dual $\mathcal H\!om_{\mathcal O_C}(\mathcal I_P,
-\mathcal O_C)$ in a new \texttt{IdealSheafDual.lean} (rejected: high
-LOC cost in exchange for a single sheaf the project can build directly);
-(iii)~Hartshorne's \emph{subsheaf-of-\(\mathcal K_C\)} description (accepted).
-The present chapter adopts route~(iii) for the general
-\texttt{sheafOf \(D\)} as well, and \cref{lem:sheafOf_singlePoint} verifies
-that the general construction at \(D = [P]\) recovers the closed-point
-specialisation of \texttt{RR.3} on the nose. The subsheaf-of-\(\mathcal K_C\)
-recipe is mathematically Hartshorne's original (II~\S6, the definition of
-\(\mathscr L(D)\)) and was equally available for the closed-point case; the
-project's choice to use it both at the general \(D\) and at the \(D = [P]\)
-specialisation is what makes the comparison
-\(\mathcal O_C([P]) \cong \mathcal O_C(D)|_{D = [P]}\) a direct unfolding
-rather than a non-trivial isomorphism.
+\paragraph{Construction strategy.}
+The functor \(\mathcal O_C(D)\) is defined following Hartshorne~II~\S6 as
+the sub-\(\mathcal O_C\)-module of the constant sheaf
+\(\mathcal K_C \cong K(C)\) generated by the appropriate local data. Both
+\(\mathcal O_C(D)|_{D=[P]}\) and \cref{def:lineBundleAtClosedPoint}
+use Hartshorne's subsheaf-of-\(\mathcal K_C\) recipe with the same section
+carriers, so the comparison of \cref{lem:sheafOf_singlePoint} is the
+identity-on-\(K(C)\) isomorphism induced by the section-wise equality of
+those carriers.
 
 \section{The invertible sheaf \(\mathcal O_C(D)\)}
 
@@ -140,7 +105,9 @@ rather than a non-trivial isomorphism.
   \label{def:sheafOf}
   \lean{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf}
   \uses{def:codim1_cycles, def:prime_divisor, def:order_at_point,
-        def:Scheme_toModuleKPresheaf, thm:Scheme_toModuleKPresheaf_isSheaf}
+        def:Scheme_toModuleKPresheaf, thm:Scheme_toModuleKPresheaf_isSheaf,
+        def:sheafOf_carrierPresheaf, lem:sheafOf_carrierPresheaf_isSheaf,
+        thm:smooth_isRegularInCodimOne}
 
   % SOURCE: [Hartshorne], II.6, p.~144 (definition of the invertible
   % sheaf \(\mathscr L(D)\) associated to a Cartier divisor on a scheme),
@@ -232,23 +199,992 @@ rather than a non-trivial isomorphism.
   choice of uniformisers \(\pi_Q\) (any two choices differ by a unit, so
   they generate the same \(\mathcal O_C\)-submodule).
 
-  \paragraph{Lean signature scope.} The Lean definition
-  \texttt{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf} takes a Weil
-  divisor \(D : C.\text{left.WeilDivisor}\) and returns a
-  \(\texttt{Sheaf}~J~(\mathbf{Mod}_{\bar k})\) on
-  \(C.\text{left.toTopCat}\), where
-  \(J = \texttt{Opens.grothendieckTopology C.left.toTopCat}\) is the
-  standard topology on the topological space underlying \(C\). The
-  closed-point specialisation \(\mathcal O_C([P])\) is
-  \cref{def:lineBundleAtClosedPoint} of
-  \cref{chap:RiemannRoch_OCofP}; their agreement at \(D = [P]\) is
-  \cref{lem:sheafOf_singlePoint} below. The construction follows
-  the iter-182 \texttt{ocofp-sheaf-internalhom} recipe in
-  \texttt{analogies/}: presheaf-by-hand via per-open
-  \(\bar k\)-submodules of the function field, sheaf property reduced to
-  the locality of the order conditions at the stalks of the prime
-  divisors. The declaration is \texttt{noncomputable}.
+  \paragraph{Construction overview.}
+  The closed-point specialisation \(\mathcal O_C([P])\) is
+  \cref{def:lineBundleAtClosedPoint} of \cref{chap:RiemannRoch_OCofP};
+  their agreement at \(D = [P]\) is \cref{lem:sheafOf_singlePoint} below.
+  The construction proceeds presheaf-by-hand via per-open
+  \(\bar k\)-submodules of the function field, with the sheaf property
+  reduced to the locality of the order conditions at the stalks of the
+  prime divisors. The substrate helpers
+  (\cref{def:sheafOf_carrierSet,lem:sheafOf_carrierSet_mono,%
+  def:sheafOf_carrierSubmodule,def:sheafOf_trivAtBot,%
+  def:sheafOf_carrierSubmoduleSheaf,lem:sheafOf_carrierSubmoduleSheaf_le,%
+  def:sheafOf_carrierTypeSubfunctor,def:sheafOf_carrierPresheaf,%
+  lem:sheafOf_carrierPresheaf_isSheaf}) are assembled in the
+  ``Carrier substrate'' section below.
+
+  \paragraph{Substrate obligation.} The general (\(D \neq 0\)) branch of
+  the construction relies on the hypothesis that \(C\) is regular in
+  codimension one, i.e.\ that every local ring \(\mathcal O_{C, Q}\) at a
+  prime divisor \(Q\) is a discrete valuation ring. This is the smoothness
+  \(\Rightarrow\) DVR implication at a \(\bar k\)-rational codimension-one
+  point, obtained through the one-dimensional cotangent space and
+  established in \cref{thm:smooth_isRegularInCodimOne}.
+  Every carrier helper below is established outright once this DVR
+  substrate is in scope.
 \end{definition}
+
+\section{The codimension-one regularity substrate}
+
+The general (\(D \neq 0\)) branch of \cref{def:sheafOf} forms its order
+conditions inside the local rings \(\mathcal O_{C, Q}\) at the prime
+divisors \(Q\) of \(C\), and reads off \(\ord_Q\) as the valuation of a
+discrete valuation ring; this is sound precisely when \(C\) is regular in
+codimension one (\cref{def:isRegularInCodimensionOne}). The instance below
+establishes this from the curve's smoothness hypothesis,
+generalising the \(\mathbb P^1\)-only
+\cref{thm:projectiveLineBar_isRegularInCodimOne} of
+\cref{chap:RiemannRoch_WeilDivisor} to an abstract smooth curve \(C\).
+
+The substrate is established via the conormal isomorphism. At a codimension-one point \(x \in C\) the stalk \(\mathcal O_{C, x}\)
+is a smooth local \(\bar k\)-algebra: it is the localisation at a height-one
+prime of a relative-dimension-one standard-smooth affine chart of \(C\), hence
+essentially of finite type and formally smooth over \(\bar k\). Since \(x\) has
+coheight one and the curve has Krull dimension at most one
+(\cref{thm:krullDim_curve_le_one}), the point \(x\) is closed, so its prime in
+the standard-smooth chart is maximal; the structure map onto the residue field
+is then surjective (\cref{lem:algebraMap_residueField_surjective}), exhibiting
+\(\kappa(x)\) as a finite-type \(\bar k\)-algebra that is a field, hence
+\(\kappa(x) = \bar k\) is \(\bar k\)-rational. The conormal isomorphism of
+\cref{chap:RiemannRoch_SmoothRegular},
+\[
+  \mathfrak m_x / \mathfrak m_x^2 \;\cong\;
+  \Omega_{C/\bar k, x} \otimes_{\mathcal O_{C, x}} \kappa(x)
+  \qquad (\text{Hartshorne~II.8.7}),
+\]
+then identifies the residue-field dimension of the cotangent space with the
+\(\mathcal O_{C, x}\)-rank of the differentials:
+\(\operatorname{finrank}_{\kappa(x)} \mathfrak m_x / \mathfrak m_x^2
+= \operatorname{finrank}_{\mathcal O_{C, x}} \Omega_{C/\bar k, x}\)
+(\cref{lem:finrank_cotangentSpace_eq_rank_kaehler}). The differentials
+\(\Omega_{C/\bar k}\) are locally free of rank one on the smooth curve
+(\cref{lem:smooth_kaehler_locallyFree_rank_one}), so their stalk has rank one,
+giving
+\(\operatorname{finrank}_{\kappa(x)} \mathfrak m_x / \mathfrak m_x^2 = 1\)
+(\cref{lem:cotangentSpace_finrank_eq_one_of_smooth}).
+\cref{lem:isDVR_stalk_of_finrank_cotangentSpace} (via
+\cref{lem:finrank_cotangentSpace_eq_one_iff_isDVR}) then yields
+\(\texttt{IsDiscreteValuationRing}\,\mathcal O_{C, x}\)
+(\cref{lem:stalk_isDVR_of_smooth}), and
+\cref{thm:smooth_isRegularInCodimOne} applies this at each
+codimension-one point. The one-dimensional cotangent dimension is obtained
+through the conormal identification; the only use of dimension data is the
+global curve bound \(\operatorname{krullDim} C.\mathrm{left} \le 1\)
+(\cref{thm:krullDim_curve_le_one}), which serves solely to certify that each
+codimension-one point is closed (and hence \(\bar k\)-rational) and supplies the
+Krull-dimension-bound hypothesis of \cref{lem:cotangentSpace_finrank_eq_one_of_smooth}.
+This is the abstract-curve generalisation of
+\cref{thm:projectiveLineBar_isRegularInCodimOne}.
+
+\subsection{The abstract ring-bridge (algebra-core realisation)}
+
+The conormal route above is realised at the level of commutative algebra by
+three lemmas about a \emph{localisation} \(T\) of a relative-dimension-one
+standard-smooth \(k\)-algebra \(S\). At a codimension-one point \(x \in C\) the
+stalk \(\mathcal O_{C, x}\) is exactly such a \(T\): the localisation
+\(T = S_{\mathfrak q}\) of the coordinate ring \(S\) of a standard-smooth affine
+chart of \(C\) at the height-one prime \(\mathfrak q\) corresponding to \(x\).
+These three lemmas form the pure commutative-algebra core consumed by the
+scheme-level statements of this section.
+
+\begin{lemma}\leanok
+[Free rank-one differentials at a standard-smooth localisation]
+  \label{lem:free_finrank_kaehler_localization}
+  \lean{Algebra.free_and_finrank_kaehlerDifferential_localization_eq_one}
+  Let \(k\) be a field, let \(S\) be a relative-dimension-one standard-smooth
+  \(k\)-algebra (\(\texttt{IsStandardSmoothOfRelativeDimension}\ 1\ k\ S\)), and
+  let \(T\) be a localisation of \(S\) at a submonoid \(M \subseteq S\). Then the
+  module of Kähler differentials \(\Omega_{T/k}\) is a free \(T\)-module of rank
+  one:
+  \[
+    \texttt{Module.Free}\ T\ \Omega_{T/k}
+    \qquad\text{and}\qquad
+    \operatorname{finrank}_T \Omega_{T/k} = 1.
+  \]
+  This is the algebra realisation consumed in the stalk-level half of
+  \cref{lem:smooth_kaehler_locallyFree_rank_one}.
+\end{lemma}
+
+\begin{proof}
+
+\leanok
+  The standard-smooth \(k\)-algebra \(S\) has free Kähler differentials
+  \(\Omega_{S/k}\), of rank equal to the relative dimension, here one. Kähler
+  differentials commute with localisation: the canonical map
+  \(\Omega_{S/k} \to \Omega_{T/k}\) exhibits \(\Omega_{T/k}\) as the
+  localisation of \(\Omega_{S/k}\) at \(M\).
+  A localisation of a
+  free rank-one module is free of rank one, whence \(\Omega_{T/k}\) is
+  \(T\)-free with \(\operatorname{finrank}_T \Omega_{T/k} = 1\).
+\end{proof}
+
+\begin{lemma}
+
+\leanok
+[One-dimensional cotangent space at a standard-smooth localisation]
+  \label{lem:finrank_cotangent_localization_eq_one}
+  \lean{Algebra.finrank_cotangentSpace_localization_eq_one_of_isStandardSmooth_dim_one}
+  \uses{lem:free_finrank_kaehler_localization,
+        lem:finrank_cotangentSpace_eq_rank_kaehler}
+  With \(k, S, M, T\) as in \cref{lem:free_finrank_kaehler_localization}, suppose
+  in addition that \(T\) is a local ring (\(\texttt{IsLocalRing}\ T\)) whose
+  residue field \(\kappa(T)\) is \(k\)-rational --- with \(\Omega_{\kappa(T)/k} = 0\)
+  and \(H^1_{\mathrm{cot}}(k, \kappa(T)) = 0\) (both hold when
+  \(\kappa(T) = k\)). Then the cotangent space of \(T\) is one-dimensional over
+  its residue field:
+  \[
+    \operatorname{finrank}_{\kappa(T)}
+      \bigl(\texttt{IsLocalRing.CotangentSpace}\ T\bigr) = 1.
+  \]
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:free_finrank_kaehler_localization,
+        lem:finrank_cotangentSpace_eq_rank_kaehler}
+        \leanok
+  By \cref{lem:free_finrank_kaehler_localization} the differentials
+  \(\Omega_{T/k}\) are \(T\)-free of rank one. The conormal corollary
+  \cref{lem:finrank_cotangentSpace_eq_rank_kaehler},
+  whose \(k\)-rationality hypotheses are supplied by the two residue-field
+  vanishing assumptions, equates the residue-field dimension of the cotangent
+  space with the \(T\)-rank of the differentials,
+  \[
+    \operatorname{finrank}_{\kappa(T)}
+      \bigl(\texttt{CotangentSpace}\ T\bigr)
+    = \operatorname{finrank}_T \Omega_{T/k} = 1.
+  \]
+  The two residue-field vanishing assumptions are exactly the \(k\)-rationality
+  hypotheses this lemma carries; in the scheme-level application they are
+  supplied at a codimension-one point of a smooth curve, where the residue
+  field is the base field \(\bar k\) (see the proof of
+  \cref{lem:cotangentSpace_finrank_eq_one_of_smooth}).
+\end{proof}
+
+\begin{lemma}\leanok
+[Discrete valuation ring at a standard-smooth localisation]
+  \label{lem:isDVR_localization_standardSmooth}
+  \lean{Algebra.isDiscreteValuationRing_localization_of_isStandardSmooth_dim_one}
+  \uses{lem:finrank_cotangent_localization_eq_one}
+  With \(k, S, M, T\) as in \cref{lem:finrank_cotangent_localization_eq_one},
+  suppose moreover that \(T\) is a Noetherian local integral domain
+  (\(\texttt{IsLocalRing}\ T\), \(\texttt{IsNoetherianRing}\ T\),
+  \(\texttt{IsDomain}\ T\)) with \(k\)-rational residue field. Then \(T\) is a
+  discrete valuation ring (\(\texttt{IsDiscreteValuationRing}\ T\)).
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:finrank_cotangent_localization_eq_one}
+  \leanok
+  As a localisation of the finite-type \(k\)-algebra \(S\), the ring \(T\) is
+  essentially of finite type over \(k\); and standard-smoothness of \(S\) makes
+  \(S\) formally smooth over \(k\), which composes with the formal smoothness of
+  the localisation map \(S \to T\) to make \(T\) formally smooth over \(k\). Thus
+  \(T\) is a smooth local \(k\)-algebra of relative dimension one, whose
+  cotangent space is one-dimensional by
+  \cref{lem:finrank_cotangent_localization_eq_one}. The smooth-DVR criterion
+  of \cref{chap:RiemannRoch_SmoothRegular} then yields
+  \(\texttt{IsDiscreteValuationRing}\ T\).
+\end{proof}
+
+% --- Shared chart-extraction frontier -----------------------------------------
+% The three scheme-level pins below
+% (\cref{lem:smooth_kaehler_locallyFree_rank_one},
+%  \cref{lem:cotangentSpace_finrank_eq_one_of_smooth},
+%  \cref{lem:stalk_isDVR_of_smooth}) all need the SAME geometric input: a
+% relative-dimension-one standard-smooth affine chart at the point $x$, with its
+% stalk realised as a localisation over the base field $\bar k$. The next two
+% lemmas isolate that input once; each pin then \uses{} them together with the
+% pure-algebra core above.
+
+\begin{lemma}
+
+\leanok
+[Standard-smooth affine chart over the base field at a point]
+  \label{lem:exists_standardSmooth_chart_of_smooth}
+  \lean{AlgebraicGeometry.exists_isStandardSmooth_chart_of_smooth}
+  Let \(\bar k\) be a field and let \(C\) be a scheme over
+  \(\operatorname{Spec} \bar k\) whose structure morphism is
+  \(\texttt{SmoothOfRelativeDimension}\ 1\). Then for every point
+  \(x \in C\) there is an affine open \(V \ni x\) with coordinate
+  ring \(S = \Gamma(C, V)\) and a ring homomorphism
+  \(\psi : \bar k \to S\) realising \(S\) as a base-field algebra whose
+  structure map is standard-smooth of relative dimension one:
+  \[
+    \texttt{RingHom.IsStandardSmoothOfRelativeDimension}\ 1\ \psi .
+  \]
+\end{lemma}
+
+\begin{proof}
+
+\leanok
+  The smoothness hypothesis provides, for the given \(x\), an affine open
+  \(U \subseteq \operatorname{Spec} \bar k\) and an affine open
+  \(V \ni x\) of \(C\) mapping into \(U\) under the structure morphism, together
+  with a proof that the induced ring map
+  \(\Gamma(\operatorname{Spec} \bar k, U) \to \Gamma(C, V)\)
+  is standard-smooth of relative dimension one.
+
+  Since \(\bar k\) is a field, \(\operatorname{Spec} \bar k\) is a single point,
+  so the only affine open is the whole space \(U = \operatorname{Spec} \bar k\),
+  and the canonical isomorphism \(\Gamma(\operatorname{Spec} \bar k) \cong \bar k\)
+  identifies the source of the chart map with \(\bar k\). Transporting
+  standard-smoothness across this isomorphism yields the base-field structure map
+  \(\psi : \bar k \to S\) with
+  \(\texttt{RingHom.IsStandardSmoothOfRelativeDimension}\ 1\ \psi\).
+\end{proof}
+
+\begin{lemma}
+
+\leanok
+[Stalk of a smooth curve as a base-field localisation of a standard-smooth chart]
+  \label{lem:stalk_standardSmooth_localization_of_smooth}
+  \lean{AlgebraicGeometry.isLocalization_stalk_standardSmooth_chart_of_smooth}
+  \uses{lem:exists_standardSmooth_chart_of_smooth}
+  With \(\bar k\), \(C\), \(x\), the affine chart \(V \ni x\),
+  \(S = \Gamma(C, V)\), and \(\psi : \bar k \to S\) as in
+  \cref{lem:exists_standardSmooth_chart_of_smooth}, let
+  \(\mathfrak q \subseteq S\) be the prime ideal corresponding to \(x\) and let
+  \(T = \mathcal O_{C, x}\) be the stalk. Then \(T\) is the localisation of
+  \(S\) at \(\mathfrak q\), and the localisation and base-field structures are
+  compatible: \(S\) and \(T\) carry \(\bar k\)-algebra structures forming a
+  scalar tower \(\bar k \to S \to T\), the identification
+  \(\texttt{IsLocalization}\ (S \setminus \mathfrak q)\ T\) holds, and \(S\) is
+  standard-smooth of relative dimension one over \(\bar k\)
+  (\(\texttt{Algebra.IsStandardSmoothOfRelativeDimension}\ 1\ \bar k\ S\)).
+  This is precisely the algebraic data consumed by the pure-algebra core
+  \cref{lem:free_finrank_kaehler_localization},
+  \cref{lem:finrank_cotangent_localization_eq_one},
+  \cref{lem:isDVR_localization_standardSmooth}.
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:exists_standardSmooth_chart_of_smooth}
+  \leanok
+  Because \(V\) is an affine open containing \(x\), the stalk
+  \(T = \mathcal O_{C, x}\) is the localisation of its coordinate ring
+  \(S = \Gamma(C, V)\) at the prime \(\mathfrak q\) corresponding to \(x\),
+  giving an \(S\)-algebra structure on \(T\) and the localisation identification
+  \(T \cong S_{\mathfrak q}\). Equipping \(S\) and \(T\) with their base-field
+  \(\bar k\)-algebra structures via the chart map \(\psi : \bar k \to S\) from
+  \cref{lem:exists_standardSmooth_chart_of_smooth} and the composite
+  \(\bar k \to S \to T\) yields the scalar tower \(\bar k \to S \to T\); the
+  standard-smoothness of the chart map \(\psi\) transports to the algebra-level
+  instance \(\texttt{Algebra.IsStandardSmoothOfRelativeDimension}\ 1\ \bar k\ S\).
+\end{proof}
+
+\begin{lemma}[Smooth of relative dimension one \(\Rightarrow\) smooth]
+  \label{lem:smoothOfRelativeDimension_smooth}
+  \lean{AlgebraicGeometry.SmoothOfRelativeDimension.smooth}
+  \mathlibok
+  \textit{Provided by Mathlib
+  (\texttt{Mathlib.AlgebraicGeometry.Morphisms.Smooth}).}
+  If a morphism of schemes \(f : X \to Y\) is smooth of relative dimension
+  \(n\) (\(\texttt{SmoothOfRelativeDimension}\ n\ f\)), then \(f\) is smooth
+  (\(\texttt{Smooth}\ f\)). In particular the structure morphism
+  \(C.\mathrm{hom} : C \to \operatorname{Spec} \bar k\) of a curve that is
+  \(\texttt{SmoothOfRelativeDimension}\ 1\) is a smooth morphism.
+\end{lemma}
+
+\begin{lemma}
+[Smooth curve \(\Rightarrow\) differentials locally free of rank one]
+  \label{lem:smooth_kaehler_locallyFree_rank_one}
+  \lean{AlgebraicGeometry.kaehlerDifferential_locallyFree_rank_one_of_smooth}
+  \uses{lem:smoothOfRelativeDimension_smooth,
+        lem:free_finrank_kaehler_localization,
+        lem:exists_standardSmooth_chart_of_smooth,
+        lem:stalk_standardSmooth_localization_of_smooth}
+  % SOURCE: [Hartshorne], II.8, Theorem 8.15, p.~177 (an irreducible
+  % separated finite-type scheme over an algebraically closed field is
+  % nonsingular iff its sheaf of differentials is locally free of rank
+  % $n = \dim X$). Read from
+  % references/hartshorne-algebraic-geometry.pdf, PDF page 194 (= doc
+  % p.~177), transcribed character-by-character from the rendered scanned
+  % page image (the PDF has no text layer).
+  % SOURCE QUOTE: "Let $X$ be an irreducible separated scheme of finite type
+  % over an algebraically closed field $k$. Then $\Omega_{X/k}$ is a locally
+  % free sheaf of rank $n = \dim X$ if and only if $X$ is a nonsingular
+  % variety over $k$."
+  \textit{Source: Hartshorne, II.8, Theorem~8.15.}
+  Let \(\bar k\) be an algebraically closed field and let \(C\) be an
+  integral curve of finite type over \(\bar k\) whose structure morphism
+  is \(\texttt{SmoothOfRelativeDimension}\ 1\). Then the sheaf of relative
+  differentials \(\Omega_{C/\bar k}\) is a locally free
+  \(\mathcal O_C\)-module of rank one.
+\end{lemma}
+
+% SOURCE QUOTE PROOF: "If $x \in X$ is a closed point, then the local ring
+% $B = \mathcal{O}_{X,x}$ has dimension $n$, residue field $k$, and is a
+% localization of a $k$-algebra of finite type. Furthermore the module
+% $\Omega_{B/k}$ of differentials of $B$ over $k$ is equal to the stalk
+% $(\Omega_{X/k})_x$ of the sheaf $\Omega_{X/k}$, and we can apply (8.8) and
+% we see that $(\Omega_{X/k})_x$ is free of rank $n$ if and only if $B$ is a
+% regular local ring. Now the theorem follows in view of (8.14A) and
+% (Ex. 5.7)."
+\begin{proof}
+  \uses{lem:smoothOfRelativeDimension_smooth,
+        lem:exists_standardSmooth_chart_of_smooth,
+        lem:stalk_standardSmooth_localization_of_smooth,
+        lem:free_finrank_kaehler_localization}
+  By \cref{lem:smoothOfRelativeDimension_smooth} the structure morphism is a
+  smooth morphism, so \(C\) is a nonsingular variety over the algebraically
+  closed field \(\bar k\) (all its local rings are regular). By Hartshorne's
+  Theorem~II.8.15 the sheaf \(\Omega_{C/\bar k}\) is then locally free of
+  rank \(n = \dim C = 1\).
+
+  \emph{Stalk-level realisation.} For the codimension-one application only the
+  rank-one freeness of the stalk \(\Omega_{C/\bar k, x}\) is consumed, and that
+  is obtained directly from the standard-smooth chart, with no recourse to the
+  global locally-free statement. By
+  \cref{lem:exists_standardSmooth_chart_of_smooth} the point \(x\) lies on a
+  relative-dimension-one standard-smooth affine chart
+  \(\operatorname{Spec} S\) of \(C\), and by
+  \cref{lem:stalk_standardSmooth_localization_of_smooth} the stalk
+  \(\mathcal O_{C, x} = T = S_{\mathfrak q}\) is the localisation of \(S\) at
+  the corresponding prime \(\mathfrak q\), with \(S\) standard-smooth of
+  relative dimension one over \(\bar k\). Applying the pure-algebra core
+  \cref{lem:free_finrank_kaehler_localization} to this localisation gives that
+  \(\Omega_{T/\bar k} = \Omega_{C/\bar k, x}\) is a free
+  \(\mathcal O_{C, x}\)-module of rank one with
+  \(\operatorname{finrank}_{\mathcal O_{C, x}} \Omega_{C/\bar k, x} = 1\).
+\end{proof}
+
+% NOTE: the codimension-one rationality lemma
+% \cref{lem:codimOne_point_residueField_eq_kbar}
+% (\lean{AlgebraicGeometry.residueField_eq_of_coheight_eq_one}) and its proof now
+% live in \cref{chap:RiemannRoch_ResidueFieldKbar}, the owning chapter of
+% AlgebraicJacobian/RiemannRoch/ResidueFieldKbar.lean.  It is \uses{}'d by
+% \cref{lem:stalk_isDVR_of_smooth} across chapters.
+
+\begin{lemma}
+
+\leanok
+[Surjectivity of the structure map onto the residue field at a maximal localisation]
+  \label{lem:algebraMap_residueField_surjective}
+  \lean{Algebra.algebraMap_residueField_surjective_of_isLocalization_atPrime}
+  Let \(R\) be a commutative ring and \(\mathfrak p \subseteq R\) a
+  \emph{maximal} ideal. Let \(R_{\mathfrak p}\) be a localisation of \(R\) at
+  \(\mathfrak p\) --- a local ring with
+  \(\texttt{IsLocalization.AtPrime}\ R_{\mathfrak p}\ \mathfrak p\) --- and let
+  \(\kappa(R_{\mathfrak p}) = R_{\mathfrak p} / \mathfrak m_{R_{\mathfrak p}}\)
+  denote its residue field. Then the composite structure map
+  \[
+    R \;\longrightarrow\; R_{\mathfrak p} \;\longrightarrow\;
+    \kappa(R_{\mathfrak p})
+  \]
+  is surjective.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  The residue map \(R_{\mathfrak p} \to \kappa(R_{\mathfrak p})\) is surjective, so any element of
+  \(\kappa(R_{\mathfrak p})\) is the residue class of some
+  \(t \in R_{\mathfrak p}\); by surjectivity of the localisation map onto
+  fractions, write \(t = r / s\) with \(r \in R\) and \(s \in R \setminus
+  \mathfrak p\). The composite \(R \to \kappa(R_{\mathfrak p})\) kills exactly
+  \(\mathfrak p\): a class \(\overline{a}\) (for \(a \in R\)) vanishes in
+  \(\kappa(R_{\mathfrak p})\) iff \(a \in \mathfrak p\).
+  Because \(\mathfrak p\) is maximal and
+  \(s \notin \mathfrak p\), the ideal \((s) + \mathfrak p\) strictly contains
+  \(\mathfrak p\), hence equals the whole ring \(R\):
+  there exist \(u \in R\) and \(q \in \mathfrak p\) with \(u s = 1 - q\), i.e.
+  \(s\) is invertible modulo \(\mathfrak p\).
+  Consequently \(\overline{u}\) is the inverse of \(\overline{s}\) in
+  \(\kappa(R_{\mathfrak p})\), and the image of \(r u \in R\) is
+  \(\overline{r}\,\overline{s}^{-1}\), which is precisely the residue class of
+  \(t = r/s\), the chosen element. Thus every element of
+  \(\kappa(R_{\mathfrak p})\) is hit by \(R\).
+\end{proof}
+
+\begin{lemma}
+
+\leanok
+[Cotangent space at a rational point of a smooth curve is one-dimensional]
+  \label{lem:cotangentSpace_finrank_eq_one_of_smooth}
+  \lean{AlgebraicGeometry.finrank_cotangentSpace_stalk_eq_one_of_smooth}
+  \uses{lem:algebraMap_residueField_surjective,
+        lem:finrank_cotangent_localization_eq_one,
+        lem:exists_standardSmooth_chart_of_smooth,
+        lem:stalk_standardSmooth_localization_of_smooth,
+        lem:smooth_kaehler_locallyFree_rank_one,
+        lem:finrank_cotangentSpace_eq_rank_kaehler,
+        thm:krullDim_curve_le_one}
+  % SOURCE: [Hartshorne], II.8, Proposition 8.7, p.~174 (for a local ring
+  % $B$ containing a field $k$ isomorphic to its residue field, the conormal
+  % map $\mathfrak{m}/\mathfrak{m}^2 \to \Omega_{B/k} \otimes_B k$ is an
+  % isomorphism). Read from
+  % references/hartshorne-algebraic-geometry.pdf, PDF page 191 (= doc
+  % p.~174), transcribed character-by-character from the rendered scanned
+  % page image (the PDF has no text layer).
+  % SOURCE QUOTE: "Let $B$ be a local ring which contains a field $k$
+  % isomorphic to its residue field $B/\mathfrak{m}$. Then the map
+  % $\delta: \mathfrak{m}/\mathfrak{m}^2 \to \Omega_{B/k} \otimes_B k$ of
+  % (8.4A) is an isomorphism."
+  \textit{Source: Hartshorne, II.8, Proposition~8.7.}
+  Let \(C\) be a smooth (\(\texttt{SmoothOfRelativeDimension}\ 1\)) integral
+  curve over an algebraically closed field \(\bar k\), assumed to have Krull
+  dimension at most one (\(\operatorname{krullDim} C.\mathrm{left} \le 1\)), and
+  let \(x \in C\) be a codimension-one point (\(\texttt{Order.coheight}\,x = 1\)).
+  Then the cotangent space of the stalk is one-dimensional over the residue
+  field:
+  \[
+    \dim_{\kappa(x)} \mathfrak m_x / \mathfrak m_x^2
+    \;=\;
+    \operatorname{finrank}_{\kappa(x)}
+      \bigl(\texttt{IsLocalRing.CotangentSpace}\ \mathcal O_{C, x}\bigr)
+    \;=\; 1.
+  \]
+\end{lemma}
+
+% SOURCE QUOTE PROOF: "According to (8.4A), the cokernel of $\delta$ is
+% $\Omega_{k/k} = 0$, so $\delta$ is surjective. To show that $\delta$ is
+% injective, it will be sufficient to show that the map
+% $\delta': \Hom_k(\Omega_{B/k} \otimes k, k) \to
+% \Hom_k(\mathfrak{m}/\mathfrak{m}^2, k)$ of dual vector spaces is
+% surjective. The term on the left is isomorphic to
+% $\Hom_B(\Omega_{B/k}, k)$, which by definition of the differentials, can
+% be identified with the set $\Der_k(B, k)$ of $k$-derivations of $B$ to
+% $k$. If $d: B \to k$ is a derivation, then $\delta'(d)$ is obtained by
+% restricting to $\mathfrak{m}$, and noting that $d(\mathfrak{m}^2) = 0$.
+% Now, to show that $\delta'$ is surjective, let
+% $h \in \Hom(\mathfrak{m}/\mathfrak{m}^2, k)$. For any $b \in B$, we can
+% write $b = \lambda + c$, $\lambda \in k$, $c \in \mathfrak{m}$, in a
+% unique way. Define $db = h(\bar c)$, where $\bar c \in
+% \mathfrak{m}/\mathfrak{m}^2$ is the image of $c$. Then one verifies
+% immediately that $d$ is a $k$-derivation of $B$ to $k$, and that
+% $\delta'(d) = h$. Thus $\delta'$ is surjective, as required."
+\begin{proof}
+  \uses{lem:algebraMap_residueField_surjective,
+        lem:finrank_cotangent_localization_eq_one,
+        lem:exists_standardSmooth_chart_of_smooth,
+        lem:stalk_standardSmooth_localization_of_smooth,
+        lem:finrank_cotangentSpace_eq_rank_kaehler,
+        thm:krullDim_curve_le_one}
+        \leanok
+  Write \(B = \mathcal O_{C, x}\) for the stalk.
+  By \cref{lem:exists_standardSmooth_chart_of_smooth} the point \(x\) lies on a
+  relative-dimension-one standard-smooth affine chart
+  \(\operatorname{Spec} S\) of \(C\), and by
+  \cref{lem:stalk_standardSmooth_localization_of_smooth} the stalk
+  \(B = T = S_{\mathfrak q}\) is the localisation of \(S\) at the prime
+  \(\mathfrak q \subseteq S\) corresponding to \(x\), with \(S\) standard-smooth
+  of relative dimension one over \(\bar k\) and the scalar tower
+  \(\bar k \to S \to T\). As a standard-smooth \(\bar k\)-algebra, \(S\) is of
+  finite type over \(\bar k\).
+
+  \emph{The residue field \(\kappa(x)\) is \(\bar k\)-rational.}
+  Since \(\operatorname{coheight} x = 1\) and \(\operatorname{krullDim}
+  C.\mathrm{left} \le 1\), the closed subset \(\overline{\{x\}}\) cannot be
+  properly specialised within \(C\), so \(x\) is a closed point of \(C\);
+  the global dimension bound \(\operatorname{krullDim} C.\mathrm{left} \le 1\) is exactly
+  what excludes a longer specialisation chain and is supplied by
+  \cref{thm:krullDim_curve_le_one}. A closed point of the affine chart
+  \(\operatorname{Spec} S\) corresponds to a \emph{maximal} ideal
+  \(\mathfrak q\) of \(S\). By
+  \cref{lem:algebraMap_residueField_surjective} the structure map
+  \(S \to \kappa(x) = \kappa(B)\) is therefore surjective, so \(\kappa(x)\) is a
+  quotient of \(S\) and hence itself of finite type over \(\bar k\). A
+  field that is of finite type as an algebra over the algebraically closed
+  field \(\bar k\) is equal to \(\bar k\)
+  (the structure map \(\bar k \to \kappa(x)\) is bijective by algebraic closedness).
+  In particular
+  \(\kappa(x)\) is \(\bar k\)-rational, which supplies the two residue-field
+  vanishings \(\Omega_{\kappa(x)/\bar k} = 0\) and
+  \(H^1_{\mathrm{cot}}(\bar k, \kappa(x)) = 0\) consumed below.
+
+  Applying these data, together with
+  the residue-field vanishings above, to the pure-algebra core
+  \cref{lem:finrank_cotangent_localization_eq_one} yields directly
+  \[
+    \operatorname{finrank}_{\kappa(x)}
+      \bigl(\texttt{IsLocalRing.CotangentSpace}\ B\bigr) = 1,
+    \qquad\text{i.e.}\qquad
+    \dim_{\kappa(x)} \mathfrak m_x / \mathfrak m_x^2 = 1.
+  \]
+  \cref{lem:finrank_cotangent_localization_eq_one} is the conormal
+  comparison \cref{lem:finrank_cotangentSpace_eq_rank_kaehler} of
+  \cref{chap:RiemannRoch_SmoothRegular} (the numerical corollary of the
+  isomorphism
+  \(\mathfrak m_x/\mathfrak m_x^2 \cong \Omega_{B/\bar k} \otimes_B \kappa(x)\),
+  Hartshorne~II.8.7) applied to the rank-one freeness of
+  \(\Omega_{B/\bar k}\).
+\end{proof}
+
+\begin{lemma}
+
+\leanok
+[Smooth of relative dimension one \(\Rightarrow\) DVR stalk at a
+codimension-one point]
+  \label{lem:stalk_isDVR_of_smooth}
+  \lean{AlgebraicGeometry.isDiscreteValuationRing_stalk_of_smooth}
+  \uses{lem:cotangentSpace_finrank_eq_one_of_smooth,
+        lem:isDVR_stalk_of_finrank_cotangentSpace,
+        lem:isDVR_localization_standardSmooth,
+        lem:exists_standardSmooth_chart_of_smooth,
+        lem:stalk_standardSmooth_localization_of_smooth}
+  Let \(\bar k\) be an algebraically closed field and let \(C\) be an
+  integral curve over \(\bar k\) whose structure morphism is
+  \(\texttt{SmoothOfRelativeDimension}\ 1\). Then for every codimension-one
+  point \(x \in C\) (\(\texttt{Order.coheight}\,x = 1\)) the stalk
+  \(\mathcal O_{C, x}\) is a discrete valuation ring
+  (\(\texttt{IsDiscreteValuationRing}\,\mathcal O_{C, x}\)).
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:exists_standardSmooth_chart_of_smooth,
+        lem:stalk_standardSmooth_localization_of_smooth,
+        lem:isDVR_localization_standardSmooth,
+        lem:codimOne_point_residueField_eq_kbar}
+  Let \(x \in C\) be a codimension-one point, and write
+  \(T = \mathcal O_{C, x}\) for the stalk. As the local ring of a point on an
+  integral, locally Noetherian curve, \(T\) is a Noetherian local integral
+  domain. Since \(x\) is a codimension-one point of an integral curve over the
+  algebraically closed field \(\bar k\), it is closed with residue field
+  \(\kappa(x) = \bar k\) (\cref{lem:codimOne_point_residueField_eq_kbar}), so the
+  residue field is \(\bar k\)-rational.
+
+  By \cref{lem:exists_standardSmooth_chart_of_smooth} the point \(x\) lies on a
+  relative-dimension-one standard-smooth affine chart
+  \(\operatorname{Spec} S\) of \(C\), and by
+  \cref{lem:stalk_standardSmooth_localization_of_smooth} the stalk
+  \(T = S_{\mathfrak q}\) is the localisation of \(S\) at the corresponding
+  prime, with \(S\) standard-smooth of relative dimension one over \(\bar k\)
+  and the localisation and base-field structures compatible. These are exactly
+  the hypotheses of the pure-algebra core
+  \cref{lem:isDVR_localization_standardSmooth}: a localisation \(T\) of a
+  relative-dimension-one standard-smooth \(\bar k\)-algebra that is a Noetherian
+  local integral domain with \(\bar k\)-rational residue field is a discrete
+  valuation ring. Applying it to \(T\) yields
+  \(\texttt{IsDiscreteValuationRing}\,\mathcal O_{C, x}\).
+\end{proof}
+
+\begin{lemma}
+
+\leanok
+[Codimension one \(\Rightarrow\) Krull dimension one of the stalk]
+  \label{lem:coheight_eq_ringKrullDim_stalk}
+  \lean{AlgebraicGeometry.ringKrullDim_stalk_eq_one_of_coheight_eq_one}
+  % SOURCE: [Stacks Project], Tag 02IZ = Lemma 28.10.3
+  % (`properties-lemma-codimension-local-ring`, Chapter 28 ``Properties of
+  % Schemes''): the codimension of an irreducible closed subset equals the
+  % Krull dimension of the local ring at its generic point. Read from
+  % references/stacks-coheight-properties.tex, lines 1258--1274.
+  % SOURCE QUOTE: "Let $X$ be a scheme. Let $Y \subset X$ be an irreducible
+  % closed subset. Let $\xi \in Y$ be the generic point. Then
+  % $$
+  % \text{codim}(Y, X) = \dim(\mathcal{O}_{X, \xi})
+  % $$
+  % where the codimension is as defined in
+  % Topology, Definition \ref{topology-definition-codimension}."
+  \textit{Source: Stacks Project, Tag 02IZ (Lemma 28.10.3): for an
+  irreducible closed subset \(Y\) with generic point \(\xi\),
+  \(\operatorname{codim}(Y, X) = \dim \mathcal O_{X, \xi}\).}
+  Let \(C\) be an integral scheme and let \(x \in C\) be a point with
+  \(\texttt{Order.coheight}\,x = 1\), i.e.\ the irreducible closed subset
+  \(\overline{\{x\}}\) (of which \(x\) is the generic point) has
+  codimension one in \(C\). Then \(\operatorname{ringKrullDim}
+  \mathcal O_{C, x} = 1\).
+\end{lemma}
+
+\begin{proof}
+  The point \(x\) is the generic point of the irreducible closed subset
+  \(Y := \overline{\{x\}}\). By the Stacks Project (Tag 02IZ) the
+  codimension of \(Y\) in \(C\) equals the Krull dimension of the local ring
+  at its generic point:
+  \(\operatorname{codim}(Y, C) = \dim \mathcal O_{C, x}\). The topological
+  coheight \(\texttt{Order.coheight}\,x\) in the specialisation order on
+  \(C\) is, by definition, the codimension \(\operatorname{codim}(Y, C)\).
+  The hypothesis \(\texttt{Order.coheight}\,x = 1\) therefore yields
+  \(\operatorname{ringKrullDim} \mathcal O_{C, x} = 1\).
+\end{proof}
+
+\begin{lemma}[Cotangent-space characterisation of DVRs]
+  \label{lem:finrank_cotangentSpace_eq_one_iff_isDVR}
+  \lean{IsLocalRing.finrank_CotangentSpace_eq_one_iff}
+  \mathlibok
+  \textit{Provided by Mathlib
+  (\texttt{Mathlib.RingTheory.DiscreteValuationRing.TFAE}).}
+  For a Noetherian local integral domain \(R\), the residue-field dimension
+  of the cotangent space satisfies
+  \(\dim_{\kappa(R)} \mathfrak m_R / \mathfrak m_R^2 = 1\) if and only if
+  \(R\) is a discrete valuation ring. (This is one clause of the standard
+  \texttt{TFAE} for discrete valuation rings,
+  \(\texttt{IsDiscreteValuationRing.TFAE}\), exposed as the stand-alone
+  equivalence \(\texttt{finrank\_CotangentSpace\_eq\_one\_iff}\).)
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[Scheme-stalk wrapper: one-dimensional cotangent space \(\Rightarrow\) DVR
+stalk]
+  \label{lem:isDVR_stalk_of_finrank_cotangentSpace}
+  \lean{AlgebraicGeometry.isDiscreteValuationRing_stalk_of_finrank_cotangentSpace_eq_one}
+  \uses{lem:finrank_cotangentSpace_eq_one_iff_isDVR}
+  Let \(X\) be an integral, locally Noetherian scheme and let \(x \in X\).
+  If the cotangent space of the stalk is one-dimensional over the residue
+  field,
+  \[
+    \operatorname{finrank}_{\kappa(x)}
+      \bigl(\texttt{IsLocalRing.CotangentSpace}\ \mathcal O_{X, x}\bigr)
+    \;=\; 1,
+  \]
+  then the stalk \(\mathcal O_{X, x}\) is a discrete valuation ring
+  (\(\texttt{IsDiscreteValuationRing}\,\mathcal O_{X, x}\)).
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:finrank_cotangentSpace_eq_one_iff_isDVR}
+  The stalk \(\mathcal O_{X, x}\) of an integral, locally Noetherian scheme
+  at a point is a Noetherian local integral domain: it is a local ring
+  (\(\texttt{IsLocalRing}\)), Noetherian (\(\texttt{IsNoetherianRing}\), from
+  local Noetherianity of \(X\)), and an integral domain
+  (\(\texttt{IsDomain}\), from integrality of \(X\)). These three properties
+  are precisely the hypotheses of \cref{lem:finrank_cotangentSpace_eq_one_iff_isDVR}
+  (Mathlib's \(\texttt{IsLocalRing.finrank\_CotangentSpace\_eq\_one\_iff}\)),
+  whose forward direction converts the hypothesis
+  \(\operatorname{finrank}_{\kappa(x)}
+  (\texttt{CotangentSpace}\ \mathcal O_{X, x}) = 1\) into
+  \(\texttt{IsDiscreteValuationRing}\,\mathcal O_{X, x}\). This lemma reduces
+  the discrete valuation ring conclusion to the single numerical condition
+  \(\operatorname{finrank}_{\kappa(x)} \mathfrak m_x/\mathfrak m_x^2 = 1\).
+\end{proof}
+
+\begin{lemma}
+
+\leanok
+[Regular local ring of Krull dimension one \(\Rightarrow\) DVR]
+  \label{lem:regularLocal_dim_one_isDVR}
+  \lean{AlgebraicGeometry.isDiscreteValuationRing_of_isRegularLocalRing_of_ringKrullDim_eq_one}
+  \uses{lem:finrank_cotangentSpace_eq_one_iff_isDVR}
+  % SOURCE: [Stacks Project], Tag 00PD = Lemma 10.119.7
+  % (`algebra-lemma-characterize-dvr`, Section 10.119 ``Around
+  % Krull--Akizuki''), the equivalence of ``regular local ring of
+  % dimension one'' and ``discrete valuation ring''. Read from
+  % references/stacks-regular-dvr-algebra.tex, lines 29107--29121.
+  % SOURCE QUOTE: "Let $A$ be a ring. The following are equivalent.
+  % \begin{enumerate}
+  % \item The ring $A$ is a discrete valuation ring.
+  % \item The ring $A$ is a valuation ring and Noetherian but not a field.
+  % \item The ring $A$ is a regular local ring of dimension $1$.
+  % \item The ring $A$ is a Noetherian local domain with maximal ideal
+  % $\mathfrak m$ generated by a single nonzero element.
+  % \item The ring $A$ is a Noetherian local normal domain of dimension $1$.
+  % \end{enumerate}"
+  \textit{Source: Stacks Project, Tag 00PD (Lemma 10.119.7), the
+  equivalence (1)\,\(\Leftrightarrow\)\,(3): a regular local ring of
+  dimension one is a discrete valuation ring.}
+  Let \(R\) be a Noetherian local integral domain that is a regular local
+  ring (\(\texttt{IsRegularLocalRing}\,R\)) with
+  \(\operatorname{ringKrullDim} R = 1\). Then \(R\) is a discrete valuation
+  ring (\(\texttt{IsDiscreteValuationRing}\,R\)).
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:finrank_cotangentSpace_eq_one_iff_isDVR}
+  This is the implication (3)\,\(\Rightarrow\)\,(1) of the Stacks
+  characterisation quoted above, via the cotangent-space route: by the
+  definition of a regular local ring, the residue-field dimension of the
+  cotangent space \(\mathfrak m_R / \mathfrak m_R^2\) equals the Krull
+  dimension of \(R\), which is \(1\) by hypothesis; hence
+  \(\dim_{\kappa(R)} \mathfrak m_R / \mathfrak m_R^2 = 1\), and
+  \cref{lem:finrank_cotangentSpace_eq_one_iff_isDVR}
+  converts this into \(\texttt{IsDiscreteValuationRing}\,R\).
+\end{proof}
+
+\begin{theorem}
+
+\leanok
+[Smooth of relative dimension one \(\Rightarrow\) regular in codimension one]
+  \label{thm:smooth_isRegularInCodimOne}
+  \lean{AlgebraicGeometry.instIsRegularInCodimensionOneOfSmooth}
+  \uses{def:isRegularInCodimensionOne, lem:stalk_isDVR_of_smooth,
+        thm:krullDim_curve_le_one}
+  Let \(\bar k\) be an algebraically closed field and let \(C\) be an
+  integral curve over
+  \(\bar k\) whose structure morphism
+  \(C.\mathrm{hom} : C \to \operatorname{Spec} \bar k\) is
+  \(\texttt{SmoothOfRelativeDimension}\ 1\). Then the underlying scheme
+  \(C.\mathrm{left}\) is \emph{regular in codimension one}
+  (\cref{def:isRegularInCodimensionOne}): for every point \(x \in C\) of
+  codimension one (\(\texttt{Order.coheight}\,x = 1\)) the local ring
+  \(\mathcal O_{C, x}\) is a discrete valuation ring.
+\end{theorem}
+
+\begin{proof}
+  \uses{def:isRegularInCodimensionOne, lem:stalk_isDVR_of_smooth,
+        thm:krullDim_curve_le_one}
+  Let \(x \in C\) be a point with \(\texttt{Order.coheight}\,x = 1\). By
+  \cref{lem:stalk_isDVR_of_smooth}, applied to the
+  smooth-of-relative-dimension-one structure morphism of \(C\), the stalk
+  \(\mathcal O_{C, x}\) is a discrete valuation ring, which is exactly the
+  per-point datum required by \cref{def:isRegularInCodimensionOne}. The
+  per-point DVR discharge routes through the one-dimensional cotangent space
+  \cref{lem:cotangentSpace_finrank_eq_one_of_smooth}, whose
+  \(\operatorname{krullDim} C.\mathrm{left} \le 1\) hypothesis is the global
+  curve-dimension bound \cref{thm:krullDim_curve_le_one}.
+
+  As \(x\) was an arbitrary codimension-one point, \(C.\mathrm{left}\) is
+  regular in codimension one. This is the abstract-curve generalisation of
+  \cref{thm:projectiveLineBar_isRegularInCodimOne}, which establishes the same
+  conclusion via the explicit two-chart affine cover of \(\mathbb P^1_{\bar k}\)
+  (each chart an affine line, hence a principal ideal domain, whose localisation
+  at a height-one prime is a discrete valuation ring).
+\end{proof}
+
+\section{Carrier substrate for \(\mathcal O_C(D)\)}
+
+This section assembles the substrate helpers for \cref{def:sheafOf}.
+They generalise the closed-point carrier machinery of
+\cref{chap:RiemannRoch_OCofP} from a single closed point \(P\) to an
+arbitrary Weil divisor \(D\). Throughout, \(C\) is integral, locally
+Noetherian and regular in codimension one over \(\bar k\), so that the
+local ring \(\mathcal O_{C, Q}\) at each prime divisor \(Q\) is a
+discrete valuation ring and \(\ord_Q\) is its valuation.
+
+\begin{definition}
+
+\leanok
+[Carrier set of \(\mathcal O_C(D)\) over an open]
+  \label{def:sheafOf_carrierSet}
+  \lean{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.carrierSet}
+  \uses{def:codim1_cycles, def:prime_divisor, def:order_at_point}
+  For a Weil divisor \(D : C.\text{left.PrimeDivisor} \to_0 \mathbb Z\) and
+  an open \(U \subseteq C\), the \emph{carrier set}
+  \(\mathrm{carrierSet}_D(U) \subseteq K(C)\) is
+  \[
+    \mathrm{carrierSet}_D(U) \;=\;
+    \bigl\{\, f \in K(C) \;\big|\;
+      f = 0 \,\lor\,
+      \bigl(\forall Q,\ Q.\mathrm{point} \in U \;\Rightarrow\;
+        -\,D(Q) \le \ord_Q(f)\bigr) \,\bigr\}.
+  \]
+  The disjunctive shape \(f = 0 \lor \dots\) (in contrast with the pure
+  conjunction used in \texttt{RR.3}'s closed-point carrier
+  \cref{def:lineBundleAtClosedPoint_carrierSet}) is \emph{required}: for a
+  prime divisor \(Q\) at which \(D(Q) < 0\) the bound \(-D(Q)\) is strictly
+  positive, so the junk value \(\ord_Q(0) = 0\) need not satisfy
+  \(-D(Q) \le \ord_Q(0)\), and the zero function must be admitted by a
+  separate clause for the carrier to be a submodule. It is the underlying
+  set of the section module of \(\mathcal O_C(D)\) over \(U\).
+\end{definition}
+
+\begin{lemma}
+
+\leanok
+[Monotonicity of the carrier set]
+  \label{lem:sheafOf_carrierSet_mono}
+  \lean{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.carrierSet_mono}
+  \uses{def:sheafOf_carrierSet}
+  If \(V \subseteq U\) are opens of \(C\) then
+  \(\mathrm{carrierSet}_D(U) \subseteq \mathrm{carrierSet}_D(V)\): the order
+  conditions over the smaller open \(V\) range over a subset of the prime
+  divisors involved over \(U\) and are therefore implied by them, while the
+  \(f = 0\) clause is preserved verbatim. This antitone inclusion supplies
+  the restriction map of the carrier presheaf.
+\end{lemma}
+
+\begin{proof}
+  \uses{def:sheafOf_carrierSet}
+  A function \(f \in \mathrm{carrierSet}_D(U)\) either is \(0\), in which
+  case it lies in \(\mathrm{carrierSet}_D(V)\) by the same \(f = 0\) clause,
+  or satisfies \(-D(Q) \le \ord_Q(f)\) for every \(Q\) with
+  \(Q.\mathrm{point} \in U\); since \(V \subseteq U\), the hypothesis
+  \(Q.\mathrm{point} \in V\) entails \(Q.\mathrm{point} \in U\), so the same
+  bound holds for every \(Q\) with \(Q.\mathrm{point} \in V\). Hence
+  \(f \in \mathrm{carrierSet}_D(V)\).
+\end{proof}
+
+\begin{definition}
+
+\leanok
+[Carrier submodule of \(\mathcal O_C(D)\) over an open]
+  \label{def:sheafOf_carrierSubmodule}
+  \lean{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.carrierSubmodule}
+  \uses{def:sheafOf_carrierSet, def:order_at_point}
+  The carrier set \(\mathrm{carrierSet}_D(U)\) is a \(\bar k\)-submodule of
+  \(K(C)\). It contains \(0\) (the \(f = 0\) clause). It is closed under
+  addition: if \(a, b\) are both nonzero with \(a + b \neq 0\), then for
+  every prime divisor \(Q\) the non-archimedean inequality
+  \(\min(\ord_Q a, \ord_Q b) \le \ord_Q(a + b)\) combines with the two hypotheses
+  \(-D(Q) \le \ord_Q a\) and \(-D(Q) \le \ord_Q b\) to give
+  \(-D(Q) \le \ord_Q(a + b)\); the degenerate cases where one summand or the
+  sum is \(0\) fall back to the \(f = 0\) clause. It is closed under scaling
+  by a constant \(c \in \bar k\): for \(c \neq 0\) the image of \(c\) in
+  each stalk \(\mathcal O_{C, Q}\) is a unit, hence has order \(\ge 0\), so
+  \(\ord_Q(c \cdot f) = \ord_Q(c) + \ord_Q(f) \ge \ord_Q(f) \ge -D(Q)\),
+  while \(c = 0\) gives \(c \cdot f = 0\).
+\end{definition}
+
+\begin{definition}
+
+\leanok
+[Bot-trivialisation submodule]
+  \label{def:sheafOf_trivAtBot}
+  \lean{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.trivAtBot}
+  For an open \(U \subseteq C\), the \(\bar k\)-submodule
+  \(\mathrm{trivAtBot}(U) \subseteq K(C)\) equals all of \(K(C)\) when
+  \(U \ne \emptyset\) and equals \(\{0\}\) when \(U = \emptyset\); concretely
+  \(\mathrm{trivAtBot}(U) = \{\, f \mid U \ne \emptyset \,\lor\, f = 0\,\}\).
+  Intersecting the carrier submodule with this factor enforces the
+  sheaf-at-\(\emptyset\) condition \(\Gamma(\emptyset, \mathcal O_C(D)) = 0\)
+  required by the Grothendieck topology of opens (whose empty sieve covers
+  \(\emptyset\), forcing the section module there to be terminal).
+\end{definition}
+
+\begin{definition}
+
+\leanok
+[Sheaf-corrected carrier submodule enforcing \(F(\bot) = 0\)]
+  \label{def:sheafOf_carrierSubmoduleSheaf}
+  \lean{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.carrierSubmoduleSheaf}
+  \uses{def:sheafOf_carrierSubmodule, def:sheafOf_trivAtBot}
+  The \emph{sheaf-corrected carrier submodule} is the meet
+  \[
+    \mathrm{carrierSubmoduleSheaf}_D(U) \;:=\;
+    \mathrm{carrierSubmodule}_D(U) \;\sqcap\; \mathrm{trivAtBot}(U).
+  \]
+  On a nonempty open it equals \(\mathrm{carrierSubmodule}_D(U)\) (then
+  \(\mathrm{trivAtBot}(U) = K(C)\)); at \(U = \emptyset\) it equals \(\{0\}\)
+  (the meet annihilates, since \(\mathrm{trivAtBot}(\emptyset) = \{0\}\)).
+  This is the corrected substrate consumed by the carrier presheaf, exactly
+  as in \texttt{RR.3}'s
+  \cref{def:lineBundleAtClosedPoint_carrierSubmoduleSheaf}.
+\end{definition}
+
+\begin{lemma}
+
+\leanok
+[Monotonicity of the sheaf-corrected carrier submodule]
+  \label{lem:sheafOf_carrierSubmoduleSheaf_le}
+  \lean{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.carrierSubmoduleSheaf_le}
+  \uses{def:sheafOf_carrierSubmoduleSheaf, lem:sheafOf_carrierSet_mono}
+  If \(V \subseteq U\) are opens with \(V \ne \emptyset\), then
+  \(\mathrm{carrierSubmoduleSheaf}_D(U) \le
+  \mathrm{carrierSubmoduleSheaf}_D(V)\). The hypothesis \(V \ne \emptyset\)
+  is necessary: a nonzero section over \(U\) need not satisfy the
+  trivialisation-at-\(\emptyset\) condition. This inclusion supplies the
+  restriction maps of the carrier presheaf on nonempty targets.
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:sheafOf_carrierSet_mono, def:sheafOf_trivAtBot}
+  Let \(x \in \mathrm{carrierSubmoduleSheaf}_D(U)\), so
+  \(x \in \mathrm{carrierSet}_D(U)\) and \(x \in \mathrm{trivAtBot}(U)\). By
+  \cref{lem:sheafOf_carrierSet_mono} and \(V \subseteq U\),
+  \(x \in \mathrm{carrierSet}_D(V)\); and since \(V \ne \emptyset\),
+  \(x \in \mathrm{trivAtBot}(V)\) holds by the left disjunct. Hence
+  \(x \in \mathrm{carrierSubmoduleSheaf}_D(V)\).
+\end{proof}
+
+\begin{definition}
+
+\leanok
+[Type-level subfunctor presentation of the carrier]
+  \label{def:sheafOf_carrierTypeSubfunctor}
+  \lean{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.carrierTypeSubfunctor}
+  \uses{def:sheafOf_carrierSubmoduleSheaf}
+  The carrier of \(\mathcal O_C(D)\) is presented as a subfunctor of the
+  type-valued presheaf \(U \mapsto (U \to K(C))\) of arbitrary
+  \(K(C)\)-valued functions: a section over \(U\) is a constant function
+  with value \(f \in \mathrm{carrierSubmoduleSheaf}_D(U)\). On a restriction
+  \(V \subseteq U\), a section with value \(f\) maps to the section with
+  value \(f\) when \(V \ne \emptyset\) (membership transported by
+  \cref{lem:sheafOf_carrierSubmoduleSheaf_le}) and to the unique section
+  over \(V = \emptyset\) otherwise. This presentation reduces the sheaf
+  condition to a stalk-locality check against the ambient sheaf of
+  type-valued functions, exploiting that any two nonempty opens of the
+  irreducible scheme \(C\) intersect.
+\end{definition}
+
+\begin{definition}
+
+\leanok
+[The carrier presheaf of \(\mathcal O_C(D)\)]
+  \label{def:sheafOf_carrierPresheaf}
+  \lean{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.carrierPresheaf}
+  \uses{def:sheafOf_carrierSubmoduleSheaf, lem:sheafOf_carrierSubmoduleSheaf_le}
+  The sheaf-corrected carrier submodules assemble into a
+  \(\bar k\)-linear functor
+  \[
+    \texttt{carrierPresheaf}_D : (\mathrm{Opens}\,|C|)^{\mathrm{op}}
+    \longrightarrow \mathbf{Mod}_{\bar k},
+    \qquad U \longmapsto \mathrm{carrierSubmoduleSheaf}_D(U),
+  \]
+  whose restriction along \(V \subseteq U\) is the zero map when
+  \(V = \emptyset\) and the inclusion
+  \(\mathrm{carrierSubmoduleSheaf}_D(U) \hookrightarrow
+  \mathrm{carrierSubmoduleSheaf}_D(V)\) of
+  \cref{lem:sheafOf_carrierSubmoduleSheaf_le} otherwise. The functor laws
+  (identity and composition) are checked by cases on whether the target
+  open is empty: on nonempty targets every restriction is an inclusion that
+  is the identity on \(K(C)\) at the carrier level, and at the empty target
+  the section module is \(\{0\}\), so both composites agree.
+\end{definition}
+
+\begin{lemma}[Carrier-presheaf restrictions are the identity on rational functions]
+  \label{lem:carrierPresheaf_map_coe}
+  \lean{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.carrierPresheaf_map_coe}
+  \uses{def:sheafOf_carrierPresheaf}
+  For every inclusion of opens \(V \subseteq U\) with non-empty target, the
+  restriction map of \(\texttt{carrierPresheaf}_D\) (\cref{def:sheafOf_carrierPresheaf})
+  acts as the identity on the underlying rational function: if \(x \in
+  \mathrm{carrierSubmoduleSheaf}_D(U)\) restricts to \(x' \in
+  \mathrm{carrierSubmoduleSheaf}_D(V)\), then \(x\) and \(x'\) are the same
+  element of \(K(C)\).
+\end{lemma}
+
+\begin{proof}
+  \uses{def:sheafOf_carrierPresheaf}
+  By \cref{def:sheafOf_carrierPresheaf}, at a non-empty target the restriction
+  map is the submodule inclusion
+  \(\mathrm{carrierSubmoduleSheaf}_D(U) \hookrightarrow
+  \mathrm{carrierSubmoduleSheaf}_D(V)\) (the empty-target branch is excluded by
+  the hypothesis). A submodule inclusion is, by construction, the identity on
+  underlying elements, so the underlying \(K(C)\)-element is preserved.
+\end{proof}
+
+\begin{lemma}
+
+\leanok
+[Sheaf property of the carrier presheaf]
+  \label{lem:sheafOf_carrierPresheaf_isSheaf}
+  \lean{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.carrierPresheaf_isSheaf}
+  \uses{def:sheafOf_carrierPresheaf, def:sheafOf_carrierSubmoduleSheaf,
+        def:sheafOf_carrierTypeSubfunctor, def:sheafOf_trivAtBot,
+        def:prime_divisor, def:order_at_point}
+  The presheaf \(\texttt{carrierPresheaf}_D\) is a sheaf for the
+  Grothendieck topology of opens on \(C\). The proof verifies the
+  unique-gluing form of the sheaf condition, discharged in two
+  regimes:
+  \begin{enumerate}
+    \item \emph{Empty-cover regime.} When the cover sups to \(\emptyset\)
+      (in particular for the empty sieve covering \(\bot\)), every member
+      open is \(\emptyset\), each local section module is \(\{0\}\) by the
+      \(\mathrm{trivAtBot}\) factor of
+      \cref{def:sheafOf_carrierSubmoduleSheaf}, and the unique gluing is
+      \(0\); existence and uniqueness are then immediate.
+    \item \emph{Irreducible-gluing regime.} When the cover has a nonempty
+      member, pick one, \(U_{i_0}\), and let \(v \in K(C)\) be the value of
+      its section. Any two nonempty opens of the irreducible space
+      underlying the integral scheme \(C\) intersect in a nonempty open, so
+      on each pairwise overlap the compatibility condition — which, on
+      nonempty opens, is equality of the constant \(K(C)\)-values — forces
+      every nonempty member's section to carry the \emph{same} value \(v\).
+      The candidate glued section is the constant function \(v\). Its
+      membership in \(\mathrm{carrierSubmoduleSheaf}_D\) over the union is
+      checked prime divisor by prime divisor: a prime divisor \(Q\) in the
+      union lies in some member \(U_i\); if \(Q.\mathrm{point} \in U_i\)
+      with \(U_i \ne \emptyset\) then \(v\) inherits the order bound
+      \(-D(Q) \le \ord_Q(v)\) from the section over \(U_i\) (and the
+      \(f = 0\) clause is transported when \(v = 0\)). The order conditions
+      being stalk-local at each prime divisor, gluing preserves them;
+      uniqueness follows because the restriction maps are the identity on
+      \(K(C)\) on nonempty opens.
+  \end{enumerate}
+  The argument is the divisor-indexed generalisation of
+  \cref{lem:lineBundleAtClosedPoint_carrierPresheaf_isSheaf}.
+\end{lemma}
 
 \section{Immediate corollaries}
 
@@ -289,30 +1225,46 @@ rather than a non-trivial isomorphism.
   equality of sub-\(\mathcal O_C\)-modules of \(\mathcal K_C\).
 \end{proof}
 
-\begin{lemma}\leanok
-[Sheaf at a single closed point is the line bundle of
+\begin{lemma}
+
+\leanok
+[Sheaf at a single closed point is isomorphic to the line bundle of
 \cref{def:lineBundleAtClosedPoint}]
   \label{lem:sheafOf_singlePoint}
-  \lean{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf_singlePoint}
+  \lean{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf_singlePoint_iso}
   \uses{def:sheafOf, def:divisor_closed_point, def:prime_divisor,
-        def:lineBundleAtClosedPoint}
+        def:lineBundleAtClosedPoint,
+        lem:lineBundleAtClosedPoint_globalSections_iff}
 
   Let \(C\) be a smooth proper geometrically irreducible curve over
   \(\bar k\) and let \(P \in C\) be a closed point, viewed as a Weil divisor
   \([P] \in \mathrm{Div}(C)\) via \cref{def:divisor_closed_point}. Then the
-  invertible sheaf \(\mathcal O_C([P])\) of \cref{def:sheafOf} agrees on
-  the nose with the line bundle of the closed point
-  \(\mathcal O_C(P)\) of \cref{def:lineBundleAtClosedPoint}:
+  invertible sheaf \(\mathcal O_C([P])\) of \cref{def:sheafOf} is
+  \emph{isomorphic} to the line bundle of the closed point
+  \(\mathcal O_C(P)\) of \cref{def:lineBundleAtClosedPoint}: there is an
+  isomorphism of sheaves of \(\mathcal O_C\)-modules
   \[
     \mathcal O_C(D)\bigl|_{D = [P]}
-    \;=\; \texttt{lineBundleAtClosedPoint}_{P}
+    \;\xrightarrow{\ \sim\ }\;
+    \texttt{lineBundleAtClosedPoint}_{P}
   \]
-  as sub-\(\mathcal O_C\)-modules of \(\mathcal K_C\), equivalently as
-  objects in \(\mathbf{Sh}(C, \mathbf{Mod}_{\bar k})\).
+  that is the identity on the common carrier \(K(C)\); equivalently, the
+  type of such isomorphisms is inhabited,
+  \(\mathrm{Nonempty}\bigl(\mathcal O_C([P]) \cong
+  \texttt{lineBundleAtClosedPoint}_P\bigr)\) in
+  \(\mathbf{Sh}(C, \mathbf{Mod}_{\bar k})\).
+
+  A strict sheaf \emph{equality}
+  \(\mathcal O_C(D)|_{D=[P]} = \texttt{lineBundleAtClosedPoint}_P\) is not
+  available: the right-hand side is assembled from the carrier data of
+  \cref{chap:RiemannRoch_OCofP}, which is encapsulated and cannot be named
+  for a definitional equality. The comparison is therefore stated and proved
+  at the level of an isomorphism, which is all the downstream
+  \(\chi\)-identity and degree arguments require.
 \end{lemma}
 
 \begin{proof}
-  
+  \uses{lem:lineBundleAtClosedPoint_globalSections_iff}
   Unfold both definitions. On the \texttt{sheafOf} side, the formal sum
   \([P]\) has coefficients \(n_Q = 1\) if \(Q = P\) and \(n_Q = 0\) otherwise
   (where \(P\) is identified with the prime divisor it determines by
@@ -331,20 +1283,951 @@ rather than a non-trivial isomorphism.
   \(Q \in U \setminus \{P\}\) and has at most a simple pole at \(P\) when
   \(P \in U\).
 
-  Restriction maps on both sides are the identity on \(K(C)\). The two
-  sub-\(\mathcal O_C\)-modules of \(\mathcal K_C\) are therefore equal
-  section-by-section as subsets of \(K(C)\), and the equality propagates
-  to an equality of sheaves of \(\mathcal O_C\)-modules. The
-  \(\bar k\)-module structure on both sides is the restriction of the
-  \(\bar k\)-module structure on \(K(C)\), so the identification is
-  \(\bar k\)-linear on each section.
+  Hence over every open \(U\) the two section \(\bar k\)-submodules of
+  \(K(C)\) coincide as subsets,
+  \(\Gamma(U, \mathcal O_C([P])) = \Gamma(U, \texttt{lineBundleAtClosedPoint}_P)\).
+  Since restriction maps on both sides are the identity on \(K(C)\) and the
+  \(\bar k\)-module structure on each side is the restriction of that on
+  \(K(C)\), the section-wise identity maps assemble into a morphism of
+  sheaves of \(\mathcal O_C\)-modules that is the identity on the carrier;
+  its section-wise inverse (again the identity on \(K(C)\)) is likewise a
+  sheaf morphism. The two are mutually inverse, so they constitute an
+  isomorphism \(\mathcal O_C([P]) \cong \texttt{lineBundleAtClosedPoint}_P\),
+  identity on \(K(C)\). This exhibits the required inhabitant of
+  \(\mathrm{Nonempty}\bigl(\mathcal O_C([P]) \cong
+  \texttt{lineBundleAtClosedPoint}_P\bigr)\).
+\end{proof}
+
+\begin{lemma}
+[Ideal-sheaf short exact sequence at a closed point]
+  \label{lem:idealSheaf_ses_closedPoint}
+  \lean{AlgebraicGeometry.Scheme.WeilDivisor.idealSheaf_ses_closedPoint}
+  \uses{lem:sheafOf_ses_single_add, def:sheafOf, def:divisor_closed_point,
+        def:prime_divisor}
+  Let \(C\) be a smooth proper geometrically irreducible curve over
+  \(\bar k\) and let \(P \in C\) be a closed point. Viewing \(P\) as a
+  locally principal closed subscheme of \(C\), its structure sheaf is the
+  skyscraper sheaf \(k(P)\) at \(P\) with stalk \(\bar k\), and its ideal
+  sheaf is \(\mathcal O_C(-[P])\) (the sub-\(\mathcal O_C\)-module of
+  \(\mathcal K_C\) locally generated by a uniformiser \(\pi_P\) at \(P\) and
+  by \(1\) away from \(P\)). These fit into a short exact sequence
+  \[
+    0 \;\longrightarrow\; \mathcal O_C(-[P])
+    \;\longrightarrow\; \mathcal O_C
+    \;\longrightarrow\; k(P)
+    \;\longrightarrow\; 0
+  \]
+  in \(\mathbf{Sh}(C, \mathbf{Mod}_{\bar k})\).
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:sheafOf_ses_single_add, lem:sheafOf_zero,
+        lem:cokernel_sheafOf_single_add_iso_skyscraper}
+  This is the inductive-step sequence \cref{lem:sheafOf_ses_single_add}
+  specialised at \(D = -[P]\). Then \(\mathcal O_C(D) = \mathcal O_C(-[P])\),
+  and \(D + [P] = 0\), so \(\mathcal O_C(D+[P]) = \mathcal O_C(0) =
+  \mathcal O_C\) by \cref{lem:sheafOf_zero}. The inclusion
+  \(\mathcal O_C(-[P]) \hookrightarrow \mathcal O_C\) is the inclusion of
+  subsheaves of \(\mathcal K_C\): a section of \(\mathcal O_C(-[P])\) over
+  \(U\) is a rational function vanishing to order \(\geq 1\) at \(P\) (when
+  \(P \in U\)) and regular at every other prime divisor of \(U\), hence in
+  particular a regular function. The cokernel is the skyscraper \(k(P)\) by
+  \cref{lem:cokernel_sheafOf_single_add_iso_skyscraper}, via the residue
+  (evaluation) map \(\mathcal O_C \twoheadrightarrow k(P)\) whose kernel is
+  exactly the maximal-ideal sheaf \(\mathcal O_C(-[P])\). The sequence is
+  therefore exact.
+\end{proof}
+
+% ════════════════════════════════════════════════════════════════════════
+% The inductive-step SES is presented by the cokernel route rather than
+% by the structure-sheaf tensor decomposition of Hartshorne~IV.1.3.
+% The category $\mathbf{Sh}(C, \mathbf{Mod}_{\bar k})$ has $\bar k$-linear
+% sheaves as objects (not $\mathcal O_C$-module objects), so the tensor
+% $\otimes_{\mathcal O_C}$ is not its monoidal product and the classical
+% ``tensor the ideal-sheaf sequence by $\mathcal O_C(D+[P])$'' argument
+% does not apply.  The sequence is presented intrinsically: the subsheaf
+% inclusion is a monomorphism, and the SES is the canonical
+% mono--cokernel short exact sequence, with the cokernel identified as the
+% skyscraper $k(P)$.
+% ════════════════════════════════════════════════════════════════════════
+
+\begin{definition}[Short complex and short-exactness]
+  \label{def:shortComplex_mathlib}
+  \lean{CategoryTheory.ShortComplex.ShortExact}
+  \mathlibok
+  \textit{Provided by Mathlib.}
+  In a category with zero morphisms, a \emph{short complex} is a pair of
+  composable morphisms \(X_1 \xrightarrow{f} X_2 \xrightarrow{g} X_3\) with
+  \(g \circ f = 0\). In an abelian category it is \emph{short exact} when
+  \(f\) is a monomorphism, \(g\) is an epimorphism, and the complex is exact
+  at \(X_2\). This is Mathlib's \(\texttt{CategoryTheory.ShortComplex}\)
+  together with its \(\texttt{ShortExact}\) predicate; it is the shape in
+  which the project records the sequence
+  \(0 \to \mathcal O_C(D) \to \mathcal O_C(D+[P]) \to k(P) \to 0\).
+\end{definition}
+
+\begin{definition}[Cokernel and its projection]
+  \label{def:cokernel_mathlib}
+  \lean{CategoryTheory.Limits.cokernel}
+  \mathlibok
+  \textit{Provided by Mathlib.}
+  For a morphism \(f : X \to Y\) in a category with zero morphisms and the
+  relevant colimit, the \emph{cokernel} \(\operatorname{coker} f\) carries a
+  canonical projection \(\pi_f : Y \to \operatorname{coker} f\), characterised
+  by \(\pi_f \circ f = 0\) and the universal property that any morphism out of
+  \(Y\) killing \(f\) factors uniquely through \(\pi_f\). The abelian category
+  \(\mathbf{Sh}(C, \mathbf{Mod}_{\bar k})\) has all cokernels.
+\end{definition}
+
+\begin{definition}[Skyscraper sheaf]
+  \label{def:skyscraperSheaf_mathlib}
+  \lean{skyscraperSheaf}
+  \mathlibok
+  \textit{Provided by Mathlib.}
+  For a point \(p_0\) of a topological space \(X\) and an object \(A\) of a
+  category with a terminal object, the skyscraper sheaf
+  \(\texttt{skyscraperSheaf}\,p_0\,A\) takes the value \(A\) on every open
+  containing \(p_0\) and the terminal object on every open avoiding \(p_0\).
+  The third term of the inductive-step sequence is
+  \(k(P) := \texttt{skyscraperSheaf}\,P.\mathrm{point}\,\bar k\) in
+  \(\mathbf{Sh}(C, \mathbf{Mod}_{\bar k})\): the residue field \(\bar k\)
+  placed at the closed point \(P\).
+\end{definition}
+
+\begin{lemma}
+
+\leanok
+[Adding \([P]\) relaxes the carrier order bound]
+  \label{lem:carrierSet_le_add_single}
+  \lean{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.carrierSet_le_add_single}
+  \uses{def:sheafOf, def:order_at_point, def:prime_divisor}
+  Let \(C\) be a smooth proper geometrically irreducible curve over
+  \(\bar k\), let \(D \in \mathrm{Div}(C)\) and let \(P\) be a prime divisor
+  of \(C\) (\cref{def:prime_divisor}). Over every open \(U \subseteq C\) the
+  carrier set of \(\mathcal O_C(D)\) is contained in that of
+  \(\mathcal O_C([P]+D)\):
+  \[
+    \Gamma\bigl(U, \mathcal O_C(D)\bigr) \;\subseteq\;
+    \Gamma\bigl(U, \mathcal O_C([P]+D)\bigr)
+  \]
+  as subsets of \(K(C)\).
+\end{lemma}
+
+\begin{proof}
+  \uses{def:order_at_point}
+  The zero section lies in both carriers. A nonzero
+  \(f \in \Gamma(U, \mathcal O_C(D))\) satisfies \(-(D\,Q) \leq \ord_Q(f)\)
+  for every prime divisor \(Q \in U\). The coefficient of \(P\) in
+  \([P]+D\) exceeds that in \(D\) by one, while every other coefficient is
+  unchanged; hence \(-(([P]+D)\,Q) \leq -(D\,Q) \leq \ord_Q(f)\) at \(Q = P\)
+  and the bounds are unchanged at \(Q \neq P\). Thus \(f\) satisfies the
+  (weaker) order constraints defining \(\mathcal O_C([P]+D)\), and the
+  inclusion of carrier sets follows.
+\end{proof}
+
+\begin{lemma}
+
+\leanok
+[Carrier-submodule inclusion in the divisor variable]
+  \label{lem:carrierSubmoduleSheaf_le_add_single}
+  \lean{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.carrierSubmoduleSheaf_le_add_single}
+  \uses{lem:carrierSet_le_add_single, def:sheafOf}
+  With \(C, D, P\) as above, on every open \(U\) the section
+  \(\bar k\)-submodule of \(\mathcal O_C(D)\) is contained in that of
+  \(\mathcal O_C([P]+D)\), as \(\bar k\)-submodules of \(K(C)\).
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:carrierSet_le_add_single}
+  The defining submodule of \(\mathcal O_C(D)\) over \(U\) is the carrier set
+  intersected with the bot-trivialisation constraint (which forces the
+  section to vanish on the empty open). The carrier-set inclusion is
+  \cref{lem:carrierSet_le_add_single}, and the bot-trivialisation factor
+  depends on \(U\) alone, not on the divisor, so it coincides on both sides.
+  Intersecting a smaller carrier with the same factor yields the asserted
+  submodule inclusion.
+\end{proof}
+
+\begin{definition}
+
+\leanok
+[Inclusion morphism of carrier presheaves]
+  \label{lem:carrierPresheaf_le_hom}
+  \lean{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.carrierPresheaf_le_hom}
+  \uses{lem:carrierSubmoduleSheaf_le_add_single, def:sheafOf}
+  With \(C, D, P\) as above, the section-wise submodule inclusions of
+  \cref{lem:carrierSubmoduleSheaf_le_add_single} assemble into a morphism of
+  carrier presheaves
+  \[
+    \mathcal O_C(D) \;\longrightarrow\; \mathcal O_C([P]+D),
+  \]
+  natural in the open \(U\): the presheaf-level inclusion
+  \(\mathcal O_C(D) \hookrightarrow \mathcal O_C([P]+D)\) of subpresheaves of
+  the constant sheaf \(\mathcal K_C\).
+\end{definition}
+
+\begin{proof}
+  \uses{lem:carrierSubmoduleSheaf_le_add_single}
+  For each open \(U\) take the \(\bar k\)-linear submodule inclusion of
+  \cref{lem:carrierSubmoduleSheaf_le_add_single}. Naturality is the
+  commutation of these inclusions with restriction. The restriction maps on
+  both carrier presheaves are the identity on \(K(C)\), so for
+  \(V \subseteq U\) with \(V \neq \varnothing\) the naturality square
+  commutes on the nose; at \(V = \varnothing\) the codomain section module is
+  the zero module, a subsingleton, so the square commutes trivially. The
+  section-wise inclusions therefore constitute a presheaf morphism.
+\end{proof}
+
+\begin{definition}
+
+\leanok
+[The carrier sheaf of \(\mathcal O_C(D)\)]
+  \label{def:sheafOf_carrierSheaf}
+  \lean{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.carrierSheaf}
+  \uses{def:sheafOf_carrierPresheaf, lem:sheafOf_carrierPresheaf_isSheaf}
+  For a Weil divisor \(D : C.\text{left.PrimeDivisor} \to_0 \mathbb Z\), the
+  \emph{carrier sheaf} \(\texttt{carrierSheaf}_D\) is the presheaf
+  \cref{def:sheafOf_carrierPresheaf} equipped with the sheaf property
+  \cref{lem:sheafOf_carrierPresheaf_isSheaf}, regarded as an object of
+  \(\mathbf{Sh}(C, \mathbf{Mod}_{\bar k})\). The lemmas below establish
+  the inductive-step short exact sequence at the carrier-sheaf level.
+\end{definition}
+
+\begin{definition}
+
+\leanok
+[Sheaf-level inclusion \(\mathcal O_C(D) \hookrightarrow \mathcal O_C([P]+D)\)]
+  \label{def:sheafOf_carrierSheafHom_le_add_single}
+  \lean{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.carrierSheafHom_le_add_single}
+  \uses{def:sheafOf_carrierSheaf, lem:carrierPresheaf_le_hom}
+  With \(C, D\) as above and \(P\) a prime divisor of \(C\)
+  (\cref{def:prime_divisor}), the presheaf inclusion
+  \cref{lem:carrierPresheaf_le_hom} promotes to a morphism of carrier sheaves
+  \[
+    \texttt{carrierSheaf}_D \;\longrightarrow\;
+    \texttt{carrierSheaf}_{[P]+D}
+  \]
+  in \(\mathbf{Sh}(C, \mathbf{Mod}_{\bar k})\): a morphism of sheaves is
+  precisely a morphism of underlying presheaves, so the carrier-presheaf
+  inclusion \(\mathcal O_C(D) \hookrightarrow \mathcal O_C([P]+D)\) is already a
+  sheaf morphism between the carrier sheaves.
+\end{definition}
+
+\begin{lemma}
+
+\leanok
+[The inclusion \(\mathcal O_C(D) \hookrightarrow \mathcal O_C([P]+D)\) is a
+monomorphism]
+  \label{lem:sheafOf_mono_single_add}
+  \lean{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.carrierSheafHom_le_add_single_mono}
+  \uses{def:sheafOf_carrierSheafHom_le_add_single,
+        lem:carrierSubmoduleSheaf_le_add_single, def:prime_divisor}
+  Let \(C\) be a smooth proper geometrically irreducible curve over
+  \(\bar k\), let \(D \in \mathrm{Div}(C)\) and let \(P\) be a closed point of
+  \(C\) (a prime divisor, \cref{def:prime_divisor}). The sheaf-level inclusion
+  of \cref{def:sheafOf_carrierSheafHom_le_add_single}
+  \[
+    f \;\colon\; \mathcal O_C(D) \;\longrightarrow\; \mathcal O_C([P]+D)
+  \]
+  in \(\mathbf{Sh}(C, \mathbf{Mod}_{\bar k})\) is a \emph{monomorphism}.
+\end{lemma}
+
+\begin{proof}
+  \uses{def:sheafOf_carrierSheafHom_le_add_single,
+        lem:carrierSubmoduleSheaf_le_add_single}
+  Over every open \(U\) the morphism \(f\) is the \(\bar k\)-linear submodule
+  inclusion of \cref{lem:carrierSubmoduleSheaf_le_add_single}, hence injective
+  on sections; so each component of \(f\) is a monomorphism in
+  \(\mathbf{Mod}_{\bar k}\). A natural transformation that is component-wise a
+  monomorphism is a monomorphism of presheaves, and a presheaf monomorphism
+  between sheaves is a monomorphism in the sheaf category
+  \(\mathbf{Sh}(C, \mathbf{Mod}_{\bar k})\) (monomorphisms in this abelian
+  sheaf category are detected section-wise). Therefore \(f\) is a monomorphism.
 \end{proof}
 
 \begin{lemma}\leanok
-[Short exact sequence for \(D \rightsquigarrow D + [Y]\)]
+[Away from \(P\): the carrier set is unchanged by \([P]\)]
+  \label{lem:carrierSet_add_single_eq_of_not_mem}
+  \lean{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.carrierSet_add_single_eq_of_not_mem}
+  \uses{def:sheafOf_carrierSet}
+  Let \(C, D\) be as above and let \(P\) be a prime divisor of \(C\). For every
+  open \(U \subseteq C\) with \(P.\mathrm{point} \notin U\) the carrier sets of
+  \(\mathcal O_C([P]+D)\) and \(\mathcal O_C(D)\) over \(U\) coincide:
+  \[
+    \mathrm{carrierSet}_{[P]+D}(U) \;=\; \mathrm{carrierSet}_D(U).
+  \]
+\end{lemma}
+
+\begin{proof}
+  \uses{def:sheafOf_carrierSet}
+  The divisors \([P]+D\) and \(D\) differ only in their coefficient at the prime
+  \(P\). For every prime divisor \(Q\) with \(Q.\mathrm{point} \in U\) we have
+  \(Q \neq P\) (else \(P.\mathrm{point} = Q.\mathrm{point} \in U\) by injectivity
+  of \(Q \mapsto Q.\mathrm{point}\), contradicting \(P.\mathrm{point} \notin U\)), so \(([P]+D)\,Q = D\,Q\) and the
+  order constraints defining the two carrier sets are identical over \(U\).
+\end{proof}
+
+\begin{lemma}\leanok
+[Away from \(P\): the carrier submodule is unchanged]
+  \label{lem:carrierSubmodule_add_single_eq_of_not_mem}
+  \lean{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.carrierSubmodule_add_single_eq_of_not_mem}
+  \uses{lem:carrierSet_add_single_eq_of_not_mem, def:sheafOf_carrierSubmodule}
+  With \(C, D, P\) as above and \(U \subseteq C\) open with
+  \(P.\mathrm{point} \notin U\), the carrier \(\bar k\)-submodules agree:
+  \(\mathrm{carrierSubmodule}_{[P]+D}(U) = \mathrm{carrierSubmodule}_D(U)\).
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:carrierSet_add_single_eq_of_not_mem}
+  The carrier submodule has underlying set the carrier set, so the equality of
+  carrier sets \cref{lem:carrierSet_add_single_eq_of_not_mem} promotes to an
+  equality of submodules by extensionality on the underlying sets.
+\end{proof}
+
+\begin{lemma}
+
+\leanok
+[Away from \(P\): the sheaf-corrected carrier submodule is unchanged]
+  \label{lem:carrierSubmoduleSheaf_add_single_eq_of_not_mem}
+  \lean{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.carrierSubmoduleSheaf_add_single_eq_of_not_mem}
+  \uses{lem:carrierSubmodule_add_single_eq_of_not_mem,
+        def:sheafOf_carrierSubmoduleSheaf}
+  With \(C, D, P\) as above and \(U \subseteq C\) open with
+  \(P.\mathrm{point} \notin U\), the sheaf-corrected carrier submodules agree:
+  \(\mathrm{carrierSubmoduleSheaf}_{[P]+D}(U) =
+  \mathrm{carrierSubmoduleSheaf}_D(U)\).
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:carrierSubmodule_add_single_eq_of_not_mem}
+  The sheaf-corrected carrier submodule is the meet of the carrier submodule
+  with the bot-trivialisation factor \(\mathrm{trivAtBot}(U)\), and the latter
+  depends on \(U\) alone, not on the divisor. Rewriting the carrier-submodule
+  factor by \cref{lem:carrierSubmodule_add_single_eq_of_not_mem} gives the
+  asserted equality.
+\end{proof}
+
+\begin{lemma}\leanok
+[Away from \(P\): the inclusion is an isomorphism on sections]
+  \label{lem:carrierPresheaf_le_hom_app_isIso_of_not_mem}
+  \lean{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.carrierPresheaf_le_hom_app_isIso_of_not_mem}
+  \uses{lem:carrierSubmoduleSheaf_add_single_eq_of_not_mem,
+        def:sheafOf_carrierSheafHom_le_add_single}
+  With \(C, D, P\) as above and \(U \subseteq C\) open with
+  \(P.\mathrm{point} \notin U\), the component over \(U\) of the inclusion
+  morphism \(\mathcal O_C(D) \hookrightarrow \mathcal O_C([P]+D)\)
+  (\cref{def:sheafOf_carrierSheafHom_le_add_single}) is an isomorphism of
+  \(\bar k\)-modules.
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:carrierSubmoduleSheaf_add_single_eq_of_not_mem}
+  By \cref{lem:carrierSubmoduleSheaf_add_single_eq_of_not_mem} the source and
+  target section submodules coincide over \(U\), so the
+  inclusion-of-equal-submodules component is the identity map, in particular a
+  bijection, hence an isomorphism in \(\mathbf{Mod}_{\bar k}\).
+\end{proof}
+
+\begin{definition}
+
+\leanok
+[Order submodule at \(P\): the fractional ideal \(\pi_P^{-n}\mathcal O_{C,P}\)]
+  \label{def:sheafOf_orderAtPSubmodule}
+  \lean{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.orderAtPSubmodule}
+  \uses{def:order_at_point, lem:stalk_isDVR_of_smooth}
+  Let \(D : C.\mathrm{left.PrimeDivisor} \to_0 \mathbb Z\) and let \(P\) be a
+  prime divisor of \(C\), with \(n = D\,P\). The \emph{order submodule at \(P\)}
+  is the \(\bar k\)-submodule of \(K(C)\)
+  \[
+    \mathrm{orderAtP}_D(P) \;:=\;
+    \bigl\{\, g \in K(C) \;\big|\; g = 0 \,\lor\, -\,n \le \ord_P(g) \,\bigr\}
+    \;\subseteq\; K(C),
+  \]
+  cut out by the \emph{single} order constraint at \(P\) (with the separate
+  \(g = 0\) clause, as in \cref{def:sheafOf_carrierSet}). In the discrete
+  valuation ring \(\mathcal O_{C,P}\) (\cref{lem:stalk_isDVR_of_smooth}) with
+  uniformiser \(\pi_P\) this submodule is exactly the fractional ideal
+  \(\pi_P^{-n}\mathcal O_{C,P}\): a nonzero \(g\) has \(\ord_P(g) \ge -n\) iff
+  \(\pi_P^{\,n} g \in \mathcal O_{C,P}\). It is the closure of the carrier
+  conditions to the lone prime \(P\), and is the target of the carrier-stalk
+  identification \cref{lem:carrierSheaf_stalk_eq_fractionalIdeal}.
+\end{definition}
+
+\begin{lemma}
+
+\leanok
+[Stalk of an inclusion-restriction presheaf is the directed supremum of its
+sections]
+  \label{lem:carrierSheaf_stalk_iso_iSup}
+  \lean{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.carrierSheaf_stalk_iso_iSup}
+  \uses{def:sheafOf_carrierSheaf, def:sheafOf_carrierSubmoduleSheaf,
+        lem:sheafOf_carrierSubmoduleSheaf_le}
+  With \(C, D\) as above and \(P\) a prime divisor, the stalk of the carrier
+  sheaf at \(P.\mathrm{point}\) is the directed supremum, taken inside \(K(C)\),
+  of the section submodules over the open neighbourhoods of \(P.\mathrm{point}\):
+  \[
+    (\texttt{carrierSheaf}_D)_{P.\mathrm{point}} \;\cong\;
+    \bigsqcup_{U \ni P.\mathrm{point}}
+        \mathrm{carrierSubmoduleSheaf}_D(U)
+  \]
+  as \(\bar k\)-modules, where the supremum ranges over open
+  neighbourhoods \(U \ni P.\mathrm{point}\) and \(\bigsqcup\) is the lattice
+  supremum of \(\bar k\)-submodules of \(K(C)\).
+\end{lemma}
+
+\begin{proof}
+  \uses{def:sheafOf_carrierSubmoduleSheaf, lem:sheafOf_carrierSubmoduleSheaf_le,
+        lem:carrierPresheaf_map_coe}
+  Write \(\Gamma(U) := \mathrm{carrierSubmoduleSheaf}_D(U) \subseteq K(C)\) and
+  \(S := \bigsqcup_{U \ni P.\mathrm{point}} \Gamma(U)\). The family
+  \(U \mapsto \Gamma(U)\) over \(\mathrm{OpenNhds}(P.\mathrm{point})\) is
+  \emph{directed} under \(\le\): the index is nonempty (\(\top \ni
+  P.\mathrm{point}\)) and for \(U, V \ni P.\mathrm{point}\) the open \(U \sqcap V
+  \ni P.\mathrm{point}\) satisfies \(\Gamma(U), \Gamma(V) \le \Gamma(U \sqcap
+  V)\) by monotonicity (\cref{lem:sheafOf_carrierSubmoduleSheaf_le}; note
+  \(U \sqcap V \ne \emptyset\) as it contains \(P.\mathrm{point}\)). Since the
+  family is directed, the supremum \(S\) equals the genuine union
+  \(\bigcup_{U \ni P.\mathrm{point}} \Gamma(U)\) inside \(K(C)\).
+
+  Every restriction map of \(\texttt{carrierSheaf}_D\) between nonempty opens is
+  the inclusion \(\Gamma(U) \hookrightarrow \Gamma(V)\) of submodules of \(K(C)\)
+  (\cref{def:sheafOf_carrierSubmoduleSheaf}), i.e.\ the identity on the
+  underlying elements of \(K(C)\). We build the comparison map
+  \(\varphi : (\texttt{carrierSheaf}_D)_{P.\mathrm{point}} \to S\) via the
+  universal property of the stalk: each section leg \(\Gamma(U) \hookrightarrow
+  S\) is the canonical inclusion into the supremum, and these maps are compatible
+  with the (inclusion) restriction maps, so they factor through the colimit
+  defining the stalk; on the germ of \(s \in \Gamma(U)\) at \(P.\mathrm{point}\),
+  \(\varphi\) sends it to \(s\) viewed in \(S\). Then:
+  \begin{itemize}
+  \item \(\varphi\) is \emph{injective}: post-composing with the inclusion
+    \(S \hookrightarrow K(C)\) sends the germ of \(s\) over \(U\) to the
+    underlying element of \(s\) in \(K(C)\); since every restriction map is an
+    injective inclusion, two germs with equal underlying element agree on a
+    common smaller neighbourhood and are therefore equal by sheaf separatedness.
+  \item \(\varphi\) is \emph{surjective}: every element of \(S\) lies in some
+    \(\Gamma(U)\) with \(U \ni P.\mathrm{point}\) by the directed-union
+    description above, and is thus the image under \(\varphi\) of the
+    corresponding germ.
+  \end{itemize}
+  A bijective \(\bar k\)-linear map of modules is an isomorphism, giving the
+  stated isomorphism.
+\end{proof}
+
+\begin{lemma}
+
+\leanok
+[Finitely many prime divisors violate the order constraints on an affine open]
+  \label{lem:finite_orderConstraintFail_affine}
+  \lean{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.finite_orderConstraintFail_affine}
+  % NOTE: The proof uses global finiteness of the principal-divisor support
+  % (available on the proper curve via compactness), which is strictly stronger
+  % than the affine-finiteness route and handles \(g = 0\) internally --- so
+  % the statement carries no nonzero hypothesis on \(g\).
+  \uses{def:order_at_point, def:prime_divisor, def:principal_divisor,
+        def:codim1_cycles}
+  Let \(W \subseteq C\) be an affine open and let \(g \in K(C)\) be a rational
+  function. Then the set of prime divisors
+  \[
+    \bigl\{\, Q \;\big|\; Q.\mathrm{point} \in W \,\land\,
+      \neg\,(-\,D\,Q \le \ord_Q(g)) \,\bigr\}
+  \]
+  is finite.
+\end{lemma}
+
+\begin{proof}
+  \uses{def:principal_divisor}
+  If a prime divisor \(Q\) with \(Q.\mathrm{point} \in W\) violates the
+  constraint, then \(\ord_Q(g) < -\,D\,Q\); in particular it is impossible to
+  have both \(\ord_Q(g) = 0\) and \(D\,Q = 0\) (which would give \(0 \le 0\)).
+  Hence every such \(Q\) lies in the union of the two sets
+  \[
+    \{\, Q : \ord_Q(g) \ne 0 \,\}
+    \quad\text{and}\quad
+    \{\, Q : D\,Q \ne 0 \,\}.
+  \]
+  The second set is finite because \(D\) has finite support by definition of a
+  Weil divisor. The first set is finite because it is the support of the
+  principal divisor \(\operatorname{div}(g)\) (\cref{def:principal_divisor}):
+  on the proper curve \(C\) the curve's underlying space is compact, so
+  \(\operatorname{div}(g)\) is a well-defined finitely-supported cycle whose
+  support is exactly \(\{\, Q : \ord_Q(g) \ne 0 \,\}\) (when \(g = 0\) this set
+  is empty by the convention \(\ord_Q(0) = 0\)). Being the support of a
+  \(\mathrm{Finsupp}\), it is finite outright — no affine restriction is
+  needed. A finite union of finite sets is finite.
+\end{proof}
+
+\begin{lemma}
+
+\leanok
+[Order constraint at \(P\) is realised on a small open]
+  \label{lem:exists_open_mem_carrierSubmoduleSheaf}
+  \lean{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.exists_open_mem_carrierSubmoduleSheaf}
+  \uses{def:sheafOf_orderAtPSubmodule, def:sheafOf_carrierSubmoduleSheaf,
+        lem:finite_orderConstraintFail_affine, def:prime_divisor}
+  Let \(g \in \mathrm{orderAtP}_D(P)\) (\cref{def:sheafOf_orderAtPSubmodule}).
+  Then there is an open \(U \ni P.\mathrm{point}\) with
+  \(g \in \mathrm{carrierSubmoduleSheaf}_D(U)\).
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:finite_orderConstraintFail_affine}
+  If \(g = 0\) then \(g \in \mathrm{carrierSubmoduleSheaf}_D(U)\) for every
+  \(U \ni P.\mathrm{point}\) (the \(f = 0\) clause), so take \(U = \top\).
+  Assume \(g \ne 0\). Choose an affine open \(W \ni P.\mathrm{point}\) (every
+  point of a scheme has an affine open neighbourhood). By
+  \cref{lem:finite_orderConstraintFail_affine} the set
+  \[
+    B \;=\; \{\, Q \mid Q.\mathrm{point} \in W \,\land\,
+      \neg\,(-\,D\,Q \le \ord_Q(g)) \,\}
+  \]
+  of \emph{bad} prime divisors inside \(W\) is finite. Each \(Q \in B\) is a
+  codimension-one point of \(C\), hence its closure \(\overline{\{Q.\mathrm
+  {point}\}}\) is a proper closed set; moreover \(P \notin B\), because
+  \(g \in \mathrm{orderAtP}_D(P)\) and \(g \ne 0\) give exactly
+  \(-\,D\,P \le \ord_P(g)\). Therefore
+  \[
+    U \;:=\; W \;\setminus\; \bigcup_{Q \in B}
+      \overline{\{Q.\mathrm{point}\}}
+  \]
+  is open (a finite union of closed sets removed from the open \(W\)) and
+  contains \(P.\mathrm{point}\) (it lies in \(W\), and \(P.\mathrm{point}\) is
+  not in any \(\overline{\{Q.\mathrm{point}\}}\) for \(Q \in B\): a prime
+  divisor's generic point lies in another's closure only if they coincide, and
+  \(P \notin B\)). For every prime divisor \(Q'\) with \(Q'.\mathrm{point} \in
+  U\) we have \(Q'.\mathrm{point} \in W\) and \(Q' \notin B\), so
+  \(-\,D\,Q' \le \ord_{Q'}(g)\). Hence \(g\) satisfies all order constraints
+  over \(U\), i.e.\ \(g \in \mathrm{carrierSubmoduleSheaf}_D(U)\) (and \(U \ne
+  \emptyset\) since \(P.\mathrm{point} \in U\), so the \(\mathrm{trivAtBot}\)
+  factor is \(K(C)\)).
+\end{proof}
+
+\begin{lemma}
+
+\leanok
+[The directed supremum of carrier sections at \(P\) is the order submodule]
+  \label{lem:iSup_carrierSubmoduleSheaf_eq_orderAtPSubmodule}
+  \lean{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.iSup_carrierSubmoduleSheaf_eq_orderAtPSubmodule}
+  \uses{def:sheafOf_carrierSubmoduleSheaf, def:sheafOf_orderAtPSubmodule,
+        lem:sheafOf_carrierSubmoduleSheaf_le,
+        lem:exists_open_mem_carrierSubmoduleSheaf, def:prime_divisor}
+  With \(C, D, P\) as above,
+  \[
+    \bigsqcup_{U \ni P.\mathrm{point}}
+      \mathrm{carrierSubmoduleSheaf}_D(U) \;=\; \mathrm{orderAtP}_D(P)
+  \]
+  as \(\bar k\)-submodules of \(K(C)\).
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:exists_open_mem_carrierSubmoduleSheaf,
+        lem:sheafOf_carrierSubmoduleSheaf_le}
+  We prove the two inclusions; throughout, the family is directed (as in
+  \cref{lem:carrierSheaf_stalk_iso_iSup}), so membership in the supremum is
+  equivalent to membership in some \(\mathrm{carrierSubmoduleSheaf}_D(U)\) with
+  \(U \ni P.\mathrm{point}\).
+
+  \emph{(\(\le\))} It suffices to show each leg
+  \(\mathrm{carrierSubmoduleSheaf}_D(U) \le \mathrm{orderAtP}_D(P)\) for \(U \ni
+  P.\mathrm{point}\). Let \(g \in \mathrm{carrierSubmoduleSheaf}_D(U)\). If
+  \(g = 0\) it lies in \(\mathrm{orderAtP}_D(P)\). Otherwise, since
+  \(P.\mathrm{point} \in U\), the order constraint at \(Q = P\) is among those
+  enforced over \(U\), giving \(-\,D\,P \le \ord_P(g)\); thus
+  \(g \in \mathrm{orderAtP}_D(P)\).
+
+  \emph{(\(\ge\))} Let \(g \in \mathrm{orderAtP}_D(P)\). By
+  \cref{lem:exists_open_mem_carrierSubmoduleSheaf} there is an open \(U \ni
+  P.\mathrm{point}\) with \(g \in \mathrm{carrierSubmoduleSheaf}_D(U)\), whence
+  \(g\) lies in the directed supremum.
+\end{proof}
+
+\begin{lemma}\leanok
+[Stalk of the carrier sheaf is a fractional ideal of the DVR]
+  \label{lem:carrierSheaf_stalk_eq_fractionalIdeal}
+  \lean{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.carrierSheaf_stalk_eq}
+  \uses{def:sheafOf_carrierSheaf, lem:stalk_isDVR_of_smooth, def:order_at_point,
+        def:sheafOf_orderAtPSubmodule, lem:carrierSheaf_stalk_iso_iSup,
+        lem:iSup_carrierSubmoduleSheaf_eq_orderAtPSubmodule}
+  Let \(C\) be a smooth proper geometrically irreducible curve over \(\bar k\),
+  let \(D \in \mathrm{Div}(C)\), and let \(P\) be a prime divisor of \(C\) with
+  order \(n = D\,P\) (\cref{def:order_at_point}). The stalk of the carrier sheaf
+  \(\texttt{carrierSheaf}_D\) (\cref{def:sheafOf_carrierSheaf}) at the point
+  \(P.\mathrm{point}\) is the fractional ideal
+  \[
+    (\texttt{carrierSheaf}_D)_{P.\mathrm{point}} \;=\;
+    \pi_P^{-n}\,\mathcal O_{C,P} \;\subseteq\; K(C),
+  \]
+  where \(\pi_P\) is a uniformiser of the discrete valuation ring
+  \(\mathcal O_{C,P}\) (\cref{lem:stalk_isDVR_of_smooth}).
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:carrierSheaf_stalk_iso_iSup,
+        lem:iSup_carrierSubmoduleSheaf_eq_orderAtPSubmodule,
+        def:sheafOf_orderAtPSubmodule, lem:stalk_isDVR_of_smooth}
+  By \cref{lem:carrierSheaf_stalk_iso_iSup} the stalk of the carrier sheaf at
+  \(P.\mathrm{point}\) is the directed supremum
+  \(\bigsqcup_{U \ni P.\mathrm{point}} \mathrm{carrierSubmoduleSheaf}_D(U)\),
+  taken inside \(K(C)\) (every restriction map is the identity inclusion on
+  \(K(C)\)). By
+  \cref{lem:iSup_carrierSubmoduleSheaf_eq_orderAtPSubmodule} this supremum equals
+  the order submodule \(\mathrm{orderAtP}_D(P)\) of
+  \cref{def:sheafOf_orderAtPSubmodule}: the \(\le\) inclusion uses the constraint
+  at \(Q = P\) on each leg, while the \(\ge\) inclusion realises any
+  \(g \in \mathrm{orderAtP}_D(P)\) on an open neighbourhood of \(P.\mathrm{point}\)
+  obtained by deleting the \emph{finitely many} prime divisors at which \(g\) or
+  \(D\) is supported (its poles and the support of \(D\)), so that no other order
+  constraint survives. Rewriting the supremum by this equality through the iso of
+  \cref{lem:carrierSheaf_stalk_iso_iSup} identifies the stalk with
+  \(\mathrm{orderAtP}_D(P)\). Finally, in the discrete valuation ring
+  \(\mathcal O_{C,P}\) (\cref{lem:stalk_isDVR_of_smooth}) with uniformiser
+  \(\pi_P\), the order submodule \(\mathrm{orderAtP}_D(P) = \{g \mid g = 0 \lor
+  -n \le \ord_P(g)\}\) is precisely the fractional ideal
+  \(\pi_P^{-n}\mathcal O_{C,P} \subseteq K(C)\), which is the stated form.
+
+  The stalk is identified \emph{up to isomorphism} with
+  \(\mathrm{orderAtP}_D(P)\) (\cref{def:sheafOf_orderAtPSubmodule}); the
+  displayed equality \(=\) in the statement is therefore an isomorphism
+  \(\cong\). The fractional-ideal description \(\pi_P^{-n}\mathcal O_{C,P}\)
+  is the intrinsic characterisation of \(\mathrm{orderAtP}_D(P)\) given in
+  \cref{def:sheafOf_orderAtPSubmodule}, not a separate equality.
+\end{proof}
+
+\begin{lemma}\leanok
+[At \(P\): the cokernel stalk is \(\bar k\)]
+  \label{lem:cokernel_sheafOf_single_add_stalkAtP_iso_kbar}
+  \lean{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.cokernel_stalk_at_iso_kbar}
+  \uses{lem:carrierSheaf_stalk_eq_fractionalIdeal, lem:stalk_isDVR_of_smooth,
+        lem:codimOne_point_residueField_eq_kbar, def:order_at_point}
+  With \(C, D, P\) as above and \(n = D\,P\), at the point \(P.\mathrm{point}\)
+  the stalk of the inclusion \(\mathcal O_C(D) \hookrightarrow \mathcal
+  O_C([P]+D)\) is the inclusion of fractional ideals
+  \(\pi_P^{-n}\mathcal O_{C,P} \subseteq \pi_P^{-(n+1)}\mathcal O_{C,P}\) in
+  \(K(C)\). Multiplication by \(\pi_P^{\,n+1}\) is a \(\bar k\)-linear
+  automorphism of \(K(C)\) carrying this inclusion isomorphically onto the
+  maximal-ideal inclusion \(\mathfrak m_P = \pi_P\mathcal O_{C,P} \subseteq
+  \mathcal O_{C,P}\). Hence the stalk of the cokernel at \(P.\mathrm{point}\) is
+  \[
+    \pi_P^{-(n+1)}\mathcal O_{C,P} \big/ \pi_P^{-n}\mathcal O_{C,P}
+    \;\cong\; \mathcal O_{C,P}/\mathfrak m_P \;=\; \bar k,
+  \]
+  the residue field of \(P\), which equals \(\bar k\) because \(P\) is a
+  codimension-one point (\cref{lem:codimOne_point_residueField_eq_kbar}).
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:carrierSheaf_stalk_eq_fractionalIdeal, lem:stalk_isDVR_of_smooth,
+        lem:codimOne_point_residueField_eq_kbar}
+  By \cref{lem:carrierSheaf_stalk_eq_fractionalIdeal} the two stalks are
+  \(\pi_P^{-n}\mathcal O_{C,P}\) and \(\pi_P^{-(n+1)}\mathcal O_{C,P}\), and the
+  stalk of the inclusion is the inclusion of these fractional ideals (the
+  restriction maps being the identity on \(K(C)\)). In the discrete valuation
+  ring \(\mathcal O_{C,P}\) (\cref{lem:stalk_isDVR_of_smooth}) multiplication by
+  \(\pi_P^{\,n+1}\) is a \(\bar k\)-linear bijection of \(K(C)\) sending
+  \(\pi_P^{-n}\mathcal O_{C,P}\) onto \(\pi_P\mathcal O_{C,P} = \mathfrak m_P\)
+  and \(\pi_P^{-(n+1)}\mathcal O_{C,P}\) onto \(\mathcal O_{C,P}\). It therefore
+  induces an isomorphism of quotient \(\bar k\)-modules
+  \(\pi_P^{-(n+1)}\mathcal O_{C,P}/\pi_P^{-n}\mathcal O_{C,P} \cong \mathcal
+  O_{C,P}/\mathfrak m_P\). The right-hand quotient is the residue field at \(P\),
+  equal to \(\bar k\) by \cref{lem:codimOne_point_residueField_eq_kbar}.
+\end{proof}
+
+\begin{definition}\leanok
+[Residue-evaluation comparison morphism]
+  \label{def:cokernel_skyscraper_hom}
+  \lean{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.cokernel_skyscraper_hom}
+  \uses{def:sheafOf_carrierSheafHom_le_add_single, def:cokernel_mathlib,
+        def:skyscraperSheaf_mathlib, def:order_at_point}
+  With \(C, D, P\) as above and \(n = D\,P\), the \emph{residue-evaluation
+  morphism} is the comparison morphism
+  \[
+    \operatorname{coker} f \;\longrightarrow\;
+    \texttt{skyscraperSheaf}\,P.\mathrm{point}\,\bar k
+  \]
+  in \(\mathbf{Sh}(C, \mathbf{Mod}_{\bar k})\), where \(f\) is the sheaf-level
+  inclusion of \cref{def:sheafOf_carrierSheafHom_le_add_single} and
+  \(\operatorname{coker} f\) its cokernel (\cref{def:cokernel_mathlib}). On a
+  small open \(U \ni P.\mathrm{point}\) it sends the class of a section
+  \(g \in \mathcal O_C([P]+D)(U)\) to its leading Laurent coefficient at the
+  order-\((n+1)\) pole at \(P\) --- the residue
+  \((\pi_P^{\,n+1} g) \bmod \mathfrak m_P \in \bar k\) --- and it is the zero map
+  on every open avoiding \(P.\mathrm{point}\). This evaluation is well-defined
+  modulo \(\mathcal O_C(D)(U)\) and natural in \(U\), so it descends from the
+  cokernel to the skyscraper.
+\end{definition}
+
+\begin{lemma}\leanok
+[The residue-evaluation morphism is an isomorphism]
+  \label{lem:cokernel_skyscraper_hom_isIso}
+  \lean{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.cokernel_skyscraper_hom_isIso}
+  \uses{def:cokernel_skyscraper_hom,
+        lem:carrierPresheaf_le_hom_app_isIso_of_not_mem,
+        lem:cokernel_sheafOf_single_add_stalkAtP_iso_kbar,
+        def:skyscraperSheaf_mathlib}
+  The residue-evaluation morphism \cref{def:cokernel_skyscraper_hom} induces an
+  isomorphism on the stalk at every point of \(C\): the zero map at every point
+  other than \(P.\mathrm{point}\) (both stalks vanish there), and the residue
+  isomorphism \(\mathcal O_{C,P}/\mathfrak m_P = \bar k\) at
+  \(P.\mathrm{point}\). A morphism of sheaves that is an isomorphism on every
+  stalk is itself an isomorphism, so the residue-evaluation morphism is an
+  isomorphism
+  \(\operatorname{coker} f \cong
+  \texttt{skyscraperSheaf}\,P.\mathrm{point}\,\bar k\).
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:carrierPresheaf_le_hom_app_isIso_of_not_mem,
+        lem:cokernel_sheafOf_single_add_stalkAtP_iso_kbar}
+  Stalks are checked pointwise. At a point \(Q \neq P.\mathrm{point}\): on a
+  small open \(U \ni Q\) with \(P.\mathrm{point} \notin U\) the inclusion \(f\) is
+  an isomorphism on sections by
+  \cref{lem:carrierPresheaf_le_hom_app_isIso_of_not_mem}, so \(\operatorname{coker}
+  f\) has zero stalk at \(Q\); the skyscraper likewise has zero (terminal) stalk
+  away from \(P.\mathrm{point}\), and the morphism between zero modules is an
+  isomorphism. At \(Q = P.\mathrm{point}\): the stalk of \(\operatorname{coker}
+  f\) is \(\bar k\) by
+  \cref{lem:cokernel_sheafOf_single_add_stalkAtP_iso_kbar}, and the
+  residue-evaluation morphism realises precisely the residue isomorphism
+  \(\mathcal O_{C,P}/\mathfrak m_P = \bar k\) onto the skyscraper stalk
+  \(\bar k\). Being a stalkwise isomorphism, the morphism is an isomorphism of
+  sheaves.
+\end{proof}
+
+\begin{lemma}
+
+\leanok
+[The cokernel of the inclusion is the skyscraper at \(P\)]
+  \label{lem:cokernel_sheafOf_single_add_iso_skyscraper}
+  \lean{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.cokernel_carrierSheafHom_iso_skyscraper}
+  \uses{lem:sheafOf_mono_single_add, def:cokernel_mathlib,
+        def:skyscraperSheaf_mathlib,
+        def:cokernel_skyscraper_hom,
+        lem:cokernel_sheafOf_single_add_stalkAtP_iso_kbar,
+        lem:cokernel_skyscraper_hom_isIso}
+  Let \(C, D, P\) be as above and let
+  \(f : \mathcal O_C(D) \hookrightarrow \mathcal O_C([P]+D)\) be the
+  monomorphism of \cref{lem:sheafOf_mono_single_add}. Then its cokernel in
+  \(\mathbf{Sh}(C, \mathbf{Mod}_{\bar k})\) is isomorphic to the skyscraper
+  sheaf at \(P\) with stalk \(\bar k\):
+  \[
+    \operatorname{coker} f \;\cong\;
+    \texttt{skyscraperSheaf}\;P.\mathrm{point}\;\bar k.
+  \]
+\end{lemma}
+
+\begin{proof}
+  \uses{def:cokernel_skyscraper_hom,
+        lem:cokernel_sheafOf_single_add_stalkAtP_iso_kbar,
+        lem:cokernel_skyscraper_hom_isIso}
+  Assemble the stalkwise analysis. The residue-evaluation comparison morphism
+  \cref{def:cokernel_skyscraper_hom} from \(\operatorname{coker} f\) to the
+  skyscraper \(\texttt{skyscraperSheaf}\,P.\mathrm{point}\,\bar k\) is an
+  isomorphism on every stalk: it is the zero-to-zero map away from
+  \(P.\mathrm{point}\), and at \(P.\mathrm{point}\) it realises the residue
+  isomorphism \(\mathcal O_{C,P}/\mathfrak m_P = \bar k\) computed in
+  \cref{lem:cokernel_sheafOf_single_add_stalkAtP_iso_kbar}. By
+  \cref{lem:cokernel_skyscraper_hom_isIso} a stalkwise isomorphism of sheaves is
+  an isomorphism, so \(\operatorname{coker} f \cong
+  \texttt{skyscraperSheaf}\,P.\mathrm{point}\,\bar k = k(P)\).
+\end{proof}
+
+\begin{lemma}
+
+\leanok
+[\(\mathcal O_C(D)\) is its carrier sheaf for a nonzero divisor]
+  \label{lem:sheafOf_eq_carrier_of_ne_zero}
+  \lean{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf_eq_carrier_of_ne_zero}
+  \uses{def:sheafOf, def:sheafOf_carrierSheaf}
+  Let \(C\) be a smooth proper geometrically irreducible curve over \(\bar k\)
+  and let \(D \in \mathrm{Div}(C)\) with \(D \neq 0\). Then the invertible
+  sheaf \(\mathcal O_C(D)\) of \cref{def:sheafOf} equals its carrier sheaf
+  of \cref{def:sheafOf_carrierSheaf}:
+  \[
+    \mathcal O_C(D) = \texttt{carrierSheaf}_D.
+  \]
+  This equality transports the carrier-level inductive-step results to the
+  level of \(\mathcal O_C(D)\).
+\end{lemma}
+
+\begin{proof}
+  \uses{def:sheafOf, def:sheafOf_carrierSheaf}
+  By \cref{def:sheafOf}, when \(D \neq 0\) the invertible sheaf is defined
+  as \(\texttt{carrierSheaf}_D\), giving the asserted equality.
+\end{proof}
+
+\begin{theorem}
+
+\leanok
+[Short exact sequence for \(D \rightsquigarrow D + [P]\) at the carrier level]
+  \label{thm:sheafOf_carrierSheaf_ses_single_add}
+  \lean{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.carrierSheaf_ses_single_add}
+  \uses{def:sheafOf_carrierSheaf,
+        def:sheafOf_carrierSheafHom_le_add_single,
+        lem:sheafOf_mono_single_add,
+        lem:cokernel_sheafOf_single_add_iso_skyscraper,
+        def:shortComplex_mathlib, def:cokernel_mathlib,
+        def:skyscraperSheaf_mathlib}
+  Let \(C, D, P\) be as above. The sheaf-level inclusion
+  \cref{def:sheafOf_carrierSheafHom_le_add_single}
+  \(f : \texttt{carrierSheaf}_D \to \texttt{carrierSheaf}_{[P]+D}\) fits into a
+  short exact sequence
+  \[
+    0 \;\longrightarrow\; \texttt{carrierSheaf}_D
+    \;\longrightarrow\; \texttt{carrierSheaf}_{[P]+D}
+    \;\longrightarrow\; k(P)
+    \;\longrightarrow\; 0
+  \]
+  in \(\mathbf{Sh}(C, \mathbf{Mod}_{\bar k})\), with \(k(P)\) the skyscraper
+  sheaf at \(P\) with stalk \(\bar k\). This is the carrier-sheaf formulation
+  of \cref{lem:sheafOf_ses_single_add}, using the identification
+  \(\mathcal O_C(D) = \texttt{carrierSheaf}_D\) of
+  \cref{lem:sheafOf_eq_carrier_of_ne_zero} (valid when \(D \neq 0\)).
+\end{theorem}
+
+\begin{proof}
+  \uses{def:sheafOf_carrierSheafHom_le_add_single,
+        lem:sheafOf_mono_single_add,
+        lem:cokernel_sheafOf_single_add_iso_skyscraper,
+        def:shortComplex_mathlib, def:cokernel_mathlib}
+  Take \(f\) the sheaf-level inclusion of
+  \cref{def:sheafOf_carrierSheafHom_le_add_single}; it is a monomorphism by
+  \cref{lem:sheafOf_mono_single_add}. Form the short complex
+  (\cref{def:shortComplex_mathlib})
+  \(\texttt{carrierSheaf}_D \xrightarrow{f} \texttt{carrierSheaf}_{[P]+D}
+  \xrightarrow{\pi_f} \operatorname{coker} f\) with \(\pi_f\) the canonical
+  cokernel projection (\cref{def:cokernel_mathlib}). In the abelian category
+  \(\mathbf{Sh}(C, \mathbf{Mod}_{\bar k})\) the sequence attached to a
+  monomorphism \(f\) is short exact: \(f\) is mono, \(\pi_f\) is epi as a
+  cokernel projection, and exactness at the middle term is the defining
+  property of the cokernel of a monomorphism. Finally
+  \cref{lem:cokernel_sheafOf_single_add_iso_skyscraper} identifies the third
+  term \(\operatorname{coker} f \cong k(P)\), giving the asserted sequence.
+\end{proof}
+
+\begin{lemma}[Algebraic Hartogs: bounded valuations give integral elements]
+  \label{lem:mem_integers_of_valuation_le_one}
+  \lean{IsDedekindDomain.HeightOneSpectrum.mem_integers_of_valuation_le_one}
+  \mathlibok
+  \textit{Provided by Mathlib (\texttt{Mathlib.RingTheory.DedekindDomain.AdicValuation}).}
+  Let \(R\) be a Dedekind domain with fraction field
+  \(K = \operatorname{Frac}(R)\), and let \(x \in K\). If the
+  \(\mathfrak p\)-adic valuation satisfies \(v_{\mathfrak p}(x) \le 1\) at every
+  height-one prime \(\mathfrak p\) of \(R\), then \(x\) lies in the image of the
+  structure map \(R \hookrightarrow K\), i.e.\
+  \(x \in (\operatorname{algebraMap} R\,K).\mathrm{range}\). Equivalently, inside
+  \(K\) one has \(R = \bigcap_{\operatorname{ht}\mathfrak p = 1} R_{\mathfrak p}\).
+  This is the ring-theoretic core ("algebraic Hartogs") behind
+  Hartshorne's Proposition~6.3A on a normal Noetherian domain.
+\end{lemma}
+
+\begin{lemma}[Sections of the zero carrier sheaf are the structure sheaf]
+  \label{lem:carrierSheaf_zero_sections_eq_structureSheaf}
+  % NOTE: `\lean{}` names the EXPECTED Lean target for the section-wise
+  % identification step; it isolates the single real Mathlib gap (the
+  % algebraic-Hartogs anchor \cref{lem:mem_integers_of_valuation_le_one})
+  % from the sheaf-theoretic assembly in
+  % \cref{lem:carrierSheaf_zero_iso_toModuleKSheaf}.
+  \lean{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.carrierSheaf_zero_sections_eq_structureSheaf}
+  % SOURCE: [Hartshorne], II.6, Proposition 6.3A, p.~132 (read from
+  % references/hartshorne-algebraic-geometry.pdf, PDF page 132 = doc p.132,
+  % transcribed character-by-character from the rendered scanned page image;
+  % the PDF has no text layer).
+  % SOURCE QUOTE: "Proposition 6.3A. Let \(A\) be an integrally closed
+  % noetherian domain. Then
+  % \(A = \bigcap_{\mathrm{ht}\,\mathfrak p = 1} A_{\mathfrak p}\)
+  % where the intersection is taken over all prime ideals of height 1.
+  % PROOF. Matsumura [2, Th. 38, p. 124]."
+  \textit{Source: Hartshorne, II.6, Proposition 6.3A, p.~132.}
+  \uses{lem:mem_integers_of_valuation_le_one, def:order_at_point,
+        def:sheafOf_carrierSheaf}
+  Let \(C\) be a smooth proper geometrically irreducible curve over \(\bar k\)
+  and let \(U = \operatorname{Spec} A \subseteq C\) be an affine open with
+  coordinate ring \(A\). Then the section module of the carrier sheaf of the
+  zero divisor coincides with the regular functions on \(U\):
+  \[
+    \Gamma(U, \texttt{carrierSheaf}_0) \;=\; \Gamma(U, \struct C).
+  \]
+\end{lemma}
+
+% SOURCE QUOTE PROOF: "Proposition 6.3A. Let \(A\) be an integrally closed
+% noetherian domain. Then
+% \(A = \bigcap_{\mathrm{ht}\,\mathfrak p = 1} A_{\mathfrak p}\)
+% where the intersection is taken over all prime ideals of height 1.
+% PROOF. Matsumura [2, Th. 38, p. 124]."
+\begin{proof}
+  \uses{lem:mem_integers_of_valuation_le_one, def:order_at_point,
+        def:sheafOf_carrierSheaf}
+  Over the affine open \(U = \operatorname{Spec} A\) the section module of
+  \(\texttt{carrierSheaf}_0\) is the set of rational functions with no poles on
+  \(U\):
+  \[
+    \Gamma(U, \texttt{carrierSheaf}_0) \;=\;
+    \{\, g \in K(C) : \ord_Q(g) \geq 0 \text{ for every prime divisor }
+    Q \in U \,\},
+  \]
+  the order constraint at the zero divisor (\cref{def:order_at_point}). A smooth
+  curve is regular, hence normal, so the coordinate ring \(A\) is an integrally
+  closed Noetherian domain; being one-dimensional it is a Dedekind domain, with
+  fraction field \(K(C)\). On the smooth curve the codimension-one points of
+  \(U\) are precisely the prime divisors meeting \(U\), and under this
+  identification the \(\mathfrak p\)-adic valuation
+  \(v_{\mathfrak p} = \texttt{HeightOneSpectrum.valuation}\) at a height-one
+  prime \(\mathfrak p\) agrees with the divisorial order \(\ord_Q\) at the
+  corresponding prime divisor \(Q\). Thus a rational function \(g\) has
+  \(\ord_Q(g) \ge 0\) at every prime divisor of \(U\) precisely when
+  \(v_{\mathfrak p}(g) \le 1\) at every height-one prime of \(A\); by the
+  algebraic-Hartogs anchor \cref{lem:mem_integers_of_valuation_le_one} this
+  holds exactly when \(g\) lies in \(A = \Gamma(U, \struct C)\). Hence the two
+  section modules coincide.
+\end{proof}
+
+\begin{lemma}\leanok
+[The carrier sheaf of the zero divisor is the structure sheaf]
+  \label{lem:carrierSheaf_zero_iso_toModuleKSheaf}
+  \lean{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.carrierSheaf_zero_iso_toModuleKSheaf}
+  \textit{Source: Hartshorne, II.6, Proposition 6.3A, p.~132.}
+  \uses{def:sheafOf_carrierSheaf, def:Scheme_toModuleKSheaf, def:order_at_point}
+  Let \(C\) be a smooth proper geometrically irreducible curve over \(\bar k\).
+  The carrier sheaf of the zero divisor is isomorphic, in
+  \(\mathbf{Sh}(C, \mathbf{Mod}_{\bar k})\), to the structure sheaf of \(C\)
+  regarded as a sheaf of \(\bar k\)-modules \(\toModuleKSheaf C\)
+  (\cref{def:Scheme_toModuleKSheaf}):
+  \[
+    \texttt{carrierSheaf}_0 \;\cong\; \toModuleKSheaf C.
+  \]
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:carrierSheaf_zero_sections_eq_structureSheaf,
+        def:Scheme_toModuleKSheaf}
+  By \cref{lem:carrierSheaf_zero_sections_eq_structureSheaf} the section module
+  of \(\texttt{carrierSheaf}_0\) over each affine open
+  \(U = \operatorname{Spec} A \subseteq C\) equals \(\Gamma(U, \struct C)\), the
+  regular functions on \(U\); both are realised as \(\bar k\)-submodules of
+  \(K(C)\) and the equality is the identity on the underlying rational
+  functions. These section-wise identifications are induced by the canonical
+  inclusion \(\struct C \hookrightarrow \mathcal K_C\), so they are compatible
+  with the restriction maps (each restriction is the identity on \(K(C)\)) and
+  glue to a natural isomorphism of sheaves
+  \(\texttt{carrierSheaf}_0 \cong \toModuleKSheaf C\)
+  (\cref{def:Scheme_toModuleKSheaf}) in
+  \(\mathbf{Sh}(C, \mathbf{Mod}_{\bar k})\).
+\end{proof}
+
+\begin{lemma}
+
+\leanok
+[Short exact sequence for \(D \rightsquigarrow D + [P]\)]
   \label{lem:sheafOf_ses_single_add}
   \lean{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf_ses_single_add}
-  \uses{def:sheafOf, def:divisor_closed_point, def:prime_divisor}
+  \uses{def:sheafOf, def:divisor_closed_point, def:prime_divisor,
+        lem:sheafOf_mono_single_add,
+        lem:cokernel_sheafOf_single_add_iso_skyscraper,
+        thm:sheafOf_carrierSheaf_ses_single_add,
+        lem:sheafOf_eq_carrier_of_ne_zero,
+        lem:carrierSheaf_zero_iso_toModuleKSheaf,
+        def:shortComplex_mathlib, def:cokernel_mathlib,
+        def:skyscraperSheaf_mathlib}
 
   % SOURCE: [Hartshorne], IV.1, p.~296 (the inductive step of the proof
   % of Theorem~1.3, ``Next, let \(D\) be any divisor, and let \(P\) be any
@@ -383,87 +2266,90 @@ rather than a non-trivial isomorphism.
   \(\bar k\)-rational closed point).
 \end{lemma}
 
+% SOURCE QUOTE PROOF: "We consider \(P\) as a closed subscheme of \(X\). Its
+% structure sheaf is a skyscraper sheaf \(k\) sitting at the point \(P\),
+% which we denote by \(k(P)\), and its ideal sheaf is \(\mathscr L(-P)\)
+% by (II, 6.18). Therefore we have an exact sequence
+% \(0 \to \mathscr L(-P) \to \mathscr O_X \to k(P) \to 0\).
+% Tensoring with \(\mathscr L(D + P)\) we get
+% \(0 \to \mathscr L(D) \to \mathscr L(D + P) \to k(P) \to 0\).
+% (Since \(\mathscr L(D + P)\) is locally free of rank 1, tensoring by
+% it does not affect the sheaf \(k(P)\).)"
 \begin{proof}
-  
-  Hartshorne's argument (IV.1.3, the inductive step quoted above)
-  proceeds in two beats:
+  \uses{lem:sheafOf_mono_single_add,
+        lem:cokernel_sheafOf_single_add_iso_skyscraper,
+        thm:sheafOf_carrierSheaf_ses_single_add,
+        lem:sheafOf_eq_carrier_of_ne_zero,
+        lem:carrierSheaf_zero_iso_toModuleKSheaf,
+        def:shortComplex_mathlib, def:cokernel_mathlib,
+        def:skyscraperSheaf_mathlib}
+  Hartshorne obtains the sequence by tensoring the ideal-sheaf sequence
+  \(0 \to \mathcal O_C(-[P]) \to \mathcal O_C \to k(P) \to 0\) with the
+  locally free rank-one sheaf \(\mathcal O_C(D+[P])\). The category
+  \(\mathbf{Sh}(C, \mathbf{Mod}_{\bar k})\) has \(\bar k\)-linear sheaves
+  as objects rather than \(\mathcal O_C\)-module objects, so the
+  tensor \(\otimes_{\mathcal O_C}\) is not its monoidal product and that
+  approach does not apply. Instead we obtain the \emph{same} short exact
+  sequence from the carrier-level sequence
+  \cref{thm:sheafOf_carrierSheaf_ses_single_add} and transport its first two
+  terms to \(\mathcal O_C(D)\) and \(\mathcal O_C(D+[P])\).
 
-  \emph{Beat 1 (the ideal-sheaf SES at \(P\)).} The closed-subscheme
-  inclusion \(P \hookrightarrow C\) has structure sheaf
-  \(\mathcal O_P \cong k(P)\) (a skyscraper at \(P\) with stalk \(\bar k\)),
-  and Hartshorne's Proposition~II.6.18 identifies its ideal sheaf as
-  \(\mathcal I_P = \mathcal O_C(-[P])\) (the sub-\(\mathcal O_C\)-module of
-  \(\mathcal K_C\) generated by a local uniformiser \(\pi_P\) at \(P\) and by
-  \(1\) away from \(P\), i.e.\ the locally-principal ideal of the locally
-  principal closed subscheme \(P\)). This produces the structural short
-  exact sequence
-  \[
-    0 \;\longrightarrow\; \mathcal O_C(-[P])
-    \;\longrightarrow\; \mathcal O_C
-    \;\longrightarrow\; k(P)
-    \;\longrightarrow\; 0
-  \]
-  in \(\mathbf{Coh}(C)\).
+  By \cref{thm:sheafOf_carrierSheaf_ses_single_add} the canonical mono--cokernel
+  pair of the sheaf-level inclusion
+  \(\texttt{carrierSheaf}_D \hookrightarrow \texttt{carrierSheaf}_{[P]+D}\) is a
+  short complex (\cref{def:shortComplex_mathlib})
+  \(\texttt{carrierSheaf}_D \xrightarrow{\ f\ } \texttt{carrierSheaf}_{[P]+D}
+  \xrightarrow{\ \pi_f\ } \operatorname{coker} f\) that is short exact: \(f\) is a
+  monomorphism by \cref{lem:sheafOf_mono_single_add}, \(\pi_f\) is an
+  epimorphism as a cokernel projection (\cref{def:cokernel_mathlib}), and
+  exactness at the middle term is the defining property of the cokernel of a
+  monomorphism. Its third term is the skyscraper \(k(P) =
+  \texttt{skyscraperSheaf}\,P.\mathrm{point}\,\bar k\)
+  (\cref{def:skyscraperSheaf_mathlib}) via
+  \cref{lem:cokernel_sheafOf_single_add_iso_skyscraper}.
 
-  \emph{Beat 2 (tensor with \(\mathcal O_C(D + [P])\)).} The line bundle
-  \(\mathcal O_C(D + [P])\) is locally free of rank~\(1\)
-  (Hartshorne~II.6.13(a)), so $- \otimes_{\mathcal O_C}
-  \mathcal O_C(D + [P])$ is exact on $\mathbf{Coh}(C)$ and preserves
-  the short exact sequence of Beat~1:
-  \[
-    0 \;\longrightarrow\; \mathcal O_C(-[P]) \otimes
-      \mathcal O_C(D + [P])
-    \;\longrightarrow\; \mathcal O_C \otimes \mathcal O_C(D + [P])
-    \;\longrightarrow\; k(P) \otimes \mathcal O_C(D + [P])
-    \;\longrightarrow\; 0.
-  \]
-  Three identifications collapse this to the claimed sequence:
+  It remains to rewrite the first two terms as \(\mathcal O_C(D)\) and
+  \(\mathcal O_C(D+[P])\). We distinguish three cases by whether either divisor
+  is zero; since \(D = 0\) forces \(D + [P] = [P] \neq 0\) and \(D + [P] = 0\)
+  forces \(D = -[P] \neq 0\), at most one corner occurs.
   \begin{itemize}
-    \item $\mathcal O_C(-[P]) \otimes \mathcal O_C(D + [P]) \cong
-      \mathcal O_C(D)$ (tensor product of line bundles is the
-      \(\mathrm{Div}(C)\)-additive operation $D' + D'' \mapsto \mathcal O_C(D' +
-      D'')$ via Hartshorne's Proposition~6.13(b), which is in turn the
-      ring-theoretic identity
-      $\pi_P^{-1} \cdot \pi_P^{1 + n_P^{D}} \cdot \prod_{Q \neq P}
-      \pi_Q^{n_Q^{D}} = \prod_Q \pi_Q^{n_Q^{D}}$ on the generating
-      rational functions, where \(n_Q^{D}\) is the coefficient of \(Q\)
-      in \(D\));
-    \item $\mathcal O_C \otimes \mathcal O_C(D + [P]) \cong
-      \mathcal O_C(D + [P])$ (the structure sheaf is the tensor unit);
-    \item \(k(P) \otimes \mathcal O_C(D + [P]) \cong k(P)\) (tensoring a
-      skyscraper at \(P\) by a locally free rank-\(1\) sheaf preserves the
-      skyscraper; concretely, at the stalk over \(P\) the line bundle
-      \(\mathcal O_C(D + [P])_P\) is a free \(\mathcal O_{C,P}\)-module of
-      rank one, and $k(P) \otimes_{\mathcal O_{C,P}} \mathcal O_{C,P}
-      \cong k(P)$ is just $k(P)$; away from $P$ the skyscraper is the
-      zero sheaf, on which the tensor is the zero sheaf).
+    \item \emph{Generic case \(D \neq 0\) and \(D + [P] \neq 0\).} Both invertible
+      sheaves equal their carrier sheaves by
+      \cref{lem:sheafOf_eq_carrier_of_ne_zero}, so
+      \(\texttt{carrierSheaf}_D = \mathcal O_C(D)\) and
+      \(\texttt{carrierSheaf}_{[P]+D} = \mathcal O_C(D+[P])\) directly.
+    \item \emph{Corner \(D = 0\).} Here \(\mathcal O_C(D) = \mathcal O_C(0)\) is
+      the structure sheaf \(\toModuleKSheaf C\), \emph{not}
+      \(\texttt{carrierSheaf}_0\); the bridge
+      \cref{lem:carrierSheaf_zero_iso_toModuleKSheaf} supplies the isomorphism
+      \(\texttt{carrierSheaf}_0 \cong \toModuleKSheaf C\), identifying the first
+      term with \(\mathcal O_C(0)\). The second term \(D + [P] = [P] \neq 0\) is
+      rewritten by \cref{lem:sheafOf_eq_carrier_of_ne_zero}.
+    \item \emph{Corner \(D + [P] = 0\)} (that is \(D = -[P]\)). Here
+      \(\mathcal O_C(D+[P]) = \mathcal O_C(0) = \toModuleKSheaf C\), and the
+      bridge \cref{lem:carrierSheaf_zero_iso_toModuleKSheaf} identifies the
+      second term with \(\mathcal O_C(0)\). The first term \(D = -[P] \neq 0\) is
+      rewritten by \cref{lem:sheafOf_eq_carrier_of_ne_zero}.
   \end{itemize}
-  Substituting yields
+  In every case the carrier-level short exact sequence transports to the
+  asserted short exact sequence
   \[
     0 \;\longrightarrow\; \mathcal O_C(D)
     \;\longrightarrow\; \mathcal O_C(D + [P])
     \;\longrightarrow\; k(P)
-    \;\longrightarrow\; 0,
+    \;\longrightarrow\; 0
   \]
-  exact in \(\mathbf{Coh}(C)\), as required.
-
-  \emph{Compatibility with the structural inclusion.} The first map
-  \(\mathcal O_C(D) \hookrightarrow \mathcal O_C(D + [P])\) is the
-  inclusion of subsheaves of \(\mathcal K_C\): at the level of sections,
-  the constraint \(\ord_P(f) \geq -n_P^{D}\) of
-  \(\Gamma(U, \mathcal O_C(D))\) implies the weaker constraint
-  \(\ord_P(f) \geq -n_P^{D} - 1\) of \(\Gamma(U, \mathcal O_C(D + [P]))\)
-  when \(P \in U\) (constraints on \(Q \neq P\) are unchanged), and the map
-  is identity on \(K(C)\) at the carrier level. The second map
-  \(\mathcal O_C(D + [P]) \twoheadrightarrow k(P)\) is the evaluation
-  ``leading coefficient at the pole at \(P\)'' (i.e.\ the
-  \(\pi_P^{-(n_P^{D} + 1)}\)-coefficient in the Laurent expansion of \(f\)
-  at \(P\)), which is well-defined on \(\Gamma(U, \mathcal O_C(D + [P]))\)
-  modulo the subgroup of sections with \(\ord_P(f) \geq -n_P^{D}\) ---
-  i.e.\ modulo \(\Gamma(U, \mathcal O_C(D))\).
+  in \(\mathbf{Sh}(C, \mathbf{Mod}_{\bar k})\). Concretely the first map is
+  the inclusion of subsheaves of \(\mathcal K_C\) (the order constraint
+  \(\ord_P(f) \geq -n_P^{D}\) implies the weaker
+  \(\ord_P(f) \geq -n_P^{D} - 1\), identity on \(K(C)\)) and the second is
+  the residue (``leading Laurent coefficient at the order-\((n_P^{D}+1)\)
+  pole at \(P\)'') evaluation, well-defined modulo
+  \(\Gamma(U, \mathcal O_C(D))\).
 \end{proof}
 
 \section{Sheaf-property correctness}
+\label{sec:sheaf-property-correctness}
 
 The construction of \cref{def:sheafOf} is presheaf-by-hand: a
 per-open \(\bar k\)-submodule of \(K(C)\), with restriction along
@@ -534,55 +2420,6 @@ finite); patching the trivialisations on overlaps amounts to changing
 uniformiser, which is unit-times the original (by the DVR property), so
 the cocycle is in \(\mathcal O_C^{\times}\) and the sheaf is invertible.
 
-The closure of (i)+(ii) in Lean follows the project's existing
-\texttt{Scheme.toModuleKPresheaf} /
-\texttt{toModuleKPresheaf\_isSheaf} template in
-\texttt{AlgebraicJacobian/Cohomology/StructureSheafModuleK/}, which
-landed the analogous bottom-up
-\(\mathbf{Sh}(C, \mathbf{Mod}_{\bar k})\)-valued construction for the
-structure sheaf. The order-condition locality is closed via the project's
-\texttt{Scheme.RationalMap.order} stalk bridge of
-\texttt{RR.1} (\cref{chap:RiemannRoch_WeilDivisor} and surrounding lemmas).
-
-\section{Lean signature pins (iter-183 file skeleton)}
-
-The Lean file \texttt{AlgebraicJacobian/RiemannRoch/OcOfD.lean} (to be
-created in iter-183 as a file-skeleton lane) will host exactly the
-four pinned declarations of this chapter:
-
-\begin{itemize}
-  \item \texttt{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf}
-    (\cref{def:sheafOf}) — the invertible sheaf functor itself, replacing
-    the typed-\texttt{sorry} body currently in
-    \texttt{AlgebraicJacobian/RiemannRoch/RRFormula.lean:168}. The
-    \texttt{noncomputable def} signature is move-only across files;
-    the body lives in \texttt{OcOfD.lean}, the
-    \texttt{RRFormula.lean} entry becomes a re-export (or the signature
-    itself moves wholesale and \texttt{RRFormula.lean}'s consumers
-    re-import).
-  \item \texttt{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf\_zero}
-    (\cref{lem:sheafOf_zero}) — the structure-sheaf identification at
-    \(D = 0\).
-  \item \texttt{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf\_singlePoint}
-    (\cref{lem:sheafOf_singlePoint}) — the
-    \cref{def:lineBundleAtClosedPoint} comparison at \(D = [P]\),
-    upstream of \cref{thm:lineBundleAtClosedPoint_dim_eq_two_of_genusZero}'s
-    consumption in \texttt{RR.3}.
-  \item
-    \texttt{AlgebraicGeometry.Scheme.WeilDivisor.sheafOf\_ses\_single\_add}
-    (\cref{lem:sheafOf_ses_single_add}) — the inductive-step short
-    exact sequence consumed by the two helper sorries
-    \texttt{eulerCharacteristic\_sheafOf\_zero} and
-    \texttt{eulerCharacteristic\_sheafOf\_succ} of \texttt{RR.2}.
-\end{itemize}
-
-The iter-183 file-skeleton lane will create these four declarations as
-typed sorries; the iter-184+ prover lanes will close the bodies along
-the recipe sketched in \
-(via the project's existing \texttt{toModuleKPresheaf} template) and
-unblock both \texttt{RR.2}'s helper sorries and the \texttt{RR.3}
-\(\mathcal O_C([P])\) identification.
-
 \section{Out of scope}
 
 \begin{itemize}
@@ -590,45 +2427,43 @@ unblock both \texttt{RR.2}'s helper sorries and the \texttt{RR.3}
     isomorphism \(\mathcal O_C(D) \cong \mathcal O_C(D')\) when
     \(D \sim D'\) (i.e.\ \(D - D' = \div(f)\) for some
     \(f \in K(C)^{\times}\)) is \emph{not} formalised in this chapter.
-    It is not needed for the genus-\(0\) critical path: \texttt{RR.2}
+    It is not needed for the main genus-zero proof: \texttt{RR.2}
     consumes only \(\chi(\mathcal O_C(D))\) and the SES additivity at
     closed points; \texttt{RR.3} consumes only the closed-point
     specialisation; \texttt{RR.4} consumes the function-field /
     degree bridge, which is divisorial in \(\mathrm{Div}(C)\) rather than
     in \(\mathrm{Pic}(C) = \mathrm{Div}(C) / \sim\). The
     Cartier-divisor \(\leftrightarrow\) \texttt{Pic} isomorphism is
-    queued for the post-RR-bridge follow-up chapter.
-  \item \textbf{Sheaf-multiplication
+    queued for the subsequent chapter.
+  \item \textbf{General sheaf-multiplication
     $\mathcal O_C(D) \otimes \mathcal O_C(D') \cong \mathcal O_C(D +
-    D')$.} The tensor-product identity of Hartshorne's
-    Proposition~6.13(b) is invoked inside the proof of
-    \cref{lem:sheafOf_ses_single_add} at the single instance
-    $\mathcal O_C(-[P]) \otimes \mathcal O_C(D + [P]) \cong
-    \mathcal O_C(D)$, but the \emph{statement} of
-    Proposition~6.13(b) as a separate lemma is not formalised in this
-    chapter. The instance used inside the SES proof is local to that
-    proof; a generalised tensor-additivity lemma is queued for the
-    post-RR-bridge follow-up.
+    D')$.} The structure-sheaf tensor $\otimes_{\mathcal O_C}$ is not the
+    monoidal product of the target category
+    \(\mathbf{Sh}(C, \mathbf{Mod}_{\bar k})\) (whose objects are
+    \(\bar k\)-linear sheaves rather than \(\mathcal O_C\)-module objects),
+    so the inductive-step sequence is presented intrinsically by the
+    cokernel route of \cref{lem:sheafOf_ses_single_add} (the subsheaf
+    inclusion \cref{lem:sheafOf_mono_single_add} together with the cokernel
+    identification \cref{lem:cokernel_sheafOf_single_add_iso_skyscraper})
+    rather than by tensoring. The general tensor-additivity statement
+    $\mathcal O_C(D) \otimes \mathcal O_C(D') \cong \mathcal O_C(D + D')$
+    for arbitrary divisors \(D, D'\) is not established in this chapter;
+    it is queued for the a subsequent chapter.
   \item \textbf{Pullback of \(\mathcal O_C(D)\) along a morphism.} The
     pullback \(f^* \mathcal O_C(D) \cong \mathcal O_{C'}(f^* D)\) for
     a morphism of curves \(f : C' \to C\), used in degree-computation
     arguments on a base change, is \emph{not} formalised in this
-    chapter and is not needed for the genus-\(0\) critical path.
+    chapter and is not needed for the main genus-zero proof.
   \item \textbf{Global-sections identification as the Riemann--Roch
     space.} The identification
     \(H^0(C, \mathcal O_C(D)) \cong L(D)\) for a general Weil divisor
     \(D\) (i.e.\ the analogue of
     \cref{lem:lineBundleAtClosedPoint_globalSections_iff} for general
-    \(D\)) is queued for the post-RR-bridge follow-up. The closed-point
+    \(D\)) is queued for the a subsequent chapter. The closed-point
     case \(D = [P]\) is the only specialisation consumed by the
-    genus-\(0\) critical path, and it is handled in
+    main genus-zero proof, and it is handled in
     \texttt{RR.3} via \cref{lem:sheafOf_singlePoint}.
-  \item \textbf{Serre duality and the canonical sheaf.} As recorded in
-    the \texttt{RR.2} and \texttt{RR.3} chapters, Mathlib (snapshot
-    \texttt{b80f227}) ships no dualizing sheaf \(\omega_X\) on a scheme
-    and no Serre duality theorem. The genus-\(0\) critical path
-    does \emph{not} require either; the present chapter accordingly
-    does not engage them.
+  \item \textbf{Serre duality and the canonical sheaf.} The dualizing
+    sheaf \(\omega_X\) and the Serre duality theorem are not used in this
+    chapter and are not required for the main genus-zero proof.
 \end{itemize}
-
-\label{sec:sheaf-property-correctness}

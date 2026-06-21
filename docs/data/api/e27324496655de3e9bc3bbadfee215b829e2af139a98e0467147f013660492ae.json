@@ -1,0 +1,192 @@
+[
+  {
+    "timestamp": "2026-06-21T06:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "tensorObj_restrict_iso_eq_pullbackTensorMap"
+    },
+    "session": {
+      "id": "session_45",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "sheafifyTensorUnitIso_hom_eq'",
+        "H1inv_app_eq_pullbackVal_restrict",
+        "map_tensorHom_comp3",
+        "pushforward_mu_appIso_collapse"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Collapse sheafifyTensorUnitIso.hom factor (now-public), rewrite each H1.inv leg by extracted helper, distribute over tensor",
+        "code_tried": "rw [sheafifyTensorUnitIso_hom_eq']; erw [H1inv_app_eq_pullbackVal_restrict f M, H1inv_app_eq_pullbackVal_restrict f N]; exact map_tensorHom_comp3 (C := _root_.PresheafOfModules (Y.presheaf ⋙ forget₂ CommRingCat RingCat)) _ _ _ _ _ _ _",
+        "line_number": "374-424",
+        "lean_error": null,
+        "goal_before": "a_Y.map (H1.inv.app M.val ⊗ₘ H1.inv.app N.val) = sheafifyTensorUnitIso.hom ⪰ a_Y.map(forget pbv⊗forget pbv) ⪰ a_Y.map(forget ρ⁻¹⊗forget ρ⁻¹)",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "Body sorry-free (lake build EXIT 0). erw needed: leftAdjointUniq carrier matches only up to defeq instance/proof terms; rw/simp only fail 'did not find pattern'. map_tensorHom_comp3 applied by `exact` so functor-carrier defeq (𝟙 _.obj vs 𝟙 _.val) absorbed definitionally. rw [tensorHom_comp3] directly FAILS (MonoidalCategory synth)."
+      }
+    ],
+    "next_steps": "B1 keystone done modulo helper H1inv_app_eq_pullbackVal_restrict. Add blueprint entry for it; close its crux."
+  },
+  {
+    "timestamp": "2026-06-21T06:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "H1inv_app_eq_pullbackVal_restrict"
+    },
+    "session": {
+      "id": "session_45",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "leftAdjointUniq/mate-calculus unit-coherence crux (same family as B2); ~80-120 LOC",
+      "key_lemmas_used": [
+        "Adjunction.leftAdjointUniq_inv_app",
+        "Adjunction.homEquiv_unit",
+        "Adjunction.unit_leftAdjointUniq_hom_app",
+        "sheafificationCompPullback_eq_leftAdjointUniq"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "homEquiv-injective on pullbackPushforwardAdjunction φ'; reduce LHS image to hadj.unit via unit_leftAdjointUniq_hom_app, then crux",
+        "code_tried": "apply (PresheafOfModules.pullbackPushforwardAdjunction (Hom.toRingCatSheafHom f).hom).homEquiv _ _ |>.injective; rw [Adjunction.leftAdjointUniq_inv_app]; simp only [Adjunction.homEquiv_unit]; refine Eq.trans (Adjunction.unit_leftAdjointUniq_hom_app _ hadj M.val) ?_; sorry",
+        "line_number": "286-342",
+        "lean_error": null,
+        "goal_before": "(hadj.leftAdjointUniq pullbackPushforwardAdjunction).inv.app M.val = η ⪰ forget pullbackValIso.hom ⪰ forget restrictFunctorIsoPullback.inv",
+        "goal_after": "hadj.unit.app M.val = pullbackPPAdj.unit.app M.val ⪰ pushforward φ'.map(η_P ⪰ forget pbv ⪰ forget ρ⁻¹)",
+        "result": "partial",
+        "insight": "Reduction verified. unit_leftAdjointUniq_hom_app works only as TERM (Eq.trans), NOT as rw (defeq-not-syntactic carrier; matches root htri' precedent). Crux verified (lean_multi_attempt) to be pure leftAdjointUniq coherence: pullbackValIso.inv = leftAdjointUniq(sheafification.comp ...) vs (...comp sheafification), restrictFunctorIsoPullback = leftAdjointUniq(restrictAdjunction) vs (pullbackPushforwardAdjunction). SAME mate-calculus family as B2."
+      }
+    ],
+    "next_steps": "Close via conjugateEquiv_comp / mateEquiv_hcomp / leftAdjointUniq_trans + leftAdjointUniqUnitEta (root L1531). Shared helper would discharge both this crux AND B2."
+  },
+  {
+    "timestamp": "2026-06-21T06:30:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "restrictFunctorIsoPullback_comp_compat"
+    },
+    "session": {
+      "id": "session_45",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "B2 mate-calculus residual (~80-120 LOC); not attempted in depth (B1 consumed the session). Sectionwise unit/tmul chase is WRONG-SHAPE (carrier diamonds). Recast as right-adjoint conjugate-algebra per analogies/b2mate045.md.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Untouched this iter; pre-existing partial reduces to same leftAdjointUniq unit-coherence shape as B1 crux",
+        "code_tried": "(not attempted)",
+        "line_number": "221-268",
+        "lean_error": null,
+        "goal_before": "restrictFunctorIsoPullback comp-compatibility (mate coherence)",
+        "goal_after": "(unchanged)",
+        "result": "partial",
+        "insight": "B2 and the new B1 crux reduce to the SAME leftAdjointUniqUnitEta-style coherence; a shared helper likely discharges both."
+      }
+    ],
+    "next_steps": "Build the shared leftAdjointUniqUnitEta-style mate helper FIRST, then B2 and the B1 crux fall together. Do NOT raw-prove via sectionwise chase."
+  },
+  {
+    "timestamp": "2026-06-21T06:30:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "tensorObj_restrict_iso_restrict_compat"
+    },
+    "session": {
+      "id": "session_45",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "S2: immersion-naturality of the 4-leg chart-chase; not free from restrictFunctorComp.hom.naturality (gives morphism-naturality, not immersion). Downstream of B1; untouched.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Untouched (downstream of B1, scheduled later)",
+        "code_tried": "(not attempted)",
+        "line_number": "446",
+        "lean_error": null,
+        "goal_before": "S2 immersion-naturality square",
+        "goal_after": "(unchanged)",
+        "result": "failed",
+        "insight": "Requires per-leg immersion-naturality of restrictFunctorIsoPullback / sheafificationCompPullback / strip / H1∘H2."
+      }
+    ],
+    "next_steps": "After B1 crux + B2 land, attempt S2 with the now-proven per-leg helpers."
+  },
+  {
+    "timestamp": "2026-06-21T06:30:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "dual_restrict_iso_restrict_compat"
+    },
+    "session": {
+      "id": "session_45",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "S3 dual-route immersion-naturality; same depth as S2; untouched (stretch).",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Untouched (dual stretch)",
+        "code_tried": "(not attempted)",
+        "line_number": "468",
+        "lean_error": null,
+        "goal_before": "S3 dual immersion-naturality",
+        "goal_after": "(unchanged)",
+        "result": "failed",
+        "insight": "DualInverse chart-chase immersion-naturality, same residual depth as S2."
+      }
+    ],
+    "next_steps": "Stretch; after S2."
+  },
+  {
+    "timestamp": "2026-06-21T06:30:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "trivialisation_restrict_compat"
+    },
+    "session": {
+      "id": "session_45",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Telescope: downstream of all squares (S2/S3/S4a/S4b) + B1/B2; untouched. S4c closed iter-041.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Untouched (terminal, downstream of all squares)",
+        "code_tried": "(not attempted)",
+        "line_number": "639",
+        "lean_error": null,
+        "goal_before": "cocycle telescope gating lemma",
+        "goal_after": "(unchanged)",
+        "result": "failed",
+        "insight": "Gates the cocycle exists_tensorObj_inverse; needs all squares first."
+      }
+    ],
+    "next_steps": "Final assembly after squares close."
+  }
+]
