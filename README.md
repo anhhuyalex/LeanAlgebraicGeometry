@@ -21,13 +21,13 @@ For more details, run `archon dashboard <project-name>` for any project in the s
 
 | Project | Role in the scope | Main dependency direction | Status (open `sorry`) |
 | --- | --- | --- | --- | 
-| `Algebraic-Jacobian-Challenge` | Core Jacobian / Picard / curve geometry engine | Provides infrastructure for most downstream projects | 🔄 In progress (87) ✨ |
+| `Algebraic-Jacobian-Challenge` | Core Jacobian / Picard / curve geometry engine | Provides infrastructure for most downstream projects | 🔄 In progress (86) ✨ |
 | `Cech-Cohomology` | Čech comparison and higher direct image machinery | Feeds back into the Jacobian challenge and related papers | ✅ Complete (0) — merged back sorry-free into AJC ✨ |
 | `Line-Bundle-Comparison-Iso` | Tensor/dual comparison isomorphisms for relative Picard | Unblocks the Jacobian challenge at large scale | 🔄 In progress (6) ✨ |
 | `Albanese` | Albanese universal property + abelian-variety / codim-one extension leg | Extracted from `Algebraic-Jacobian-Challenge`; merges back | 🔄 In progress (17) ✨ |
 | `RiemannRoch` | Weil divisors, `O(D)`/`O(P)`, `H¹`-vanishing and the RR formula core | Extracted from `Algebraic-Jacobian-Challenge`; merges back | 🔄 In progress (25) ✨ |
 | `Quot-Foundations` | Quot, Grassmannian, and flat-base-change foundations | Deferred — active work moved to the `GR-quot_closure` / `FBC-B_SNAP-chain` extractions | ⏸️ Deferred (21) |
-| `GR-quot_closure` | Grassmannian-quotient representability (H⁰ leg) | Extracted from `Quot-Foundations`; merges back | 🔄 In progress (4) ✨ |
+| `GR-quot_closure` | Grassmannian-quotient representability (H⁰ leg) | Extracted from `Quot-Foundations`; **merged sorry-free into AJC ✨ 2026-06-22** | ✅ Complete (0) — merged sorry-free into AJC ✨ |
 | `FBC-B_SNAP-chain` | Flat-base-change leg + shared SNAP foundation | Extracted from `Quot-Foundations`; merges back | 🔄 In progress (14) ✨ |
 | 36 related-paper projects | Formalization of related algebraic-geometry papers | A few consume the AG base (secant/perverse/Mordell–Lang); most are self-contained | 📝 Blueprint only (0 Lean) |
 

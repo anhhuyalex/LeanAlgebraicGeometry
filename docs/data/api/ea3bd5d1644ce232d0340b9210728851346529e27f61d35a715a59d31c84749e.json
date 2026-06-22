@@ -1,0 +1,142 @@
+[
+  {
+    "timestamp": "2026-06-22T03:05:46Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+      "theorem": "sheafOf.carrierSet_zero_eq"
+    },
+    "session": {
+      "id": "session_18",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "Finsupp.coe_zero",
+        "Pi.zero_apply",
+        "neg_zero"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "S1 — unfold carrierSet at D=0, reduce bound -(0 Q) to 0",
+        "code_tried": "unfold sheafOf.carrierSet; simp only [Finsupp.coe_zero, Pi.zero_apply, neg_zero]",
+        "line_number": "1730",
+        "result": "success",
+        "insight": "carrierSet 0 = rational functions that are 0 or have ord_Q ≥ 0 ∀ Q∈U. Axiom-clean {propext,Classical.choice,Quot.sound}."
+      }
+    ],
+    "next_steps": "Coverage debt: needs a \\lean{} block in blueprint (realises first sentence of lem:carrierSheaf_zero_sections_eq_structureSheaf)."
+  },
+  {
+    "timestamp": "2026-06-22T03:05:46Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+      "theorem": "sheafOf.structureSection_mem_carrierSet_zero"
+    },
+    "session": {
+      "id": "session_18",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "TopCat.Presheaf.germ_stalkSpecializes_apply",
+        "Ring.ordFrac_ge_one_of_ne_zero",
+        "WithZero.log_le_log",
+        "genericPoint_spec"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "S2 easy arm: regular ⟹ no poles. germToFunctionField U s = algebraMap 𝒪_{C,Q} K(C) (germ U Q.point s), so ordFrac ≥ 1 ⟹ ord_Q ≥ 0",
+        "code_tried": "set β := germ U Q.point hQU s; hα_eq : f = algebraMap R K(C) β via germ_stalkSpecializes_apply (h := genericPoint⤳Q.point); ordFrac_ge_one_of_ne_zero hβne; WithZero.log_le_log",
+        "line_number": "1748",
+        "result": "success",
+        "insight": "Mirrors key_alpha_ge germ argument of carrierSubmodule. Fixed hβne by dropping a stale `hf` rewrite; fixed goal-mismatch by `change` instead of `show`. Axiom-clean."
+      }
+    ],
+    "next_steps": "Coverage debt: worth promoting to its own \\lean{}-pinned blueprint block (reusable forward inclusion Γ(U,𝒪_C)→carrier₀)."
+  },
+  {
+    "timestamp": "2026-06-22T03:05:46Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+      "theorem": "sheafOf.carrierSheaf_zero_sections_eq_structureSheaf"
+    },
+    "session": {
+      "id": "session_18",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Hartogs converse (ord_Q g ≥ 0 ∀Q∈U ⟹ g∈A) needs IsDedekindDomain of an affine chart (smooth⟹regular⟹integrally-closed dim-1⟹Dedekind — no single-call Mathlib lemma), then mem_integers_of_valuation_le_one. Mathlib gap.",
+      "key_lemmas_used": [
+        "Scheme.germToFunctionField_injective",
+        "functionField_isFractionRing_of_isAffineOpen",
+        "Ring.ordFrac_eq_one_of_notMem"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Pin S3 component iso (carrierSheaf 0).val.obj U ≅ (toModuleKSheaf C).val.obj U at blueprint name; forward map = S2, injective by germToFunctionField_injective; inverse = Hartogs (deep)",
+        "code_tried": "private noncomputable def ... := sorry",
+        "line_number": "1800",
+        "result": "partial",
+        "insight": "Forward+injectivity identified; inverse isolated to exact Mathlib gap. Statement formalized at pinned \\lean{} name (sync added statement \\leanok)."
+      }
+    ],
+    "next_steps": "Next prove lane: build IsDedekindDomain Γ(C.left,U) for affine open via project SmoothRegular ⟹ integrally-closed dim-1 ⟹ Dedekind, then mem_integers_of_valuation_le_one over functionField_isFractionRing_of_isAffineOpen. Blueprint adequacy gap: chapter proves affine U only; needs general-U locality/gluing step first."
+  },
+  {
+    "timestamp": "2026-06-22T03:05:46Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+      "theorem": "sheafOf.carrierSheaf_zero_iso_toModuleKSheaf"
+    },
+    "session": {
+      "id": "session_18",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Rests on S3 component iso (Hartogs gap) + one NatIso naturality sorry (identity-on-K(C) both sides).",
+      "key_lemmas_used": [
+        "CategoryTheory.fullyFaithfulSheafToPresheaf",
+        "FullyFaithful.preimageIso",
+        "NatIso.ofComponents"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Lift per-open component iso to sheaf iso through fully faithful sheafToPresheaf",
+        "code_tried": "(fullyFaithfulSheafToPresheaf ...).preimageIso (NatIso.ofComponents (fun U => carrierSheaf_zero_sections_eq_structureSheaf U) (by sorry))",
+        "line_number": "1812",
+        "result": "partial",
+        "insight": "Auditor-confirmed non-circular + not laundering: term well-typed only via the two sorries; substituting real proofs closes it completely. preimageIso is the standard presheaf→sheaf NatIso lift."
+      }
+    ],
+    "next_steps": "Naturality square closes mechanically (identity on K(C) both sides) once S3 component iso lands."
+  },
+  {
+    "timestamp": "2026-06-22T03:05:46Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+      "theorem": "sheafOf.cokernel_stalk_at_iso_kbar"
+    },
+    "session": {
+      "id": "session_18",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "G2 DVR residue quotient (π^{-(n+1)}𝒪)/(π^{-n}𝒪)≅k̄ — untouched this iter (iter focused on the bridge)."
+    },
+    "attempts": [],
+    "next_steps": "Independent cluster from the bridge. iter-017 reduced it to this one residue sorry (L1509); effort-break into (a) stalk-map naturality and (b) DVR residue before proving."
+  }
+]

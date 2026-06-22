@@ -1,1 +1,154 @@
-[]
+[
+  {
+    "timestamp": "2026-06-21T21:05:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "H1inv_app_eq_pullbackVal_restrict"
+    },
+    "session": {
+      "id": "session_51",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "Adjunction.leftAdjointUniq_inv_app",
+        "Adjunction.homEquiv_unit",
+        "Adjunction.unit_leftAdjointUniq_hom_app",
+        "sheafPullbackUnit_forget_eq",
+        "CategoryTheory.Functor.map_comp",
+        "CategoryTheory.Functor.map_id"
+      ],
+      "note": "body sorry-free; transitively rides the new helper sheafPullbackUnit_forget_eq (still one sorry), so #print axioms still lists sorryAx"
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Effort-break the crux unit identity into 4 named parts (I rfl, II sheaf unit_leftAdjointUniq, III new helper sheafPullbackUnit_forget_eq, IV forget/pushforward functoriality rfl) and assemble term-mode",
+        "code_tried": "apply (pullbackPushforwardAdjunction …).homEquiv _ _ |>.injective; rw [leftAdjointUniq_inv_app]; simp only [homEquiv_unit]; refine Eq.trans (unit_leftAdjointUniq_hom_app _ hadj M.val) ?_; have hII := unit_leftAdjointUniq_hom_app _ _ M; have key := (map_comp).symm.trans …; have hII2 := …; rw [show hadj.unit.app M.val = forget ((restrictAdjunction f).unit.app M) from rfl, hII2]; refine Eq.trans (Functor.map_comp (forget) …) ?_; refine Eq.trans (congrArg … (sheafPullbackUnit_forget_eq f M)) ?_; exact Eq.trans (Category.assoc _ _ _) (congrArg …)",
+        "line_number": "493",
+        "lean_error": "intermediate: rw [Category.assoc]/rw [Functor.map_comp] FAILED — 'Did not find an occurrence of the pattern (?f ≫ ?g) ≫ ?h' on the SheafOfModules ≫ seam (defeq-not-syntactic)",
+        "result": "success",
+        "insight": "Crux is the forget-transport of the SHEAF-level unit_leftAdjointUniq triangle (restrictFunctorIsoPullback), NOT a B2-style conjugate telescope. Every category-lemma step must be term-mode (Eq.trans/congrArg/:=); rw of category lemmas always misses the SheafOfModules seam. Adjunction.eq_unit_comp_map_iff is the clean transposer (avoids rw [← homEquiv_unit] higher-order-unification failure). Functor.map_comp/map_id need CategoryTheory. qualification (clash with lawful-functor)."
+      }
+    ],
+    "next_steps": "Close the residual sheafPullbackUnit_forget_eq to make H1inv (and B1 keystone) transitively axiom-clean."
+  },
+  {
+    "timestamp": "2026-06-21T21:05:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "sheafPullbackUnit_forget_eq"
+    },
+    "session": {
+      "id": "session_51",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Abstract sheaf pullback unit pullbackPushforwardAdjunction f is built by Adjunction.ofIsRightAdjoint, hence OPAQUE to simp/aesop/aesop_cat (normalises forget _.map to .val but cannot close — not formal). Must be related to the CONCRETE SheafOfModules.PullbackConstruction.adjunction φ via Scheme.Modules.pullbackIso φ = leftAdjointUniq (pullbackPushforwardAdjunction f) (PullbackConstruction.adjunction φ) + unit_leftAdjointUniq/leftAdjointUniq_hom_app_counit family (~80-150 LOC mate calculus, mirrors root leftAdjointUniqUnitEta/pullbackObjUnitToUnit_comp).",
+      "key_lemmas_used": [
+        "Adjunction.eq_unit_comp_map_iff",
+        "pullbackValIso",
+        "sheafificationCompPullback_eq_leftAdjointUniq"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Transpose RHS across presheaf pullback-pushforward adjunction triangle, unfold pullbackValIso, apply sheafificationCompPullback_eq_leftAdjointUniq to expose the leftAdjointUniq mate identity",
+        "code_tried": "apply (Adjunction.eq_unit_comp_map_iff (pullbackPushforwardAdjunction φ') _ _).mpr; rw [pullbackValIso]; simp only [Iso.trans_hom, Iso.symm_hom, Functor.mapIso_hom, Functor.map_comp]; rw [← Functor.map_comp, sheafificationCompPullback_eq_leftAdjointUniq]; sorry",
+        "line_number": "438",
+        "lean_error": "rw [Adjunction.unit_leftAdjointUniq_hom_app] / rw of leftAdjointUniq family FAILED — 'Did not find an occurrence of the pattern (Adjunction.unit ?adj).app ?X ≫ Functor.map …' (opaque ofIsRightAdjoint unit)",
+        "result": "partial",
+        "insight": "Two correct transposition steps + the pullbackValIso/sheafificationCompPullback unfold reduce the opaque coherence to ONE fully-explicit leftAdjointUniq mate identity (forward progress compiles before the sorry). The residual is the SAME mate-calculus family as the root leftAdjointUniqUnitEta; needs the pullbackIso bridge to make the abstract ofIsRightAdjoint unit concrete."
+      }
+    ],
+    "next_steps": "Next prove pass: target sheafPullbackUnit_forget_eq's explicit residual with the Scheme.Modules.pullbackIso bridge + PullbackConstruction.adjunction; OR mathlib-analogist cross-domain on 'abstract ofIsRightAdjoint unit vs concrete sheafify∘pullback∘forget unit'."
+  },
+  {
+    "timestamp": "2026-06-21T21:05:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "tensorObj_restrict_iso_restrict_compat (S2)"
+    },
+    "session": {
+      "id": "session_51",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Gated on full B1-crux closure per directive; B1-crux residual (sheafPullbackUnit_forget_eq) remains open so secondary squares not attempted."
+    },
+    "attempts": [],
+    "next_steps": "Attempt after sheafPullbackUnit_forget_eq closes; deep immersion-naturality 4-step chart-chase riding B1 keystone + B2 (done) + left-unitor."
+  },
+  {
+    "timestamp": "2026-06-21T21:05:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "S3 (L715)"
+    },
+    "session": {
+      "id": "session_51",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Deferred dual-analogue gap; thin-poset subsingleton route (b) unverified."
+    },
+    "attempts": [],
+    "next_steps": "Defer until B1-crux closed; do not burn a round if route (b) stalls."
+  },
+  {
+    "timestamp": "2026-06-21T21:05:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "S4a (L740)"
+    },
+    "session": {
+      "id": "session_51",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Deferred dual-analogue gap (same as S3)."
+    },
+    "attempts": [],
+    "next_steps": "Defer; dual analogue of S2."
+  },
+  {
+    "timestamp": "2026-06-21T21:05:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "tensorObj_unit_iso_restrict_compat (S4b, L756)"
+    },
+    "session": {
+      "id": "session_51",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Gated on full B1-crux closure per directive."
+    },
+    "attempts": [],
+    "next_steps": "Attempt with S2 after B1-crux closes; rides B1 + pullbackTensorMap_restrict + B2 + left-unitor."
+  },
+  {
+    "timestamp": "2026-06-21T21:05:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "trivialisation_restrict_compat (L828)"
+    },
+    "session": {
+      "id": "session_51",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Telescope of all 5 squares; only after S2/S3/S4a/S4b close."
+    },
+    "attempts": [],
+    "next_steps": "Final assembly after the four squares close."
+  }
+]

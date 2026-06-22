@@ -1,0 +1,168 @@
+[
+  {
+    "timestamp": "2026-06-22T02:00:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+      "theorem": "sheafOf.cokernel_skyscraper_hom_isIso"
+    },
+    "session": {
+      "id": "session_17",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "TopCat.Presheaf.isIso_iff_stalkFunctor_map_iso",
+        "Adjunction.homEquiv_counit",
+        "IsIso.of_isIso_fac_right",
+        "skyscraperPresheafStalkOfSpecializes",
+        "skyscraperPresheafStalkOfNotSpecializesIsTerminal",
+        "Limits.IsZero.isIso",
+        "Limits.PreservesCokernel.iso",
+        "Functor.preservesZeroMorphisms_of_isLeftAdjoint",
+        "stalkFunctor_map_carrierPresheaf_le_hom_epi_of_ne",
+        "isClosed_singleton_of_coheight_eq_one",
+        "krullDim_curve_le_one"
+      ],
+      "axioms": [
+        "propext",
+        "sorryAx (transitive via G2 only)",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "P.point branch: identify stalk map of transpose via adjunction triangle, then conclude IsIso by 2-out-of-3",
+        "code_tried": "have htri := (adj.homEquiv Co A).symm_apply_apply _; rw [adj.homEquiv_counit] at htri; ... heq : ... = G2.hom ≫ inv (adj.counit.app A)",
+        "line_number": "1562-1581",
+        "lean_error": "could not synthesize IsIso (adj.counit.app A) for `CategoryTheory.inv` in the statement type (hard error at heq line) despite local haveI hcounit",
+        "result": "failed",
+        "insight": "putting `inv (counit.app A)` in the goal/statement type forces a typeclass synth that fails; avoid inv-in-type"
+      },
+      {
+        "attempt": 2,
+        "strategy": "P.point branch fix: drop inv-in-type, use of_isIso_fac_right with f named explicitly",
+        "code_tried": "haveI hcounit : IsIso (adj.counit.app A) := by rw [show adj.counit.app A = (skyscraperPresheafStalkOfSpecializes P.point A specializes_rfl).hom from rfl]; infer_instance; exact IsIso.of_isIso_fac_right (f := adj.counit.app A) htri",
+        "line_number": "1569-1581",
+        "lean_error": null,
+        "result": "success",
+        "insight": "passing f by name (f := adj.counit.app A) lets the instance resolve; htri : F.map csh ≫ counit.app A = G2.hom both isos ⇒ F.map csh iso"
+      },
+      {
+        "attempt": 3,
+        "strategy": "away-from-P branch: both stalks vanish ⇒ IsZero.isIso; target via skyscraperPresheafStalkOfNotSpecializes, source via left-adjoint preserves cokernel of epi",
+        "code_tried": "refine Limits.IsZero.isIso ?_ ?_ _; source: PreservesCokernel.iso G f with hpcs.preservesColimit + preservesZeroMorphisms_of_isLeftAdjoint; isZero_cokernel_of_epi (G.map f via stalkFunctor_map_carrierPresheaf_le_hom_epi_of_ne)",
+        "line_number": "1582-1623",
+        "lean_error": "cokernelComparison f G / instIsIsoCokernelComparison fail to synth G.PreservesZeroMorphisms INSIDE the term (standalone inferInstance succeeds); PreservesColimitsOfShape→PreservesColimit(parallelPair) does not fire via inferInstance",
+        "result": "success",
+        "insight": "WORKAROUND: haveI hpcs : PreservesColimitsOfShape WalkingParallelPair G := inferInstance; haveI hpc2 := hpcs.preservesColimit; then PreservesCokernel.iso G f elaborates (cokernelComparison does NOT). Direction G.obj(coker f) ≅ coker(G.map f) is correct for IsZero.of_iso."
+      }
+    ],
+    "next_steps": "Lemma is body-sorry-free; becomes fully axiom-clean as soon as G2 (cokernel_stalk_at_iso_kbar) lands. No further work needed on G3 itself."
+  },
+  {
+    "timestamp": "2026-06-22T02:00:01Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+      "theorem": "sheafOf.cokernel_stalk_at_iso_kbar"
+    },
+    "session": {
+      "id": "session_17",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "DVR fractional-ideal residue computation cokernel(π^{-n}𝒪 ⊆ π^{-(n+1)}𝒪) ≅ k̄ + a carrierSheaf_stalk_eq naturality lemma (stalk map = Submodule.inclusion of orderAtP submodules). ~200-400 LOC dedicated lane.",
+      "key_lemmas_used": [
+        "Limits.PreservesCokernel.iso",
+        "Functor.preservesZeroMorphisms_of_isLeftAdjoint",
+        "PreservesColimitsOfShape.preservesColimit"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "left-adjoint preserves cokernel at P.point: stalk_P(coker f) ≅ coker(stalk_P f), then reduce to residue cokernel ≅ k̄",
+        "code_tried": "refine Limits.PreservesCokernel.iso (Sheaf.forget ⋙ stalkFunctor P.point) (carrierSheafHom_le_add_single D P) ≪≫ ?_  -- with hpcs/hpc2/hpzm haveI's",
+        "line_number": "1485-1509",
+        "lean_error": null,
+        "result": "partial",
+        "insight": "Step 1 (PreservesCokernel.iso) compiles and isolates exactly the residue obligation `cokernel (G.map f) ≅ ModuleCat.of kbar kbar`. Remaining sorry at L1509 is the DVR quotient + naturality; reduction is real compiling code."
+      }
+    ],
+    "next_steps": "Dedicated lane: (1) naturality lemma G.map f = Submodule.inclusion(orderAtPSubmodule D P ≤ orderAtPSubmodule (single P 1+D) P) via carrierSheaf_stalk_iso_iSup; (2) DVR residue (π^{-(n+1)}𝒪)/(π^{-n}𝒪) ≅ 𝒪/𝔪 ≅ k̄ by π^{n+1}· automorphism + residueField_eq_of_coheight_eq_one. Consider effort-breaker to split these two sub-claims into stub lemmas before proving."
+  },
+  {
+    "timestamp": "2026-06-22T02:00:02Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+      "theorem": "sheafOf.cokernel_skyscraper_hom"
+    },
+    "session": {
+      "id": "session_17",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "stalkSkyscraperSheafAdjunction",
+        "Adjunction.homEquiv"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "build the residue-evaluation morphism as the adjunction transpose of G2.hom (no new proof, docstring rewrite only)",
+        "code_tried": "(stalkSkyscraperSheafAdjunction P.point).homEquiv Co (ModuleCat.of kbar kbar) (cokernel_stalk_at_iso_kbar D P).hom",
+        "line_number": "1522-1532",
+        "lean_error": null,
+        "result": "success",
+        "insight": "def was already sorry-free on entry (transpose of G2.hom); the residue-evaluation prose = the adjunction unit applied to a germ. No change needed beyond docstring."
+      }
+    ],
+    "next_steps": "Complete; depends only on G2 landing for full axiom-cleanliness."
+  },
+  {
+    "timestamp": "2026-06-22T02:00:03Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+      "theorem": "sheafOf.stalkFunctor_map_carrierPresheaf_le_hom_epi_of_ne"
+    },
+    "session": {
+      "id": "session_17",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "ModuleCat.epi_iff_surjective",
+        "TopCat.Presheaf.stalkFunctor_map_germ_apply",
+        "TopCat.Presheaf.germ_res_apply",
+        "carrierSubmoduleSheaf_add_single_eq_of_not_mem",
+        "TopCat.Presheaf.germ_exist"
+      ],
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "new helper: stalk map of carrier inclusion is epi (surjective) away from P, via germ rep on small open avoiding P.point where the two carrier submodules coincide",
+        "code_tried": "rw [ModuleCat.epi_iff_surjective]; obtain germ rep s on V ∋ x, P.point ∉ V; carrierSubmoduleSheaf_add_single_eq_of_not_mem gives heq; lift via stalkFunctor_map_germ_apply + germ_res_apply",
+        "line_number": "1417-1476",
+        "lean_error": null,
+        "result": "success",
+        "insight": "axiom-clean. This is the real driver of the away-from-P half of G3 (replaces blueprint's section-iso route). Coverage debt: no blueprint entry yet."
+      }
+    ],
+    "next_steps": "Author a blueprint entry (lem) for this helper; planner to add prose + \\uses."
+  }
+]

@@ -1,0 +1,143 @@
+[
+  {
+    "timestamp": "2026-06-22T03:00:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/FlatBaseChange.lean",
+      "theorem": "pullback_spec_tilde_iso_ring_square_mate_glue"
+    },
+    "session": {
+      "id": "session_20",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Four-leg iterated-mate telescoping over the composite (Spec).Modules pullback-pushforward adjunctions forces the composite-adjunction unit to whnf (iterated_mateEquiv_conjugateEquiv is TwoSquare-valued) -> documented 200k-hb kernel bomb. Even the leg->Nat staging bridges kernel-bomb on cold build (LSP hides it).",
+      "key_lemmas_used": [
+        "iterated_mateEquiv_conjugateEquiv",
+        "conjugateEquiv_comp",
+        "chartBaseChangeGeometricComparison_mate",
+        "chartBaseChangeModuleReassoc_extendScalarsComp"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Leg->Nat bridges (hr,hg) + both mate-fact stagings to expose geomNat/reassocNat and line up the closed mate legs syntactically.",
+        "code_tried": "have hr : chartBaseChangeModuleReassoc .. = (chartBaseChangeModuleReassocNat ..).app M := rfl;  have hg : chartBaseChangeGeometricComparison .. = (chartBaseChangeGeometricComparisonNat ..).app (tilde M) := by apply Iso.ext; rfl; rw [hg, hr]",
+        "line_number": "1820",
+        "lean_error": "FlatBaseChange.lean:1757:8: (kernel) deterministic timeout (cold lake build; LSP/lean_multi_attempt returned goals:[] / clean)",
+        "goal_before": "pb(Spec inclR').map(pstrho.inv) >> (chartGeom).inv = (pst inclR').hom >> tilde.map(reassoc.inv) >> (pst rhoB).inv >> pb(Spec rhoB).map(pst inclR).inv  (in (Spec(R'⊗A B)).Modules)",
+        "goal_after": "",
+        "result": "failed",
+        "insight": "Bridges ELABORATE in the REPL but hg's .hom-rfl proof term forces the tilde M/pullback carrier whnf at kernel-check -> the documented X.Modules-junction wall. Bridges real-in-elaborator, NOT kernel-safe. REVERTED to clean stub."
+      },
+      {
+        "attempt": 2,
+        "strategy": "The iterated-mate telescoping itself (combine geometric composite-adjunction conjugate with the four tilde-adjunction pst legs via iterated_mateEquiv_conjugateEquiv).",
+        "code_tried": "(staging only; not driven past have hmateGeom/hmateAlg)",
+        "line_number": "1820",
+        "lean_error": "200000-hb whnf kernel bomb (composite-adjunction unit), per documented TwoSquare hazard",
+        "goal_before": "",
+        "goal_after": "",
+        "result": "failed",
+        "insight": "TwoSquare-valued mate transposition pointwise (.app (tilde M)) forces composite-unit whnf. Per standing directive (leave typed sorry if TwoSquare transposition bombs, do NOT thrash), left as typed sorry. Genuine wall."
+      }
+    ],
+    "next_steps": "Kernel-safe NAT-TRANS-level telescoping: never force .app (tilde M); lift each factor to whiskerLeft/whiskerRight natTrans, suffices a NatTrans eq between the two composite functors, drive by closed coherences (conjugateEquiv_comp/_symm_comp/_whiskerLeft/_whiskerRight + iterated_mateEquiv_conjugateEquiv_symm + 2 mate legs + gammaPushforwardNatIso_comp). Multi-hundred-step assembly; right scope for a dedicated lane."
+  },
+  {
+    "timestamp": "2026-06-22T03:00:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "tensorObjAssoc_hK_lhs_native"
+    },
+    "session": {
+      "id": "session_20",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Project-local DUAL-MonoidalCategory-instance mu-token-divergence: the goal's whiskerRight carries a toMonoidalCategory-UNFOLDED instance (artefact of the productive native-chain simp), head_img's carries the modulesLocalizedMonoidal synonym instance; reconciling whnf-unfolds the localized mu -> 200000-hb bomb. Resolution = structural refactor (glue Option A), not a prover route.",
+      "key_lemmas_used": [
+        "tensorObjAssoc_hK_lhs_head_img"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Re-confirm documented direct routes applying the proven head lemma to the reduced prefix>>tail = s1.inv>>tail goal.",
+        "code_tried": "exact tensorObjAssoc_hK_lhs_head_img_assoc A B C _;  refine ... _;  exact (tensorObjAssoc_hK_lhs_head_img A B C) =≫ _",
+        "line_number": "2251",
+        "lean_error": "(deterministic) timeout at whnf, maximum number of heartbeats (200000)",
+        "goal_before": "prefix >> tail = s1.inv >> tail  (prefix = mu.inv >> (c_{A⊗B} ▷ L'C♭) >> mu_{A♭⊗B♭,C♭}.hom)",
+        "goal_after": "",
+        "result": "failed",
+        "insight": "All three bomb even in the LSP REPL. Matches existing in-file dead-list."
+      },
+      {
+        "attempt": 2,
+        "strategy": "PREVENT the spelling divergence upstream: drop Localization.Monoidal.toMonoidalCategory from the merge simp only (~L2139) so the goal's whiskerRight stays folded-synonym matching head_img.",
+        "code_tried": "simp only [sheafification, Localization.Monoidal.tensorHom_id, Localization.Monoidal.id_tensorHom, Category.assoc]  -- toMonoidalCategory dropped",
+        "line_number": "2139",
+        "lean_error": "erw [← whiskerRight_comp_assoc] then gives (deterministic) timeout at isDefEq; mu-pair cancel no longer fires",
+        "goal_before": "",
+        "goal_after": "",
+        "result": "failed",
+        "insight": "toMonoidalCategory is LOAD-BEARING. Without it the merge/cancel chain fails. Reverted. DEAD END."
+      },
+      {
+        "attempt": 3,
+        "strategy": "MATCH the spelling on the head side: run the native simp set on the head equation h so its whiskerRight matches the goal's unfolded spelling, then apply.",
+        "code_tried": "have h := tensorObjAssoc_hK_lhs_head_img A B C; simp only [sheafification, toMonoidalCategory, tensorHom_id, id_tensorHom, Category.assoc] at h; rw [reassoc_of% h]",
+        "line_number": "2251",
+        "lean_error": "the simp ... at h ITSELF whnf-bombs (200000 hb); simp only [toMonoidalCategory] at h alone -> isDefEq timeout",
+        "goal_before": "",
+        "goal_after": "",
+        "result": "failed",
+        "insight": "Precise mechanism: the native simp fires bomb-free on the GOAL only because the goal carries productive mu.hom⊗1->▷ / 1⊗mu.inv->◁ redexes (from associator_hom_app) that simp rewrites WITHOUT whnf'ing deep mu. head_img has no such redexes, so toMonoidalCategory is forced to unfold structurally over mu-laden terms -> bomb. The divergent spelling is producible ONLY via the productive native chain, NEVER reproducible on the head equation in isolation. DEAD END."
+      },
+      {
+        "attempt": 4,
+        "strategy": "congr 1 probe: split prefix>>tail = s1.inv>>tail and discharge prefix = s1.inv by internal defeq, removing tail from the unifier.",
+        "code_tried": "congr 1",
+        "line_number": "2231",
+        "lean_error": "LSP REPL closes (internal rfl within 200000 hb); cold lake build -> (deterministic) timeout at whnf @ decl head (L2098:0)",
+        "goal_before": "prefix >> tail = s1.inv >> tail",
+        "goal_after": "(LSP: goals []) / (cold build: whnf bomb)",
+        "result": "failed",
+        "insight": "congr's rfl re-incurs the same mu-token-divergence at kernel-check. LSP hides the kernel bomb. Reverted."
+      }
+    ],
+    "next_steps": "Prover frontier EXHAUSTED on this node. Resolution is the pre-committed structural refactor pivot (glue Option A: definitionally rewire the hand-built tensorObj* defs onto the LocalizedMonoidal X synonym ⊗ so the comp-instance boundary vanishes and no toMonoidalCategory unfold is ever needed). This is a refactor-subagent + blueprint-sync task, NOT a prover route. Do NOT dispatch another SNAP prover at this node. tensorObjAssoc_hK_lhs_head_img (sorry-free) is the ready unfolded head equation for the pivot."
+  },
+  {
+    "timestamp": "2026-06-22T03:00:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "tensorPowAdd_assoc"
+    },
+    "session": {
+      "id": "session_20",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Downstream of the blocked associator bridge: tensorObjAssoc coherence transfer requires either the localized associator characterisation (= the blocked hK_lhs/native node, via tensorObjAssoc_eq_localizedAssociator) or a from-scratch presheaf derivation re-entangling the whiskered-unit mu comparison maps. Both base + succ are sorry.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Assessed as net-progress fallback; left as typed sorry with existing genuine-attempt body (not touched).",
+        "code_tried": "(none — assessed only)",
+        "line_number": "3107",
+        "lean_error": "",
+        "goal_before": "L.tensorPowAdd_assoc base/succ",
+        "goal_after": "",
+        "result": "partial",
+        "insight": "Genuinely downstream of the bridge completion (PROGRESS: 'after hK_lhs + assembly close'). Not independently tractable. Also: the proposed independent unitor bridge tensorObjUnitor_eq_localized does NOT exist in file or blueprint (no \\lean pin) — a brand-new speculative lemma, high mu-bomb risk, not started."
+      }
+    ],
+    "next_steps": "Blocked behind tensorObjAssoc_hK_lhs_native. Do not re-assign until the SNAP refactor pivot lands the associator characterisation. Same applies to tensorPowAdd_rightUnit (succ), tensorPowAdd_braiding (succ), sectionsMul_mul_assoc."
+  }
+]

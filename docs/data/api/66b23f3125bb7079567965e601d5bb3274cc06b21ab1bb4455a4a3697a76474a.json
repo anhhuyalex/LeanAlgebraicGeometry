@@ -1,0 +1,245 @@
+[
+  {
+    "timestamp": "2026-06-22T03:24:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "sheafPullbackUnit_forget_eq"
+    },
+    "session": {
+      "id": "session_53",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": null,
+      "key_lemmas_used": [
+        "SheafOfModules.fullyFaithfulForget.map_injective",
+        "Adjunction.right_triangle_components",
+        "Adjunction.leftAdjointUniq_inv_app",
+        "Adjunction.unit_leftAdjointUniq_hom_app",
+        "sheafificationCompPullback_eq_leftAdjointUniq",
+        "pullbackValIso",
+        "Adjunction.comp_unit_app"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "forget-faithful then split hUNIT over the sheaf composite",
+        "code_tried": "apply (SheafOfModules.fullyFaithfulForget X.ringCatSheaf).map_injective; erw [Functor.map_comp]; rw [hUNIT]",
+        "line_number": "551",
+        "lean_error": "none (forward progress); plain rw [Functor.map_comp] MISSES the SheafOfModules ≫ seam, erw required",
+        "goal_before": "forget((pullbackPushforwardAdjunction f).unit.app M) ≫ ... = ...",
+        "goal_after": "RHS split into presheaf legs",
+        "result": "partial",
+        "insight": "erw crosses the SheafOfModules/PresheafOfModules ≫ defeq-not-syntactic seam where rw fails"
+      },
+      {
+        "attempt": 2,
+        "strategy": "LHS ε-cancellation telescope hLHS via forget(hnat) + sheafification right_triangle",
+        "code_tried": "have hfn := congrArg forget.map hnat; have htri2 := sheafificationAdjunction.right_triangle_components; rw [show forget(unit)=𝟙 ≫ forget(unit) from (id_comp _).symm, ← htri2']; exact (Category.assoc _ _ _).trans (congrArg (η ≫ ·) hfn)",
+        "line_number": "559-590",
+        "lean_error": "rw [← Category.assoc, htri2', id_comp] failed 'Did not find (?f ≫ ?g) ≫ ?h'; resolved by term-mode Eq.trans + congrArg",
+        "goal_before": "forget(η_s.app M) = ...",
+        "goal_after": "= A.unit.app M.val ≫ pushforward_pre.map(forget(pullback.map ε))",
+        "result": "success",
+        "insight": "term-mode Category.assoc/congrArg over the seam where rw of category lemmas misses"
+      },
+      {
+        "attempt": 3,
+        "strategy": "hAcomp = rfl (composite-unit identity) stated BEFORE set",
+        "code_tried": "have hAcomp : η^pre ≫ forget(η_s.app(a_X M.val)) = A.unit.app M.val := rfl",
+        "line_number": "606",
+        "lean_error": "set A := ... broke bare rfl (no zeta-unfold of Adjunction.comp); moved hAcomp before set",
+        "goal_before": "...",
+        "goal_after": "...",
+        "result": "success",
+        "insight": "set is HAZARDOUS: breaks bare rfl that needs zeta-unfold of Adjunction.comp; state rfl-haves before set, final proof uses NO set"
+      },
+      {
+        "attempt": 4,
+        "strategy": "hAcancel via inverse leftAdjointUniq triangle (replaced failed Iso.hom_inv_id_app)",
+        "code_tried": "Adjunction.leftAdjointUniq_inv_app + (Adjunction.unit_leftAdjointUniq_hom_app B A M.val).symm",
+        "line_number": "628-640",
+        "lean_error": "NatIso.app_hom/app_inv unknown; congrArg(·≫R.map scp.inv) hpin type mismatch (A✝ vs A fold); resolved by full-spelling inverse-triangle route",
+        "goal_before": "A.unit.app M.val = B.unit ≫ R.map(leftAdjointUniq.inv)",
+        "goal_after": "closed",
+        "result": "success",
+        "insight": "inverse-triangle route supersedes the failed hom_inv_id_app cancellation"
+      },
+      {
+        "attempt": 5,
+        "strategy": "hpbv+hFINAL defeq-bridge leftAdjointUniq↔sheafificationCompPullback",
+        "code_tried": "rw [pullbackValIso, Iso.trans_hom, Iso.symm_hom, Functor.mapIso_hom]; rfl; then have hscp_eq := (sheafificationCompPullback_eq_leftAdjointUniq f).symm (defeq have, rw ← MISSES due to set φ); erw [Functor.map_comp]×2; rfl",
+        "line_number": "648-668",
+        "lean_error": "rw [← sheafificationCompPullback_eq_leftAdjointUniq] MISSES (proof-local set φ := Hom.toRingCatSheafHom f); resolved via defeq have",
+        "goal_before": "pullbackValIso.hom telescoping",
+        "goal_after": "closed",
+        "result": "success",
+        "insight": "rw of a lemma at f MISSES under proof-local set φ; bridge via defeq have (.symm) instead"
+      },
+      {
+        "attempt": 6,
+        "strategy": "term-mode final assembly + heartbeat bump",
+        "code_tried": "rw [hA]; refine Eq.trans (Category.assoc _ _ _).symm ?_; rw [hAcomp, hAcancel]; exact Eq.trans (Category.assoc _ _ _) (congrArg (B.unit ≫ ·) hFINAL); set_option maxHeartbeats 4000000",
+        "line_number": "668-685, 421",
+        "lean_error": "erw [hFINAL]; rw [Adjunction.comp_unit_app] left unsolved goals; whnf timeout at 1600000 → bumped to 4000000",
+        "goal_before": "...",
+        "goal_after": "no goals",
+        "result": "success",
+        "insight": "final B.unit = ppP.unit ≫ pushforward.map η_Y discharged by defeq (term-mode exact), NOT rw/erw; 2 whnf-defeq rfls (hAcomp/hFINAL) needed 4M heartbeats"
+      }
+    ],
+    "next_steps": "B1-crux fully CLOSED; H1inv now sorry-free. Next frontier: S2 tensorObj_restrict_iso_restrict_compat (the deepest immersion-naturality chart-chase), which S3/S4a/S4b/trivialisation all ride."
+  },
+  {
+    "timestamp": "2026-06-22T03:24:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "tensorObj_restrict_iso_restrict_compat"
+    },
+    "session": {
+      "id": "session_53",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "immersion-naturality (naturality in the immersion j, not in a morphism of X-modules); restrictFunctorComp.hom.naturality is a known dead-end (gives morphism-naturality)",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "assessed only; not attempted (out of budget after primary close)",
+        "code_tried": "",
+        "line_number": "914",
+        "lean_error": "",
+        "goal_before": "",
+        "goal_after": "",
+        "result": "partial",
+        "insight": "S2 is the deepest residual (~150 LOC fresh naturality chart-chase); S3/S4a/S4b/trivialisation transitively ride it"
+      }
+    ],
+    "next_steps": "Effort-break S2 into per-leg immersion-naturality squares; or mathlib-analogist on immersion-indexed naturality of restrictFunctor."
+  },
+  {
+    "timestamp": "2026-06-22T03:24:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "dual_restrict_iso_restrict_compat"
+    },
+    "session": {
+      "id": "session_53",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "dual analogue of S2; same depth; thin-poset subsingleton route unverified",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "not attempted (rides S2)",
+        "code_tried": "",
+        "line_number": "936",
+        "lean_error": "",
+        "goal_before": "",
+        "goal_after": "",
+        "result": "partial",
+        "insight": "deferred — same governing difficulty as S2"
+      }
+    ],
+    "next_steps": "Gate on S2 closure."
+  },
+  {
+    "timestamp": "2026-06-22T03:24:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "dual_unit_iso_restrict_compat"
+    },
+    "session": {
+      "id": "session_53",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "immersion-naturality of presheafDualUnitIso against j + dual_restrict_iso naturality; rides S2/S3",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "not attempted (rides S2/S3)",
+        "code_tried": "",
+        "line_number": "960",
+        "lean_error": "",
+        "goal_before": "",
+        "goal_after": "",
+        "result": "partial",
+        "insight": "deferred"
+      }
+    ],
+    "next_steps": "Gate on S2/S3 closure."
+  },
+  {
+    "timestamp": "2026-06-22T03:24:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "tensorObj_unit_iso_restrict_compat"
+    },
+    "session": {
+      "id": "session_53",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "immersion-naturality of presheaf left unitor + S2; blocked on S2 (unproven)",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "assessed; rides S2",
+        "code_tried": "",
+        "line_number": "976",
+        "lean_error": "",
+        "goal_before": "",
+        "goal_after": "",
+        "result": "partial",
+        "insight": "S4b explicitly blocked on S2"
+      }
+    ],
+    "next_steps": "Gate on S2 closure + left-unitor immersion-naturality."
+  },
+  {
+    "timestamp": "2026-06-22T03:24:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "trivialisation_restrict_compat"
+    },
+    "session": {
+      "id": "session_53",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "telescope of all 5 squares (S2-S4c); only closes after they do",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "not attempted (terminal telescope)",
+        "code_tried": "",
+        "line_number": "1107",
+        "lean_error": "",
+        "goal_before": "",
+        "goal_after": "",
+        "result": "partial",
+        "insight": "thoroughly commented (L1082-1107); BLOCKER each square is a genuine residual (iter-040 finding)"
+      }
+    ],
+    "next_steps": "Gate on all squares; then assemble the 5-constituent telescope."
+  }
+]

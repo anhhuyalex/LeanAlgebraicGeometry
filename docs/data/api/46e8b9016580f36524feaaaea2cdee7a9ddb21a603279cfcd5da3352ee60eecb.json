@@ -1,0 +1,162 @@
+[
+  {
+    "timestamp": "2026-06-22T04:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/CurveChartDedekind.lean",
+      "theorem": "AlgebraicGeometry.chart_dimensionLEOne"
+    },
+    "session": {
+      "id": "session_19",
+      "model": "opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "ringKrullDim_globalSections_eq_krullDim (new helper)",
+        "Order.krullDim_eq_of_orderIso",
+        "Order.krullDim_orderDual",
+        "PrimeSpectrum.le_iff_specializes",
+        "Ring.krullDimLE_one_iff",
+        "Ring.DimensionLEOne.mk"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Reduce Ring.DimensionLEOne to ringKrullDim ≤ 1 via affine order-iso bridge, then domain argument (nonzero prime is not minimal ⟹ maximal)",
+        "code_tried": "new private lemma ringKrullDim_globalSections_eq_krullDim: ringKrullDim Γ(V,⊤) = Order.krullDim(α:=V) via TopCat.homeoOfIso(forgetToTop.mapIso V.isoSpec) upgraded to order-iso V ≃o (PrimeSpectrum Γ(V,⊤))ᵒᵈ; close with krullDim_eq_of_orderIso + krullDim_orderDual + rfl",
+        "line_number": "92",
+        "result": "success",
+        "insight": "ringKrullDim R = Order.krullDim (PrimeSpectrum R) holds by rfl; scheme specialisation preorder is the DUAL of prime inclusion. topologicalKrullDim route abandoned (it is krullDim of IrreducibleCloseds, needs sobriety)."
+      }
+    ],
+    "next_steps": "Consumed by chart_isDedekindDomain; OcOfD bridge consumes downstream."
+  },
+  {
+    "timestamp": "2026-06-22T04:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/CurveChartDedekind.lean",
+      "theorem": "AlgebraicGeometry.chart_isIntegrallyClosed"
+    },
+    "session": {
+      "id": "session_19",
+      "model": "opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "IsIntegrallyClosed.of_localization_maximal",
+        "IsAffineOpen.isLocalization_stalk'",
+        "Scheme.ringKrullDim_stalk_eq_coheight",
+        "IsLocalization.AtPrime.ringKrullDim_eq_height",
+        "Ideal.primeHeight_le_ringKrullDim",
+        "Ideal.primeHeight_eq_zero_iff",
+        "Scheme.IsRegularInCodimensionOne.out",
+        "IsDiscreteValuationRing.RingEquivClass.isDiscreteValuationRing"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Localize integral-closedness at each nonzero maximal prime; show stalk is a DVR (coheight=1) hence integrally closed, transport across IsLocalization.algEquiv",
+        "code_tried": "apply IsIntegrallyClosed.of_localization_maximal; per p: x:=hV.fromSpec ⟨p,_⟩; coheight = primeHeight via ringKrullDim_stalk_eq_coheight + AtPrime.ringKrullDim_eq_height; primeHeight≤1 (must pass (I:=P.asIdeal)); primeHeight≠0 via primeHeight_eq_zero_iff; DVR via IsRegularInCodimensionOne.out; transport via algEquiv",
+        "line_number": "145",
+        "result": "success",
+        "insight": "Ideal.primeHeight_le_ringKrullDim needs explicit (I := P.asIdeal) or the [IsPrime] instance is stuck. In ℕ∞, ≤1 ∧ ≠0 ⟹ =1. DVR ⟹ IsIntegrallyClosed by instance."
+      }
+    ],
+    "next_steps": "Consumed by chart_isDedekindDomain."
+  },
+  {
+    "timestamp": "2026-06-22T04:30:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/CurveChartDedekind.lean",
+      "theorem": "AlgebraicGeometry.chart_isDedekindDomain"
+    },
+    "session": {
+      "id": "session_19",
+      "model": "opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "isDedekindRing_iff",
+        "IsLocallyNoetherian.component_noetherian",
+        "functionField_isFractionRing_of_isAffineOpen",
+        "IsIntegrallyClosed.algebraMap_eq_of_integral",
+        "instIsDedekindDomainOfIsDomainOfIsDedekindRing"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Assemble IsDedekindRing via isDedekindRing_iff ⟨noeth, dimLEOne, intClosed-predicate⟩, then upgrade to IsDedekindDomain via instance",
+        "code_tried": "haveI noeth := component_noetherian ⟨⊤,hV⟩; haveI frac := functionField_isFractionRing_of_isAffineOpen; haveI IsIntegrallyClosed := chart_isIntegrallyClosed; haveI IsDedekindRing := (isDedekindRing_iff _ _).mpr ⟨noeth, chart_dimensionLEOne, fun hx => IsIntegrallyClosed.algebraMap_eq_of_integral hx⟩; infer_instance",
+        "line_number": "202",
+        "result": "success",
+        "insight": "isDedekindRing_iff's 3rd conjunct is the integral-closure PREDICATE (∀x, IsIntegral→∃y…), not the IsIntegrallyClosed class. isDedekindRing_iff yields IsDedekindRing; goal IsDedekindDomain is a distinct class — set IsDedekindRing as haveI and infer_instance."
+      }
+    ],
+    "next_steps": "OcOfD consumes for carrierSheaf_zero_iso_toModuleKSheaf bridge section-inverse next iter."
+  },
+  {
+    "timestamp": "2026-06-22T04:30:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+      "theorem": "AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.cokernel_stalk_at_iso_kbar"
+    },
+    "session": {
+      "id": "session_19",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Whole categorical/naturality content CLOSED; body now sorry-free, gated on the single typed leaf orderAtP_residue_linearEquiv (DVR residue equiv, Mathlib-gap-blocked).",
+      "key_lemmas_used": [
+        "Limits.cokernel.mapIso",
+        "ModuleCat.cokernelIsoRangeQuotient",
+        "PreservesCokernel.iso",
+        "TopCat.Presheaf.stalkFunctor_map_germ_apply",
+        "Limits.colimit.ι_desc"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Reduce coker(stalk map) to coker(fractional-ideal inclusion) via carrierSheaf_stalk_eq identifications + cokernel.mapIso, then to residue quotient ≅ k̄",
+        "code_tried": "exact (Limits.cokernel.mapIso _ (ModuleCat.ofHom (Submodule.inclusion orderAtPSubmodule_le_single_add)) (stalk_eq D) (stalk_eq ([P]+D)) cokernel_stalk_at_naturality) ≪≫ orderAtP_quotient_iso_kbar",
+        "line_number": "1548",
+        "result": "partial",
+        "insight": "Closed via 6 new axiom-clean helpers. Linchpin = cokernel_stalk_at_naturality (stalk map IS submodule inclusion under identifications), itself resting on carrierSheaf_stalk_iso_iSup_germ_coe — the germ-action extraction that unseals the colimit-descent factorisation via unfold + simp [eq_mpr_eq_cast,cast_eq,asIso_hom] + erw [germ, ←comp_apply, colimit.ι_desc]."
+      }
+    ],
+    "next_steps": "Pin orderAtP_residue_linearEquiv + 6 helpers in blueprint; close the leaf after the shared mem_integers_of_valuation_le_one Mathlib-build lemma lands."
+  },
+  {
+    "timestamp": "2026-06-22T04:30:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+      "theorem": "AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.orderAtP_residue_linearEquiv"
+    },
+    "session": {
+      "id": "session_19",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "Forward residue map cannot even be DEFINED without the valuation-ring membership characterisation ord_P x ≥ 0 ↔ x ∈ (algebraMap R K).range = IsDedekindDomain.HeightOneSpectrum.mem_integers_of_valuation_le_one specialised to the DVR stalk. SAME gap as the bridge carrierSheaf_zero_iso_toModuleKSheaf (~L1884).",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "Multiply by uniformiser power π_P^{n+1} to send g ∈ orderAtP([P]+D) P to (π^{n+1}g) mod 𝔪_P ∈ R/𝔪_P ≅ k̄; kernel = orderAtP D P, surjective, k̄-linear",
+        "code_tried": "typed sorry with full construction sketch in docstring + informal/orderAtP_residue_linearEquiv.md (informal-agent unavailable — no API key in env)",
+        "line_number": "1605",
+        "result": "failed",
+        "insight": "Single mathlib-build lemma (x ∈ (algebraMap R (FractionRing R)).range ↔ 1 ≤ Ring.ordFrac R x for a DVR) unblocks BOTH this leaf AND the bridge section-inverse. Scaffold then prove."
+      }
+    ],
+    "next_steps": "Dispatch shared mathlib-build lemma for valuation-ring membership; then one prove lane closes both this leaf and the bridge."
+  }
+]

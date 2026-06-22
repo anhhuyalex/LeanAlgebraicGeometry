@@ -2849,5 +2849,486 @@
         "next_steps": "Dedicated lane: Dedekind-per-chart + valuation=order + gluing development."
       }
     ]
+  },
+  {
+    "sessionId": "session_17",
+    "milestones": [
+      {
+        "timestamp": "2026-06-22T02:00:00Z",
+        "status": "solved",
+        "target": {
+          "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+          "theorem": "sheafOf.cokernel_skyscraper_hom_isIso"
+        },
+        "session": {
+          "id": "session_17",
+          "model": "claude-opus-4-8"
+        },
+        "findings": {
+          "blocker": null,
+          "key_lemmas_used": [
+            "TopCat.Presheaf.isIso_iff_stalkFunctor_map_iso",
+            "Adjunction.homEquiv_counit",
+            "IsIso.of_isIso_fac_right",
+            "skyscraperPresheafStalkOfSpecializes",
+            "skyscraperPresheafStalkOfNotSpecializesIsTerminal",
+            "Limits.IsZero.isIso",
+            "Limits.PreservesCokernel.iso",
+            "Functor.preservesZeroMorphisms_of_isLeftAdjoint",
+            "stalkFunctor_map_carrierPresheaf_le_hom_epi_of_ne",
+            "isClosed_singleton_of_coheight_eq_one",
+            "krullDim_curve_le_one"
+          ],
+          "axioms": [
+            "propext",
+            "sorryAx (transitive via G2 only)",
+            "Classical.choice",
+            "Quot.sound"
+          ]
+        },
+        "attempts": [
+          {
+            "attempt": 1,
+            "strategy": "P.point branch: identify stalk map of transpose via adjunction triangle, then conclude IsIso by 2-out-of-3",
+            "code_tried": "have htri := (adj.homEquiv Co A).symm_apply_apply _; rw [adj.homEquiv_counit] at htri; ... heq : ... = G2.hom ≫ inv (adj.counit.app A)",
+            "line_number": "1562-1581",
+            "lean_error": "could not synthesize IsIso (adj.counit.app A) for `CategoryTheory.inv` in the statement type (hard error at heq line) despite local haveI hcounit",
+            "result": "failed",
+            "insight": "putting `inv (counit.app A)` in the goal/statement type forces a typeclass synth that fails; avoid inv-in-type"
+          },
+          {
+            "attempt": 2,
+            "strategy": "P.point branch fix: drop inv-in-type, use of_isIso_fac_right with f named explicitly",
+            "code_tried": "haveI hcounit : IsIso (adj.counit.app A) := by rw [show adj.counit.app A = (skyscraperPresheafStalkOfSpecializes P.point A specializes_rfl).hom from rfl]; infer_instance; exact IsIso.of_isIso_fac_right (f := adj.counit.app A) htri",
+            "line_number": "1569-1581",
+            "lean_error": null,
+            "result": "success",
+            "insight": "passing f by name (f := adj.counit.app A) lets the instance resolve; htri : F.map csh ≫ counit.app A = G2.hom both isos ⇒ F.map csh iso"
+          },
+          {
+            "attempt": 3,
+            "strategy": "away-from-P branch: both stalks vanish ⇒ IsZero.isIso; target via skyscraperPresheafStalkOfNotSpecializes, source via left-adjoint preserves cokernel of epi",
+            "code_tried": "refine Limits.IsZero.isIso ?_ ?_ _; source: PreservesCokernel.iso G f with hpcs.preservesColimit + preservesZeroMorphisms_of_isLeftAdjoint; isZero_cokernel_of_epi (G.map f via stalkFunctor_map_carrierPresheaf_le_hom_epi_of_ne)",
+            "line_number": "1582-1623",
+            "lean_error": "cokernelComparison f G / instIsIsoCokernelComparison fail to synth G.PreservesZeroMorphisms INSIDE the term (standalone inferInstance succeeds); PreservesColimitsOfShape→PreservesColimit(parallelPair) does not fire via inferInstance",
+            "result": "success",
+            "insight": "WORKAROUND: haveI hpcs : PreservesColimitsOfShape WalkingParallelPair G := inferInstance; haveI hpc2 := hpcs.preservesColimit; then PreservesCokernel.iso G f elaborates (cokernelComparison does NOT). Direction G.obj(coker f) ≅ coker(G.map f) is correct for IsZero.of_iso."
+          }
+        ],
+        "next_steps": "Lemma is body-sorry-free; becomes fully axiom-clean as soon as G2 (cokernel_stalk_at_iso_kbar) lands. No further work needed on G3 itself."
+      },
+      {
+        "timestamp": "2026-06-22T02:00:01Z",
+        "status": "partial",
+        "target": {
+          "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+          "theorem": "sheafOf.cokernel_stalk_at_iso_kbar"
+        },
+        "session": {
+          "id": "session_17",
+          "model": "claude-opus-4-8"
+        },
+        "findings": {
+          "blocker": "DVR fractional-ideal residue computation cokernel(π^{-n}𝒪 ⊆ π^{-(n+1)}𝒪) ≅ k̄ + a carrierSheaf_stalk_eq naturality lemma (stalk map = Submodule.inclusion of orderAtP submodules). ~200-400 LOC dedicated lane.",
+          "key_lemmas_used": [
+            "Limits.PreservesCokernel.iso",
+            "Functor.preservesZeroMorphisms_of_isLeftAdjoint",
+            "PreservesColimitsOfShape.preservesColimit"
+          ]
+        },
+        "attempts": [
+          {
+            "attempt": 1,
+            "strategy": "left-adjoint preserves cokernel at P.point: stalk_P(coker f) ≅ coker(stalk_P f), then reduce to residue cokernel ≅ k̄",
+            "code_tried": "refine Limits.PreservesCokernel.iso (Sheaf.forget ⋙ stalkFunctor P.point) (carrierSheafHom_le_add_single D P) ≪≫ ?_  -- with hpcs/hpc2/hpzm haveI's",
+            "line_number": "1485-1509",
+            "lean_error": null,
+            "result": "partial",
+            "insight": "Step 1 (PreservesCokernel.iso) compiles and isolates exactly the residue obligation `cokernel (G.map f) ≅ ModuleCat.of kbar kbar`. Remaining sorry at L1509 is the DVR quotient + naturality; reduction is real compiling code."
+          }
+        ],
+        "next_steps": "Dedicated lane: (1) naturality lemma G.map f = Submodule.inclusion(orderAtPSubmodule D P ≤ orderAtPSubmodule (single P 1+D) P) via carrierSheaf_stalk_iso_iSup; (2) DVR residue (π^{-(n+1)}𝒪)/(π^{-n}𝒪) ≅ 𝒪/𝔪 ≅ k̄ by π^{n+1}· automorphism + residueField_eq_of_coheight_eq_one. Consider effort-breaker to split these two sub-claims into stub lemmas before proving."
+      },
+      {
+        "timestamp": "2026-06-22T02:00:02Z",
+        "status": "solved",
+        "target": {
+          "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+          "theorem": "sheafOf.cokernel_skyscraper_hom"
+        },
+        "session": {
+          "id": "session_17",
+          "model": "claude-opus-4-8"
+        },
+        "findings": {
+          "blocker": null,
+          "key_lemmas_used": [
+            "stalkSkyscraperSheafAdjunction",
+            "Adjunction.homEquiv"
+          ]
+        },
+        "attempts": [
+          {
+            "attempt": 1,
+            "strategy": "build the residue-evaluation morphism as the adjunction transpose of G2.hom (no new proof, docstring rewrite only)",
+            "code_tried": "(stalkSkyscraperSheafAdjunction P.point).homEquiv Co (ModuleCat.of kbar kbar) (cokernel_stalk_at_iso_kbar D P).hom",
+            "line_number": "1522-1532",
+            "lean_error": null,
+            "result": "success",
+            "insight": "def was already sorry-free on entry (transpose of G2.hom); the residue-evaluation prose = the adjunction unit applied to a germ. No change needed beyond docstring."
+          }
+        ],
+        "next_steps": "Complete; depends only on G2 landing for full axiom-cleanliness."
+      },
+      {
+        "timestamp": "2026-06-22T02:00:03Z",
+        "status": "solved",
+        "target": {
+          "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+          "theorem": "sheafOf.stalkFunctor_map_carrierPresheaf_le_hom_epi_of_ne"
+        },
+        "session": {
+          "id": "session_17",
+          "model": "claude-opus-4-8"
+        },
+        "findings": {
+          "blocker": null,
+          "key_lemmas_used": [
+            "ModuleCat.epi_iff_surjective",
+            "TopCat.Presheaf.stalkFunctor_map_germ_apply",
+            "TopCat.Presheaf.germ_res_apply",
+            "carrierSubmoduleSheaf_add_single_eq_of_not_mem",
+            "TopCat.Presheaf.germ_exist"
+          ],
+          "axioms": [
+            "propext",
+            "Classical.choice",
+            "Quot.sound"
+          ]
+        },
+        "attempts": [
+          {
+            "attempt": 1,
+            "strategy": "new helper: stalk map of carrier inclusion is epi (surjective) away from P, via germ rep on small open avoiding P.point where the two carrier submodules coincide",
+            "code_tried": "rw [ModuleCat.epi_iff_surjective]; obtain germ rep s on V ∋ x, P.point ∉ V; carrierSubmoduleSheaf_add_single_eq_of_not_mem gives heq; lift via stalkFunctor_map_germ_apply + germ_res_apply",
+            "line_number": "1417-1476",
+            "lean_error": null,
+            "result": "success",
+            "insight": "axiom-clean. This is the real driver of the away-from-P half of G3 (replaces blueprint's section-iso route). Coverage debt: no blueprint entry yet."
+          }
+        ],
+        "next_steps": "Author a blueprint entry (lem) for this helper; planner to add prose + \\uses."
+      }
+    ]
+  },
+  {
+    "sessionId": "session_18",
+    "milestones": [
+      {
+        "timestamp": "2026-06-22T03:05:46Z",
+        "status": "solved",
+        "target": {
+          "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+          "theorem": "sheafOf.carrierSet_zero_eq"
+        },
+        "session": {
+          "id": "session_18",
+          "model": "claude-opus-4-8"
+        },
+        "findings": {
+          "key_lemmas_used": [
+            "Finsupp.coe_zero",
+            "Pi.zero_apply",
+            "neg_zero"
+          ]
+        },
+        "attempts": [
+          {
+            "attempt": 1,
+            "strategy": "S1 — unfold carrierSet at D=0, reduce bound -(0 Q) to 0",
+            "code_tried": "unfold sheafOf.carrierSet; simp only [Finsupp.coe_zero, Pi.zero_apply, neg_zero]",
+            "line_number": "1730",
+            "result": "success",
+            "insight": "carrierSet 0 = rational functions that are 0 or have ord_Q ≥ 0 ∀ Q∈U. Axiom-clean {propext,Classical.choice,Quot.sound}."
+          }
+        ],
+        "next_steps": "Coverage debt: needs a \\lean{} block in blueprint (realises first sentence of lem:carrierSheaf_zero_sections_eq_structureSheaf)."
+      },
+      {
+        "timestamp": "2026-06-22T03:05:46Z",
+        "status": "solved",
+        "target": {
+          "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+          "theorem": "sheafOf.structureSection_mem_carrierSet_zero"
+        },
+        "session": {
+          "id": "session_18",
+          "model": "claude-opus-4-8"
+        },
+        "findings": {
+          "key_lemmas_used": [
+            "TopCat.Presheaf.germ_stalkSpecializes_apply",
+            "Ring.ordFrac_ge_one_of_ne_zero",
+            "WithZero.log_le_log",
+            "genericPoint_spec"
+          ]
+        },
+        "attempts": [
+          {
+            "attempt": 1,
+            "strategy": "S2 easy arm: regular ⟹ no poles. germToFunctionField U s = algebraMap 𝒪_{C,Q} K(C) (germ U Q.point s), so ordFrac ≥ 1 ⟹ ord_Q ≥ 0",
+            "code_tried": "set β := germ U Q.point hQU s; hα_eq : f = algebraMap R K(C) β via germ_stalkSpecializes_apply (h := genericPoint⤳Q.point); ordFrac_ge_one_of_ne_zero hβne; WithZero.log_le_log",
+            "line_number": "1748",
+            "result": "success",
+            "insight": "Mirrors key_alpha_ge germ argument of carrierSubmodule. Fixed hβne by dropping a stale `hf` rewrite; fixed goal-mismatch by `change` instead of `show`. Axiom-clean."
+          }
+        ],
+        "next_steps": "Coverage debt: worth promoting to its own \\lean{}-pinned blueprint block (reusable forward inclusion Γ(U,𝒪_C)→carrier₀)."
+      },
+      {
+        "timestamp": "2026-06-22T03:05:46Z",
+        "status": "partial",
+        "target": {
+          "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+          "theorem": "sheafOf.carrierSheaf_zero_sections_eq_structureSheaf"
+        },
+        "session": {
+          "id": "session_18",
+          "model": "claude-opus-4-8"
+        },
+        "findings": {
+          "blocker": "Hartogs converse (ord_Q g ≥ 0 ∀Q∈U ⟹ g∈A) needs IsDedekindDomain of an affine chart (smooth⟹regular⟹integrally-closed dim-1⟹Dedekind — no single-call Mathlib lemma), then mem_integers_of_valuation_le_one. Mathlib gap.",
+          "key_lemmas_used": [
+            "Scheme.germToFunctionField_injective",
+            "functionField_isFractionRing_of_isAffineOpen",
+            "Ring.ordFrac_eq_one_of_notMem"
+          ]
+        },
+        "attempts": [
+          {
+            "attempt": 1,
+            "strategy": "Pin S3 component iso (carrierSheaf 0).val.obj U ≅ (toModuleKSheaf C).val.obj U at blueprint name; forward map = S2, injective by germToFunctionField_injective; inverse = Hartogs (deep)",
+            "code_tried": "private noncomputable def ... := sorry",
+            "line_number": "1800",
+            "result": "partial",
+            "insight": "Forward+injectivity identified; inverse isolated to exact Mathlib gap. Statement formalized at pinned \\lean{} name (sync added statement \\leanok)."
+          }
+        ],
+        "next_steps": "Next prove lane: build IsDedekindDomain Γ(C.left,U) for affine open via project SmoothRegular ⟹ integrally-closed dim-1 ⟹ Dedekind, then mem_integers_of_valuation_le_one over functionField_isFractionRing_of_isAffineOpen. Blueprint adequacy gap: chapter proves affine U only; needs general-U locality/gluing step first."
+      },
+      {
+        "timestamp": "2026-06-22T03:05:46Z",
+        "status": "partial",
+        "target": {
+          "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+          "theorem": "sheafOf.carrierSheaf_zero_iso_toModuleKSheaf"
+        },
+        "session": {
+          "id": "session_18",
+          "model": "claude-opus-4-8"
+        },
+        "findings": {
+          "blocker": "Rests on S3 component iso (Hartogs gap) + one NatIso naturality sorry (identity-on-K(C) both sides).",
+          "key_lemmas_used": [
+            "CategoryTheory.fullyFaithfulSheafToPresheaf",
+            "FullyFaithful.preimageIso",
+            "NatIso.ofComponents"
+          ]
+        },
+        "attempts": [
+          {
+            "attempt": 1,
+            "strategy": "Lift per-open component iso to sheaf iso through fully faithful sheafToPresheaf",
+            "code_tried": "(fullyFaithfulSheafToPresheaf ...).preimageIso (NatIso.ofComponents (fun U => carrierSheaf_zero_sections_eq_structureSheaf U) (by sorry))",
+            "line_number": "1812",
+            "result": "partial",
+            "insight": "Auditor-confirmed non-circular + not laundering: term well-typed only via the two sorries; substituting real proofs closes it completely. preimageIso is the standard presheaf→sheaf NatIso lift."
+          }
+        ],
+        "next_steps": "Naturality square closes mechanically (identity on K(C) both sides) once S3 component iso lands."
+      },
+      {
+        "timestamp": "2026-06-22T03:05:46Z",
+        "status": "blocked",
+        "target": {
+          "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+          "theorem": "sheafOf.cokernel_stalk_at_iso_kbar"
+        },
+        "session": {
+          "id": "session_18",
+          "model": "claude-opus-4-8"
+        },
+        "findings": {
+          "blocker": "G2 DVR residue quotient (π^{-(n+1)}𝒪)/(π^{-n}𝒪)≅k̄ — untouched this iter (iter focused on the bridge)."
+        },
+        "attempts": [],
+        "next_steps": "Independent cluster from the bridge. iter-017 reduced it to this one residue sorry (L1509); effort-break into (a) stalk-map naturality and (b) DVR residue before proving."
+      }
+    ]
+  },
+  {
+    "sessionId": "session_19",
+    "milestones": [
+      {
+        "timestamp": "2026-06-22T04:30:00Z",
+        "status": "solved",
+        "target": {
+          "file": "AlgebraicJacobian/RiemannRoch/CurveChartDedekind.lean",
+          "theorem": "AlgebraicGeometry.chart_dimensionLEOne"
+        },
+        "session": {
+          "id": "session_19",
+          "model": "opus"
+        },
+        "findings": {
+          "key_lemmas_used": [
+            "ringKrullDim_globalSections_eq_krullDim (new helper)",
+            "Order.krullDim_eq_of_orderIso",
+            "Order.krullDim_orderDual",
+            "PrimeSpectrum.le_iff_specializes",
+            "Ring.krullDimLE_one_iff",
+            "Ring.DimensionLEOne.mk"
+          ]
+        },
+        "attempts": [
+          {
+            "attempt": 1,
+            "strategy": "Reduce Ring.DimensionLEOne to ringKrullDim ≤ 1 via affine order-iso bridge, then domain argument (nonzero prime is not minimal ⟹ maximal)",
+            "code_tried": "new private lemma ringKrullDim_globalSections_eq_krullDim: ringKrullDim Γ(V,⊤) = Order.krullDim(α:=V) via TopCat.homeoOfIso(forgetToTop.mapIso V.isoSpec) upgraded to order-iso V ≃o (PrimeSpectrum Γ(V,⊤))ᵒᵈ; close with krullDim_eq_of_orderIso + krullDim_orderDual + rfl",
+            "line_number": "92",
+            "result": "success",
+            "insight": "ringKrullDim R = Order.krullDim (PrimeSpectrum R) holds by rfl; scheme specialisation preorder is the DUAL of prime inclusion. topologicalKrullDim route abandoned (it is krullDim of IrreducibleCloseds, needs sobriety)."
+          }
+        ],
+        "next_steps": "Consumed by chart_isDedekindDomain; OcOfD bridge consumes downstream."
+      },
+      {
+        "timestamp": "2026-06-22T04:30:00Z",
+        "status": "solved",
+        "target": {
+          "file": "AlgebraicJacobian/RiemannRoch/CurveChartDedekind.lean",
+          "theorem": "AlgebraicGeometry.chart_isIntegrallyClosed"
+        },
+        "session": {
+          "id": "session_19",
+          "model": "opus"
+        },
+        "findings": {
+          "key_lemmas_used": [
+            "IsIntegrallyClosed.of_localization_maximal",
+            "IsAffineOpen.isLocalization_stalk'",
+            "Scheme.ringKrullDim_stalk_eq_coheight",
+            "IsLocalization.AtPrime.ringKrullDim_eq_height",
+            "Ideal.primeHeight_le_ringKrullDim",
+            "Ideal.primeHeight_eq_zero_iff",
+            "Scheme.IsRegularInCodimensionOne.out",
+            "IsDiscreteValuationRing.RingEquivClass.isDiscreteValuationRing"
+          ]
+        },
+        "attempts": [
+          {
+            "attempt": 1,
+            "strategy": "Localize integral-closedness at each nonzero maximal prime; show stalk is a DVR (coheight=1) hence integrally closed, transport across IsLocalization.algEquiv",
+            "code_tried": "apply IsIntegrallyClosed.of_localization_maximal; per p: x:=hV.fromSpec ⟨p,_⟩; coheight = primeHeight via ringKrullDim_stalk_eq_coheight + AtPrime.ringKrullDim_eq_height; primeHeight≤1 (must pass (I:=P.asIdeal)); primeHeight≠0 via primeHeight_eq_zero_iff; DVR via IsRegularInCodimensionOne.out; transport via algEquiv",
+            "line_number": "145",
+            "result": "success",
+            "insight": "Ideal.primeHeight_le_ringKrullDim needs explicit (I := P.asIdeal) or the [IsPrime] instance is stuck. In ℕ∞, ≤1 ∧ ≠0 ⟹ =1. DVR ⟹ IsIntegrallyClosed by instance."
+          }
+        ],
+        "next_steps": "Consumed by chart_isDedekindDomain."
+      },
+      {
+        "timestamp": "2026-06-22T04:30:00Z",
+        "status": "solved",
+        "target": {
+          "file": "AlgebraicJacobian/RiemannRoch/CurveChartDedekind.lean",
+          "theorem": "AlgebraicGeometry.chart_isDedekindDomain"
+        },
+        "session": {
+          "id": "session_19",
+          "model": "opus"
+        },
+        "findings": {
+          "key_lemmas_used": [
+            "isDedekindRing_iff",
+            "IsLocallyNoetherian.component_noetherian",
+            "functionField_isFractionRing_of_isAffineOpen",
+            "IsIntegrallyClosed.algebraMap_eq_of_integral",
+            "instIsDedekindDomainOfIsDomainOfIsDedekindRing"
+          ]
+        },
+        "attempts": [
+          {
+            "attempt": 1,
+            "strategy": "Assemble IsDedekindRing via isDedekindRing_iff ⟨noeth, dimLEOne, intClosed-predicate⟩, then upgrade to IsDedekindDomain via instance",
+            "code_tried": "haveI noeth := component_noetherian ⟨⊤,hV⟩; haveI frac := functionField_isFractionRing_of_isAffineOpen; haveI IsIntegrallyClosed := chart_isIntegrallyClosed; haveI IsDedekindRing := (isDedekindRing_iff _ _).mpr ⟨noeth, chart_dimensionLEOne, fun hx => IsIntegrallyClosed.algebraMap_eq_of_integral hx⟩; infer_instance",
+            "line_number": "202",
+            "result": "success",
+            "insight": "isDedekindRing_iff's 3rd conjunct is the integral-closure PREDICATE (∀x, IsIntegral→∃y…), not the IsIntegrallyClosed class. isDedekindRing_iff yields IsDedekindRing; goal IsDedekindDomain is a distinct class — set IsDedekindRing as haveI and infer_instance."
+          }
+        ],
+        "next_steps": "OcOfD consumes for carrierSheaf_zero_iso_toModuleKSheaf bridge section-inverse next iter."
+      },
+      {
+        "timestamp": "2026-06-22T04:30:00Z",
+        "status": "partial",
+        "target": {
+          "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+          "theorem": "AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.cokernel_stalk_at_iso_kbar"
+        },
+        "session": {
+          "id": "session_19",
+          "model": "opus"
+        },
+        "findings": {
+          "blocker": "Whole categorical/naturality content CLOSED; body now sorry-free, gated on the single typed leaf orderAtP_residue_linearEquiv (DVR residue equiv, Mathlib-gap-blocked).",
+          "key_lemmas_used": [
+            "Limits.cokernel.mapIso",
+            "ModuleCat.cokernelIsoRangeQuotient",
+            "PreservesCokernel.iso",
+            "TopCat.Presheaf.stalkFunctor_map_germ_apply",
+            "Limits.colimit.ι_desc"
+          ]
+        },
+        "attempts": [
+          {
+            "attempt": 1,
+            "strategy": "Reduce coker(stalk map) to coker(fractional-ideal inclusion) via carrierSheaf_stalk_eq identifications + cokernel.mapIso, then to residue quotient ≅ k̄",
+            "code_tried": "exact (Limits.cokernel.mapIso _ (ModuleCat.ofHom (Submodule.inclusion orderAtPSubmodule_le_single_add)) (stalk_eq D) (stalk_eq ([P]+D)) cokernel_stalk_at_naturality) ≪≫ orderAtP_quotient_iso_kbar",
+            "line_number": "1548",
+            "result": "partial",
+            "insight": "Closed via 6 new axiom-clean helpers. Linchpin = cokernel_stalk_at_naturality (stalk map IS submodule inclusion under identifications), itself resting on carrierSheaf_stalk_iso_iSup_germ_coe — the germ-action extraction that unseals the colimit-descent factorisation via unfold + simp [eq_mpr_eq_cast,cast_eq,asIso_hom] + erw [germ, ←comp_apply, colimit.ι_desc]."
+          }
+        ],
+        "next_steps": "Pin orderAtP_residue_linearEquiv + 6 helpers in blueprint; close the leaf after the shared mem_integers_of_valuation_le_one Mathlib-build lemma lands."
+      },
+      {
+        "timestamp": "2026-06-22T04:30:00Z",
+        "status": "blocked",
+        "target": {
+          "file": "AlgebraicJacobian/RiemannRoch/OcOfD.lean",
+          "theorem": "AlgebraicGeometry.Scheme.WeilDivisor.sheafOf.orderAtP_residue_linearEquiv"
+        },
+        "session": {
+          "id": "session_19",
+          "model": "opus"
+        },
+        "findings": {
+          "blocker": "Forward residue map cannot even be DEFINED without the valuation-ring membership characterisation ord_P x ≥ 0 ↔ x ∈ (algebraMap R K).range = IsDedekindDomain.HeightOneSpectrum.mem_integers_of_valuation_le_one specialised to the DVR stalk. SAME gap as the bridge carrierSheaf_zero_iso_toModuleKSheaf (~L1884).",
+          "key_lemmas_used": []
+        },
+        "attempts": [
+          {
+            "attempt": 1,
+            "strategy": "Multiply by uniformiser power π_P^{n+1} to send g ∈ orderAtP([P]+D) P to (π^{n+1}g) mod 𝔪_P ∈ R/𝔪_P ≅ k̄; kernel = orderAtP D P, surjective, k̄-linear",
+            "code_tried": "typed sorry with full construction sketch in docstring + informal/orderAtP_residue_linearEquiv.md (informal-agent unavailable — no API key in env)",
+            "line_number": "1605",
+            "result": "failed",
+            "insight": "Single mathlib-build lemma (x ∈ (algebraMap R (FractionRing R)).range ↔ 1 ≤ Ring.ordFrac R x for a DVR) unblocks BOTH this leaf AND the bridge section-inverse. Scaffold then prove."
+          }
+        ],
+        "next_steps": "Dispatch shared mathlib-build lemma for valuation-ring membership; then one prove lane closes both this leaf and the bridge."
+      }
+    ]
   }
 ]

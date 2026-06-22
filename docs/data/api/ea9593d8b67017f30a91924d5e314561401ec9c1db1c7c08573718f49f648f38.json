@@ -1,0 +1,158 @@
+[
+  {
+    "timestamp": "2026-06-22T07:00:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "tensorObj_restrict_iso_restrict_compat"
+    },
+    "session": {
+      "id": "session_54",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "tensorObj_restrict_iso_eq_pullbackTensorMap",
+        "restrictFunctorIsoPullback_comp_compat",
+        "pullbackTensorMap_restrict",
+        "pullbackTensorMap_natural",
+        "pullbackTensorMap_restrict_cancel",
+        "tensorObj_functoriality_comp3",
+        "restrictFunctorIsoPullback_comp_compat_leg"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "simp B1-promote + B2 expand RFIP at M⊗N only, then congr/Iso.ext + RFIP j naturality + pre-cancelled composition law",
+        "code_tried": "simp only [tensorObj_restrict_iso_eq_pullbackTensorMap]; rw [restrictFunctorIsoPullback_comp_compat j hjι (tensorObj M N)]; simp only [Functor.mapIso_trans, Iso.trans_assoc]; congr 1; congr 1; apply Iso.ext; ...",
+        "line_number": "1027",
+        "lean_error": "intermediate erw [Iso.hom_inv_id_app_assoc] whnf-bombs kernel (sheafification explosion); placeholder-refine tensorObj_functoriality_comp whnf-bombs",
+        "result": "partial",
+        "insight": "LSP type-checks but kernel/full-elaboration whnf-bombs at any heartbeat budget when erw seam-cancellation or placeholder-refine is used on the pullbackTensorMap-laden goal"
+      },
+      {
+        "attempt": 2,
+        "strategy": "isolate seam erw into helper pullbackTensorMap_restrict_cancel (discharged by generic natIso_hom_inv_id_app_assoc via exact); supply tensorObj_functoriality_comp3 morphism args EXPLICITLY; set_option maxHeartbeats 6400000",
+        "code_tried": "exact map_tensorHom_comp2 (C := PresheafOfModules ...) _ a.val a'.val b.val b'.val; refine Eq.trans (tensorObj_functoriality_comp3 α₁ α₂ α₃ ...) ?_; rfl",
+        "line_number": "1027",
+        "lean_error": "none (lake build EXIT 0)",
+        "result": "success",
+        "insight": "Prefer exact/refine of FULLY-APPLIED generic lemma over erw/placeholder-refine on sheafification-carrier goals; isolate unavoidable seam erw into a small helper. Closed S2, file sorry 5→4."
+      }
+    ],
+    "next_steps": "S2 done. S4b (tensorObj_unit_iso) needs a NEW left-unitor pullback-coherence lemma (unit analogue of pullbackTensorMap base-change)."
+  },
+  {
+    "timestamp": "2026-06-22T07:00:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "tensorObj_unit_iso_restrict_compat"
+    },
+    "session": {
+      "id": "session_54",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "tensorObj_unit_iso = sheafification.map (λ_ 𝟙) ≫ counit; the square needs immersion-naturality of the presheaf left unitor λ_ under sheafification + pullbackUnitIso/counit interplay — a fresh monoidal-unit base-change ingredient not yet built (B1-comparable depth). NOT a direct S2 corollary.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "apply Iso.ext; unfold both sides to hom-level and check whether S2 template applies",
+        "code_tried": "apply Iso.ext; simp only [tensorObj_unit_iso, unitRestrictIso, ...]",
+        "line_number": "1129",
+        "lean_error": "goal reduces to relating sheafification.map (λ_ 𝟙).hom ≫ counit to the trivialisation chain conjugated by unitRestrictIso — no existing lemma supplies the unitor base-change",
+        "result": "partial",
+        "insight": "S4b is genuinely gated on a missing left-unitor/pullback-unit-coherence lemma; left as documented sorry, residual named in-code"
+      }
+    ],
+    "next_steps": "Scaffold a presheaf_leftUnitor / pullback-unit-coherence lemma first; then S4b follows the S2 B1-route template."
+  },
+  {
+    "timestamp": "2026-06-22T07:00:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "dual_restrict_iso_restrict_compat"
+    },
+    "session": {
+      "id": "session_54",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Dual-B1 gap: the dual analogue of Bridge B1 (pullbackDualMap / internal-hom base-change cone) does NOT exist (grep-empty: pullbackDualMap/internalHomPullback/dual_restrict_iso_eq all absent). S3 cannot use the S2 template until this cone is built.",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "untouched — confirmed blocked by planner's Q3 grep",
+        "code_tried": "(not attempted; blocked on missing dual-B1)",
+        "line_number": "1088",
+        "lean_error": "n/a",
+        "result": "failed",
+        "insight": "Genuine infrastructure gap, not a proof-tactic gap"
+      }
+    ],
+    "next_steps": "Build the dual base-change cone (pullbackDualMap) OR pursue the unproven subsingleton route (b)."
+  },
+  {
+    "timestamp": "2026-06-22T07:00:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "dual_unit_iso_restrict_compat"
+    },
+    "session": {
+      "id": "session_54",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Same dual-B1 gap as S3, plus the unit-coherence ingredient (cf. S4b).",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "untouched — blocked",
+        "code_tried": "(not attempted)",
+        "line_number": "1113",
+        "lean_error": "n/a",
+        "result": "failed",
+        "insight": "Gated on dual-B1 cone + dual unit-coherence"
+      }
+    ],
+    "next_steps": "Gated on dual-B1 cone."
+  },
+  {
+    "timestamp": "2026-06-22T07:00:00Z",
+    "status": "not_started",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/TensorObjInverse.lean",
+      "theorem": "trivialisation_restrict_compat"
+    },
+    "session": {
+      "id": "session_54",
+      "model": "claude-opus-4-8"
+    },
+    "findings": {
+      "blocker": "Telescope of all 5 squares (S2/S3/S4a/S4b + trivialisation_uIota); transitively gated on S3/S4a (dual-B1) and S4b (left-unitor coherence).",
+      "key_lemmas_used": []
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "untouched — gated",
+        "code_tried": "(not attempted)",
+        "line_number": "1201",
+        "lean_error": "n/a",
+        "result": "failed",
+        "insight": "Cannot close until the 4 squares land"
+      }
+    ],
+    "next_steps": "Assemble once S3/S4a/S4b are closed."
+  }
+]

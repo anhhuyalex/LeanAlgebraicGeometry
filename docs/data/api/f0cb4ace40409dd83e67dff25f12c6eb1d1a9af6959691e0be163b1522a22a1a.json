@@ -1,0 +1,152 @@
+[
+  {
+    "timestamp": "2026-06-22T13:05:00Z",
+    "status": "solved",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "tensorObjUnitIso_eq_localizedLeftUnitor"
+    },
+    "session": {
+      "id": "session_21",
+      "model": "opus"
+    },
+    "findings": {
+      "key_lemmas_used": [
+        "Iso.ext",
+        "Iso.eq_inv_comp",
+        "cancel_epi",
+        "MonoidalCategory.leftUnitor_naturality",
+        "Localization.Monoidal.leftUnitor_hom_app",
+        "tensorHom_comp_tensorHom_assoc",
+        "Iso.hom_inv_id"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "NET-PROGRESS FALLBACK: independent unitor bridge (modelled on proven tensorBraiding_eq_localizedBraiding); apply Iso.ext, isolate localized unitor via Iso.eq_inv_comp, cancel_epi (𝟙 ◁ c_G), bridge unitModule X vs 𝟙_ via erw leftUnitor_naturality, leftUnitor_hom_app at (L').obj, collapse c_G/c_G⁻¹ pair, rfl closes residual defeq",
+        "code_tried": "apply Iso.ext; symm; rw [← Iso.eq_inv_comp]; cancel_epi (𝟙 ◁ c_G); erw [MonoidalCategory.leftUnitor_naturality]; rw [Localization.Monoidal.leftUnitor_hom_app]; ... erw [tensorHom_comp_tensorHom_assoc]; rw [Iso.hom_inv_id, tensorHom_id]; rfl",
+        "line_number": "1883 (blueprint)",
+        "result": "success",
+        "insight": "leftUnitor_hom_app fires ONLY at (L').obj _ — reduce general G to L'G♭ first via leftUnitor_naturality along counit c_G. unitModule X vs 𝟙_ token-divergence + the modulesLocalizedMonoidal↔LocalizedMonoidal comp-instance divergence both block rw/cancel_epi/Category.assoc; erw bridges both, final residual closes by plain rfl (light goal, no deep μ). axiom-clean."
+      }
+    ],
+    "next_steps": "Right-unitor bridge lem:tensorObjRightUnitor_eq_localized — all pieces present (braiding bridge + this unitor bridge + MonoidalCategory.braiding_leftUnitor); does NOT need the blocked associator wall."
+  },
+  {
+    "timestamp": "2026-06-22T13:05:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Picard/SectionGradedRing.lean",
+      "theorem": "tensorObjAssoc_hK_lhs_native"
+    },
+    "session": {
+      "id": "session_21",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "irreducible dual-MonoidalCategory-instance μ-token-divergence: reconciling the two whiskerRight INSTANCES (Localization.Monoidal.toMonoidalCategory vs modulesLocalizedMonoidal X) is itself the isDefEq bomb, independent of any heavy tail",
+      "key_lemmas_used": [
+        "tensorObjAssoc_hK_lhs_head_img"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "most-surgical fix not in prior dead-end list: isolated local change of JUST the single c_{A⊗B} ▷ L'C♭ whisker to the modulesLocalizedMonoidal X synonym instance (no μ syntactically inside it), then exact head_img_assoc",
+        "code_tried": "conv_lhs => enter [2, 1]; change MonoidalCategoryStruct.whiskerRight (C := modulesLocalizedMonoidal X) c_{A⊗B} L'C♭",
+        "line_number": "2314",
+        "lean_error": "(kernel/isDefEq) deterministic timeout 200000 hb at the change target line (cold-build VERIFIED)",
+        "result": "failed",
+        "insight": "the change ALONE bombs: toMonoidalCategory's whiskerRight field is defined via the localization lift, comparing it to the synonym instance forces a whnf of the localized μ independently of any tail. ~10th churn iter, 0 net elim. Refactor pivot (glue Option A) is the only resolution — NOT a prover route."
+      }
+    ],
+    "next_steps": "STOP prover rounds on this target. Dispatch refactor subagent (glue Option A: rewire tensorObj* defs onto LocalizedMonoidal synonym ⊗ so the toMonoidalCategory unfold never arises). Dual-instance DELETION stays REFUTED (load-bearing, 51-site cascade)."
+  },
+  {
+    "timestamp": "2026-06-22T13:05:00Z",
+    "status": "partial",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/FlatBaseChange.lean",
+      "theorem": "pullback_spec_tilde_iso_ring_square_mate_glue"
+    },
+    "session": {
+      "id": "session_21",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "any proof obligation EQUATING two presentations at .app (tilde M) bombs at (kernel) deterministic timeout — residual morphism types are tilde M-evaluated → pullback∘tilde sheafification whnf; bombs even with M a free variable so generic-N escape REFUTED. Close tactic is irrelevant.",
+      "key_lemmas_used": [
+        "NatIso.trans_app",
+        "Iso.app_hom",
+        "Iso.app_inv",
+        "eqToHom_app",
+        "congr 1"
+      ]
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "structural .app (tilde M) Nat-bridges for the two non-pst legs: bridge geomComp = geomNat.app (tilde M) and reassoc = reassocNat.app M via a component-distribution simp set (close by pre-compiled rfl-lemmas, not a giant rfl), then congr 1",
+        "code_tried": "simp only [<def>, <defNat>, eq_mpr_eq_cast, cast_eq, Iso.trans_hom, Iso.symm_hom, Iso.app_hom, Iso.app_inv, NatTrans.comp_app, NatIso.trans_app]; congr 1",
+        "line_number": "1900",
+        "lean_error": "ALGEBRAIC bridge: GREEN (kept). GEOMETRIC bridge: LSP shows single proof-irrelevance residual goals_after=[], but cold lake build (kernel) deterministic timeout regardless of close tactic",
+        "result": "partial",
+        "insight": "ALGEBRAIC bridge chartBaseChangeModuleReassoc_eq_natApp RESOLVED, kernel-safe, axiom-clean (ModuleCat.extendScalars carriers, no sheafification) — KEPT. GEOMETRIC .app (tilde M) bridge is kernel-unsafe by ANY tactic — REMOVED. Only sheaf-free carriers admit the structural bridge."
+      }
+    ],
+    "next_steps": "Glue assembly must be PURE TERM-MODE / nat-level: natTrans_ext_of_unit + the 2 closed legs + gammaPushforwardNatIso_comp, single final .app M exact, NEVER an intermediate .app (tilde M) rewrite. The kept algebraic bridge is the algebraic half already in place. Large multi-step — recommend effort-breaker + dedicated lane."
+  },
+  {
+    "timestamp": "2026-06-22T13:05:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/FlatBaseChange.lean",
+      "theorem": "affineBaseChange_pushforward_iso"
+    },
+    "session": {
+      "id": "session_21",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "gated on pushforward_base_change_mate_cancelBaseChange (transitive sorry via base_change_mate_gstar_transpose) PLUS a Mathlib-absent multi-hundred-LOC restriction-compatibility of pushforwardBaseChangeMap"
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "inspected only — not tractable this iter",
+        "code_tried": "(none — inspected, left documented sorry)",
+        "line_number": "2373",
+        "result": "failed",
+        "insight": "no independent route; gated on missing infra"
+      }
+    ],
+    "next_steps": "Defer. Gated on crux + missing affine-chart restriction infra."
+  },
+  {
+    "timestamp": "2026-06-22T13:05:00Z",
+    "status": "blocked",
+    "target": {
+      "file": "AlgebraicJacobian/Cohomology/FlatBaseChange.lean",
+      "theorem": "flatBaseChange_pushforward_isIso"
+    },
+    "session": {
+      "id": "session_21",
+      "model": "opus"
+    },
+    "findings": {
+      "blocker": "gated on missing Čech-cohomology / affine-cover infrastructure for SheafOfModules"
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "strategy": "inspected only — not tractable this iter",
+        "code_tried": "(none — inspected, left documented sorry)",
+        "line_number": "2395",
+        "result": "failed",
+        "insight": "no independent route; needs missing Čech infra"
+      }
+    ],
+    "next_steps": "Defer. Needs Čech-cohomology / affine-cover infra for SheafOfModules."
+  }
+]
