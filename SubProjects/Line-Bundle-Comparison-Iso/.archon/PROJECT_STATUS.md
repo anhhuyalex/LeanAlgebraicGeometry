@@ -37,6 +37,54 @@ Current scope and live state live in [`PROGRESS.md`](PROGRESS.md) and
   General rule: prefer `exact`/`refine` of a FULLY-APPLIED generic lemma over `erw`/placeholder-`refine`.
   S2 route = B1-promote → B2 expand at `M⊗N` only (keep legs folded) → cancel prefixes → `Iso.ext` + `RFIP j`
   naturality → pre-cancelled comp law → `pullbackTensorMap_natural` (D1′) → merge `tensorObj_functoriality_comp3`.
+- **Substrate left-unitor naturality + the `λ_`-carrier trap (iter-055, closed S4b BODY
+  `tensorObj_unit_iso_restrict_compat` + the two helpers `tensorObj_unit_iso_eq_left_unitor`,
+  `tensorObj_left_unitor_naturality`).** (a) `tensorObj_unit_iso = tensorObj_left_unitor 𝒪` is pure `unfold; rfl`
+  (both are `sheafification.mapIso(presheaf λ at 𝟙_) ≪≫ counit`; `λ_ 𝟙_` defeq `monoidalCategoryStruct.leftUnitor 𝒪.val`).
+  (b) For substrate left-unitor naturality, state the inner presheaf seam `hpre` STANDALONE in the syntactic carrier
+  `PresheafOfModules (W.presheaf ⋙ forget₂ CommRingCat RingCat)` and close it by `exact MonoidalCategory.leftUnitor_naturality _`.
+  ⚠ `λ_` REJECTS `(C := …)` — force the carrier either via the explicit `(monoidalCategoryStruct (R := W.presheaf)).leftUnitor`
+  (matches the actual `tensorObj_left_unitor` term) OR via `leftUnitor_naturality _` with a BARE `_` so the expected type
+  fixes the category; a FULLY-APPLIED `leftUnitor_naturality _ (forget g.hom)` re-infers the WRONG carrier
+  (`W.ringCatSheaf.obj`) → instance-synth failure. `id_tensorHom` rewrite of `𝟙⊗ₘf` does NOT fire by name and is NOT
+  needed (defeq `𝟙 _ ⊗ₘ f ≡ 𝟙_ ◁ f`, `forget.obj 𝒪 ≡ 𝟙_`). Inline `rw/erw [leftUnitor_naturality]` FAILS (head-keys
+  on `𝟙_`, goal has `(unit).val`; rewriting `(unit).val → 𝟙_` hits a dependent-motive error) → use the standalone `hpre`
+  + `erw [← Functor.map_comp, hpre, Functor.map_comp]`, then sheafification-counit naturality (`dualUnitIso_dualIsoOfIso`
+  idiom). (c) Apply the naturality lemma at iso-hom level **term-mode** (`congrArg (· ≫ uR.hom) hL2` / `Eq.trans`) — a
+  plain `rw [hL2]` MISSES the defeq-not-syntactic `SheafOfModules ≫` seam.
+- **Cone A sheaf-transport: reduce an S4b-style unitor square to ONE sheaf-level lemma by iso-algebra
+  (iter-056, closed `tensorObj_unit_iso_restrict_compat_inner` mod bridge 3).** When a chart-restriction
+  unitor square must be transported to the abstract `pullback f` world, build 3 cheap bridges then
+  collapse by pure iso-algebra — do NOT build `Functor.Monoidal (pullback φ)` (globally false: δ not iso
+  for general modules, `Γ(ℙ¹,𝒪(1))=0`). Bridges: (1) η-identification `pullbackUnitIso_eq_sheafify_eta`
+  `:= (pullbackEtaUnitSquare f).symm` (the sheaf unit comparison IS the proven presheaf η-square,
+  rearranged; `(pullbackUnitIso f).hom` defeq `pullbackObjUnitToUnit f.toRingCatSheafHom`); (2)
+  δ-identification `pullbackTensorMap_eq_sheafify_delta` `:= rfl` (def-unfold of `pullbackTensorMap` into
+  `scp.hom ≫ a_Y.map δ ≫ sheafifyTensorUnitIso.hom ≫ a_Y.map (pbv⊗ₘpbv)`); (3) the genuine geometric crux
+  = sheaf-level left-unitality `pullbackTensorMap_left_unitality` (B1-scale, still open). Inner-seam
+  recipe: `hbr` packages bridge 3 as an `Iso.ext` equality (`simp[Iso.trans_hom,asIso_hom,
+  Functor.mapIso_hom]`); `hconj` conjugates `restrictFunctorIsoPullback j`-naturality
+  (`F.mapIso e = α.app A ≪≫ G.mapIso e ≪≫ (α.app B).symm`) via `Iso.ext`+`simp`+`rw[←α.hom.naturality_assoc,
+  Iso.hom_inv_id_app, Category.comp_id]` — **NO leading `Category.assoc`** (simp already right-associates);
+  then `rw[hconj,←hbr]; simp[Iso.trans_assoc]; congr 1; congr 1` strips the common prefix; `hcore` cancels
+  the `RFIP.symm ≪≫ RFIP` pair inside `unitRestrictIso` + `tensorObjIsoOfIso_eq_comp` + **`erw`** (not `rw`)
+  `tensorObj_left_unitor_naturality` (codomain `(restrictFunctor j).obj 𝒪` vs goal `restrict 𝒪 j` = defeq
+  not syntactic). The square's `hjι : j≫U.ι=V.ι` is UNUSED on this route (intrinsic to `j` as immersion).
+- **Term-mode `Category.assoc` reassoc + naturality-in-goal-syntax across a 2-form middle-object seam
+  (iter-057, the bridge-3 chain atoms `pullbackValIso_naturality`, `pullback_map_tensorObj_left_unitor_eq`).**
+  When the intermediate composite's *middle object* has two non-syntactic-but-defeq forms (e.g.
+  `(a_X ⋙ pullback φ).obj` vs `(pullback f).obj (a_X.obj ·)`), `rw [← Category.assoc]`, `reassoc_of%`,
+  `slice_lhs`, and `conv => rw [← Category.assoc]` ALL silently miss (object metavars can't pattern-match
+  either form). Reassociate **term-mode**: `(Category.assoc _ _ _).symm.trans ((congrArg (· ≫ _) h).trans
+  (Category.assoc _ _ _))` — objects inferred from the explicit morphisms, checked by defeq. Likewise, to
+  USE a naturality square whose endpoints are in the seam's "wrong" syntactic form, state it as
+  `have hkey : <goal-exact-syntax> := (iso.inv.naturality g).symm` and `exact` it — the term-mode `exact`
+  absorbs the `≫`-seam / `Iso.app` / `restrictScalars 𝟙` defeqs a `rw [naturality]` would miss. Cone A
+  bridge-3 reduction: `rw [pullbackTensorMap_eq_sheafify_delta, pullback_map_tensorObj_left_unitor_eq]`
+  → `have hHLU` = sheafified presheaf `left_unitality_hom` (`rw [← map_comp, ← map_comp]; exact congrArg _
+  hlu`, X-side `λ_` forced via `(monoidalCategoryStruct (R := X.presheaf)).leftUnitor M.val`) →
+  `erw [← hHLU]` (crosses `φ'` let-binding vs `(Hom.toRingCatSheafHom f).hom` defeq) leaves the
+  η-whisker+λ residual = sub-lemmas 3+2 (still open, B1-scale; effort-break into 3a/3b).
 - **Close an opaque-`ofIsRightAdjoint`-unit comparison via forget-faithful + INNER-adjunction transpose
   (iter-053, the B1-crux residual `sheafPullbackUnit_forget_eq` — broke the 050-052 plateau).** When the
   whole-composite `homEquiv`/`forget.map_injective` transposition is circular (iter-052 dead-end), do NOT
@@ -506,16 +554,22 @@ Current scope and live state live in [`PROGRESS.md`](PROGRESS.md) and
 ### Known Blockers (do not retry without a structural change)
 - **~~S2 tensor-flank square `tensorObj_restrict_iso_restrict_compat`~~ — CLOSED iter-054** (sorry 5→4,
   `lake build` EXIT 0). First square done; B1-route template VALIDATED on the tensor flank. Do NOT re-open.
-- **S4b `tensorObj_unit_iso_restrict_compat` (L1129) — infrastructure-gated, NOT proof-tactic gated.**
-  `tensorObj_unit_iso = sheafification.map (λ_ 𝟙) ≫ counit`; needs a NEW **left-unitor / pullback-unit-coherence
-  lemma** (immersion-naturality of the presheaf left unitor `λ_` under sheafification + `pullbackUnitIso`/`counit`
-  interplay) — the unit analogue of `pullbackTensorMap` base-change, B1-comparable depth, NOT yet built. Do NOT
-  send a bare prove lane: scaffold the `presheaf_leftUnitor` coherence lemma FIRST, then S4b follows the S2 template.
-- **S3 `dual_restrict_iso_restrict_compat` (L1088) / S4a `dual_unit_iso_restrict_compat` (L1113) — DUAL-B1 GAP.**
-  The dual analogue of Bridge B1 (`pullbackDualMap` / internal-hom base-change cone) does NOT exist (grep-empty:
-  `pullbackDualMap`, `internalHomPullback`, `dual_restrict_iso_eq`). Genuine missing construction. Decide the
-  dual-flank route (build the cone — mirror of tensor B1 — vs the unproven subsingleton route) before any prove
-  lane. `trivialisation_restrict_compat` (L1201) is the telescope of all 5 squares, transitively gated.
+- **S4b `tensorObj_unit_iso_restrict_compat` — BODY CLOSED iter-055; residual relocated to a named inner seam.**
+  S4b body (L1206) is now sorry-free via the bespoke unitor-coherence route (bridge to left unitor +
+  `tensorObj_left_unitor_naturality` + iso-algebra; see Proof Patterns). The residual is the NEW isolated
+  helper **`tensorObj_unit_iso_restrict_compat_inner` (L1175, sorry)** = the "unit analogue of Bridge B1": after
+  two committed opening rewrites it reduces to the **pullback-world left-unitor coherence** `pullback(λ)=δ;(η▷-);λ`.
+  Do NOT send a bare prove lane — it is INFRASTRUCTURE-gated (see the unified blocker below).
+- **UNIFIED BLOCKER — one missing construction gates 3 of the 4 open sorries (inner seam, S3, S4a).** The S4b
+  inner seam, S3 `dual_restrict_iso_restrict_compat` (L1088), and S4a `dual_unit_iso_restrict_compat` (L1113) ALL
+  need the same absent infrastructure: a registered **`Functor.Monoidal (PresheafOfModules.pullback φ)`** instance
+  (from δ=`pullbackTensorMap` + η=`pullbackUnitIso`), i.e. the B1-depth pullback-world coherence cone — which on
+  the dual side is the never-built `pullbackDualMap`/internal-hom base-change cone (grep-empty:
+  `pullbackDualMap`, `internalHomPullback`, `dual_restrict_iso_eq`). The prover, lvb-checker, and planner NOTE all
+  independently name this instance as the move that collapses all four unitor squares + supplies the dual cone.
+  NEXT: analogist-confirm the Mathlib `Functor.Monoidal` field shape (`Functor.Monoidal.map_leftUnitor`), then
+  build it ONCE. Grinding the squares by tactic is a dead end. `trivialisation_restrict_compat` (L1304) is the
+  telescope of all 5 squares, transitively gated.
 - **~~Bridge B2 (`restrictFunctorIsoPullback_comp_compat`/`_hom`)~~ — CLOSED iter-050.** The multi-iter
   (044–049) terminal blocker is gone: `_hom` is sorry-free + axiom-clean, consumer already closed. The
   fine-grained conjugate-telescope corrective worked (see Proof Patterns). Sorry 7→6. Do NOT re-open or
@@ -889,6 +943,10 @@ Current scope and live state live in [`PROGRESS.md`](PROGRESS.md) and
   similarly truncated — worth a one-shot sweep.**
 
 ## Last Updated
+2026-06-22T13:02:50Z (iter-057 review — bridge-3 chain 3/4 links closed (atom `pullbackValIso_naturality`, sub-lemma 1, sub-lemma 1′ `pullback_map_tensorObj_left_unitor_eq`, `hHLU` proven + wired); bridge-3 residual reduced to combined η-whisker(L3)+λ(L2) leg; sorry 4→4; `lake build` EXIT 0 (8324). CHURNING acknowledged → effort-break L1365 into 3a/3b next iter. Both auditors clean (no laundering); lvb-checker must-fix = ill-typed display of `lem:pullback_val_iso_naturality_left_unitor` (`.inv`→`.hom`; `% NOTE:` added, blueprint-writer to rewrite); coverage debt 115→117 (atom + 1′). New KB pattern: term-mode `Category.assoc` reassoc across a 2-form middle-object seam. See `iter/iter-057/review.md`. — narrative log frozen; this is a pointer only.)
+
+2026-06-22T09:00:00Z (iter-055 review — **S4b BODY `tensorObj_unit_iso_restrict_compat` CLOSED; monolithic S4b sorry REPLACED by the isolated B1-depth inner seam `tensorObj_unit_iso_restrict_compat_inner`; sorry 4→4** (genuine reduction, not closure). `lake build …TensorObjInverse` EXIT 0 (8324 jobs, re-run this review). 3 new decls, all axiom-clean: bridge `tensorObj_unit_iso_eq_left_unitor` (`unfold;rfl`), `tensorObj_left_unitor_naturality`, S4b body — the iter-054 WRONG-route (S4b-as-B1-corollary) was fixed via analogist→writer→reviewer-PASS, then formalized on the corrected bespoke unitor route. NEW KB pattern: substrate left-unitor naturality + the `λ_`-carrier trap (`λ_` rejects `(C:=)`; force via `monoidalCategoryStruct.leftUnitor` or bare `leftUnitor_naturality _`; apply across the `SheafOfModules ≫` seam term-mode). **UNIFIED BLOCKER surfaced:** the S4b inner seam + S3 + S4a (3 of 4 open sorries) all need ONE missing construction — `Functor.Monoidal (PresheafOfModules.pullback φ)` / the B1-depth pullback-world (+ dual) coherence cone — promoted to the live critical path. Both auditors clean (0 must-fix); lean-auditor major = stale "still open" comment on the PROVED `hKEY` (L501); lvb-checker major = S4b blueprint prose overstates inner seam as S2+S4c (added `% NOTE:`; blueprint-writer to rewrite). Coverage debt 114→117. Blueprint doctor clean. See `iter/iter-055/review.md`.)
+
 2026-06-22T07:00:00Z (iter-054 review — **S2 tensor-flank square `tensorObj_restrict_iso_restrict_compat` CLOSED; sorry 5→4.** `lake build …TensorObjInverse` EXIT 0 (re-run this review; not stale-green — attempts 84/95/97 whnf-bombed at 6.4M but FINAL isolated-helper+`exact` edits fixed it). B1-route template VALIDATED on the tensor flank. 9 new proven helpers (coverage debt → 114 unmatched). NEW KB pattern: the whnf-seam idiom (prefer fully-applied-`exact` over `erw`/placeholder-`refine`; isolate seam `erw` into a tiny helper). Remaining 4 sorries are INFRASTRUCTURE-gated: S4b needs a NEW left-unitor/pullback-unit-coherence lemma; S3/S4a need the non-existent dual-B1 cone (`pullbackDualMap`, grep-empty); trivialisation telescopes all 5. Both auditors clean (no laundering; 0 must-fix). Auditor majors = stale-narrative/dead-code only (dead helper pair `map_tensorHom_comp2`/`tensorObj_functoriality_comp`, stale ESCALATION L501–539, stale STATUS L830–841, iter-number drift). No marker override (S2 statement-`\leanok` present; proof-block `\leanok` absent by chapter convention). Blueprint doctor clean. See `iter/iter-054/review.md`.)
 2026-06-22T03:30:00Z (iter-053 review — **B1-crux residual `sheafPullbackUnit_forget_eq` CLOSED; `H1inv` now fully sorry-free; sorry 6→5.** `lake build …TensorObjInverse` EXIT 0, axiom-clean. The whole B1/B2 engine layer is done. Realized route = forget-faithful + INNER presheaf-pullback transpose + inverse-`leftAdjointUniq` triangle (NOT the iter-052-exhausted whole-composite homEquiv, NOT the analogist's sketched `comp_unit_app`-of-composite). Next frontier = S2 `tensorObj_restrict_iso_restrict_compat` (the deepest immersion-naturality square; S3/S4a/S4b/trivialisation ride it) — recommend effort-breaker before any prove round. Both auditors clean (no laundering; 0 must-fix). Major non-blocking: blueprint proof prose of `lem:sheaf_pullback_unit_forget_eq` still narrates the abandoned route (`% NOTE:` added) + cross-session iter-number drift in several docstrings. Blueprint doctor clean. See `iter/iter-053/review.md`.)
 2026-06-21T22:20:00Z (iter-052 review — **`sheafPullbackUnit_forget_eq` reduced to ONE iso identity; sorry 6→6 flat 3rd iter; prove/transposition route PROVEN EXHAUSTED (circular).** `lake build …TensorObjInverse` EXIT 0, 0 axioms; 4 in-proof sub-lemmas (htri/hcancel/hA/hUNIT) compute the opaque `ofIsRightAdjoint` sheaf unit via the Mathlib `pullbackIso` bridge; residual `hKEY`/`hA2` is the un-API'd coherence between two `leftAdjointUniq` over different right adjoints — pivot to mathlib-analogist cross-domain / effort-break the ε-counit telescope, NOT another prove round. Both auditors clean (no laundering). Blueprint doctor clean. See `iter/iter-052/review.md`.)

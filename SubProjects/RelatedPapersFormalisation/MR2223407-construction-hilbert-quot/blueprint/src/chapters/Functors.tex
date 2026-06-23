@@ -1,0 +1,1490 @@
+% archon:covers MR2223407ConstructionHilbertQuot/Functors.lean
+\chapter{The Hilbert and Quot Functors, and the Grassmannian}
+\label{chap:functors}
+
+This chapter transcribes \S1 of Nitsure. It defines the goal objects of the whole
+project --- the Hilbert and Quot functors --- in their projective and relative
+forms, records the stratification by Hilbert polynomials and the fppf-descent
+property, and gives the explicit construction of the Grassmannian scheme over
+$\ZZ$ together with its tautological quotient and Pl\"ucker embedding. Everything
+downstream (regularity, base change, flattening, and the Quot construction
+itself) exists to prove these functors representable; the representability
+theorems are proved in Chapter~\ref{chap:quot-construction}, not here.
+
+\section{Auxiliary declarations}
+
+The formalization introduces a handful of project-bespoke carriers and
+predicates that package the data Nitsure's definitions range over. They have no
+independent mathematical content beyond what the cited functor definitions below
+already record; they exist so the Lean statements have explicit subjects. Two of
+them stand in for notions Mathlib does not yet provide and are tracked as gaps.
+
+\begin{definition}\leanok
+[The free module $\oplus^r\Oo_X$]
+  \label{def:free-module}
+  \lean{MR2223407ConstructionHilbertQuot.freeModule}
+  The rank-$r$ free sheaf of modules $\oplus^r\Oo_X = \Oo_X^{\oplus r}$ on a
+  scheme $X$, realised as \texttt{SheafOfModules.free} on the index type
+  $\mathrm{Fin}\,r$. It is the common source of the surjections defining the Quot
+  and Grassmannian functors.
+\end{definition}
+
+\begin{definition}\leanok
+[Sheaf flat over the base]
+  \label{def:sheaf-flat-over}
+  \lean{MR2223407ConstructionHilbertQuot.SheafFlatOver}
+  For $f\colon X\to S$ and a sheaf of modules $\Ff$ on $X$, the proposition that
+  $\Ff$ is \emph{flat over the base $S$ along $f$}: every stalk $\Ff_x$ is flat
+  as a module over the local ring $\Oo_{S,f(x)}$.
+
+  \textbf{Mathlib gap.} Relative flatness of a \emph{sheaf} over a base scheme is
+  not packaged in Mathlib (only flatness of a \emph{morphism},
+  \texttt{AlgebraicGeometry.Flat}). Stated abstractly as a \texttt{Prop}; tracked
+  for discharge once sheaf-relative flatness lands.
+\end{definition}
+
+\begin{definition}\leanok
+[Locally free of rank $d$]
+  \label{def:is-locally-free-of-rank}
+  \lean{MR2223407ConstructionHilbertQuot.IsLocallyFreeOfRank}
+  For a sheaf of modules $\Ff$ on $X$, the proposition that $\Ff$ is
+  \emph{locally free of rank $d$}: $X$ is covered by opens on which $\Ff$ is
+  isomorphic to $\oplus^d\Oo_X$.
+
+  \textbf{Mathlib gap.} A locally-free-of-fixed-rank predicate for
+  \texttt{SheafOfModules} is absent in this Mathlib revision; on affine pieces it
+  corresponds to projectivity of rank $d$, as in \texttt{Module.Grassmannian}.
+  Stated abstractly; tracked for discharge.
+\end{definition}
+
+\begin{definition}\leanok
+[Family of subschemes of $\PP^n$]
+  \label{def:hilbert-family-pn}
+  \lean{MR2223407ConstructionHilbertQuot.HilbertFamilyPn}
+  \uses{def:projective-space}
+  The data carrier underlying \cref{def:hilbert-functor-pn}: a closed immersion
+  $Y\hookrightarrow\PP^n_S$ (recording the closed subscheme $Y$) together with a
+  proof that the composite $Y\to S$ is flat.
+\end{definition}
+
+\begin{definition}\leanok
+[Family of quotients of $\oplus^r\Oo_{\PP^n}$]
+  \label{def:quot-family-pn}
+  \lean{MR2223407ConstructionHilbertQuot.QuotFamilyPn}
+  \uses{def:projective-space, def:free-module, def:sheaf-flat-over}
+  The data carrier underlying \cref{def:quot-functor-pn}: a (quasi-)coherent
+  sheaf $\Ff$ on $\PP^n_S$, flat over $S$, with a surjection
+  $q\colon\oplus^r\Oo_{\PP^n_S}\to\Ff$. Coherence is approximated by
+  quasi-coherence and flatness by \cref{def:sheaf-flat-over} (Mathlib gaps); the
+  value is a representative, the $\ker q$-equivalence being deferred.
+\end{definition}
+
+\begin{definition}\leanok
+[Family of quotients of $E$]
+  \label{def:quot-family}
+  \lean{MR2223407ConstructionHilbertQuot.QuotFamily}
+  \uses{def:sheaf-flat-over, def:free-module}
+  The data carrier underlying \cref{def:quot-functor}: for $\pi\colon X\to S$,
+  $E$ on $X$, and $T\to S$, a (quasi-)coherent $\Ff$ on $X_T=X\times_S T$, flat
+  over $T$, with a surjection $q\colon E_T\to\Ff$ where $E_T$ is the pullback of
+  $E$. The proper-support condition is omitted (schematic support is a Mathlib
+  gap) and the $\ker q$-equivalence deferred.
+\end{definition}
+
+\begin{definition}\leanok
+[Fibrewise Hilbert polynomial]
+  \label{def:fibre-hilbert-polynomial}
+  \lean{MR2223407ConstructionHilbertQuot.fibreHilbertPolynomial}
+  \uses{def:hilbert-polynomial, def:quot-family}
+  For a family $\langle\Ff,q\rangle$ of \cref{def:quot-family} and a point $t$ of
+  the base, the Hilbert polynomial $\Phi_t\in\QQ[\lambda]$ of the fibre $\Ff_t$
+  computed with the pullback of a chosen line bundle $L$.
+
+  \textbf{Mathlib gap.} The fibre restriction and its Hilbert polynomial need the
+  coherent-cohomology API absent from Mathlib; stated via
+  \cref{def:hilbert-polynomial}, value deferred.
+\end{definition}
+
+\begin{definition}\leanok
+[Family with fixed Hilbert polynomial]
+  \label{def:quot-family-phi}
+  \lean{MR2223407ConstructionHilbertQuot.QuotFamilyPhi}
+  \uses{def:quot-family, def:fibre-hilbert-polynomial}
+  The data carrier underlying \cref{def:quot-functor-phi}: a family of
+  \cref{def:quot-family} together with the constraint that its fibrewise Hilbert
+  polynomial (\cref{def:fibre-hilbert-polynomial}) is everywhere equal to a fixed
+  $\Phi\in\QQ[\lambda]$.
+\end{definition}
+
+\begin{definition}\leanok
+[The structure morphism of the Grassmannian]
+  \label{def:grassmannian-structure-morphism}
+  \lean{MR2223407ConstructionHilbertQuot.grassmannianScheme.structureMorphism}
+  \uses{def:grassmannian-scheme}
+  The structure morphism $\grasssch(r,d)\to\Spec\ZZ$, realised as the unique
+  morphism to the terminal scheme.
+\end{definition}
+
+\begin{definition}\leanok
+[The tautological-quotient carrier]
+  \label{def:grassmannian-tautological}
+  \lean{MR2223407ConstructionHilbertQuot.GrassmannianTautological}
+  \uses{def:grassmannian-scheme, def:is-locally-free-of-rank, def:free-module}
+  The data carrier underlying \cref{def:grassmannian-universal-quotient}: a
+  rank-$d$ locally free sheaf $U$ on $\grasssch(r,d)$
+  (\cref{def:is-locally-free-of-rank}) with a surjection
+  $u\colon\oplus^r\Oo_{\grass(r,d)}\to U$.
+\end{definition}
+
+\section{The Hilbert and Quot functors of $\PP^n$}
+
+\begin{definition}\leanok
+[The Hilbert functor of projective space]
+  \label{def:hilbert-functor-pn}
+  \lean{MR2223407ConstructionHilbertQuot.hilbertFunctorPn}
+  \uses{def:projective-space, def:hilbert-family-pn}
+  % SOURCE: Nitsure, §1, lines 298--323 (read from references/MR2223407-construction-hilbert-quot.tex)
+  % SOURCE QUOTE: "If $S$ is a locally noetherian scheme,
+  % a \textbf{family of subschemes of $\PP^n$ parametrised by $S$} will mean
+  % a closed subscheme $Y \subset \PP^n_S = \PP^n_{\Z}\times S$
+  % such that $Y$ is flat over $S$.
+  % If $f: T\to S$ is any morphism of locally noetherian schemes, then
+  % by pull-back we get a family $f^*(Y) = (\id \times f)^{-1}(Y)
+  % \subset \PP^n_T$
+  % parametrised by $T$, from a family $Y$ parametrised by $S$.
+  % This defines a contravariant functor $\Hilb_{\PP^n}$
+  % from the category of all locally noetherian schemes to the category of sets,
+  % which associates to any $S$ the set of all such families
+  % $$\Hilb_{\PP^n}(S) = \{ Y \subset \PP^n_S \,|\,
+  % Y \mbox{ is flat over }S \}$$"
+  \textit{Source: Nitsure, §1.}
+  Let $S$ be a locally noetherian scheme. A \emph{family of subschemes of
+  $\PP^n$ parametrised by $S$} is a closed subscheme $Y\subset\PP^n_S =
+  \PP^n_{\ZZ}\times S$ that is flat over $S$. For a morphism $f\colon T\to S$ of
+  locally noetherian schemes, pullback along $\id\times f\colon\PP^n_T\to\PP^n_S$
+  sends a family $Y$ over $S$ to the family $f^*(Y) = (\id\times f)^{-1}(Y)
+  \subset\PP^n_T$ over $T$. This defines the contravariant set-valued functor
+  \[
+    \Hilbf_{\PP^n}(S) \;=\; \{\, Y\subset\PP^n_S \mid Y \text{ is flat over } S \,\}.
+  \]
+\end{definition}
+
+\begin{definition}\leanok
+[The Quot functor of $\oplus^r\Oo_{\PP^n}$]
+  \label{def:quot-functor-pn}
+  \lean{MR2223407ConstructionHilbertQuot.quotFunctorPn}
+  \uses{def:projective-space, def:quot-family-pn}
+  % SOURCE: Nitsure, §1, lines 347--379 (read from references/MR2223407-construction-hilbert-quot.tex)
+  % SOURCE QUOTE: "A \textbf{family of quotients of $\oplus^r {\mathcal O}_{\PP^n}$
+  % parametrised by a locally noetherian scheme $S$} will mean
+  % a pair $(\F,q)$ consisting of
+  % (i) a coherent sheaf $\F$ on $\PP^n_S$ which is flat over $S$, and
+  % (ii) a surjective ${\mathcal O}_{\PP^n_S}$-linear homomorphism of sheaves
+  % $q:\oplus^r {\mathcal O}_{\PP^n_S}  \to \F$.
+  % Two such families $(\F,q)$ and $(\F,q)$ parametrised by $S$ will
+  % be regarded as equivalent if there exists an isomorphism $f: \F \to \F'$
+  % which takes $q$ to $q'$ ... This is the same as the condition
+  % $\ker(q) = \ker(q')$. We will denote by $\langle \F, q \rangle$
+  % an equivalence class. ... it gives rise to a contravariant functor
+  % $\Quot_{\oplus^r {\mathcal O}_{\PP^n}}$ from the category of
+  % all locally noetherian schemes to the category of sets,
+  % by putting
+  % $$\Quot_{\oplus^r {\mathcal O}_{\PP^n}}(S) =
+  % \{\mbox{ All } \langle \F, q \rangle \mbox{ parametrised by }S\}$$"
+  \textit{Source: Nitsure, §1.}
+  Fix a positive integer $r$. A \emph{family of quotients of $\oplus^r\Oo_{\PP^n}$
+  parametrised by} a locally noetherian scheme $S$ is a pair $(\Ff,q)$ where
+  (i) $\Ff$ is a coherent sheaf on $\PP^n_S$ flat over $S$, and
+  (ii) $q\colon\oplus^r\Oo_{\PP^n_S}\to\Ff$ is a surjective
+  $\Oo_{\PP^n_S}$-linear homomorphism. Two families $(\Ff,q)$ and $(\Ff',q')$ are
+  \emph{equivalent} if there is an isomorphism $f\colon\Ff\to\Ff'$ with
+  $f\circ q = q'$; equivalently $\ker(q) = \ker(q')$. Write $\langle\Ff,q\rangle$
+  for an equivalence class. Pullback under $\id\times f\colon\PP^n_T\to\PP^n_S$
+  sends $q$ to $f^*(q)\colon\oplus^r\Oo_{\PP^n_T}\to f^*(\Ff)$ (well-defined,
+  since tensor product is right exact and preserves flatness) and respects
+  equivalence, giving the contravariant functor
+  \[
+    \Quotf_{\oplus^r\Oo_{\PP^n}}(S) \;=\;
+    \{\,\text{all }\langle\Ff,q\rangle \text{ parametrised by } S\,\}.
+  \]
+\end{definition}
+
+\section{The relative Hilbert and Quot functors}
+
+\begin{definition}\leanok
+[The Quot functor $\Quotf_{E/X/S}$]
+  \label{def:quot-functor}
+  \lean{MR2223407ConstructionHilbertQuot.quotFunctor}
+  \uses{def:projective-space, def:quot-family}
+  % SOURCE: Nitsure, §1, lines 400--424 (read from references/MR2223407-construction-hilbert-quot.tex)
+  % SOURCE QUOTE: "Let $S$ be a noetherian scheme and let $X\to S$ be a finite type
+  % scheme over it. Let $E$ be a coherent sheaf on $X$.
+  % Let $Sch_S$ denote the category of all locally noetherian schemes
+  % over $S$. For any $T\to S$ in $Sch_S$, a \textbf{family of quotients of $E$
+  % parametrised by $T$} will mean
+  % a pair $(\F,q)$ consisting of
+  % (i) a coherent sheaf $\F$ on $X_T = X\times_ST$
+  % such that the schematic support of $\F$ is proper over $T$
+  % and $\F$ is flat over $T$, together with
+  % (ii) a surjective ${\mathcal O}_{X_T}$-linear homomorphism of sheaves
+  % $q:E_T  \to \F$ where $E_T$ is the pull-back of $E$ under
+  % the projection $X_T \to X$.
+  % Two such families $(\F,q)$ and $(\F,q)$ parametrised by $T$ will
+  % be regarded as equivalent if $\ker(q) = \ker(q')$),
+  % and $\langle \F, q \rangle$ will denote
+  % an equivalence class. ... which gives
+  % a set-valued contravariant functor
+  % $\Quot_{E/X/S} : Sch_S \to Sets$ under which
+  % $$T\mapsto  \{\mbox{ All } \langle \F, q \rangle \mbox{ parametrised by }T\}$$"
+  \textit{Source: Nitsure, §1.}
+  Let $S$ be noetherian, $X\to S$ a morphism of finite type, and $E$ a coherent
+  sheaf on $X$. Let $\Sch_S$ be the category of locally noetherian $S$-schemes.
+  For $T\to S$ in $\Sch_S$, a \emph{family of quotients of $E$ parametrised by
+  $T$} is a pair $(\Ff,q)$ where (i) $\Ff$ is a coherent sheaf on $X_T =
+  X\times_S T$ whose schematic support is proper over $T$ and which is flat over
+  $T$, and (ii) $q\colon E_T\to\Ff$ is a surjective $\Oo_{X_T}$-linear
+  homomorphism, $E_T$ being the pullback of $E$ along $X_T\to X$. Two families are
+  equivalent if $\ker(q) = \ker(q')$, with class $\langle\Ff,q\rangle$. Since
+  properness and flatness are stable under base change and tensor product is
+  right exact, pullback along an $S$-morphism $T'\to T$ is well-defined, yielding
+  the contravariant functor $\Quotf_{E/X/S}\colon\Sch_S\to\Sets$,
+  $T\mapsto\{\text{all }\langle\Ff,q\rangle \text{ parametrised by } T\}$. The
+  functors of \cref{def:quot-functor-pn,def:hilbert-functor-pn} are the special
+  cases $\Quotf_{\oplus^r\Oo_{\PP^n_{\ZZ}}/\PP^n_{\ZZ}/\spec\ZZ}$ and
+  $\Hilbf_{\PP^n_{\ZZ}/\spec\ZZ}$.
+\end{definition}
+
+\begin{definition}\leanok
+[The Hilbert functor $\Hilbf_{X/S}$]
+  \label{def:hilbert-functor}
+  \lean{MR2223407ConstructionHilbertQuot.hilbertFunctor}
+  \uses{def:quot-functor, def:free-module}
+  % SOURCE: Nitsure, §1, lines 426--433 (read from references/MR2223407-construction-hilbert-quot.tex)
+  % SOURCE QUOTE: "When $E = {\mathcal O}_X$, the functor $\Quot_{{\mathcal O}_X/X/S} : Sch_S \to Sets$
+  % associates to $T$ the set of all closed subschemes $Y\subset X_T$
+  % that are proper and flat over $T$. We denote this functor by $\Hilb_{X/S}$.
+  % Note in particular that we have
+  % $$\Hilb_{\PP^n} = \Hilb_{\PP^n_{\Z}/\spec \Z} \mbox{ and }
+  % \Quot_{\oplus^r {\mathcal O}_{\PP^n}} =
+  % \Quot_{\oplus^r {\mathcal O}_{\PP^n_{\Z}}/\PP^n_{\Z}/\spec \Z}$$"
+  \textit{Source: Nitsure, §1.}
+  Taking $E = \Oo_X$ in \cref{def:quot-functor}, a surjection
+  $\Oo_{X_T}\to\Ff$ with $\ker$ recording the data is the same as a closed
+  subscheme $Y\subset X_T$ proper and flat over $T$. The resulting functor
+  $\Hilbf_{X/S} := \Quotf_{\Oo_X/X/S}$ sends $T$ to the set of closed subschemes
+  $Y\subset X_T$ that are proper and flat over $T$. In particular $\Hilbf_{\PP^n}
+  = \Hilbf_{\PP^n_{\ZZ}/\spec\ZZ}$.
+\end{definition}
+
+\section{Stratification by Hilbert polynomials}
+
+\begin{definition}\leanok
+[Hilbert polynomial of a coherent sheaf]
+  \label{def:hilbert-polynomial}
+  \lean{MR2223407ConstructionHilbertQuot.hilbertPolynomial}
+  \uses{thm:coherent-higher-direct-image}
+  % SOURCE: Nitsure, §1, lines 455--464 (read from references/MR2223407-construction-hilbert-quot.tex)
+  % SOURCE QUOTE: "Recall that if $F$ is a coherent sheaf on
+  % $X$ whose support is proper over $k$, then
+  % the \textbf{Hilbert polynomial} ${\Phi}\in \Q[\lambda]$ of $F$ is defined by
+  % the function
+  % $${\Phi}(m) = \chi(F(m)) =
+  % \sum_{i=0}^n (-1)^i \dim_k H^i(X, F\otimes L^{\otimes m})$$
+  % where the dimensions of the cohomologies are finite because of the
+  % coherence and properness conditions. The fact that $\chi(F(m))$
+  % is indeed a polynomial in $m$ under the above assumption is a special
+  % case of what is known as Snapper's Lemma (see Kleiman [K] for a proof)."
+  \textit{Source: Nitsure, §1.}
+  Let $X$ be of finite type over a field $k$ with a line bundle $L$, and let $F$
+  be a coherent sheaf on $X$ whose support is proper over $k$. Its \emph{Hilbert
+  polynomial} $\Phi\in\QQ[\lambda]$ is the polynomial agreeing for all integers
+  $m$ with the Euler characteristic
+  \[
+    \Phi(m) \;=\; \chi(F(m)) \;=\;
+    \sum_{i\ge 0}(-1)^i\dim_k H^i\!\left(X,\, F\ot L^{\ot m}\right),
+  \]
+  the cohomology groups being finite-dimensional by coherence and properness.
+  That $m\mapsto\chi(F(m))$ is given by a polynomial is the content of Snapper's
+  lemma, which we take as an external input (cited, not proved here); the
+  finiteness of the $H^i$ is \cref{thm:coherent-higher-direct-image}.
+\end{definition}
+
+\begin{definition}\leanok
+[The fixed-polynomial Quot subfunctor]
+  \label{def:quot-functor-phi}
+  \lean{MR2223407ConstructionHilbertQuot.quotFunctorPhi}
+  \uses{def:quot-functor, def:hilbert-polynomial, def:quot-family-phi}
+  % SOURCE: Nitsure, §1, lines 481--492 (read from references/MR2223407-construction-hilbert-quot.tex)
+  % SOURCE QUOTE: "for any polynomial ${\Phi}\in \Q[\lambda]$, the functor
+  % $\Quot_{E/X/S}^{\Phi,L}$ associates
+  % to any $T$ the set of all equivalence classes of
+  % families $\langle \F,q \rangle$ such that at each $t\in T$ the
+  % Hilbert polynomial of the restriction $\F_t$, calculated
+  % using the pull-back of $L$, is ${\Phi}$."
+  \textit{Source: Nitsure, §1.}
+  Fix a line bundle $L$ on $X$ and a polynomial $\Phi\in\QQ[\lambda]$. The
+  subfunctor $\Quotf_{E/X/S}^{\Phi,L}\subset\Quotf_{E/X/S}$ assigns to $T$ the
+  set of classes $\langle\Ff,q\rangle$ such that for every point $t\in T$ the
+  Hilbert polynomial of the fibre $\Ff_t$, computed with respect to the pullback
+  of $L$ to $X_t$, equals $\Phi$ (\cref{def:hilbert-polynomial}).
+\end{definition}
+
+\begin{lemma}\leanok
+[Decomposition by Hilbert polynomial]
+  \label{lem:quot-hilbert-decomposition}
+  \lean{MR2223407ConstructionHilbertQuot.quot_hilbert_decomposition}
+  \uses{def:quot-functor-phi, def:hilbert-polynomial}
+  % SOURCE: Nitsure, §1, lines 468--492 (read from references/MR2223407-construction-hilbert-quot.tex)
+  % SOURCE QUOTE: "If $\F$ is flat over $S$ then the function $s\mapsto {\Phi}_s$
+  % from the set of points of $S$ to the polynomial ring $\Q[\lambda]$ is
+  % known to be locally constant on $S$.
+  % This shows that the functor $\Quot_{E/X/S}$ naturally decomposes
+  % as a co-product
+  % $$\Quot_{E/X/S} = \coprod_{{\Phi}\in \Q[\lambda]}\, \Quot_{E/X/S}^{\Phi,L}$$"
+  \textit{Source: Nitsure, §1.}
+  With $L$ a line bundle on $X$, the functor $\Quotf_{E/X/S}$ is the coproduct
+  \[
+    \Quotf_{E/X/S} \;=\; \coprod_{\Phi\in\QQ[\lambda]}\Quotf_{E/X/S}^{\Phi,L}
+  \]
+  of the subfunctors of \cref{def:quot-functor-phi}.
+\end{lemma}
+
+% SOURCE QUOTE PROOF: "If $\F$ is flat over $S$ then the function $s\mapsto {\Phi}_s$
+% from the set of points of $S$ to the polynomial ring $\Q[\lambda]$ is
+% known to be locally constant on $S$. This shows that the functor
+% $\Quot_{E/X/S}$ naturally decomposes as a co-product ..."
+\begin{proof}
+  \uses{lem:quot-hilbert-decomposition, def:quot-functor-phi, def:hilbert-polynomial}
+  Fix a family $\langle\Ff,q\rangle\in\Quotf_{E/X/S}(T)$. Since $\Ff$ is coherent
+  on $X_T$, flat over $T$, with support proper over $T$, the function
+  $t\mapsto\Phi_t$ sending a point of $T$ to the Hilbert polynomial of the fibre
+  $\Ff_t$ (computed with the pullback of $L$) is locally constant on $T$ --- a
+  standard consequence of flatness, the constancy of the fibrewise Euler
+  characteristic in a flat family (cited, via \cref{def:hilbert-polynomial} and
+  the cohomology-and-base-change input). Hence $T$ is the disjoint union of the
+  open-and-closed loci $T_\Phi = \{t : \Phi_t = \Phi\}$, on each of which the
+  restricted family lies in $\Quotf_{E/X/S}^{\Phi,L}$. As only finitely many
+  $\Phi$ occur on a given $T$ and the loci are disjoint, the assignment
+  $\langle\Ff,q\rangle\mapsto(\langle\Ff,q\rangle|_{T_\Phi})_\Phi$ is a natural
+  bijection $\Quotf_{E/X/S}(T)\cong\coprod_\Phi\Quotf_{E/X/S}^{\Phi,L}(T)$,
+  giving the stated coproduct decomposition.
+\end{proof}
+
+\section{Faithfully flat descent}
+
+\begin{lemma}\leanok
+[The Hilbert and Quot functors are fppf sheaves]
+  \label{lem:quot-ffdescent}
+  \lean{MR2223407ConstructionHilbertQuot.quot_ffdescent}
+  \uses{def:quot-functor, def:hilbert-functor, thm:ffdescent}
+  % SOURCE: Nitsure, §1, lines 382--439 (read from references/MR2223407-construction-hilbert-quot.tex)
+  % SOURCE QUOTE: "It is immediate that the functor $\Quot_{\oplus^r {\mathcal O}_{\PP^n}}$
+  % satisfies faithfully flat descent. ... It is clear that the functors
+  % $\Quot_{E/X/S}$ and $\Hilb_{X/S}$ satisfy faithfully flat descent,
+  % so it makes sense to pose the question of their representability."
+  \textit{Source: Nitsure, §1.}
+  The functors $\Quotf_{E/X/S}$ and $\Hilbf_{X/S}$ satisfy faithfully flat
+  descent; that is, they are sheaves for the fppf topology.
+\end{lemma}
+
+% SOURCE QUOTE PROOF: "It is immediate that the functor $\Quot_{\oplus^r {\mathcal O}_{\PP^n}}$
+% satisfies faithfully flat descent." / "It is clear that the functors
+% $\Quot_{E/X/S}$ and $\Hilb_{X/S}$ satisfy faithfully flat descent, so it makes
+% sense to pose the question of their representability."
+\begin{proof}
+  \uses{thm:ffdescent}
+  A family $\langle\Ff,q\rangle$ over $T$ is a quasi-coherent sheaf $\Ff$ on
+  $X_T$ together with a homomorphism $q\colon E_T\to\Ff$, data of a local
+  (quasi-coherent) nature on $X_T$. The coherence, flatness, properness of
+  support, and surjectivity conditions are all fppf-local on the base $T$.
+  Faithfully flat descent for quasi-coherent sheaves and their morphisms
+  (\cref{thm:ffdescent}) therefore glues compatible families over an fppf cover
+  to a unique family over the base, so $\Quotf_{E/X/S}$ is an fppf sheaf;
+  $\Hilbf_{X/S}$ is the special case $E = \Oo_X$.
+\end{proof}
+
+\section{Construction of the Grassmannian}
+
+\begin{definition}\leanok
+[The Grassmannian scheme by gluing affine charts]
+  \label{def:grassmannian-scheme}
+  \lean{MR2223407ConstructionHilbertQuot.grassmannianScheme}
+  \uses{def:projective-space, def:grass-glue-data, def:grass-chart-scheme, def:grass-overlap, def:grass-inclusion, def:grass-trans-morphism, def:grass-trans-morphism2, lem:grass-inclusion-self-isiso, lem:grass-trans-morphism-self, lem:grassmannian-cocycle}
+  % SOURCE: Nitsure, §1, lines 807--850 (read from references/MR2223407-construction-hilbert-quot.tex)
+  % SOURCE QUOTE: "For any subset $I\subset \{1,\ldots, r\}$ with $\#(I) =d$,
+  % consider the $d\times r$ matrix $X^I$ whose $I$ the minor
+  % $X^I_I$ is the $d\times d$ identity matrix $1_{d\times d}$, while the remaining
+  % entries of $X^I$ are independent variables $x^I_{p,q}$ over $\Z$.
+  % Let $\Z[X^I]$ denote the polynomial ring in the variables
+  % $x^I_{p,q}$, and let $U^I = \spec \Z[X^I]$ ... For any $I$ and $J$, a ring homomorphism
+  % $\theta_{I,J} : \Z[X^J, 1/P^J_I] \to \Z[X^I, 1/P^I_J]$ is
+  % defined as follows. The images of the variables
+  % $x^J_{p,q}$ are given by the entries of the matrix formula
+  % $\theta_{I,J}(X^J) = (X^I_J) ^{-1}\,X^I$. ... the schemes
+  % $U^I$ ... can be glued together by the co-cycle $(\theta_{I,J})$ to form a
+  % finite-type scheme $\grass(r,d)$ over $\Z$."
+  \textit{Source: Nitsure, §1.}
+  Fix integers $r\ge d\ge 1$. For each subset $I\subset\{1,\dots,r\}$ with
+  $\#I = d$, let $X^I$ be the $d\times r$ matrix whose $I$-th $d\times d$ minor
+  $X^I_I$ is the identity $1_{d\times d}$ and whose remaining entries are
+  independent variables $x^I_{p,q}$; set $U^I = \spec\ZZ[X^I]$, non-canonically
+  $\AAA^{d(r-d)}_{\ZZ}$. For $J$ with $\#J = d$ put $P^I_J = \det(X^I_J)$ and let
+  $U^I_J = \spec\ZZ[X^I, 1/P^I_J]\subset U^I$ be the locus where $X^I_J$ is
+  invertible. Define $\theta_{I,J}\colon\ZZ[X^J,1/P^J_I]\to\ZZ[X^I,1/P^I_J]$ by
+  the matrix formula $\theta_{I,J}(X^J) = (X^I_J)^{-1}X^I$ (so
+  $\theta_{I,J}(P^J_I) = 1/P^I_J$, and the map extends to the localisation). The
+  $\binom{r}{d}$ charts $U^I$ glued along the $\theta_{I,J}$ form the
+  finite-type scheme $\grasssch(r,d)$ over $\ZZ$, which is smooth over $\spec\ZZ$
+  of relative dimension $d(r-d)$.
+
+  \emph{Lean BUILD recipe (project-bespoke; \texttt{mathlib-build}).} Assemble an
+  \texttt{AlgebraicGeometry.Scheme.GlueData}:
+  (1) index a chart by $I:\mathtt{Fin}\,d\hookrightarrow\mathtt{Fin}\,r$
+  ($\binom rd$ charts);
+  (2) frame matrix $X^I:\mathtt{Matrix}\,(\mathtt{Fin}\,d)\,(\mathtt{Fin}\,r)\,
+  (\mathtt{MvPolynomial}\,\mathcal V\,\ZZ)$ with free index
+  $\mathcal V=\{(p,q):q\notin\range I\}$: entry $(p,q)$ is $\delta_{p,s}$ when
+  $q=I\,s$, else the variable $X_{(p,q)}$ (injectivity of $I$ is why the index is
+  an embedding); this is exactly the object \cref{lem:grassmannian-cocycle}
+  operates on;
+  (3) charts $U^I=\spec(\mathtt{MvPolynomial}\,\mathcal V\,\ZZ)$;
+  (4) overlaps $U^I_J=D(P^I_J)$ with $P^I_J=\det(X^I.\mathtt{submatrix}\,\id\,J)$
+  via \texttt{Localization.Away}/\texttt{Scheme.basicOpen};
+  (5) transition ring maps $\theta_{I,J}(X^J)=(X^I_J)^{-1}X^I$ between the
+  localisations; the GlueData cocycle Prop field is \cref{lem:grassmannian-cocycle}
+  applied entrywise (now proven) and $\theta_{I,I}=\id$ is the degenerate case;
+  (6) $\grasssch(r,d):=D.\mathtt{glued}$, $\mathtt{structureMorphism}:=
+  \mathtt{terminal.from}$. The GlueData data fields must be real charts (a
+  \texttt{sorry} in a data field ships a junk scheme — banned); build them before
+  asserting the Prop fields.
+\end{definition}
+
+\begin{lemma}\leanok
+[Cocycle condition for the gluing]
+  \label{lem:grassmannian-cocycle}
+  \lean{MR2223407ConstructionHilbertQuot.grassmannian_cocycle}
+  \uses{def:grassmannian-scheme}
+  % SOURCE: Nitsure, §1, lines 838--848 (read from references/MR2223407-construction-hilbert-quot.tex)
+  % SOURCE QUOTE: "Note that $\theta_{I,I}$ is identity on $U^I_I = U^I$, and
+  % we leave it to the reader to verify that
+  % for any three subsets $I$, $J$ and $K$ of $\{ 1,\ldots, r\}$ of
+  % cardinality $d$, the co-cycle condition
+  % $\theta_{I,K}= \theta_{I,J}\theta_{J,K}$
+  % is satisfied."
+  \textit{Source: Nitsure, §1.}
+  One has $\theta_{I,I} = \id$ on $U^I$, and for any three index sets $I,J,K$ of
+  cardinality $d$ the cocycle identity
+  $\theta_{I,K} = \theta_{I,J}\circ\theta_{J,K}$ holds on the relevant overlaps.
+  Hence the gluing data of \cref{def:grassmannian-scheme} is valid.
+\end{lemma}
+
+% SOURCE QUOTE PROOF: "we leave it to the reader to verify that
+% for any three subsets $I$, $J$ and $K$ ... the co-cycle condition
+% $\theta_{I,K}= \theta_{I,J}\theta_{J,K}$ is satisfied."
+\begin{proof}  \uses{def:grassmannian-scheme}
+  All three maps are computed by the same matrix bookkeeping. On
+  $\ZZ[X^K,\dots]$, applying $\theta_{J,K}$ then $\theta_{I,J}$ sends $X^K$ to
+  $\theta_{I,J}\big((X^J_K)^{-1}X^J\big) = \big(\theta_{I,J}(X^J)_K\big)^{-1}
+  \theta_{I,J}(X^J)$. Substituting $\theta_{I,J}(X^J) = (X^I_J)^{-1}X^I$ and
+  using that the $K$-minor of $(X^I_J)^{-1}X^I$ is $(X^I_J)^{-1}X^I_K$, the
+  leading factor $(X^I_J)^{-1}$ cancels:
+  $\big((X^I_J)^{-1}X^I_K\big)^{-1}(X^I_J)^{-1}X^I = (X^I_K)^{-1}X^I =
+  \theta_{I,K}(X^K)$. Since $\theta_{I,I}(X^I) = (X^I_I)^{-1}X^I = X^I$ (as
+  $X^I_I = 1$), $\theta_{I,I} = \id$, and the cocycle condition holds on the
+  triple overlaps where all the relevant minors are invertible.
+\end{proof}
+
+\section{GlueData implementation helpers for the Grassmannian}
+
+These declarations are project-bespoke: they realise the
+\texttt{Scheme.GlueData} of \cref{def:grassmannian-scheme} concretely, one field
+at a time, and carry no mathematical content beyond the construction already
+cited there. They are listed so the Lean$\leftrightarrow$blueprint
+correspondence is complete; each is a routine step of the matrix/localisation
+bookkeeping. The chart index runs over embeddings $I\colon\Fin d\hookrightarrow
+\Fin r$ (injectivity encodes $\#I = d$).
+
+\begin{definition}\leanok
+[Chart index]
+  \label{def:grass-chart}
+  \lean{MR2223407ConstructionHilbertQuot.GrassChart}
+  $\GrassChart\,r\,d := (\Fin d\hookrightarrow\Fin r)$, the index type of the
+  charts (an embedding picks the $d$-subset $I$ together with an ordering of it).
+\end{definition}
+
+\begin{definition}\leanok
+[Free variables of a chart]
+  \label{def:grass-vars}
+  \lean{MR2223407ConstructionHilbertQuot.GrassVars}
+  \uses{def:grass-chart}
+  $\GrassVars\,r\,d\,I := \Fin d\times\{q : q\notin\range I\}$, indexing the
+  free polynomial variables $x^I_{p,q}$ (entries of $X^I$ outside the $I$-minor).
+\end{definition}
+
+\begin{definition}\leanok
+[Chart coordinate ring]
+  \label{def:grass-chart-ring}
+  \lean{MR2223407ConstructionHilbertQuot.grassChartRing}
+  \uses{def:grass-vars}
+  $\grassChartRing := \ZZ[\GrassVars\,r\,d\,I]$, the polynomial ring
+  $\ZZ[X^I]$ in the free variables.
+\end{definition}
+
+\begin{definition}\leanok
+[Chart scheme ($\mathrm{GlueData}\ U$)]
+  \label{def:grass-chart-scheme}
+  \lean{MR2223407ConstructionHilbertQuot.grassChart}
+  \uses{def:grass-chart-ring}
+  $U^I := \spec(\grassChartRing)$, the affine chart; the $U$-field of the
+  GlueData.
+\end{definition}
+
+\begin{definition}\leanok
+[Frame matrix $X^I$]
+  \label{def:grass-frame}
+  \lean{MR2223407ConstructionHilbertQuot.grassFrame}
+  \uses{def:grass-chart, def:grass-vars, def:grass-chart-ring}
+  The $d\times r$ matrix $X^I$ over $\grassChartRing$: entry $(p,q)$ is
+  $\delta_{p,s}$ when $q = I\,s$, and the variable $x^I_{p,q}$ otherwise.
+\end{definition}
+
+\begin{lemma}\leanok
+[The $I$-minor of $X^I$ is the identity]
+  \label{lem:grass-frame-minor-self}
+  \lean{MR2223407ConstructionHilbertQuot.grassFrame_minor_self}
+  \uses{def:grass-frame}
+  $X^I.\mathtt{submatrix}\,\id\,I = 1$ (the $I$-columns of $X^I$ form $1_{d}$).
+  Immediate from the definition of $\grassFrame$ on the $I$-columns.
+\end{lemma}
+
+\begin{definition}\leanok
+[Minor polynomial $P^I_J$]
+  \label{def:grass-minor}
+  \lean{MR2223407ConstructionHilbertQuot.grassMinor}
+  \uses{def:grass-frame}
+  $P^I_J := \det\big(X^I.\mathtt{submatrix}\,\id\,J\big)\in\grassChartRing$.
+\end{definition}
+
+\begin{lemma}\leanok
+[$P^I_I = 1$]
+  \label{lem:grass-minor-self}
+  \lean{MR2223407ConstructionHilbertQuot.grassMinor_self}
+  \uses{def:grass-minor, lem:grass-frame-minor-self}
+  $\grassMinor\,I\,I = 1$, by \cref{lem:grass-frame-minor-self} and
+  $\det 1 = 1$.
+\end{lemma}
+
+\begin{definition}\leanok
+[Overlap coordinate ring]
+  \label{def:grass-overlap-ring}
+  \lean{MR2223407ConstructionHilbertQuot.grassOverlapRing}
+  \uses{def:grass-minor, def:grass-chart-ring}
+  $\grassOverlapRing\,I\,J := \mathtt{Localization.Away}(P^I_J) =
+  \ZZ[X^I, 1/P^I_J]$.
+\end{definition}
+
+\begin{definition}\leanok
+[Overlap scheme ($\mathrm{GlueData}\ V$)]
+  \label{def:grass-overlap}
+  \lean{MR2223407ConstructionHilbertQuot.grassOverlap}
+  \uses{def:grass-overlap-ring}
+  $U^I_J := \spec(\grassOverlapRing\,I\,J) = D(P^I_J)$; the $V$-field of the
+  GlueData.
+\end{definition}
+
+\begin{definition}\leanok
+[Chart inclusion ($\mathrm{GlueData}\ f$)]
+  \label{def:grass-inclusion}
+  \lean{MR2223407ConstructionHilbertQuot.grassInclusion}
+  \uses{def:grass-overlap, def:grass-chart-scheme}
+  $U^I_J\hookrightarrow U^I$, $\spec$ of the localisation map
+  $\grassChartRing\to\grassOverlapRing\,I\,J$; the $f$-field, an open immersion
+  (the basic open $D(P^I_J)$).
+\end{definition}
+
+\begin{definition}\leanok
+[Frame over the overlap ring]
+  \label{def:grass-frame-loc}
+  \lean{MR2223407ConstructionHilbertQuot.grassFrameLoc}
+  \uses{def:grass-frame, def:grass-overlap-ring}
+  The image of $X^I$ in $\grassOverlapRing\,I\,J$ under the localisation map.
+\end{definition}
+
+\begin{definition}\leanok
+[$J$-minor matrix over the overlap]
+  \label{def:grass-minor-matrix-loc}
+  \lean{MR2223407ConstructionHilbertQuot.grassMinorMatrixLoc}
+  \uses{def:grass-frame-loc}
+  $X^I_J := (\grassFrameLoc).\mathtt{submatrix}\,\id\,J$, the $d\times d$ minor
+  over $\grassOverlapRing\,I\,J$.
+\end{definition}
+
+\begin{lemma}\leanok
+[Determinant of the localised minor]
+  \label{lem:grass-minor-matrix-loc-det}
+  \lean{MR2223407ConstructionHilbertQuot.grassMinorMatrixLoc_det}
+  \uses{def:grass-minor-matrix-loc, def:grass-minor}
+  $\det(X^I_J) = \mathtt{algebraMap}(P^I_J)$ in $\grassOverlapRing\,I\,J$,
+  by compatibility of $\det$ with the entrywise localisation map.
+\end{lemma}
+
+\begin{lemma}\leanok
+[The localised minor is invertible]
+  \label{lem:grass-minor-matrix-loc-isunit-det}
+  \lean{MR2223407ConstructionHilbertQuot.grassMinorMatrixLoc_isUnit_det}
+  \uses{lem:grass-minor-matrix-loc-det}
+  $\det(X^I_J)$ is a unit in $\grassOverlapRing\,I\,J$, since $P^I_J$ is
+  inverted there (\cref{lem:grass-minor-matrix-loc-det} and
+  $\mathtt{IsLocalization.Away.algebraMap\_isUnit}$). Hence $X^I_J\in\GL_d$.
+\end{lemma}
+
+\begin{definition}\leanok
+[Transition matrix $\theta_{I,J}(X^J)$]
+  \label{def:grass-trans-matrix}
+  \lean{MR2223407ConstructionHilbertQuot.grassTransMatrix}
+  \uses{def:grass-minor-matrix-loc, def:grass-frame-loc, lem:grass-minor-matrix-loc-isunit-det}
+  $(X^I_J)^{-1}\,X^I$ over $\grassOverlapRing\,I\,J$ (the matrix entries of
+  $\theta_{I,J}$); well-defined as $X^I_J$ is invertible
+  (\cref{lem:grass-minor-matrix-loc-isunit-det}).
+\end{definition}
+
+\begin{lemma}\leanok
+[$J$-minor of the transition matrix is $1$]
+  \label{lem:grass-trans-matrix-submatrix-self}
+  \lean{MR2223407ConstructionHilbertQuot.grassTransMatrix_submatrix_self}
+  \uses{def:grass-trans-matrix, lem:grass-minor-matrix-loc-isunit-det}
+  $\big((X^I_J)^{-1}X^I\big).\mathtt{submatrix}\,\id\,J = 1$, i.e.
+  $(X^I_J)^{-1}X^I_J = 1$ (\texttt{Matrix.nonsing\_inv\_mul}).
+\end{lemma}
+
+\begin{definition}\leanok
+[Polynomial-level transition $\theta_{I,J}$]
+  \label{def:grass-trans-aux}
+  \lean{MR2223407ConstructionHilbertQuot.grassTransAux}
+  \uses{def:grass-chart-ring, def:grass-trans-matrix}
+  The ring map $\ZZ[X^J]\to\grassOverlapRing\,I\,J = \ZZ[X^I,1/P^I_J]$ sending
+  the variable $x^J_{p,q}$ to the $(p,q)$-entry of $(X^I_J)^{-1}X^I$
+  (\texttt{MvPolynomial.eval}$_2$\texttt{Hom}).
+\end{definition}
+
+\begin{lemma}\leanok
+[$\theta_{I,J}$ realises the transition matrix]
+  \label{lem:grass-trans-aux-map-frame}
+  \lean{MR2223407ConstructionHilbertQuot.grassTransAux_map_frame}
+  \uses{def:grass-trans-aux, def:grass-frame, def:grass-trans-matrix}
+  $(X^J).\mathtt{map}\,\theta_{I,J} = (X^I_J)^{-1}X^I$, i.e.
+  $\theta_{I,J}(X^J) = \grassTransMatrix\,I\,J$ entrywise.
+\end{lemma}
+
+\begin{lemma}\leanok
+[Well-definedness gate: $\theta_{I,J}(P^J_I)$ is a unit]
+  \label{lem:grass-trans-aux-minor-isunit}
+  \lean{MR2223407ConstructionHilbertQuot.grassTransAux_minor_isUnit}
+  \uses{lem:grass-trans-aux-map-frame, lem:grass-frame-minor-self, lem:grass-minor-matrix-loc-isunit-det}
+  $\theta_{I,J}(P^J_I)$ is a unit in $\grassOverlapRing\,I\,J$. Indeed
+  $\theta_{I,J}(P^J_I) = \det\big((X^I_J)^{-1}X^I\big)_I =
+  \det\big((X^I_J)^{-1}\big)$ (using $X^I_I = 1$,
+  \cref{lem:grass-frame-minor-self}), the inverse of the unit $\det(X^I_J)$
+  (\cref{lem:grass-minor-matrix-loc-isunit-det}). This is the obstruction whose
+  vanishing would block $\theta_{I,J}$ from extending to the localisation.
+\end{lemma}
+
+\begin{definition}\leanok
+[Localised transition ($\mathrm{GlueData}\ t$, ring level)]
+  \label{def:grass-trans}
+  \lean{MR2223407ConstructionHilbertQuot.grassTrans}
+  \uses{def:grass-trans-aux, lem:grass-trans-aux-minor-isunit}
+  $\ZZ[X^J,1/P^J_I]\to\ZZ[X^I,1/P^I_J]$, the lift of $\theta_{I,J}$ past the
+  inverted element via \texttt{Localization.awayLift}, valid by the gate
+  \cref{lem:grass-trans-aux-minor-isunit}.
+\end{definition}
+
+\begin{definition}\leanok
+[Transition morphism ($\mathrm{GlueData}\ t$)]
+  \label{def:grass-trans-morphism}
+  \lean{MR2223407ConstructionHilbertQuot.grassTransMorphism}
+  \uses{def:grass-trans, def:grass-overlap}
+  $U^I_J\to U^J_I$, the $\spec$ of $\grassTrans$; the $t$-field of the GlueData.
+\end{definition}
+
+\begin{lemma}
+
+\leanok
+[$\mathrm{GlueData}\ f_{\mathrm{id}}$: self-inclusion is an isomorphism]
+  \label{lem:grass-inclusion-self-isiso}
+  \lean{MR2223407ConstructionHilbertQuot.grassInclusion_self_isIso}
+  \uses{def:grass-inclusion, lem:grass-minor-self}
+  The inclusion $\grassInclusion\,I\,I\colon U^I_I\to U^I$ is an isomorphism.
+  Since $\grassMinor\,I\,I = 1$ (\cref{lem:grass-minor-self}), localising
+  $\grassChartRing$ away from the unit $P^I_I = 1$ is an isomorphism, hence so is
+  its $\spec$. This is the $f_{\mathrm{id}}$ field of the GlueData.
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[Self-overlap minor matrix is the identity]
+  \label{lem:grass-minor-matrix-loc-self}
+  \lean{MR2223407ConstructionHilbertQuot.grassMinorMatrixLoc_self}
+  \uses{def:grass-minor-matrix-loc, lem:grass-frame-minor-self}
+  Over the overlap ring $\grassOverlapRing\,I\,I$, the localised minor matrix
+  $X^I_I = 1$, by localising \cref{lem:grass-frame-minor-self}.
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[Self-transition matrix is $X^I$]
+  \label{lem:grass-trans-matrix-self}
+  \lean{MR2223407ConstructionHilbertQuot.grassTransMatrix_self}
+  \uses{def:grass-trans-matrix, lem:grass-minor-matrix-loc-self}
+  $\grassTransMatrix\,I\,I = X^I$: the transition matrix is $(X^I_I)^{-1}X^I$ and
+  $X^I_I = 1$ (\cref{lem:grass-minor-matrix-loc-self}), so $(1)^{-1}X^I = X^I$.
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[Self-transition is the structural algebra map]
+  \label{lem:grass-trans-aux-self}
+  \lean{MR2223407ConstructionHilbertQuot.grassTransAux_self}
+  \uses{def:grass-trans-aux, lem:grass-trans-matrix-self}
+  $\theta_{I,I} = \mathrm{algebraMap}$: the polynomial-level transition sends each
+  variable $x^I_{p,q}$ to itself (by \cref{lem:grass-trans-matrix-self}), so it
+  agrees with the structural algebra map $\ZZ[X^I]\to\grassOverlapRing\,I\,I$
+  (checked on constants and variables via \texttt{MvPolynomial.ringHom\_ext}).
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[Self-transition (localised) is the identity]
+  \label{lem:grass-trans-self}
+  \lean{MR2223407ConstructionHilbertQuot.grassTrans_self}
+  \uses{def:grass-trans, lem:grass-trans-aux-self}
+  $\grassTrans\,I\,I = \mathrm{id}$: the localised lift of $\theta_{I,I}$ equals
+  the identity ring map, since $\theta_{I,I}$ is the algebra map
+  (\cref{lem:grass-trans-aux-self}) and lifting it past the inverted element gives
+  the identity (\texttt{IsLocalization.ringHom\_ext} + \texttt{Away.lift\_comp}).
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[$\mathrm{GlueData}\ t_{\mathrm{id}}$: self-transition morphism is the identity]
+  \label{lem:grass-trans-morphism-self}
+  \lean{MR2223407ConstructionHilbertQuot.grassTransMorphism_self}
+  \uses{def:grass-trans-morphism, lem:grass-trans-self}
+  $\grassTransMorphism\,I\,I = \mathrm{id}$. Since $\grassTrans\,I\,I$ is the
+  identity ring map (\cref{lem:grass-trans-self}), its $\spec$ is the identity
+  morphism (\texttt{Spec.map\_id}). This is the $t_{\mathrm{id}}$ field.
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[Value of the transition on an arbitrary minor]
+  \label{lem:grass-trans-aux-minor}
+  \lean{MR2223407ConstructionHilbertQuot.grassTransAux_minor}
+  \uses{lem:grass-trans-aux-map-frame, def:grass-minor, lem:grass-minor-matrix-loc-det}
+  For any index set $K$, $\theta_{I,J}(P^J_K) = \det\big((X^I_J)^{-1}\big)\cdot
+  P^I_K$ in $\grassOverlapRing\,I\,J$. The map $\theta_{I,J}$ commutes with
+  $\det$ and $\mathrm{submatrix}$; rewriting $(X^J).\mathtt{map}\,\theta_{I,J} =
+  (X^I_J)^{-1}X^I$ (\cref{lem:grass-trans-aux-map-frame}) and splitting the
+  determinant of the product (\texttt{Matrix.det\_mul}) gives the stated factor.
+  This strictly generalises \cref{lem:grass-trans-aux-minor-isunit} (the $K=I$
+  case).
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[Parametric well-definedness gate for the triple overlap]
+  \label{lem:grass-trans-aux-minor-isunit-of}
+  \lean{MR2223407ConstructionHilbertQuot.grassTransAux_minor_isUnit_of}
+  \uses{lem:grass-trans-aux-minor, lem:grass-minor-matrix-loc-isunit-det}
+  In any $\grassOverlapRing\,I\,J$-algebra $S$ in which the image of $P^I_K$ is a
+  unit, the image of $\theta_{I,J}(P^J_K)$ is a unit. By
+  \cref{lem:grass-trans-aux-minor}, $\theta_{I,J}(P^J_K) = \det\big((X^I_J)^{-1}
+  \big)\cdot P^I_K$; the first factor is always a unit
+  (\cref{lem:grass-minor-matrix-loc-isunit-det}) and the second is a unit by
+  hypothesis. This is the exact \texttt{awayLift} hypothesis the triple-overlap
+  transition $t'$ needs, stated parametrically so it plugs into whichever
+  coordinate ring the pullback produces.
+\end{lemma}
+
+\subsection{Triple-overlap layer (GlueData $t'$)}
+The cocycle/compatibility GlueData fields run over the \emph{triple} overlaps
+$U^I_J\cap U^I_K$. The coordinate ring of this triple overlap, the transition map
+between two such, and its $\spec$ as the GlueData $t'$ data field are built below.
+
+\begin{definition}
+
+\leanok
+[Triple-overlap ring]
+  \label{def:grass-overlap-ring2}
+  \lean{MR2223407ConstructionHilbertQuot.grassOverlapRing2}
+  \uses{def:grass-minor, def:grass-overlap-ring}
+  The coordinate ring of the triple overlap $U^I_J\cap U^I_K$, namely the
+  localisation $\ZZ[X^I,1/(P^I_J\,P^I_K)] = \mathtt{Localization.Away}\,(P^I_J\cdot
+  P^I_K)$ obtained by inverting both minors $P^I_J = \grassMinor\,I\,J$ and
+  $P^I_K = \grassMinor\,I\,K$ in $\ZZ[X^I]$.
+\end{definition}
+
+\begin{definition}
+
+\leanok
+[Localisation map into the triple overlap]
+  \label{def:grass-overlap-to-triple}
+  \lean{MR2223407ConstructionHilbertQuot.grassOverlapToTriple}
+  \uses{def:grass-overlap-ring2, def:grass-overlap-ring}
+  The canonical localisation map $\ZZ[X^I,1/P^I_J]\to\ZZ[X^I,1/(P^I_J\,P^I_K)]$
+  (\texttt{IsLocalization.Away.awayToAwayRight}), inverting the further element
+  $P^I_K$.
+\end{definition}
+
+\begin{definition}
+
+\leanok
+[Transition pushed into the triple overlap]
+  \label{def:grass-trans-aux-triple}
+  \lean{MR2223407ConstructionHilbertQuot.grassTransAuxTriple}
+  \uses{def:grass-trans-aux, def:grass-overlap-to-triple}
+  The composite $\grassOverlapToTriple\circ\theta_{I,J}\colon
+  \ZZ[X^J]\to\ZZ[X^I,1/(P^I_J\,P^I_K)]$ of the polynomial-level transition
+  \cref{def:grass-trans-aux} with the localisation map
+  \cref{def:grass-overlap-to-triple}.
+\end{definition}
+
+\begin{lemma}
+
+\leanok
+[Triple-overlap well-definedness gate]
+  \label{lem:grass-trans-aux-triple-isunit}
+  \lean{MR2223407ConstructionHilbertQuot.grassTransAuxTriple_isUnit}
+  \uses{lem:grass-trans-aux-minor, lem:grass-trans-aux-minor-isunit, lem:grass-minor-matrix-loc-isunit-det}
+  In $\grassOverlapRing\,I\,J\,K$ the image of $\theta_{I,J}(P^J_K\cdot P^J_I)$ is a
+  unit. Splitting the product: the $P^J_K$-factor equals $\det\big((X^I_J)^{-1}\big)
+  \cdot P^I_K$ by \cref{lem:grass-trans-aux-minor}, a product of two units (the
+  determinant by \cref{lem:grass-minor-matrix-loc-isunit-det}, and $P^I_K$ because
+  $P^I_J\,P^I_K$ is inverted in the target); the $P^J_I$-factor is a unit by
+  \cref{lem:grass-trans-aux-minor-isunit}. This is the \texttt{awayLift} hypothesis
+  the double-localisation transition $t'$ requires.
+\end{lemma}
+
+\begin{definition}
+
+\leanok
+[Double-localisation transition ($\mathrm{GlueData}\ t'$, ring level)]
+  \label{def:grass-trans2}
+  \lean{MR2223407ConstructionHilbertQuot.grassTrans2}
+  \uses{def:grass-trans-aux-triple, lem:grass-trans-aux-triple-isunit}
+  The ring map $\ZZ[X^J,1/(P^J_K\,P^J_I)]\to\ZZ[X^I,1/(P^I_J\,P^I_K)]$, the lift of
+  $\grassTransAuxTriple$ past the inverted element $P^J_K\cdot P^J_I$ via
+  \texttt{Localization.awayLift}, valid by the gate
+  \cref{lem:grass-trans-aux-triple-isunit}.
+\end{definition}
+
+\begin{lemma}
+
+\leanok
+[Triple transition restricts to the polynomial transition]
+  \label{lem:grass-trans2-comp-algebramap}
+  \lean{MR2223407ConstructionHilbertQuot.grassTrans2_comp_algebraMap}
+  \uses{def:grass-trans2}
+  $\mathrm{grassTrans2}\circ(\text{algebra map }\ZZ[X^J]\to\ZZ[X^J,1/(P^J_K P^J_I)]) =
+  \grassTransAuxTriple$, the defining \texttt{awayLift} compatibility
+  (\texttt{IsLocalization.Away.lift\_comp}). This is the comp-law used to discharge
+  the $t_{\mathrm{fac}}$ and cocycle Prop fields at the ring level.
+\end{lemma}
+
+\begin{definition}
+
+\leanok
+[Triple overlap as a tensor of two localisations]
+  \label{def:grass-triple-ring-equiv}
+  \lean{MR2223407ConstructionHilbertQuot.grassTripleRingEquiv}
+  \uses{def:grass-overlap-ring, def:grass-overlap-ring2}
+  The algebra isomorphism $\ZZ[X^I,1/P^I_J]\ot_{\ZZ[X^I]}\ZZ[X^I,1/P^I_K]\cong
+  \ZZ[X^I,1/(P^I_J\,P^I_K)]$, identifying the tensor of the two single-minor
+  localisations with the double localisation (\texttt{IsLocalization.Away.mul'}
+  composed with \texttt{IsLocalization.algEquiv}).
+\end{definition}
+
+\begin{definition}
+
+\leanok
+[Triple overlap pullback $\cong\spec$ identification]
+  \label{def:grass-triple-iso}
+  \lean{MR2223407ConstructionHilbertQuot.grassTripleIso}
+  \uses{def:grass-triple-ring-equiv, def:grass-inclusion}
+  The scheme isomorphism $\mathtt{pullback}\,(f\,I\,J)\,(f\,I\,K)\cong
+  \spec(\grassOverlapRing\,I\,J\,K)$: the pullback of the two affine inclusions is
+  the $\spec$ of the tensor product (\texttt{AlgebraicGeometry.pullbackSpecIso}),
+  which is then identified with $\spec$ of the triple-overlap ring via
+  \cref{def:grass-triple-ring-equiv}.
+\end{definition}
+
+\begin{definition}
+
+\leanok
+[Triple transition morphism ($\mathrm{GlueData}\ t'$)]
+  \label{def:grass-trans-morphism2}
+  \lean{MR2223407ConstructionHilbertQuot.grassTransMorphism2}
+  \uses{def:grass-triple-iso, def:grass-trans2}
+  The GlueData $t'$ field $\mathtt{pullback}\,(f\,I\,J)\,(f\,I\,K)\to
+  \mathtt{pullback}\,(f\,J\,K)\,(f\,J\,I)$, defined as
+  $\grassTripleIso(I,J,K).\mathrm{hom}\,\circ\,\spec(\mathrm{grassTrans2})\,\circ\,
+  \grassTripleIso(J,K,I).\mathrm{inv}$.
+\end{definition}
+
+\begin{lemma}
+
+\leanok
+[Triple-overlap ring cocycle]
+  \label{lem:grass-trans2-cocycle}
+  \lean{MR2223407ConstructionHilbertQuot.grassTrans2_cocycle}
+  \uses{def:grass-trans2, lem:grassmannian-cocycle}
+  The three triple-overlap transition ring maps compose to the identity:
+  $\mathrm{grassTrans2}(I,J,K)\circ\mathrm{grassTrans2}(J,K,I)\circ
+  \mathrm{grassTrans2}(K,I,J)=\id$ on $\grassOverlapRing\,I\,J\,K$.
+\end{lemma}
+\begin{proof}
+  \uses{lem:grassmannian-cocycle}
+  By \texttt{IsLocalization.ringHom\_ext} it suffices to compare the two ring maps
+  on the image of $A_I=\ZZ[X^I]$, then by \texttt{MvPolynomial.ringHom\_ext} on the
+  frame variables. On the frame the composite acts as the product of the three
+  inverse minor matrices, which collapses to the identity by the matrix cocycle
+  identity \cref{lem:grassmannian-cocycle} (repackaged with matrix inverses via the
+  unit minors of the triple ring), applied twice; the residual
+  $(X^I_I)^{-1}X^I=X^I$ closes by $X^I_I=1$.
+\end{proof}
+
+\begin{lemma}
+
+\leanok
+[Geometric cocycle ($\mathrm{GlueData}$ cocycle field)]
+  \label{lem:grass-trans-morphism2-cocycle}
+  \lean{MR2223407ConstructionHilbertQuot.grassTransMorphism2_cocycle}
+  \uses{def:grass-trans-morphism2, def:grass-triple-iso, lem:grass-trans2-cocycle}
+  The triple-overlap transitions compose to the identity:
+  $t'(I,J,K)\circ t'(J,K,I)\circ t'(K,I,J)=\id$ on
+  $\mathtt{pullback}\,(f\,I\,J)\,(f\,I\,K)$. This is the
+  \texttt{Scheme.GlueData.cocycle} Prop field for the Grassmannian.
+\end{lemma}
+\begin{proof}
+  \uses{lem:grass-trans2-cocycle}
+  Cancelling the adjacent $\grassTripleIso(\cdot).\mathrm{inv}\circ
+  \grassTripleIso(\cdot).\mathrm{hom}$ factors leaves the three $\spec(\mathrm{grassTrans2})$
+  maps, whose composite is $\spec$ of \cref{lem:grass-trans2-cocycle} $=\id$; the
+  outer $\mathrm{hom}\circ\mathrm{inv}$ pair cancels.
+\end{proof}
+
+\section{Triple-overlap projections and GlueData assembly}
+
+These project-bespoke declarations realise the $t'$ \texttt{Scheme.GlueData} field
+of \cref{def:grassmannian-scheme} (the $t\_fac$ Prop field and the final
+assembly), one routine step at a time. They carry no mathematical content beyond
+\cref{def:grass-trans-morphism2} and are listed for Lean$\leftrightarrow$blueprint
+completeness.
+
+\begin{definition}
+
+\leanok
+[First triple-overlap projection ring map]
+  \label{def:grass-triple-proj-fst}
+  \lean{MR2223407ConstructionHilbertQuot.grassTripleProjFst}
+  \uses{def:grass-triple-ring-equiv, def:grass-overlap-ring2}
+  The ring map $\grassOverlapRing\,I\,J\to\grassOverlapRing\,I\,J\,K$ realising the
+  first projection of the triple overlap, $\mathrm{grassTripleRingEquiv}\circ
+  \mathtt{includeLeft}$.
+\end{definition}
+
+\begin{definition}
+
+\leanok
+[Second triple-overlap projection ring map]
+  \label{def:grass-triple-proj-snd}
+  \lean{MR2223407ConstructionHilbertQuot.grassTripleProjSnd}
+  \uses{def:grass-triple-ring-equiv, def:grass-overlap-ring2}
+  The ring map for the second projection, $\mathrm{grassTripleRingEquiv}\circ
+  \mathtt{includeRight}$.
+\end{definition}
+
+\begin{lemma}
+
+\leanok
+[First projection is an $\ZZ[X^I]$-algebra map]
+  \label{lem:grass-triple-proj-fst-comp-algebramap}
+  \lean{MR2223407ConstructionHilbertQuot.grassTripleProjFst_comp_algebraMap}
+  \uses{def:grass-triple-proj-fst}
+  $\mathrm{grassTripleProjFst}$ commutes with the structure maps from
+  $\ZZ[X^I]$ (by \texttt{AlgEquiv.commutes} and the $\mathtt{include}$ algebra-map
+  identities).
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[Second projection is an $\ZZ[X^I]$-algebra map]
+  \label{lem:grass-triple-proj-snd-comp-algebramap}
+  \lean{MR2223407ConstructionHilbertQuot.grassTripleProjSnd_comp_algebraMap}
+  \uses{def:grass-triple-proj-snd}
+  Same as the previous lemma for the second projection.
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[Overlap-to-triple is an algebra map]
+  \label{lem:grass-overlap-to-triple-comp-algebramap}
+  \lean{MR2223407ConstructionHilbertQuot.grassOverlapToTriple_comp_algebraMap}
+  \uses{def:grass-overlap-to-triple}
+  $\grassOverlapToTriple\,I\,J\,K$ commutes with the structure map from
+  $\ZZ[X^I]$, proved elementwise.
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[First projection equals overlap-to-triple]
+  \label{lem:grass-triple-proj-fst-eq-overlap-to-triple}
+  \lean{MR2223407ConstructionHilbertQuot.grassTripleProjFst_eq_overlapToTriple}
+  \uses{def:grass-triple-proj-fst, def:grass-overlap-to-triple, lem:grass-overlap-to-triple-comp-algebramap}
+  $\mathrm{grassTripleProjFst} = \grassOverlapToTriple\,I\,J\,K$: both are the
+  unique $\ZZ[X^I]$-algebra map out of the localisation $\grassOverlapRing\,I\,J$,
+  so they agree by \texttt{IsLocalization.ringHom\_ext}.
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[Geometric first projection of the triple iso]
+  \label{lem:grass-triple-iso-inv-fst}
+  \lean{MR2223407ConstructionHilbertQuot.grassTripleIso_inv_fst}
+  \uses{def:grass-triple-iso, def:grass-triple-proj-fst}
+  $(\grassTripleIso\,I\,J\,K).\mathrm{inv}\circ\mathtt{pullback.fst} =
+  \spec(\mathrm{grassTripleProjFst})$. Proved via
+  \texttt{pullbackSpecIso\_inv\_fst} (the $\mathtt{mapIso}$-inv factor reduces by
+  $\mathtt{rfl}$).
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[Geometric second projection of the triple iso]
+  \label{lem:grass-triple-iso-inv-snd}
+  \lean{MR2223407ConstructionHilbertQuot.grassTripleIso_inv_snd}
+  \uses{def:grass-triple-iso, def:grass-triple-proj-snd}
+  $(\grassTripleIso\,I\,J\,K).\mathrm{inv}\circ\mathtt{pullback.snd} =
+  \spec(\mathrm{grassTripleProjSnd})$, as for the first projection.
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[Ring-level $t\_fac$]
+  \label{lem:grass-trans2-proj-snd-eq}
+  \lean{MR2223407ConstructionHilbertQuot.grassTrans2_proj_snd_eq}
+  \uses{def:grass-trans2, def:grass-triple-proj-snd, def:grass-trans-aux-triple, lem:grass-trans2-comp-algebramap}
+  The ring identity underlying the $t\_fac$ field: both sides reduce to
+  $\grassTransAuxTriple\,I\,J\,K$, compared by
+  \texttt{IsLocalization.ringHom\_ext} over $\mathtt{powers}(P^J_I)$.
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[The GlueData $t\_fac$ field]
+  \label{lem:grass-trans-morphism2-tfac}
+  \lean{MR2223407ConstructionHilbertQuot.grassTransMorphism2_tfac}
+  \uses{def:grass-trans-morphism2, lem:grass-triple-iso-inv-fst, lem:grass-triple-iso-inv-snd, lem:grass-trans2-proj-snd-eq}
+  $t'(I,J,K)\circ\mathtt{pullback.snd} = \mathtt{pullback.fst}\circ t(I,J)$, the
+  \texttt{Scheme.GlueData.t\_fac} Prop field. Precompose with
+  $(\grassTripleIso).\mathrm{inv}$, cancel $\mathrm{inv}\circ\mathrm{hom}$, apply the
+  two projection lemmas and transport the ring identity
+  \cref{lem:grass-trans2-proj-snd-eq}.
+\end{lemma}
+
+\begin{definition}
+
+\leanok
+[The Grassmannian \texttt{Scheme.GlueData}]
+  \label{def:grass-glue-data}
+  \lean{MR2223407ConstructionHilbertQuot.grassGlueData}
+  \uses{def:grass-chart-scheme, def:grass-overlap, def:grass-inclusion, def:grass-trans-morphism, def:grass-trans-morphism2, lem:grass-inclusion-self-isiso, lem:grass-trans-morphism-self, lem:grass-trans-morphism2-tfac, lem:grass-trans-morphism2-cocycle}
+  The fully-assembled \texttt{AlgebraicGeometry.Scheme.GlueData} for the
+  Grassmannian: $U^I$ as the charts, $U^I_J$ as the overlaps, $\grassInclusion$ as
+  the open immersions ($f\_open$/$f\_mono$/$f\_hasPullback$ automatic), with $t$,
+  $t'$ the two transition morphisms and $t\_id$, $f\_id$, $t\_fac$, $cocycle$ the
+  proven Prop fields. \cref{def:grassmannian-scheme} is its $\mathtt{.glued}$.
+\end{definition}
+
+\begin{lemma}
+
+\leanok
+[Single-overlap transition is an algebra map]
+  \label{lem:grass-trans-comp-algebramap}
+  \lean{MR2223407ConstructionHilbertQuot.grassTrans_comp_algebraMap}
+  \uses{def:grass-trans-aux, def:grass-overlap-ring}
+  The single-overlap transition ring map commutes with the structure map from
+  $\ZZ[X^J]$; localisation bookkeeping.
+\end{lemma}
+
+\subsection{Matrix-inverse bookkeeping lemmas}
+
+The following are pure matrix/localisation identities supporting the cocycle and
+$t\_fac$ computations; each is a routine \texttt{Matrix} or \texttt{RingHom} fact.
+
+\begin{lemma}
+
+\leanok
+[Frame-chase cocycle step]
+  \label{lem:grass-trans-step}
+  \lean{MR2223407ConstructionHilbertQuot.grassTransStep}
+  \uses{def:grass-trans-matrix, def:grass-frame}
+  One step of the frame chase rewriting a product of inverse minor matrices,
+  consumed by \cref{lem:grass-trans2-cocycle}.
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[Cocycle with matrix inverses]
+  \label{lem:cocycle-nonsing-inv}
+  \lean{MR2223407ConstructionHilbertQuot.cocycle_nonsing_inv}
+  \uses{lem:grassmannian-cocycle}
+  \cref{lem:grassmannian-cocycle} repackaged with \texttt{Matrix.nonsing\_inv} for
+  the unit minors of the triple-overlap ring.
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[Determinant of a pushed minor]
+  \label{lem:grass-pushed-minor-det}
+  \lean{MR2223407ConstructionHilbertQuot.pushedMinor_det}
+  \uses{def:grass-minor, def:grass-frame}
+  The determinant of a minor pushed forward along the overlap map equals the image
+  of the minor polynomial.
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[Left minor is a unit]
+  \label{lem:grass-minor-algebramap-isunit-left}
+  \lean{MR2223407ConstructionHilbertQuot.grassMinor_algebraMap_isUnit_left}
+  \uses{def:grass-minor, def:grass-overlap-ring2}
+  The image of $P^I_J$ in the triple-overlap ring is a unit.
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[Right minor is a unit]
+  \label{lem:grass-minor-algebramap-isunit-right}
+  \lean{MR2223407ConstructionHilbertQuot.grassMinor_algebraMap_isUnit_right}
+  \uses{def:grass-minor, def:grass-overlap-ring2}
+  The image of $P^I_K$ in the triple-overlap ring is a unit.
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[Frame over the triple overlap]
+  \label{lem:grass-frame-loc-map-overlap-to-triple}
+  \lean{MR2223407ConstructionHilbertQuot.grassFrameLoc_map_overlapToTriple}
+  \uses{def:grass-frame-loc, def:grass-overlap-to-triple}
+  The localised frame $X^I$ maps to its triple-overlap image under
+  $\grassOverlapToTriple$.
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[Triple auxiliary on the frame]
+  \label{lem:grass-trans-aux-triple-map-frame}
+  \lean{MR2223407ConstructionHilbertQuot.grassTransAuxTriple_map_frame}
+  \uses{def:grass-trans-aux-triple, def:grass-frame}
+  The value of $\grassTransAuxTriple$ on the frame variables.
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[$t'$ on the frame]
+  \label{lem:grass-trans2-map-frame}
+  \lean{MR2223407ConstructionHilbertQuot.grassTrans2_map_frame}
+  \uses{def:grass-trans2, def:grass-frame}
+  The value of $\mathrm{grassTrans2}$ on the frame variables.
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[Transition matrix over the triple overlap]
+  \label{lem:grass-trans-matrix-map-overlap-to-triple}
+  \lean{MR2223407ConstructionHilbertQuot.grassTransMatrix_map_overlapToTriple}
+  \uses{def:grass-trans-matrix, def:grass-overlap-to-triple}
+  The transition matrix $(X^I_J)^{-1}X^I$ maps to its triple-overlap image.
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[Ring hom commutes with ring inverse]
+  \label{lem:grass-ringhom-ring-inverse}
+  \lean{MR2223407ConstructionHilbertQuot.ringHom_ringInverse}
+  \uses{def:grass-trans-matrix}
+  A ring homomorphism commutes with \texttt{Ring.inverse} on units.
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[Ring hom commutes with $\mathtt{nonsing\_inv}$]
+  \label{lem:grass-map-nonsing-inv}
+  \lean{MR2223407ConstructionHilbertQuot.map_nonsing_inv}
+  \uses{def:grass-trans-matrix}
+  Applying a ring hom entrywise commutes with \texttt{Matrix.nonsing\_inv} of an
+  invertible matrix.
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[$\mathtt{mapMatrix}$ commutes with $\mathtt{nonsing\_inv}$]
+  \label{lem:grass-ringhom-mapmatrix-nonsing-inv}
+  \lean{MR2223407ConstructionHilbertQuot.RingHom.mapMatrix_nonsing_inv}
+  \uses{def:grass-trans-matrix}
+  The square-matrix version of the previous lemma via \texttt{RingHom.mapMatrix}.
+\end{lemma}
+
+\begin{lemma}\leanok
+[Separatedness of the Grassmannian]
+  \label{lem:grassmannian-separated}
+  \lean{MR2223407ConstructionHilbertQuot.grassmannian_separated}
+  \uses{def:grassmannian-scheme, def:grassmannian-structure-morphism}
+  % SOURCE: Nitsure, §1, lines 856--860 (read from references/MR2223407-construction-hilbert-quot.tex)
+  % SOURCE QUOTE: "The intersection of the diagonal of $\grass(r,d)$ with $U^I\times U^J$
+  % can be seen to be the closed subscheme $\Delta_{I,J}\subset U^I\times U^J$
+  % defined by entries of the matrix formula $X^J_I\,X^I - X^J =0$,
+  % and so $\grass(r,d)$ is a separated scheme."
+  \textit{Source: Nitsure, §1.}
+  The scheme $\grasssch(r,d)$ is separated over $\ZZ$: for any two charts, the
+  intersection of the diagonal with $U^I\times U^J$ is the closed subscheme
+  $\Delta_{I,J}\subset U^I\times U^J$ cut out by the entries of
+  $X^J_I\,X^I - X^J = 0$.
+\end{lemma}
+
+% SOURCE QUOTE PROOF: "The intersection of the diagonal of $\grass(r,d)$ with
+% $U^I\times U^J$ can be seen to be the closed subscheme $\Delta_{I,J}\subset
+% U^I\times U^J$ defined by entries of the matrix formula $X^J_I\,X^I - X^J =0$,
+% and so $\grass(r,d)$ is a separated scheme."
+\begin{proof}
+  \uses{def:grassmannian-scheme}
+  To check separatedness it suffices to show that for every pair of charts the
+  diagonal $\grasssch(r,d)\to\grasssch(r,d)\times_\ZZ\grasssch(r,d)$ meets
+  $U^I\times U^J$ in a closed subscheme. A point of $U^I\times U^J$ lies on the
+  diagonal exactly when the two matrices represent the same quotient, i.e. when
+  $X^J = X^J_I\,X^I$ (the change-of-chart relation from $\theta$). The entries of
+  $X^J_I\,X^I - X^J$ are regular functions on $U^I\times U^J$, so their vanishing
+  locus $\Delta_{I,J}$ is closed; this is the diagonal restricted to that chart
+  product. As this holds for all $I,J$, the diagonal is a closed immersion and
+  $\grasssch(r,d)$ is separated.
+\end{proof}
+
+\begin{lemma}\leanok
+[Properness of the Grassmannian]
+  \label{lem:grassmannian-proper}
+  \lean{MR2223407ConstructionHilbertQuot.grassmannian_proper}
+  \uses{def:grassmannian-scheme, def:grassmannian-structure-morphism, lem:grassmannian-separated, lem:grassmannian-cocycle, thm:valuative-criterion-properness}
+  % SOURCE: Nitsure, §1, lines 865--891 (read from references/MR2223407-construction-hilbert-quot.tex)
+  % SOURCE QUOTE: "We now show that $\pi : \grass(r,d) \to \spec \Z$ is proper. It is enough to
+  % verify the valuative criterion of properness for discrete valuation rings.
+  % Let $\Rr$ be a dvr, $\K$ its quotient field, and let
+  % $\varphi : \spec \K \to \grass(r,d)$ be a morphism. This is given by
+  % a ring homomorphism $f : \Z[X^I] \to \K$ for some $I$. Having fixed
+  % one such $I$, next choose $J$ such that $\nu(f(P^I_J))$ is minimum ...
+  % Now consider the homomorphism
+  % $g : \Z[X^J] \to \K$ defined by entries of the matrix formula
+  % $$g(X^J) = f((X^I_J)^{-1}\,X^I)$$
+  % Then $g$ defines the same morphism ... and moreover all $d\times d$ minors $X^J_K$ satisfy
+  % $\nu(g(P^J_K)) \ge 0$. ... Therefore, the map $g : \Z[X^J] \to \K$
+  % factors uniquely via $\Rr \subset \K$. ... so now we see that
+  % $\grass(r,d) \to \spec \Z$ is proper."
+  \textit{Source: Nitsure, §1.}
+  The structure morphism $\pi\colon\grasssch(r,d)\to\spec\ZZ$ is proper.
+\end{lemma}
+
+% SOURCE QUOTE PROOF: "It is enough to verify the valuative criterion of properness
+% for discrete valuation rings. Let $\Rr$ be a dvr, $\K$ its quotient field, and let
+% $\varphi : \spec \K \to \grass(r,d)$ be a morphism. This is given by a ring
+% homomorphism $f : \Z[X^I] \to \K$ for some $I$. Having fixed one such $I$, next
+% choose $J$ such that $\nu(f(P^I_J))$ is minimum, where $\nu : \K \to \Z\bigcup
+% \{ \infty\}$ denotes the discrete valuation. As $P^I_I = 1$, note that
+% $\nu(f(P^I_J)) \le 0$ ... Now consider the homomorphism $g : \Z[X^J] \to \K$
+% defined by ... $g(X^J) = f((X^I_J)^{-1}\,X^I)$ ... all $d\times d$ minors $X^J_K$
+% satisfy $\nu(g(P^J_K)) \ge 0$. As the minor $X^J_J$ is identity, it follows ...
+% that in fact $\nu(g(x^J_{p,q}))\ge 0$ for all entries of $X^J$. Therefore, the
+% map $g : \Z[X^J] \to \K$ factors uniquely via $\Rr \subset \K$."
+\begin{proof}
+  \uses{def:grassmannian-scheme, lem:grassmannian-separated, lem:grassmannian-cocycle, thm:valuative-criterion-properness}
+  The morphism is of finite type, and by \cref{lem:grassmannian-separated} it is
+  separated; by \cref{thm:valuative-criterion-properness} it suffices to verify
+  the valuative criterion for discrete valuation rings. Let $\Rr$ be a dvr with
+  fraction field $\K$ and valuation $\nu$, and let $\varphi\colon\spec\K\to
+  \grasssch(r,d)$ be a $\ZZ$-morphism. It factors through some chart $U^I$, given
+  by $f\colon\ZZ[X^I]\to\K$. Choose $J$ minimising $\nu(f(P^I_J))$; since
+  $P^I_I = 1$ we have $\nu(f(P^I_J))\le\nu(f(P^I_I)) = 0$, so $f(P^I_J)\ne 0$ and
+  $f(X^I_J)\in\GL_d(\K)$. Define $g\colon\ZZ[X^J]\to\K$ by
+  $g(X^J) = f\big((X^I_J)^{-1}X^I\big)$; by the cocycle relation
+  (\cref{lem:grassmannian-cocycle}) $g$ defines the same morphism $\varphi$. For
+  every $K$ the minor satisfies $g(P^J_K) = f(P^I_K)/f(P^I_J)$, which has
+  $\nu\ge 0$ by minimality of $\nu(f(P^I_J))$. Since $X^J_J = 1$, expanding the
+  entries of $X^J$ in terms of these minors gives $\nu(g(x^J_{p,q}))\ge 0$ for
+  all entries; hence $g$ factors uniquely through $\Rr\subset\K$, producing a
+  morphism $\spec\Rr\to U^J\hookrightarrow\grasssch(r,d)$ extending $\varphi$.
+  Existence plus separatedness (uniqueness) give the valuative criterion, so
+  $\pi$ is proper.
+\end{proof}
+
+\begin{definition}\leanok
+[The tautological quotient on the Grassmannian]
+  \label{def:grassmannian-universal-quotient}
+  \lean{MR2223407ConstructionHilbertQuot.grassmannianUniversalQuotient}
+  \uses{def:grassmannian-scheme, def:grassmannian-tautological}
+  % SOURCE: Nitsure, §1, lines 898--910 (read from references/MR2223407-construction-hilbert-quot.tex)
+  % SOURCE QUOTE: "We next define a rank $d$ locally free sheaf $\U$ on $\grass(r,d)$
+  % together with a surjective homomorphism $\oplus^r\,{\mathcal O}_{\grass(r,d)} \to \U$.
+  % On each $U^I$ we define a surjective homomorphism
+  % $u^I :\oplus^r\,{\mathcal O}_{U^I} \to  \oplus^d\,{\mathcal O}_{U^I}$
+  % by the matrix $X^I$. Compatible with the co-cycle $(\theta_{I,J})$
+  % for gluing the affine pieces $U^I$, we give gluing data
+  % $(g_{I,J})$ for gluing together the trivial bundles $\oplus^d\,{\mathcal O}_{U^I}$
+  % by putting
+  % $$g_{I,J} = (X^I_J)^{-1} \in GL_d(U^I_J)$$
+  % This is compatible with the homomorphisms $u^I$,
+  % so we get a surjective homomorphism
+  % $u : \oplus^r\,{\mathcal O}_{\grass(r,d)} \to \U$."
+  \textit{Source: Nitsure, §1.}
+  On each chart $U^I$ define a surjection $u^I\colon\oplus^r\Oo_{U^I}\to
+  \oplus^d\Oo_{U^I}$ by the matrix $X^I$. Glue the trivial rank-$d$ bundles
+  $\oplus^d\Oo_{U^I}$ by the transition matrices $g_{I,J} = (X^I_J)^{-1}\in
+  \GL_d(U^I_J)$; these are compatible with the chart gluing $(\theta_{I,J})$ of
+  \cref{def:grassmannian-scheme} and with the $u^I$. The result is a rank-$d$
+  locally free sheaf $\Uu$ on $\grasssch(r,d)$ with a surjective homomorphism
+  $u\colon\oplus^r\Oo_{\grasssch(r,d)}\to\Uu$, the \emph{tautological quotient}.
+\end{definition}
+
+\begin{lemma}\leanok
+[The determinant of $\Uu$ is very ample; the Pl\"ucker embedding]
+  \label{lem:grassmannian-very-ample}
+  \lean{MR2223407ConstructionHilbertQuot.grassmannian_very_ample}
+  \uses{def:grassmannian-universal-quotient, lem:grassmannian-proper, def:very-ample}
+  % SOURCE: Nitsure, §1, lines 914--930 (read from references/MR2223407-construction-hilbert-quot.tex)
+  % SOURCE QUOTE: "As $\U$ is given by the transition functions $g_{I,J}$ described above,
+  % the determinant line bundle
+  % $\det(\U)$ is given by the transition functions
+  % $\det(g_{I,J}) = 1/P^I_J \in GL_1(U^I_J)$.
+  % For each $I$, we define a global section
+  % $$\sigma_I \in \Gamma(\grass(r,d),\det(\U))$$
+  % by putting $\sigma_I|_{U^J} = P^J_I \in
+  % \Gamma(U^J,{\mathcal O}_{U^J})$ ... the sections $\sigma_I$ form
+  % a linear system which is base point free and separates points
+  % relative to $\spec \Z$, and so gives an embedding of
+  % $\grass(r,d)$ into $\PP^m_{\Z}$ where $m = {r\choose d}-1$.
+  % This is a closed embedding by the properness of
+  % $\pi:\grass(r,d) \to \spec \Z$. In particular, $\det(\U)$
+  % is a relatively very ample line bundle on $\grass(r,d)$ over $\Z$."
+  \textit{Source: Nitsure, §1.}
+  The determinant line bundle $\det(\Uu)$ has transition functions
+  $\det(g_{I,J}) = 1/P^I_J$. The Pl\"ucker sections $\sigma_I\in
+  \Gamma(\grasssch(r,d),\det(\Uu))$, defined by
+  $\sigma_I|_{U^J} = P^J_I$, form a base-point-free linear system separating
+  points and tangent vectors relative to $\spec\ZZ$, and give a closed embedding
+  $\grasssch(r,d)\hookrightarrow\PP^m_{\ZZ}$ with $m = \binom{r}{d}-1$. In
+  particular $\det(\Uu)$ is relatively very ample over $\ZZ$.
+\end{lemma}
+
+% SOURCE QUOTE PROOF: "the determinant line bundle $\det(\U)$ is given by the
+% transition functions $\det(g_{I,J}) = 1/P^I_J$ ... For each $I$, we define a
+% global section ... by putting $\sigma_I|_{U^J} = P^J_I$ ... the sections
+% $\sigma_I$ form a linear system which is base point free and separates points
+% relative to $\spec \Z$, and so gives an embedding of $\grass(r,d)$ into
+% $\PP^m_{\Z}$ ... This is a closed embedding by the properness of
+% $\pi:\grass(r,d) \to \spec \Z$."
+\begin{proof}
+  \uses{def:grassmannian-universal-quotient, lem:grassmannian-proper, def:very-ample}
+  Since $\Uu$ has transition matrices $g_{I,J} = (X^I_J)^{-1}$, its top exterior
+  power $\det(\Uu)$ has transition functions $\det(g_{I,J}) = 1/P^I_J$. The local
+  expressions $\sigma_I|_{U^J} = P^J_I$ are compatible with these transitions
+  ($P^K_I = P^K_J\cdot P^J_I/\!\det$-cocycle on overlaps), hence glue to global
+  sections $\sigma_I\in\Gamma(\grasssch(r,d),\det(\Uu))$, indexed by the
+  $\binom{r}{d}$ subsets $I$. On the chart $U^J$ one has $\sigma_J|_{U^J} =
+  P^J_J = 1$, nowhere vanishing, so the $\sigma_I$ have no common zero: the
+  system is base-point free and defines a morphism
+  $\grasssch(r,d)\to\PP^m_{\ZZ}$, $m = \binom{r}{d}-1$. On each chart the
+  remaining ratios $\sigma_I/\sigma_J = P^J_I$ recover the chart coordinates, so
+  the morphism separates points and tangent vectors and is an immersion. By
+  properness of $\pi$ (\cref{lem:grassmannian-proper}) the immersion is a closed
+  immersion; thus $\det(\Uu)$ is relatively very ample in the sense of
+  \cref{def:very-ample}.
+\end{proof}
+
+\begin{theorem}\leanok
+[The Grassmannian represents the quotient functor]
+  \label{thm:grassmannian-represents}
+  \lean{MR2223407ConstructionHilbertQuot.grassmannian_represents}
+  \uses{def:grassmannian-scheme, def:grassmannian-universal-quotient, lem:grassmannian-cocycle}
+  % SOURCE: Nitsure, §1, lines 557--566 (read from references/MR2223407-construction-hilbert-quot.tex)
+  % SOURCE QUOTE: "Show that $\grass(r,d)$ together with the quotient
+  % $u:\oplus^r\,{\mathcal O}_{\grass(r,d)} \to \U$ represents the
+  % contravariant functor
+  % $$\Grass(r,d) = \Quot_{\oplus^r\,{\mathcal O}_{\Z}/\Z/\Z}^{d, {\mathcal O}_{\Z}}$$
+  % from schemes to sets, which associates to any $T$ the
+  % set of all equivalence classes
+  % $\langle \F, q\rangle$ of quotients $q: \oplus^r\,{\mathcal O}_T \to \F$
+  % where $\F$ is a locally free sheaf on $T$ of rank $d$.
+  % Therefore, $\quot_{\oplus^r\,{\mathcal O}_{\Z}/\Z/\Z}^{d, {\mathcal O}_{\Z}}$
+  % exists, and equals $\grass(r,d)$."
+  \textit{Source: Nitsure, §1.}
+  The scheme $\grasssch(r,d)$, together with its tautological quotient
+  $u\colon\oplus^r\Oo_{\grasssch(r,d)}\to\Uu$, represents the contravariant
+  functor
+  \[
+    \grassf(r,d)(T) \;=\;
+    \{\,\langle\Ff,q\rangle : q\colon\oplus^r\Oo_T\twoheadrightarrow\Ff,\
+    \Ff \text{ locally free of rank } d\,\}.
+  \]
+  That is, for every scheme $T$ pulling back $u$ gives a natural bijection
+  $\Mor(T,\grasssch(r,d))\cong\grassf(r,d)(T)$, with $u$ the universal quotient.
+\end{theorem}
+
+% SOURCE QUOTE PROOF: "Show that $\grass(r,d)$ together with the quotient
+% $u:\oplus^r\,{\mathcal O}_{\grass(r,d)} \to \U$ represents the contravariant
+% functor $\Grass(r,d) = \Quot_{\oplus^r\,{\mathcal O}_{\Z}/\Z/\Z}^{d, {\mathcal O}_{\Z}}$
+% ... which associates to any $T$ the set of all equivalence classes
+% $\langle \F, q\rangle$ of quotients $q: \oplus^r\,{\mathcal O}_T \to \F$
+% where $\F$ is a locally free sheaf on $T$ of rank $d$."
+\begin{proof}
+  \uses{def:grassmannian-scheme, def:grassmannian-universal-quotient, lem:grassmannian-cocycle}
+  Pullback of the tautological quotient gives a natural transformation
+  $\Mor(-,\grasssch(r,d))\to\grassf(r,d)$, $\psi\mapsto\langle\psi^*\Uu,\psi^*
+  u\rangle$. We construct the inverse. Given a rank-$d$ locally free quotient
+  $q\colon\oplus^r\Oo_T\twoheadrightarrow\Ff$ on $T$, the homomorphism $q$ is
+  locally an $r\to d$ surjection; over the open set $T_I$ where the composite
+  $\oplus^r\Oo_T\to\Ff$ restricted to the coordinates indexed by $I$ is an
+  isomorphism (equivalently, the corresponding $d\times d$ minor is invertible),
+  trivialise $\Ff$ by that isomorphism. In this trivialisation $q$ is given by a
+  $d\times r$ matrix whose $I$-minor is the identity, hence by a unique morphism
+  $T_I\to U^I$ classifying its free entries. As $I$ ranges over all index sets
+  the $T_I$ cover $T$ (some $d\times d$ minor of $q$ is invertible at each point,
+  $\Ff$ being a rank-$d$ quotient), and on overlaps the two classifying maps
+  differ exactly by the change-of-chart $\theta_{I,J}$ (\cref{lem:grassmannian-cocycle}),
+  so they glue to a unique morphism $\varphi_q\colon T\to\grasssch(r,d)$ with
+  $\varphi_q^*u\cong q$. The two constructions are mutually inverse and natural
+  in $T$, so $\grasssch(r,d)$ represents $\grassf(r,d)$ with universal family
+  $u$.
+\end{proof}

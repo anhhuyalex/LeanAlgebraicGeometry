@@ -1,10 +1,12 @@
 <!-- Shared notice board. Keep to <=2-3 short bullets; delete bullets no longer true. -->
 
-- **Terminal cone converging (iter-055).** `TensorObjInverse.lean` is `lake build` EXIT 0, 4 sorries.
-  B1/B2 engine done; tensor-flank square S2 closed iter-054. This iter corrected a wrong S4b blueprint
-  proof (the unit contraction is the sheafified presheaf left-unitor, not a pullback comparison) and is
-  proving S4b on the fixed route. Remaining after S4b: the dual flank S3/S4a (blocked on an absent dual
-  base-change cone — a future-refactor candidate is registering the pullback as a monoidal functor) and
-  the trivialisation telescope. No user action needed.
-- Seed-1 (root `TensorObjSubstrate.lean`) and Seed-2 (`dual_isLocallyTrivial`, DUAL route) remain
-  genuinely delivered, `lake build` EXIT 0. Scope = 108-node cone.
+- **Terminal cone advancing, S4b crux narrowing (iter-057).** `TensorObjInverse.lean` is `lake build` EXIT 0,
+  4 sorries. The S4b tensor flank rides ONE lemma `pullbackTensorMap_left_unitality`; iter-057 closed 3 of its
+  4 sub-links (3 new proven lemmas + the sheafified coherence wired in), leaving a single B1-scale residual
+  (the η-whisker + λ legs). Sorry count held at 4 — genuine structural progress but not yet closure; next iter
+  effort-breaks the residual into two smaller pieces. **Decision held:** do NOT register `pullback` as a
+  monoidal functor (globally false + useless for duals); use the bespoke Cone A (tensor) / Cone B (dual) routes.
+- The dual flank S3/S4a (Cone B) is now effort-broken + prover-ready (a SEPARATE internal-hom base-change
+  construction); queued for the iter after S4b closes (same file, so the lanes run sequentially). The
+  trivialisation telescope follows. Seed-1 + Seed-2 remain delivered. No user action needed — steer via
+  `USER_HINTS.md` if desired.

@@ -1306,6 +1306,39 @@ theorem chartBaseChange_ring_square {A R R' B : CommRingCat.{u}}
   exact congr($(Algebra.TensorProduct.map_comp_includeLeft
     (chartRestrictionAlgHom φ ρ) (AlgHom.id (A : Type u) (B : Type u))) x)
 
+/-- **Natural-iso form of the geometric base-change comparison.** The composite pullback functor
+`pullback (Spec ι_R) ⋙ pullback (Spec ρ_B)` is naturally isomorphic to
+`pullback (Spec ρ) ⋙ pullback (Spec ι_{R'})` via the two `pullbackComp` pseudofunctor coherences and
+the `pullbackCongr` of the base-change geometric square (the `Spec`-image of
+`chartBaseChange_ring_square`). Its `(tilde M)`-component is `chartBaseChangeGeometricComparison`.
+Project-local. -/
+noncomputable def chartBaseChangeGeometricComparisonNat {A R R' B : CommRingCat.{u}}
+    (ψ : A ⟶ B) (φ : A ⟶ R) (ρ : R ⟶ R') :
+    letI : Algebra (A : Type u) (R : Type u) := φ.hom.toAlgebra
+    letI : Algebra (A : Type u) (R' : Type u) := (φ ≫ ρ).hom.toAlgebra
+    letI : Algebra (A : Type u) (B : Type u) := ψ.hom.toAlgebra
+    Scheme.Modules.pullback (Spec.map (CommRingCat.ofHom (Algebra.TensorProduct.includeLeftRingHom
+        (R := (A : Type u)) (A := (R : Type u)) (B := (B : Type u))))) ⋙
+      Scheme.Modules.pullback (Spec.map (chartBaseChangeRingMap ψ φ ρ)) ≅
+      Scheme.Modules.pullback (Spec.map ρ) ⋙
+        Scheme.Modules.pullback (Spec.map (CommRingCat.ofHom
+          (Algebra.TensorProduct.includeLeftRingHom
+            (R := (A : Type u)) (A := (R' : Type u)) (B := (B : Type u))))) := by
+  letI : Algebra (A : Type u) (R : Type u) := φ.hom.toAlgebra
+  letI : Algebra (A : Type u) (R' : Type u) := (φ ≫ ρ).hom.toAlgebra
+  letI : Algebra (A : Type u) (B : Type u) := ψ.hom.toAlgebra
+  set inclR := CommRingCat.ofHom (Algebra.TensorProduct.includeLeftRingHom
+    (R := (A : Type u)) (A := (R : Type u)) (B := (B : Type u))) with hinclR
+  set inclR' := CommRingCat.ofHom (Algebra.TensorProduct.includeLeftRingHom
+    (R := (A : Type u)) (A := (R' : Type u)) (B := (B : Type u))) with hinclR'
+  set ρB := chartBaseChangeRingMap ψ φ ρ with hρB
+  have hsq : Spec.map ρB ≫ Spec.map inclR = Spec.map inclR' ≫ Spec.map ρ := by
+    rw [← Spec.map_comp, ← Spec.map_comp]
+    exact congrArg Spec.map (chartBaseChange_ring_square ψ φ ρ)
+  exact (Scheme.Modules.pullbackComp (Spec.map ρB) (Spec.map inclR)) ≪≫
+    (Scheme.Modules.pullbackCongr hsq) ≪≫
+    (Scheme.Modules.pullbackComp (Spec.map inclR') (Spec.map ρ)).symm
+
 /-- **(b1) Geometric comparison along the base-changed open immersion.** The base-changed chart
 `j_B : W_B ↪ V_B` (coordinate map `ρ_B`) identifies the iterated pullback
 `j_B^* (F_B|_{V_B}) = j_B^* (Spec ι_R)^* M^~` with the `W`-chart pullback
@@ -1329,19 +1362,7 @@ noncomputable def chartBaseChangeGeometricComparison {A R R' B : CommRingCat.{u}
   letI : Algebra (A : Type u) (R : Type u) := φ.hom.toAlgebra
   letI : Algebra (A : Type u) (R' : Type u) := (φ ≫ ρ).hom.toAlgebra
   letI : Algebra (A : Type u) (B : Type u) := ψ.hom.toAlgebra
-  set inclR := CommRingCat.ofHom (Algebra.TensorProduct.includeLeftRingHom
-    (R := (A : Type u)) (A := (R : Type u)) (B := (B : Type u))) with hinclR
-  set inclR' := CommRingCat.ofHom (Algebra.TensorProduct.includeLeftRingHom
-    (R := (A : Type u)) (A := (R' : Type u)) (B := (B : Type u))) with hinclR'
-  set ρB := chartBaseChangeRingMap ψ φ ρ with hρB
-  -- The geometric base-change square `Spec ρ_B ≫ Spec ι_R = Spec ι_{R'} ≫ Spec ρ`, from the ring
-  -- square `ι_R ≫ ρ_B = ρ ≫ ι_{R'}` (`chartBaseChange_ring_square`) by `Spec`-contravariance.
-  have hsq : Spec.map ρB ≫ Spec.map inclR = Spec.map inclR' ≫ Spec.map ρ := by
-    rw [← Spec.map_comp, ← Spec.map_comp]
-    exact congrArg Spec.map (chartBaseChange_ring_square ψ φ ρ)
-  exact (Scheme.Modules.pullbackComp (Spec.map ρB) (Spec.map inclR)).app (tilde M) ≪≫
-    (Scheme.Modules.pullbackCongr hsq).app (tilde M) ≪≫
-    (Scheme.Modules.pullbackComp (Spec.map inclR') (Spec.map ρ)).symm.app (tilde M)
+  exact (chartBaseChangeGeometricComparisonNat ψ φ ρ).app (tilde M)
 
 /-- **(b2) Algebraic reassociation of the iterated base change.** Extending scalars to `R' ⊗[A] B`
 in stages — first along `ι_R : R → R ⊗[A] B` then along `ρ_B`, versus first along `ρ : R → R'`
@@ -1605,39 +1626,6 @@ lemma pushforwardCongr_inv_eq {X Y : Scheme} {f g : X ⟶ Y} (hf : f = g) :
   subst hf
   aesop_cat
 
-/-- **Natural-iso form of the geometric base-change comparison.** The composite pullback functor
-`pullback (Spec ι_R) ⋙ pullback (Spec ρ_B)` is naturally isomorphic to
-`pullback (Spec ρ) ⋙ pullback (Spec ι_{R'})` via the two `pullbackComp` pseudofunctor coherences and
-the `pullbackCongr` of the base-change geometric square (the `Spec`-image of
-`chartBaseChange_ring_square`). Its `(tilde M)`-component is `chartBaseChangeGeometricComparison`.
-Project-local. -/
-noncomputable def chartBaseChangeGeometricComparisonNat {A R R' B : CommRingCat.{u}}
-    (ψ : A ⟶ B) (φ : A ⟶ R) (ρ : R ⟶ R') :
-    letI : Algebra (A : Type u) (R : Type u) := φ.hom.toAlgebra
-    letI : Algebra (A : Type u) (R' : Type u) := (φ ≫ ρ).hom.toAlgebra
-    letI : Algebra (A : Type u) (B : Type u) := ψ.hom.toAlgebra
-    Scheme.Modules.pullback (Spec.map (CommRingCat.ofHom (Algebra.TensorProduct.includeLeftRingHom
-        (R := (A : Type u)) (A := (R : Type u)) (B := (B : Type u))))) ⋙
-      Scheme.Modules.pullback (Spec.map (chartBaseChangeRingMap ψ φ ρ)) ≅
-      Scheme.Modules.pullback (Spec.map ρ) ⋙
-        Scheme.Modules.pullback (Spec.map (CommRingCat.ofHom
-          (Algebra.TensorProduct.includeLeftRingHom
-            (R := (A : Type u)) (A := (R' : Type u)) (B := (B : Type u))))) := by
-  letI : Algebra (A : Type u) (R : Type u) := φ.hom.toAlgebra
-  letI : Algebra (A : Type u) (R' : Type u) := (φ ≫ ρ).hom.toAlgebra
-  letI : Algebra (A : Type u) (B : Type u) := ψ.hom.toAlgebra
-  set inclR := CommRingCat.ofHom (Algebra.TensorProduct.includeLeftRingHom
-    (R := (A : Type u)) (A := (R : Type u)) (B := (B : Type u))) with hinclR
-  set inclR' := CommRingCat.ofHom (Algebra.TensorProduct.includeLeftRingHom
-    (R := (A : Type u)) (A := (R' : Type u)) (B := (B : Type u))) with hinclR'
-  set ρB := chartBaseChangeRingMap ψ φ ρ with hρB
-  have hsq : Spec.map ρB ≫ Spec.map inclR = Spec.map inclR' ≫ Spec.map ρ := by
-    rw [← Spec.map_comp, ← Spec.map_comp]
-    exact congrArg Spec.map (chartBaseChange_ring_square ψ φ ρ)
-  exact (Scheme.Modules.pullbackComp (Spec.map ρB) (Spec.map inclR)) ≪≫
-    (Scheme.Modules.pullbackCongr hsq) ≪≫
-    (Scheme.Modules.pullbackComp (Spec.map inclR') (Spec.map ρ)).symm
-
 /-- **Natural-iso form of the geometric base-change comparison on the pushforward side** — the
 right-adjoint mate target for `chartBaseChangeGeometricComparisonNat`. The composite pushforward
 functor `pushforward (Spec ι_{R'}) ⋙ pushforward (Spec ρ)` is naturally isomorphic to
@@ -1761,6 +1749,60 @@ theorem chartBaseChangeGeometricComparison_mate {A R R' B : CommRingCat.{u}}
 -- `N : (Spec R).Modules` — where `pullback.obj N` does not whnf — then instantiate at `tilde M` by
 -- substitution, which the kernel does without whnf); see the glue `sorry` note below.
 
+/-! ### (b2 glue) Nat-trans-level decomposition of the iterated-mate assembly
+
+The six lemmas below decompose the iterated-mate glue
+`pullback_spec_tilde_iso_ring_square_mate_glue` into nat-trans/TwoSquare-level steps, each closable
+WITHOUT reassembling the four-leg telescope pointwise (the pointwise `.app M` route forces the
+composite-adjunction unit to weak-head-normal form — the documented kernel timeout). Steps 1–2 are
+definitional whiskering lifts that fold a `.map`/`.app`-wrapped leg back into a whiskered nat-trans;
+step 3 recognises a single dictionary leg as an iterated single-step mate; steps 4–5 wire the two
+already-closed per-leg mate coherences to the nat-trans level by a single TwoSquare pasting each;
+step 6 assembles the composite-functor nat-trans equation. -/
+
+/-- **(b2 glue) Whisker-right lift of a pushforward-wrapped leg** (blueprint
+`lem:ring_square_glue_whiskerRight_lift`). The image `H.map (Φ.app M)` of a natural-transformation
+component under a post-composed functor `H` is the `M`-component of the right-whiskered transformation
+`whiskerRight Φ H`. Definitional (Mathlib's `whiskerRight_app`, read right-to-left); folds a
+`pushforward.map`-wrapped dictionary leg into a whiskered nat-trans so the composite unit stays
+folded. Project-local. -/
+lemma ring_square_glue_whiskerRight_lift {C D E : Type*} [Category C] [Category D] [Category E]
+    {F G : C ⥤ D} (Φ : F ⟶ G) (H : D ⥤ E) (M : C) :
+    H.map (Φ.app M) = (Functor.whiskerRight Φ H).app M := rfl
+
+/-- **(b2 glue) Whisker-left lift of an extend-scalars-wrapped leg** (blueprint
+`lem:ring_square_glue_whiskerLeft_lift`). The component `Φ.app (F.obj M)` of a natural transformation
+at a pre-composed functor's image is the `M`-component of the left-whiskered transformation
+`whiskerLeft F Φ`. Definitional (Mathlib's `whiskerLeft_app`, read right-to-left); folds an
+`extendScalars`-wrapped dictionary leg into a whiskered nat-trans. Project-local. -/
+lemma ring_square_glue_whiskerLeft_lift {C D E : Type*} [Category C] [Category D] [Category E]
+    (F : C ⥤ D) {G H : D ⥤ E} (Φ : G ⟶ H) (M : C) :
+    Φ.app (F.obj M) = (Functor.whiskerLeft F Φ).app M := rfl
+
+/-- **(b2 glue) Iterated single-step-mate recognition of one dictionary leg** (blueprint
+`lem:ring_square_glue_pst_iterated_mate`). For a ring map `φ : R ⟶ R'` and any TwoSquare `α` of the
+two single-step left adjoints, the conjugate of `α` over the binary composite adjunctions
+`adjL = (tilde ⊣ Γ).comp (pullback ⊣ pushforward)` and
+`adjR = (extendScalars ⊣ restrictScalars).comp (tilde ⊣ Γ)` is the natural transformation underlying
+the iterated single-step mate `mateEquiv (pullback ⊣ pushforward) (extendScalars ⊣ restrictScalars)
+(mateEquiv (tilde ⊣ Γ) (tilde ⊣ Γ) α)`. This is Mathlib's `iterated_mateEquiv_conjugateEquiv`
+specialised to the affine-dictionary adjunctions, read in the displayed direction. It exposes the
+iterated-mate structure of a dictionary leg without evaluating any component (the whole identity
+is a structural TwoSquare-pasting equation), so the composite-adjunction unit is never forced to
+whnf. Project-local. -/
+lemma ring_square_glue_pst_iterated_mate {R R' : CommRingCat.{u}} (φ : R ⟶ R')
+    (α : CategoryTheory.TwoSquare (ModuleCat.extendScalars φ.hom) (tilde.functor R)
+      (tilde.functor R') (Scheme.Modules.pullback (Spec.map φ))) :
+    (conjugateEquiv ((tilde.adjunction (R := R)).comp
+          (Scheme.Modules.pullbackPushforwardAdjunction (Spec.map φ)))
+        ((ModuleCat.extendRestrictScalarsAdj φ.hom).comp (tilde.adjunction (R := R')))) α
+      = ((mateEquiv (Scheme.Modules.pullbackPushforwardAdjunction (Spec.map φ))
+            (ModuleCat.extendRestrictScalarsAdj φ.hom))
+          ((mateEquiv (tilde.adjunction (R := R)) (tilde.adjunction (R := R'))) α)).natTrans :=
+  (iterated_mateEquiv_conjugateEquiv (tilde.adjunction (R := R)) (tilde.adjunction (R := R'))
+    (ModuleCat.extendRestrictScalarsAdj φ.hom)
+    (Scheme.Modules.pullbackPushforwardAdjunction (Spec.map φ)) α).symm
+
 /-- **Component bridge for the algebraic reassociation** (kernel-safe). The `M`-component of the
 natural-iso form `chartBaseChangeModuleReassocNat` is the per-`M` reassociation
 `chartBaseChangeModuleReassoc`. As with the geometric bridge, the structural component-distribution simp
@@ -1782,6 +1824,202 @@ lemma chartBaseChangeModuleReassoc_eq_natApp {A R R' B : CommRingCat.{u}}
     eq_mpr_eq_cast, cast_eq, Iso.trans_hom, Iso.symm_hom, Iso.app_hom, Iso.app_inv,
     NatTrans.comp_app, NatIso.trans_app, eqToIso.hom, eqToHom_app]
   congr 1
+
+/-- **(b2 glue) Geometric leg at the natural-transformation level** (blueprint
+`lem:ring_square_glue_geom_leg_nat`). The hom-level reading of the closed geometric mate coherence
+`chartBaseChangeGeometricComparison_mate`: the adjoint conjugate (over the composite
+pullback–pushforward adjunctions) of the geometric comparison `chartBaseChangeGeometricComparisonNat`
+is the pushforward comparison `chartBaseChangePushforwardNat`, now stated for the underlying natural
+transformations (`conjugateEquiv` on `.hom`) rather than the isomorphisms. This is the form consumed
+by the four-leg telescope of `ring_square_glue_natTrans`. Derived directly from the closed Iso-level
+leg through `conjugateIsoEquiv_apply_hom`; no component is evaluated. Project-local. -/
+lemma ring_square_glue_geom_leg_nat {A R R' B : CommRingCat.{u}}
+    (ψ : A ⟶ B) (φ : A ⟶ R) (ρ : R ⟶ R') :
+    letI : Algebra (A : Type u) (R : Type u) := φ.hom.toAlgebra
+    letI : Algebra (A : Type u) (R' : Type u) := (φ ≫ ρ).hom.toAlgebra
+    letI : Algebra (A : Type u) (B : Type u) := ψ.hom.toAlgebra
+    conjugateEquiv
+        ((Scheme.Modules.pullbackPushforwardAdjunction (Spec.map ρ)).comp
+          (Scheme.Modules.pullbackPushforwardAdjunction (Spec.map (CommRingCat.ofHom
+            (Algebra.TensorProduct.includeLeftRingHom
+              (R := (A : Type u)) (A := (R' : Type u)) (B := (B : Type u)))))))
+        ((Scheme.Modules.pullbackPushforwardAdjunction (Spec.map (CommRingCat.ofHom
+            (Algebra.TensorProduct.includeLeftRingHom
+              (R := (A : Type u)) (A := (R : Type u)) (B := (B : Type u)))))).comp
+          (Scheme.Modules.pullbackPushforwardAdjunction (Spec.map (chartBaseChangeRingMap ψ φ ρ))))
+        (chartBaseChangeGeometricComparisonNat ψ φ ρ).hom
+      = (chartBaseChangePushforwardNat ψ φ ρ).hom := by
+  letI : Algebra (A : Type u) (R : Type u) := φ.hom.toAlgebra
+  letI : Algebra (A : Type u) (R' : Type u) := (φ ≫ ρ).hom.toAlgebra
+  letI : Algebra (A : Type u) (B : Type u) := ψ.hom.toAlgebra
+  have h := congrArg Iso.hom (chartBaseChangeGeometricComparison_mate ψ φ ρ)
+  rw [conjugateIsoEquiv_apply_hom] at h
+  exact h
+
+/-- **(b2 glue) Algebraic leg at the natural-transformation level** (blueprint
+`lem:ring_square_glue_alg_leg_nat`). The hom-level reading of the closed algebraic mate coherence
+`chartBaseChangeModuleReassoc_extendScalarsComp`: the adjoint conjugate (over the composite
+extend–restrict adjunctions) of the extend-scalars reassociation `chartBaseChangeModuleReassocNat`
+is the restrict-scalars reassociation `chartBaseChangeRestrictReassocNat`, stated for the underlying
+natural transformations. This is the form consumed by the four-leg telescope of
+`ring_square_glue_natTrans`. Derived directly from the closed Iso-level leg through
+`conjugateIsoEquiv_apply_hom`. Project-local. -/
+lemma ring_square_glue_alg_leg_nat {A R R' B : CommRingCat.{u}}
+    (ψ : A ⟶ B) (φ : A ⟶ R) (ρ : R ⟶ R') :
+    letI : Algebra (A : Type u) (R : Type u) := φ.hom.toAlgebra
+    letI : Algebra (A : Type u) (R' : Type u) := (φ ≫ ρ).hom.toAlgebra
+    letI : Algebra (A : Type u) (B : Type u) := ψ.hom.toAlgebra
+    conjugateEquiv
+        ((ModuleCat.extendRestrictScalarsAdj ρ.hom).comp
+          (ModuleCat.extendRestrictScalarsAdj (CommRingCat.ofHom
+            (Algebra.TensorProduct.includeLeftRingHom
+              (R := (A : Type u)) (A := (R' : Type u)) (B := (B : Type u)))).hom))
+        ((ModuleCat.extendRestrictScalarsAdj (CommRingCat.ofHom
+            (Algebra.TensorProduct.includeLeftRingHom
+              (R := (A : Type u)) (A := (R : Type u)) (B := (B : Type u)))).hom).comp
+          (ModuleCat.extendRestrictScalarsAdj (chartBaseChangeRingMap ψ φ ρ).hom))
+        (chartBaseChangeModuleReassocNat ψ φ ρ).hom
+      = (chartBaseChangeRestrictReassocNat ψ φ ρ).hom := by
+  letI : Algebra (A : Type u) (R : Type u) := φ.hom.toAlgebra
+  letI : Algebra (A : Type u) (R' : Type u) := (φ ≫ ρ).hom.toAlgebra
+  letI : Algebra (A : Type u) (B : Type u) := ψ.hom.toAlgebra
+  have h := congrArg Iso.hom (chartBaseChangeModuleReassoc_extendScalarsComp ψ φ ρ)
+  rw [conjugateIsoEquiv_apply_hom] at h
+  exact h
+
+/-! ### (b2 glue) Iso-level conjugate telescoping — carrier-free primitives for the cocycle
+
+The blueprint cocycle `lem:ring_square_cocycle` telescopes the four dictionary legs (each a
+`(conjugateIsoEquiv …).symm γ`) into a single conjugate of a composite, then "re-upgrades to
+isomorphisms by `conjugateIsoEquiv`". Mathlib provides the *morphism*-level conjugate composition
+laws `conjugateEquiv_comp` / `conjugateEquiv_symm_comp` but NOT their `Iso`-level companions. The two
+lemmas below supply exactly those companions. They are pure category theory over abstract categories
+— no sheafification / pullback / extend-scalars carrier occurs — so no kernel weak-head-normal-form
+reduction can be triggered (the documented `.app (tilde M)` kernel timeout). Project-local. -/
+
+/-- **Iso-level conjugate composition** (blueprint feeds `lem:ring_square_cocycle`). The `Iso`-level
+companion of Mathlib's morphism-level `conjugateEquiv_comp`: conjugating a composite of left-adjoint
+isomorphisms is the (contravariant) composite of the conjugates. Carrier-free. -/
+theorem conjugateIsoEquiv_comp {C D : Type*} [Category C] [Category D]
+    {L₁ L₂ L₃ : C ⥤ D} {R₁ R₂ R₃ : D ⥤ C}
+    (adj₁ : L₁ ⊣ R₁) (adj₂ : L₂ ⊣ R₂) (adj₃ : L₃ ⊣ R₃)
+    (α : L₂ ≅ L₁) (β : L₃ ≅ L₂) :
+    conjugateIsoEquiv adj₁ adj₂ α ≪≫ conjugateIsoEquiv adj₂ adj₃ β
+      = conjugateIsoEquiv adj₁ adj₃ (β ≪≫ α) := by
+  apply Iso.ext
+  simp only [Iso.trans_hom, conjugateIsoEquiv_apply_hom]
+  rw [conjugateEquiv_comp]
+
+/-- **Iso-level inverse-conjugate composition** (blueprint feeds `lem:ring_square_cocycle`). The
+`Iso`-level companion of Mathlib's `conjugateEquiv_symm_comp`: the inverse conjugate of a composite
+of right-adjoint isomorphisms is the (contravariant) composite of the inverse conjugates. This is the
+form consumed by the four-leg telescope, since every dictionary leg `pullback_spec_tilde_iso φ` is
+`((conjugateIsoEquiv adjL adjR).symm (gammaPushforwardNatIso φ)).symm`. Carrier-free. -/
+theorem conjugateIsoEquiv_symm_comp {C D : Type*} [Category C] [Category D]
+    {L₁ L₂ L₃ : C ⥤ D} {R₁ R₂ R₃ : D ⥤ C}
+    (adj₁ : L₁ ⊣ R₁) (adj₂ : L₂ ⊣ R₂) (adj₃ : L₃ ⊣ R₃)
+    (α : R₁ ≅ R₂) (β : R₂ ≅ R₃) :
+    (conjugateIsoEquiv adj₂ adj₃).symm β ≪≫ (conjugateIsoEquiv adj₁ adj₂).symm α
+      = (conjugateIsoEquiv adj₁ adj₃).symm (α ≪≫ β) := by
+  rw [Equiv.eq_symm_apply,
+    ← conjugateIsoEquiv_comp adj₁ adj₂ adj₃
+      ((conjugateIsoEquiv adj₁ adj₂).symm α) ((conjugateIsoEquiv adj₂ adj₃).symm β),
+    Equiv.apply_symm_apply, Equiv.apply_symm_apply]
+
+/-- **Functor-level affine pullback dictionary.** The natural isomorphism of functors
+`ModuleCat R ⥤ (Spec R').Modules`
+\[ \widetilde{(-)} \;\circ\; \operatorname{pullback}(\operatorname{Spec}\varphi)
+   \;\cong\; \operatorname{extendScalars}\varphi \;\circ\; \widetilde{(-)} \]
+whose `M`-component is `pullback_spec_tilde_iso φ M`. This is exactly the conjugate (via
+`conjugateIsoEquiv`) of `gammaPushforwardNatIso φ`, repackaged at the functor level so the four-leg
+telescope of the ring-square glue can be carried out without evaluating any component. Project-local.
+-/
+noncomputable def pullbackSpecTildeNatIso {R R' : CommRingCat.{u}} (φ : R ⟶ R') :
+    tilde.functor R ⋙ Scheme.Modules.pullback (Spec.map φ) ≅
+      ModuleCat.extendScalars φ.hom ⋙ tilde.functor R' :=
+  ((conjugateIsoEquiv ((tilde.adjunction (R := R)).comp
+        (Scheme.Modules.pullbackPushforwardAdjunction (Spec.map φ)))
+      ((ModuleCat.extendRestrictScalarsAdj φ.hom).comp
+        (tilde.adjunction (R := R')))).symm (gammaPushforwardNatIso φ)).symm
+
+/-- The `M`-component of `pullbackSpecTildeNatIso φ` is `pullback_spec_tilde_iso φ M`, definitionally
+(`pullback_spec_tilde_iso` is `(pullbackSpecTildeNatIso φ).app M` by construction). Project-local. -/
+lemma pullbackSpecTildeNatIso_app {R R' : CommRingCat.{u}} (φ : R ⟶ R') (M : ModuleCat.{u} R) :
+    (pullbackSpecTildeNatIso φ).app M = pullback_spec_tilde_iso φ M := rfl
+
+/- iter-024 STUCK (preserved attempt — see task_results): `ring_square_glue_natTrans` is commented
+   out because its STATEMENT cannot be elaborated within the 200000-heartbeat budget. Cold-build with
+   the `tilde.functor _` whisker target (metavar OR pinned to `CommRingCat.of (TensorProduct A R' B)`)
+   `(deterministic) timeout at whnf`/`isDefEq` @200000hb at the `Functor.isoWhiskerRight
+   (chartBaseChangeModuleReassocNat ψ φ ρ) (tilde.functor …)` seam: matching the algebraic-reassoc
+   nat-iso's codomain category `ModuleCat (extendScalars inclR' codomain)` against `tilde.functor`'s
+   source forces a whnf of the heavy `extendScalars`/ModuleCat-diamond carrier. Raising heartbeats to
+   800000 DOES elaborate the statement (confirmed) — i.e. the route is merely over-budget, not
+   ill-typed — but `maxHeartbeats` is forbidden and the matching FOLD (in the glue below) ALSO bombs
+   at whnf @200000hb on the `.app M` distribution over the `pullbackSpecTildeNatIso` legs (re-crossing
+   the `pullback (Spec _).obj (tilde M)` sheafification junction). Both ends over-budget ⇒ the
+   functor-level `≪≫`-chain natTrans route is genuinely STUCK; iter-025 must escalate structurally
+   (a kernel-light `.app M` fold or a different decomposition), NOT another helper round. The closed
+   scaffold (`ring_square_glue_{whiskerRight_lift,whiskerLeft_lift,pst_iterated_mate,geom_leg_nat,
+   alg_leg_nat}`, `pullbackSpecTildeNatIso`(+`_app`), `chartBaseChangeModuleReassoc_eq_natApp`) is kept
+   above for that escalation.
+
+**(b2 glue) The composite-functor natural-isomorphism equation** (blueprint
+`lem:ring_square_glue_natTrans`). The two composite functors
+`tilde ⋙ pullback (Spec ι_R) ⋙ pullback (Spec ρ_B)` and
+`extendScalars ρ ⋙ tilde ⋙ pullback (Spec ι_{R'})` (both `ModuleCat R ⥤ (Spec (R'⊗_A B)).Modules`)
+carry equal natural isomorphisms: the one assembled from the geometric comparison
+`chartBaseChangeGeometricComparisonNat` and the functor-level dictionary `pullbackSpecTildeNatIso ρ`
+agrees with the one assembled from the three functor-level dictionaries (for `ι_R`, `ρ_B`, `ι_{R'}`)
+and the algebraic reassociation `chartBaseChangeModuleReassocNat`. This is the
+natural-transformation form of the glue's `M`-component equation; evaluating it at `M` (with
+`pullbackSpecTildeNatIso_app` and `chartBaseChangeModuleReassoc_eq_natApp`) folds the glue. The
+four-leg telescope is carried out entirely at the natural-transformation / `TwoSquare` level, so no
+`.app (tilde M)` is forced and the composite-adjunction unit never reaches weak-head-normal form.
+Project-local.
+
+lemma ring_square_glue_natTrans {A R R' B : CommRingCat.{u}}
+    (ψ : A ⟶ B) (φ : A ⟶ R) (ρ : R ⟶ R') :
+    letI : Algebra (A : Type u) (R : Type u) := φ.hom.toAlgebra
+    letI : Algebra (A : Type u) (R' : Type u) := (φ ≫ ρ).hom.toAlgebra
+    letI : Algebra (A : Type u) (B : Type u) := ψ.hom.toAlgebra
+    Functor.isoWhiskerLeft (tilde.functor R) (chartBaseChangeGeometricComparisonNat ψ φ ρ) ≪≫
+        Functor.isoWhiskerRight (pullbackSpecTildeNatIso ρ)
+          (Scheme.Modules.pullback (Spec.map (CommRingCat.ofHom
+            (Algebra.TensorProduct.includeLeftRingHom
+              (R := (A : Type u)) (A := (R' : Type u)) (B := (B : Type u))))))
+      = Functor.isoWhiskerRight (pullbackSpecTildeNatIso (CommRingCat.ofHom
+            (Algebra.TensorProduct.includeLeftRingHom
+              (R := (A : Type u)) (A := (R : Type u)) (B := (B : Type u)))))
+          (Scheme.Modules.pullback (Spec.map (chartBaseChangeRingMap ψ φ ρ))) ≪≫
+        Functor.isoWhiskerLeft (ModuleCat.extendScalars (CommRingCat.ofHom
+            (Algebra.TensorProduct.includeLeftRingHom
+              (R := (A : Type u)) (A := (R : Type u)) (B := (B : Type u)))).hom)
+          (pullbackSpecTildeNatIso (chartBaseChangeRingMap ψ φ ρ)) ≪≫
+        Functor.isoWhiskerRight (chartBaseChangeModuleReassocNat ψ φ ρ)
+          (tilde.functor (CommRingCat.of (TensorProduct (A : Type u) (R' : Type u) (B : Type u)))) ≪≫
+        (Functor.isoWhiskerLeft (ModuleCat.extendScalars ρ.hom)
+          (pullbackSpecTildeNatIso (CommRingCat.ofHom
+            (Algebra.TensorProduct.includeLeftRingHom
+              (R := (A : Type u)) (A := (R' : Type u)) (B := (B : Type u)))))).symm := by
+  letI : Algebra (A : Type u) (R : Type u) := φ.hom.toAlgebra
+  letI : Algebra (A : Type u) (R' : Type u) := (φ ≫ ρ).hom.toAlgebra
+  letI : Algebra (A : Type u) (B : Type u) := ψ.hom.toAlgebra
+  sorry
+-/
+
+/-- **iter-026 FOLD MECHANISM PROBE** (temporary; replaced by the real `ring_square_cocycle`). A
+carrier-free, object-level skeleton of the ring-square telescope used only to determine whether the
+blueprint's `exact ring_square_cocycle …` fold is kernel-light IN THE FILE (the scratch REPL makes
+bottom-up carrier inference artificially expensive, so the fold must be tested by a real cold build).
+If this builds, the abstract-cocycle route is viable and this is upgraded to the provable structured
+cocycle; if it kernel-times-out, the fold route is refuted in-file. -/
+theorem ring_square_cocycle_probe
+    {𝒵 : Type*} [Category 𝒵] {X1 X2 X3 X4 X5 X6 : 𝒵}
+    (g : X1 ≅ X2) (pρ : X2 ≅ X5) (qincl : X1 ≅ X3)
+    (dρB : X3 ≅ X4) (sr : X4 ≅ X6) (dincl' : X5 ≅ X6) :
+    g ≪≫ pρ = qincl ≪≫ dρB ≪≫ sr ≪≫ dincl'.symm := by
+  sorry
 
 /-- **(b2) Iterated-mate glue of the ring-square naturality** (blueprint
 `lem:pullback_spec_tilde_iso_ring_square_mate_glue`). The iterated-mate assembly of the per-leg unit
@@ -1824,14 +2062,10 @@ theorem pullback_spec_tilde_iso_ring_square_mate_glue {A R R' B : CommRingCat.{u
   letI : Algebra (A : Type u) (R : Type u) := φ.hom.toAlgebra
   letI : Algebra (A : Type u) (R' : Type u) := (φ ≫ ρ).hom.toAlgebra
   letI : Algebra (A : Type u) (B : Type u) := ψ.hom.toAlgebra
-  -- Reduce the iso equation to the underlying INVERSE natural-transformation equality, where every
-  -- `pullback_spec_tilde_iso` leg becomes, by `pullback_spec_tilde_iso_inv_conjugateEquiv`, the
-  -- `M`-component of `(conjugateEquiv adjLφ adjRφ).symm (gammaPushforwardNatIso φ).hom`.
-  apply Iso.ext
-  rw [← Iso.inv_eq_inv]
-  simp only [Iso.trans_inv, Iso.symm_inv, Functor.mapIso_inv,
-    pullback_spec_tilde_iso_inv_conjugateEquiv, pullback_spec_tilde_iso_hom_conjugateEquiv]
-  -- GOAL NOW (staged): an equality of two morphisms `tilde N ⟶ Source` in `(Spec (R'⊗[A]B)).Modules`,
+  -- iter-024 FOLD: the entire telescope is isolated in `ring_square_glue_natTrans` (functor-level Iso
+  -- equation); evaluate it at `M`. See the closing tactic at the end of this proof.
+  -- (historical staged-route comments retained below for the prover record).
+  -- GOAL (staged, historical): an equality of two morphisms `tilde N ⟶ Source` in `(Spec (R'⊗[A]B)).Modules`,
   -- with all four `pullback_spec_tilde_iso` legs rewritten to `M`-components of
   -- `(conjugateEquiv adjLφ adjRφ).symm (gammaPushforwardNatIso φ).hom` (resp. the `.hom`/`.inv` swap),
   -- and the two non-`pst` legs present as `(chartBaseChangeGeometricComparison ψ φ ρ M).inv` and
@@ -1897,7 +2131,117 @@ theorem pullback_spec_tilde_iso_ring_square_mate_glue {A R R' B : CommRingCat.{u
   -- final `exact`, never an intermediate `.app (tilde M)` rewrite. The kernel-SAFE algebraic component
   -- bridge `chartBaseChangeModuleReassoc_eq_natApp` (above; carriers are `ModuleCat.extendScalars`, no
   -- sheafification — it builds) is the algebraic-leg half of that nat-level assembly already in place.
-  sorry
+  --
+  -- iter-022 PROGRESS (scaffold lemmas now in place, cold-build green):
+  --   * `ring_square_glue_whiskerRight_lift` / `ring_square_glue_whiskerLeft_lift` (above) — the
+  --     definitional `Functor.whiskerRight_app`/`whiskerLeft_app` folds, ready to rewrite the
+  --     `pushforward.map`/`Γ.map`/`extendScalars`-wrapped legs of the goal into whiskered nat-transes.
+  --   * `ring_square_glue_pst_iterated_mate` (above, CLOSED) — the linchpin: for any TwoSquare `α`,
+  --     `conjugateEquiv adjL adjR α = ((mateEquiv … ) ((mateEquiv …) α)).natTrans` via Mathlib's
+  --     `iterated_mateEquiv_conjugateEquiv`. Its inverse-direction companion is
+  --     `CategoryTheory.iterated_mateEquiv_conjugateEquiv_symm` (VERIFIED REAL this iter,
+  --     `…Adjunction.Mates`): for a RIGHT-adjoint square `α : TwoSquare U₂ R₂ R₁ U₁` (the shape of
+  --     `gammaPushforwardNatIso φ`),
+  --     `(conjugateEquiv adjL adjR).symm.trans (TwoSquare.equivNatTrans …).symm) α
+  --        = (mateEquiv adj₁ adj₂).symm ((mateEquiv adj₄ adj₃).symm α)` — i.e. the natTrans underlying
+  --     `pullback_spec_tilde_iso φ` (cf. `pullback_spec_tilde_iso_inv_conjugateEquiv`) IS the double
+  --     inverse single-step mate of `gammaPushforwardNatIso φ.hom`. This is the recognition that
+  --     unblocks the four-leg telescope.
+  -- REMAINING (the genuine crux, blueprint `lem:ring_square_glue_{geom_leg_nat,alg_leg_nat,natTrans}`):
+  --   assemble the natTrans-level equation between the two composite left adjoints
+  --     `extendScalars ρ ⋙ tilde ⋙ pullback (Spec inclR')`  and
+  --     `tilde ⋙ pullback (Spec inclR) ⋙ pullback (Spec ρB)`
+  --   by recognising each of the four `pst` legs as an iterated mate (`pst_iterated_mate`), telescoping
+  --   the four `(conjugateEquiv …).symm (gammaPushforwardNatIso …)` factors with
+  --   `conjugateEquiv_symm_comp`, discharging the geometric leg through
+  --   `chartBaseChangeGeometricComparison_mate` and the algebraic leg through
+  --   `chartBaseChangeModuleReassoc_extendScalarsComp` (both via the TwoSquare vcomp lemmas
+  --   `conjugateEquiv_mateEquiv_vcomp` / `mateEquiv_conjugateEquiv_vcomp`), and closing the residual
+  --   `ModuleCat R` equation on `gammaPushforwardNatIso_comp`; then fold the wrappers with the two
+  --   whisker lifts and evaluate at `M`. All at nat-trans/TwoSquare level so `.app (tilde M)` is never
+  --   forced (the documented kernel timeout).
+  --
+  -- iter-023 PROGRESS (cold-build verified green):
+  --   * `ring_square_glue_geom_leg_nat` (above, CLOSED) — the hom-level form of the closed geometric
+  --     mate leg: `conjugateEquiv adjGeomL adjGeomR (chartBaseChangeGeometricComparisonNat).hom =
+  --     (chartBaseChangePushforwardNat).hom` (derived from `chartBaseChangeGeometricComparison_mate`
+  --     via `conjugateIsoEquiv_apply_hom`). This is the `conjugateEquiv`-on-hom shape the four-leg
+  --     telescope consumes for the geometric leg.
+  --   * `ring_square_glue_alg_leg_nat` (above, CLOSED) — likewise for the algebraic leg, from
+  --     `chartBaseChangeModuleReassoc_extendScalarsComp`.
+  --   * `pullbackSpecTildeNatIso` + `pullbackSpecTildeNatIso_app` (above, CLOSED) — the functor-level
+  --     dictionary `tilde ⋙ pullback (Spec φ) ≅ extendScalars φ ⋙ tilde` whose `.app M` is
+  --     `pullback_spec_tilde_iso φ M` (by `rfl`), ready to lift the four legs to functor level.
+  --   With these, the directive's "5 tractable scaffold lemmas" are all closed (3 pre-existing whisker
+  --   lifts + `pst_iterated_mate`, plus these 2 leg-nat lemmas); only `ring_square_glue_natTrans`
+  --   (the four-leg telescope itself) and this glue's final fold remain.
+  --
+  -- iter-023 FINDING — the FUNDAMENTAL geom-bridge wall is precisely located (NEXT-ITER UNBLOCK):
+  --   The final fold `glue ↔ natTrans.app M` is kernel-safe for every leg EXCEPT the geometric
+  --   comparison: the glue carries the OBJECT-level `chartBaseChangeGeometricComparison ψ φ ρ M`,
+  --   whereas the functor-level telescope produces `(chartBaseChangeGeometricComparisonNat).app
+  --   (tilde M)`. These are defeq but NOT syntactically equal (the object def DISTRIBUTES `.app
+  --   (tilde M)` over the three-factor `≪≫`), so any `exact`/`rw` relating them forces a defeq check
+  --   over `pullback (Spec _).obj (tilde M)` → the documented sheafification-whnf kernel bomb
+  --   (iter-020/021). The ALGEBRAIC analogue is already kernel-safe via `chartBaseChangeModuleReassoc_eq_natApp`
+  --   (carriers are `extendScalars`, no sheafification). The geom bridge has NO such safe form because
+  --   its carriers sheafify. UNBLOCK: make the bridge SYNTACTIC by re-basing the object def — reorder
+  --   `chartBaseChangeGeometricComparisonNat` (and its deps) BEFORE `chartBaseChangeGeometricComparison`,
+  --   then redefine the latter as `(chartBaseChangeGeometricComparisonNat ψ φ ρ).app (tilde M)` (same
+  --   type, defeq to the current distributed def; only statement/`exact`-delegation uses exist at
+  --   L1936/L2092/L2142, all defeq-tolerant). Then the glue's geom leg IS the nat form by construction
+  --   and the final `.app M` fold is kernel-light. This is a localized reorder, NOT a global refactor.
+  --
+  -- iter-024 FOLD (the reorder is DONE — `chartBaseChangeGeometricComparison` body is
+  -- `(chartBaseChangeGeometricComparisonNat ψ φ ρ).app (tilde M)`, so the geom leg of the goal is
+  -- syntactically the nat form). The whole telescoping is isolated in `ring_square_glue_natTrans`
+  -- (a functor-level Iso equation); fold it at `M` here. The geom leg folds by defeq (the syntactic
+  -- def + `tilde M = (tilde.functor R).obj M`); the algebraic reassoc leg folds by
+  -- `chartBaseChangeModuleReassoc_eq_natApp`; the four `pullback_spec_tilde_iso` legs fold by
+  -- `pullbackSpecTildeNatIso_app` (`rfl`).
+  -- iter-024 FOLD ATTEMPT (REVERTED — cold-build `(deterministic) timeout at whnf` @200000hb):
+  --   `rw [chartBaseChangeModuleReassoc_eq_natApp ψ φ ρ M]`
+  --   `exact congrArg (fun i => Iso.app i M) (ring_square_glue_natTrans ψ φ ρ)`
+  -- The `congrArg (Iso.app · M)` of the functor-level `ring_square_glue_natTrans` equation produces
+  -- `(natLHS).app M = (natRHS).app M`; the closing `exact` must defeq this against the glue goal,
+  -- which forces the `Iso.app`/`≪≫` distribution to whnf the `pullback (Spec _).obj (tilde M)`
+  -- sheafification carriers — the documented kernel-class bomb. Even with the geom leg made syntactic
+  -- (`chartBaseChangeGeometricComparison` re-based on `…Nat.app (tilde M)`), the OTHER three
+  -- `pullbackSpecTildeNatIso` legs' `.app M` fold re-crosses the `.obj (tilde M)` junction → whnf bomb.
+  -- This is the decisive nat-trans-level whnf bomb the directive flags as genuine STUCK (iter-025
+  -- escalation). The natTrans assembly `ring_square_glue_natTrans` is itself a typed sorry whose
+  -- STATEMENT only elaborates above the 200000-heartbeat budget (isDefEq at the `tilde.functor`
+  -- whisker target), confirming the route is over-budget at both ends.
+  --
+  -- iter-025 ESCALATION (blueprint `lem:ring_square_cocycle` — the carrier-free route). The directive's
+  -- nat-trans-level whnf bomb is genuine STUCK for EVERY concrete (carrier-bearing) presentation: any
+  -- statement naming `tilde.functor`/`pullback (Spec _)` bombs to elaborate, and any tactic forcing a
+  -- defeq at `.obj (tilde M)` bombs in the kernel. The ONLY escape is the blueprint's abstract cocycle:
+  -- state the telescoping over ABSTRACT categories/functors/adjunctions (no carrier named), prove it by
+  -- pure mate calculus, then `exact ring_square_cocycle … h_unitTri h_geomLeg h_algLeg h_comp` — whose
+  -- unification BINDS the heavy carriers to metavariables (never REDUCES them), dodging the bomb.
+  -- iter-025 landed the two carrier-free iso-level telescoping primitives the cocycle's "re-upgrade to
+  -- isomorphisms" step needs and Mathlib lacks: `conjugateIsoEquiv_comp` / `conjugateIsoEquiv_symm_comp`
+  -- (above, CLOSED, axiom-clean). All five Mathlib mate lemmas the cocycle proof cites are toolchain-
+  -- verified REAL (`mateEquiv_vcomp`, `mateEquiv_hcomp`, `conjugateEquiv_symm_comp`,
+  -- `iterated_mateEquiv_conjugateEquiv`, `conjugateIsoEquiv_apply_hom`). The remaining obligation is the
+  -- abstract cocycle itself (a large 2-categorical pasting over ~4 adjunction columns) + this final
+  -- `exact`; it is one dedicated structural lemma, beyond a single fine-grained prover round. Until it
+  -- lands the glue stays a typed sorry (the directive-sanctioned STUCK outcome — NO `maxHeartbeats`,
+  -- NO carrier-bearing helper).
+  -- iter-026 FOLD PROBE: test whether the abstract-cocycle `exact` is kernel-light in-file.
+  exact ring_square_cocycle_probe
+    (chartBaseChangeGeometricComparison ψ φ ρ M)
+    ((Scheme.Modules.pullback (Spec.map (CommRingCat.ofHom Algebra.TensorProduct.includeLeftRingHom))).mapIso
+        (pullback_spec_tilde_iso ρ M))
+    ((Scheme.Modules.pullback (Spec.map (chartBaseChangeRingMap ψ φ ρ))).mapIso
+        (pullback_spec_tilde_iso (CommRingCat.ofHom Algebra.TensorProduct.includeLeftRingHom) M))
+    (pullback_spec_tilde_iso (chartBaseChangeRingMap ψ φ ρ)
+          ((ModuleCat.extendScalars
+                (CommRingCat.Hom.hom (CommRingCat.ofHom Algebra.TensorProduct.includeLeftRingHom))).obj M))
+    ((tilde.functor (CommRingCat.of (TensorProduct ↑A ↑R' ↑B))).mapIso (chartBaseChangeModuleReassoc ψ φ ρ M))
+    (pullback_spec_tilde_iso (CommRingCat.ofHom Algebra.TensorProduct.includeLeftRingHom)
+              ((ModuleCat.extendScalars (CommRingCat.Hom.hom ρ)).obj M))
 
 /-- **(b2) Ring-square naturality of the tilde-pullback dictionary**
 (blueprint `lem:pullback_spec_tilde_iso_ring_square_natural`). The explicit affine tilde-pullback

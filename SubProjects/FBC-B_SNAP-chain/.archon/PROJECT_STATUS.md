@@ -8,6 +8,74 @@
 
 ### Proof Patterns (reusable across targets)
 
+- **`exact <abstract-lemma> <heavy-carriers…>` does NOT dodge a whnf bomb (iter-026 REFUTES the iter-025
+  conjecture below).** The iter-026 probe tested exactly this: a fully carrier-free cocycle skeleton
+  `ring_square_cocycle_probe` (`{𝒵}[Category 𝒵]{X1..X6}`, six Isos, `sorry` body) folded into the heavy FBC glue
+  via `exact ring_square_cocycle_probe (chartBaseChangeGeometricComparison …) …`. Cold build → whnf 200k-hb timeout
+  at the FOLD seam (FlatBaseChange.lean:2235), build RED. ROOT CAUSE: the `exact`-binds-carriers-to-metavars premise
+  is FALSE — unification of the abstract conclusion against the CONCRETE goal still forces whnf of the GOAL side
+  whenever the goal is not already syntactically in the lemma's conclusion shape (here the concrete RHS last factor
+  is `pullback_spec_tilde_iso …`, not syntactically `_.symm`, so the kernel reduces to test the shape).
+  Carrier-abstraction helps the lemma's PROOF; it never helps the FOLD's unification. To use a cocycle fold the goal
+  must FIRST be made SYNTACTICALLY a cocycle instance (all legs one shape, no defeq-not-syntactic mismatch) — which
+  is the original wall. → the iso/functor-level FBC ring-square glue is STUCK on both sub-routes (carrier-bearing
+  iter-024, carrier-free iter-026); pivot to a pointwise sheaf-free proof or a syntactic re-shape.
+- **(iter-025 conjecture, NOW REFUTED — see above) Escape a carrier-whnf kernel bomb by ABSTRACTING the carrier
+  out of the statement, then `exact`.**
+  When a coherence equation between composites over a heavy carrier (`tilde` sheafification, `pullback (Spec _)`,
+  `extendScalars`) is well-typed but over-budget (elaborates @800k-hb, bombs @200k-hb; `maxHeartbeats` forbidden),
+  the term is fine — every TACTIC that forces a defeq across the carrier (`simp`/`rw`/`congr`/`congrArg (Iso.app ·)`)
+  is what bombs (motive re-check over the carrier). The PROPOSED fix (abstract cocycle, prove by mate calculus, close
+  with a SINGLE `exact cocycle … hyps`) was conjectured kernel-light because unification was thought to BIND the
+  carriers to metavars without reducing them — **iter-026 cold-build refuted this** (the fold whnf-bombs anyway).
+  Still-valid residue: the closed Iso-level telescoping primitives Mathlib LACKS — `conjugateIsoEquiv_comp` /
+  `conjugateIsoEquiv_symm_comp` (project-side, iter-025, carrier-free, `Iso.ext`+`conjugateIsoEquiv_apply_hom`+
+  `conjugateEquiv_comp`); the COLD `lake build`-only test discipline (LSP/`lean_run_code` hide the timeout); and the
+  real Mathlib mate API (`Adjunction.Mates`: `mateEquiv_vcomp`/`_hcomp`, `iterated_mateEquiv_conjugateEquiv`;
+  `CatCommSq.hComp`) — usable for a cocycle's PROOF, just not for a carrier-dodging fold.
+
+- **Make an object-def's `.app (tilde M)` fold SYNTACTIC by re-basing the def body on its `…Nat.app (tilde M)`
+  form (iter-024 `fbc-geom-reorder`, landed cold-green).** When an object-level comparison `comparison M` is
+  the distributed three-factor `≪≫` of an `.app (tilde M)` over a functor-level nat-iso, folding it against
+  the nat form forces a defeq over `pullback (Spec _).obj (tilde M)` → sheafification whnf kernel bomb.
+  FIX (plan-phase refactor, NOT a prover): reorder the functor-level `comparisonNat` (+ its deps) BEFORE the
+  object def, then redefine the object def body as `exact (comparisonNat ψ φ ρ).app (tilde M)` (same type,
+  defeq to the distributed form; all existing statement/`exact`-delegation uses are defeq-tolerant). The fold
+  then closes by `rfl`/defeq on that leg. CAVEAT (iter-024): this only fixes ONE leg — a glue with multiple
+  legs crossing `.obj (tilde M)` needs EVERY leg re-based, else the un-rebased legs still whnf-bomb (the
+  three non-geom `pullbackSpecTildeNatIso` legs were the residual wall). Companion kernel-safe bridge for
+  `extendScalars`-carrier (no sheafification) legs: `chartBaseChangeModuleReassoc_eq_natApp` (`congr 1` close).
+
+- **FBC mate-leg at NAT-TRANS level = hom-level reading of a CLOSED Iso mate leg (iter-023, CLOSED
+  `ring_square_glue_geom_leg_nat` + `ring_square_glue_alg_leg_nat` cold-green, axiom-clean; CORRECTS iter-022's
+  "leg-nat lemmas not independently closable" claim).** To state the natural-transformation form of a mate
+  coherence consumed by a telescope, do NOT chase the blueprint's abstract `vcomp`-phrasing
+  (`conjugateEquiv_mateEquiv_vcomp` / `mateEquiv_conjugateEquiv_vcomp`). State it as the **hom-level
+  `conjugateEquiv` reading of the already-closed Iso-level mate leg** and close in 3 lines:
+  `have h := congrArg Iso.hom (<closed_Iso_mate_lemma> …); rw [conjugateIsoEquiv_apply_hom] at h; exact h`
+  (`conjugateIsoEquiv` is `@[simps]` ⇒ `conjugateIsoEquiv_apply_hom : (conjugateIsoEquiv adj₁ adj₂ α).hom =
+  conjugateEquiv adj₁ adj₂ α.hom`). KERNEL-LIGHT: no component evaluated, no `tilde M` carrier whnf. Same recipe
+  for geom (`chartBaseChangeGeometricComparison_mate`) and alg (`chartBaseChangeModuleReassoc_extendScalarsComp`)
+  legs. Companion functor-level dictionary: `pullbackSpecTildeNatIso := conjugateIsoEquiv.symm
+  (gammaPushforwardNatIso φ)` with `pullbackSpecTildeNatIso_app : (…).app M = pullback_spec_tilde_iso φ M := rfl`.
+
+- **FBC iterated-mate LINCHPIN via `iterated_mateEquiv_conjugateEquiv` specialization (iter-022, CLOSED
+  `ring_square_glue_pst_iterated_mate` cold-green + axiom-clean).** The conjugate of a TwoSquare over a
+  BINARY composite adjunction equals the iterated single-step mate: `conjugateEquiv adjL adjR α =
+  ((mateEquiv adj₄ …) ((mateEquiv adj₁ …) α)).natTrans`, closed simply as
+  `(iterated_mateEquiv_conjugateEquiv adj₁ adj₂ adj₃ adj₄ α).symm`. Adjunction matching MUST be verified:
+  here `adj₁ = tilde.adjunction R`, `adj₂ = tilde.adjunction R'`, `adj₃ = extendRestrictScalarsAdj φ.hom`,
+  `adj₄ = pullbackPushforwardAdjunction (Spec.map φ)`, with `adj₁.comp adj₄ = adjL`, `adj₃.comp adj₂ = adjR`.
+  CONFIRMED REAL (`Mathlib/CategoryTheory/Adjunction/Mates.lean` L450,456, pinned b80f227):
+  `iterated_mateEquiv_conjugateEquiv` + inverse companion `iterated_mateEquiv_conjugateEquiv_symm` (the tool
+  for a RIGHT-adjoint square, e.g. `gammaPushforwardNatIso`) + `conjugateEquiv_symm_comp` (telescope fusion)
+  + the TwoSquare-valued `conjugateEquiv_mateEquiv_vcomp` / `mateEquiv_conjugateEquiv_vcomp` (whiskerings are
+  `TwoSquare.whiskerLeft/Right/Top/Bottom` pastings, NOT `Functor.whisker*`; recover NatTrans via `.natTrans`
+  / `TwoSquare.equivNatTrans`). Definitional whisker-app folds: `H.map (Φ.app M) = (Functor.whiskerRight Φ H).app M`
+  and `Φ.app (F.obj M) = (Functor.whiskerLeft F Φ).app M`, both `:= rfl` — name is `Functor.whiskerRight`/
+  `Functor.whiskerLeft`, NOT `CategoryTheory.whiskerRight` (unknown identifier in this toolchain). This is the
+  decomposition engine for the remaining four-leg natTrans telescope (`ring_square_glue_natTrans`) that gates
+  the glue.
 - **SNAP unitor bridge over the localized-monoidal boundary — `tensorObjUnitIso_eq_localizedLeftUnitor`
   (iter-021, CLOSED sorry-free, cold-green, axiom-clean; the leandag-READY net-progress bridge NOT gated on
   the blocked associator).** To prove `(hand-built unitor iso) = (object iso) ≫ (localized λ^loc)` between the
@@ -2046,6 +2114,65 @@
 
 ### Known Blockers (do not retry without a structural change)
 
+- **FBC ring-square glue `pullback_spec_tilde_iso_ring_square_mate_glue` = both glue sub-routes refuted; do NOT
+  author another cocycle/probe variant.** Frontier at sorry=1 for 5 consecutive iters (iter-022→026). (1) The
+  carrier-BEARING functor-level `≪≫`-glue (`ring_square_glue_natTrans` telescope) is over-budget at statement +
+  fold (iter-024 STUCK). (2) The carrier-FREE abstract cocycle + single-`exact` fold whnf-bombs at the fold seam
+  (iter-026, FlatBaseChange.lean:2235, 200k hb) — the `exact`-binds-to-metavars premise is false, unification still
+  whnf's the goal side. The ONLY remaining routes are STRUCTURAL: (i) re-shape the glue conclusion so all four legs
+  are SYNTACTICALLY one cocycle instance (kill the defeq-not-syntactic `_.symm` mismatch), or (ii) abandon the
+  iso/functor-level glue and prove the ring-square naturality pointwise on a sheaf-free carrier. Both large → user
+  escalation / strategy consult before committing. NOTE: iter-026 left the temporary `ring_square_cocycle_probe`
+  + `exact` fold IN the file → build RED; iter-027 must revert (delete probe @L2017, glue body → plain `sorry`).
+- **SNAP monolithic Option-A `⊗_loc` re-base = 4–5-iter FAILED MECHANISM (iter-022→025; do NOT re-attempt
+  as one batch).** Re-basing `tensorObj`/unitor/braiding/associator onto `MonoidalCategory.tensorObj
+  (C := modulesLocalizedMonoidal X)` (to make bridges `rfl` + delete the associator wall) is the correct
+  DESIGN, but the refactor lane cannot land it in one dispatch: iter-022 timed out (0 edits), iter-023
+  false-greened via `private`, iter-024 was build-fix-only, iter-025 timed out leaving a HALF-MIGRATED
+  consumer that broke the cold build (~25 errors: object/unitor defs partly re-based but consumers still
+  call the OLD hand-built API, e.g. `tensorObjAssoc_hK_lhs_head` unknown). NEXT TIME: either per-def
+  cold-build-gated micro-refactors (ONE def/lane, mandatory CONSUMER cold-build after each, back up the
+  green file first — no git net) OR user escalation. NEVER a multi-def monolithic batch.
+
+- **No git safety net (single untracked `504eef1 first commit`).** A refactor that overwrites a green
+  `.lean` loses it permanently if no manual `.backup` exists (iter-025 lost the iter-024 green split
+  consumer). ANY structural lane MUST copy the current green file to `<file>.<slug>-backup` BEFORE editing.
+
+- **FBC b2-glue functor-level `≪≫`-chain natTrans route is OVER-BUDGET AT BOTH ENDS (iter-024, decisive
+  STUCK; do NOT retry the same phrasing).** The plan made the geometric leg syntactic (re-based
+  `chartBaseChangeGeometricComparison` on `(chartBaseChangeGeometricComparisonNat ψ φ ρ).app (tilde M)`,
+  defeq — see Proof Patterns), removing 1 of 4 `.obj (tilde M)` crossings. The remaining four-leg telescope
+  `ring_square_glue_natTrans` then fails TWICE: (1) its **STATEMENT** does not elaborate within 200000 hb —
+  `(deterministic) timeout at isDefEq`(metavar)/`whnf`(pinned) at the
+  `Functor.isoWhiskerRight (chartBaseChangeModuleReassocNat ψ φ ρ) (tilde.functor …)` seam (matching the
+  alg-reassoc nat-iso codomain `ModuleCat (extendScalars …)` against `tilde.functor`'s source whnf's the
+  extendScalars/ModuleCat diamond); confirmed elaborable only at `maxHeartbeats 800000` (forbidden) ⇒
+  over-budget, not ill-typed; preserved as a `/- … -/` comment (FlatBaseChange.lean L1911–1970), NOT a typed
+  sorry. (2) The **FOLD** `rw [chartBaseChangeModuleReassoc_eq_natApp …]; exact congrArg (Iso.app · M)
+  (ring_square_glue_natTrans …)` → `(deterministic) timeout at whnf` @200000hb at the closing `exact`: the
+  three NON-geom `pullbackSpecTildeNatIso` legs each cross `pullback (Spec _).obj (tilde M)` sheafification
+  in the `.app M` distribution. RESOLUTION (iter-025, STRUCTURAL, not a helper round): EITHER give the three
+  non-geom legs the same syntactic-`.app M`-by-construction re-base the geom leg got, OR assemble the glue iso
+  as one closed (component-free) term so no `.obj (tilde M)` defeq is forced + a statement phrasing that does
+  not whnf the extendScalars/ModuleCat diamond at the `tilde.functor` whisker. The 5/6 scaffold + geom re-base
+  + `pullbackSpecTildeNatIso`/`_app` + `chartBaseChangeModuleReassoc_eq_natApp` are READY for either route.
+  Candidate for a `mathlib-analogist` cross-domain consult ("fold a composite-functor nat-iso to a component
+  without whnf'ing a sheafification carrier").
+
+- **File-split refactor that cold-builds only the EXTRACTED module is a FALSE GREEN (iter-023, SNAP
+  regression).** The Option-A/file-split lane moved the localized-monoidal infra out of `SectionGradedRing.lean`
+  into `SectionGradedRingLocalized.lean` and verified `lake build …SectionGradedRingLocalized` (green, 2441
+  jobs) — but NEVER built the consumer `…SectionGradedRing`, which then failed with 30+ `Unknown identifier`
+  errors (+2 cascading kernel timeouts). ROOT CAUSE: the extracted decls (`MonoidalPresheaf`,
+  `sheafificationCounitIso`, `laxMonoidal_μ_eq`, `oplaxMonoidal_δ_eq`, `Wsheaf`, …) were left **`private`**.
+  Lean-4 `private` is FILE-SCOPED — it does NOT survive `import` (the importer sees a mangled name). RULE:
+  (1) cross-file-referenced decls must be public; (2) any extraction/split refactor MUST cold-build the
+  DOWNSTREAM CONSUMER as its self-check, not just the extracted module (this is the iter-018 mis-cert trap one
+  level up). FIX = de-private the 5 consumer-referenced decls + build the consumer, OR revert to
+  `SectionGradedRing.lean.presplit-backup` (= iter-021 green). NOTE: the split did NOT advance the associator
+  wall (`tensorObjAssoc_hK_lhs_native` L1082 still `sorry`) — Option A as designed (re-base onto ⊗_loc, delete
+  the wall) was NOT performed.
+
 - **SNAP `tensorObjAssoc_hK_lhs_native` FINAL STEP — head-lemma application over the full-`tail` goal
   isDefEq-BOMBS (iter-018, 200k hb; the SUCCESSOR to the now-DOWN iter-017 reassoc wall).** The iter-017
   reassoc wall is RESOLVED by the statement-pin (see Proof Patterns: `native` drives the whole reassoc →
@@ -2119,18 +2246,45 @@
   algebraic half. A direct `exact <closed-lemma> ψ φ ρ M` over a `.obj (tilde M)` type IS kernel-light — only
   `simp`/`congr`/`rw`/`rfl` defeq-CHECKS at that type bomb → the assembly must be PURE TERM-MODE / nat-level
   with a SINGLE final `.app M` `exact`, never an intermediate `.app (tilde M)` rewrite.
+  **iter-022: the 6-lemma scaffold is the agreed churn-breaker; 3/6 CLOSED cold-green (the 2 whisker-app
+  folds + the linchpin `ring_square_glue_pst_iterated_mate` via `iterated_mateEquiv_conjugateEquiv` — see
+  Proof Patterns).** The glue `sorry` is now gated SOLELY on `ring_square_glue_natTrans` — the four-leg
+  nat-trans telescope, which SUBSUMES `geom_leg_nat`/`alg_leg_nat` (these are NOT independent facts; their
+  standalone types are underdetermined until the telescope's two composite functors are pinned — do NOT stub
+  them with guessed types). Route (all ingredients verified REAL): recognise the 4 `pst` legs via
+  `pst_iterated_mate` (+`_symm`), telescope `(conjugateEquiv …).symm (gammaPushforwardNatIso …)` with
+  `conjugateEquiv_symm_comp`, discharge geom leg via `chartBaseChangeGeometricComparison_mate` + alg leg via
+  `chartBaseChangeModuleReassoc_extendScalarsComp` (paste with `{conjugateEquiv,mateEquiv}_…_vcomp`), close
+  residual on `gammaPushforwardNatIso_comp`; then glue = fold the 2 whisker lifts + evaluate at `M`.
+  Multi-hundred-step → effort-break `ring_square_glue_natTrans` FIRST, then a dedicated prover lane. Cold-build
+  every candidate (`lean_goal` times out; use `lean_multi_attempt`).
+- **SNAP Option-A refactor TIMES OUT — the refactor subagent cannot land the 3341-line re-base in one
+  dispatch (iter-022, 3rd consecutive timeout).** Option A (re-base `tensorObj*` onto Mathlib `⊗_loc` so the
+  `hK_lhs` associator bridge becomes `rfl`) was dispatched THREE times: `snap-optiona`/`snap-optionA`
+  (from-scratch full-file rewrites) + `snap-optiona-r3` (explicit SURGICAL in-place edits). ALL timed out;
+  r3 made 0 Edit/Write calls (no dispatch_end, no task result). SNAP file stays byte-identical to iter-021
+  (no partial application → no broken state). **This is a budget ceiling on the refactor MECHANISM, not the
+  math.** FIX (iter-023): DECOMPOSE the re-base into a sequence of small, independently-dispatched,
+  cold-build-gated refactor steps (effort-breaker / staged: foundation-reorder → re-base `tensorObj` alone →
+  unitor → braiding → associator → downstream `sorry`s), OR surface the in-budget impossibility to the user.
+  Do NOT dispatch a 4th monolithic refactor. Dual-instance deletion stays REFUTED; Option-B prover ABANDONED.
 - **FBC `base_change_mate_gstar_transpose` sorry body carries a FALSE-STATUS comment + dangling refs — do NOT
-  trust it (iter-020, auditor CRITICAL + lvbc-fbc020).** `FlatBaseChange.lean:2116-2118` asserts crux sub-(b)
-  is "PROVEN and axiom-clean as the standalone lemma `base_change_mate_extendScalars_inner_value_counit`" — that
-  lemma DOES NOT EXIST anywhere in the project (grep: only this comment). L2112-2115 names ~3 more non-existent
-  decls (`…_fstar_reindex_legs_unitExpand` @~1273, `…_gammaDistribute` @~1304, `pullbackPushforward_unit_comp`
-  @~1144). A prover reading these would hunt phantom theorems. **STRATEGIC TENSION:** ARCHON_MEMORY records the
-  `base_change_mate_*` apparatus as SHEAF-LEVEL-route DEAD / slated for excision, yet `base_change_mate_gstar_transpose`
-  (sorry L2125) is STILL wired into the LIVE seeds via `pushforward_base_change_mate_cancelBaseChange` (and the
-  chapter's dead phantom `lem:pushforward_base_change_mate_sections_direct` is still cited by the live
-  `cancelBaseChange` proof, chapter L1770). Either excise the apparatus AND re-route the seeds onto the
-  concrete-tilde/glue path, or the "dead" classification is stale. Resolve in the dedicated excision iter
-  (planner/refactor decision, NOT a prover); fix the false-status comment then.
+  trust it (iter-020, STILL UNRESOLVED iter-022, auditor CRITICAL ×3 + lvbc-fbc020).** `FlatBaseChange.lean`
+  (now ~L2267-2268; line refs drift as the file grows) asserts crux sub-(b) is "PROVEN and axiom-clean as the
+  standalone lemma `base_change_mate_extendScalars_inner_value_counit`" — that lemma DOES NOT EXIST anywhere in
+  the project (grep: only this comment). Nearby (now ~L2263-2265) names ~3 more non-existent decls
+  (`…_fstar_reindex_legs_unitExpand` @~1273, `…_gammaDistribute` @~1304, `pullbackPushforward_unit_comp`
+  @~1144). A prover reading these would hunt phantom theorems. **ALSO (NEW iter-022): dead `set_option
+  maxHeartbeats` cluster at ~L2127-2130** — 4 stacked `set_option … in` are consumed by the following
+  `/-! ### Seam 3 -/` doc-comment command (in Lean 4 `set_option … in` binds the NEXT command; a doc-comment
+  IS a command), so they never reach any declaration and Seam-3 decls silently run at the default heartbeat.
+  **STRATEGIC TENSION:** ARCHON_MEMORY records the `base_change_mate_*` apparatus as SHEAF-LEVEL-route DEAD /
+  slated for excision, yet `base_change_mate_gstar_transpose` (sorry) is STILL wired into the LIVE seeds via
+  `pushforward_base_change_mate_cancelBaseChange` (and the chapter's dead phantom
+  `lem:pushforward_base_change_mate_sections_direct` is still cited by the live `cancelBaseChange` proof,
+  chapter L1770). Either excise the apparatus AND re-route the seeds onto the concrete-tilde/glue path, or the
+  "dead" classification is stale. Resolve in the dedicated excision iter (planner/refactor decision, NOT a
+  prover); fix the false-status comment + dead `set_option` cluster + stale iter-numbers (L184-247) then.
 - **[RESOLVED iter-018] FBC geometric leg `chartBaseChangeGeometricComparison_mate` — CLOSED cold-green +
   axiom-clean.** The iter-017 "`conjugateEquiv_pullbackComp_inv` is comment-fiction" claim was FALSE: it IS
   real Mathlib (`Scheme.Modules`, Sheaf.lean:238, @[simp]). The whnf-bomb was avoided by driving via CLOSED
@@ -3070,6 +3224,61 @@
   enforced corrective is a mathlib-analogist consult on the reframing keystone, not a prove round.
 
 ## Last Updated
+2026-06-23T (iter-026 review, this subproject) — **0 net frontier elim; FBC build RED (iter-026 cocycle-fold
+probe refuted in-file, whnf timeout @L2235); SNAP reverted to iter-021 green monolith.** Full narrative in
+`iter/iter-026/review.md`; reusable finding + Known Blocker added to the Knowledge Base above.
+
+### Prior: 2026-06-22T (iter-025 review, this subproject) — **0 net frontier elim; +2 NEW sorry-free FBC decls; SNAP
+BUILD REGRESSED (does NOT cold-build).** FBC cold-build GREEN firsthand (exit 0, 8318 jobs, 4 sorry = glue
+@L2019 + 3 dead-mate @L2386/2661/2701; axioms = propext/Classical.choice/Quot.sound). FBC route pivoted from
+the dead carrier-bearing glue to the abstract carrier-free `lem:ring_square_cocycle`: landed its 2
+Mathlib-gap Iso-level telescoping primitives `conjugateIsoEquiv_comp` (@L1903) + `conjugateIsoEquiv_symm_comp`
+(@L1918), verified all 5 cited Mathlib mate lemmas REAL; the cocycle itself = 1 large structural lemma, NOT
+authored (exceeds a fine-grained round) → dedicated `prove` lane next. **SNAP `SectionGradedRing.lean` RED
+(exit 1, ~25 errors)**: 3 Option-A refactor sub-lanes all timed out, left a half-migrated consumer
+(`tensorObjAssoc_hK_lhs_head` unknown @L907 + type mismatches). 4th consecutive SNAP refactor-mechanism
+failure (pc025 abort flag FIRED) → revert-to-green first (only fallback = `presplit-backup`, iter-021
+monolith; iter-024 split-consumer LOST, no git net) then micro-refactor OR user escalation. lean-auditor
+iter025: 1 must-fix (SNAP broken build) + 3 major (5 no-op `maxHeartbeats` on FBC doc-comment headers
+@L2328/2363–2366 in dead apparatus; SNAP dead comment @L1380–1438). lvbc fbc025: 0 must-fix, FBC faithful,
+2 minor coverage misses (new lemmas not blueprinted); cocycle correctly unmarked, glue statement-`\leanok`
+correct. blueprint-doctor 0 findings. sync −43 \leanok (Picard) = correct reaction to SNAP breakage. Prior iter-024:
+2026-06-22T (iter-024 review, this subproject) — **0 net frontier elim; FBC glue route confirmed GENUINELY
+STUCK (over-budget at both ends); SNAP iter-023 regression FIXED.** FBC cold-build GREEN firsthand (exit 0,
+8318 jobs, 4 sorry = glue @L1980 + 3 dead-mate/seed; 0 axioms). SNAP cold-build GREEN firsthand (exit 0, 2442
+jobs, 5 sorry) — plan-phase `snap-deprivate` de-privatized the 6 consumer-referenced decls + built the consumer.
+Plan-phase `fbc-geom-reorder` re-based `chartBaseChangeGeometricComparison` on `…Nat.app (tilde M)` (geom leg
+syntactic). Prover's decisive STUCK test fired at BOTH ends of `ring_square_glue_natTrans`: STATEMENT
+over-budget (isDefEq/whnf @200000hb @L1942, extendScalars/ModuleCat diamond at the `tilde.functor` whisker;
+elaborates only @800000hb → comment block L1911–1970, not a typed sorry) AND fold over-budget (whnf @200000hb;
+3 non-geom `pullbackSpecTildeNatIso` legs cross `.obj (tilde M)`); glue reverted to typed sorry @L2163.
+iter-025 = STRUCTURAL escalation (all-legs-syntactic re-base or component-free assembly), NOT a helper round;
+SNAP iter-025 = Option-A re-base from green baseline (decompose; 3× monolithic timeout). lean-vs-blueprint
+1 must-fix (false `\leanok` on commented `lem:ring_square_glue_natTrans` → FIXED by review: removed +`% NOTE:`).
+lean-auditor 14 must-fix (all tracked frontier/dead sorries, downgraded) + 2 misplaced `maxHeartbeats` clusters
+(FBC L2272/L2307–2310, dead apparatus) + cleanup. Prior iter-023:
+2026-06-22T (iter-023 review, this subproject) — **0 net frontier elim; +3 NEW sorry-free FBC decls; SNAP BUILD
+REGRESSED (does NOT compile).** FBC cold-build GREEN firsthand (exit 0, 8318 jobs, 4 sorry = 1 glue frontier +
+3 dead apparatus, 0 axioms): closed 5/6 glue scaffold (NEW `ring_square_glue_geom_leg_nat`/`alg_leg_nat` as
+hom-level `conjugateEquiv` readings of the closed Iso legs + helper `pullbackSpecTildeNatIso`); glue still
+`sorry`, gated on a precisely-located geom-bridge wall (object def vs `.app(tilde M)` → sheafification whnf) —
+UNBLOCK = localized reorder + `ring_square_glue_natTrans` effort-break. **SNAP `SectionGradedRing.lean` BROKEN
+firsthand: 30+ `Unknown identifier` errors + 2 kernel timeouts** — the plan-phase Option-A/file-split extracted
+the localized-monoidal infra into new `SectionGradedRingLocalized.lean` but left it `private` (file-scoped, dies
+on import); the refactor cold-built only the extracted module, never the consumer. Associator wall UNTOUCHED
+(Option-A re-base NOT performed). FIX = de-private + build consumer, OR revert to `.presplit-backup` (iter-021
+green). lean-auditor 12 must-fix (4 = the private regression, independently found; 8 tracked sorries);
+lvbc-fbc PASS (1 major = `pullbackSpecTildeNatIso` coverage debt). Prior iter-022:
+2026-06-22T (iter-022 review, this subproject) — **0 net frontier elim but +3 NEW sorry-free FBC decls (incl.
+the planner-identified linchpin); FBC cold-build GREEN firsthand (exit 0, 8318 jobs, 4 sorry), SNAP UNCHANGED
+this iter (refactor 0-edit timeout → iter-021 green, 6 sorry), 0 axioms, blueprint-doctor 0.** FBC closed 3/6
+glue scaffold lemmas (`ring_square_glue_whiskerRight_lift`/`whiskerLeft_lift` `:= rfl` + linchpin
+`ring_square_glue_pst_iterated_mate` via `iterated_mateEquiv_conjugateEquiv`); glue `sorry` now gated SOLELY on
+the four-leg natTrans telescope `ring_square_glue_natTrans` → effort-break it. SNAP Option-A refactor TIMED OUT
+a 3rd time (0 edits committed; mechanism budget ceiling on the 3341-L re-base) → iter-023 must DECOMPOSE the
+refactor into staged cold-build-gated steps, NOT a 4th monolith. Auditor: fabricated-lemma excuse-comment
+(L2267-2268) STILL unresolved (3rd flag) + NEW dead `set_option` cluster (L2127-2130), both in the
+COMPILE-DEAD `base_change_mate_*` apparatus → deferred excision iter. Prior iter-021:
 2026-06-22T (iter-021 review, this subproject) — **0 net frontier elim but +2 NEW sorry-free decls (1/file);
 both files cold-build GREEN (review-verified firsthand, exit 0: FBC 8318 jobs / 4 sorry, SNAP 2441 jobs /
 5 sorry-decls), 0 kernel timeouts, 0 axioms, blueprint-doctor 0.** SNAP CLOSED net-progress unitor bridge

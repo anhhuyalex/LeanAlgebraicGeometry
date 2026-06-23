@@ -1151,12 +1151,10 @@ private lemma tensorObj_left_unitor_naturality {W : Scheme.{u}} {M M' : W.Module
         (C := _root_.PresheafOfModules (W.presheaf ⋙ forget₂ CommRingCat RingCat))
         (𝟙 ((SheafOfModules.forget W.ringCatSheaf).obj (SheafOfModules.unit W.ringCatSheaf)))
         ((SheafOfModules.forget W.ringCatSheaf).map g.hom)
-      ≫ (λ_ (M'.val : _root_.PresheafOfModules (W.presheaf ⋙ forget₂ CommRingCat RingCat))).hom
-      = (λ_ (M.val : _root_.PresheafOfModules (W.presheaf ⋙ forget₂ CommRingCat RingCat))).hom
+      ≫ ((PresheafOfModules.monoidalCategoryStruct (R := W.presheaf)).leftUnitor M'.val).hom
+      = ((PresheafOfModules.monoidalCategoryStruct (R := W.presheaf)).leftUnitor M.val).hom
         ≫ (SheafOfModules.forget W.ringCatSheaf).map g.hom := by
-    rw [MonoidalCategory.id_tensorHom]
-    exact MonoidalCategory.leftUnitor_naturality
-      ((SheafOfModules.forget W.ringCatSheaf).map g.hom)
+    exact MonoidalCategory.leftUnitor_naturality _
   simp only [tensorObjIsoOfIso, tensorObj_left_unitor, Iso.trans_hom, Functor.mapIso_hom,
     MonoidalCategory.tensorIso_hom, Functor.mapIso_refl, Iso.refl_hom, Category.assoc]
   -- Combine the two sheafification legs, rewrite by the inner seam `hpre`, split, then close with
@@ -1165,6 +1163,292 @@ private lemma tensorObj_left_unitor_naturality {W : Scheme.{u}} {M M' : W.Module
   erw [← Functor.map_comp, hpre, Functor.map_comp, Category.assoc]
   erw [(PresheafOfModules.sheafificationAdjunction (𝟙 W.ringCatSheaf.val)).counit.naturality g.hom]
   rfl
+
+/-- **Cone A bridge 1 (η mate-identification).** The sheaf-level unit comparison `pullbackUnitIso f`
+is the sheafification of the presheaf-level oplax unit `η (pullback φ')`, conjugated by `pullbackValIso`
+on the source and `sheafifyUnitIso` on the target.  This is the proven `pullbackEtaUnitSquare f`
+rearranged: `(pullbackUnitIso f).hom` is definitionally `pullbackObjUnitToUnit f.toRingCatSheafHom`. -/
+private lemma pullbackUnitIso_eq_sheafify_eta {X Y : Scheme.{u}} (f : Y ⟶ X) :
+    letI φ' : (X.presheaf ⋙ forget₂ CommRingCat RingCat) ⟶
+        (TopologicalSpace.Opens.map f.base).op ⋙ (Y.presheaf ⋙ forget₂ CommRingCat RingCat) :=
+        (f.toRingCatSheafHom).hom
+    (pullbackUnitIso f).hom
+      = (pullbackValIso f (SheafOfModules.unit X.ringCatSheaf)).inv ≫
+          (PresheafOfModules.sheafification (R := Y.ringCatSheaf) (𝟙 Y.ringCatSheaf.val)).map
+            (Functor.OplaxMonoidal.η (PresheafOfModules.pullback φ')) ≫ sheafifyUnitIso.hom := by
+  exact (pullbackEtaUnitSquare f).symm
+
+/-- **Cone A bridge 2 (δ mate-identification).** Definitional unfolding of `pullbackTensorMap`: it is
+the sheafification of the presheaf-level oplax cotensorator `δ (pullback φ')`, conjugated by the
+`sheafificationCompPullback` device, `sheafifyTensorUnitIso`, and the two `pullbackValIso`s. -/
+private lemma pullbackTensorMap_eq_sheafify_delta {X Y : Scheme.{u}} (f : Y ⟶ X) (M N : X.Modules) :
+    letI φ' : (X.presheaf ⋙ forget₂ CommRingCat RingCat) ⟶
+        (TopologicalSpace.Opens.map f.base).op ⋙ (Y.presheaf ⋙ forget₂ CommRingCat RingCat) :=
+        (f.toRingCatSheafHom).hom
+    pullbackTensorMap f M N
+      = (SheafOfModules.sheafificationCompPullback f.toRingCatSheafHom).hom.app
+            (PresheafOfModules.Monoidal.tensorObj M.val N.val)
+          ≫ (PresheafOfModules.sheafification (R := Y.ringCatSheaf) (𝟙 Y.ringCatSheaf.val)).map
+              (Functor.OplaxMonoidal.δ (PresheafOfModules.pullback φ') M.val N.val)
+          ≫ (sheafifyTensorUnitIso (X := Y)
+              ((PresheafOfModules.pullback φ').obj M.val)
+              ((PresheafOfModules.pullback φ').obj N.val)).hom
+          ≫ (PresheafOfModules.sheafification (R := Y.ringCatSheaf) (𝟙 Y.ringCatSheaf.val)).map
+              (MonoidalCategory.tensorHom
+                (C := _root_.PresheafOfModules (Y.presheaf ⋙ forget₂ CommRingCat RingCat))
+                ((SheafOfModules.forget Y.ringCatSheaf).map (pullbackValIso f M).hom)
+                ((SheafOfModules.forget Y.ringCatSheaf).map (pullbackValIso f N).hom)) :=
+  rfl
+
+/-- **Naturality of `pullbackValIso f` against a sheaf morphism.**  `pullbackValIso f`, as `M`
+varies, is the natural isomorphism `(forget ⋙ F ⋙ a_Y) ≅ pullback f` (`F = pullback φ'`); hence for
+any `g : M ⟶ N` in `X.Modules` the square
+`(pbv M).hom ≫ f^*g = a_Y.map (F.map g.val) ≫ (pbv N).hom` commutes.  Proved by unfolding
+`pullbackValIso` into its two natural legs (`sheafificationCompPullback` and the sheafification
+counit) and chaining their naturalities (counit naturality at `g`, `sheafificationCompPullback`
+inverse naturality at `g.val`).  The reusable atom underlying the RHS reconciliation
+`pullbackValIso_naturality_leftUnitor` (Cone A sub-lemma 1). -/
+private lemma pullbackValIso_naturality {X Y : Scheme.{u}} (f : Y ⟶ X) {M N : X.Modules}
+    (g : M ⟶ N) :
+    (pullbackValIso f M).hom ≫ (pullback f).map g
+      = (PresheafOfModules.sheafification (R := Y.ringCatSheaf) (𝟙 Y.ringCatSheaf.val)).map
+          ((PresheafOfModules.pullback (f.toRingCatSheafHom).hom).map
+            ((SheafOfModules.forget X.ringCatSheaf).map g))
+        ≫ (pullbackValIso f N).hom := by
+  rw [pullbackValIso, pullbackValIso]
+  simp only [Iso.trans_hom, Iso.symm_hom, Functor.mapIso_hom, Category.assoc]
+  -- LHS = scp.inv.app M.val ≫ f^*(counit.app M) ≫ f^*g ; merge the two f^* legs (`erw` over the
+  -- `SheafOfModules ≫` seam), push the counit past `g` by counit naturality, re-split.
+  erw [← Functor.map_comp,
+    ← (PresheafOfModules.sheafificationAdjunction (R := X.ringCatSheaf)
+      (𝟙 X.ringCatSheaf.val)).counit.naturality g,
+    Functor.map_comp]
+  -- Now LHS = scp.inv.app M.val ≫ f^*(a_X.map g.val) ≫ f^*(counit.app N); slide scp.inv past
+  -- `a_X.map g.val` by inverse naturality of `sheafificationCompPullback`.  `hkey` is that
+  -- naturality square stated in the goal's exact syntax (the `≫`-seam/`Iso.app`/`restrictScalars 𝟙`
+  -- defeqs are absorbed by the term-mode `exact`).
+  have hkey :
+      ((SheafOfModules.sheafificationCompPullback (Hom.toRingCatSheafHom f)).app M.val).inv ≫
+        (pullback f).map
+          (((SheafOfModules.forget X.ringCatSheaf ⋙
+                PresheafOfModules.restrictScalars (𝟙 X.ringCatSheaf.val)) ⋙
+              PresheafOfModules.sheafification (𝟙 X.ringCatSheaf.val)).map g)
+        = (PresheafOfModules.sheafification (R := Y.ringCatSheaf) (𝟙 Y.ringCatSheaf.val)).map
+            ((PresheafOfModules.pullback (Hom.toRingCatSheafHom f).hom).map
+              ((SheafOfModules.forget X.ringCatSheaf).map g)) ≫
+          ((SheafOfModules.sheafificationCompPullback (Hom.toRingCatSheafHom f)).app N.val).inv :=
+    ((SheafOfModules.sheafificationCompPullback (Hom.toRingCatSheafHom f)).inv.naturality
+      ((SheafOfModules.forget X.ringCatSheaf).map g)).symm
+  -- Reassociate term-mode (the messy middle object has two non-syntactic forms, so `rw`-reassoc
+  -- and `reassoc_of%` both miss; `congrArg`/`Category.assoc` as terms absorb the defeq).
+  exact (Category.assoc _ _ _).symm.trans ((congrArg (· ≫ _) hkey).trans (Category.assoc _ _ _))
+
+/-- **Cone A sub-lemma 1 (`lem:pullback_val_iso_naturality_left_unitor`): RHS reconciliation.**
+The naturality of `pullbackValIso f` against the sheaf left-unitor morphism
+`(tensorObj_left_unitor M).hom : 𝒪_X ⊗ M ⟶ M`, i.e. the blueprint identity
+`(pbv_{𝒪⊗M}).hom ≫ f^*(λ^sheaf_M) = a_Y.map (F.map (λ^sheaf_M).val) ≫ (pbv_M).hom`
+(the blueprint's `F.map λ_{M.val}` is, at the Lean level, `F.map` of the *sheaf* unitor's underlying
+presheaf morphism — the inner sheafification is already folded into `(tensorObj_left_unitor M).hom`).
+A direct specialisation of the reusable atom `pullbackValIso_naturality`. -/
+private lemma pullbackValIso_naturality_leftUnitor {X Y : Scheme.{u}} (f : Y ⟶ X) (M : X.Modules) :
+    (pullbackValIso f (tensorObj (SheafOfModules.unit X.ringCatSheaf) M)).hom
+        ≫ (pullback f).map (tensorObj_left_unitor M).hom
+      = (PresheafOfModules.sheafification (R := Y.ringCatSheaf) (𝟙 Y.ringCatSheaf.val)).map
+          ((PresheafOfModules.pullback (f.toRingCatSheafHom).hom).map
+            ((SheafOfModules.forget X.ringCatSheaf).map (tensorObj_left_unitor M).hom))
+        ≫ (pullbackValIso f M).hom :=
+  pullbackValIso_naturality f (tensorObj_left_unitor M).hom
+
+/-- **Cone A sub-lemma 1′ (RHS reconciliation, assembly form).**  The `f^*`-image of the sheaf
+left unitor at `M`, expressed through the `sheafificationCompPullback` comparison and the sheafified
+*presheaf* left unitor `λ_{M.val}`:
+`f^*(λ^sheaf_M) = scp.hom.app(𝟙_⊗M.val) ≫ a_Y.map (F.map λ_{M.val}) ≫ (pbv_M).hom`.
+This is the form the bridge-3 assembly consumes (the `scp.hom` head matches the leading
+`sheafificationCompPullback` factor of `pullbackTensorMap`); proved by unfolding
+`tensorObj_left_unitor`, replacing `f^*(counit)` by `scp.hom ≫ pbv_M` and sliding `scp.hom` past
+`a_X.map λ` by `sheafificationCompPullback` naturality. -/
+private lemma pullback_map_tensorObj_left_unitor_eq {X Y : Scheme.{u}} (f : Y ⟶ X) (M : X.Modules) :
+    (pullback f).map (tensorObj_left_unitor M).hom
+      = (SheafOfModules.sheafificationCompPullback f.toRingCatSheafHom).hom.app
+            (PresheafOfModules.Monoidal.tensorObj (SheafOfModules.unit X.ringCatSheaf).val M.val)
+        ≫ (PresheafOfModules.sheafification (R := Y.ringCatSheaf) (𝟙 Y.ringCatSheaf.val)).map
+            ((PresheafOfModules.pullback (f.toRingCatSheafHom).hom).map
+              ((PresheafOfModules.monoidalCategoryStruct (R := X.presheaf)).leftUnitor M.val).hom)
+        ≫ (pullbackValIso f M).hom := by
+  rw [tensorObj_left_unitor]
+  simp only [Iso.trans_hom, Functor.mapIso_hom, asIso_hom, Iso.app_hom, Category.assoc]
+  -- `f^*(λ^sheaf) = f^*(a_X.map λ) ≫ f^*(counit)`.
+  erw [Functor.map_comp]
+  -- `f^*(counit_M) = scp.hom.app M.val ≫ (pbv_M).hom`  (cancel `scp.hom ≫ scp.inv`).
+  have hc : (pullback f).map
+        ((PresheafOfModules.sheafificationAdjunction (R := X.ringCatSheaf)
+          (𝟙 X.ringCatSheaf.val)).counit.app M)
+      = (SheafOfModules.sheafificationCompPullback f.toRingCatSheafHom).hom.app M.val
+          ≫ (pullbackValIso f M).hom := by
+    rw [pullbackValIso, Iso.trans_hom, Iso.symm_hom, Functor.mapIso_hom]
+    exact Eq.symm (Iso.hom_inv_id_app_assoc _ _ _)
+  -- `scp.hom.app M.val` slides past `f^*(a_X.map λ)` by `sheafificationCompPullback` naturality.
+  have hnat := (SheafOfModules.sheafificationCompPullback f.toRingCatSheafHom).hom.naturality
+    ((PresheafOfModules.monoidalCategoryStruct (R := X.presheaf)).leftUnitor M.val).hom
+  erw [hc]
+  exact (Category.assoc _ _ _).symm.trans
+    ((congrArg (· ≫ (pullbackValIso f M).hom) hnat).trans (Category.assoc _ _ _))
+
+set_option maxHeartbeats 1600000 in
+/-- **Cone A sub-lemma 2 (`lem:tensorobj_left_unitor_pullback_eq_sheafify`): the λ-leg.**
+The `(𝟙_Y, f^*M)`-reconciliation wrapper
+`Wλ = sheafifyTensorUnitIso 𝟙ₚY (F M.val) ≫ a_Y.map (sheafifyUnitIso ⊗ pbv_M)`,
+post-composed with the sheaf-level left unitor at `f^*M`, equals the sheafified presheaf left unitor
+`a_Y.map λ_{F M.val}` conjugated by `pullbackValIso` on the target:
+`Wλ ≫ (tensorObj_left_unitor (f^*M)).hom = a_Y.map λ_{F M.val} ≫ (pbv_M).hom`.
+This is the cleanest leg: only presheaf-`λ` naturality (against the `sheafifyUnitIso`/`pbv` legs) and
+sheafification-counit naturality are used; no new monoidal structure. -/
+private lemma tensorObj_left_unitor_pullback_eq_sheafify {X Y : Scheme.{u}} (f : Y ⟶ X)
+    (M : X.Modules) :
+    letI φ' : (X.presheaf ⋙ forget₂ CommRingCat RingCat) ⟶
+        (TopologicalSpace.Opens.map f.base).op ⋙ (Y.presheaf ⋙ forget₂ CommRingCat RingCat) :=
+        (f.toRingCatSheafHom).hom
+    (sheafifyTensorUnitIso (X := Y)
+          (𝟙_ (_root_.PresheafOfModules (Y.presheaf ⋙ forget₂ CommRingCat RingCat)))
+          ((PresheafOfModules.pullback φ').obj M.val)).hom
+        ≫ (PresheafOfModules.sheafification (R := Y.ringCatSheaf) (𝟙 Y.ringCatSheaf.val)).map
+            (MonoidalCategory.tensorHom
+              (C := _root_.PresheafOfModules (Y.presheaf ⋙ forget₂ CommRingCat RingCat))
+              ((SheafOfModules.forget Y.ringCatSheaf).map (sheafifyUnitIso (Y := Y)).hom)
+              ((SheafOfModules.forget Y.ringCatSheaf).map (pullbackValIso f M).hom))
+        ≫ (tensorObj_left_unitor ((pullback f).obj M)).hom
+      = (PresheafOfModules.sheafification (R := Y.ringCatSheaf) (𝟙 Y.ringCatSheaf.val)).map
+          ((PresheafOfModules.monoidalCategoryStruct (R := Y.presheaf)).leftUnitor
+            ((PresheafOfModules.pullback (f.toRingCatSheafHom).hom).obj M.val)).hom
+        ≫ (pullbackValIso f M).hom := by
+  -- Unfold `tensorObj_left_unitor (f^*M)` = `a_Y.map λ_{(f^*M).val} ≫ counit.app (f^*M)` and the
+  -- reconciliation wrapper; reduce to (i) presheaf left-unitor naturality against the
+  -- `sheafifyUnitIso`/`pbv_M` legs and (ii) sheafification-counit naturality.  PARTIAL: the
+  -- `sheafifyTensorUnitIso` device must be unfolded into its `asIso (a_Y.map (η ▷)/(◁ η))` legs
+  -- before the presheaf-λ naturality square is exposed; this is the genuine residual.
+  sorry
+
+set_option maxHeartbeats 1600000 in
+/-- **Cone A sub-lemma 3 (`lem:pullback_unit_iso_whisker_eq_sheafify_eta_whisker`): the η-whisker
+leg.**  The `δ`-identification right wrapper `W = sheafifyTensorUnitIso (F 𝟙)(F M.val) ≫
+a_Y.map (pbv_𝟙 ⊗ pbv_M)`, post-composed with the unit comparison whiskered into the left factor
+`(tensorObjIsoOfIso (pullbackUnitIso f) 𝟙).hom`, equals the sheafified presheaf `η`-whisker
+`a_Y.map (η F ▷ F M.val)` followed by the `(𝟙_Y, f^*M)`-wrapper
+`Wλ = sheafifyTensorUnitIso 𝟙ₚY (F M.val) ≫ a_Y.map (sheafifyUnitIso ⊗ pbv_M)`:
+`W ≫ whisk = a_Y.map (η F ▷ F M.val) ≫ Wλ`.
+Decomposed (sub-lemma 3 = 3a + 3b) into the bridge-1 substitution + whisker expansion (3a) and the
+left-factor `pbv_𝟙`/`sheafifyUnitIso` device cancellation against the right wrapper (3b). -/
+private lemma pullbackUnitIso_whisker_eq_sheafify_eta_whisker {X Y : Scheme.{u}} (f : Y ⟶ X)
+    (M : X.Modules) :
+    letI φ' : (X.presheaf ⋙ forget₂ CommRingCat RingCat) ⟶
+        (TopologicalSpace.Opens.map f.base).op ⋙ (Y.presheaf ⋙ forget₂ CommRingCat RingCat) :=
+        (f.toRingCatSheafHom).hom
+    (sheafifyTensorUnitIso (X := Y)
+          ((PresheafOfModules.pullback φ').obj (SheafOfModules.unit X.ringCatSheaf).val)
+          ((PresheafOfModules.pullback φ').obj M.val)).hom
+        ≫ (PresheafOfModules.sheafification (R := Y.ringCatSheaf) (𝟙 Y.ringCatSheaf.val)).map
+            (MonoidalCategory.tensorHom
+              (C := _root_.PresheafOfModules (Y.presheaf ⋙ forget₂ CommRingCat RingCat))
+              ((SheafOfModules.forget Y.ringCatSheaf).map
+                (pullbackValIso f (SheafOfModules.unit X.ringCatSheaf)).hom)
+              ((SheafOfModules.forget Y.ringCatSheaf).map (pullbackValIso f M).hom))
+        ≫ (tensorObjIsoOfIso (pullbackUnitIso f) (Iso.refl ((pullback f).obj M))).hom
+      = (PresheafOfModules.sheafification (R := Y.ringCatSheaf) (𝟙 Y.ringCatSheaf.val)).map
+            (Functor.OplaxMonoidal.η (PresheafOfModules.pullback φ')
+              ▷ (PresheafOfModules.pullback φ').obj M.val)
+        ≫ (sheafifyTensorUnitIso (X := Y)
+              (𝟙_ (_root_.PresheafOfModules (Y.presheaf ⋙ forget₂ CommRingCat RingCat)))
+              ((PresheafOfModules.pullback φ').obj M.val)).hom
+        ≫ (PresheafOfModules.sheafification (R := Y.ringCatSheaf) (𝟙 Y.ringCatSheaf.val)).map
+            (MonoidalCategory.tensorHom
+              (C := _root_.PresheafOfModules (Y.presheaf ⋙ forget₂ CommRingCat RingCat))
+              ((SheafOfModules.forget Y.ringCatSheaf).map (sheafifyUnitIso (Y := Y)).hom)
+              ((SheafOfModules.forget Y.ringCatSheaf).map (pullbackValIso f M).hom)) := by
+  -- 3a: substitute bridge 1 `(pullbackUnitIso f).hom = (pbv 𝟙).inv ≫ a_Y.map η ≫ sheafifyUnitIso.hom`
+  -- into `whisk = (pullbackUnitIso f).hom ⊗ 𝟙`, splitting by bifunctoriality of the sheaf tensor.
+  -- 3b: cancel the `(pbv 𝟙).inv` whisker against the `pbv 𝟙` leg of the right wrapper `W`, and pair
+  -- `sheafifyUnitIso` with the `β` reconciliation; what survives is `aη ≫ Wλ`.
+  -- PARTIAL: requires the bifunctorial split of `tensorObjIsoOfIso` across `a_Y.map (tensorHom …)`
+  -- followed by the `pbv`/`sheafifyUnitIso` cancellation; not yet closed.
+  sorry
+
+/-- **Cone A bridge 3 (sheaf-level left unitality of the pullback tensorator).** The sheaf-level
+left-unitality coherence of the "oplax monoidal" structure (`δ = pullbackTensorMap`,
+`η = pullbackUnitIso`) of the abstract module pullback `pullback f`:
+`δ_{𝒪,M} ≫ (η ▷ -) ≫ λ_{f^*M} = f^*(λ_M)`.  This is the sheaf-level transport of the presheaf-level
+`Functor.OplaxMonoidal.left_unitality_hom (pullback φ') M.val` (free from the registered oplax
+instance `presheafPullbackOplaxMonoidal`), reconciled across the sheafification boundary by
+`pullbackUnitIso_eq_sheafify_eta` (η), `pullbackTensorMap_eq_sheafify_delta` (δ), and the
+`pullbackValIso`/`sheafifyUnitIso`/counit devices (the same B1 toolkit). -/
+private lemma pullbackTensorMap_left_unitality {X Y : Scheme.{u}} (f : Y ⟶ X) (M : X.Modules) :
+    pullbackTensorMap f (SheafOfModules.unit X.ringCatSheaf) M
+        ≫ (tensorObjIsoOfIso (pullbackUnitIso f)
+            (Iso.refl ((pullback f).obj M))).hom
+        ≫ (tensorObj_left_unitor ((pullback f).obj M)).hom
+      = (pullback f).map (tensorObj_left_unitor M).hom := by
+  -- GEOMETRIC CRUX of Cone A.  Reduce to the presheaf-level `left_unitality_hom (pullback φ') M.val`
+  -- (the free oplax coherence) by sheafifying it and reconciling the three legs:
+  --   • `pullbackTensorMap` = `a_Y.map δ` conjugated by `sheafificationCompPullback`/`pullbackValIso`
+  --     (`pullbackTensorMap_eq_sheafify_delta`),
+  --   • `pullbackUnitIso` = `a_Y.map η` conjugated by `pullbackValIso`/`sheafifyUnitIso`
+  --     (`pullbackUnitIso_eq_sheafify_eta`),
+  --   • `tensorObj_left_unitor` = `a_Y.map (λ_)` ≫ counit, and the RHS `f^*(λ_M)` reconciled through
+  --     `pullbackValIso` naturality with `a_Y.map (F.map (λ_ M.val))`.
+  letI φ' : (X.presheaf ⋙ forget₂ CommRingCat RingCat) ⟶
+      (TopologicalSpace.Opens.map f.base).op ⋙ (Y.presheaf ⋙ forget₂ CommRingCat RingCat) :=
+      (f.toRingCatSheafHom).hom
+  -- Expand the sheaf-level tensorator to its sheafified-δ form (bridge 2).  (The unit comparison
+  -- `pullbackUnitIso f` is reconciled to `a_Y.map (η F)` by `pullbackUnitIso_eq_sheafify_eta` once
+  -- `tensorObjIsoOfIso`/`tensorObj_left_unitor` are unfolded; bridge 1 + the presheaf coherence
+  -- `hlu` below are the two seeds of the reconciliation.)
+  -- Expand δ (bridge 2) on the LHS and reconcile the RHS `f^*(λ^sheaf_M)` to the
+  -- `scp.hom ≫ a_Y.map(F.map λ_{M.val}) ≫ pbv_M` form (sub-lemma 1′).
+  rw [pullbackTensorMap_eq_sheafify_delta f (SheafOfModules.unit X.ringCatSheaf) M,
+    pullback_map_tensorObj_left_unitor_eq f M]
+  -- The presheaf-level left-unitality coherence, free from the registered oplax instance
+  -- `presheafPullbackOplaxMonoidal`.
+  have hlu := Functor.OplaxMonoidal.left_unitality_hom
+    (PresheafOfModules.pullback φ') M.val
+  -- Sheafify it: `a_Y.map δ ≫ a_Y.map (η ▷ FM) ≫ a_Y.map λ_{FM} = a_Y.map (F.map λ_{M.val})`.
+  have hHLU : (PresheafOfModules.sheafification (R := Y.ringCatSheaf) (𝟙 Y.ringCatSheaf.val)).map
+        (Functor.OplaxMonoidal.δ (PresheafOfModules.pullback φ')
+          (SheafOfModules.unit X.ringCatSheaf).val M.val)
+        ≫ (PresheafOfModules.sheafification (R := Y.ringCatSheaf) (𝟙 Y.ringCatSheaf.val)).map
+            (Functor.OplaxMonoidal.η (PresheafOfModules.pullback φ')
+              ▷ (PresheafOfModules.pullback φ').obj M.val)
+        ≫ (PresheafOfModules.sheafification (R := Y.ringCatSheaf) (𝟙 Y.ringCatSheaf.val)).map
+            (λ_ ((PresheafOfModules.pullback φ').obj M.val)).hom
+      = (PresheafOfModules.sheafification (R := Y.ringCatSheaf) (𝟙 Y.ringCatSheaf.val)).map
+          ((PresheafOfModules.pullback φ').map
+            ((PresheafOfModules.monoidalCategoryStruct (R := X.presheaf)).leftUnitor M.val).hom) := by
+    rw [← Functor.map_comp, ← Functor.map_comp]
+    exact congrArg _ hlu
+  -- Expose the sheafified presheaf δ/η/λ legs on the RHS via `hHLU` (so both sides share the leading
+  -- `scp.hom ≫ a_Y.map δ` once reassociated).  `erw` to cross the `φ'` let-binding vs
+  -- `(Hom.toRingCatSheafHom f).hom` defeq seam.
+  erw [← hHLU]
+  -- RESIDUAL (Cone A sub-lemmas 2 & 3 combined): with the RHS now
+  -- `scp.hom ≫ a_Y.map δ ≫ a_Y.map (η ▷ FM) ≫ a_Y.map λ_{FM} ≫ pbv_M` and the LHS
+  -- `scp.hom ≫ a_Y.map δ ≫ (sheafifyTensorUnitIso ≫ a_Y.map(pbv⊗pbv)) ≫ tensorObjIsoOfIso η ≫ λ_{f^*M}`,
+  -- what remains is the per-leg reconciliation of the trailing four LHS factors against
+  -- `a_Y.map (η ▷ FM) ≫ a_Y.map λ_{FM} ≫ pbv_M`:
+  --   • the η-whisker leg (sub-lemma 3): `sheafifyTensorUnitIso ≫ a_Y.map(pbv⊗pbv) ≫ tensorObjIsoOfIso
+  --     (pullbackUnitIso) 𝟙 ∼ a_Y.map (η ▷ FM)`, consuming bridge 1 `pullbackUnitIso_eq_sheafify_eta`;
+  --   • the λ leg (sub-lemma 2): `tensorObj_left_unitor (f^*M) ∼ a_Y.map λ_{FM} ≫ pbv_M`.
+  -- This is the genuinely hard B1-scale residual; per the iter-057 reversal plan it should be re-broken
+  -- into 3a (bridge-1 substitution + whisker expansion) / 3b (left-factor device cancellation) rather
+  -- than ground whole.  `pullbackValIso_naturality` (atom), `pullbackValIso_naturality_leftUnitor`
+  -- (sub-lemma 1) and `pullback_map_tensorObj_left_unitor_eq` (RHS reconciliation, sub-lemma 1′)
+  -- and `hHLU` are all in place; this is the only remaining gap of the chain.
+  sorry
+
+/-- **Split a `tensorObjIsoOfIso` into its two single-leg factors.**
+`tensorObjIsoOfIso e e' = tensorObjIsoOfIso e (𝟙) ≪≫ tensorObjIsoOfIso (𝟙) e'`. -/
+private lemma tensorObjIsoOfIso_eq_comp {X : Scheme.{u}} {M M' N N' : X.Modules}
+    (e : M ≅ M') (e' : N ≅ N') :
+    tensorObjIsoOfIso e e'
+      = tensorObjIsoOfIso e (Iso.refl N) ≪≫ tensorObjIsoOfIso (Iso.refl M') e' := by
+  rw [← tensorObjIsoOfIso_trans, Iso.trans_refl, Iso.refl_trans]
 
 /-- **Inner seam (S4b): the restriction of the unit-contraction over `U` factors as the
 tensor-restriction comparison, the unit identification on the left leg, and the left unitor over
@@ -1175,21 +1459,72 @@ project's tensorator (`tensorObj_restrict_iso`/`pullbackTensorMap`) and unit com
 `F(λ_X) = δ ≫ (η ▷ FX) ≫ λ_`, but the restriction functor carries no registered
 `Functor.Monoidal` instance, so it is established directly. -/
 private lemma tensorObj_unit_iso_restrict_compat_inner {X : Scheme.{u}} {U V : X.Opens}
-    (j : (V : Scheme) ⟶ (U : Scheme)) [IsOpenImmersion j] (hjι : j ≫ U.ι = V.ι) :
+    (j : (V : Scheme) ⟶ (U : Scheme)) [IsOpenImmersion j] (_hjι : j ≫ U.ι = V.ι) :
     (restrictFunctor j).mapIso (tensorObj_unit_iso (X := (U : Scheme)))
       = tensorObj_restrict_iso j (SheafOfModules.unit (U : Scheme).ringCatSheaf)
             (SheafOfModules.unit (U : Scheme).ringCatSheaf)
           ≪≫ tensorObjIsoOfIso (unitRestrictIso j)
               (Iso.refl (restrict (SheafOfModules.unit (U : Scheme).ringCatSheaf) j))
           ≪≫ tensorObj_left_unitor (restrict (SheafOfModules.unit (U : Scheme).ringCatSheaf) j) := by
-  -- ROUTE: promote `tensorObj_restrict_iso j 𝒪 𝒪` to the pullback world (Bridge B1,
-  -- `tensorObj_restrict_iso_eq_pullbackTensorMap`), express `restrictFunctor j` on the sheafified
-  -- presheaf unitor via `restrictFunctorIsoPullback` + `sheafificationCompPullback`, and reconcile
-  -- with the pullback unit comparison `pullbackUnitIso`/`pullbackObjUnitToUnit`.  RESIDUAL: the
-  -- pullback-world presheaf left-unitor coherence (no `Functor.Monoidal (pullback φ)` instance
-  -- exists in Mathlib — see `analogies/s4b-unitor.md`); the δ/η components are all built
-  -- (`pullbackTensorMap`, `pullbackUnitIso`) but their unitor interaction is not yet assembled.
-  sorry
+  -- Normalise the LHS unit-contraction to the left unitor at `𝒪_U` (so this is the unit case of
+  -- "the left unitor `𝒪_U ⊗ (-) ≅ (-)` commutes with restriction along `j`"), and promote the
+  -- RHS tensor-restriction comparison to the pullback world by Bridge B1
+  -- (`tensorObj_restrict_iso_eq_pullbackTensorMap`), in which the composition laws
+  -- (`pullbackTensorMap_restrict`, `pullbackObjUnitToUnit_comp`) live.
+  rw [tensorObj_unit_iso_eq_left_unitor (X := (U : Scheme)),
+    tensorObj_restrict_iso_eq_pullbackTensorMap j (SheafOfModules.unit (U : Scheme).ringCatSheaf)
+      (SheafOfModules.unit (U : Scheme).ringCatSheaf)]
+  -- The genuine inner seam is now Cone A: the pullback-world left-unitor coherence
+  -- `pullbackTensorMap_left_unitality` (bridge 3), conjugated through the
+  -- `restrictFunctorIsoPullback j ≅`-naturality (LHS) and combined with the per-leg unit
+  -- identification `unitRestrictIso = restrictFunctorIsoPullback ≪≫ pullbackUnitIso`, then
+  -- the substrate left-unitor naturality.  All of this below is iso-algebra over bridge 3.
+  -- Bridge 3 (sheaf-level left unitality at the unit) packaged as an iso equality.
+  have hbr :
+      @asIso _ _ _ _ (pullbackTensorMap j (SheafOfModules.unit (U : Scheme).ringCatSheaf)
+            (SheafOfModules.unit (U : Scheme).ringCatSheaf))
+          (pullbackTensorMap_isIso_of_isOpenImmersion j _ _)
+          ≪≫ tensorObjIsoOfIso (pullbackUnitIso j)
+              (Iso.refl ((pullback j).obj (SheafOfModules.unit (U : Scheme).ringCatSheaf)))
+          ≪≫ tensorObj_left_unitor
+              ((pullback j).obj (SheafOfModules.unit (U : Scheme).ringCatSheaf))
+        = (pullback j).mapIso
+            (tensorObj_left_unitor (SheafOfModules.unit (U : Scheme).ringCatSheaf)) := by
+    apply Iso.ext
+    simp only [Iso.trans_hom, asIso_hom, Functor.mapIso_hom]
+    exact pullbackTensorMap_left_unitality j (SheafOfModules.unit (U : Scheme).ringCatSheaf)
+  -- `restrictFunctorIsoPullback j`-naturality, conjugation form, on the left unitor.
+  have hconj :
+      (restrictFunctor j).mapIso
+          (tensorObj_left_unitor (SheafOfModules.unit (U : Scheme).ringCatSheaf))
+        = (restrictFunctorIsoPullback j).app
+              (tensorObj (SheafOfModules.unit (U : Scheme).ringCatSheaf)
+                (SheafOfModules.unit (U : Scheme).ringCatSheaf))
+            ≪≫ (pullback j).mapIso
+                (tensorObj_left_unitor (SheafOfModules.unit (U : Scheme).ringCatSheaf))
+            ≪≫ ((restrictFunctorIsoPullback j).app
+                (SheafOfModules.unit (U : Scheme).ringCatSheaf)).symm := by
+    apply Iso.ext
+    simp only [Iso.trans_hom, Functor.mapIso_hom, Iso.symm_hom, Iso.app_inv, Iso.app_hom]
+    rw [← (restrictFunctorIsoPullback j).hom.naturality_assoc,
+      Iso.hom_inv_id_app, Category.comp_id]
+  rw [hconj, ← hbr]
+  simp only [Iso.trans_assoc]
+  -- strip the common `RFIP.app (𝒪⊗𝒪) ≪≫ asIso δ` prefix
+  congr 1
+  congr 1
+  -- hcore: combine the two `tensorObjIsoOfIso` legs, cancel the `restrictFunctorIsoPullback` pair
+  -- inside `unitRestrictIso`, then slide through left-unitor naturality.
+  symm
+  rw [← Iso.trans_assoc, ← tensorObjIsoOfIso_trans, unitRestrictIso]
+  rw [← Iso.trans_assoc ((restrictFunctorIsoPullback j).app
+        (SheafOfModules.unit (U : Scheme).ringCatSheaf)).symm
+      ((restrictFunctorIsoPullback j).app (SheafOfModules.unit (U : Scheme).ringCatSheaf))
+      (pullbackUnitIso j),
+    Iso.symm_self_id, Iso.refl_trans, Iso.trans_refl]
+  rw [tensorObjIsoOfIso_eq_comp, Iso.trans_assoc]
+  erw [tensorObj_left_unitor_naturality ((restrictFunctorIsoPullback j).app
+      (SheafOfModules.unit (U : Scheme).ringCatSheaf)).symm]
 
 /-- **S4b (blueprint `lem:tensorobj_unit_iso_restrict_compat`): the unit self-tensor (left unitor)
 commutes with further restriction along the chart `j`.** Modulo `unitRestrictIso j` and the
@@ -1228,7 +1563,10 @@ private lemma tensorObj_unit_iso_restrict_compat {X : Scheme.{u}} {U V : X.Opens
   have hL2 := congrArg Iso.hom (tensorObj_left_unitor_naturality (unitRestrictIso j).symm)
   simp only [Iso.trans_hom, Iso.symm_hom] at hL2
   simp only [Iso.trans_hom]
-  rw [← Category.assoc, hL2, Category.assoc, Iso.inv_hom_id, Category.comp_id]
+  -- `rw [hL2]` would miss the defeq-not-syntactic `SheafOfModules ≫` seam; substitute it term-mode.
+  rw [← Category.assoc]
+  refine Eq.trans ?_ (congrArg (· ≫ (unitRestrictIso j).hom) hL2).symm
+  rw [Category.assoc, Iso.inv_hom_id, Category.comp_id]
 
 /-- **S4c (blueprint `lem:trivialisation_uiota_restrict_compat`): the global-unit comparison
 `uι = unitRestrictIso` commutes with further restriction along the chart `j`.** Modulo

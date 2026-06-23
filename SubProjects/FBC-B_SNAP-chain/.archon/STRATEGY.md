@@ -21,7 +21,7 @@ Names/labels are the parent's so finished work merges back unchanged.
 | Phase | Status | Iters left | LOC | Key Mathlib needs | Risks |
 |---|---|---|---|---|---|
 | FBC-B i=0 — concrete-tilde equalizer (Stacks 02KH) | ACTIVE | 2–4 | ~250–450 | `tensorEqLocusEquiv`; tensor⊗ preserves finite products; qcqs-pushforward-qcoh (likely project-build) | heaviest node = MV qcqs gluing (effort 1737); glue residual = restriction-naturality of the concrete tilde iso (≠ off-path abstract mate); qcqs-pushforward-qcoh absent from Mathlib |
-| SNAP — section graded ring | ACTIVE | 2–4 | ~120–300 (net DELETION ~900L bridge) | `MonoidalCategory (LocalizedMonoidal)` pentagon/triangle/hexagon; `Functor.Monoidal (L')` | re-prove ~10 coherences after `tensorObj*→⊗_loc` align; RISK = μ-boundary re-summoned inside the re-proofs (see Open Q) |
+| SNAP — section graded ring | ACTIVE | 2–4 | ~120–300 (net DELETION ~900L bridge) | `MonoidalCategory (LocalizedMonoidal)` pentagon/triangle/hexagon; `Functor.Monoidal (L')` | Option-A LANDING (4 failed iters = MECHANISM not math): land via SKELETON refactor (re-base 5 defs + `sorry` broken coherences, single agent, NO concurrent writers) + prover fill — NOT monolithic; RISK = μ-boundary re-summoned in re-proofs (Open Q) → single-global-instance fallback |
 
 ## Completed
 
@@ -65,6 +65,12 @@ via Mathlib pentagon/triangle/hexagon + `Functor.Monoidal (L')` lax-coherences. 
 localization-precondition machinery (`Wsheaf`/`W_isMonoidal`/`isIso_sheafification_whiskerRight_unit`)
 and BOTH monoidal instances — dual-instance DELETION is REFUTED (load-bearing). Then graded assembly
 (`gcommSemiring`/`gmodule`) → the H⁰ graded ring `Γ_*(X,L)`. Stalkwise / "presheaf+Γ-at-end" routes DEAD.
+**LANDING MECHANISM (the 4-iter failure was mechanism, not math).** A monolithic refactor (re-base +
+re-prove in one agent) times out and gets killed; iter-025's 3 concurrent writers raced into a broken
+half-migration. Land as TWO steps: (1) ONE refactor agent (no concurrency), green-preserving: re-base
+the 5 defs onto `⊗_loc` and `sorry` every coherence proof that breaks → commit GREEN-WITH-SORRIES
+(`tensorObjAssoc_eq_localizedAssociator` becomes `rfl`, wall sorry DELETED); (2) a PROVER lane fills the
+now-easy coherence sorries. Never >1 agent on the file at once; cold-build file AND root after step (1).
 
 ## Open key strategic questions
 - **SNAP μ-boundary one layer down (sc022 CHALLENGE).** Under Option A, do the ~10 re-proved coherences
@@ -74,12 +80,15 @@ and BOTH monoidal instances — dual-instance DELETION is REFUTED (load-bearing)
   `⊗_loc` pentagon/triangle/hexagon + `Γ∘L'` lax — neither reconciles two associators. UNVERIFIED until
   the prover re-proves them. REVERSAL: if ≥2 coherences cold-bomb on the μ-boundary, Option A merely moved
   the wall → escalate to single-global-instance (give `X.Modules` the localized instance directly).
-- **FBC mate vs naturality (sc022 CHALLENGE).** "Do NOT re-attempt the mate" targets the OFF-PATH abstract
-  `affineBaseChange_pushforward_iso`/`base_change_mate_*` apparatus (a different statement, `\uses`-disjoint
-  from the goal). The ON-PATH glue `..._ring_square_mate_glue` is the restriction-NATURALITY of the concrete,
-  already-proved tilde iso `pullback_spec_tilde_iso` — a TwoSquare nat-trans identity, decomposed by the
-  blueprint into 6 `ring_square_glue_*` sub-lemmas (the 4 Mathlib mate-API lemmas verified present, br021).
-  Distinct obligation, distinct (nat-trans-level) proof; not the dead abstract mate.
+- **FBC glue = ABSTRACT mate cocycle (iter-026 pivot; supersedes the 6-sub-lemma natTrans telescope).**
+  The ON-PATH glue `..._ring_square_mate_glue` is the restriction-NATURALITY of the concrete tilde iso
+  `pullback_spec_tilde_iso` (NOT the dead OFF-PATH `affineBaseChange_pushforward_iso`/`base_change_mate_*`).
+  The concrete-whisker natTrans telescope (`ring_square_glue_natTrans`) is OVER-BUDGET (elaborates @800k-hb,
+  kernel-bombs @200k whnf'ing the `tilde`/`extendScalars` carrier at statement-seam AND `.app M` fold).
+  Replaced (mathlib-analogist `analogies/fbc-glue-carrier-whnf.md`) by an ABSTRACT carrier-free
+  `ring_square_cocycle` (no `tilde`/`pullback`/`extendScalars` in statement or proof → no whnf can fire),
+  proved by pure mate calculus, closing the heavy glue goal with ONE `exact` (carriers → metavars).
+  The 4 leg facts are already-closed concrete lemmas (geom/alg leg-nat + unit-triangle + comp-coherence).
 - **qcqs-pushforward-qcoh (Stacks 01XJ) absent from Mathlib (sc022).** Verified MISSING this iter. Required
   by the DOWNSTREAM bridge `flatBaseChange_isIso_iff_gammaTensorComparison` (not the glue). Plan: build
   project-side via `[prover-mode: mathlib-build]` when the bridge is reached; budget +1–2 iters / ~80–150 LOC.

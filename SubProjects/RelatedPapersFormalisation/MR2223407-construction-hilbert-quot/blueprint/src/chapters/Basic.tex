@@ -1,0 +1,823 @@
+% archon:covers MR2223407ConstructionHilbertQuot/Basic.lean
+% Foundations, conventions, and the major external/Mathlib inputs on which the
+% whole construction rests. Source: Nitsure, "Construction of Hilbert and Quot
+% Schemes" (MR2223407, arXiv:math/0504590), file
+% references/MR2223407-construction-hilbert-quot.tex.
+
+\chapter{Foundations and Conventions}
+\label{chap:basic}
+
+This chapter fixes conventions and records the foundational results — most of
+them deep theorems of Grothendieck (EGA) or facts already available in Mathlib —
+on which Nitsure's construction of Hilbert and Quot schemes rests. Each such
+input is stated as an explicit \emph{dependency anchor} so that the dependency
+graph makes the project's reliance on the foundational layer visible. Anchors
+backed by Mathlib are (or will be) marked \mathlibok; anchors that quote a
+classical source not yet in Mathlib carry the source citation and a one-line
+justification.
+
+\section{The goal of the project}
+
+The terminal object of this project is the existence (representability) of the
+Quot functor in the projective setting, in the Altman--Kleiman / Grothendieck
+form. The precise statement and its proof live in
+Chapter~\ref{chap:quot-construction}
+(see Lemma/Theorem labels there, in particular \cref{thm:altman-kleiman-quot}).
+All other chapters exist to support that theorem and its variants
+(the Hilbert scheme, the scheme of morphisms, and quotients by flat projective
+equivalence relations, in Chapter~\ref{chap:variants}).
+
+\section{Schemes, sheaves and projective space}
+
+% SOURCE: Nitsure §1 (references/MR2223407-construction-hilbert-quot.tex lines 287--506).
+Throughout, schemes are assumed locally noetherian unless stated otherwise, and
+$S$ denotes a noetherian base scheme. For a positive integer $n$ we write
+$\PP^n_S = \PP^n_{\ZZ}\times S$ for projective $n$-space over $S$, with its
+structure morphism $\pi\colon \PP^n_S\to S$ and tautological line bundle
+$\Oo_{\PP^n_S}(1)$; for a sheaf $\Ff$ on $\PP^n_S$ and an integer $r$ we write
+$\Ff(r) = \Ff\ot \Oo_{\PP^n_S}(r)$. More generally $\PP(V) = \Proj_S \Sym_{\Oo_S} V$
+is the projective bundle of a coherent sheaf (or vector bundle) $V$ on $S$, with
+its very ample line bundle $\Oo_{\PP(V)}(1)$.
+
+\begin{definition}\leanok
+[Projective space over a base]
+  \label{def:projective-space}
+  \lean{MR2223407ConstructionHilbertQuot.projectiveSpace}
+  For a scheme $S$ and $n\ge 0$, projective $n$-space $\PP^n_S$ over $S$ is the
+  base change to $S$ of $\PP^n_{\ZZ} = \Proj \ZZ[x_0,\dots,x_n]$, equipped with
+  its structure morphism to $S$ and Serre twisting sheaves $\Oo(r)$.
+  \textit{Source: Nitsure §1; standard (EGA II / Mathlib \texttt{Proj}).}
+\end{definition}
+
+\begin{definition}
+
+\leanok
+[Structure morphism of projective space]
+  \label{def:projective-space-structure-morphism}
+  \lean{MR2223407ConstructionHilbertQuot.projectiveSpace.structureMorphism}
+  \uses{def:projective-space}
+  The structure morphism $\PP^n_S \to S$ of projective $n$-space over $S$.
+  Concretely it is the first projection of the pullback presenting
+  $\PP^n_S$ as $S \times_{\spec\ZZ} \PP^n_{\ZZ}$; it makes $\PP^n_S$ a
+  scheme over $S$. (Supporting helper for \ref{def:projective-space}.)
+\end{definition}
+\begin{proof}
+  \uses{def:projective-space}
+  Take the first projection $\mathrm{pullback.fst}$ of the defining pullback.
+\end{proof}
+
+\begin{definition}\leanok
+[Relative Proj of a graded sheaf; projective bundle]
+  \label{def:relative-proj}
+  \lean{MR2223407ConstructionHilbertQuot.relativeProj}
+  \uses{def:projective-space}
+  For a coherent sheaf (or vector bundle) $V$ on a scheme $S$, the projective
+  bundle $\PP(V) = \Proj_S \Sym_{\Oo_S} V$ is the relative Proj of the graded
+  sheaf of $\Oo_S$-algebras $\Sym_{\Oo_S} V$, equipped with its structure
+  morphism to $S$ and tautological very ample line bundle $\Oo_{\PP(V)}(1)$.
+  \textit{Source: Nitsure §5 lines 2160--2173; standard (EGA II 3; built by
+  gluing the graded-ring $\Proj$ on an affine cover of $S$).}
+\end{definition}
+
+\begin{proof}
+  \uses{def:relative-proj}
+  Construction (project BUILD item, see \texttt{STRATEGY.md} foundational-anchor
+  table). This is a project-bespoke Lean implementation plan for the standard
+  relative-$\Proj$ construction. \emph{Mathlib status (verified iter-006):}
+  Mathlib provides only the graded-\emph{ring} $\Proj$
+  (\texttt{AlgebraicGeometry.Proj} of a $\ZZ$-graded ring $\mathcal A:\NN\to\sigma$)
+  and \emph{no} relative $\Proj$ of a sheaf, and \emph{no} symmetric algebra
+  $\Sym_{\Oo_S}$ of a sheaf of modules. Both are gaps to be built bottom-up
+  (Mathlib-gradient). The build decomposes into ordered steps, each a future
+  \texttt{mathlib-build} objective:
+
+  \begin{enumerate}
+    \item \textbf{Affine-local model.} For an affine $\spec A\subseteq S$ on which
+      $V$ is free of rank $n+1$, $\Sym_{\Oo_S}V$ restricts to the polynomial ring
+      $A[t_0,\dots,t_n]$ with its standard $\NN$-grading; the local model of
+      $\PP(V)$ is the Mathlib graded-ring $\Proj A[t_0,\dots,t_n]$ together with
+      its structure morphism. \emph{Verified Mathlib anchors (iter-007):} the
+      structure morphism is \texttt{AlgebraicGeometry.Proj.toSpecZero}
+      $: \Proj\,\mathcal A\to\spec(\mathcal A_0)$ (degree-zero part), which for the
+      polynomial grading is exactly $\Proj A[t_\bullet]\to\spec A$ since
+      $\mathcal A_0 = A$; moreover \texttt{Proj.isSeparated} proves
+      $\texttt{IsSeparated}(\texttt{toSpecZero})$ \emph{unconditionally} and
+      \texttt{Proj.instIsProper\ldots} proves $\texttt{IsProper}(\texttt{toSpecZero})$
+      under $\texttt{Algebra.FiniteType}\,(\mathcal A_0)\,A$ (automatic for a
+      polynomial ring in finitely many variables). So the single-chart model
+      \emph{and} its separatedness/properness are entirely in Mathlib — no new
+      material for a single chart.
+    \item \textbf{Trivialising cover.} Choose an affine cover $\{\spec A_\alpha\}$
+      of $S$ trivialising $V$ (exists when $V$ is locally free; for the project's
+      use $V$ is coherent/loc.\ free on the relevant base). Record the transition
+      isomorphisms $g_{\alpha\beta}\in\GL_{n+1}(A_{\alpha\beta})$ of $V$ on
+      overlaps.
+    \item \textbf{Transition isomorphisms of charts.} A change of frame
+      $g_{\alpha\beta}$ acts $\ZZ$-linearly in degree $1$ and so induces a graded
+      ring isomorphism of $A_{\alpha\beta}[t_\bullet]$, hence an isomorphism of the
+      graded-ring $\Proj$ over the overlap $\spec A_{\alpha\beta}$. This is the
+      exact analogue of the matrix-formula transition maps used for the
+      Grassmannian (\cref{def:grassmannian-scheme}); the cocycle identity for the
+      $g_{\alpha\beta}$ is the matrix cocycle (\cref{lem:grassmannian-cocycle}
+      pattern: products of invertibles, \texttt{convert} on the embedded
+      \texttt{Invertible} obligation).
+    \item \textbf{Glue.} Assemble an \texttt{AlgebraicGeometry.Scheme.GlueData}
+      whose objects are the chart $\Proj$'s, whose $V$-fields are the overlap
+      opens, and whose transition isos $t$ are step~3; the cocycle Prop fields are
+      step~3's identity. Set $\relproj S V := D.\mathtt{glued}$.
+    \item \textbf{Structure morphism.} The chart maps $\Proj A_\alpha[t_\bullet]
+      \to\spec A_\alpha\hookrightarrow S$ agree on overlaps (compatibility from
+      step~3), so they glue to $\relproj S V\to S$
+      (\cref{def:relative-proj-structure-morphism}).
+    \item \textbf{Tautological $\Oo(1)$.} The Serre twist $\Oo(1)$ on each chart
+      $\Proj$ is compatible under the degree-$1$ action of $g_{\alpha\beta}$, so it
+      glues to a relatively very ample line bundle $\Oo_{\PP(V)}(1)$.
+  \end{enumerate}
+  Steps 1--5 are finite and axiom-clean once the \texttt{GlueData} fields are
+  supplied; the one genuinely new Mathlib ingredient is $\Sym$ of a (locally free)
+  sheaf in step~1, which for the locally-free case is just the polynomial ring on a
+  local frame and needs no full sheaf-$\Sym$ theory. \emph{Consequence used
+  downstream:} $\relproj S V\to S$ is \emph{separated} (it is built from
+  separated affine $\Proj$'s glued along open immersions), which is exactly the
+  $\texttt{IsSeparated}$ fact gating the second conjunct of
+  \cref{lem:quot-properness}. No $\infty$ hole.
+\end{proof}
+
+\begin{definition}
+
+\leanok
+[Structure morphism of a projective bundle]
+  \label{def:relative-proj-structure-morphism}
+  \lean{MR2223407ConstructionHilbertQuot.relativeProj.structureMorphism}
+  \uses{def:relative-proj}
+  The structure morphism $\PP(V) \to S$ of the projective bundle, exhibiting
+  $\PP(V)$ as a scheme over $S$. (Supporting helper for \ref{def:relative-proj};
+  produced by the same affine-cover gluing as $\PP(V)$ itself.)
+\end{definition}
+\begin{proof}
+  \uses{def:relative-proj}
+  On each trivialising affine $\spec A \subseteq S$ the morphism is the canonical
+  $\Proj A[\Sym V] \to \spec A$; these glue to the global structure morphism.
+  Construction deferred with the relative-Proj BUILD item.
+\end{proof}
+
+\subsection{relativeProj single-chart model (project-local Mathlib supplement)}
+
+The relative $\Proj$ is glued from affine charts; over a trivialising affine
+$\spec A \subseteq S$ with $V$ free of rank $n+1$, the chart is
+$\Proj A[t_0,\dots,t_n] \to \spec A$. This subsection records the affine-local
+model and the fact that its structure morphism is separated and proper — all of
+which is pure Mathlib glue (no new mathematics). It realises
+\cref{def:relative-proj} step~1 (affine-local model) and the affine-local part of
+\cref{def:relative-proj-structure-morphism}.
+
+\begin{definition}
+
+\leanok
+[Standard grading of $A[t_0,\dots,t_n]$]
+  \label{def:projchart-grading}
+  \lean{MR2223407ConstructionHilbertQuot.projChartGrading}
+  \uses{def:relative-proj}
+  The standard $\NN$-grading of the polynomial ring $A[t_0,\dots,t_n]$ by total
+  degree, $\mathcal A_m = \mathrm{homogeneousSubmodule}\,(\Fin(n+1))\,A\,m$. The
+  degree-zero part $\mathcal A_0$ is $A$.
+\end{definition}
+
+\begin{definition}
+
+\leanok
+[Affine chart $\Proj A[t_\bullet]$]
+  \label{def:projchart}
+  \lean{MR2223407ConstructionHilbertQuot.projChart}
+  \uses{def:projchart-grading}
+  The chart scheme $\Proj\mathcal A$ for the grading \cref{def:projchart-grading}.
+\end{definition}
+
+\begin{definition}
+
+\leanok
+[Chart morphism to $\spec\mathcal A_0$]
+  \label{def:projchart-to-speczero}
+  \lean{MR2223407ConstructionHilbertQuot.projChartToSpecZero}
+  \uses{def:projchart}
+  The canonical morphism $\Proj\mathcal A \to \spec\mathcal A_0$, given by
+  Mathlib's \texttt{Proj.toSpecZero}.
+\end{definition}
+
+\begin{lemma}
+
+\leanok
+[Chart is finite type over its degree-zero part]
+  \label{lem:projchart-finitetype}
+  \lean{MR2223407ConstructionHilbertQuot.projChart_finiteType}
+  \uses{def:projchart-grading}
+  $A[t_\bullet]$ is of finite type over $\mathcal A_0$. Mathlib supplies finite
+  type only over the base $A$; transfer it down the tower $A \to \mathcal A_0 \to
+  A[t_\bullet]$ via a hand-built \texttt{IsScalarTower} and
+  \texttt{Algebra.FiniteType.of\_restrictScalars\_finiteType}.
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[Chart morphism is separated]
+  \label{lem:projchart-separated}
+  \lean{MR2223407ConstructionHilbertQuot.projChartToSpecZero_isSeparated}
+  \uses{def:projchart-to-speczero}
+  $\projChartToSpecZero$ is separated, by Mathlib's unconditional
+  \texttt{Proj.isSeparated}.
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[Chart morphism is proper]
+  \label{lem:projchart-proper}
+  \lean{MR2223407ConstructionHilbertQuot.projChartToSpecZero_isProper}
+  \uses{def:projchart-to-speczero, lem:projchart-finitetype}
+  $\projChartToSpecZero$ is proper: Mathlib's $\Proj$ proper instance fires once
+  the finite-type hypothesis \cref{lem:projchart-finitetype} is supplied.
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[Degree-zero part is the base ring]
+  \label{lem:gradezero-eq-base}
+  \lean{MR2223407ConstructionHilbertQuot.algebraMap_projChartGradeZero_bijective}
+  \uses{def:projchart-grading}
+  The algebra map $A \to \mathcal A_0$ is bijective (formally $A[t_\bullet]_0 =
+  A$). Injectivity from \texttt{MvPolynomial.C\_injective}; surjectivity from
+  $\mathcal A_0 = 1$ (\texttt{homogeneousSubmodule\_zero}) and
+  \texttt{Submodule.one\_eq\_range}.
+\end{lemma}
+
+\begin{definition}
+
+\leanok
+[Ring equivalence $A \cong \mathcal A_0$]
+  \label{def:projchart-gradezero-equiv}
+  \lean{MR2223407ConstructionHilbertQuot.projChartGradeZeroEquiv}
+  \uses{lem:gradezero-eq-base}
+  The ring isomorphism $A \cong \mathcal A_0$ from
+  \cref{lem:gradezero-eq-base} via \texttt{RingEquiv.ofBijective}.
+\end{definition}
+
+\begin{definition}
+
+\leanok
+[Scheme iso $\spec\mathcal A_0 \cong \spec A$]
+  \label{def:spec-gradezero-iso-base}
+  \lean{MR2223407ConstructionHilbertQuot.specGradeZeroIsoSpecBase}
+  \uses{def:projchart-gradezero-equiv}
+  The scheme isomorphism $\spec\mathcal A_0 \cong \spec A$, the $\spec$ of
+  \cref{def:projchart-gradezero-equiv} (\texttt{asIso (Spec.map \dots)}).
+\end{definition}
+
+\begin{definition}
+
+\leanok
+[Chart structure morphism over the honest base $\spec A$]
+  \label{def:projchart-to-specbase}
+  \lean{MR2223407ConstructionHilbertQuot.projChartToSpecBase}
+  \uses{def:projchart-to-speczero, def:spec-gradezero-iso-base}
+  The chart structure morphism $\Proj\mathcal A \to \spec A$, obtained by
+  composing $\projChartToSpecZero$ with the iso
+  \cref{def:spec-gradezero-iso-base}. This is the affine-local model of the
+  relative-$\Proj$ structure morphism $\PP(V) \to S$.
+\end{definition}
+
+\begin{lemma}
+
+\leanok
+[Base chart morphism is separated]
+  \label{lem:projchart-base-separated}
+  \lean{MR2223407ConstructionHilbertQuot.projChartToSpecBase_isSeparated}
+  \uses{def:projchart-to-specbase, lem:projchart-separated}
+  $\projChartToSpecBase$ is separated (composite of a separated morphism with an
+  isomorphism).
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[Base chart morphism is proper]
+  \label{lem:projchart-base-proper}
+  \lean{MR2223407ConstructionHilbertQuot.projChartToSpecBase_isProper}
+  \uses{def:projchart-to-specbase, lem:projchart-proper}
+  $\projChartToSpecBase$ is proper (composite of a proper morphism with an
+  isomorphism). This is the affine-local properness fact gating
+  \cref{lem:quot-properness}.
+\end{lemma}
+
+\subsection{Frame-change transition isomorphisms (step 3)}
+This realises \cref{def:relative-proj} step~3: a change of frame
+$g\in\GL_{n+1}(A)$ of $V$ on a chart induces an automorphism of
+$\Proj A[t_0,\dots,t_n]$, and these satisfy the cocycle identity that the
+eventual cross-$S$ \texttt{Scheme.GlueData} consumes.
+
+\begin{definition}
+
+\leanok
+[Frame substitution vector]
+  \label{def:projchart-frame-subst}
+  \lean{MR2223407ConstructionHilbertQuot.projChartFrameSubst}
+  \uses{def:projchart-grading}
+  For $g$ a square matrix over $A$, the substitution sending the variable $t_i$ to
+  the linear form $\sum_j g_{ij}\,t_j$.
+\end{definition}
+
+\begin{lemma}
+
+\leanok
+[Frame substitution is degree one]
+  \label{lem:projchart-frame-subst-homogeneous}
+  \lean{MR2223407ConstructionHilbertQuot.projChartFrameSubst_isHomogeneous}
+  \uses{def:projchart-frame-subst}
+  Each component $\sum_j g_{ij}\,t_j$ of the frame substitution is homogeneous of
+  degree $1$ (a sum of degree-one monomials, via
+  \texttt{MvPolynomial.IsHomogeneous.sum/C/X/mul}).
+\end{lemma}
+
+\begin{definition}
+
+\leanok
+[Frame-change graded ring hom]
+  \label{def:projchart-frame-hom}
+  \lean{MR2223407ConstructionHilbertQuot.projChartFrameHom}
+  \uses{lem:projchart-frame-subst-homogeneous}
+  The graded ring endomorphism of $A[t_\bullet]$ induced by the frame substitution
+  via $\mathtt{aeval}$; it is graded because a degree-one substitution sends
+  degree-$m$ to degree-$m$ (\texttt{MvPolynomial.IsHomogeneous.aeval}).
+\end{definition}
+
+\begin{lemma}
+
+\leanok
+[Frame hom acts by substitution]
+  \label{lem:projchart-frame-hom-apply}
+  \lean{MR2223407ConstructionHilbertQuot.projChartFrameHom_apply}
+  \uses{def:projchart-frame-hom}
+  $\projChartFrameHom(g)(x) = \mathtt{aeval}\,(\text{subst }g)\,x$ (definitional
+  unfolding).
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[Frame substitution composes by matrix product]
+  \label{lem:projchart-frame-subst-comp}
+  \lean{MR2223407ConstructionHilbertQuot.projChartFrameSubst_comp}
+  \uses{def:projchart-frame-subst}
+  Composing two frame substitutions corresponds to multiplying their matrices
+  entrywise (\texttt{MvPolynomial.comp\_aeval}, \texttt{Matrix.mul\_apply}); the
+  matrix cocycle at the polynomial level.
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[Frame hom composition law]
+  \label{lem:projchart-frame-hom-comp}
+  \lean{MR2223407ConstructionHilbertQuot.projChartFrameHom_comp}
+  \uses{def:projchart-frame-hom, lem:projchart-frame-subst-comp}
+  $\projChartFrameHom(g_2)\circ\projChartFrameHom(g_1) =
+  \projChartFrameHom(g_1\cdot g_2)$ (contravariant in the matrix).
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[Frame hom of identity]
+  \label{lem:projchart-frame-hom-one}
+  \lean{MR2223407ConstructionHilbertQuot.projChartFrameHom_one}
+  \uses{def:projchart-frame-hom}
+  $\projChartFrameHom(1) = \id$ (the identity graded ring hom).
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[Frame hom satisfies the irrelevant-ideal condition]
+  \label{lem:projchart-frame-hom-irrelevant-le}
+  \lean{MR2223407ConstructionHilbertQuot.projChartFrameHom_irrelevant_le}
+  \uses{lem:projchart-frame-hom-comp, lem:projchart-frame-hom-one}
+  When $h\cdot g = 1$, the irrelevant ideal satisfies $\mathcal A_+ \le
+  \mathcal A_+.\mathtt{map}\,(\projChartFrameHom(g))$ — the hypothesis required by
+  $\Proj.\mathtt{map}$. It follows from surjectivity of the frame substitution on
+  degree one (\texttt{HomogeneousIdeal.irrelevant\_le},
+  \texttt{mem\_irrelevant\_of\_mem}).
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[Proj.map congruence in the hom argument]
+  \label{lem:projchart-frame-map-congr}
+  \lean{MR2223407ConstructionHilbertQuot.projChartFrameMap_congr}
+  \uses{def:projchart}
+  $\Proj.\mathtt{map}$ is congruent in its graded-hom argument: equal homs give
+  equal morphisms (the irrelevant-ideal proof argument is proof-irrelevant, so a
+  $\mathtt{subst}$ on the hom suffices).
+\end{lemma}
+
+\begin{definition}
+
+\leanok
+[Frame-change transition morphism]
+  \label{def:projchart-frame-map}
+  \lean{MR2223407ConstructionHilbertQuot.projChartFrameMap}
+  \uses{def:projchart-frame-hom, lem:projchart-frame-hom-irrelevant-le}
+  The transition morphism $\Proj A[t_\bullet]\to\Proj A[t_\bullet]$ given by
+  $\Proj.\mathtt{map}\,(\projChartFrameHom(g))$; the $t$-field of the eventual
+  cross-$S$ GlueData.
+\end{definition}
+
+\begin{lemma}
+
+\leanok
+[Scheme-level cocycle for frame changes]
+  \label{lem:projchart-frame-map-comp}
+  \lean{MR2223407ConstructionHilbertQuot.projChartFrameMap_comp}
+  \uses{def:projchart-frame-map, lem:projchart-frame-hom-comp, lem:projchart-frame-map-congr}
+  $\projChartFrameMap(g_1)\circ\projChartFrameMap(g_2) =
+  \projChartFrameMap(g_2\cdot g_1)$, the scheme-level cocycle (via
+  \texttt{Proj.map\_comp} and \cref{lem:projchart-frame-hom-comp}); the GlueData
+  cocycle Prop field.
+\end{lemma}
+
+\begin{definition}
+
+\leanok
+[Frame-change transition isomorphism]
+  \label{def:projchart-frame-map-iso}
+  \lean{MR2223407ConstructionHilbertQuot.projChartFrameMapIso}
+  \uses{def:projchart-frame-map, lem:projchart-frame-hom-comp, lem:projchart-frame-hom-one, lem:projchart-frame-map-congr}
+  For an invertible frame $g$, the isomorphism $\Proj A[t_\bullet]\cong\Proj
+  A[t_\bullet]$ with inverse $\projChartFrameMap(g^{-1})$ (the round-trips collapse
+  to $\Proj.\mathtt{map}\,\id = \id$). This is the chart-transition iso the cross-$S$
+  gluing of \cref{def:relative-proj} consumes.
+\end{definition}
+
+\subsection{Base-change transition between charts (step 4 ingredient)}
+In the cross-$S$ \texttt{Scheme.GlueData} (\cref{def:relative-proj} step~4), an
+overlap of two affine pieces $\spec A_\alpha,\spec A_\beta$ of $S$ is itself
+covered by affines $\spec A_{\alpha\beta}$, and the chart over the overlap is
+$\Proj A_{\alpha\beta}[t_\bullet]$. Passing from a chart $\Proj A_\alpha[t_\bullet]$
+to the overlap chart is induced by the ring map $A_\alpha\to A_{\alpha\beta}$
+applied coefficientwise; combined with the frame change
+(\cref{def:projchart-frame-map}) this is the full GlueData transition. This base
+change is independent of $\Sym$/local-frame machinery and is the next concrete
+ingredient. The decision of record (locally-free $V$): the GlueData is assembled
+from an \emph{explicit} affine cover of $S$ together with per-overlap frame
+matrices forming a $\GL_{n+1}$ $1$-cocycle (mirroring \cref{def:grassmannian-scheme});
+the only genuinely-absent Mathlib piece is the adapter turning an abstract
+$V:S.\mathtt{Modules}$ into that explicit cover-plus-frame data (local triviality
+of a locally free sheaf), which is deferred.
+
+\begin{definition}
+
+\leanok
+[Base-change graded ring hom]
+  \label{def:projchart-base-hom}
+  \lean{MR2223407ConstructionHilbertQuot.projChartBaseHom}
+  \uses{def:projchart-grading}
+  For a ring hom $\varphi\colon A\to A'$, the graded ring hom
+  $A[t_\bullet]\to A'[t_\bullet]$ that applies $\varphi$ to coefficients
+  (\texttt{MvPolynomial.map}\,$\varphi$). It is graded because applying $\varphi$ to
+  coefficients preserves the total degree of every monomial.
+\end{definition}
+
+\begin{lemma}
+
+\leanok
+[Base-change hom satisfies the irrelevant-ideal condition]
+  \label{lem:projchart-base-hom-irrelevant-le}
+  \lean{MR2223407ConstructionHilbertQuot.projChartBaseHom_irrelevant_le}
+  \uses{def:projchart-base-hom}
+  $\mathcal A'_+ \le \mathcal A'_+.\mathtt{map}\,(\mathrm{projChartBaseHom}\,\varphi)$
+  — the hypothesis $\Proj.\mathtt{map}$ needs. It holds because each variable $t_i$
+  maps to $t_i$, so the irrelevant generators are in the image.
+\end{lemma}
+
+\begin{definition}
+
+\leanok
+[Base-change transition morphism]
+  \label{def:projchart-base-map}
+  \lean{MR2223407ConstructionHilbertQuot.projChartBaseMap}
+  \uses{def:projchart-base-hom, lem:projchart-base-hom-irrelevant-le}
+  The morphism $\Proj A'[t_\bullet]\to\Proj A[t_\bullet]$ given by
+  $\Proj.\mathtt{map}\,(\mathrm{projChartBaseHom}\,\varphi)$ (contravariant in
+  $\varphi$). Composed with \cref{def:projchart-frame-map} over $A_{\alpha\beta}$,
+  it is the full chart transition of the cross-$S$ GlueData.
+\end{definition}
+
+\begin{lemma}
+
+\leanok
+[Base-change graded hom, pointwise]
+  \label{lem:projchart-base-hom-apply}
+  \lean{MR2223407ConstructionHilbertQuot.projChartBaseHom_apply}
+  \uses{def:projchart-base-hom}
+  $\mathrm{projChartBaseHom}\,\varphi$ acts as $\mathtt{MvPolynomial.map}\,\varphi$
+  on the underlying polynomial ring (definitional unfolding).
+\end{lemma}
+\begin{proof} By definition. \end{proof}
+
+\begin{lemma}
+
+\leanok
+[Base-change hom unit law]
+  \label{lem:projchart-base-hom-id}
+  \lean{MR2223407ConstructionHilbertQuot.projChartBaseHom_id}
+  \uses{def:projchart-base-hom}
+  $\mathrm{projChartBaseHom}\,(\id_A)=\id$ as a graded ring hom, since
+  $\mathtt{MvPolynomial.map}\,\id=\id$.
+\end{lemma}
+\begin{proof} From \texttt{MvPolynomial.map\_id}. \end{proof}
+
+\begin{lemma}
+
+\leanok
+[Base-change hom composition law]
+  \label{lem:projchart-base-hom-comp}
+  \lean{MR2223407ConstructionHilbertQuot.projChartBaseHom_comp}
+  \uses{def:projchart-base-hom}
+  For $\varphi:A\to A'$, $\psi:A'\to A''$,
+  $\mathrm{projChartBaseHom}\,(\psi\circ\varphi)=
+  \mathrm{projChartBaseHom}\,\psi\circ\mathrm{projChartBaseHom}\,\varphi$
+  (covariant), since $\mathtt{MvPolynomial.map}$ is functorial.
+\end{lemma}
+\begin{proof} From \texttt{MvPolynomial.map\_map}. \end{proof}
+
+\begin{lemma}
+
+\leanok
+[Base-change map congruence]
+  \label{lem:projchart-base-map-congr}
+  \lean{MR2223407ConstructionHilbertQuot.projChartBaseMap_congr}
+  \uses{def:projchart-base-map}
+  $\mathrm{projChartBaseMap}$ depends only on the underlying graded hom: equal
+  homs give equal $\Proj.\mathtt{map}$ morphisms (the irrelevant-ideal hypothesis
+  is proof-irrelevant).
+\end{lemma}
+\begin{proof} By substitution on the hom argument. \end{proof}
+
+\begin{lemma}
+
+\leanok
+[Base-change map unit law]
+  \label{lem:projchart-base-map-id}
+  \lean{MR2223407ConstructionHilbertQuot.projChartBaseMap_id}
+  \uses{def:projchart-base-map, lem:projchart-base-hom-id}
+  $\mathrm{projChartBaseMap}\,(\id_A)=\id_{\Proj A[t_\bullet]}$.
+\end{lemma}
+\begin{proof} From \cref{lem:projchart-base-hom-id} and \texttt{Proj.map\_id}. \end{proof}
+
+\begin{lemma}
+
+\leanok
+[Base-change map functoriality]
+  \label{lem:projchart-base-map-comp}
+  \lean{MR2223407ConstructionHilbertQuot.projChartBaseMap_comp}
+  \uses{def:projchart-base-map, lem:projchart-base-hom-comp, lem:projchart-base-map-congr}
+  $\mathrm{projChartBaseMap}\,(\psi\circ\varphi)=
+  \mathrm{projChartBaseMap}\,\varphi\circ\mathrm{projChartBaseMap}\,\psi$
+  (contravariant), the scheme-level functoriality of the base change.
+\end{lemma}
+\begin{proof}
+  From \texttt{Proj.map\_comp}, \cref{lem:projchart-base-hom-comp}, and
+  \cref{lem:projchart-base-map-congr}.
+\end{proof}
+
+\subsection{Chart structure-morphism compatibility (step 5 ingredient)}
+For the charts to glue to a scheme \emph{over} $S$ (\cref{def:relative-proj}
+step~5), the chart structure morphisms
+$\mathrm{projChartToSpecBase}:\Proj A[t_\bullet]\to\spec A$
+(\cref{def:relative-proj}, built from \texttt{Proj.toSpecZero} by identifying the
+degree-zero part $A[t_\bullet]_0=A$) must be compatible with the two halves of the
+chart transition: the frame change leaves the base unchanged, and the base change
+covers $\spec\varphi$. Both are instances of the naturality of
+\texttt{Proj.toSpecZero} along \texttt{Proj.map}, which is \emph{absent} from
+Mathlib (no \texttt{Proj.map}--\texttt{toSpecZero} square lemma) and is built here
+as a project-local supplement. These are cover-independent and required regardless
+of how the trivialising cover is supplied.
+
+\begin{lemma}
+
+\leanok
+[Frame change fixes the base projection]
+  \label{lem:projchart-frame-map-tospecbase}
+  \lean{MR2223407ConstructionHilbertQuot.projChartFrameMap_toSpecBase}
+  \uses{def:projchart-frame-map, def:relative-proj, lem:proj-map-tospeczero, lem:graded-zero-ringhom-projchart-frame-hom}
+  $\mathrm{projChartFrameMap}\,g\,\circ\,\mathrm{projChartToSpecBase}
+  =\mathrm{projChartToSpecBase}$.
+\end{lemma}
+\begin{proof}
+  The frame substitution $t_i\mapsto\sum_j g_{ij}t_j$ fixes the constants $A$
+  pointwise, so the induced graded hom is the identity on the degree-zero part
+  $A[t_\bullet]_0=A$. Hence the \texttt{Proj.map}--\texttt{toSpecZero} square
+  collapses to $\spec(\id_A)=\id$, leaving $\mathrm{projChartToSpecBase}$ unchanged.
+\end{proof}
+
+\begin{lemma}
+
+\leanok
+[Base change covers $\spec\varphi$]
+  \label{lem:projchart-base-map-tospecbase}
+  \lean{MR2223407ConstructionHilbertQuot.projChartBaseMap_toSpecBase}
+  \uses{def:projchart-base-map, def:relative-proj, lem:proj-map-tospeczero, lem:specmap-graded-zero-ringhom-projchart-base-hom}
+  For $\varphi:A\to A'$,
+  $\mathrm{projChartBaseMap}\,\varphi\,\circ\,\mathrm{projChartToSpecBase}_A
+  =\mathrm{projChartToSpecBase}_{A'}\,\circ\,\spec\varphi$.
+\end{lemma}
+\begin{proof}
+  $\mathrm{projChartBaseHom}\,\varphi=\mathtt{MvPolynomial.map}\,\varphi$ restricts
+  on the degree-zero part to $\varphi:A\to A'$. The naturality of
+  \texttt{Proj.toSpecZero} along \texttt{Proj.map} then gives the square; transport
+  through the identifications $A[t_\bullet]_0=A$, $A'[t_\bullet]_0=A'$ used to define
+  $\mathrm{projChartToSpecBase}$.
+\end{proof}
+
+\subsection{Naturality of \texorpdfstring{$\Proj.\mathtt{toSpecZero}$}{Proj.toSpecZero} (project-local supplement)}
+
+The two compatibility lemmas above both reduce to a single project-local lemma:
+the naturality of \texttt{Proj.toSpecZero} along \texttt{Proj.map}, absent from
+Mathlib. The supporting helpers below are pure ring/graded-ring bookkeeping.
+
+\begin{lemma}
+
+\leanok
+[Naturality of $\Proj.\mathtt{toSpecZero}$ along $\Proj.\mathtt{map}$]
+  \label{lem:proj-map-tospeczero}
+  \lean{MR2223407ConstructionHilbertQuot.projMap_toSpecZero}
+  \uses{def:relative-proj}
+  For a graded ring hom $f:\mathcal A\to\mathcal B$ (with $f_0$ its degree-zero
+  restriction), $\Proj.\mathtt{map}\,f\,\circ\,\Proj.\mathtt{toSpecZero}_{\mathcal A}
+  =\Proj.\mathtt{toSpecZero}_{\mathcal B}\,\circ\,\spec f_0$. Checked on the affine
+  open cover $\Proj.\mathtt{mapAffineOpenCover}$: each chart reduces by
+  $\mathtt{awayι\_comp\_map}$ and $\mathtt{awayι\_toSpecZero}$ to the ring identity
+  \cref{lem:away-map-comp-from-zero-ringhom}.
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[Away map commutes with the degree-zero inclusion]
+  \label{lem:away-map-comp-from-zero-ringhom}
+  \lean{MR2223407ConstructionHilbertQuot.awayMap_comp_fromZeroRingHom}
+  \uses{def:relative-proj}
+  $(\mathtt{Away.map}\,f\,s)\circ\mathtt{fromZeroRingHom} =
+  \mathtt{fromZeroRingHom}\circ f_0$ on the degree-zero localisations; proved
+  elementwise via \texttt{HomogeneousLocalization.map\_mk}.
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[Frame hom is the identity on degree zero]
+  \label{lem:graded-zero-ringhom-projchart-frame-hom}
+  \lean{MR2223407ConstructionHilbertQuot.gradedZeroRingHom_projChartFrameHom}
+  \uses{def:projchart-frame-hom}
+  The degree-zero restriction of $\projChartFrameHom(g)$ is the identity on $A$:
+  a degree-zero element is a constant $C\,c$, fixed by the frame substitution
+  ($\mathtt{aeval}\,C$).
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[Base hom restricts to $\varphi$ on degree zero]
+  \label{lem:graded-zero-ringhom-projchart-base-hom-comp}
+  \lean{MR2223407ConstructionHilbertQuot.gradedZeroRingHom_projChartBaseHom_comp}
+  \uses{def:projchart-base-hom}
+  The degree-zero restriction of $\mathrm{projChartBaseHom}\,\varphi$ is
+  $\varphi:A\to A'$ through the identifications $A=\mathcal A_0$, $A'=\mathcal A'_0$
+  (via \texttt{MvPolynomial.map\_C}).
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[$\spec$ of the degree-zero base hom]
+  \label{lem:specmap-graded-zero-ringhom-projchart-base-hom}
+  \lean{MR2223407ConstructionHilbertQuot.specMap_gradedZeroRingHom_projChartBaseHom}
+  \uses{lem:graded-zero-ringhom-projchart-base-hom-comp}
+  The $\spec$-level form of the previous lemma, transported through
+  $\mathrm{specGradeZeroIsoSpecBase}$ by functoriality of $\spec$; the Spec-side
+  half of \cref{lem:projchart-base-map-tospecbase}.
+\end{lemma}
+
+\begin{definition}\leanok
+[Relatively very ample line bundle]
+  \label{def:very-ample}
+  \lean{MR2223407ConstructionHilbertQuot.RelativelyVeryAmple}
+  \uses{def:projective-space, def:relative-proj}
+  A line bundle $L$ on a scheme $X$ over $S$ is \emph{relatively very ample} if
+  there is a closed immersion $X\hookrightarrow \PP(V)$ over $S$, for some
+  coherent sheaf $V$ on $S$, under which $L$ is the restriction of
+  $\Oo_{\PP(V)}(1)$.
+  \textit{Source: Nitsure §5 lines 2160--2173.}
+\end{definition}
+
+\section{Coherent sheaves, flatness and cohomology — foundational anchors}
+
+The construction draws on the following classical theorems, used essentially as
+black boxes by Nitsure (he cites EGA, Mumford, and Altman--Kleiman). They are the
+load-bearing foundational inputs of the project; we record each as an anchor with
+its source. Whether each is taken from Mathlib (then \mathlibok) or proved inside
+the project is a strategy decision recorded in \texttt{.archon/STRATEGY.md}.
+
+\begin{theorem}\leanok
+[Coherence and finiteness of higher direct images]
+  \label{thm:coherent-higher-direct-image}
+  \lean{MR2223407ConstructionHilbertQuot.coherent_higher_direct_image}
+  \uses{def:projective-space}
+  Let $\pi\colon X\to S$ be a projective morphism of noetherian schemes and let
+  $\Ff$ be a coherent sheaf on $X$. Then each higher direct image
+  $R^i\pi_*\Ff$ is a coherent sheaf on $S$, and vanishes for $i$ greater than
+  the fibre dimension.
+  \textit{Source: EGA III 3.2 (Nitsure §1, §3); used pervasively.}
+\end{theorem}
+
+\begin{proof}
+  \uses{thm:coherent-higher-direct-image}
+  Classical theorem of Grothendieck on the finiteness of cohomology of proper
+  morphisms; reduces to the affine-base case and the computation of the
+  cohomology of $\Oo_{\PP^n}(r)$ via the Čech complex of the standard cover.
+  Treated as a foundational input (Mathlib anchor when available); see
+  \texttt{STRATEGY.md} for the proof obligation status.
+\end{proof}
+
+\begin{theorem}\leanok
+[Serre vanishing and global generation]
+  \label{thm:serre-vanishing}
+  \lean{MR2223407ConstructionHilbertQuot.serre_vanishing}
+  \uses{thm:coherent-higher-direct-image}
+  Let $\Ff$ be a coherent sheaf on $\PP^n_S$ with $S$ noetherian affine. Then
+  there is an integer $r_0$ such that for all $r\ge r_0$ the sheaf $\Ff(r)$ is
+  generated by finitely many global sections and $H^i(\PP^n_S,\Ff(r)) = 0$ for
+  all $i\ge 1$.
+  \textit{Source: Serre (FAC); EGA III 2.2.1; Nitsure §2--§3.}
+\end{theorem}
+
+\begin{proof}
+  \uses{thm:serre-vanishing}
+  Standard: write $\Ff$ as a quotient of a finite sum of twists
+  $\Oo(-d)^{\oplus}$ and use the explicit cohomology of line bundles on
+  $\PP^n$. Foundational input; refined quantitatively in
+  Chapter~\ref{chap:regularity} (Castelnuovo--Mumford regularity).
+\end{proof}
+
+\begin{theorem}\leanok
+[Cohomology and base change]
+  \label{thm:cohomology-base-change}
+  \lean{MR2223407ConstructionHilbertQuot.cohomology_and_base_change}
+  \uses{thm:coherent-higher-direct-image}
+  Let $\pi\colon X\to S$ be projective with $S$ noetherian and $\Ff$ coherent on
+  $X$ and flat over $S$. There is a bounded complex $K^\bullet$ of finite
+  locally free $\Oo_S$-modules (the Grothendieck complex) computing the
+  cohomology of $\Ff$ universally: for every base change $\phi\colon T\to S$,
+  $R^i\pi_{T*}\Ff_T \cong \mathcal{H}^i(\phi^* K^\bullet)$.
+  \textit{Source: EGA III 7.7 (Nitsure §3 lines 1449--1607).}
+\end{theorem}
+
+\begin{proof}
+  \uses{thm:cohomology-base-change}
+  Classical (EGA III §7). Detailed development of the consequences used in this
+  project (semicontinuity, base change for flat sheaves) is given in
+  Chapter~\ref{chap:semicontinuity}. Foundational input.
+\end{proof}
+
+\begin{theorem}\leanok\mathlibok
+[Valuative criterion of properness]
+  \label{thm:valuative-criterion-properness}
+  \lean{MR2223407ConstructionHilbertQuot.valuativeCriterion_proper}
+  A finite-type morphism $X\to S$ of noetherian schemes is proper if and only if
+  it is separated and satisfies the valuative criterion of properness with
+  respect to discrete valuation rings: for every dvr $R$ with fraction field $K$,
+  every $S$-morphism $\spec K\to X$ extends uniquely to $\spec R\to X$.
+  \textit{Source: EGA II 7.3 (Nitsure §1 lines 865--891); available in Mathlib.}
+\end{theorem}
+
+\begin{proof}
+  \uses{thm:valuative-criterion-properness}
+  Standard; available in Mathlib's algebraic geometry library. Mathlib anchor.
+\end{proof}
+
+\begin{theorem}\leanok
+[Faithfully flat descent for quasi-coherent sheaves]
+  \label{thm:ffdescent}
+  \lean{MR2223407ConstructionHilbertQuot.faithfullyFlatDescent}
+  Quasi-coherent sheaves, and morphisms between them, satisfy descent along
+  faithfully flat quasi-compact morphisms; in particular the Hilbert and Quot
+  functors are sheaves for the fppf topology.
+  \textit{Source: SGA1/EGA (Nitsure §1 lines 382--439); standard.}
+\end{theorem}
+
+\begin{proof}
+  \uses{thm:ffdescent}
+  Classical fppf descent. Foundational input; only the qualitative ``the functor
+  is a sheaf'' statement is used. Mathlib anchor when available.
+\end{proof}

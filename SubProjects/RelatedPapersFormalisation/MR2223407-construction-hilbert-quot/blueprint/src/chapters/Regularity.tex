@@ -1,0 +1,483 @@
+% archon:covers MR2223407ConstructionHilbertQuot/Regularity.lean
+\chapter{Castelnuovo--Mumford Regularity}
+\label{chap:regularity}
+
+This chapter develops the quantitative engine of the Quot construction:
+Castelnuovo--Mumford $m$-regularity. The notion of $m$-regularity controls, in
+a single integer $m$, the global generation and the higher-cohomology vanishing
+of all twists $\Ff(r)$ with $r\ge m$. Mumford's theorem then bounds the
+regularity of a coherent subsheaf of $\oplus^p\Oo_{\PP^n}$ in terms of its
+Hilbert polynomial alone, with a bound that is uniform in the field and in the
+sheaf. This uniform bound is exactly what makes the Quot scheme a \emph{bounded}
+family, embeddable into a single Grassmannian.
+\textit{Source: Nitsure, ``Construction of Hilbert and Quot Schemes'' (MR2223407,
+arXiv:math/0504590), \S2; file
+\texttt{references/MR2223407-construction-hilbert-quot.tex}.}
+
+\section{$m$-regularity}
+
+% SOURCE: Nitsure, §2, lines 960--963 (read from references/MR2223407-construction-hilbert-quot.tex)
+% SOURCE QUOTE: "Let $k$ be a field and let $\F$ be a coherent sheaf on the
+% projective space $\PP^n$ over $k$. Let $m$ be an integer.
+% The sheaf $\F$ is said to be \textbf{$m$-regular} if we have
+% $$H^i(\PP^n, \F(m-i)) =0\mbox{ for each }i \ge 1.$$"
+\begin{definition}\leanok
+[$m$-regular sheaf]
+  \label{def:m-regular}
+  \lean{MR2223407ConstructionHilbertQuot.IsMRegular}
+  \uses{def:projective-space, thm:coherent-higher-direct-image}
+  Let $k$ be a field, let $\Ff$ be a coherent sheaf on projective space $\PP^n$
+  over $k$, and let $m$ be an integer. The sheaf $\Ff$ is said to be
+  \emph{$m$-regular} if
+  \[
+    H^i(\PP^n, \Ff(m-i)) = 0 \quad\text{for every } i \ge 1 .
+  \]
+  \textit{Source: Nitsure \S2, lines 960--963.}
+  The definition, which may look strange at first sight, is designed to support
+  induction on $n = \dim(\PP^n)$ by restriction to a suitable hyperplane: the
+  shift $m-i$ is exactly what makes the property survive such a restriction
+  (\cref{lem:regularity-hyperplane-restriction}). The cohomology groups
+  $H^i(\PP^n,\Ff(m-i))$ are finite-dimensional $k$-vector spaces by
+  \cref{thm:coherent-higher-direct-image} (applied to the structure morphism
+  $\PP^n\to\spec k$).
+\end{definition}
+
+% SOURCE: Nitsure, §2, lines 966--981 (read from references/MR2223407-construction-hilbert-quot.tex)
+% SOURCE QUOTE: "If $H\subset \PP^n$ is
+% a hyperplane which does not contain any associated point of $\F$,
+% then we have a short exact sheaf sequence
+% $$0 \to \F(m-i-1) \stackrel{\alpha}{\to} \F(m-i) \to \F_H(m-i)\to 0$$
+% where the map $\alpha$ is locally given by multiplication with
+% a defining equation of $H$, hence is injective.
+% The resulting long exact cohomology sequence
+% $$\ldots \to H^i(\PP^n, \F(m-i)) \to H^i(\PP^n, \F_H(m-i))
+% \to H^{i+1}(\PP^n, \F(m-i-1)) \to \ldots$$
+% shows that if $\F$ is $m$-regular, then so is its restriction $\F_H$
+% (with the \textit{same value\,} for $m$)
+% to a hyperplane $H\simeq \PP^{n-1}$ which does not contain any
+% associated point of $\F$.
+% Note that whenever $\F$ is coherent, the set of associated points of
+% $\F$ is finite, so there will exist at least one such hyperplane $H$
+% when the field $k$ is infinite."
+\begin{lemma}\leanok
+[Regularity restricts to a generic hyperplane]
+  \label{lem:regularity-hyperplane-restriction}
+  \lean{MR2223407ConstructionHilbertQuot.isMRegular_restrict_hyperplane}
+  \uses{def:m-regular}
+  Let $\Ff$ be a coherent sheaf on $\PP^n$ over a field $k$, and let
+  $H\subset\PP^n$ be a hyperplane that contains no associated point of $\Ff$.
+  Write $\Ff_H$ for the restriction of $\Ff$ to $H\simeq\PP^{n-1}$. If $\Ff$ is
+  $m$-regular, then $\Ff_H$ is again $m$-regular, with the \emph{same} value of
+  $m$. Moreover, whenever $\Ff$ is coherent its set of associated points is
+  finite, so at least one such hyperplane $H$ exists when $k$ is infinite.
+  \textit{Source: Nitsure \S2, lines 966--981.}
+\end{lemma}
+
+% SOURCE QUOTE PROOF: "If $H\subset \PP^n$ is
+% a hyperplane which does not contain any associated point of $\F$,
+% then we have a short exact sheaf sequence
+% $$0 \to \F(m-i-1) \stackrel{\alpha}{\to} \F(m-i) \to \F_H(m-i)\to 0$$
+% where the map $\alpha$ is locally given by multiplication with
+% a defining equation of $H$, hence is injective.
+% The resulting long exact cohomology sequence
+% $$\ldots \to H^i(\PP^n, \F(m-i)) \to H^i(\PP^n, \F_H(m-i))
+% \to H^{i+1}(\PP^n, \F(m-i-1)) \to \ldots$$
+% shows that if $\F$ is $m$-regular, then so is its restriction $\F_H$
+% (with the \textit{same value\,} for $m$)."
+\begin{proof}
+  \uses{def:m-regular, thm:coherent-higher-direct-image}
+  \leanok
+  Fix $i\ge 1$. Because $H$ contains no associated point of $\Ff$, a local
+  defining equation of $H$ is a non-zero-divisor on $\Ff$, so multiplication by
+  it gives an injection $\alpha\colon \Ff(m-i-1)\hookrightarrow \Ff(m-i)$ whose
+  cokernel is the restriction $\Ff_H(m-i)$. Twisting the structure sequence of
+  $H$ by $\Ff(m-i)$ thus yields the short exact sequence
+  \[
+    0 \to \Ff(m-i-1) \xrightarrow{\ \alpha\ } \Ff(m-i) \to \Ff_H(m-i) \to 0 .
+  \]
+  Its long exact cohomology sequence contains
+  \[
+    \cdots \to H^i(\PP^n,\Ff(m-i)) \to H^i(H,\Ff_H(m-i))
+      \to H^{i+1}(\PP^n,\Ff(m-i-1)) \to \cdots .
+  \]
+  If $\Ff$ is $m$-regular then $H^i(\PP^n,\Ff(m-i)) = 0$ and, since the
+  exponent on the right is $(m-1)-(i+1)$ shifted appropriately, also
+  $H^{i+1}(\PP^n,\Ff(m-i-1)) = H^{i+1}(\PP^n,\Ff(m-(i+1)))=0$ by definition of
+  $m$-regularity applied at index $i+1$. Exactness forces the middle term
+  $H^i(H,\Ff_H(m-i)) = 0$. As $i\ge1$ was arbitrary, $\Ff_H$ is $m$-regular.
+  Finiteness of the set of associated points of a coherent sheaf gives, for $k$
+  infinite, a hyperplane $H$ avoiding all of them. (All cohomology groups are
+  finite-dimensional over $k$ by \cref{thm:coherent-higher-direct-image}.)
+\end{proof}
+
+\section{Castelnuovo's lemma}
+
+The following lemma is due to Castelnuovo, according to Mumford's \emph{Curves on
+a surface}. We split its three parts into separate statements, since (a) feeds
+(b) and (c), and gather them under an umbrella lemma at the end.
+
+% SOURCE: Nitsure, §2, lines 986--1001 (read from references/MR2223407-construction-hilbert-quot.tex)
+% SOURCE QUOTE: "If $\F$ is an $m$-regular sheaf on $\PP^n$ then
+% the following statements hold:
+% \textbf{(a)} The canonical map $H^0(\PP^n,{\mathcal O}_{\PP^n}(1))\otimes
+% H^0(\PP^n,\F(r)) \to H^0(\PP^n,\F(r+1))$ is surjective
+% whenever $r\ge m$.
+% \textbf{(b)} We have $H^i(\PP^n, \F(r))=0$ whenever $i \ge 1$ and $r\ge m-i$.
+% In other words, if $\F$ is $m$-regular, then it is $m'$-regular for all
+% $m' \ge m$.
+% \textbf{(c)} The sheaf $\F(r)$ is generated by its global sections,
+% and all its higher cohomologies vanish, whenever $r\ge m$."
+\begin{lemma}\leanok
+[Castelnuovo, vanishing of higher cohomology]
+  \label{lem:castelnuovo-vanishing}
+  \lean{MR2223407ConstructionHilbertQuot.castelnuovo_vanishing}
+  \uses{def:m-regular, lem:regularity-hyperplane-restriction}
+  Let $\Ff$ be an $m$-regular coherent sheaf on $\PP^n$ over a field $k$. Then
+  \[
+    H^i(\PP^n,\Ff(r)) = 0 \quad\text{whenever } i\ge1 \text{ and } r\ge m-i .
+  \]
+  In particular, if $\Ff$ is $m$-regular then it is $m'$-regular for every
+  $m'\ge m$.
+  \textit{Source: Nitsure \S2, lines 994--996 (part (b)).}
+\end{lemma}
+
+% SOURCE QUOTE PROOF: "When $r=m-i$, the equality $H^i(\PP^n, \F(r))=0$ in statement \textbf{(b)}
+% follows for all $n\ge 0$ by definition of $m$-regularity.
+% To prove \textbf{(b)}, we now proceed by induction on $r$ where
+% $r\ge m-i+1$. Consider the exact sequence
+% $$H^i(\PP^n, \F(r-1)) \to H^i(\PP^n, \F(r)) \to
+% H^i(H, \F_H(r))$$
+% By inductive hypothesis for $r-1$
+% the first term is zero,
+% while by inductive hypothesis for $n-1$
+% the last term is zero, which shows that the middle term is zero,
+% completing the proof of \textbf{(b)}."
+\begin{proof}
+  \uses{def:m-regular, lem:regularity-hyperplane-restriction}
+  Since cohomology commutes with field extension, we may assume $k$ infinite,
+  and we argue by induction on $n$. For $n=0$ the only twist with $i\ge1$ has
+  vanishing cohomology, so the statement holds. Let $n\ge1$ and choose a
+  hyperplane $H$ avoiding the associated points of $\Ff$; by
+  \cref{lem:regularity-hyperplane-restriction}, $\Ff_H$ is $m$-regular on
+  $H\simeq\PP^{n-1}$, so the inductive hypothesis applies to $\Ff_H$.
+
+  Fix $i\ge1$. When $r=m-i$ the equality $H^i(\PP^n,\Ff(r))=0$ holds by the
+  definition of $m$-regularity. We now induct on $r\ge m-i+1$. From the short
+  exact sequence
+  $0\to\Ff(r-1)\to\Ff(r)\to\Ff_H(r)\to0$ we extract
+  \[
+    H^i(\PP^n,\Ff(r-1)) \to H^i(\PP^n,\Ff(r)) \to H^i(H,\Ff_H(r)) .
+  \]
+  The left term vanishes by the inductive hypothesis on $r-1$, and the right
+  term vanishes by the inductive hypothesis on $n-1$ (it equals
+  $H^i(H,\Ff_H((m+i)-i))$ with $r\ge m-i+1>m-i$, covered by regularity of
+  $\Ff_H$ at smaller dimension). Exactness gives $H^i(\PP^n,\Ff(r))=0$. The
+  final statement is the case $r\ge m$ rephrased: $m$-regularity at $m'\ge m$
+  asks $H^i(\Ff(m'-i))=0$, which holds since $m'-i\ge m-i$.
+\end{proof}
+
+% SOURCE: Nitsure, §2, lines 990--992 (read from references/MR2223407-construction-hilbert-quot.tex)
+% SOURCE QUOTE: "\textbf{(a)} The canonical map $H^0(\PP^n,{\mathcal O}_{\PP^n}(1))\otimes
+% H^0(\PP^n,\F(r)) \to H^0(\PP^n,\F(r+1))$ is surjective
+% whenever $r\ge m$."
+\begin{lemma}\leanok
+[Castelnuovo, surjectivity of multiplication]
+  \label{lem:castelnuovo-surjective}
+  \lean{MR2223407ConstructionHilbertQuot.castelnuovo_surjective}
+  \uses{def:m-regular, lem:regularity-hyperplane-restriction, lem:castelnuovo-vanishing}
+  Let $\Ff$ be an $m$-regular coherent sheaf on $\PP^n$ over a field $k$. Then
+  for every $r\ge m$ the canonical multiplication map
+  \[
+    H^0(\PP^n,\Oo_{\PP^n}(1)) \ot H^0(\PP^n,\Ff(r))
+      \longrightarrow H^0(\PP^n,\Ff(r+1))
+  \]
+  is surjective.
+  \textit{Source: Nitsure \S2, lines 990--992 (part (a)).}
+\end{lemma}
+
+% SOURCE QUOTE PROOF: "Now consider the commutative diagram
+% ... The top map $\sigma$ is surjective, for the following reason:
+% By $m$-regularity of $\F$ and using the statement \textbf{(b)}
+% already proved, we see that
+% $H^1(\PP^n, \F(r-1))=0$ for $r\ge m$, and so the restriction map
+% $\nu_r: H^0(\PP^n, \F(r)) \to H^0(H, \F_H(r))$ is surjective.
+% Also, the restriction map
+% $\rho : H^0(\PP^n,{\mathcal O}_{\PP^n}(1)) \to H^0(H, {\mathcal O}_H(1))$ is surjective.
+% Therefore the tensor product $\sigma = \nu_r \otimes \rho$
+% of these two maps is surjective.
+% The second vertical map $\tau$ is surjective by inductive
+% hypothesis for $n-1 = \dim(H)$.
+% Therefore, the composite $\tau\circ \sigma$ is surjective,
+% so the composite $\nu_{r+1}\circ\mu$ is surjective,
+% hence $H^0(\PP^n, \F(r+1)) = \im(\mu) + \ker(\nu_{r+1})$.
+% As the bottom row is exact, we get
+% $H^0(\PP^n, \F(r+1)) =  \im(\mu) + \im(\alpha)$.
+% However, we have $\im(\alpha) \subset \im(\mu)$, as the map
+% $\alpha$ is given by tensoring with a certain section of
+% ${\mathcal O}_{\PP^n}(1)$ (which has divisor $H$).
+% Therefore, $H^0(\PP^n, \F(r+1)) = \im(\mu)$.
+% This completes the proof of \textbf{(a)} for all $n$."
+\begin{proof}
+  \uses{def:m-regular, lem:regularity-hyperplane-restriction, lem:castelnuovo-vanishing}
+  We may assume $k$ infinite and induct on $n$; the case $n=0$ is immediate.
+  Let $n\ge1$, pick a hyperplane $H$ avoiding the associated points of $\Ff$, so
+  that $\Ff_H$ is $m$-regular (\cref{lem:regularity-hyperplane-restriction}) and
+  the inductive hypothesis holds on $H\simeq\PP^{n-1}$. Write $\mu$ for the
+  multiplication map to be shown surjective, $\nu_r$ for the restriction
+  $H^0(\PP^n,\Ff(r))\to H^0(H,\Ff_H(r))$, and consider the commutative diagram
+  \[
+    \begin{array}{ccc}
+      H^0(\PP^n,\Ff(r))\ot H^0(\PP^n,\Oo_{\PP^n}(1))
+        & \xrightarrow{\ \sigma\ }
+        & H^0(H,\Ff_H(r))\ot H^0(H,\Oo_H(1)) \\
+      \big\downarrow{\scriptstyle\mu} & & \big\downarrow{\scriptstyle\tau} \\
+      H^0(\PP^n,\Ff(r+1)) & \xrightarrow{\ \nu_{r+1}\ } & H^0(H,\Ff_H(r+1)) .
+    \end{array}
+  \]
+  The top map $\sigma=\nu_r\ot\rho$ is surjective: by
+  \cref{lem:castelnuovo-vanishing}, $H^1(\PP^n,\Ff(r-1))=0$ for $r\ge m$, so the
+  long exact sequence of $0\to\Ff(r-1)\to\Ff(r)\to\Ff_H(r)\to0$ makes $\nu_r$
+  surjective; and the restriction
+  $\rho\colon H^0(\PP^n,\Oo_{\PP^n}(1))\to H^0(H,\Oo_H(1))$ is surjective. The
+  vertical map $\tau$ is surjective by the inductive hypothesis on $\dim H=n-1$.
+  Hence $\nu_{r+1}\circ\mu=\tau\circ\sigma$ is surjective, so
+  $H^0(\PP^n,\Ff(r+1)) = \im(\mu)+\ker(\nu_{r+1})$. By exactness of the bottom
+  row, $\ker(\nu_{r+1})=\im(\alpha)$, where $\alpha$ is multiplication by the
+  section of $\Oo_{\PP^n}(1)$ cutting out $H$; this section lies in the image of
+  the multiplication map, so $\im(\alpha)\subset\im(\mu)$. Therefore
+  $H^0(\PP^n,\Ff(r+1)) = \im(\mu)$, i.e. $\mu$ is surjective.
+\end{proof}
+
+% SOURCE: Nitsure, §2, lines 999--1000 (read from references/MR2223407-construction-hilbert-quot.tex)
+% SOURCE QUOTE: "\textbf{(c)} The sheaf $\F(r)$ is generated by its global sections,
+% and all its higher cohomologies vanish, whenever $r\ge m$."
+\begin{lemma}\leanok
+[Castelnuovo, global generation]
+  \label{lem:castelnuovo-globally-generated}
+  \lean{MR2223407ConstructionHilbertQuot.castelnuovo_globally_generated}
+  \uses{def:m-regular, lem:castelnuovo-surjective, lem:castelnuovo-vanishing, thm:serre-vanishing}
+  Let $\Ff$ be an $m$-regular coherent sheaf on $\PP^n$ over a field $k$. Then
+  for every $r\ge m$ the twist $\Ff(r)$ is generated by its global sections and
+  $H^i(\PP^n,\Ff(r))=0$ for all $i\ge1$.
+  \textit{Source: Nitsure \S2, lines 999--1000 (part (c)).}
+\end{lemma}
+
+% SOURCE QUOTE PROOF: "To prove \textbf{(c)}, consider the map $H^0(\PP^n, \F(r))
+% \otimes H^0(\PP^n,{\mathcal O}_{\PP^n}(p)) \to
+% H^0(\PP^n, \F(r+p))$,
+% which is
+% surjective for $r\ge m$ and $p\ge 0$ as follows from
+% a repeated use of \textbf{(a)}.
+% For $p\gg 0$, we know that
+% $H^0(\PP^n, \F(r+p))$ is generated by its global sections.
+% It follows that $H^0(\PP^n, \F(r))$ is also generated
+% by its global sections for $r\ge m$. We already know from \textbf{(b)}
+% that $H^i(\PP^n, \F(r))=0$ for $i\ge 1$ when $r\ge m$.
+% This proves \textbf{(c)}, completing the proof of the lemma."
+\begin{proof}
+  \uses{lem:castelnuovo-surjective, lem:castelnuovo-vanishing, thm:serre-vanishing}
+  Iterating \cref{lem:castelnuovo-surjective} shows that the map
+  $H^0(\PP^n,\Ff(r))\ot H^0(\PP^n,\Oo_{\PP^n}(p))\to H^0(\PP^n,\Ff(r+p))$ is
+  surjective for $r\ge m$ and $p\ge0$. By Serre vanishing
+  (\cref{thm:serre-vanishing}), for $p\gg0$ the sheaf $\Ff(r+p)$ is generated by
+  its global sections. Surjectivity of the displayed map then propagates global
+  generation downward: every fibre of $\Ff(r)$ is hit by global sections of
+  $\Ff(r)$, so $\Ff(r)$ is globally generated for $r\ge m$. Vanishing of higher
+  cohomology for $r\ge m$ is the case $i\ge1$, $r\ge m\ge m-i$ of
+  \cref{lem:castelnuovo-vanishing}.
+\end{proof}
+
+\begin{lemma}\leanok
+[Castelnuovo's lemma]
+  \label{lem:castelnuovo}
+  \lean{MR2223407ConstructionHilbertQuot.castelnuovo}
+  \uses{lem:castelnuovo-surjective, lem:castelnuovo-vanishing, lem:castelnuovo-globally-generated}
+  Let $\Ff$ be an $m$-regular coherent sheaf on $\PP^n$ over a field $k$. Then,
+  for all $r\ge m$:
+  \textbf{(a)} the multiplication map
+  $H^0(\Oo_{\PP^n}(1))\ot H^0(\Ff(r))\to H^0(\Ff(r+1))$ is surjective;
+  \textbf{(b)} $H^i(\Ff(r'))=0$ for all $i\ge1$ and $r'\ge m-i$ (so $\Ff$ is
+  $m'$-regular for all $m'\ge m$); and
+  \textbf{(c)} $\Ff(r)$ is globally generated with vanishing higher cohomology.
+  \textit{Source: Nitsure \S2, Lemma (Castelnuovo), lines 986--1001.}
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:castelnuovo-surjective, lem:castelnuovo-vanishing, lem:castelnuovo-globally-generated}
+  Parts (a), (b), (c) are \cref{lem:castelnuovo-surjective},
+  \cref{lem:castelnuovo-vanishing}, and \cref{lem:castelnuovo-globally-generated}
+  respectively.
+\end{proof}
+
+% SOURCE: Nitsure, §2, lines 1075--1091 (read from references/MR2223407-construction-hilbert-quot.tex)
+% SOURCE QUOTE: "The following fact, based on the
+% diagram used in the course of the above proof,
+% will be useful later: With notation as above,
+% let the restriction map
+% $\nu_r: H^0(\PP^n, \F(r)) \to
+% H^0(H, \F_H(r))$ be surjective. Also, let $\F_H$ be $r$-regular, so that
+% by Lemma \ref{Castelnuovo}.\textbf{(a)} the map
+% $H^0(H, {\mathcal O}_H(1))\otimes H^0(H, \F_H(r))\to H^0(H, \F_H(r+1))$
+% is surjective. Then the restriction map
+% $\nu_{r+1} : H^0(\PP^n, \F(r+1)) \to  H^0(H, \F_H(r+1))$
+% is again surjective. As a consequence, if
+% $\F_H$ is $m$ regular and if for some $r \ge m$ the
+% restriction map $\nu_r : H^0(\PP^n, \F(r)) \to
+% H^0(H, \F_H(r))$ is surjective, then the restriction map
+% $\nu_p : H^0(\PP^n, \F(p)) \to
+% H^0(H, \F_H(p))$ is surjective for all $p\ge r$."
+\begin{remark}[Propagation of surjectivity of restriction]
+  \label{rem:surjectivity-of-restriction}
+  With the notation of \cref{lem:castelnuovo-surjective}, suppose the restriction
+  map $\nu_r\colon H^0(\PP^n,\Ff(r))\to H^0(H,\Ff_H(r))$ is surjective and that
+  $\Ff_H$ is $r$-regular, so that the multiplication
+  $H^0(H,\Oo_H(1))\ot H^0(H,\Ff_H(r))\to H^0(H,\Ff_H(r+1))$ is surjective by
+  \cref{lem:castelnuovo-surjective}\,(a). Then $\nu_{r+1}$ is surjective as well.
+  Consequently, if $\Ff_H$ is $m$-regular and $\nu_r$ is surjective for some
+  $r\ge m$, then $\nu_p$ is surjective for all $p\ge r$.
+  \textit{Source: Nitsure \S2, lines 1075--1091.}
+\end{remark}
+
+\section{Mumford's regularity bound}
+
+The use of $m$-regularity in the construction of Quot schemes is through the
+following theorem, which bounds the regularity of a subsheaf of
+$\oplus^p\Oo_{\PP^n}$ uniformly in terms of its Hilbert polynomial.
+
+% SOURCE: Nitsure, §2, lines 1131--1148 (read from references/MR2223407-construction-hilbert-quot.tex)
+% SOURCE QUOTE: "For any non-negative integers $p$ and $n$,
+% there exists a polynomial $F_{p,n}$ in $n+1$ variables
+% with integral coefficients, which has the following property:
+% Let $k$ be any field, and let $\PP^n$ denote the $n$-dimensional
+% projective space over $k$. Let
+% $\F$ be any coherent sheaf
+% on $\PP^n$, which is isomorphic to a
+% subsheaf of $\oplus ^p{\mathcal O}_{\PP^n}$.
+% Let the Hilbert polynomial of $\F$ be written in terms of binomial
+% coefficients as
+% $$\chi(\F(r)) = \sum_{i=0}^n a_i \, {r\choose i}$$
+% where $a_0,\ldots,a_n \in \Z$.
+% Then $\F$ is $m$-regular, where
+% $m=F_{p,n}(a_0,\ldots,a_n)$."
+\begin{theorem}\leanok
+[Mumford's regularity theorem]
+  \label{thm:mumford-regularity}
+  \lean{MR2223407ConstructionHilbertQuot.mumford_regularity}
+  \uses{lem:castelnuovo, lem:regularity-hyperplane-restriction, def:hilbert-polynomial}
+  For all non-negative integers $p$ and $n$ there exists a polynomial $F_{p,n}$
+  in $n+1$ variables with integer coefficients with the following property. Let
+  $k$ be any field, let $\Ff$ be a coherent sheaf on $\PP^n$ over $k$ that is
+  isomorphic to a subsheaf of $\oplus^p\Oo_{\PP^n}$, and write its Hilbert
+  polynomial in the binomial basis as
+  \[
+    \chi(\Ff(r)) = \sum_{i=0}^n a_i \binom{r}{i}, \qquad a_0,\dots,a_n\in\ZZ .
+  \]
+  Then $\Ff$ is $m$-regular for $m = F_{p,n}(a_0,\dots,a_n)$.
+  \textit{Source: Nitsure \S2, Theorem (Mumford), lines 1131--1148.}
+\end{theorem}
+
+% SOURCE QUOTE PROOF: "(Following Mumford [M])
+% As before, we can assume that $k$ is infinite. We argue by induction on $n$.
+% When $n=0$, clearly we can take $F_{p,0}$ to be any polynomial.
+% Next, let $n\ge 1$.
+% Let $H\subset \PP^n$ be a hyperplane which does not contain
+% any of the finitely many associated points of
+% $\oplus^p{\mathcal O}_{\PP^n}/\F$ (such an $H$ exists as $k$ is infinite).
+% Then the following torsion sheaf vanishes:
+% $$\un{Tor}^1_{{\mathcal O}_{\PP^n}}({\mathcal O}_H,\, \oplus ^p{\mathcal O}_{\PP^n}/\F)=0$$
+% Therefore the sequence
+% $0\to \F \to \oplus^p{\mathcal O}_{\PP^n} \to \oplus^p{\mathcal O}_{\PP^n}/\F\to 0$
+% restricts to $H$ to give a short exact sequence
+% $0\to \F_H \to \oplus^p{\mathcal O}_H \to \oplus^p{\mathcal O}_H/\F_H \to 0$.
+% This shows that $\F_H$ is isomorphic to a subsheaf of
+% $\oplus ^p{\mathcal O}_{\PP^{n-1}_k}$ ...
+% Note that $\F$ is torsion free if non-zero, and so
+% we have a short exact sequence $0\to \F(-1) \to \F \to \F_H \to 0$.
+% From the associated cohomology sequence we get
+% $\chi(\F_H(r)) = \chi(\F(r)) - \chi(\F(r-1)) = ... = \sum_{j=0}^{n-1}b_j{r\choose j}$
+% where the coefficients $b_0,\ldots,b_{n-1}$ have
+% expressions $b_j = g_j(a_0,\ldots,a_n)$ ...
+% By inductive hypothesis on $n-1$
+% there exists a polynomial $F_{p,n-1}(x_0,\ldots,x_{n-1})$
+% such that $\F_H$ is $m_0$-regular where
+% $m_0 = F_{p,n-1}(b_0,\ldots,b_{n-1})$. ... $m_0 = G(a_0,\ldots,a_n)$ ...
+% For $m\ge m_0 -1$, we therefore get a long exact cohomology sequence
+% $$0\to H^0(\F(m-1))\to H^0(\F(m)) \stackrel{\nu_m}{\to} H^0(\F_H(m))
+% \to H^1(\F(m-1))\to H^1(\F(m)) \to 0 \to \ldots $$
+% which for $i\ge 2$ gives isomorphisms ... $H^i(\F(m)) = 0$ for all $i\ge 2$ and $m\ge m_0-2$.
+% ... We will in fact show that for $m\ge m_0$, the function
+% $h^1(\F(m))$ is strictly decreasing till its value reaches zero, ...
+% $$H^1(\F(m))=0 \mbox{ for }  m \ge m_0 + h^1(\F(m_0)).$$
+% ... $h^1(\F(m-1))\ge h^1(\F(m))$ for $m\ge m_0$,
+% and moreover equality holds for some $m\ge m_0$
+% if and only if the restriction map
+% $\nu_m : H^0(\F(m)) \to H^0(\F_H(m))$ is surjective.
+% As $\F_H$ is $m$-regular, it follows from
+% Remark \ref{surjectivity of restriction} that the restriction map
+% $\nu_j ...$ is surjective for all $j\ge m$ ...
+% To put a bound on $h^1(\F(m_0))$, we use the fact that
+% as $\F \subset \oplus^p{\mathcal O}_{\PP^n}$ we must have
+% $h^0(\F(r)) \le p h^0({\mathcal O}_{\PP^n}(r)) = p{n + r\choose  n}$.
+% ... $h^1(\F(m_0))= h^0(\F(m_0)) - \chi(\F(m_0)) \le p{n + m_0\choose  n}-\sum_{i=0}^n a_i {m_0\choose i} = P(a_0,\ldots a_n)$
+% ... $$H^1(\F(m))=0 \mbox{ for }  m \ge G(a_0,\ldots, a_n) + P(a_0,\ldots, a_n)$$
+% Taking $F_{p,n}(x_0,\ldots, x_n)$ to be $G(x_0,\ldots, x_n) + P(x_0,\ldots, x_n)$ ...
+% we see that $\F$ is $F_{p,n}(a_0,\ldots, a_n)$-regular.
+% This completes the proof of the theorem."
+\begin{proof}
+  \uses{lem:castelnuovo, lem:regularity-hyperplane-restriction, def:hilbert-polynomial, thm:coherent-higher-direct-image, thm:serre-vanishing}
+  Following Mumford, we may assume $k$ infinite and argue by induction on $n$.
+  For $n=0$ any polynomial $F_{p,0}$ works, since every coherent sheaf on
+  $\spec k$ is $m$-regular for all $m$.
+
+  \emph{Reduction to a hyperplane.} Let $n\ge1$ and choose a hyperplane
+  $H\subset\PP^n$ avoiding the finitely many associated points of the quotient
+  $\oplus^p\Oo_{\PP^n}/\Ff$. Then $\mathrm{Tor}^1_{\Oo_{\PP^n}}(\Oo_H,
+  \oplus^p\Oo_{\PP^n}/\Ff) = 0$, so restricting
+  $0\to\Ff\to\oplus^p\Oo_{\PP^n}\to\oplus^p\Oo_{\PP^n}/\Ff\to0$ to $H$ keeps it
+  exact and exhibits $\Ff_H$ as a subsheaf of $\oplus^p\Oo_{H}\cong
+  \oplus^p\Oo_{\PP^{n-1}_k}$. Since $\Ff$ is torsion free (if nonzero), the
+  sequence $0\to\Ff(-1)\to\Ff\to\Ff_H\to0$ is exact, whence
+  \[
+    \chi(\Ff_H(r)) = \chi(\Ff(r))-\chi(\Ff(r-1))
+      = \sum_{i=0}^n a_i\binom{r-1}{i-1} = \sum_{j=0}^{n-1} b_j\binom{r}{j},
+  \]
+  with $b_j = g_j(a_0,\dots,a_n)$ for fixed integer polynomials $g_j$
+  independent of $k$ and $\Ff$ (\cref{def:hilbert-polynomial} for the binomial
+  expansion).
+
+  \emph{Inductive bound on $\Ff_H$.} By the inductive hypothesis there is a
+  polynomial $F_{p,n-1}$ making $\Ff_H$ be $m_0$-regular with
+  $m_0 = F_{p,n-1}(b_0,\dots,b_{n-1}) = G(a_0,\dots,a_n)$, $G$ an integer
+  polynomial independent of $k$ and $\Ff$.
+
+  \emph{Controlling $h^1$.} For $m\ge m_0-1$ the cohomology sequence of
+  $0\to\Ff(m-1)\to\Ff(m)\to\Ff_H(m)\to0$ reads
+  \[
+    0\to H^0(\Ff(m-1))\to H^0(\Ff(m))\xrightarrow{\nu_m} H^0(\Ff_H(m))
+      \to H^1(\Ff(m-1))\to H^1(\Ff(m))\to0,
+  \]
+  with $H^i(\Ff(m-1))\xrightarrow{\sim}H^i(\Ff(m))$ for $i\ge2$. Since
+  $H^i(\Ff(m))=0$ for $m\gg0$ (\cref{thm:serre-vanishing}), these isomorphisms
+  give $H^i(\Ff(m))=0$ for all $i\ge2$ and $m\ge m_0-2$. The surjections
+  $H^1(\Ff(m-1))\to H^1(\Ff(m))$ make $h^1(\Ff(m))$ non-increasing for
+  $m\ge m_0-2$; moreover $h^1(\Ff(m-1))=h^1(\Ff(m))$ exactly when $\nu_m$ is
+  surjective. As $\Ff_H$ is $m_0$-regular, \cref{rem:surjectivity-of-restriction}
+  shows $\nu_j$ is surjective for all $j\ge m_0$, so $h^1(\Ff(m))$ is strictly
+  decreasing for $m\ge m_0$ until it reaches $0$. Hence
+  $H^1(\Ff(m))=0$ for $m\ge m_0 + h^1(\Ff(m_0))$.
+
+  \emph{Bounding $h^1(\Ff(m_0))$.} From $\Ff\subset\oplus^p\Oo_{\PP^n}$ we get
+  $h^0(\Ff(r))\le p\,h^0(\Oo_{\PP^n}(r)) = p\binom{n+r}{n}$. Using
+  $h^i(\Ff(m))=0$ for $i\ge2$, $m\ge m_0-2$,
+  \[
+    h^1(\Ff(m_0)) = h^0(\Ff(m_0))-\chi(\Ff(m_0))
+      \le p\binom{n+m_0}{n} - \sum_{i=0}^n a_i\binom{m_0}{i}
+      =: P(a_0,\dots,a_n),
+  \]
+  with $P$ an integer polynomial (substitute $m_0=G(a_0,\dots,a_n)$) independent
+  of $k$ and $\Ff$, and $P(a_0,\dots,a_n)\ge0$. Therefore $H^1(\Ff(m))=0$ for
+  $m\ge G+P$. Combined with the vanishing of $H^i(\Ff(m))$ for $i\ge2$ and the
+  definition of regularity, taking $F_{p,n} := G + P$ makes $\Ff$ be
+  $F_{p,n}(a_0,\dots,a_n)$-regular. (All $h^i$ are finite by
+  \cref{thm:coherent-higher-direct-image}.)
+\end{proof}
