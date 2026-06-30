@@ -21,15 +21,13 @@ For more details, run `archon dashboard <project-name>` for any project in the s
 
 | Project | Role in the scope | Main dependency direction | Status (open `sorry`) |
 | --- | --- | --- | --- | 
-| `Algebraic-Jacobian-Challenge` | Core Jacobian / Picard / curve geometry engine | Provides infrastructure for most downstream projects | 🔄 In progress (86) ✨ |
-| `Cech-Cohomology` | Čech comparison and higher direct image machinery | Feeds back into the Jacobian challenge and related papers | ✅ Complete (0) — merged back sorry-free into AJC ✨ |
-| `Line-Bundle-Comparison-Iso` | Tensor/dual comparison isomorphisms for relative Picard | Unblocks the Jacobian challenge at large scale | 🔄 In progress (4) ✨ |
-| `Albanese` | Albanese universal property + abelian-variety / codim-one extension leg | Extracted from `Algebraic-Jacobian-Challenge`; merges back | 🔄 In progress (17) ✨ |
-| `RiemannRoch` | Weil divisors, `O(D)`/`O(P)`, `H¹`-vanishing and the RR formula core | Extracted from `Algebraic-Jacobian-Challenge`; merges back | 🔄 In progress (25) ✨ |
-| `Quot-Foundations` | Quot, Grassmannian, and flat-base-change foundations | Deferred — active work moved to the `GR-quot_closure` / `FBC-B_SNAP-chain` extractions | ⏸️ Deferred (21) |
-| `GR-quot_closure` | Grassmannian-quotient representability (H⁰ leg) | Extracted from `Quot-Foundations`; **merged sorry-free into AJC ✨ 2026-06-22** | ✅ Complete (0) — merged sorry-free into AJC ✨ |
-| `FBC-B_SNAP-chain` | Flat-base-change leg + shared SNAP foundation | ⏸️ **Paused 2026-06-24** — mate route superseded by the Čech route in AJC; reusable foundations salvaged into AJC (`RegroupHelper`, `FlatBaseChangeGlobal` prefix); dir renamed `…-[paused-superseded-by-cech-route]` | ⏸️ Paused (20, preserved) ✨ |
-| `MR0555258-compactifying-picard` | Compactifying the Picard scheme | Formalization of the paper | 🔄 In progress (5) ✨ |
+| `Algebraic-Jacobian-Challenge` | Core Jacobian / Picard / curve geometry engine | Provides infrastructure for most downstream projects | 🔄 In progress (101) ✨ |
+| `Cech-Cohomology` | Čech comparison and higher direct image machinery | Feeds back into the Jacobian challenge and related papers | ✅ Complete — merged sorry-free into AJC; standalone carries 16 v4.31-interim ✨ |
+| `Line-Bundle-Comparison-Iso` | Tensor/dual comparison isomorphisms for relative Picard | Unblocks the Jacobian challenge at large scale | 🔄 In progress (3) ✨ |
+| `Albanese` | Albanese universal property + abelian-variety / codim-one extension leg | Extracted from `Algebraic-Jacobian-Challenge`; merges back | 🔄 In progress (17) |
+| `Quot-Foundations` | Quot, Grassmannian, and flat-base-change foundations | Deferred — active work moved to the `GR-quot_closure` extraction | ⏸️ Deferred (21) |
+| `GR-quot_closure` | Grassmannian-quotient representability (H⁰ leg) | Extracted from `Quot-Foundations`; **merged sorry-free into AJC ✨ 2026-06-22** | ✅ Complete — merged sorry-free into AJC; standalone carries 3 v4.31-interim ✨ |
+| `MR0555258-compactifying-picard` | Compactifying the Picard scheme | Formalization of the paper | 🔄 In progress (1) ✨ |
 | 35 related-paper projects | Formalization of related algebraic-geometry papers | A few consume the AG base (secant/perverse/Mordell–Lang); most are self-contained | 📝 Blueprint only (0 Lean) |
 
 > Note: The related papers do not directly contribute to the Jacobian challenge, they are not advanced yet, I included them here because they might indirectly contribute. However, contributors or readers should focus their attention on the AJC and its related subprojects. The full related-paper catalogue and formalization-readiness ordering now live in their own [Related-Papers roadmap](SubProjects/RelatedPapersFormalisation/roadmap.md). ✨

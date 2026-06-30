@@ -247,7 +247,7 @@ just not as short-term Lean proofs.
 - [ ] **Picard functor representability** — representability theorem
 
 #### MR0555258 — Compactifying the Picard scheme  ·  **AJC #28**  ·  tier 2  ·  **R1**
-*Prover stage — 5 open `sorry`* ✨
+*Prover stage — 1 open `sorry`* ✨
 *Blueprint: skeleton, **Lean targets all `TODO` placeholders** — 1 ch, 1 statement, 1 proof sketch.*
 **Main theorem:** Construction and representability of the compactified Picard scheme for reduced curves.
 
