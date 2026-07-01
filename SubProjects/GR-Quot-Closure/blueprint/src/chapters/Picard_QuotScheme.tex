@@ -1,0 +1,3281 @@
+\chapter{The Quot scheme}
+\label{chap:Picard_QuotScheme}
+% archon:covers AlgebraicJacobian/Picard/QuotScheme.lean AlgebraicJacobian/Picard/GradedHilbertSerre.lean
+
+% STRATEGY NOTE. This chapter packages the Quot-foundations layer of the
+% Grothendieck--Altman--Kleiman Quot-scheme construction
+% \(\mathrm{Quot}^{\Phi,L}_{E/X/S}\): the per-fiber Hilbert polynomial, the
+% Quot functor of \(T\)-flat coherent quotients of \(E_T\) on
+% \(X_T = X \times_S T\), and the Grassmannian \emph{scheme} together with
+% its representability. The Quot functor underlies the relative Picard
+% functor via the Hilbert scheme \(\Hilb_{C/k} = \Quot_{\mathcal{O}_C/C/k}\)
+% -- the case \(E = \mathcal{O}_X\) of the Quot functor.
+%
+% LOAD-BEARING SUB-PREREQUISITE. The Quot construction embeds Quot as a
+% locally closed subfunctor of a Grassmannian
+% \(\mathrm{Grass}(W \otimes_{\mathcal{O}_S} \mathrm{Sym}^r V, \Phi(r))\).
+% Mathlib (at the pinned commit) carries no Grassmannian \emph{scheme} -- only
+% a linear-algebra Grassmannian as a finite-rank-quotient variety. The
+% scheme-level Grassmannian over an arbitrary noetherian base is therefore an
+% in-project sub-build. This chapter introduces it as
+% \cref{def:grassmannian_scheme} and states its representability
+% (\cref{thm:grassmannian_representable}).
+
+\section{Setup and motivation}
+\label{sec:quot_setup}
+
+Throughout this chapter, let \(S\) be a noetherian scheme, \(\pi : X \to S\) a
+projective morphism, \(L\) a relatively very ample line bundle on \(X\) over \(S\),
+and \(E\) a coherent sheaf on \(X\). The Quot construction packages the
+\(T\)-flat coherent quotients \(E_T \twoheadrightarrow \mathcal{F}\) of the
+pull-back \(E_T\) to \(X_T = X \times_S T\), modulo the equivalence
+\(\langle \mathcal{F}, q\rangle = \langle \mathcal{F}', q'\rangle\) defined by
+\(\ker(q) = \ker(q')\). Fixing the Hilbert polynomial
+\(\Phi(\lambda) = \chi(\mathcal{F}|_{X_t}(\lambda)) \in \mathbb{Q}[\lambda]\)
+(constant on connected \(T\) by flatness)
+stratifies the Quot functor into pieces \(\Quot^{\Phi,L}_{E/X/S}\), each of
+which Grothendieck proved is representable by a projective \(S\)-scheme.
+This chapter develops the foundations of that picture: the Hilbert
+polynomial (\cref{def:hilbert_polynomial}), the Quot functor
+(\cref{def:quot_functor}), and the Grassmannian scheme
+(\cref{def:grassmannian_scheme}) with its representability
+(\cref{thm:grassmannian_representable}).
+
+% SOURCE: [Nitsure], "Construction of Hilbert and Quot Schemes", \S 1;
+% FGA Explained Ch.~5, AMS MSM 123 (read from
+% references/nitsure-hilbert-quot-src/nitsure-hilbert-quot.tex, L287-L500).
+% The Hartshorne reference for the polynomial-eventually
+% property of Euler characteristics is [Hartshorne], III.5.2 (the scanned
+% PDF at references/hartshorne-algebraic-geometry.pdf has no text layer, so
+% the verbatim source-quote is taken from
+% Nitsure \S 1; Hartshorne III.5.2 is cited in prose as the textbook
+% reference).
+
+\section{Hilbert polynomial of a coherent sheaf}
+\label{sec:hilbert_polynomial}
+
+\begin{definition}\leanok
+[Hilbert polynomial]
+  \label{def:hilbert_polynomial}
+  \lean{AlgebraicGeometry.Scheme.hilbertPolynomial}
+  \uses{thm:hilbertPoly_of_sectionModule}
+  % ENCODING. `def:hilbert_polynomial` is formalized via the GRADED HILBERT
+  % FUNCTION of the section module ⊕_{m≥0} Γ(X_s, F_s ⊗ L_s^{⊗m})
+  % (def:sectionGradedModule), whose polynomiality is extracted in
+  % thm:hilbertPoly_of_sectionModule from the graded Hilbert–Serre rationality
+  % lemma (lem:gradedHilbertSerre_rational) together with the Mathlib lemma
+  % Polynomial.existsUnique_hilbertPoly (lem:hilbertPoly_exists_mathlib). The
+  % construction uses only H^0; for m≫0 it agrees with the Euler characteristic
+  % χ by Serre vanishing, so it is the classical Hilbert polynomial and no
+  % numerical invariant is lost.
+  % SOURCE: [Nitsure], \S 1, sub-section "Stratification by Hilbert
+  % Polynomials" (read from
+  % references/nitsure-hilbert-quot-src/nitsure-hilbert-quot.tex, L453-L478).
+  % SOURCE QUOTE:
+  % "Let \(X\) be a finite type scheme over
+  %  a field \(k\), together with a line bundle \(L\).
+  %  Recall that if \(F\) is a coherent sheaf on
+  %  \(X\) whose support is proper over \(k\), then
+  %  the \textbf{Hilbert polynomial} \({\Phi}\in \Q[\lambda]\) of \(F\) is defined by
+  %  the function
+  %  \(\){\Phi}(m) = \chi(F(m)) =
+  %  \sum_{i=0}^n (-1)^i \dim_k H^i(X, F\otimes L^{\otimes m})\(\)
+  %  where the dimensions of the cohomologies are finite because of the
+  %  coherence and properness conditions. The fact that \(\chi(F(m))\)
+  %  is indeed a polynomial in \(m\) under the above assumption is a special
+  %  case of what is known as Snapper's Lemma (see Kleiman [K] for a proof).
+  %
+  %  Let \(X\to S\) be a finite type morphism of noetherian schemes,
+  %  and let \(L\) be a line bundle on \(X\). Let \(\F\)
+  %  be any coherent sheaf on
+  %  \(X\) whose schematic support is proper over \(S\). Then for each \(s\in S\),
+  %  we get a polynomial \({\Phi}_s \in  \Q[\lambda]\)
+  %  which is the Hilbert polynomial of
+  %  the restriction \(\F_s = F|_{X_s}\) of \(\F\) to the fiber \(X_s\) over \(s\),
+  %  calculated with respect to the line bundle \(L_s = L|_{X_s}\).
+  %  If \(\F\) is flat over \(S\) then the function \(s\mapsto {\Phi}_s\)
+  %  from the set of points of \(S\) to the polynomial ring \(\Q[\lambda]\) is
+  %  known to be locally constant on \(S\)."
+  \textit{Source: [Nitsure], \S 1 (FGA Explained Ch.~5); cf.\ [Hartshorne],
+  III.5.2.}
+  Let \(X \to S\) be a finite-type morphism of noetherian schemes and let \(L\)
+  be a line bundle on \(X\). For a coherent sheaf \(\mathcal{F}\) on \(X\) whose
+  schematic support is proper over \(S\) and a point \(s \in S\), write \(X_s\)
+  for the fibre over \(s\), \(\mathcal{F}_s = \mathcal{F}|_{X_s}\) and
+  \(L_s = L|_{X_s}\). The \emph{Hilbert polynomial of \(\mathcal{F}\) at \(s\)
+  relative to \(L\)} is the unique polynomial
+  \(\Phi_{\mathcal{F},s} \in \mathbb{Q}[\lambda]\) that agrees, for all
+  \(m \gg 0\), with the graded Hilbert function
+  \[
+    m \;\longmapsto\; \dim_{\kappa(s)} \Gamma\bigl(X_s,\, \mathcal{F}_s \otimes L_s^{\otimes m}\bigr)
+  \]
+  of the section module
+  \(\bigoplus_{m \ge 0} \Gamma(X_s, \mathcal{F}_s \otimes L_s^{\otimes m})\)
+  (\cref{def:sectionGradedModule}), viewed as a finitely generated graded module
+  over the homogeneous section ring
+  \(\bigoplus_{m \ge 0} \Gamma(X_s, L_s^{\otimes m})\)
+  (\cref{def:sectionGradedRing}). Existence and uniqueness of
+  \(\Phi_{\mathcal{F},s}\) are the content of
+  \cref{thm:hilbertPoly_of_sectionModule}.
+
+  This is the classical Hilbert polynomial. When \(\mathcal{F}_s\) is coherent
+  and \(L_s\) is ample on the proper \(\kappa(s)\)-scheme \(X_s\), Serre vanishing
+  gives \(H^i(X_s, \mathcal{F}_s \otimes L_s^{\otimes m}) = 0\) for all \(i > 0\)
+  and \(m \gg 0\), so for \(m \gg 0\)
+  \[
+    \dim_{\kappa(s)} \Gamma(X_s, \mathcal{F}_s \otimes L_s^{\otimes m})
+    \;=\; \chi(X_s,\, \mathcal{F}_s \otimes L_s^{\otimes m})
+    \;=\; \sum_{i \ge 0} (-1)^i \dim_{\kappa(s)} H^i(X_s,\, \mathcal{F}_s \otimes L_s^{\otimes m}),
+  \]
+  and hence \(\Phi_{\mathcal{F},s}\) coincides with the Euler-characteristic
+  Hilbert polynomial of Snapper's Lemma -- no numerical invariant is lost. The
+  construction above, however, uses only the global sections \(H^0\): the higher
+  cohomology enters solely through the classical statement that the two functions
+  agree for \(m \gg 0\), never through the definition of \(\Phi_{\mathcal{F},s}\)
+  itself. When \(\mathcal{F}\) is \(S\)-flat the function
+  \(s \mapsto \Phi_{\mathcal{F},s}\) is locally constant on \(S\), so \(\Phi\) is
+  well-defined on connected components.
+\end{definition}
+
+\section{Graded Hilbert polynomial}
+\label{sec:graded_hilbert_polynomial}
+
+This section gives the graded-Hilbert-function construction that underlies
+\cref{def:hilbert_polynomial}. Working over a single fibre \(X_s\) with its
+ample line bundle \(L_s\) and coherent sheaf \(\mathcal{F}_s\), it builds the
+section graded ring (\cref{def:sectionGradedRing}) and module
+(\cref{def:sectionGradedModule}), records their finite generation
+(\cref{lem:sectionGradedModule_fg}), and extracts the Hilbert polynomial
+(\cref{thm:hilbertPoly_of_sectionModule}) by combining the graded
+Hilbert--Serre rationality of the Hilbert series
+(\cref{lem:gradedHilbertSerre_rational}) with Mathlib's polynomial-extraction
+lemma (\cref{lem:hilbertPoly_exists_mathlib}). The route uses only \(H^0\)
+(global sections), so it is independent of higher coherent cohomology.
+
+\begin{definition}
+[Section graded ring]
+  \label{def:sectionGradedRing}
+  \lean{AlgebraicGeometry.sectionGradedRing}
+  \uses{lem:sectionGradedRing_gcommSemiring}
+  % NOTE: Formalization is blocked on the absence of tensor products for sheaves of modules in
+  % Mathlib at the pinned commit. The degree-\(m\) component \(\Gamma(X_s, L_s^{\otimes m})\)
+  % requires a tensor power \(L_s^{\otimes m}\) of a line bundle; this infrastructure (tensor
+  % product of sheaves of modules with lax-monoidal global sections) is not yet available, making
+  % this definition a prerequisite sub-build.
+  % SOURCE: [Nitsure], "Construction of Hilbert and Quot Schemes", \S 1,
+  % sub-section "Stratification by Hilbert Polynomials" (read from
+  % references/nitsure-hilbert-quot-src/nitsure-hilbert-quot.tex, L453-L464).
+  % SOURCE QUOTE:
+  % "Let $X$ be a finite type scheme over
+  %  a field $k$, together with a line bundle $L$.
+  %  Recall that if $F$ is a coherent sheaf on
+  %  $X$ whose support is proper over $k$, then
+  %  the \textbf{Hilbert polynomial} ${\Phi}\in \Q[\lambda]$ of $F$ is defined by
+  %  the function
+  %  $${\Phi}(m) = \chi(F(m)) =
+  %  \sum_{i=0}^n (-1)^i \dim_k H^i(X, F\otimes L^{\otimes m})$$
+  %  where the dimensions of the cohomologies are finite because of the
+  %  coherence and properness conditions."
+  \textit{Source: [Nitsure], \S 1 (FGA Explained Ch.~5); the section graded
+  ring is the homogeneous coordinate ring of [Hartshorne], I.7.}
+  Let \(s \in S\) and let \(L_s\) be a line bundle on the fibre \(X_s\), a scheme
+  of finite type over the residue field \(\kappa(s)\). The \emph{section graded
+  ring} of \(L_s\) is the graded commutative ring
+  \[
+    R(X_s, L_s) \;=\; \bigoplus_{m \ge 0} \Gamma\bigl(X_s,\, L_s^{\otimes m}\bigr),
+  \]
+  with degree-\(m\) component \(\Gamma(X_s, L_s^{\otimes m})\) and multiplication
+  the tensor product of sections
+  \(\Gamma(X_s, L_s^{\otimes m}) \otimes_{\kappa(s)}
+  \Gamma(X_s, L_s^{\otimes m'}) \to \Gamma(X_s, L_s^{\otimes (m+m')})\),
+  \(\sigma \otimes \tau \mapsto \sigma \cdot \tau\). Its degree-zero component is
+  \(\Gamma(X_s, \mathcal{O}_{X_s})\), which contains \(\kappa(s)\). When \(X_s\) is
+  proper over \(\kappa(s)\) and \(L_s\) is ample, \(R(X_s, L_s)\) is a finitely
+  generated -- hence Noetherian -- graded \(\kappa(s)\)-algebra (a suitable
+  Veronese power of \(L_s\) is very ample and embeds \(X_s\) into a projective
+  space, exhibiting \(R(X_s, L_s)\) up to a finite extension as a quotient of a
+  polynomial ring).
+\end{definition}
+
+\begin{definition}
+[Section graded module]
+  \label{def:sectionGradedModule}
+  \lean{AlgebraicGeometry.sectionGradedModule}
+  \uses{def:sectionGradedRing, lem:sectionGradedModule_gmodule}
+  % SOURCE: [Nitsure], \S 1, sub-section "Stratification by Hilbert
+  % Polynomials" (read from
+  % references/nitsure-hilbert-quot-src/nitsure-hilbert-quot.tex, L453-L464).
+  % SOURCE QUOTE:
+  % "Recall that if $F$ is a coherent sheaf on
+  %  $X$ whose support is proper over $k$, then
+  %  the \textbf{Hilbert polynomial} ${\Phi}\in \Q[\lambda]$ of $F$ is defined by
+  %  the function
+  %  $${\Phi}(m) = \chi(F(m)) =
+  %  \sum_{i=0}^n (-1)^i \dim_k H^i(X, F\otimes L^{\otimes m})$$
+  %  where the dimensions of the cohomologies are finite because of the
+  %  coherence and properness conditions."
+  \textit{Source: [Nitsure], \S 1 (FGA Explained Ch.~5); cf.\ [Hartshorne],
+  I.7.}
+  Let \(\mathcal{F}_s\) be a coherent sheaf on the fibre \(X_s\) and \(L_s\) a
+  line bundle on \(X_s\). The \emph{section graded module} of \(\mathcal{F}_s\)
+  twisted by \(L_s\) is the graded \(R(X_s, L_s)\)-module
+  (\cref{def:sectionGradedRing})
+  \[
+    M(X_s, \mathcal{F}_s, L_s)
+    \;=\; \bigoplus_{m \ge 0} \Gamma\bigl(X_s,\, \mathcal{F}_s \otimes L_s^{\otimes m}\bigr),
+  \]
+  with degree-\(m\) component the \(\kappa(s)\)-vector space
+  \(\Gamma(X_s, \mathcal{F}_s \otimes L_s^{\otimes m})\) and scalar action given
+  by the section tensor product
+  \(\Gamma(X_s, L_s^{\otimes m}) \otimes_{\kappa(s)}
+  \Gamma(X_s, \mathcal{F}_s \otimes L_s^{\otimes m'})
+  \to \Gamma(X_s, \mathcal{F}_s \otimes L_s^{\otimes (m+m')})\). Its graded Hilbert
+  function is \(m \mapsto \dim_{\kappa(s)}
+  \Gamma(X_s, \mathcal{F}_s \otimes L_s^{\otimes m})\).
+\end{definition}
+
+\begin{lemma}
+[Finite generation of the section graded module]
+  \label{lem:sectionGradedModule_fg}
+  \lean{AlgebraicGeometry.sectionGradedModule_fg}
+  \uses{def:sectionGradedModule, def:sectionGradedRing}
+  % SOURCE: [Nitsure], \S 1, sub-section "Stratification by Hilbert
+  % Polynomials" (read from
+  % references/nitsure-hilbert-quot-src/nitsure-hilbert-quot.tex, L453-L464).
+  % SOURCE QUOTE:
+  % "Recall that if $F$ is a coherent sheaf on
+  %  $X$ whose support is proper over $k$, then
+  %  the \textbf{Hilbert polynomial} ${\Phi}\in \Q[\lambda]$ of $F$ is defined by
+  %  the function
+  %  $${\Phi}(m) = \chi(F(m)) =
+  %  \sum_{i=0}^n (-1)^i \dim_k H^i(X, F\otimes L^{\otimes m})$$
+  %  where the dimensions of the cohomologies are finite because of the
+  %  coherence and properness conditions."
+  \textit{Source: [Nitsure], \S 1 (FGA Explained Ch.~5); Serre's theorem on
+  ample line bundles, [Hartshorne], I.7 / II.5.}
+  Let \(X_s\) be proper over the field \(\kappa(s)\), let \(L_s\) be an ample line
+  bundle on \(X_s\), and let \(\mathcal{F}_s\) be a coherent sheaf on \(X_s\).
+  Then the section graded ring \(R(X_s, L_s)\) (\cref{def:sectionGradedRing}) is a
+  Noetherian graded ring, and the section graded module
+  \(M(X_s, \mathcal{F}_s, L_s)\) (\cref{def:sectionGradedModule}) is a finitely
+  generated graded \(R(X_s, L_s)\)-module. In particular each component
+  \(\Gamma(X_s, \mathcal{F}_s \otimes L_s^{\otimes m})\) is a finite-dimensional
+  \(\kappa(s)\)-vector space.
+\end{lemma}
+
+\begin{proof}
+  \uses{def:sectionGradedRing, def:sectionGradedModule}
+  Since \(L_s\) is ample and \(X_s\) is proper over \(\kappa(s)\), a Veronese
+  power \(L_s^{\otimes e}\) is very ample and gives a closed immersion
+  \(X_s \hookrightarrow \mathbb{P}^N_{\kappa(s)}\). By Serre's theorem the section
+  graded ring \(R(X_s, L_s)\) is a finitely generated graded
+  \(\kappa(s)\)-algebra, so it is Noetherian. For the coherent sheaf
+  \(\mathcal{F}_s\), the same ampleness yields, again by Serre, that
+  \(\bigoplus_{m \ge 0} \Gamma(X_s, \mathcal{F}_s \otimes L_s^{\otimes m})\) is a
+  finitely generated graded module over \(R(X_s, L_s)\): the twists
+  \(\mathcal{F}_s \otimes L_s^{\otimes m}\) are globally generated for
+  \(m \gg 0\), and the finitely many generating sections in low degrees together
+  with the multiplication maps generate \(M(X_s, \mathcal{F}_s, L_s)\) over
+  \(R(X_s, L_s)\). Finite dimensionality of each component over \(\kappa(s)\)
+  follows from coherence and properness (finiteness of cohomology of coherent
+  sheaves on a proper scheme over a field).
+\end{proof}
+
+\begin{lemma}[Existence and uniqueness of the Hilbert polynomial of a rational
+  graded series]
+  \label{lem:hilbertPoly_exists_mathlib}
+  \lean{Polynomial.existsUnique_hilbertPoly}
+  \mathlibok
+  \textit{Provided by Mathlib
+  (\texttt{Mathlib.RingTheory.Polynomial.HilbertPoly}).}
+  Let \(F\) be a field of characteristic zero, let \(p \in F[X]\), and let
+  \(d \in \mathbb{N}\). Then there is a unique polynomial \(h \in F[X]\) such that
+  for some \(N \in \mathbb{N}\) and all \(n > N\) the coefficient of \(X^n\) in the
+  power-series expansion of \(p \cdot (1 - X)^{-d} \in F\llbracket X\rrbracket\)
+  equals \(h(n)\):
+  \[
+    \exists!\, h \in F[X],\ \exists N,\ \forall n > N : \;
+    \bigl[ X^n \bigr]\bigl( p \cdot (1-X)^{-d} \bigr) \;=\; h(n).
+  \]
+  Equivalently, the eventual coefficient function of any rational power series
+  with denominator a power of \(1 - X\) is, for \(n \gg 0\), given by a unique
+  polynomial \(h\) (Mathlib's \(\mathrm{hilbertPoly}\,p\,d\)). The hypothesis
+  \([\mathrm{CharZero}\,F]\) is satisfied by \(F = \mathbb{Q}\), which is the
+  instance used to obtain \(\Phi_{\mathcal{F},s} \in \mathbb{Q}[\lambda]\).
+\end{lemma}
+
+\begin{lemma}[Additivity of \(\dim_\kappa\) on a short exact sequence
+  (rank--nullity)]
+  \label{lem:finrank_ses_additive_mathlib}
+  \lean{Submodule.finrank_quotient_add_finrank}
+  \mathlibok
+  \textit{Provided by Mathlib
+  (\texttt{Mathlib.LinearAlgebra.Dimension.RankNullity}).}
+  Let \(\kappa\) be a field, \(V\) a finite-dimensional \(\kappa\)-vector space and
+  \(W \subseteq V\) a subspace. Then
+  \[
+    \dim_\kappa (V / W) + \dim_\kappa W \;=\; \dim_\kappa V .
+  \]
+  Equivalently, \(\dim_\kappa = \operatorname{finrank}_\kappa\) is additive on a
+  short exact sequence \(0 \to W \to V \to V/W \to 0\) of finite-dimensional
+  \(\kappa\)-vector spaces. This is the additivity that converts the degreewise
+  short exact sequences of graded components into additive relations among the
+  coefficients of the Hilbert series.
+\end{lemma}
+
+\begin{lemma}[The rational power series \((1 - X)^{-d}\)]
+  \label{lem:invOneSubPow_mathlib}
+  \lean{PowerSeries.invOneSubPow}
+  \mathlibok
+  \textit{Provided by Mathlib
+  (\texttt{Mathlib.RingTheory.PowerSeries.WellKnown}).}
+  Let \(S\) be a commutative ring and \(d \in \mathbb{N}\). Then \((1 - X)^d\) is a
+  unit in the power series ring \(S\llbracket X\rrbracket\), and Mathlib names its
+  inverse
+  \[
+    \operatorname{invOneSubPow}(S, d) \;=\; (1 - X)^{-d}
+      \;\in\; S\llbracket X\rrbracket^{\times}.
+  \]
+  Together with the coercion
+  \(\operatorname{toPowerSeries} : F[X] \to F\llbracket X\rrbracket\) of a
+  polynomial to its power series, this is the data in which a rational Hilbert
+  series \(p \cdot (1 - X)^{-d}\) is expressed; it is the same rational-series shape
+  whose eventual coefficients are extracted by
+  \cref{lem:hilbertPoly_exists_mathlib}.
+\end{lemma}
+
+\begin{lemma}\leanok
+[Graded Hilbert--Serre: rationality of the Hilbert series]
+  \label{lem:gradedHilbertSerre_rational}
+  \lean{AlgebraicGeometry.gradedModule_hilbertSeries_rational}
+  \uses{lem:finrank_ses_additive_mathlib, lem:invOneSubPow_mathlib,
+    def:ratHilb, lem:ratHilb_ofEventuallyZero, lem:ratHilb_ofDiffEq,
+    lem:ratHilb_bump, def:graded_subquotientHilb,
+    lem:graded_subquotient_isRatHilb}
+  % SOURCE: [Stacks Project], "Commutative Algebra", \S "Noetherian graded
+  % rings", Proposition \texttt{proposition-graded-hilbert-polynomial} (Tag
+  % 00K1) (read from references/hilbert-serre-algebra.tex, L13893-L13905).
+  % SOURCE QUOTE:
+  % "Suppose that $S$ is a Noetherian graded ring
+  %  and $M$ a finite graded $S$-module. Consider the
+  %  function
+  %  $$
+  %  \mathbf{Z} \longrightarrow K'_0(S_0), \quad
+  %  n \longmapsto [M_n]
+  %  $$
+  %  see Lemma \ref{lemma-graded-module-fg}.
+  %  If $S_{+}$ is generated by elements of degree $1$,
+  %  then this function is a numerical polynomial."
+  \textit{Source: [Stacks Project], "Commutative Algebra", Tag 00K1
+  (proposition on graded Hilbert polynomials); cf.\ [Nitsure], \S 1 (Snapper's
+  Lemma), [Hartshorne], I.7.}
+  Let \(R\) be a Noetherian graded ring whose degree-zero part is a field
+  \(\kappa\) and which is generated as a \(\kappa\)-algebra by finitely many
+  elements, and let \(M\) be a finitely generated graded \(R\)-module with
+  finite-dimensional graded components \(M_n\). Then there exist
+  \(p \in \mathbb{Q}[X]\) and \(d \in \mathbb{N}\) and an \(N \in \mathbb{N}\)
+  such that for all \(n > N\)
+  \[
+    \dim_{\kappa} M_n \;=\; \bigl[ X^n \bigr]\bigl( p \cdot (1 - X)^{-d}\bigr);
+  \]
+  that is, the Hilbert series \(\sum_{n \ge 0} (\dim_\kappa M_n)\, X^n\) is, up to
+  a polynomial correction in low degrees, the rational function
+  \(p \cdot (1 - X)^{-d}\), expressed in the power-series form
+  \(\operatorname{toPowerSeries}(p) \cdot \operatorname{invOneSubPow}(\mathbb{Q}, d)\)
+  (\cref{lem:invOneSubPow_mathlib}).
+
+  \emph{Status.} This is the substantive half of the graded Hilbert--Serre
+  theorem (rationality of the Hilbert series of a finitely generated graded
+  module). It is not covered by Mathlib: \cref{lem:hilbertPoly_exists_mathlib}
+  supplies only the converse polynomial-extraction step from a rational series, not
+  the production of the rational series from the module. The argument is realised by
+  an \emph{ambient subquotient induction} (\cref{lem:graded_subquotient_isRatHilb}):
+  the whole induction ranges over pairs of homogeneous submodules \(N' \le N\) of the
+  single fixed graded module \(M\), and the Hilbert function is the ambient difference
+  \(n \mapsto \dim_\kappa(N \cap M_n) - \dim_\kappa(N' \cap M_n)\). The class of such
+  pairs is closed under the kernel and cokernel of multiplication by a degree-one
+  element (each presented again as an ambient subquotient pair), so the inductive step
+  never forms a graded quotient ring \(R/(x)\), a graded quotient module \(M/xM\), or a
+  regrading of a derived carrier. The genuine Mathlib gap is thereby \emph{avoided}
+  rather than filled; the residual obligation is the short ambient bookkeeping of the
+  subquotient blocks (\cref{def:graded_subquotientHilb},
+  \cref{lem:graded_subquotient_ker_coker},
+  \cref{lem:graded_subquotient_degreewise_diff},
+  \cref{lem:graded_subquotient_finite_transfer},
+  \cref{lem:graded_subquotient_isRatHilb}), each of which manipulates only ambient
+  families \(n \mapsto N_{\mathrm{aux}} \cap M_n\) of submodules of \(M\).
+  % NOTE: The power-series rationality toolkit (\cref{subsec:isRatHilb}) is formalized
+  %   and axiom-clean; the present theorem is a closed, axiom-clean Lean declaration
+  %   (gradedModule_hilbertSeries_rational). The ambient subquotient route
+  %   (\cref{lem:graded_subquotient_isRatHilb}) sidesteps missing graded-quotient API by
+  %   working with ambient families of submodules of \(M\).
+\end{lemma}
+
+% SOURCE QUOTE PROOF: [Stacks Project], Tag 00K1, proof, inductive step (read
+% from references/hilbert-serre-algebra.tex, L13938-L13947).
+% "Let $\overline{M} = M/xM$. Note that the map $x : M \to M$
+%  is {\it not} a map of graded $S$-modules, since it does
+%  not map $M_d$ into $M_d$. Namely, for each $d$ we have the
+%  following short exact sequence
+%  $$
+%  0 \to M_d \xrightarrow{x} M_{d + 1} \to \overline{M}_{d + 1} \to 0
+%  $$
+%  This proves that $[M_{d + 1}] - [M_d] = [\overline{M}_{d + 1}]$.
+%  Hence we win by Lemma \ref{lemma-numerical-polynomial}."
+\begin{proof}
+  \uses{def:ratHilb, lem:ratHilb_ofEventuallyZero, lem:ratHilb_ofDiffEq,
+    lem:ratHilb_bump, lem:graded_degreewise_finrank_diff,
+    def:graded_subquotientHilb, lem:graded_subquotient_ker_coker,
+    lem:graded_subquotient_degreewise_diff,
+    lem:graded_subquotient_finite_transfer, lem:graded_subquotient_isRatHilb,
+    lem:graded_homogeneousSubmodule_iSupIndep,
+    lem:graded_homogeneousSubmodule_iSup_eq, lem:ideal_homogeneous_span_mathlib,
+    lem:isHomogeneousElem_graded_smul_mathlib,
+    lem:fg_restrictScalars_of_surjective_mathlib}
+    \leanok
+  We argue with the abstract graded \(\kappa\)-algebra
+  \(R = \bigoplus_{n \ge 0} R_n\), whose degree-zero part \(R_0 = \kappa\) is a
+  field, and the finitely generated graded \(R\)-module
+  \(M = \bigoplus_{n \ge 0} M_n\) with finite-dimensional components \(M_n\);
+  there is no appeal to any geometric realisation of \(R\) or \(M\).
+
+  \emph{Reduction to generation in degree \(1\).} Since \(R\) is Noetherian and
+  finitely generated as a \(\kappa\)-algebra, it is generated by finitely many
+  homogeneous elements of positive degree. Replacing \(R\) by a Veronese
+  subalgebra \(R^{(e)} = \bigoplus_n R_{en}\) for a suitable \(e\) and re-grading
+  (and \(M\) by the corresponding Veronese module), we may assume \(R\) is
+  generated by its degree-one part, \(\kappa[R_1] = R\). The degree-one part
+  \(R_1\) is then a finite-dimensional \(\kappa\)-vector space whose \(\kappa\)-basis
+  \(x_1, \dots, x_r\) generates \(R\) as a \(\kappa\)-algebra; \(r = \dim_\kappa R_1\)
+  is the number on which we induct.
+  % NOTE: The existence of finitely many degree-one generators (the number r the
+  % induction is on) is expected to follow from the standing hypotheses --
+  % "finitely generated κ-algebra" together with "generated in degree 1" -- so no
+  % new hypothesis on gradedModule_hilbertSeries_rational is anticipated. To be
+  % confirmed when the prover formalizes the assembly: degree-1 generation gives
+  % R₁ as a finite-dimensional κ-vector space spanning R as a κ-algebra, and a
+  % κ-basis of R₁ is a finite degree-one generating set.
+
+  \emph{Set-up of the ambient data.} Regard \(M\) as the fixed ambient graded
+  \(\kappa\)-module with internal decomposition \(n \mapsto \mathcal{M}_n := M_n\)
+  (\cref{def:sectionGradedModule}); the components are finite-dimensional. For each
+  basis vector \(x_i \in R_1\) let \(t_i : M \to M\) be multiplication by \(x_i\), a
+  \(\kappa\)-linear endomorphism that raises degree by one (it sends \(M_n\) into
+  \(M_{n+1}\), \cref{lem:isHomogeneousElem_graded_smul_mathlib}). Since \(R\) is
+  commutative the \(t_i\) pairwise commute, and they trivially preserve the pair of
+  homogeneous submodules \((N, N') = (\top, \bot)\). Because \(R\) is generated by
+  \(x_1, \dots, x_r\) and \(M\) is finitely generated over \(R\), \(M\) is finitely
+  generated as a module over the polynomial ring \(\kappa[x_1, \dots, x_r]\) acting
+  through the \(t_i\); this is the finiteness condition required below.
+
+  \emph{Invoking the ambient subquotient induction.} Apply
+  \cref{lem:graded_subquotient_isRatHilb} to the pair \((N, N') = (\top, \bot)\)
+  with the \(r\) commuting degree-\((+1)\) endomorphisms \(t_1, \dots, t_r\). It
+  yields \(\mathrm{IsRatHilb}\) of order \(r\) for the ambient subquotient Hilbert
+  function of this pair (\cref{def:graded_subquotientHilb}),
+  \[
+    h(n) \;=\; \dim_\kappa(\top \cap \mathcal{M}_n) - \dim_\kappa(\bot \cap \mathcal{M}_n)
+      \;=\; \dim_\kappa M_n - 0 \;=\; \dim_\kappa M_n .
+  \]
+  Hence \(\mathrm{IsRatHilb}(n \mapsto \dim_\kappa M_n,\, r)\) (\cref{def:ratHilb}):
+  there are \(p \in \mathbb{Q}[X]\), \(d := r \in \mathbb{N}\) and \(N \in \mathbb{N}\)
+  with
+  \[
+    \dim_\kappa M_n \;=\; \bigl[X^n\bigr]\bigl(p \cdot (1 - X)^{-d}\bigr)
+    \qquad (n > N),
+  \]
+  which is the claim, with pole order \(d = r\). The internal mechanics of
+  \cref{lem:graded_subquotient_isRatHilb} -- the base case via
+  \cref{lem:ratHilb_ofEventuallyZero}, and the inductive step assembling the
+  kernel/cokernel closure (\cref{lem:graded_subquotient_ker_coker}), the degreewise
+  difference identity (\cref{lem:graded_subquotient_degreewise_diff}, built on
+  \(D_5\), \cref{lem:graded_degreewise_finrank_diff}) and the finiteness transfer
+  (\cref{lem:graded_subquotient_finite_transfer}) into
+  \cref{lem:ratHilb_ofDiffEq} and \cref{lem:ratHilb_bump} -- are the Stacks~00K1
+  induction realised entirely with ambient homogeneous submodules of \(M\).
+\end{proof}
+
+\subsection{The rationality toolkit \texorpdfstring{\(\mathrm{IsRatHilb}\)}{IsRatHilb}}
+\label{subsec:isRatHilb}
+% NOTE: Declarations in this subsection are currently \texttt{private} in the Lean
+% source; \lean{} pins may not resolve until they are moved to a dedicated module.
+
+The proof of \cref{lem:gradedHilbertSerre_rational} runs the Stacks~00K1 induction
+on the number of degree-one generators. Each inductive step manipulates the
+\emph{shape} of the Hilbert series -- a numerator polynomial over a power of
+\((1-X)\) -- rather than the module itself. We isolate that bookkeeping in a
+single predicate \(\mathrm{IsRatHilb}\) on functions \(f : \mathbb{N} \to
+\mathbb{Q}\), together with the closure lemmas the induction consumes. These are
+project-internal helpers realising standard steps of the Stacks~00K1 argument at
+the level of power series; Mathlib supplies only the converse extraction
+(\cref{lem:hilbertPoly_exists_mathlib}).
+
+\begin{lemma}\leanok
+[Coefficients of \((1-X)^{-1}\) times a series are partial sums]
+  \label{lem:coeff_invOneSubPow_one_mul}
+  \lean{AlgebraicGeometry.coeff_invOneSubPow_one_mul}
+  \uses{lem:invOneSubPow_mathlib}
+  Let \(F \in \mathbb{Q}\llbracket X\rrbracket\) be a power series. Then for every
+  \(n \in \mathbb{N}\) the \(n\)-th coefficient of
+  \(\operatorname{invOneSubPow}(\mathbb{Q}, 1)\cdot F = (1-X)^{-1}\cdot F\)
+  (\cref{lem:invOneSubPow_mathlib}) is the partial sum of the coefficients of
+  \(F\):
+  \[
+    \bigl[X^n\bigr]\bigl((1-X)^{-1}\cdot F\bigr)
+    \;=\; \sum_{k=0}^{n} \bigl[X^k\bigr] F .
+  \]
+  Equivalently, multiplication by \((1-X)^{-1} = \sum_{m\ge 0} X^m\) is the
+  summation operator on coefficient sequences. Proved directly in Lean from the
+  identity \(\operatorname{invOneSubPow}(\mathbb{Q},1) = \sum_{m\ge 0} X^m\) and
+  the Cauchy product.
+\end{lemma}
+
+\begin{lemma}\leanok
+[Antidifference of a rational Hilbert series]
+  \label{lem:rationalHilbert_antidiff}
+  \lean{AlgebraicGeometry.rationalHilbert_antidiff}
+  \uses{lem:coeff_invOneSubPow_one_mul, lem:invOneSubPow_mathlib}
+  Let \(H, \delta : \mathbb{N} \to \mathbb{Q}\), let \(q \in \mathbb{Q}[X]\) and
+  \(e, N \in \mathbb{N}\). Suppose that for all \(n > N\) the sequence \(\delta\)
+  is the coefficient sequence of the rational series \(q\cdot(1-X)^{-e}\),
+  \[
+    \delta(n) \;=\; \bigl[X^n\bigr]\bigl(q\cdot(1-X)^{-e}\bigr),
+  \]
+  and that \(\delta\) is the first difference of \(H\) beyond \(N\), i.e.
+  \(H(n+1) - H(n) = \delta(n+1)\) for all \(n > N\). Then there is a numerator
+  polynomial \(p \in \mathbb{Q}[X]\) such that for all \(n > N\)
+  \[
+    H(n) \;=\; \bigl[X^n\bigr]\bigl(p\cdot(1-X)^{-(e+1)}\bigr).
+  \]
+  That is, summing a coefficient sequence (anti-differencing) raises the pole
+  order by one: the partial-sum series of \(q\cdot(1-X)^{-e}\) equals
+  \(p\cdot(1-X)^{-(e+1)}\) up to a polynomial correction in low degrees. This is
+  the power-series heart of the Stacks~00K1 inductive step.
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:coeff_invOneSubPow_one_mul, lem:invOneSubPow_mathlib}
+  \leanok
+  Write \(F = q\cdot(1-X)^{-e}\). Multiplying by
+  \((1-X)^{-1}\) and using the factorisation
+  \((1-X)^{-(e+1)} = (1-X)^{-1}\cdot(1-X)^{-e}\)
+  (\cref{lem:invOneSubPow_mathlib}), \cref{lem:coeff_invOneSubPow_one_mul} gives
+  \(\bigl[X^m\bigr]\bigl(q\cdot(1-X)^{-(e+1)}\bigr) = \sum_{k=0}^{m}[X^k]F\), the
+  partial sums of \(F\). On the other hand, telescoping the first-difference
+  hypothesis from \(N+1\) expresses \(H(N+1+j)\) as \(H(N+1)\) plus a window sum
+  of the coefficients of \(F\). Splitting the partial sum
+  \(\sum_{k=0}^{n}[X^k]F\) at \(N+2\) and absorbing the resulting constant
+  discrepancy into a numerator \(C\,(1-X)^{e}\) (a constant function is the
+  order-\((e+1)\) coefficient sequence of \(C\,(1-X)^{e}\cdot(1-X)^{-(e+1)} =
+  C\,(1-X)^{-1}\)), the explicit numerator
+  \(p = C\,(1-X)^{e} + q\) realises \(H(n)\) as
+  \([X^n]\bigl(p\cdot(1-X)^{-(e+1)}\bigr)\) for all \(n > N\).
+\end{proof}
+
+\begin{definition}\leanok
+[Rational Hilbert function]
+  \label{def:ratHilb}
+  \lean{AlgebraicGeometry.IsRatHilb}
+  \uses{lem:invOneSubPow_mathlib}
+  \textit{Source: Stacks 00K1.}
+  For a function \(f : \mathbb{N} \to \mathbb{Q}\) and \(d \in \mathbb{N}\), say
+  that \(f\) is a \emph{rational Hilbert function of order \(d\)}, written
+  \(\mathrm{IsRatHilb}(f, d)\), when there exist a numerator polynomial
+  \(p \in \mathbb{Q}[X]\) and an \(N \in \mathbb{N}\) such that for all \(n > N\)
+  \[
+    f(n) \;=\; \bigl[X^n\bigr]\bigl(p\cdot(1-X)^{-d}\bigr)
+    \;=\; \bigl[X^n\bigr]\bigl(\operatorname{toPowerSeries}(p)\cdot
+      \operatorname{invOneSubPow}(\mathbb{Q}, d)\bigr)
+  \]
+  (\cref{lem:invOneSubPow_mathlib}). This is the ``eventually equal to the
+  coefficient sequence of a rational series \(p\cdot(1-X)^{-d}\)'' predicate that
+  the graded Hilbert--Serre induction tracks; its conclusion shape is exactly the
+  one consumed by \cref{lem:hilbertPoly_exists_mathlib}.
+\end{definition}
+
+\begin{lemma}\leanok
+[Base case: eventually-zero functions are rational of order \(0\)]
+  \label{lem:ratHilb_ofEventuallyZero}
+  \lean{AlgebraicGeometry.IsRatHilb.ofEventuallyZero}
+  \uses{def:ratHilb}
+  If \(f : \mathbb{N} \to \mathbb{Q}\) is eventually zero -- there is
+  \(N\) with \(f(n) = 0\) for all \(n > N\) -- then \(\mathrm{IsRatHilb}(f, 0)\)
+  (\cref{def:ratHilb}). Indeed \(f\) is then the coefficient sequence of the
+  numerator polynomial \(0\) over \((1-X)^{0} = 1\). This is the base case of the
+  Stacks~00K1 induction (no degree-one generators). Proved directly in Lean.
+\end{lemma}
+
+\begin{lemma}\leanok
+[Raising the pole order]
+  \label{lem:ratHilb_bump}
+  \lean{AlgebraicGeometry.IsRatHilb.bump}
+  \uses{def:ratHilb, lem:invOneSubPow_mathlib}
+  If \(\mathrm{IsRatHilb}(f, d)\) (\cref{def:ratHilb}) then
+  \(\mathrm{IsRatHilb}(f, d+1)\): multiplying the numerator by \((1-X)\) cancels
+  one factor of \((1-X)^{-1}\), so the same coefficient sequence is realised at
+  pole order \(d+1\). This lets two rational Hilbert functions of different
+  orders be brought to a common denominator. Proved directly in Lean using
+  \((1-X)\cdot(1-X)^{-(d+1)} = (1-X)^{-d}\) (\cref{lem:invOneSubPow_mathlib}).
+\end{lemma}
+
+\begin{lemma}\leanok
+[Closure under difference]
+  \label{lem:ratHilb_sub}
+  \lean{AlgebraicGeometry.IsRatHilb.sub}
+  \uses{def:ratHilb}
+  If \(\mathrm{IsRatHilb}(f, d)\) and \(\mathrm{IsRatHilb}(g, d)\)
+  (\cref{def:ratHilb}) at the same order \(d\), then
+  \(\mathrm{IsRatHilb}(n \mapsto f(n) - g(n),\, d)\): the numerator of the
+  difference is the difference of the numerators (over the common denominator
+  \((1-X)^{-d}\)). Proved directly in Lean.
+\end{lemma}
+
+\begin{lemma}\leanok
+[Closure under right shift]
+  \label{lem:ratHilb_shiftRight}
+  \lean{AlgebraicGeometry.IsRatHilb.shiftRight}
+  \uses{def:ratHilb}
+  If \(\mathrm{IsRatHilb}(f, d)\) (\cref{def:ratHilb}) then
+  \(\mathrm{IsRatHilb}(n \mapsto f(n-1),\, d)\): the right shift on coefficient
+  sequences is multiplication of the series by \(X\), so the numerator
+  \(p\) is replaced by \(X\cdot p\) at the same pole order. Proved directly in
+  Lean.
+\end{lemma}
+
+\begin{lemma}\leanok
+[Antidifference step for the predicate]
+  \label{lem:ratHilb_antidiff}
+  \lean{AlgebraicGeometry.IsRatHilb.antidiff}
+  \uses{def:ratHilb, lem:rationalHilbert_antidiff}
+  Let \(H, g : \mathbb{N} \to \mathbb{Q}\) and \(e, N \in \mathbb{N}\). If
+  \(\mathrm{IsRatHilb}(g, e)\) (\cref{def:ratHilb}) and \(g\) is the first
+  difference of \(H\) beyond \(N\) (\(H(n+1) - H(n) = g(n+1)\) for all
+  \(n > N\)), then \(\mathrm{IsRatHilb}(H, e+1)\). This is the predicate-level
+  packaging of \cref{lem:rationalHilbert_antidiff}: a finite difference raises
+  the pole order by one, the inductive heart of graded Hilbert--Serre.
+\end{lemma}
+
+\begin{proof}
+  \uses{def:ratHilb, lem:rationalHilbert_antidiff}
+  \leanok
+  Unfolding \(\mathrm{IsRatHilb}(g, e)\) supplies a numerator \(q\) and a
+  threshold \(N_g\) with \(g(n) = [X^n](q\cdot(1-X)^{-e})\) for \(n > N_g\).
+  Applying \cref{lem:rationalHilbert_antidiff} with this \(q\) and threshold
+  \(\max(N, N_g)\) -- whose two hypotheses are exactly the rational form of \(g\)
+  and the first-difference identity for \(H\) -- yields a numerator \(p\) with
+  \(H(n) = [X^n](p\cdot(1-X)^{-(e+1)})\) for \(n > \max(N, N_g)\), i.e.
+  \(\mathrm{IsRatHilb}(H, e+1)\).
+\end{proof}
+
+\begin{lemma}\leanok
+[Inductive-step engine from a degreewise short exact sequence]
+  \label{lem:ratHilb_ofDiffEq}
+  \lean{AlgebraicGeometry.IsRatHilb.ofDiffEq}
+  \uses{def:ratHilb, lem:ratHilb_antidiff, lem:ratHilb_sub, lem:ratHilb_shiftRight}
+  Let \(h_M, h_C, h_K : \mathbb{N} \to \mathbb{Q}\) and \(d, N \in \mathbb{N}\).
+  Suppose \(\mathrm{IsRatHilb}(h_C, d)\) and \(\mathrm{IsRatHilb}(h_K, d)\)
+  (\cref{def:ratHilb}), and that for all \(n > N\)
+  \[
+    h_M(n+1) - h_M(n) \;=\; h_C(n+1) - h_K(n).
+  \]
+  Then \(\mathrm{IsRatHilb}(h_M, d+1)\). This packages the entire power-series
+  side of the Stacks~00K1 inductive step: \(h_M\) is the Hilbert function of
+  \(M\), and \(h_C, h_K\) are the Hilbert functions of the cokernel
+  \(C = M/xM\) and kernel \(K = \ker(x : M \to M(1))\) of multiplication by a
+  degree-one element \(x\); the displayed identity is the alternating-sum
+  consequence of the degreewise short exact sequence
+  \(0 \to K_n \to M_n \xrightarrow{x} M_{n+1} \to C_{n+1} \to 0\). Given the
+  inductive hypothesis that \(h_C, h_K\) are rational of order \(d\), the
+  conclusion is rationality of \(h_M\) at order \(d+1\).
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:ratHilb_antidiff, lem:ratHilb_sub, lem:ratHilb_shiftRight}
+  \leanok
+  Set \(g(n) = h_C(n) - h_K(n-1)\). By closure under right shift
+  (\cref{lem:ratHilb_shiftRight}) \(n \mapsto h_K(n-1)\) is rational of order
+  \(d\), and by closure under difference (\cref{lem:ratHilb_sub}) so is \(g\). The
+  hypothesis rewrites as \(h_M(n+1) - h_M(n) = g(n+1)\) for \(n > N\) (since
+  \(g(n+1) = h_C(n+1) - h_K(n)\)). Applying the antidifference step
+  (\cref{lem:ratHilb_antidiff}) to \(H = h_M\) and this \(g\) gives
+  \(\mathrm{IsRatHilb}(h_M, d+1)\).
+\end{proof}
+
+\begin{theorem}[Hilbert polynomial from the section module]
+  \label{thm:hilbertPoly_of_sectionModule}
+  \lean{AlgebraicGeometry.Scheme.hilbertPolynomialOfSectionModule}
+  \uses{lem:sectionGradedModule_fg, lem:gradedHilbertSerre_rational,
+    lem:hilbertPoly_exists_mathlib}
+  % SOURCE: [Nitsure], \S 1, sub-section "Stratification by Hilbert
+  % Polynomials" (read from
+  % references/nitsure-hilbert-quot-src/nitsure-hilbert-quot.tex, L468-L478).
+  % SOURCE QUOTE:
+  % "Let $X\to S$ be a finite type morphism of noetherian schemes,
+  %  and let $L$ be a line bundle on $X$. Let $\F$
+  %  be any coherent sheaf on
+  %  $X$ whose schematic support is proper over $S$. Then for each $s\in S$,
+  %  we get a polynomial ${\Phi}_s \in  \Q[\lambda]$
+  %  which is the Hilbert polynomial of
+  %  the restriction $\F_s = F|_{X_s}$ of $\F$ to the fiber $X_s$ over $s$,
+  %  calculated with respect to the line bundle $L_s = L|_{X_s}$."
+  \textit{Source: [Nitsure], \S 1 (FGA Explained Ch.~5).}
+  Let \(X_s\) be proper over the field \(\kappa(s)\), let \(L_s\) be an ample line
+  bundle on \(X_s\), and let \(\mathcal{F}_s\) be a coherent sheaf on \(X_s\).
+  Then there is a unique polynomial \(\Phi_{\mathcal{F},s} \in \mathbb{Q}[\lambda]\)
+  such that for all \(m \gg 0\)
+  \[
+    \Phi_{\mathcal{F},s}(m)
+    \;=\; \dim_{\kappa(s)} \Gamma\bigl(X_s,\, \mathcal{F}_s \otimes L_s^{\otimes m}\bigr).
+  \]
+  This \(\Phi_{\mathcal{F},s}\) is the Hilbert polynomial of
+  \cref{def:hilbert_polynomial}.
+\end{theorem}
+
+\begin{proof}
+  \uses{lem:sectionGradedModule_fg, lem:gradedHilbertSerre_rational,
+    lem:hilbertPoly_exists_mathlib}
+  By \cref{lem:sectionGradedModule_fg} the section graded module
+  \(M(X_s, \mathcal{F}_s, L_s)\) is a finitely generated graded module over the
+  Noetherian graded ring \(R(X_s, L_s)\), with finite-dimensional components and
+  degree-zero part the field \(\kappa(s)\). Applying the abstract graded
+  Hilbert--Serre rationality lemma (\cref{lem:gradedHilbertSerre_rational}) to the
+  graded \(\kappa(s)\)-algebra \(R = R(X_s, L_s)\) and the finitely generated
+  graded module \(M = M(X_s, \mathcal{F}_s, L_s)\) exhibits the graded Hilbert
+  function
+  \(m \mapsto \dim_{\kappa(s)} \Gamma(X_s, \mathcal{F}_s \otimes L_s^{\otimes m})\)
+  as the eventual coefficient function of a rational series: there are
+  \(p \in \mathbb{Q}[X]\) and \(d \in \mathbb{N}\) and an \(N\) with
+  \(\dim_{\kappa(s)} \Gamma(X_s, \mathcal{F}_s \otimes L_s^{\otimes m})
+  = [X^m]\,(p \cdot (1 - X)^{-d})\) for \(m > N\). Apply
+  \cref{lem:hilbertPoly_exists_mathlib} over the characteristic-zero field
+  \(F = \mathbb{Q}\) to this pair \((p, d)\): it yields a unique polynomial
+  \(h \in \mathbb{Q}[X]\) whose values \(h(n)\) eventually equal
+  \([X^n]\,(p \cdot (1 - X)^{-d})\). Setting
+  \(\Phi_{\mathcal{F},s} := h\) (with the variable renamed \(\lambda\)) gives a
+  polynomial with \(\Phi_{\mathcal{F},s}(m) = \dim_{\kappa(s)}
+  \Gamma(X_s, \mathcal{F}_s \otimes L_s^{\otimes m})\) for \(m \gg 0\). Uniqueness
+  is the \(\exists!\) clause of \cref{lem:hilbertPoly_exists_mathlib}: any two
+  polynomials agreeing with the Hilbert function for \(m \gg 0\) agree at
+  infinitely many points, hence are equal.
+\end{proof}
+
+\subsection{The ambient subquotient induction for the Stacks~00K1 step}
+\label{subsec:gradedModuleApi}
+
+The power-series side of \cref{lem:gradedHilbertSerre_rational} is fully isolated
+in the \(\mathrm{IsRatHilb}\) toolkit (\cref{subsec:isRatHilb}). What remains is
+the \emph{graded-module} side of the Stacks~00K1 induction. Rather than build the
+kernel and cokernel of multiplication by a degree-one element as graded modules
+over a smaller quotient ring \(R/(x)\) -- which would force a graded structure on a
+derived carrier -- we range the induction over \emph{pairs of homogeneous
+submodules of a single fixed ambient graded module} \(M\). A pair \((N, N')\) with
+\(N' \le N\) homogeneous submodules of \(M\) stands for the subquotient \(N/N'\); its
+ambient Hilbert function is the difference \(n \mapsto \dim_\kappa(N \cap M_n) -
+\dim_\kappa(N' \cap M_n)\). The class of such pairs, equipped with finitely many
+pairwise-commuting degree-one endomorphisms preserving \(N\) and \(N'\), is
+\emph{closed} under the kernel and cokernel of one of those endomorphisms, both
+again presented as ambient subquotient pairs. Consequently no graded quotient ring,
+graded quotient module, or regrading of a subtype/quotient carrier is ever formed:
+every object that appears is an ambient family \(n \mapsto N_{\mathrm{aux}} \cap M_n\)
+of submodules of the fixed \(M\).
+
+This subsection records that machinery as a thin layer over existing Mathlib
+scaffold: Mathlib already provides the notion of a homogeneous submodule
+(\cref{lem:submodule_isHomogeneous_mathlib}), the homogeneity of a span of
+homogeneous elements (\cref{lem:ideal_homogeneous_span_mathlib}), the degree-shift
+of multiplication by a homogeneous element
+(\cref{lem:isHomogeneousElem_graded_smul_mathlib}), the rank--nullity identity
+(\cref{lem:finrank_range_add_finrank_ker_mathlib}), and the finite-generation
+transfer along a surjection (\cref{lem:fg_restrictScalars_of_surjective_mathlib}).
+What is supplied here is the internal direct-sum decomposition of a homogeneous
+submodule as an ambient family (the split \(G_1\)), the subquotient Hilbert data,
+the kernel/cokernel closure, the degreewise difference identity, the ambient
+finiteness transfer, and the induction itself.
+
+\emph{Setting for this subsection.} Let \(R = \bigoplus_{n \ge 0} R_n\) be a graded
+ring whose degree-zero part \(R_0 = \kappa\) is a field and which is generated as a
+\(\kappa\)-algebra in degree one, and let \(M = \bigoplus_{n \ge 0} M_n\) be a graded
+\(\kappa\)-vector space (the fixed ambient module) with finite-dimensional
+components \(M_n\). All submodules \(N, N', \dots\) below are homogeneous submodules
+of \(M\), and the relevant endomorphisms are \(\kappa\)-linear maps \(M \to M\)
+raising degree by one -- typically multiplication by a homogeneous element
+\(x \in R_1\).
+
+\subsubsection*{Mathlib dependency anchors}
+
+\begin{lemma}[Homogeneous submodule]
+  \label{lem:submodule_isHomogeneous_mathlib}
+  \lean{Submodule.IsHomogeneous}
+  \mathlibok
+  \textit{Provided by Mathlib
+  (\texttt{Mathlib.RingTheory.GradedAlgebra.Homogeneous.Submodule}).}
+  Let \(R = \bigoplus_n R_n\) be a graded ring and \(M = \bigoplus_n M_n\) an
+  internally graded \(R\)-module. A submodule \(p \subseteq M\) is
+  \emph{homogeneous} when it is closed under taking homogeneous components:
+  \(m \in p\) implies each graded piece \(\mathrm{proj}_n(m) \in p\). Equivalently
+  \(p = \bigoplus_n (p \cap M_n)\) as a set. Mathlib bundles this into a homogeneous
+  submodule type providing order and extensionality structure; the ambient internal
+  direct-sum decomposition \(p = \bigoplus_n (M_n \cap p)\) is supplied by the split
+  \(G_1\) (\cref{lem:graded_homogeneousSubmodule_iSupIndep},
+  \cref{lem:graded_homogeneousSubmodule_iSup_eq}).
+\end{lemma}
+
+\begin{lemma}[A span of homogeneous elements is homogeneous]
+  \label{lem:ideal_homogeneous_span_mathlib}
+  \lean{Ideal.homogeneous_span}
+  \mathlibok
+  \textit{Provided by Mathlib
+  (\texttt{Mathlib.RingTheory.GradedAlgebra.Homogeneous.Ideal}).}
+  Let \(R = \bigoplus_n R_n\) be a graded ring and \(s \subseteq R\) a set each of
+  whose elements is homogeneous. Then the ideal \(\mathrm{span}\,s\) is a
+  homogeneous ideal. In particular, for \(x \in R_1\) the principal ideal \((x)\)
+  is homogeneous, hence \(xM\) and the auxiliary submodule \(N' + x \cdot N\) are
+  homogeneous; this homogeneity feeds the kernel/cokernel closure
+  (\cref{lem:graded_subquotient_ker_coker}).
+\end{lemma}
+
+\begin{lemma}[Rank--nullity]
+  \label{lem:finrank_range_add_finrank_ker_mathlib}
+  \lean{LinearMap.finrank_range_add_finrank_ker}
+  \mathlibok
+  \textit{Provided by Mathlib
+  (\texttt{Mathlib.LinearAlgebra.FiniteDimensional.Lemmas}).}
+  Let \(\kappa\) be a field, \(V\) a finite-dimensional \(\kappa\)-vector space and
+  \(\varphi : V \to W\) a \(\kappa\)-linear map. Then
+  \[
+    \dim_\kappa(\operatorname{range}\varphi) + \dim_\kappa(\ker\varphi)
+      \;=\; \dim_\kappa V .
+  \]
+  This is the rank--nullity identity underlying the degreewise difference identity
+  \(D_5\) (\cref{lem:graded_degreewise_finrank_diff}).
+\end{lemma}
+
+\begin{lemma}[Finite generation transfers along a surjection]
+  \label{lem:fg_restrictScalars_of_surjective_mathlib}
+  \lean{Submodule.FG.restrictScalars_of_surjective}
+  \mathlibok
+  \textit{Provided by Mathlib (\texttt{Mathlib.RingTheory.Finiteness.Basic}).}
+  Let \(\varphi : R \to A\) be a surjective ring homomorphism and \(M\) an
+  \(A\)-module that is finitely generated when viewed as an \(R\)-module via
+  \(\varphi\). Then \(M\) is finitely generated as an \(A\)-module. Applied to the
+  surjection \(\kappa[t_0, \dots, t_{r-1}] \twoheadrightarrow \kappa[t_0, \dots,
+  t_{r-2}]\) killing the endomorphism \(x = t_{r-1}\) that annihilates the two
+  subquotients, this transfers their finite generation down one generator
+  (\cref{lem:graded_subquotient_finite_transfer}).
+\end{lemma}
+
+\begin{lemma}[Multiplication by a homogeneous element shifts degree]
+  \label{lem:isHomogeneousElem_graded_smul_mathlib}
+  \lean{SetLike.IsHomogeneousElem.graded_smul}
+  \mathlibok
+  \textit{Provided by Mathlib (\texttt{Mathlib.Algebra.GradedMulAction}).}
+  Let \(\mathcal{A}\) be a graded family acting on a graded family \(\mathcal{M}\)
+  via a graded scalar multiplication. If \(a \in R\) is homogeneous of degree
+  \(i\) -- in particular \(x \in R_1\) -- then for \(m \in M_n\) one has
+  \(a \cdot m \in M_{i+n}\). This is the degree-shifting property that makes \(xM\)
+  a homogeneous submodule (with degree-\((n+1)\) part \(x \cdot M_n\)) and that
+  underlies the ambient identity \(x \cdot N \cap M_{n+1} = x \cdot (N \cap M_n)\)
+  used in the subquotient closure (\cref{lem:graded_subquotient_ker_coker}) and
+  difference identity (\cref{lem:graded_subquotient_degreewise_diff}).
+\end{lemma}
+
+\begin{lemma}[Commutative subalgebra generated by commuting elements]
+  \label{lem:adjoinCommRingOfComm_mathlib}
+  \lean{Algebra.isMulCommutative_adjoin}
+  \mathlibok
+  \textit{Provided by Mathlib
+  (\texttt{Mathlib.Algebra.Algebra.Subalgebra.Lattice}).}
+  Let \(R\) be a commutative semiring and \(A\) an \(R\)-algebra, possibly
+  noncommutative. If \(s \subseteq A\) is a set of pairwise-commuting elements
+  (\(a b = b a\) for all \(a, b \in s\)), then the \(R\)-subalgebra
+  \(\mathrm{adjoin}_R(s)\) generated by \(s\) has commutative multiplication; the
+  commutative-ring structure on it follows. Applied to the \(r\) pairwise-commuting degree-raising endomorphisms
+  \(x_0, \dots, x_{r-1} \in \operatorname{End}_\kappa(M)\), it yields a
+  \emph{commutative} \(\kappa\)-subalgebra \(A = \mathrm{adjoin}_\kappa\{x_0, \dots,
+  x_{r-1}\} \subseteq \operatorname{End}_\kappa(M)\); the polynomial action of
+  \(\kappa[t_0, \dots, t_{r-1}]\) on \(M\) factors through this commutative \(A\)
+  (\cref{lem:graded_subquotient_finite_transfer}).
+\end{lemma}
+
+\begin{lemma}[Finiteness transfers along a surjective linear map]
+  \label{lem:module_finite_of_surjective_mathlib}
+  \lean{Module.Finite.of_surjective}
+  \mathlibok
+  \textit{Provided by Mathlib (\texttt{Mathlib.RingTheory.Finiteness.Defs}).}
+  Let \(A\) be a ring, \(M, N\) two \(A\)-modules and \(\varphi : M \to N\) a
+  surjective \(A\)-linear map. If \(M\) is a finite \(A\)-module, then so is \(N\).
+  This is the finiteness-transfer step at the heart of the ambient finiteness
+  transfer (\cref{lem:graded_subquotient_finite_transfer}) and of the
+  numerator/denominator finiteness lemmas
+  (\cref{lem:graded_polyQuot_finite_of_le_numerator},
+  \cref{lem:graded_polyQuot_finite_of_le_denominator}).
+\end{lemma}
+
+\begin{lemma}[Finiteness descends along an injective linear map into a Noetherian module]
+  \label{lem:module_finite_of_injective_mathlib}
+  \lean{Module.Finite.of_injective}
+  \mathlibok
+  \textit{Provided by Mathlib (\texttt{Mathlib.RingTheory.Noetherian.Defs}).}
+  Let \(A\) be a ring, \(M, N\) two \(A\)-modules with \(N\) Noetherian (in
+  particular, finite over a Noetherian ring \(A\)), and \(\varphi : M \to N\) an
+  injective \(A\)-linear map. Then \(M\) is a finite \(A\)-module. This is the
+  submodule-finiteness step in \cref{lem:graded_polyQuot_finite_of_le_numerator}.
+\end{lemma}
+
+\begin{lemma}[The lift of a linear map through a quotient]
+  \label{lem:submodule_liftQ_mathlib}
+  \lean{Submodule.liftQ}
+  \mathlibok
+  \textit{Provided by Mathlib (\texttt{Mathlib.LinearAlgebra.Quotient.Basic}).}
+  Let \(A\) be a ring, \(M, N\) two \(A\)-modules, \(P \subseteq M\) a submodule and
+  \(\varphi : M \to N\) an \(A\)-linear map with \(P \subseteq \ker\varphi\). Then
+  \(\varphi\) factors uniquely through a linear map \(M/P \to N\) on the quotient.
+  This realises the descent of a (\(\sigma\)-semilinear) map to the subquotient
+  quotient in the ambient finiteness transfer
+  (\cref{lem:graded_subquotient_finite_transfer}) and the denominator lemma
+  (\cref{lem:graded_polyQuot_finite_of_le_denominator}).
+\end{lemma}
+
+\begin{lemma}[Only finitely many members of an independent family are nonzero]
+  \label{lem:finite_ne_bot_of_iSupIndep_mathlib}
+  \lean{Submodule.finite_ne_bot_of_iSupIndep}
+  \mathlibok
+  \textit{Provided by Mathlib
+  (\texttt{Mathlib.LinearAlgebra.Dimension.Finite}).}
+  Let \(\kappa\) be a field (more generally a division ring) and \(V\) a
+  finite-dimensional \(\kappa\)-vector space. If \((p_i)_{i \in \iota}\) is an
+  \(\mathrm{iSupIndep}\) family of subspaces of \(V\), then the set
+  \(\{\,i : p_i \ne \bot\,\}\) is finite. This is the finiteness input that turns
+  degreewise independence into eventual vanishing in the base case
+  (\cref{lem:graded_subquotient_base_eventuallyZero}).
+\end{lemma}
+
+\begin{lemma}[The polynomial ring in finitely many variables is Noetherian]
+  \label{lem:mvPolynomial_isNoetherianRing_fin_mathlib}
+  \lean{MvPolynomial.isNoetherianRing_fin}
+  \mathlibok
+  \textit{Provided by Mathlib
+  (\texttt{Mathlib.RingTheory.Polynomial.Basic}).}
+  Let \(R\) be a Noetherian commutative ring and \(r \in \mathbb{N}\). Then the
+  multivariate polynomial ring \(\operatorname{MvPolynomial}(\{0, \dots, r-1\}, R)\)
+  is a Noetherian ring (Hilbert's basis theorem in finitely many variables). With
+  \(R = \kappa\) a field this makes \(\kappa[t_0, \dots, t_{r-1}]\) Noetherian, the
+  base ring over which the subquotient finiteness is measured
+  (\cref{lem:graded_polyQuot_finite_of_le_numerator}).
+\end{lemma}
+
+\begin{lemma}[A finite module over a Noetherian ring is Noetherian]
+  \label{lem:isNoetherian_of_isNoetherianRing_of_finite_mathlib}
+  \lean{isNoetherian_of_isNoetherianRing_of_finite}
+  \mathlibok
+  \textit{Provided by Mathlib (\texttt{Mathlib.RingTheory.Noetherian.Defs}).}
+  Let \(A\) be a Noetherian ring and \(M\) a finite \(A\)-module. Then \(M\) is a
+  Noetherian \(A\)-module. Combined with
+  \cref{lem:mvPolynomial_isNoetherianRing_fin_mathlib} this makes a finite
+  \(\kappa[t_0, \dots, t_{r-1}]\)-module Noetherian, so its submodules are again
+  finite (\cref{lem:graded_polyQuot_finite_of_le_numerator}).
+\end{lemma}
+
+\subsubsection*{The internal grading of a homogeneous submodule (split $G_1$)}
+
+\begin{lemma}\leanok
+[$G_1$ (independence) -- the family $n \mapsto M_n \cap p$ is independent]
+  \label{lem:graded_homogeneousSubmodule_iSupIndep}
+  \lean{AlgebraicGeometry.GradedModule.homogeneousSubmodule_inf_iSupIndep}
+  \uses{lem:submodule_isHomogeneous_mathlib}
+  Let \(M = \bigoplus_n M_n\) be an internally graded \(\kappa\)-module and let
+  \(p \subseteq M\) be a homogeneous submodule
+  (\cref{lem:submodule_isHomogeneous_mathlib}). Then the family
+  \(n \mapsto M_n \cap p\) of \(\kappa\)-subspaces of \(M\) is independent: for each
+  \(n\),
+  \[
+    (M_n \cap p) \;\cap\; \Bigl(\bigsqcup_{m \ne n} (M_m \cap p)\Bigr) \;=\; 0 .
+  \]
+  The whole statement lives in the ambient module \(M\): the subspaces
+  \(M_n \cap p\) are submodules of \(M\), never of a derived carrier \(\smash{\hat p}\).
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:submodule_isHomogeneous_mathlib}
+  \leanok
+  The components \(M_n\) of the internal decomposition of \(M\) are independent. The
+  subfamily \(n \mapsto M_n \cap p\) consists of submodules with \(M_n \cap p \le M_n\),
+  so independence is inherited: a relation among the \(M_n \cap p\) is in particular a
+  relation among the \(M_n\), forcing each term to vanish.
+\end{proof}
+
+\begin{lemma}\leanok
+[$G_1$ (supremum) -- $\bigsqcup_n (M_n \cap p) = p$ for $p$ homogeneous]
+  \label{lem:graded_homogeneousSubmodule_iSup_eq}
+  \lean{AlgebraicGeometry.GradedModule.homogeneousSubmodule_iSup_inf_eq}
+  \uses{lem:submodule_isHomogeneous_mathlib}
+  Let \(p \subseteq M\) be a homogeneous submodule
+  (\cref{lem:submodule_isHomogeneous_mathlib}). Then
+  \[
+    \bigsqcup_{n} (M_n \cap p) \;=\; p .
+  \]
+  Together with the independence of
+  \cref{lem:graded_homogeneousSubmodule_iSupIndep}, this is the ambient internal
+  direct sum \(p = \bigoplus_n (M_n \cap p)\), stated entirely inside \(M\) without
+  requiring a direct-sum decomposition of the subtype \(\smash{\hat p}\).
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:submodule_isHomogeneous_mathlib}
+  \leanok
+  The inclusion \(\bigsqcup_n (M_n \cap p) \le p\) is clear, since each
+  \(M_n \cap p \le p\). For the reverse inclusion, take \(m \in p\) and write
+  \(m = \sum_n \mathrm{proj}_n(m)\) with \(\mathrm{proj}_n(m) \in M_n\) using the
+  internal decomposition of \(M\). Homogeneity of \(p\) gives
+  \(\mathrm{proj}_n(m) \in p\), hence \(\mathrm{proj}_n(m) \in M_n \cap p\); thus
+  \(m\) is a finite sum of elements of the \(M_n \cap p\), i.e.
+  \(m \in \bigsqcup_n (M_n \cap p)\).
+\end{proof}
+
+\subsubsection*{The ambient subquotient class and its Hilbert function}
+
+\begin{definition}\leanok
+[Subquotient Hilbert data]
+  \label{def:graded_subquotientHilb}
+  \lean{AlgebraicGeometry.GradedModule.subquotientHilb}
+  \lean{AlgebraicGeometry.GradedModule.SubquotientDatum}
+  \lean{AlgebraicGeometry.GradedModule.SubquotientDatum.hilb}
+  \uses{lem:graded_homogeneousSubmodule_iSupIndep,
+    lem:graded_homogeneousSubmodule_iSup_eq}
+  Fix a graded \(\kappa\)-module \(\mathcal{M}\), i.e.\ \(M\) together with an
+  internal decomposition \(M = \bigoplus_n \mathcal{M}_n\) whose components
+  \(\mathcal{M}_n\) are finite-dimensional over \(\kappa\). A \emph{subquotient
+  datum of length \(r\)} consists of:
+  \begin{itemize}
+    \item a pair of homogeneous submodules \(N' \le N \subseteq M\); and
+    \item a family \(t : \{0, \dots, r-1\} \to (M \to_\kappa M)\) of pairwise
+      commuting \(\kappa\)-linear endomorphisms, each raising degree by one
+      (\(t_i(\mathcal{M}_n) \subseteq \mathcal{M}_{n+1}\)), each preserving \(N\)
+      and \(N'\) (\(t_i N \subseteq N\), \(t_i N' \subseteq N'\)); together with
+    \item a finiteness condition: the subquotient \(N/N'\) is a finite module over the
+      polynomial ring \(\kappa[t_0, \dots, t_{r-1}]\) acting through the \(t_i\) (via the
+      ambient \(t\)-stable carriers \(\mathrm{polySubmodule}\,N\),
+      \(\mathrm{polySubmodule}\,N'\) of \cref{def:graded_polySubmodule}).
+  \end{itemize}
+  The pair \((N, N')\) represents the subquotient \(N/N'\). Its \emph{ambient
+  Hilbert function} is
+  \[
+    \mathrm{hilb}(n) \;=\; \Bigl(\dim_\kappa (N \cap \mathcal{M}_n)
+      \;-\; \dim_\kappa (N' \cap \mathcal{M}_n)\Bigr) \;\in\; \mathbb{Q},
+  \]
+  the difference of the (finite) \(\kappa\)-dimensions of the ambient intersections,
+  computed in \(\mathbb{Z}\) and cast to \(\mathbb{Q}\). Since \(N' \le N\) one has
+  \(N' \cap \mathcal{M}_n \le N \cap \mathcal{M}_n\), so
+  \(\mathrm{hilb}(n) = \dim_\kappa\bigl((N \cap \mathcal{M}_n)/(N' \cap \mathcal{M}_n)\bigr)\)
+  is the dimension of the degree-\(n\) piece of \(N/N'\). The split \(G_1\)
+  (\cref{lem:graded_homogeneousSubmodule_iSupIndep},
+  \cref{lem:graded_homogeneousSubmodule_iSup_eq}) guarantees that these ambient
+  intersections assemble the homogeneous submodules \(N, N'\), so the data depends
+  only on the ambient families \(n \mapsto N \cap \mathcal{M}_n\),
+  \(n \mapsto N' \cap \mathcal{M}_n\).
+\end{definition}
+
+\subsubsection*{Ambient homogeneity calculus}
+
+The kernel/cokernel closure and the degreewise difference identity rest on a small
+calculus of how a degree-raising endomorphism interacts with the internal grading and
+with the lattice of homogeneous submodules. Throughout, \(M = \bigoplus_n \mathcal{M}_n\)
+is the fixed internally graded \(\kappa\)-module and \(x : M \to M\) is a
+\(\kappa\)-linear endomorphism raising degree by one. None of these statements forms a
+derived carrier: every object is a submodule of the fixed \(M\).
+
+\begin{definition}\leanok
+[Degree-raising endomorphism]
+  \label{def:graded_raisesDegree}
+  \lean{AlgebraicGeometry.GradedModule.RaisesDegree}
+  Let \(M = \bigoplus_n \mathcal{M}_n\) be an internally graded \(\kappa\)-module. A
+  \(\kappa\)-linear endomorphism \(x : M \to M\) \emph{raises degree by one} when it
+  carries each graded piece into the next: \(x(\mathcal{M}_n) \subseteq
+  \mathcal{M}_{n+1}\) for every \(n\). This is the grading-ring-free form of
+  ``multiplication by a degree-one element'': it abstracts each of the \(r\)
+  commuting degree-one generators \(x \in R_1\) acting on \(M\) into a single
+  endomorphism, with no reference to the grading ring \(R\).
+\end{definition}
+
+\begin{lemma}\leanok
+[Membership form of degree-raising]
+  \label{lem:graded_raisesDegree_mem}
+  \lean{AlgebraicGeometry.GradedModule.RaisesDegree.mem}
+  \uses{def:graded_raisesDegree}
+  If \(x\) raises degree by one (\cref{def:graded_raisesDegree}) and \(m \in
+  \mathcal{M}_n\), then \(x m \in \mathcal{M}_{n+1}\).
+\end{lemma}
+
+\begin{proof}
+  \uses{def:graded_raisesDegree}
+  \leanok
+  Immediate from the definition: \(x m \in x(\mathcal{M}_n) \subseteq
+  \mathcal{M}_{n+1}\).
+\end{proof}
+
+\begin{lemma}\leanok
+[Degree-shift commutation]
+  \label{lem:graded_decompose_raisesDegree}
+  \lean{AlgebraicGeometry.GradedModule.decompose_raisesDegree}
+  \uses{def:graded_raisesDegree, lem:graded_raisesDegree_mem}
+  Let \(x\) raise degree by one. Then for every \(m \in M\) and every \(i\) the
+  degree-\((i+1)\) homogeneous component of \(x m\) equals \(x\) applied to the
+  degree-\(i\) component of \(m\):
+  \[
+    \mathrm{proj}_{i+1}(x m) \;=\; x\bigl(\mathrm{proj}_i(m)\bigr) .
+  \]
+  This load-bearing commutation says a degree-raising endomorphism shifts the
+  internal decomposition by exactly one slot; it is what makes preimages and images
+  of homogeneous submodules under \(x\) homogeneous.
+\end{lemma}
+
+\begin{proof}
+  \uses{def:graded_raisesDegree, lem:graded_raisesDegree_mem}
+  \leanok
+  Decompose \(m = \sum_j \mathrm{proj}_j(m)\) into its finitely many homogeneous
+  components and apply \(x\): \(x m = \sum_j x(\mathrm{proj}_j(m))\) with
+  \(x(\mathrm{proj}_j(m)) \in \mathcal{M}_{j+1}\) by
+  \cref{lem:graded_raisesDegree_mem}. Reading off the degree-\((i+1)\) component, all
+  terms with \(j+1 \ne i+1\) drop out, leaving \(x(\mathrm{proj}_i(m))\).
+\end{proof}
+
+\begin{lemma}\leanok
+[Degree-raising kills the bottom]
+  \label{lem:graded_decompose_raisesDegree_zero}
+  \lean{AlgebraicGeometry.GradedModule.decompose_raisesDegree_zero}
+  \uses{def:graded_raisesDegree}
+  Let \(x\) raise degree by one. Then the degree-\(0\) component of \(x m\) vanishes
+  for every \(m\): \(\mathrm{proj}_0(x m) = 0\).
+\end{lemma}
+
+\begin{proof}
+  \uses{def:graded_raisesDegree}
+  \leanok
+  Writing \(x m = \sum_j x(\mathrm{proj}_j(m))\) with each summand in
+  \(\mathcal{M}_{j+1}\), no summand has degree \(0\) (every \(j+1 \ge 1\)), so the
+  degree-\(0\) component is \(0\).
+\end{proof}
+
+\begin{lemma}\leanok
+[Preimage of a homogeneous submodule is homogeneous]
+  \label{lem:graded_comap_isHomogeneous}
+  \lean{AlgebraicGeometry.GradedModule.comap_isHomogeneous}
+  \uses{lem:submodule_isHomogeneous_mathlib, lem:graded_decompose_raisesDegree}
+  Let \(x\) raise degree by one and let \(N' \subseteq M\) be a homogeneous submodule
+  (\cref{lem:submodule_isHomogeneous_mathlib}). Then the preimage \(x^{-1}(N') =
+  \{m : x m \in N'\}\) is a homogeneous submodule of \(M\).
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:submodule_isHomogeneous_mathlib, lem:graded_decompose_raisesDegree}
+  \leanok
+  Let \(m \in x^{-1}(N')\) and fix a degree \(i\). By the degree-shift commutation
+  (\cref{lem:graded_decompose_raisesDegree}), \(x(\mathrm{proj}_i(m)) =
+  \mathrm{proj}_{i+1}(x m)\), which lies in \(N'\) because \(x m \in N'\) and \(N'\)
+  is homogeneous. Hence \(\mathrm{proj}_i(m) \in x^{-1}(N')\), so \(x^{-1}(N')\) is
+  homogeneous.
+\end{proof}
+
+\begin{lemma}\leanok
+[Image of a homogeneous submodule is homogeneous]
+  \label{lem:graded_map_isHomogeneous}
+  \lean{AlgebraicGeometry.GradedModule.map_isHomogeneous}
+  \uses{lem:submodule_isHomogeneous_mathlib, lem:graded_decompose_raisesDegree,
+    lem:graded_decompose_raisesDegree_zero}
+  Let \(x\) raise degree by one and let \(N \subseteq M\) be a homogeneous submodule.
+  Then the image \(x \cdot N = \{x m : m \in N\}\) is a homogeneous submodule of
+  \(M\), with degree-\((n+1)\) piece \(x(N \cap \mathcal{M}_n)\) and zero
+  degree-\(0\) piece.
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:submodule_isHomogeneous_mathlib, lem:graded_decompose_raisesDegree,
+    lem:graded_decompose_raisesDegree_zero}
+    \leanok
+  Take \(x m \in x \cdot N\) with \(m \in N\) and fix a degree. In degree \(0\) the
+  component \(\mathrm{proj}_0(x m) = 0 \in x \cdot N\)
+  (\cref{lem:graded_decompose_raisesDegree_zero}). In degree \(i+1\),
+  \(\mathrm{proj}_{i+1}(x m) = x(\mathrm{proj}_i(m))\)
+  (\cref{lem:graded_decompose_raisesDegree}); since \(N\) is homogeneous,
+  \(\mathrm{proj}_i(m) \in N\), so this component lies in \(x \cdot N\). Thus every
+  homogeneous component of \(x m\) lies in \(x \cdot N\), which is therefore
+  homogeneous.
+\end{proof}
+
+\begin{lemma}\leanok
+[Intersection of homogeneous submodules is homogeneous]
+  \label{lem:graded_inf_isHomogeneous}
+  \lean{AlgebraicGeometry.GradedModule.inf_isHomogeneous}
+  \uses{lem:submodule_isHomogeneous_mathlib}
+  If \(p, q \subseteq M\) are homogeneous submodules
+  (\cref{lem:submodule_isHomogeneous_mathlib}) then so is their intersection \(p
+  \cap q\). Mathlib provides no lattice-closure lemmas for homogeneous submodules, so
+  this is recorded here.
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:submodule_isHomogeneous_mathlib}
+  \leanok
+  For \(m \in p \cap q\) and any degree \(i\), homogeneity of \(p\) and of \(q\)
+  gives \(\mathrm{proj}_i(m) \in p\) and \(\mathrm{proj}_i(m) \in q\), hence
+  \(\mathrm{proj}_i(m) \in p \cap q\).
+\end{proof}
+
+\begin{lemma}\leanok
+[Sum of homogeneous submodules is homogeneous]
+  \label{lem:graded_sup_isHomogeneous}
+  \lean{AlgebraicGeometry.GradedModule.sup_isHomogeneous}
+  \uses{lem:submodule_isHomogeneous_mathlib}
+  If \(p, q \subseteq M\) are homogeneous submodules then so is their sum \(p + q\).
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:submodule_isHomogeneous_mathlib}
+  \leanok
+  Write an element of \(p + q\) as \(a + b\) with \(a \in p\), \(b \in q\). For any
+  degree \(i\), \(\mathrm{proj}_i(a+b) = \mathrm{proj}_i(a) + \mathrm{proj}_i(b)\)
+  with \(\mathrm{proj}_i(a) \in p\) and \(\mathrm{proj}_i(b) \in q\) by homogeneity,
+  so \(\mathrm{proj}_i(a+b) \in p + q\).
+\end{proof}
+
+\begin{lemma}\leanok
+[Ambient image identity]
+  \label{lem:graded_map_inf_degree_eq}
+  \lean{AlgebraicGeometry.GradedModule.map_inf_degree_eq}
+  \uses{lem:graded_decompose_raisesDegree, lem:graded_map_isHomogeneous}
+  Let \(x\) raise degree by one and let \(N \subseteq M\) be homogeneous. Then the
+  degree-\((n+1)\) part of the image \(x \cdot N\) is exactly \(x\) of the
+  degree-\(n\) part of \(N\):
+  \[
+    (x \cdot N) \cap \mathcal{M}_{n+1} \;=\; x \cdot (N \cap \mathcal{M}_n) .
+  \]
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:graded_decompose_raisesDegree, lem:graded_map_isHomogeneous}
+  \leanok
+  \(\supseteq\): for \(m \in N \cap \mathcal{M}_n\), \(x m \in x \cdot N\) and \(x m
+  \in \mathcal{M}_{n+1}\) since \(x\) raises degree. \(\subseteq\): an element \(x m
+  \in x \cdot N\) lying in \(\mathcal{M}_{n+1}\) equals its own degree-\((n+1)\)
+  component \(\mathrm{proj}_{n+1}(x m) = x(\mathrm{proj}_n(m))\)
+  (\cref{lem:graded_decompose_raisesDegree}); homogeneity of \(N\) puts
+  \(\mathrm{proj}_n(m) \in N \cap \mathcal{M}_n\), so \(x m \in x \cdot (N \cap
+  \mathcal{M}_n)\). The image \(x \cdot N\) is homogeneous by
+  \cref{lem:graded_map_isHomogeneous}.
+\end{proof}
+
+\begin{lemma}\leanok
+[Ambient distributive law]
+  \label{lem:graded_sup_inf_degree_eq}
+  \lean{AlgebraicGeometry.GradedModule.sup_inf_degree_eq}
+  \uses{lem:graded_inf_isHomogeneous, lem:graded_sup_isHomogeneous,
+    lem:submodule_isHomogeneous_mathlib}
+  For homogeneous submodules \(P, Q \subseteq M\) and any degree \(k\), intersecting
+  the sum with a graded piece distributes:
+  \[
+    (P + Q) \cap \mathcal{M}_k \;=\; (P \cap \mathcal{M}_k) + (Q \cap \mathcal{M}_k) .
+  \]
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:graded_inf_isHomogeneous, lem:graded_sup_isHomogeneous,
+    lem:submodule_isHomogeneous_mathlib}
+    \leanok
+  \(\supseteq\) is the general lattice inequality. For \(\subseteq\), take \(z = p +
+  q \in (P + Q) \cap \mathcal{M}_k\) with \(p \in P\), \(q \in Q\). Since \(z \in
+  \mathcal{M}_k\), \(z = \mathrm{proj}_k(z) = \mathrm{proj}_k(p) +
+  \mathrm{proj}_k(q)\); homogeneity of \(P\) and \(Q\)
+  (\cref{lem:submodule_isHomogeneous_mathlib}) puts \(\mathrm{proj}_k(p) \in P \cap
+  \mathcal{M}_k\) and \(\mathrm{proj}_k(q) \in Q \cap \mathcal{M}_k\), so \(z \in (P
+  \cap \mathcal{M}_k) + (Q \cap \mathcal{M}_k)\). The intersection and sum stay in
+  the homogeneous lattice by \cref{lem:graded_inf_isHomogeneous} and
+  \cref{lem:graded_sup_isHomogeneous}.
+\end{proof}
+
+\subsubsection*{Closure under kernel and cokernel}
+
+The kernel/cokernel closure of the subquotient class is realised by eight ambient
+component facts: for a degree-raising endomorphism \(x\) and a homogeneous pair
+\(N' \le N\), the kernel pair is \((N \cap x^{-1}(N'),\, N')\) and the cokernel pair is
+\((N,\, N' + x \cdot N)\). The lemmas below record that both new pairs are homogeneous,
+nest correctly, are annihilated by \(x\), and are preserved by any endomorphism \(t\)
+commuting with \(x\) that preserves the original pair.
+
+\begin{lemma}\leanok
+[Homogeneity of the kernel pair's lower module]
+  \label{lem:graded_ker_isHomogeneous}
+  \lean{AlgebraicGeometry.GradedModule.ker_isHomogeneous}
+  \uses{lem:graded_inf_isHomogeneous, lem:graded_comap_isHomogeneous}
+  Let \(x\) raise degree by one (\cref{def:graded_raisesDegree}) and let \(N, N'\) be
+  homogeneous submodules of \(M\). Then the kernel pair's lower module
+  \(N \cap x^{-1}(N')\) is homogeneous. Indeed it is the intersection
+  (\cref{lem:graded_inf_isHomogeneous}) of the homogeneous \(N\) with the homogeneous
+  preimage \(x^{-1}(N')\) (\cref{lem:graded_comap_isHomogeneous}).
+\end{lemma}
+
+\begin{lemma}\leanok
+[Homogeneity of the cokernel pair's upper module]
+  \label{lem:graded_coker_isHomogeneous}
+  \lean{AlgebraicGeometry.GradedModule.coker_isHomogeneous}
+  \uses{lem:graded_sup_isHomogeneous, lem:graded_map_isHomogeneous}
+  Under the same hypotheses, the cokernel pair's upper module \(N' + x \cdot N\) is
+  homogeneous: it is the sum (\cref{lem:graded_sup_isHomogeneous}) of the homogeneous
+  \(N'\) with the homogeneous image \(x \cdot N\)
+  (\cref{lem:graded_map_isHomogeneous}).
+\end{lemma}
+
+\begin{lemma}\leanok
+[The kernel pair nests]
+  \label{lem:graded_ker_le}
+  \lean{AlgebraicGeometry.GradedModule.ker_le}
+  If \(N' \le N\) and \(x\) preserves \(N'\) (\(x \cdot N' \subseteq N'\)), then
+  \(N' \le N \cap x^{-1}(N')\). Indeed \(N' \le N\) by hypothesis, and \(x \cdot N'
+  \subseteq N'\) is exactly \(N' \subseteq x^{-1}(N')\); so \(N'\) is below the
+  intersection. Hence the kernel pair \((N \cap x^{-1}(N'),\, N')\) is a valid
+  subquotient pair (\cref{def:graded_subquotientHilb}).
+\end{lemma}
+
+\begin{lemma}\leanok
+[The cokernel pair nests]
+  \label{lem:graded_coker_le}
+  \lean{AlgebraicGeometry.GradedModule.coker_le}
+  If \(N' \le N\) and \(x\) preserves \(N\) (\(x \cdot N \subseteq N\)), then
+  \(N' + x \cdot N \le N\): both summands lie in \(N\). Hence the cokernel pair
+  \((N,\, N' + x \cdot N)\) is a valid subquotient pair
+  (\cref{def:graded_subquotientHilb}).
+\end{lemma}
+
+\begin{lemma}\leanok
+[$x$ annihilates the kernel subquotient]
+  \label{lem:graded_ker_annihilate}
+  \lean{AlgebraicGeometry.GradedModule.ker_annihilate}
+  The endomorphism \(x\) carries the kernel pair's lower module into \(N'\):
+  \(x \cdot (N \cap x^{-1}(N')) \subseteq N'\). Indeed \(N \cap x^{-1}(N') \subseteq
+  x^{-1}(N')\), and applying \(x\) to a preimage of \(N'\) lands in \(N'\). Thus \(x\)
+  acts as zero on the kernel subquotient.
+\end{lemma}
+
+\begin{lemma}\leanok
+[$x$ annihilates the cokernel subquotient]
+  \label{lem:graded_coker_annihilate}
+  \lean{AlgebraicGeometry.GradedModule.coker_annihilate}
+  The endomorphism \(x\) carries \(N\) into the cokernel pair's upper module:
+  \(x \cdot N \subseteq N' + x \cdot N\), trivially (the right summand). Thus \(x\)
+  acts as zero on the cokernel subquotient \(N/(N' + x \cdot N)\).
+\end{lemma}
+
+\begin{lemma}\leanok
+[Commuting endomorphisms preserve the preimage]
+  \label{lem:graded_comap_map_le_of_commute}
+  \lean{AlgebraicGeometry.GradedModule.comap_map_le_of_commute}
+  Let \(t\) commute with \(x\) and preserve \(N'\) (\(t \cdot N' \subseteq N'\)). Then
+  \(t\) preserves the preimage: \(t \cdot x^{-1}(N') \subseteq x^{-1}(N')\). Indeed for
+  \(m\) with \(x m \in N'\) one has \(x(t m) = t(x m) \in t \cdot N' \subseteq N'\), so
+  \(t m \in x^{-1}(N')\). This is what shows the remaining \(t_i\) preserve the kernel
+  pair's lower module \(N \cap x^{-1}(N')\).
+\end{lemma}
+
+\begin{lemma}\leanok
+[Commuting endomorphisms preserve the image]
+  \label{lem:graded_map_map_le_of_commute}
+  \lean{AlgebraicGeometry.GradedModule.map_map_le_of_commute}
+  Let \(t\) commute with \(x\) and preserve \(N\) (\(t \cdot N \subseteq N\)). Then
+  \(t\) preserves the image: \(t \cdot (x \cdot N) \subseteq x \cdot N\). Indeed for
+  \(m \in N\) one has \(t(x m) = x(t m)\) with \(t m \in N\), so \(t(x m) \in x \cdot
+  N\). This is what shows the remaining \(t_i\) preserve the cokernel pair's upper
+  module \(N' + x \cdot N\).
+\end{lemma}
+
+\begin{lemma}\leanok
+[Kernel/cokernel closure of the subquotient class]
+  \label{lem:graded_subquotient_ker_coker}
+  \lean{AlgebraicGeometry.GradedModule.SubquotientDatum.ker}
+  % This is a narrative grouping lemma: its content is realised in Lean by the eight
+  % ambient component facts cited in \uses{} below (no single Lean declaration),
+  % together with the SubquotientDatum.ker/.coker constructors that bundle them into a
+  % length-(r-1) datum. The `\lean` pin names the `.ker` constructor — the single decl most
+  % representative of the bundled closure — so this dependency-bearing grouping node (which is
+  % `\uses`'d by the keystone rationality induction) stays wired into the graph rather than
+  % orphaning the component facts it `\uses`. This is a deliberate duplicate of the
+  % `def:graded_subquotientDatum_ker` pin.
+  \uses{lem:graded_ker_isHomogeneous, lem:graded_coker_isHomogeneous,
+    lem:graded_ker_le, lem:graded_coker_le, lem:graded_ker_annihilate,
+    lem:graded_coker_annihilate, lem:graded_comap_map_le_of_commute,
+    lem:graded_map_map_le_of_commute,
+    def:graded_subquotientHilb, lem:graded_homogeneousSubmodule_iSupIndep,
+    lem:graded_homogeneousSubmodule_iSup_eq, lem:ideal_homogeneous_span_mathlib,
+    lem:isHomogeneousElem_graded_smul_mathlib, lem:graded_comap_isHomogeneous,
+    lem:graded_map_isHomogeneous, lem:graded_inf_isHomogeneous,
+    lem:graded_sup_isHomogeneous}
+  Let \((N, N')\) be a subquotient datum (\cref{def:graded_subquotientHilb}) with
+  endomorphisms \(t_0, \dots, t_{r-1}\), and set \(x = t_{r-1}\). Form the two new
+  pairs of homogeneous submodules of \(M\)
+  \[
+    K \;=\; \bigl(\,N \cap x^{-1}(N'),\ N'\,\bigr),
+    \qquad
+    C \;=\; \bigl(\,N,\ N' + x \cdot N\,\bigr),
+  \]
+  where \(x^{-1}(N') = \{\,m \in M : x \cdot m \in N'\,\}\) is the preimage and
+  \(x \cdot N\) is the image of \(N\) under \(x\). Then:
+  \begin{enumerate}
+    \item \(N \cap x^{-1}(N')\) and \(N' + x \cdot N\) are homogeneous submodules of
+      \(M\), with \(N' \le N \cap x^{-1}(N')\) and \(N' + x \cdot N \le N\), so both
+      \(K\) and \(C\) are subquotient pairs;
+    \item the remaining endomorphisms \(t_0, \dots, t_{r-2}\) pairwise commute,
+      raise degree by one, and preserve both members of \(K\) and of \(C\); and
+    \item \(x\) annihilates both subquotients: \(x \cdot (N \cap x^{-1}(N')) \subseteq N'\)
+      and \(x \cdot N \subseteq N' + x \cdot N\).
+  \end{enumerate}
+  Consequently \(K\) and \(C\) are again subquotient data, now of length \(r-1\)
+  (the endomorphisms \(t_0, \dots, t_{r-2}\)), and \(K = \ker x\) and \(C =
+  \operatorname{coker} x\) on the subquotient \(N/N'\): \(K\) represents
+  \(\ker\bigl(x : N/N' \to N/N'\bigr)\) and \(C\) represents
+  \(\operatorname{coker}\bigl(x : N/N' \to N/N'\bigr)\). No quotient or subtype
+  carrier is constructed; \(K\) and \(C\) are ambient pairs of homogeneous
+  submodules of the fixed \(M\).
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:graded_ker_isHomogeneous, lem:graded_coker_isHomogeneous,
+    lem:graded_ker_le, lem:graded_coker_le, lem:graded_ker_annihilate,
+    lem:graded_coker_annihilate, lem:graded_comap_map_le_of_commute,
+    lem:graded_map_map_le_of_commute,
+    lem:graded_homogeneousSubmodule_iSupIndep,
+    lem:graded_homogeneousSubmodule_iSup_eq, lem:ideal_homogeneous_span_mathlib,
+    lem:isHomogeneousElem_graded_smul_mathlib, lem:graded_comap_isHomogeneous,
+    lem:graded_map_isHomogeneous, lem:graded_inf_isHomogeneous,
+    lem:graded_sup_isHomogeneous}
+    \leanok
+  \emph{Homogeneity.} The preimage \(x^{-1}(N')\) is homogeneous: if
+  \(m = \sum_n \mathrm{proj}_n(m)\) with \(x \cdot m \in N'\), then since \(x\) raises
+  degree by one (\cref{lem:isHomogeneousElem_graded_smul_mathlib}) the components
+  \(x \cdot \mathrm{proj}_n(m) \in \mathcal{M}_{n+1}\) lie in distinct degrees, and
+  homogeneity of \(N'\) (split \(G_1\),
+  \cref{lem:graded_homogeneousSubmodule_iSup_eq}) forces each
+  \(x \cdot \mathrm{proj}_n(m) \in N'\), i.e.\ \(\mathrm{proj}_n(m) \in x^{-1}(N')\).
+  Thus \(N \cap x^{-1}(N')\) is an intersection of homogeneous submodules, hence
+  homogeneous. The image \(x \cdot N\) is homogeneous with degree-\((n+1)\) piece
+  \(x \cdot (N \cap \mathcal{M}_n)\) by
+  \cref{lem:isHomogeneousElem_graded_smul_mathlib}, and a sum of homogeneous
+  submodules is homogeneous (\cref{lem:ideal_homogeneous_span_mathlib} applied at the
+  module level), so \(N' + x \cdot N\) is homogeneous. The inclusions
+  \(N' \le N \cap x^{-1}(N')\) (as \(x \cdot N' \subseteq N'\)) and
+  \(N' + x \cdot N \le N\) (as \(N' \le N\) and \(x \cdot N \subseteq N\)) are
+  immediate. In the language of the ambient homogeneity calculus, this paragraph is
+  exactly: \(x^{-1}(N')\) is homogeneous (\cref{lem:graded_comap_isHomogeneous}),
+  \(x \cdot N\) is homogeneous (\cref{lem:graded_map_isHomogeneous}), and the
+  homogeneous lattice is closed under intersection
+  (\cref{lem:graded_inf_isHomogeneous}) and sum
+  (\cref{lem:graded_sup_isHomogeneous}).
+
+  \emph{Preservation.} Each \(t_i\) with \(i \le r-2\) commutes with \(x\) and
+  preserves \(N, N'\); hence it preserves \(x^{-1}(N')\) (if \(x t_i m = t_i x m \in
+  N'\) whenever \(x m \in N'\)), so it preserves \(N \cap x^{-1}(N')\), and it
+  preserves \(x \cdot N\) (as \(t_i x N = x t_i N \subseteq x N\)), so it preserves
+  \(N' + x \cdot N\). Degree-raising and commutativity are inherited.
+
+  \emph{Annihilation by \(x\).} For \(m \in N \cap x^{-1}(N')\) one has
+  \(x \cdot m \in N'\) by definition, so \(x\) carries the first member of \(K\) into
+  its second; and \(x \cdot N \subseteq N' + x \cdot N\) trivially. Thus \(x\) acts as
+  zero on \(N/N'\) restricted to \(K\) and on the cokernel quotient \(C\).
+
+  \emph{Identification with \(\ker x\) and \(\operatorname{coker} x\).} On the
+  subquotient \(N/N'\), the class of \(m \in N\) is killed by \(x\) iff
+  \(x \cdot m \in N'\), i.e.\ iff \(m \in N \cap x^{-1}(N')\); so \(\ker(x : N/N' \to
+  N/N')\) is exactly \((N \cap x^{-1}(N'))/N'\), represented by \(K\). The image of
+  \(x\) on \(N/N'\) is \((N' + x \cdot N)/N'\), so the cokernel
+  \((N/N')/\operatorname{im} x = N/(N' + x \cdot N)\) is represented by \(C\).
+\end{proof}
+
+\subsubsection*{The subquotient degreewise difference identity ($D_6$)}
+
+\begin{lemma}
+
+\leanok
+[preimage dimension equals ambient-intersection dimension]
+  \label{lem:graded_finrank_comap_subtype}
+  \lean{AlgebraicGeometry.GradedModule.finrank_comap_subtype}
+  For submodules \(p, S\) of a \(\kappa\)-vector space \(M\), the dimension of the
+  preimage of \(S\) under the inclusion \(p \hookrightarrow M\) equals the dimension of
+  the ambient intersection: \(\dim_\kappa(\iota_p^{-1} S) = \dim_\kappa(p \cap S)\),
+  where \(\iota_p : p \to M\) is the canonical injection. Project-local helper consumed
+  by the two kernel-dimension computations of \cref{lem:graded_subquotient_degreewise_diff}.
+\end{lemma}
+\begin{proof}
+
+\leanok
+  The inclusion \(\iota_p\) is injective, so it restricts to a \(\kappa\)-linear
+  isomorphism from \(\iota_p^{-1} S\) onto its image \(\iota_p(\iota_p^{-1} S) = p \cap S\)
+  (image of a comap under an injective map). An isomorphism preserves dimension, giving
+  the claimed equality.
+\end{proof}
+
+\begin{lemma}\leanok
+[$D_6$ -- subquotient degreewise difference]
+  \label{lem:graded_subquotient_degreewise_diff}
+  \lean{AlgebraicGeometry.GradedModule.subquotient_degreewise_diff}
+  \uses{def:graded_subquotientHilb, lem:graded_subquotient_ker_coker,
+    lem:graded_degreewise_finrank_diff, lem:graded_homogeneousSubmodule_iSupIndep,
+    lem:graded_homogeneousSubmodule_iSup_eq, lem:graded_finrank_comap_subtype,
+    lem:isHomogeneousElem_graded_smul_mathlib, lem:graded_map_inf_degree_eq,
+    lem:graded_sup_inf_degree_eq}
+  % NOTE: The proof factors the two kernel-dimension computations through the
+  %   helper \cref{lem:graded_finrank_comap_subtype} (preimage dimension = ambient
+  %   intersection dimension).
+  % SOURCE: [Stacks Project], "Commutative Algebra", \S "Noetherian graded
+  % rings", Proposition \texttt{proposition-graded-hilbert-polynomial} (Tag
+  % 00K1), proof (read from references/hilbert-serre-algebra.tex, L13939-L13947).
+  \textit{Source: [Stacks Project], Tag 00K1 (degreewise short exact sequence).}
+  Let \((N, N')\) be a subquotient datum (\cref{def:graded_subquotientHilb}) with
+  Hilbert function \(h_M\), and let \(x = t_{r-1}\). Let \(h_K\) and \(h_C\) be the
+  Hilbert functions of the kernel and cokernel subquotients
+  \(K = (N \cap x^{-1}(N'),\, N')\) and \(C = (N,\, N' + x \cdot N)\) of
+  \cref{lem:graded_subquotient_ker_coker}. Then for every \(n\)
+  \[
+    h_M(n+1) - h_M(n) \;=\; h_C(n+1) - h_K(n).
+  \]
+  Writing \(Q_n = (N \cap \mathcal{M}_n)/(N' \cap \mathcal{M}_n)\) for the
+  degree-\(n\) piece of \(N/N'\) (so \(\dim_\kappa Q_n = h_M(n)\)), multiplication by
+  \(x\) is a \(\kappa\)-linear map \(x : Q_n \to Q_{n+1}\) with
+  \(\ker(x : Q_n \to Q_{n+1})\) the degree-\(n\) piece of \(K\) and
+  \(Q_{n+1}/\operatorname{im} x\) the degree-\((n+1)\) piece of \(C\); the identity is
+  then the degreewise rank--nullity difference \(D_5\)
+  (\cref{lem:graded_degreewise_finrank_diff}). Specialising to \((N, N') = (\top,
+  \bot)\) recovers the classical \(0 \to \mathcal{M}_n \xrightarrow{x}
+  \mathcal{M}_{n+1} \to \mathcal{M}_{n+1}/x\mathcal{M}_n \to 0\).
+\end{lemma}
+
+% SOURCE QUOTE PROOF: [Stacks Project], Tag 00K1, proof, inductive step (read
+% from references/hilbert-serre-algebra.tex, L13939-L13947).
+% "Let $\overline{M} = M/xM$. Note that the map $x : M \to M$
+%  is {\it not} a map of graded $S$-modules, since it does
+%  not map $M_d$ into $M_d$. Namely, for each $d$ we have the
+%  following short exact sequence
+%  $$
+%  0 \to M_d \xrightarrow{x} M_{d + 1} \to \overline{M}_{d + 1} \to 0
+%  $$
+%  This proves that $[M_{d + 1}] - [M_d] = [\overline{M}_{d + 1}]$.
+%  Hence we win by Lemma \ref{lemma-numerical-polynomial}."
+\begin{proof}
+  \uses{lem:graded_subquotient_ker_coker, lem:graded_degreewise_finrank_diff,
+    lem:graded_homogeneousSubmodule_iSup_eq,
+    lem:isHomogeneousElem_graded_smul_mathlib, lem:graded_map_inf_degree_eq,
+    lem:graded_sup_inf_degree_eq}
+    \leanok
+  Since \(N' \le N\) are homogeneous, the split \(G_1\)
+  (\cref{lem:graded_homogeneousSubmodule_iSup_eq}) identifies the degree-\(n\) piece
+  of \(N/N'\) with \(Q_n = (N \cap \mathcal{M}_n)/(N' \cap \mathcal{M}_n)\), a
+  finite-dimensional \(\kappa\)-vector space of dimension \(h_M(n)\). Because \(x\)
+  raises degree by one and preserves \(N\) and \(N'\)
+  (\cref{lem:isHomogeneousElem_graded_smul_mathlib}), it induces a \(\kappa\)-linear
+  map \(x : Q_n \to Q_{n+1}\).
+
+  \emph{Kernel.} A class \([m] \in Q_n\) (with \(m \in N \cap \mathcal{M}_n\)) lies in
+  \(\ker(x : Q_n \to Q_{n+1})\) iff \(x \cdot m \in N' \cap \mathcal{M}_{n+1}\), i.e.\
+  iff \(m \in (N \cap x^{-1}(N')) \cap \mathcal{M}_n\). Hence \(\ker(x : Q_n \to
+  Q_{n+1}) = \bigl((N \cap x^{-1}(N')) \cap \mathcal{M}_n\bigr)/(N' \cap \mathcal{M}_n)\)
+  is exactly the degree-\(n\) piece of \(K\), of dimension \(h_K(n)\)
+  (\cref{lem:graded_subquotient_ker_coker}).
+
+  \emph{Cokernel.} The image of \(x : Q_n \to Q_{n+1}\) is
+  \(\bigl(x \cdot (N \cap \mathcal{M}_n) + (N' \cap \mathcal{M}_{n+1})\bigr)/(N' \cap
+  \mathcal{M}_{n+1})\). Using the ambient identity \((N' + x \cdot N) \cap
+  \mathcal{M}_{n+1} = (N' \cap \mathcal{M}_{n+1}) + x \cdot (N \cap \mathcal{M}_n)\)
+  -- which is the ambient distributive law (\cref{lem:graded_sup_inf_degree_eq})
+  applied to \(P = N'\), \(Q = x \cdot N\), combined with the ambient image identity
+  \((x \cdot N) \cap \mathcal{M}_{n+1} = x \cdot (N \cap \mathcal{M}_n)\)
+  (\cref{lem:graded_map_inf_degree_eq}) -- the cokernel \(Q_{n+1}/\operatorname{im} x = (N \cap
+  \mathcal{M}_{n+1})/\bigl((N' + x \cdot N) \cap \mathcal{M}_{n+1}\bigr)\) is the
+  degree-\((n+1)\) piece of \(C\), of dimension \(h_C(n+1)\).
+
+  \emph{Difference.} Apply the degreewise rank--nullity difference \(D_5\)
+  (\cref{lem:graded_degreewise_finrank_diff}) to \(\varphi = (x : Q_n \to Q_{n+1})\),
+  with \(V = Q_n\), \(W = Q_{n+1}\):
+  \[
+    h_M(n+1) - h_M(n)
+      = \dim_\kappa Q_{n+1} - \dim_\kappa Q_n
+      = \dim_\kappa(Q_{n+1}/\operatorname{im}\varphi) - \dim_\kappa(\ker\varphi)
+      = h_C(n+1) - h_K(n).
+  \]
+  This is the \(\mathrm{hdiff}\) hypothesis consumed by \cref{lem:ratHilb_ofDiffEq}.
+\end{proof}
+
+\subsubsection*{The free polynomial-ring module structure}
+
+The finiteness condition of a subquotient datum (\cref{def:graded_subquotientHilb}) and
+its transfer down one generator (\cref{lem:graded_subquotient_finite_transfer}) are
+phrased over the \emph{free} polynomial ring \(\kappa[t_0, \dots, t_{r-1}] =
+\operatorname{MvPolynomial}(\{0, \dots, r-1\}, \kappa)\). The following blocks build the
+action of that ring on the ambient module \(M\) from the \(r\) pairwise-commuting
+degree-raising endomorphisms \(t_i\), keeping every carrier an ambient submodule of
+\(M\). The free polynomial ring -- rather than the subalgebra
+\(\mathrm{adjoin}_\kappa\{t_0, \dots, t_{r-1}\} \subseteq \operatorname{End}_\kappa(M)\)
+-- is used precisely so the inductive transfer has the ring surjection
+\(\kappa[t_0, \dots, t_{r-1}] \twoheadrightarrow \kappa[t_0, \dots, t_{r-2}]\) available
+(\cref{lem:graded_subquotient_finite_transfer}).
+
+\begin{definition}\leanok
+[Polynomial evaluation ring homomorphism]
+  \label{def:graded_polyEndHom}
+  \lean{AlgebraicGeometry.GradedModule.polyEndHom}
+  \uses{lem:adjoinCommRingOfComm_mathlib}
+  Let \(t : \{0, \dots, r-1\} \to \operatorname{End}_\kappa(M)\) be a family of
+  pairwise-commuting \(\kappa\)-linear endomorphisms. The \emph{polynomial evaluation
+  ring homomorphism}
+  \[
+    \mathrm{polyEndHom}(t) : \kappa[t_0, \dots, t_{r-1}] \longrightarrow
+      \operatorname{End}_\kappa(M)
+  \]
+  sends each variable \(X_i\) to \(t_i\). It is constructed by evaluating into the
+  \emph{commutative} \(\kappa\)-subalgebra \(A = \mathrm{adjoin}_\kappa(\{t_i\})
+  \subseteq \operatorname{End}_\kappa(M)\) -- commutative by
+  \cref{lem:adjoinCommRingOfComm_mathlib} because the generators commute -- and then
+  including \(A \hookrightarrow \operatorname{End}_\kappa(M)\); evaluation into the
+  noncommutative \(\operatorname{End}_\kappa(M)\) directly is not an algebra
+  homomorphism, which is why the commutative \(A\) is interposed.
+\end{definition}
+
+\begin{lemma}\leanok
+[Evaluation sends $X_i$ to $t_i$]
+  \label{lem:graded_polyEndHom_X}
+  \lean{AlgebraicGeometry.GradedModule.polyEndHom_X}
+  \uses{def:graded_polyEndHom}
+  \(\mathrm{polyEndHom}(t)(X_i) = t_i\) for each \(i\). Immediate from the construction
+  (\cref{def:graded_polyEndHom}), as evaluation sends \(X_i\) to the chosen image
+  \(t_i\).
+\end{lemma}
+
+\begin{lemma}\leanok
+[Evaluation sends a constant to a scalar]
+  \label{lem:graded_polyEndHom_C}
+  \lean{AlgebraicGeometry.GradedModule.polyEndHom_C}
+  \uses{def:graded_polyEndHom}
+  \(\mathrm{polyEndHom}(t)(C\,c) = c \cdot \mathrm{id}_M\) for each \(c \in \kappa\):
+  the evaluation homomorphism (\cref{def:graded_polyEndHom}) is \(\kappa\)-linear and
+  carries the constant polynomial \(C\,c\) to the scalar endomorphism \(c \cdot 1\).
+\end{lemma}
+
+\begin{definition}\leanok
+[Polynomial-ring module structure on $M$]
+  \label{def:graded_polyModule}
+  \lean{AlgebraicGeometry.GradedModule.polyModule}
+  \uses{def:graded_polyEndHom}
+  The \emph{polynomial-module structure} is the \(\kappa[t_0, \dots, t_{r-1}]\)-module
+  structure on \(M\) obtained by restricting scalars along
+  \(\mathrm{polyEndHom}(t)\) (\cref{def:graded_polyEndHom}): a polynomial \(p\) acts on
+  \(m \in M\) by \(p \cdot m = \mathrm{polyEndHom}(t)(p)(m)\). This is the module over the
+  free polynomial ring on which the ambient subquotient induction's finiteness condition
+  is measured.
+\end{definition}
+
+\begin{lemma}\leanok
+[$X_i$ acts as $t_i$]
+  \label{lem:graded_polyModule_X_smul}
+  \lean{AlgebraicGeometry.GradedModule.polyModule_X_smul}
+  \uses{def:graded_polyModule, lem:graded_polyEndHom_X}
+  In the polynomial-module structure (\cref{def:graded_polyModule}), \(X_i \cdot m =
+  t_i(m)\) for all \(m \in M\). Immediate from
+  \(\mathrm{polyEndHom}(t)(X_i) = t_i\) (\cref{lem:graded_polyEndHom_X}).
+\end{lemma}
+
+\begin{lemma}\leanok
+[A constant acts as a scalar]
+  \label{lem:graded_polyModule_C_smul}
+  \lean{AlgebraicGeometry.GradedModule.polyModule_C_smul}
+  \uses{def:graded_polyModule, lem:graded_polyEndHom_C}
+  In the polynomial-module structure (\cref{def:graded_polyModule}), \((C\,c) \cdot m =
+  c \cdot m\) for all \(c \in \kappa\), \(m \in M\). Immediate from
+  \(\mathrm{polyEndHom}(t)(C\,c) = c \cdot \mathrm{id}_M\)
+  (\cref{lem:graded_polyEndHom_C}).
+\end{lemma}
+
+
+\begin{definition}\leanok
+[Polynomial-ring submodule from a $t$-stable submodule]
+  \label{def:graded_polySubmodule}
+  \lean{AlgebraicGeometry.GradedModule.polySubmodule}
+  \uses{def:graded_polyModule, lem:graded_polyModule_X_smul,
+    lem:graded_polyModule_C_smul}
+  Let \(N \subseteq M\) be a \(\kappa\)-submodule that is stable under each \(t_i\)
+  (\(t_i \cdot N \subseteq N\)). Then \(N\), with the \emph{same} ambient carrier, is a
+  \(\kappa[t_0, \dots, t_{r-1}]\)-submodule of \(M\) for the polynomial-module structure
+  (\cref{def:graded_polyModule}). Stability under the action of an arbitrary polynomial
+  follows by induction on monomials: constants act as scalars
+  (\cref{lem:graded_polyModule_C_smul}) and multiplication by \(X_i\) acts as \(t_i\)
+  (\cref{lem:graded_polyModule_X_smul}), both of which preserve \(N\).
+\end{definition}
+
+
+\subsubsection*{Finiteness-transfer infrastructure}
+
+The ambient finiteness transfer (\cref{lem:graded_subquotient_finite_transfer})
+factors the polynomial action of the larger ring through a surjection onto the
+smaller one. The following blocks build that surjection and the semilinearity
+identity it rests on, and record the two elementary finiteness manipulations
+(shrinking a numerator, enlarging a denominator) used to feed the kernel and
+cokernel constructors.
+
+\begin{definition}
+
+\leanok
+[The last-variable surjection of polynomial rings]
+  \label{lem:graded_lastVarAlgHom}
+  \lean{AlgebraicGeometry.GradedModule.lastVarAlgHom}
+  \lean{AlgebraicGeometry.GradedModule.lastVarAlgHom_X_castSucc}
+  \lean{AlgebraicGeometry.GradedModule.lastVarAlgHom_X_last}
+  \lean{AlgebraicGeometry.GradedModule.lastVarAlgHom_C}
+  \lean{AlgebraicGeometry.GradedModule.lastVarAlgHom_rename_castSucc}
+  \lean{AlgebraicGeometry.GradedModule.lastVarAlgHom_surjective}
+  \lean{AlgebraicGeometry.GradedModule.lastVarAlgHom_ringHomSurjective}
+  \uses{lem:fg_restrictScalars_of_surjective_mathlib}
+  For a field \(\kappa\) and \(r \in \mathbb{N}\), the \emph{last-variable
+  homomorphism} is the \(\kappa\)-algebra map
+  \[
+    \mathrm{lastVarAlgHom} : \kappa[t_0, \dots, t_r]
+      = \operatorname{MvPolynomial}(\{0,\dots,r\}, \kappa)
+      \;\longrightarrow\;
+      \operatorname{MvPolynomial}(\{0,\dots,r-1\}, \kappa) = \kappa[t_0, \dots, t_{r-1}]
+  \]
+  obtained by evaluation: it sends the last variable \(X_r\) to \(0\) and each
+  earlier variable \(X_i\) (for \(0 \le i < r\)) to \(X_i\), and fixes constants.
+  It is a left inverse of the algebra map
+  \(\kappa[t_0, \dots, t_{r-1}] \to \kappa[t_0, \dots, t_r]\)
+  induced by the canonical inclusion \(\{0, \dots, r-1\} \hookrightarrow \{0, \dots, r\}\)
+  on variable indices, and is therefore surjective. This is the concrete
+  ring surjection \(\kappa[t_0, \dots, t_r] \twoheadrightarrow
+  \kappa[t_0, \dots, t_{r-1}]\) along which finiteness is transferred
+  (\cref{lem:fg_restrictScalars_of_surjective_mathlib}).
+\end{definition}
+
+\begin{lemma}
+
+\leanok
+[A $t$-stable submodule is closed under the polynomial action]
+  \label{lem:graded_polyEndHom_mem_of_stable}
+  \lean{AlgebraicGeometry.GradedModule.polyEndHom_mem_of_stable}
+  \uses{def:graded_polyEndHom, lem:graded_polyEndHom_X, lem:graded_polyEndHom_C}
+  Let \(t_0, \dots, t_{r-1}\) be pairwise-commuting \(\kappa\)-linear endomorphisms
+  of \(M\) and let \(P' \subseteq M\) be a \(\kappa\)-submodule stable under each
+  \(t_i\) (\(t_i \cdot P' \subseteq P'\)). Then \(P'\) is closed under the action of
+  every polynomial: for all \(p \in \kappa[t_0, \dots, t_{r-1}]\) and \(m \in P'\),
+  \(\mathrm{polyEndHom}(t)(p)(m) \in P'\) (\cref{def:graded_polyEndHom}). The proof
+  is induction on \(p\): a constant acts as a scalar (\cref{lem:graded_polyEndHom_C}),
+  multiplication by a variable acts as the stabilising \(t_i\)
+  (\cref{lem:graded_polyEndHom_X}), and sums are handled additively.
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[Mod-$P'$ semilinearity of the polynomial action]
+  \label{lem:graded_polyEndHom_lastVar_sub_mem}
+  \lean{AlgebraicGeometry.GradedModule.polyEndHom_lastVar_sub_mem}
+  \uses{def:graded_polyEndHom, lem:graded_polyEndHom_X, lem:graded_polyEndHom_C,
+    lem:graded_polyEndHom_mem_of_stable, lem:graded_lastVarAlgHom}
+  Let \(t_0, \dots, t_r\) be pairwise-commuting \(\kappa\)-linear endomorphisms of
+  \(M\), and let \(P' \le P\) be \(\kappa\)-submodules each stable under every
+  \(t_i\), with the last endomorphism \(x = t_r\) carrying \(P\) into \(P'\)
+  (\(x \cdot P \subseteq P'\)). Then for every polynomial
+  \(s \in \kappa[t_0, \dots, t_r]\) and every \(m \in P\),
+  \[
+    \mathrm{polyEndHom}(t)(s)(m)
+      \;-\; \mathrm{polyEndHom}(t_0, \dots, t_{r-1})
+        \bigl(\mathrm{lastVarAlgHom}(s)\bigr)(m)
+      \;\in\; P' .
+  \]
+  In words: acting by \(s\) through the full family \(t\) agrees, modulo \(P'\), with
+  first projecting away the last variable via \(\mathrm{lastVarAlgHom}\)
+  (\cref{lem:graded_lastVarAlgHom}) and acting through the reduced family
+  \((t_0, \dots, t_{r-1})\). This is the semilinearity identity that makes the
+  \(\sigma\)-semilinear quotient map of \cref{lem:graded_subquotient_finite_transfer}
+  well-defined. The proof is induction on \(s\): the case of an earlier variable
+  \(s = X_i\) (\(i < r\)) is the inductive hypothesis after \(\mathrm{lastVarAlgHom}\)
+  fixes it; the case of the last variable \(s = X_r\) annihilates the reduced term,
+  and the full term lands in \(P'\) because \(x = t_r\) carries \(P\) into the
+  \(t\)-stable \(P'\) (\cref{lem:graded_polyEndHom_mem_of_stable}).
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[Shrinking the numerator preserves finiteness]
+  \label{lem:graded_polyQuot_finite_of_le_numerator}
+  \lean{AlgebraicGeometry.GradedModule.polyQuot_finite_of_le_numerator}
+  \uses{def:graded_polyModule, def:graded_polySubmodule,
+    lem:module_finite_of_injective_mathlib,
+    lem:mvPolynomial_isNoetherianRing_fin_mathlib,
+    lem:isNoetherian_of_isNoetherianRing_of_finite_mathlib}
+  Let \(N_1 \le N_2\) and \(P'\) be \(\kappa\)-submodules of \(M\), each stable under
+  the commuting family \(t_0, \dots, t_{r-1}\), and suppose the subquotient
+  \(N_2/P'\) is finite over \(\kappa[t_0, \dots, t_{r-1}]\)
+  (\cref{def:graded_polyModule}, \cref{def:graded_polySubmodule}). Then \(N_1/P'\) is
+  also finite over \(\kappa[t_0, \dots, t_{r-1}]\). Indeed the inclusion
+  \(N_1 \subseteq N_2\) induces an injective \(\kappa[t_0, \dots, t_{r-1}]\)-linear
+  map \(N_1/P' \hookrightarrow N_2/P'\); since
+  \(\kappa[t_0, \dots, t_{r-1}]\) is Noetherian
+  (\cref{lem:mvPolynomial_isNoetherianRing_fin_mathlib}), the finite module
+  \(N_2/P'\) is Noetherian
+  (\cref{lem:isNoetherian_of_isNoetherianRing_of_finite_mathlib}), so its submodule
+  \(N_1/P'\) is finite (\cref{lem:module_finite_of_injective_mathlib}). This supplies
+  the finiteness witness of the kernel constructor
+  (\cref{def:graded_subquotientDatum_ker}).
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[Enlarging the denominator preserves finiteness]
+  \label{lem:graded_polyQuot_finite_of_le_denominator}
+  \lean{AlgebraicGeometry.GradedModule.polyQuot_finite_of_le_denominator}
+  \uses{def:graded_polyModule, def:graded_polySubmodule,
+    lem:module_finite_of_surjective_mathlib, lem:submodule_liftQ_mathlib}
+  Let \(N\) and \(P_1 \le P_2\) be \(\kappa\)-submodules of \(M\), each stable under
+  the commuting family \(t_0, \dots, t_{r-1}\), and suppose the subquotient
+  \(N/P_1\) is finite over \(\kappa[t_0, \dots, t_{r-1}]\)
+  (\cref{def:graded_polyModule}, \cref{def:graded_polySubmodule}). Then \(N/P_2\) is
+  also finite over \(\kappa[t_0, \dots, t_{r-1}]\). Indeed the inclusion
+  \(P_1 \subseteq P_2\) gives a surjection \(N/P_1 \twoheadrightarrow N/P_2\)
+  (\cref{lem:submodule_liftQ_mathlib}), and finiteness transfers along it
+  (\cref{lem:module_finite_of_surjective_mathlib}). This supplies the
+  finiteness witness of the cokernel constructor
+  (\cref{def:graded_subquotientDatum_coker}).
+\end{lemma}
+
+\subsubsection*{Ambient finiteness transfer}
+
+\begin{lemma}\leanok
+[Abstract single-pair finiteness transfer down one variable]
+  \label{lem:graded_subquotient_finite_transfer}
+  \lean{AlgebraicGeometry.GradedModule.subquotient_finite_transfer}
+  \uses{def:graded_polyModule, def:graded_polySubmodule,
+    lem:graded_lastVarAlgHom, lem:graded_polyEndHom_lastVar_sub_mem,
+    lem:module_finite_of_surjective_mathlib, lem:submodule_liftQ_mathlib,
+    lem:fg_restrictScalars_of_surjective_mathlib}
+  Let \(t_0, \dots, t_r\) be pairwise-commuting \(\kappa\)-linear endomorphisms of
+  \(M\), and let \(P' \le P\) be \(\kappa\)-submodules of \(M\), each stable under
+  every \(t_i\). Suppose the last endomorphism \(x = t_r\) carries \(P\) into \(P'\)
+  (\(x \cdot P \subseteq P'\)), and that the subquotient \(P/P'\) is finite over the
+  free polynomial ring \(\kappa[t_0, \dots, t_r]\) for the polynomial-module structure
+  of \cref{def:graded_polyModule} (with carriers the ambient \(t\)-stable submodules
+  \(\mathrm{polySubmodule}\,P\), \(\mathrm{polySubmodule}\,P'\),
+  \cref{def:graded_polySubmodule}). Then \(P/P'\) is finite over
+  \(\kappa[t_0, \dots, t_{r-1}]\) for the reduced family \((t_0, \dots, t_{r-1})\).
+
+  This is the abstract single-pair transfer: it does not mention the kernel/cokernel
+  pairs, but is the engine applied to each of them by the kernel and cokernel
+  constructors (\cref{def:graded_subquotientDatum_ker},
+  \cref{def:graded_subquotientDatum_coker}). Because the last variable
+  annihilates the subquotient, the \(\kappa[t_0, \dots, t_r]\)-action factors through
+  the last-variable surjection \(\kappa[t_0, \dots, t_r] \twoheadrightarrow
+  \kappa[t_0, \dots, t_{r-1}]\), which is what makes the transfer drop one variable.
+\end{lemma}
+
+\begin{proof}
+  \uses{def:graded_polyModule, def:graded_polySubmodule,
+    lem:graded_lastVarAlgHom, lem:graded_polyEndHom_lastVar_sub_mem,
+    lem:module_finite_of_surjective_mathlib, lem:submodule_liftQ_mathlib}
+    \leanok
+  Write \(\sigma = \mathrm{lastVarAlgHom} : \kappa[t_0, \dots, t_r]
+  \twoheadrightarrow \kappa[t_0, \dots, t_{r-1}]\) for the surjective ring
+  homomorphism sending the last variable to \(0\) and each earlier variable \(X_i\)
+  (\(i < r\)) to \(X_i\) (\cref{lem:graded_lastVarAlgHom}). Consider the map on numerators
+  \[
+    g : \mathrm{polySubmodule}\,P \;\longrightarrow\;
+      \bigl(\mathrm{polySubmodule}\,P\bigr)\big/
+        \bigl(\mathrm{polySubmodule}\,P'\bigr), \qquad y \longmapsto [\,y\,],
+  \]
+  where the source carries the \(\kappa[t_0, \dots, t_r]\)-module structure and the
+  target the reduced \(\kappa[t_0, \dots, t_{r-1}]\)-module structure (both with the
+  same ambient carrier \(P\), \cref{def:graded_polySubmodule}). The mod-\(P'\)
+  semilinearity identity (\cref{lem:graded_polyEndHom_lastVar_sub_mem}) -- acting by
+  \(s\) through the full family and acting by \(\sigma(s)\) through the reduced family
+  agree modulo \(P'\), precisely because \(x = t_r\) carries \(P\) into \(P'\) --
+  says exactly that \(g\) is \(\sigma\)-semilinear. The map \(g\) is surjective (it is
+  the quotient projection on the common carrier), and it kills the denominator
+  \(\mathrm{polySubmodule}\,P'\), so it descends through that submodule
+  (\cref{lem:submodule_liftQ_mathlib}) to a surjective
+  \(\kappa[t_0, \dots, t_{r-1}]\)-linear map
+  \[
+    \bigl(\mathrm{polySubmodule}\,P\bigr)\big/\bigl(\mathrm{polySubmodule}\,P'\bigr)
+      \;\twoheadrightarrow\;
+    \bigl(\mathrm{polySubmodule}\,P\bigr)\big/\bigl(\mathrm{polySubmodule}\,P'\bigr)
+  \]
+  from the \(\kappa[t_0, \dots, t_r]\)-finite subquotient onto the reduced one.
+  Finiteness transfers along this surjection
+  (\cref{lem:module_finite_of_surjective_mathlib}), giving finiteness of \(P/P'\)
+  over \(\kappa[t_0, \dots, t_{r-1}]\).
+
+  \emph{Why the free polynomial ring.} The smaller ring must be the \emph{free}
+  polynomial ring \(\kappa[t_0, \dots, t_{r-1}]\), not the subalgebra
+  \(\mathrm{adjoin}_\kappa\{t_0, \dots, t_{r-1}\} \subseteq
+  \operatorname{End}_\kappa(M)\): relations among the endomorphisms inside
+  \(\operatorname{End}_\kappa(M)\) would obstruct the polynomial-ring surjection
+  \(\sigma\) that the scalar transfer requires
+  (\cref{lem:fg_restrictScalars_of_surjective_mathlib}). Keeping free polynomial
+  rings at every step keeps \(\sigma\) -- and hence the transfer -- available
+  throughout. Everything is finite generation of ambient submodules of the fixed
+  \(M\) and their quotients.
+\end{proof}
+
+\subsubsection*{Subquotient constructors}
+
+The kernel/cokernel closure (\cref{lem:graded_subquotient_ker_coker}) and the
+abstract finiteness transfer (\cref{lem:graded_subquotient_finite_transfer}) are
+bundled into two constructors that take a length-\((r+1)\) subquotient datum to the
+length-\(r\) kernel and cokernel data consumed by the induction. The two stability
+lemmas below first record that the new pairs are stable under the \emph{whole}
+endomorphism family (not merely the reduced one), which is what lets the over-\(\kappa[t_0,\dots,t_r]\)
+finiteness inputs be stated before the variable is dropped.
+
+\begin{lemma}
+
+\leanok
+[The kernel pair's lower module is stable under the full family]
+  \label{lem:graded_ker_stable_full}
+  \lean{AlgebraicGeometry.GradedModule.ker_stable_full}
+  \uses{lem:graded_comap_map_le_of_commute}
+  Let \((N, N')\) be a length-\((r+1)\) subquotient datum
+  (\cref{def:graded_subquotientHilb}) with endomorphisms \(t_0, \dots, t_r\) and
+  \(x = t_r\). Then the kernel pair's lower module \(N \cap x^{-1}(N')\) is stable
+  under \emph{every} \(t_i\) (\(0 \le i \le r\)), not only the reduced family: each
+  \(t_i\) preserves \(N\) and preserves the preimage \(x^{-1}(N')\) because it
+  commutes with \(x\) and preserves \(N'\)
+  (\cref{lem:graded_comap_map_le_of_commute}). This full stability is what allows the
+  kernel subquotient's finiteness to be measured over \(\kappa[t_0, \dots, t_r]\)
+  before the transfer drops the last variable.
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[The cokernel pair's upper module is stable under the full family]
+  \label{lem:graded_coker_stable_full}
+  \lean{AlgebraicGeometry.GradedModule.coker_stable_full}
+  \uses{lem:graded_map_map_le_of_commute}
+  Under the same hypotheses, the cokernel pair's upper module \(N' + x \cdot N\) is
+  stable under every \(t_i\) (\(0 \le i \le r\)): each \(t_i\) preserves \(N'\) and
+  preserves the image \(x \cdot N\) because it commutes with \(x\) and preserves
+  \(N\) (\cref{lem:graded_map_map_le_of_commute}), and a map preserves a sum of
+  preserved submodules. This full stability supports the over-\(\kappa[t_0, \dots,
+  t_r]\) finiteness input of the cokernel constructor.
+\end{lemma}
+
+\begin{definition}
+
+\leanok
+[Kernel constructor of a subquotient datum]
+  \label{def:graded_subquotientDatum_ker}
+  \lean{AlgebraicGeometry.GradedModule.SubquotientDatum.ker}
+  \uses{def:graded_subquotientHilb, lem:graded_subquotient_ker_coker,
+    lem:graded_ker_isHomogeneous, lem:graded_ker_le, lem:graded_ker_annihilate,
+    lem:graded_comap_map_le_of_commute, lem:graded_ker_stable_full,
+    lem:graded_subquotient_finite_transfer,
+    lem:graded_polyQuot_finite_of_le_numerator}
+  From a length-\((r+1)\) subquotient datum \((N, N')\) with endomorphisms
+  \(t_0, \dots, t_r\) and \(x = t_r\) (\cref{def:graded_subquotientHilb}), the
+  \emph{kernel constructor} produces the length-\(r\) datum
+  \[
+    \ker D \;=\; \bigl(\,N \cap x^{-1}(N'),\ N'\,\bigr)
+  \]
+  on the reduced family \((t_0, \dots, t_{r-1})\). Its
+  non-finiteness fields are supplied by the ambient kernel calculus: homogeneity of
+  \(N \cap x^{-1}(N')\) (\cref{lem:graded_ker_isHomogeneous}), the nesting
+  \(N' \le N \cap x^{-1}(N')\) (\cref{lem:graded_ker_le}), and stability under the
+  reduced family (\cref{lem:graded_ker_stable_full}). The finiteness witness
+  is obtained by first shrinking the numerator from \(N\) to
+  \(N \cap x^{-1}(N')\) (\cref{lem:graded_polyQuot_finite_of_le_numerator}) to get
+  \(\kappa[t_0, \dots, t_r]\)-finiteness of the kernel subquotient, then transferring
+  down one variable (\cref{lem:graded_subquotient_finite_transfer}), valid because
+  \(x\) annihilates the kernel subquotient (\cref{lem:graded_ker_annihilate}). This
+  realises the kernel half of \cref{lem:graded_subquotient_ker_coker} as a genuine
+  length-\(r\) datum.
+\end{definition}
+
+\begin{definition}
+
+\leanok
+[Cokernel constructor of a subquotient datum]
+  \label{def:graded_subquotientDatum_coker}
+  \lean{AlgebraicGeometry.GradedModule.SubquotientDatum.coker}
+  \uses{def:graded_subquotientHilb, lem:graded_subquotient_ker_coker,
+    lem:graded_coker_isHomogeneous, lem:graded_coker_le, lem:graded_coker_annihilate,
+    lem:graded_map_map_le_of_commute, lem:graded_coker_stable_full,
+    lem:graded_subquotient_finite_transfer,
+    lem:graded_polyQuot_finite_of_le_denominator}
+  From the same length-\((r+1)\) datum, the \emph{cokernel constructor} produces the
+  length-\(r\) datum
+  \[
+    \operatorname{coker} D \;=\; \bigl(\,N,\ N' + x \cdot N\,\bigr)
+  \]
+  on the reduced family. Its non-finiteness fields come from the ambient cokernel
+  calculus: homogeneity of \(N' + x \cdot N\) (\cref{lem:graded_coker_isHomogeneous}),
+  the nesting \(N' + x \cdot N \le N\) (\cref{lem:graded_coker_le}), and stability
+  under the reduced family (\cref{lem:graded_coker_stable_full}). The finiteness field
+  is obtained by enlarging the denominator from \(N'\) to \(N' + x \cdot N\)
+  (\cref{lem:graded_polyQuot_finite_of_le_denominator}) to get
+  \(\kappa[t_0, \dots, t_r]\)-finiteness of the cokernel subquotient, then
+  transferring down one variable (\cref{lem:graded_subquotient_finite_transfer}),
+  valid because \(x\) annihilates the cokernel subquotient
+  (\cref{lem:graded_coker_annihilate}). This realises the cokernel half of
+  \cref{lem:graded_subquotient_ker_coker} as a genuine length-\(r\) datum.
+\end{definition}
+
+\subsubsection*{The degreewise difference identity}
+
+\begin{lemma}\leanok
+[$D_5$ -- degreewise rank--nullity difference]
+  \label{lem:graded_degreewise_finrank_diff}
+  \lean{AlgebraicGeometry.GradedModule.degreewise_finrank_diff}
+  \uses{lem:finrank_range_add_finrank_ker_mathlib,
+    lem:finrank_ses_additive_mathlib}
+  Let \(\varphi : V \to W\) be a \(\kappa\)-linear map between finite-dimensional
+  \(\kappa\)-vector spaces. Then
+  \[
+    \dim_\kappa W - \dim_\kappa V
+      \;=\; \dim_\kappa(W/\operatorname{range}\varphi) - \dim_\kappa(\ker\varphi).
+  \]
+  Applied degreewise with \(\varphi = (x : \mathcal{M}_n \to \mathcal{M}_{n+1})\),
+  \(V = \mathcal{M}_n\), \(W = \mathcal{M}_{n+1}\) -- so that \(\ker\varphi\) is the
+  degree-\(n\) piece \(K_n\) of the kernel subquotient and
+  \(W/\operatorname{range}\varphi = \mathcal{M}_{n+1}/x \mathcal{M}_n\) the
+  degree-\((n+1)\) piece \(C_{n+1}\) of the cokernel subquotient
+  (\cref{lem:graded_subquotient_degreewise_diff}, via the split \(G_1\)
+  \cref{lem:graded_homogeneousSubmodule_iSup_eq} and the degree shift
+  \cref{lem:isHomogeneousElem_graded_smul_mathlib}) -- this gives, for every \(n\),
+  \[
+    \dim_\kappa \mathcal{M}_{n+1} - \dim_\kappa \mathcal{M}_n
+      \;=\; \dim_\kappa C_{n+1} - \dim_\kappa K_n,
+  \]
+  which is the difference identity \(\mathrm{hdiff}\) consumed by
+  \cref{lem:ratHilb_ofDiffEq}. No graded structure is used in proving the
+  underlying vector-space identity -- it is pure rank--nullity.
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:finrank_range_add_finrank_ker_mathlib,
+    lem:finrank_ses_additive_mathlib}
+    \leanok
+  By rank--nullity (\cref{lem:finrank_range_add_finrank_ker_mathlib}),
+  \(\dim_\kappa V = \dim_\kappa(\ker\varphi) + \dim_\kappa(\operatorname{range}
+  \varphi)\), so \(\dim_\kappa(\operatorname{range}\varphi) = \dim_\kappa V -
+  \dim_\kappa(\ker\varphi)\). By additivity on the short exact sequence
+  \(0 \to \operatorname{range}\varphi \to W \to W/\operatorname{range}\varphi \to 0\)
+  (\cref{lem:finrank_ses_additive_mathlib}),
+  \(\dim_\kappa(W/\operatorname{range}\varphi) = \dim_\kappa W -
+  \dim_\kappa(\operatorname{range}\varphi) = \dim_\kappa W - \dim_\kappa V +
+  \dim_\kappa(\ker\varphi)\). Rearranging gives
+  \(\dim_\kappa W - \dim_\kappa V = \dim_\kappa(W/\operatorname{range}\varphi) -
+  \dim_\kappa(\ker\varphi)\). The degreewise application identifies
+  \(\ker(x : \mathcal{M}_n \to \mathcal{M}_{n+1})\) and
+  \(\mathcal{M}_{n+1}/\operatorname{range}(x : \mathcal{M}_n \to \mathcal{M}_{n+1})\)
+  with the degree-\(n\) piece of the kernel subquotient and the degree-\((n+1)\)
+  piece of the cokernel subquotient (\cref{lem:graded_subquotient_degreewise_diff}),
+  the latter because the degree-\((n+1)\) graded piece of the homogeneous submodule
+  \(x\mathcal{M}\) is exactly \(x \mathcal{M}_n\)
+  (\cref{lem:isHomogeneousElem_graded_smul_mathlib}).
+\end{proof}
+
+\subsubsection*{The base case ($r = 0$)}
+
+\begin{lemma}\leanok
+[Base-case finiteness over the empty polynomial ring]
+  \label{lem:graded_finiteDimensional_of_mvPolynomial_isEmpty_finite}
+  \lean{AlgebraicGeometry.GradedModule.finiteDimensional_of_mvPolynomial_isEmpty_finite}
+  Let \(Q\) be a \(\kappa\)-vector space that is also a module over
+  \(\operatorname{MvPolynomial}(\sigma, \kappa)\) for an \emph{empty} index set
+  \(\sigma\) -- in particular \(\sigma = \{0, \dots, r-1\}\) with \(r = 0\) -- in a way
+  compatible with the \(\kappa\)-action (scalar tower). If \(Q\) is module-finite over
+  \(\operatorname{MvPolynomial}(\sigma, \kappa)\), then \(Q\) is finite-dimensional over
+  \(\kappa\). Indeed for empty \(\sigma\) the polynomial ring is
+  \(\operatorname{MvPolynomial}(\sigma, \kappa) \cong \kappa\), a finite \(\kappa\)-module,
+  so finiteness of \(Q\) over it transfers to finiteness over \(\kappa\) along the scalar
+  tower. This is the length-zero input to the ambient subquotient induction
+  (\cref{lem:graded_subquotient_isRatHilb}): when \(r = 0\) the subquotient \(N/N'\) is a
+  finite-dimensional \(\kappa\)-vector space, hence \(\mathrm{hilb}\) is eventually zero.
+\end{lemma}
+
+\begin{lemma}
+
+\leanok
+[independence of images modulo the kernel]
+  \label{lem:graded_iSupIndep_map_of_mem_ker_sup}
+  \lean{AlgebraicGeometry.GradedModule.iSupIndep_map_of_mem_ker_sup}
+  Let \(\pi : A \to Q\) be a \(\kappa\)-linear map and \((g_i)_{i \in \iota}\) a family of
+  subspaces of \(A\) that is \emph{independent modulo \(\ker\pi\)}: for each \(i\), every
+  \(a \in g_i\) that also lies in \(\ker\pi + \sum_{j \ne i} g_j\) already lies in
+  \(\ker\pi\). Then the image family \((\pi(g_i))_{i \in \iota}\) is independent
+  (\(\mathrm{iSupIndep}\)) in \(Q\). Ring-agnostic lattice core of the base-case
+  independence step below; applied to the quotient map \(N \twoheadrightarrow N/N'\).
+\end{lemma}
+\begin{proof}
+
+\leanok
+  By the disjointness criterion for independence it suffices to show, for each \(i\),
+  that \(\pi(g_i) \cap \sum_{j \ne i} \pi(g_j) = 0\). Take \(q\) in that intersection;
+  write \(q = \pi(a)\) with \(a \in g_i\), and (pushing the sum through \(\pi\), since
+  \(\pi(\sum_{j\ne i} g_j) = \sum_{j\ne i}\pi(g_j)\)) \(q = \pi(b)\) with
+  \(b \in \sum_{j \ne i} g_j\). Then \(a - b \in \ker\pi\), so
+  \(a = (a-b) + b \in \ker\pi + \sum_{j \ne i} g_j\). By the hypothesis applied at \(i\),
+  \(a \in \ker\pi\), whence \(q = \pi(a) = 0\).
+\end{proof}
+
+\begin{lemma}
+
+\leanok
+[Base case: the length-zero subquotient Hilbert function vanishes eventually]
+  \label{lem:graded_subquotient_base_eventuallyZero}
+  \lean{AlgebraicGeometry.GradedModule.subquotient_base_eventuallyZero}
+  \uses{def:graded_subquotientHilb,
+    lem:graded_finiteDimensional_of_mvPolynomial_isEmpty_finite,
+    lem:graded_homogeneousSubmodule_iSupIndep, lem:graded_iSupIndep_map_of_mem_ker_sup,
+    lem:finite_ne_bot_of_iSupIndep_mathlib, lem:ratHilb_ofEventuallyZero}
+  % SOURCE: [Stacks Project], "Commutative Algebra", \S "Noetherian graded
+  % rings", Proposition \texttt{proposition-graded-hilbert-polynomial} (Tag
+  % 00K1), proof, base case (read from references/hilbert-serre-algebra.tex,
+  % L13908-L13910).
+  % SOURCE QUOTE:
+  % "We prove this by induction on the minimal number of
+  %  generators of $S_1$. If this number is $0$, then
+  %  $M_n = 0$ for all $n \gg 0$ and the result holds."
+  \textit{Source: [Stacks Project], Tag 00K1 (base case of the induction).}
+  Let \((N, N')\) be a subquotient datum of length \(0\)
+  (\cref{def:graded_subquotientHilb}): a homogeneous pair \(N' \le N\) of the fixed
+  ambient graded module \(M = \bigoplus_n \mathcal{M}_n\) with \emph{no} endomorphisms,
+  whose finiteness witness says the subquotient \(Q_0 := N/N'\) is module-finite over
+  \(\operatorname{MvPolynomial}(\varnothing, \kappa)\). Then the ambient Hilbert
+  function vanishes eventually: there is \(K \in \mathbb{N}\) with
+  \(\mathrm{hilb}(n) = 0\) for all \(n > K\). Consequently
+  \(\mathrm{IsRatHilb}(\mathrm{hilb}, 0)\) (\cref{lem:ratHilb_ofEventuallyZero}),
+  which is the base case of the ambient subquotient induction
+  (\cref{lem:graded_subquotient_isRatHilb}).
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:graded_finiteDimensional_of_mvPolynomial_isEmpty_finite,
+    lem:graded_homogeneousSubmodule_iSupIndep,
+    lem:finite_ne_bot_of_iSupIndep_mathlib, lem:ratHilb_ofEventuallyZero}
+    \leanok
+  Since the index set of variables is empty,
+  \(\operatorname{MvPolynomial}(\varnothing, \kappa) \cong \kappa\), so the finiteness
+  witness makes the subquotient \(Q_0 = N/N'\) a \emph{finite-dimensional}
+  \(\kappa\)-vector space
+  (\cref{lem:graded_finiteDimensional_of_mvPolynomial_isEmpty_finite}). For each
+  degree \(n\), composing the inclusion of the homogeneous piece
+  \(N \cap \mathcal{M}_n \hookrightarrow N\) with the quotient projection
+  \(N \twoheadrightarrow Q_0\) gives a \(\kappa\)-linear map
+  \(\psi_n : N \cap \mathcal{M}_n \to Q_0\), \(m \mapsto [m]\), whose image is the
+  class of the degree-\(n\) homogeneous piece inside the subquotient.
+
+  \emph{Step 1: independence of the images.} The family
+  \(\bigl(\operatorname{range}(\psi_n)\bigr)_{n}\) is \(\mathrm{iSupIndep}\) in
+  \(Q_0\). The reason is the ambient direct-sum grading of \(M\): the homogeneous
+  pieces \(\mathcal{M}_n\) form an independent family
+  (\cref{lem:graded_homogeneousSubmodule_iSupIndep}). An element of
+  \(\bigsqcup_{j \ne n} \operatorname{range}(\psi_j)\) is a finite sum of classes of
+  homogeneous elements of degrees \(j \ne n\); since \(N'\) is homogeneous, the
+  degree-\(n\) homogeneous component of any representative of such a class lies in
+  \(N'\), so the class has zero degree-\(n\) component in \(Q_0\). A nonzero class in
+  \(\operatorname{range}(\psi_n)\), by contrast, is represented by a homogeneous
+  element of degree \(n\) not in \(N'\), so has nonzero degree-\(n\) component.
+  Comparing degree-\(n\) components forces the intersection
+  \(\operatorname{range}(\psi_n) \cap \bigsqcup_{j \ne n} \operatorname{range}(\psi_j)
+  = 0\); independence follows.
+  % NOTE: ROUTE (b). Prove the iSupIndep by direct membership analysis in
+  %   ⨆_{j ≠ n} range(ψ j), reading off the degree-n homogeneous component
+  %   directly inside Q₀'s fixed κ-module structure.
+  %   No outgoing linear map out of Q₀ is constructed, so no scalar ring other than κ
+  %   is ever introduced.
+  % NOTE: ROUTE (a). Building a κ-linear detector
+  %   Φ : Q₀ → M/N', [m] ↦ [π_n m] (degree-n projection) via descent through the
+  %   subquotient fails: the descended map carries the scalar action of Q₀'s base
+  %   ring, but the target M/N' carries only a κ-module structure -- a scalar-ring
+  %   incompatibility. Route (b) avoids this by working entirely within Q₀.
+
+  \emph{Step 2: finiteness of the support.} Because \(Q_0\) is finite-dimensional and
+  the ranges \(\operatorname{range}(\psi_n)\) are independent, only finitely many of
+  them are nonzero: the set \(\{\,n : \operatorname{range}(\psi_n) \ne 0\,\}\) is
+  finite (\cref{lem:finite_ne_bot_of_iSupIndep_mathlib}). In particular it is bounded
+  above, by some \(K \in \mathbb{N}\).
+
+  \emph{Step 3: eventual vanishing.} For \(n > K\) we have
+  \(\operatorname{range}(\psi_n) = 0\), i.e.\ every homogeneous element of
+  \(N \cap \mathcal{M}_n\) has class \(0\) in \(Q_0 = N/N'\); equivalently
+  \(N \cap \mathcal{M}_n \le N'\), hence \(N \cap \mathcal{M}_n = N' \cap \mathcal{M}_n\)
+  and
+  \[
+    \mathrm{hilb}(n) \;=\; \dim_\kappa(N \cap \mathcal{M}_n)
+      - \dim_\kappa(N' \cap \mathcal{M}_n) \;=\; 0 .
+  \]
+  Thus \(\mathrm{hilb}\) is eventually zero, and
+  \cref{lem:ratHilb_ofEventuallyZero} gives \(\mathrm{IsRatHilb}(\mathrm{hilb}, 0)\).
+\end{proof}
+
+\subsubsection*{The ambient subquotient induction}
+
+\begin{lemma}\leanok
+[Rationality of the ambient subquotient Hilbert function]
+  \label{lem:graded_subquotient_isRatHilb}
+  \lean{AlgebraicGeometry.GradedModule.subquotient_hilbertSeries_rational}
+  \uses{def:graded_subquotientHilb, lem:graded_subquotient_ker_coker,
+    def:graded_subquotientDatum_ker, def:graded_subquotientDatum_coker,
+    lem:graded_subquotient_degreewise_diff,
+    lem:graded_subquotient_finite_transfer, lem:ratHilb_ofEventuallyZero,
+    lem:ratHilb_ofDiffEq, lem:ratHilb_bump,
+    lem:graded_subquotient_base_eventuallyZero,
+    lem:graded_finiteDimensional_of_mvPolynomial_isEmpty_finite}
+  % SOURCE: [Stacks Project], "Commutative Algebra", \S "Noetherian graded
+  % rings", Proposition \texttt{proposition-graded-hilbert-polynomial} (Tag
+  % 00K1), proof (read from references/hilbert-serre-algebra.tex, L13908-L13914).
+  \textit{Source: [Stacks Project], Tag 00K1 (induction on the number of
+  degree-one generators).}
+  Let \((N, N')\) be a subquotient datum of length \(r\)
+  (\cref{def:graded_subquotientHilb}) with ambient Hilbert function
+  \(\mathrm{hilb}\). Then \(\mathrm{IsRatHilb}(\mathrm{hilb}, r)\)
+  (\cref{def:ratHilb}): the difference \(n \mapsto \dim_\kappa(N \cap \mathcal{M}_n)
+  - \dim_\kappa(N' \cap \mathcal{M}_n)\) is, for \(n \gg 0\), the coefficient
+  sequence of a rational series \(p \cdot (1 - X)^{-r}\) with \(p \in
+  \mathbb{Q}[X]\). The induction is on the length \(r\), and every object that
+  appears is an ambient pair of homogeneous submodules of the fixed graded module
+  \(M\).
+\end{lemma}
+
+% SOURCE QUOTE PROOF: [Stacks Project], Tag 00K1, proof, induction set-up (read
+% from references/hilbert-serre-algebra.tex, L13908-L13914).
+% "We prove this by induction on the minimal number of
+%  generators of $S_1$. If this number is $0$, then
+%  $M_n = 0$ for all $n \gg 0$ and the result holds.
+%  To prove the induction step, let $x\in S_1$
+%  be one of a minimal set of generators, such that
+%  the induction hypothesis applies to the
+%  graded ring $S/(x)$."
+\begin{proof}
+  \uses{lem:graded_subquotient_ker_coker,
+    def:graded_subquotientDatum_ker, def:graded_subquotientDatum_coker,
+    lem:graded_subquotient_degreewise_diff,
+    lem:graded_subquotient_finite_transfer, lem:ratHilb_ofEventuallyZero,
+    lem:ratHilb_ofDiffEq, lem:ratHilb_bump,
+    lem:graded_subquotient_base_eventuallyZero,
+    lem:graded_finiteDimensional_of_mvPolynomial_isEmpty_finite}
+    \leanok
+  We induct on the length \(r\).
+
+  \emph{Base case \(r = 0\).} A length-zero datum has a finiteness witness making the
+  subquotient \(N/N'\) a finite-dimensional \(\kappa\)-vector space
+  (\cref{lem:graded_finiteDimensional_of_mvPolynomial_isEmpty_finite}); its degreewise
+  images form an independent family inside that finite-dimensional space, so only
+  finitely many are nonzero and \(\mathrm{hilb}(n) = 0\) for \(n \gg 0\)
+  (\cref{lem:graded_subquotient_base_eventuallyZero}). By
+  \cref{lem:ratHilb_ofEventuallyZero} an eventually-zero function is rational of order
+  \(0\), giving \(\mathrm{IsRatHilb}(\mathrm{hilb}, 0)\).
+
+  \emph{Inductive step \(r \ge 1\).} Set \(x = t_{r-1}\). By the kernel/cokernel
+  closure (\cref{lem:graded_subquotient_ker_coker}) the kernel subquotient
+  \(K = (N \cap x^{-1}(N'),\, N')\) and the cokernel subquotient
+  \(C = (N,\, N' + x \cdot N)\) are subquotient data of length \(r-1\), assembled by
+  the kernel and cokernel constructors (\cref{def:graded_subquotientDatum_ker},
+  \cref{def:graded_subquotientDatum_coker}) whose finiteness witnesses come from the
+  abstract finiteness transfer (\cref{lem:graded_subquotient_finite_transfer}). The
+  induction hypothesis applied
+  to \(K\) and \(C\) gives \(\mathrm{IsRatHilb}(h_K, r-1)\) and
+  \(\mathrm{IsRatHilb}(h_C, r-1)\) (\cref{def:ratHilb}). By the degreewise
+  difference identity (\cref{lem:graded_subquotient_degreewise_diff}),
+  \[
+    \mathrm{hilb}(n+1) - \mathrm{hilb}(n) \;=\; h_C(n+1) - h_K(n)
+    \qquad \text{for all } n .
+  \]
+  Feeding \(\mathrm{IsRatHilb}(h_C, r-1)\), \(\mathrm{IsRatHilb}(h_K, r-1)\) and this
+  difference identity into the inductive-step engine
+  (\cref{lem:ratHilb_ofDiffEq}) yields \(\mathrm{IsRatHilb}(\mathrm{hilb}, r)\). (The
+  common order \(r-1\) for \(h_C\) and \(h_K\) is arranged, if necessary, by raising
+  the lower one with \cref{lem:ratHilb_bump}.) This completes the induction.
+\end{proof}
+
+\section{Support and freeness predicates}
+\label{sec:quot_predicates}
+
+The Quot functor (\cref{def:quot_functor}) and the Grassmannian
+(\cref{def:grassmannian_scheme}) classify quotient sheaves subject to two
+geometric conditions: a coherent quotient must have \emph{schematic support
+proper over the base}, and the Grassmannian's quotients must be \emph{locally
+free of a fixed rank}. This section introduces both predicates.
+
+\begin{definition}
+
+\leanok
+[Annihilator ideal sheaf of a sheaf of modules]
+  \label{def:modules_annihilator}
+  \lean{AlgebraicGeometry.Scheme.Modules.annihilator}
+  % NOTE: The definition carries no \uses: the Lean construction is
+  % `IdealSheafData.ofIdeals (fun U => Module.annihilator Γ(X,U) Γ(F,U))`, which is well-defined
+  % unconditionally and does NOT depend on the localization bridges at definition time. The two
+  % facts lem:annihilator_localization_eq_map and lem:qcoh_section_localization_basicOpen are needed
+  % only for the downstream CHARACTERIZATION (the reverse inclusion / equality on affine opens, the
+  % "annihilator forward direction"), which is not yet a blueprint block.
+  % NOTE: The definition itself is formalized and axiom-clean; the inclusion direction
+  % \(\mathrm{Ann}(\mathcal{F})(U) \subseteq \mathrm{Ann}_{\mathcal{O}_X(U)}(\mathcal{F}(U))\)
+  % (\cref{lem:modules_annihilator_ideal_le}) is closed. The reverse inclusion, which identifies
+  % the annihilator sheaf with the module-annihilator on affine opens, remains bridge-gated on
+  % \cref{lem:qcoh_section_localization_basicOpen}.
+  % SOURCE: [Nitsure], \S 1, sub-section "Stratification by Hilbert
+  % Polynomials" (read from
+  % references/nitsure-hilbert-quot-src/nitsure-hilbert-quot.tex, L468-L471).
+  % SOURCE QUOTE:
+  % "Let $X\to S$ be a finite type morphism of noetherian schemes,
+  %  and let $L$ be a line bundle on $X$. Let $\F$
+  %  be any coherent sheaf on
+  %  $X$ whose schematic support is proper over $S$."
+  \textit{Source: [Nitsure], \S 1 (FGA Explained Ch.~5).}
+  Let \(X\) be a scheme and let \(\mathcal{F}\) be a sheaf of
+  \(\mathcal{O}_X\)-modules that is \emph{quasi-coherent and of finite type}
+  (over a locally noetherian base, so that on each affine open \(U\) the section
+  module \(\mathcal{F}(U)\) is a finitely generated \(\mathcal{O}_X(U)\)-module).
+  The \emph{annihilator ideal sheaf} of \(\mathcal{F}\) is the ideal sheaf
+  \(\mathrm{Ann}(\mathcal{F})\) defined on affine opens: for each affine open
+  \(U \subseteq X\),
+  \[
+    \mathrm{Ann}(\mathcal{F})(U)
+    \;=\; \mathrm{Ann}_{\mathcal{O}_X(U)}\bigl(\mathcal{F}(U)\bigr)
+    \;\subseteq\; \mathcal{O}_X(U),
+  \]
+  the annihilator of the \(\mathcal{O}_X(U)\)-module \(\mathcal{F}(U)\). These
+  local data patch to a coherent ideal sheaf on \(X\) whose vanishing locus is
+  the set-theoretic support of \(\mathcal{F}\).
+
+  \emph{Well-definedness on basic opens.} The coherence condition for an ideal
+  sheaf requires that, for an affine open \(U\) and \(f \in \mathcal{O}_X(U)\),
+  the section \(\mathrm{Ann}(\mathcal{F})(U)\) restricts correctly to the basic
+  open \(D(f) \subseteq U\), i.e. that
+  \(\mathrm{Ann}_{\mathcal{O}_X(D(f))}(\mathcal{F}(D(f)))\) is the extension of
+  \(\mathrm{Ann}_{\mathcal{O}_X(U)}(\mathcal{F}(U))\) along the localization map
+  \(\mathcal{O}_X(U) \to \mathcal{O}_X(D(f))\). This is exactly where the two
+  hypotheses enter. The bridge
+  \cref{lem:qcoh_section_localization_basicOpen} supplies, for a quasi-coherent
+  finite-type \(\mathcal{F}\), that \(\mathcal{O}_X(D(f)) = (\mathcal{O}_X(U))_f\)
+  and that the restriction \(\mathcal{F}(U) \to \mathcal{F}(D(f))\) exhibits
+  \(\mathcal{F}(D(f))\) as the localized module \((\mathrm{powers}\,f)^{-1}
+  \mathcal{F}(U)\); the algebra engine
+  \cref{lem:annihilator_localization_eq_map} then yields, using that
+  \(\mathcal{F}(U)\) is finitely generated, the required identity
+  \(\mathrm{Ann}_{(\mathcal{O}_X(U))_f}\bigl((\mathrm{powers}\,f)^{-1}
+  \mathcal{F}(U)\bigr) = \mathrm{Ann}_{\mathcal{O}_X(U)}(\mathcal{F}(U)) \cdot
+  (\mathcal{O}_X(U))_f\). Thus the local annihilators are compatible with basic-open
+  restriction, which is the patching datum that makes \(\mathrm{Ann}(\mathcal{F})\)
+  a well-defined ideal sheaf. The finite-type hypothesis is genuinely required:
+  without finite generation of \(\mathcal{F}(U)\) the annihilator need not commute
+  with localization, and the local data fail to patch.
+
+  \emph{Note.} Mathlib does not carry an annihilator for sheaves of modules on a scheme.
+\end{definition}
+
+\begin{lemma}\leanok
+[Annihilator ideal bounded by the module annihilator on affine opens]
+  \label{lem:modules_annihilator_ideal_le}
+  \lean{AlgebraicGeometry.Scheme.Modules.annihilator_ideal_le}
+  \uses{def:modules_annihilator}
+  Let \(X\) be a scheme, \(\mathcal{F}\) a sheaf of \(\mathcal{O}_X\)-modules and
+  \(U \subseteq X\) an affine open. Then the section over \(U\) of the annihilator
+  ideal sheaf \(\mathrm{Ann}(\mathcal{F})\) (\cref{def:modules_annihilator}) is
+  contained in the module-annihilator of the sections of \(\mathcal{F}\) over
+  \(U\):
+  \[
+    \mathrm{Ann}(\mathcal{F})(U)
+    \;\subseteq\; \mathrm{Ann}_{\mathcal{O}_X(U)}\bigl(\mathcal{F}(U)\bigr).
+  \]
+  This is the inclusion direction available directly from the definition of
+  \(\mathrm{Ann}(\mathcal{F})\); the reverse inclusion is the basic-open coherence
+  statement gated on \cref{lem:qcoh_section_localization_basicOpen}. Proved directly
+  in Lean. It supports the well-definedness of the schematic support
+  (\cref{def:schematic_support}).
+\end{lemma}
+
+
+\begin{lemma}[Sections on a basic open localize the affine ring]
+  \label{lem:isLocalization_basicOpen_mathlib}
+  \lean{AlgebraicGeometry.IsAffineOpen.isLocalization_basicOpen}
+  \mathlibok
+  \textit{Provided by Mathlib
+  (\texttt{Mathlib.AlgebraicGeometry.AffineScheme}).}
+  Let \(X\) be a scheme, \(U \subseteq X\) an affine open, and
+  \(f \in \Gamma(X, U)\). Then the restriction map
+  \(\Gamma(X, U) \to \Gamma\bigl(X,\, D(f)\bigr)\) on the basic open
+  \(D(f) = X.\mathrm{basicOpen}\,f\) exhibits \(\Gamma(X, D(f))\) as the
+  localization of \(\Gamma(X, U)\) away from \(f\); that is, it is
+  \(\mathrm{IsLocalization.Away}\,f\), so
+  \(\Gamma(X, D(f)) = (\Gamma(X, U))_f\) as a \(\Gamma(X,U)\)-algebra.
+\end{lemma}
+
+
+% --- gap-2 supporting infrastructure (the named pieces of the gap-2 transport above) ---
+
+
+% --- Pullback of a quasi-coherent sheaf along an open immersion is quasi-coherent ---
+
+
+\begin{lemma}[Sheaf Mayer--Vietoris: the pullback cone over a two-open cover is a limit]
+  \label{lem:isLimitPullbackCone_mathlib}
+  \lean{TopCat.Sheaf.isLimitPullbackCone}
+  \mathlibok
+  \textit{Provided by Mathlib
+  (\texttt{Mathlib.Topology.Sheaves.SheafCondition.PairwiseIntersections}).}
+  For a sheaf \(F\) on a topological space and two opens \(U, V\), the square relating
+  \(F(U \cup V)\), \(F(U)\), \(F(V)\), \(F(U \cap V)\) is a pullback (limit). This is the generic
+  module Mayer--Vietoris used in the inductive step of the descent.
+\end{lemma}
+
+
+\begin{lemma}[Separatedness: a section is determined by its restrictions to a cover]
+  \label{lem:eq_of_locally_eq_mathlib}
+  \lean{TopCat.Sheaf.eq_of_locally_eq'}
+  \mathlibok
+  \textit{Provided by Mathlib
+  (\texttt{Mathlib.Topology.Sheaves.SheafCondition.UniqueGluing}).}
+  Let \(F\) be a sheaf on a topological space, \(V\) an open, and \(\{U_i\}\) a family of opens with
+  \(\bigsqcup_i U_i = V\). If two sections \(s, t \in F(V)\) have equal restrictions
+  \(s|_{U_i} = t|_{U_i}\) for every \(i\), then \(s = t\). This separatedness over a cover is the
+  uniqueness half of the sheaf condition; it discharges the \(\mathrm{exists\_of\_eq}\) obligation
+  (a global section vanishing on \(D(f)\) is killed by a power of \(f\)) and the final
+  ``conclude on \(D(f)\)'' step of the cover-form descent
+  (\cref{lem:section_localization_descent_of_cover}).
+\end{lemma}
+
+% NOTE: G1-core is now derived from gap1, not by a direct 3-field compact-open induction. The proof
+% is the forward leg of the equivalence \cref{lem:isIso_fromTildeΓ_iff_isLocalizedModule_restrict}.
+% The LEMMA STATEMENT is cited to Stacks 01HA above; the proof is a project-internal reduction (no
+% transcribed Stacks proof), so there is no `% SOURCE QUOTE PROOF`.
+
+% --- Quasi-coherence datum and the gap1 sub-build ---
+
+
+% --- Mathlib dependency anchors for the gap1 slice-transport route ---
+
+\begin{lemma}[Pullback of sheaves of modules along a morphism of schemes]
+  \label{lem:modules_pullback_mathlib}
+  \lean{AlgebraicGeometry.Scheme.Modules.pullback}
+  \mathlibok
+  \textit{Provided by Mathlib (\texttt{Mathlib.AlgebraicGeometry.Modules.Sheaf}).}
+  For a morphism of schemes \(f : X \to Y\), Mathlib supplies the pullback functor
+  \(f^{*} : Y.\mathrm{Modules} \to X.\mathrm{Modules}\) on sheaves of modules, left adjoint to
+  pushforward, hence colimit-preserving, and carrying the unit sheaf to the unit sheaf. The project
+  already uses this functor in the definition of local freeness. It is the geometric restriction
+  through which a presentation is transported to an open subscheme.
+\end{lemma}
+
+\begin{lemma}[Restriction of sheaves of modules along an open immersion]
+  \label{lem:modules_restrictFunctor_mathlib}
+  \lean{AlgebraicGeometry.Scheme.Modules.restrictFunctor}
+  \mathlibok
+  \textit{Provided by Mathlib (\texttt{Mathlib.AlgebraicGeometry.Modules.Sheaf}).}
+  For an open immersion \(f : X \to Y\), Mathlib supplies the restriction functor
+  \(f^{\mathrm{res}} : Y.\mathrm{Modules} \to X.\mathrm{Modules}\), with
+  \(\Gamma(f^{\mathrm{res}} M, U) = \Gamma(M, f(U))\) definitionally; it is a left adjoint (colimit
+  preserving) and carries the unit sheaf to the unit sheaf. This is the geometric
+  ``restrict to open \(U\)'' functor on \((\Spec R).\mathrm{Modules}\).
+\end{lemma}
+
+\begin{lemma}[Restriction is isomorphic to pullback]
+  \label{lem:modules_restrictFunctorIsoPullback_mathlib}
+  \lean{AlgebraicGeometry.Scheme.Modules.restrictFunctorIsoPullback}
+  \mathlibok
+  \textit{Provided by Mathlib (\texttt{Mathlib.AlgebraicGeometry.Modules.Sheaf}).}
+  For an open immersion \(f\), the restriction functor (\cref{lem:modules_restrictFunctor_mathlib})
+  is naturally isomorphic to the pullback functor (\cref{lem:modules_pullback_mathlib}):
+  \(f^{\mathrm{res}} \cong f^{*}\). This identifies the restriction functor with the
+  universal-property pullback, so a presentation transported along one transports along the other.
+\end{lemma}
+
+
+% --- The finite basic-open cover (topological precursor) ---
+
+
+% --- The over-site/open-subspace sheaf equivalence (bridge C, topological layer) ---
+
+% The blocks in this sub-section record the project-local infrastructure that fills the explicit
+% TODO of Mathlib's `Topology/Sheaves/Over.lean`: the equivalence of sheaf categories induced by
+% the site equivalence `Opens.overEquivalence U`. Together with the three Mathlib dependency
+% anchors below they form the topos-theoretic (purely topological) layer of bridge C
+% (\cref{lem:over_restrict_iso}); the geometric identification of the structure sheaves is the
+% layer above them.
+
+\begin{lemma}[Slice of opens equivalent to opens of the open subspace]
+  \label{lem:opens_overEquivalence_mathlib}
+  \lean{TopologicalSpace.Opens.overEquivalence}
+  \mathlibok
+  \textit{Provided by Mathlib (\texttt{Mathlib.Topology.Sheaves.Over}).}
+  For a topological space \(X\) and an open \(U \subseteq X\), the slice category of opens of
+  \(X\) over \(U\) (the opens of \(X\) contained in \(U\), with inclusions) is equivalent to the
+  opens of the subspace \(U\):
+  \((\mathrm{Opens}\,X)_{/U} \simeq \mathrm{Opens}(U)\). Mathlib supplies this underlying
+  equivalence of sites; it leaves the lift to sheaf categories as an explicit TODO.
+\end{lemma}
+
+\begin{lemma}[Sheaf categories of equivalent sites are equivalent]
+  \label{lem:equivalence_sheafCongr_mathlib}
+  \lean{CategoryTheory.Equivalence.sheafCongr}
+  \mathlibok
+  \textit{Provided by Mathlib (\texttt{Mathlib.CategoryTheory.Sites.Equivalence}).}
+  Let \(e : C \simeq D\) be an equivalence of categories carrying Grothendieck topologies \(J\)
+  on \(C\) and \(K\) on \(D\), and suppose \(e.\mathrm{inverse}\) is a dense subsite for
+  \((K, J)\). Then for any target category \(A\) the sheaf categories are equivalent:
+  \(\mathrm{Sheaf}(J, A) \simeq \mathrm{Sheaf}(K, A)\).
+\end{lemma}
+
+\begin{lemma}[Module sheaves transport across an equivalence of ringed sites]
+  \label{lem:pushforwardPushforwardEquivalence_mathlib}
+  \lean{SheafOfModules.pushforwardPushforwardEquivalence}
+  \mathlibok
+  \textit{Provided by Mathlib
+  (\texttt{Mathlib.Algebra.Category.ModuleCat.Sheaf.PushforwardContinuous}).}
+  Let \(e : C \simeq D\) be an equivalence of sites with both \(e.\mathrm{functor}\) and
+  \(e.\mathrm{inverse}\) continuous, and let \(S\) (a sheaf of rings on \(J\)) and \(R\) (a sheaf
+  of rings on \(K\)) be related by mutually inverse comparison maps across the continuous
+  pushforwards. Then the categories of sheaves of modules are equivalent,
+  \(\mathrm{SheafOfModules}\,R \simeq \mathrm{SheafOfModules}\,S\), compatibly with the
+  underlying ring-sheaf identification. This is the module-level lift used in step~3 of
+  \cref{lem:over_restrict_iso}.
+\end{lemma}
+
+\begin{lemma}\leanok
+[The over-equivalence functor is cocontinuous]
+  \label{lem:overEquivalence_functor_isCocontinuous}
+  \lean{AlgebraicGeometry.overEquivalence_functor_isCocontinuous}
+  \uses{lem:opens_overEquivalence_mathlib}
+  \textit{Topological layer of bridge C; fills the \texttt{Topology/Sheaves/Over.lean} TODO.}
+  The functor of \(\mathrm{Opens.overEquivalence}\,U\) (\cref{lem:opens_overEquivalence_mathlib})
+  is cocontinuous (cover-lifting) from the \(U\)-slice \(J_X|_U\) of the opens Grothendieck
+  topology of \(X\) to the opens Grothendieck topology \(J_U\) of the subspace \(U\).
+\end{lemma}
+\begin{proof}
+  \uses{lem:opens_overEquivalence_mathlib}
+  A sieve covers in the slice topology \(J_X|_U\) iff its image sieve covers in \(J_X\), and
+  covering for the opens topology is pointwise: a sieve covers iff its members' opens cover the
+  base set-theoretically. Given a point \(x\) of a slice object and a cover member in \(J_U\)
+  containing the image of \(x\), transport it across the open embedding \(U \hookrightarrow X\),
+  which is injective: the set-theoretic image of an open \(V \subseteq U\) is an open of \(X\)
+  contained in the base, a neighbourhood of \(x\) lying in the image sieve. This witnesses the
+  cover-lifting condition.
+\end{proof}
+
+\begin{lemma}\leanok
+[The over-equivalence inverse is cocontinuous]
+  \label{lem:overEquivalence_inverse_isCocontinuous}
+  \lean{AlgebraicGeometry.overEquivalence_inverse_isCocontinuous}
+  \uses{lem:opens_overEquivalence_mathlib}
+  \textit{Topological layer of bridge C; fills the \texttt{Topology/Sheaves/Over.lean} TODO.}
+  Symmetrically, the inverse of \(\mathrm{Opens.overEquivalence}\,U\) is cocontinuous from the
+  opens topology \(J_U\) of the subspace \(U\) to the \(U\)-slice \(J_X|_U\).
+\end{lemma}
+\begin{proof}
+  \uses{lem:opens_overEquivalence_mathlib}
+  As in \cref{lem:overEquivalence_functor_isCocontinuous}, reduce to the pointwise covering
+  criterion and the over-sieve image criterion; given a point and a slice-cover member, pull the
+  member back along the embedding \(U \hookrightarrow X\) (preimage of an open of \(X\) is an open
+  of the subspace) to obtain a cover member of \(J_U\) witnessing the lift.
+\end{proof}
+
+\begin{lemma}\leanok
+[The over-equivalence inverse is a dense subsite]
+  \label{lem:overEquivalence_inverse_isDenseSubsite}
+  \lean{AlgebraicGeometry.overEquivalence_inverse_isDenseSubsite}
+  \uses{lem:overEquivalence_functor_isCocontinuous, lem:overEquivalence_inverse_isCocontinuous}
+  \textit{Topological layer of bridge C; the dense-subsite witness assembled from the two
+  cocontinuities.}
+  The inverse of \(\mathrm{Opens.overEquivalence}\,U\) is a dense subsite for \((J_U, J_X|_U)\).
+  This is formal: an equivalence both of whose legs are cocontinuous
+  (\cref{lem:overEquivalence_functor_isCocontinuous},
+  \cref{lem:overEquivalence_inverse_isCocontinuous}) yields a dense subsite on its inverse.
+\end{lemma}
+
+\begin{lemma}\leanok
+[The over-equivalence functor is continuous]
+  \label{lem:overEquivalence_functor_isContinuous}
+  \lean{AlgebraicGeometry.overEquivalence_functor_isContinuous}
+  \uses{lem:overEquivalence_inverse_isCocontinuous}
+  \textit{Topological layer of bridge C; needed for the module-level lift of step~3.}
+  The functor of \(\mathrm{Opens.overEquivalence}\,U\) is continuous (cover-preserving) for
+  \((J_X|_U, J_U)\). It is obtained from the cocontinuity of the inverse
+  (\cref{lem:overEquivalence_inverse_isCocontinuous}) through the equivalence adjunction: the
+  left adjoint of a cocontinuous functor is continuous.
+\end{lemma}
+
+\begin{lemma}\leanok
+[The over-equivalence inverse is continuous]
+  \label{lem:overEquivalence_inverse_isContinuous}
+  \lean{AlgebraicGeometry.overEquivalence_inverse_isContinuous}
+  \uses{lem:overEquivalence_functor_isCocontinuous}
+  \textit{Topological layer of bridge C; needed for the module-level lift of step~3.}
+  Symmetrically, the inverse of \(\mathrm{Opens.overEquivalence}\,U\) is continuous for
+  \((J_U, J_X|_U)\), obtained from the cocontinuity of the functor
+  (\cref{lem:overEquivalence_functor_isCocontinuous}) through the equivalence adjunction.
+\end{lemma}
+
+\begin{definition}\leanok
+[The over-site/open-subspace sheaf equivalence]
+  \label{def:overEquivalence_sheafCongr}
+  \lean{AlgebraicGeometry.overEquivalence_sheafCongr}
+  \uses{lem:opens_overEquivalence_mathlib, lem:equivalence_sheafCongr_mathlib,
+    lem:overEquivalence_inverse_isDenseSubsite}
+  \textit{Keystone of the topological layer of bridge C.}
+  For any category \(A\), the site equivalence \(\mathrm{Opens.overEquivalence}\,U\)
+  (\cref{lem:opens_overEquivalence_mathlib}) lifts to an equivalence of sheaf categories
+  \[
+    \mathrm{Sheaf}(J_X|_U,\, A) \;\simeq\; \mathrm{Sheaf}(J_U,\, A),
+  \]
+  obtained by feeding the dense-subsite witness
+  (\cref{lem:overEquivalence_inverse_isDenseSubsite}) to the general sheaf-congruence
+  construction (\cref{lem:equivalence_sheafCongr_mathlib}). This is exactly the equivalence left
+  as a TODO in Mathlib's \texttt{Topology/Sheaves/Over.lean}, and it is the object across which
+  \cref{lem:over_restrict_iso} transports the structure sheaf and the module \(M\).
+\end{definition}
+
+% --- (C, step 3) The module-level equivalence and its functor identification ---
+
+% The two blocks below are the module-category layer assembled on top of the topological
+% sheaf-congruence def:overEquivalence_sheafCongr: the step-3 equivalence of categories of sheaves of
+% modules (def:over_restrict_equiv) and the step-4 functor identification (lem:over_restrict_functor_iso)
+% whose object component is the slice-touching bridge lem:over_restrict_iso below. They are
+% project-bespoke infrastructure (no external source).
+
+
+% --- (C) The single slice-touching bridge ---
+
+\begin{lemma}\leanok
+[The Grothendieck-slice restriction equals the geometric restriction (gap1, C)]
+  \label{lem:over_restrict_iso}
+  \lean{AlgebraicGeometry.Scheme.Modules.overRestrictIso}
+  \uses{lem:modules_restrictFunctor_mathlib, lem:modules_restrictFunctorIsoPullback_mathlib,
+    lem:isLocalization_basicOpen_mathlib, def:overEquivalence_sheafCongr,
+    lem:overEquivalence_functor_isContinuous, lem:overEquivalence_inverse_isContinuous,
+    lem:opens_overEquivalence_mathlib, lem:pushforwardPushforwardEquivalence_mathlib}
+  % NOTE: RESOLVED and axiom-clean. AlgebraicGeometry.Scheme.Modules.overRestrictIso
+  % now exists (#print axioms = {propext, Classical.choice, Quot.sound}); gap1 bridge C
+  % (steps 1->4) is fully closed. The step-2 geometric ring-sheaf identification collapsed to
+  % `rfl` (U.toScheme.ringCatSheaf is definitionally the transport of the sliced sheaf, via
+  % toScheme_presheaf_obj/map). The statement is routed through the step-3 equivalence functor:
+  % overRestrictIso : (overRestrictEquiv U).functor.obj (M.over U) ≅ (restrictFunctor U.ι).obj M.
+  \textit{The one lemma that must touch the Grothendieck slice site; everything downstream of it is
+  geometric.}
+  Let \(X\) be a scheme and \(U \subseteq X\) an open. The \emph{abstract Grothendieck-slice}
+  restriction \(M.\mathrm{over}\,U\) — an object of the category of sheaves of modules over the
+  sliced structure sheaf \(\mathcal{O}_X.\mathrm{over}\,U\) on the slice site \(J.\mathrm{over}\,U\) —
+  is canonically isomorphic to the \emph{geometric} restriction
+  \((\mathrm{restrictFunctor}\,U.\iota).\mathrm{obj}\,M\)
+  (\cref{lem:modules_restrictFunctor_mathlib}), equivalently to the pullback \(U.\iota^{*} M\)
+  (\cref{lem:modules_restrictFunctorIsoPullback_mathlib}), as a sheaf of modules on the small Zariski
+  site of the open subscheme \(U.\mathrm{toScheme}\). The isomorphism is induced by the equivalence
+  of sites \(J.\mathrm{over}\,U \simeq \mathrm{Opens}(U.\mathrm{toScheme})\) coming from the opens
+  functor of the open immersion \(U.\iota\), under which the sliced sheaf of rings
+  \(\mathcal{O}_X.\mathrm{over}\,U\) corresponds to the structure sheaf of \(U.\mathrm{toScheme}\).
+  For \(X = \Spec R\) and \(U = D(r)\) a basic open, the target category is
+  \((\Spec R_r).\mathrm{Modules}\) under the affine identification \(D(r) \cong \Spec R_r\)
+  (\cref{lem:isLocalization_basicOpen_mathlib}).
+\end{lemma}
+\begin{proof}
+  \uses{def:overEquivalence_sheafCongr, lem:overEquivalence_functor_isContinuous,
+    lem:overEquivalence_inverse_isContinuous, lem:opens_overEquivalence_mathlib,
+    lem:pushforwardPushforwardEquivalence_mathlib, lem:modules_restrictFunctor_mathlib,
+    lem:modules_restrictFunctorIsoPullback_mathlib, lem:isLocalization_basicOpen_mathlib}
+  The isomorphism is built in four steps, ascending from the purely topological layer to the
+  module-level statement.
+
+  \emph{Step 1 (topological layer --- done).} The opens functor of the open immersion
+  \(U.\iota\) realizes the slice of the opens site of \(X\) over \(U\) as the opens site of the
+  subspace \(U\); on sheaf categories this is the equivalence
+  \(\mathrm{Sheaf}(J_X|_U,\,A) \simeq \mathrm{Sheaf}(J_U,\,A)\) of
+  \cref{def:overEquivalence_sheafCongr}, for every target category \(A\). This is the
+  topos-theoretic layer, assembled from the cocontinuity/continuity of both legs of
+  \(\mathrm{Opens.overEquivalence}\,U\) (\cref{lem:opens_overEquivalence_mathlib}).
+
+  \emph{Step 2 (geometric ring-sheaf identification --- the current obstacle).} Identify the
+  sliced structure sheaf \(\mathcal{O}_X.\mathrm{over}\,U\) with the structure sheaf
+  \(\mathcal{O}_{U}\) of the open subscheme \(U.\mathrm{toScheme}\), transported across the
+  \(\mathrm{RingCat}\)-valued instance of \cref{def:overEquivalence_sheafCongr}; this is an
+  isomorphism of sheaves of rings. The bridge is the factorization of the opens functor of the
+  immersion,
+  \[
+    U.\iota.\mathrm{opensFunctor}
+      \;=\; (\mathrm{Opens.overEquivalence}\,U).\mathrm{inverse}
+        \;\circ\; \mathrm{Over.forget}\,U ,
+  \]
+  under which the structure-sheaf comparison reduces to the standard open-immersion
+  structure-sheaf identifications; recall that \(\mathrm{restrictFunctor}\,U.\iota\)
+  (\cref{lem:modules_restrictFunctor_mathlib}) is precisely pushforward along
+  \(U.\iota.\mathrm{opensFunctor}\). This ring-sheaf identification is the remaining geometric
+  obstacle.
+
+  \emph{Step 3 (lift to modules).} Given the step-2 identification of the underlying ring sheaves
+  and the continuity of both legs (\cref{lem:overEquivalence_functor_isContinuous},
+  \cref{lem:overEquivalence_inverse_isContinuous}), lift the sheaf-of-rings comparison to an
+  equivalence of categories of sheaves of modules via
+  \(\mathrm{pushforwardPushforwardEquivalence}\)
+  (\cref{lem:pushforwardPushforwardEquivalence_mathlib}). Under this equivalence the sliced
+  module \(M.\mathrm{over}\,U\) corresponds to the geometric restriction
+  \((\mathrm{restrictFunctor}\,U.\iota).\mathrm{obj}\,M\).
+
+  \emph{Step 4 (compose).} Compose with
+  \(\mathrm{restrictFunctorIsoPullback}\) (\cref{lem:modules_restrictFunctorIsoPullback_mathlib})
+  to land the isomorphism \(M.\mathrm{over}\,U \cong M.\mathrm{restrict}\,U.\iota \cong
+  U.\iota^{*}M\). The two sides live a priori in different module categories, so the literal Lean
+  statement of \(\mathrm{overRestrictIso}\) is phrased through the step-3 equivalence functor; for
+  \(X = \Spec R\) and \(U = D(r)\) the target is \((\Spec R_r).\mathrm{Modules}\) under
+  \(D(r) \cong \Spec R_r\) (\cref{lem:isLocalization_basicOpen_mathlib}).
+\end{proof}
+
+% --- (C, step 4') The pullback form of the slice-to-geometric isomorphism ---
+
+\begin{lemma}
+
+\leanok
+[The slice-to-geometric isomorphism in pullback form (gap1, C, step 4')]
+  \label{lem:over_restrict_pullback_iso}
+  \lean{AlgebraicGeometry.Scheme.Modules.overRestrictPullbackIso}
+  \uses{lem:over_restrict_iso, lem:modules_restrictFunctorIsoPullback_mathlib,
+    lem:modules_pullback_mathlib}
+  \textit{The pullback packaging of the slice-touching bridge; the form consumed by the P1 transport.}
+  With \(X\) and \(U \subseteq X\) as above and \(M\) a sheaf of modules on \(X\), the transport of the
+  abstract Grothendieck-slice restriction \(M.\mathrm{over}\,U\) under the step-3 equivalence functor
+  (\cref{def:over_restrict_equiv}) is canonically isomorphic to the inverse-image (pullback) of \(M\)
+  along the open immersion \(U.\iota\):
+  \[
+    (\mathrm{overRestrictEquiv}\,U).\mathrm{functor}.\mathrm{obj}\,(M.\mathrm{over}\,U)
+      \;\cong\; (U.\iota^{*})\,M
+  \]
+  (\cref{lem:modules_pullback_mathlib}). This is the pullback packaging of the slice-touching bridge
+  \cref{lem:over_restrict_iso}; it is exactly the form in which a presentation of
+  \(M.\mathrm{over}\,U\) is transported into a presentation of the geometric pullback \(U.\iota^{*}M\),
+  and it is the ingredient consumed by the per-element local-tilde transport
+  \cref{lem:isIso_fromTildeΓ_basicOpen_of_quasicoherent}.
+\end{lemma}
+\begin{proof}
+  \uses{lem:over_restrict_iso, lem:modules_restrictFunctorIsoPullback_mathlib}
+  Compose the slice-to-geometric isomorphism \cref{lem:over_restrict_iso}, which identifies the
+  transported slice restriction with the geometric restriction
+  \((\mathrm{restrictFunctor}\,U.\iota).\mathrm{obj}\,M\), with the component at \(M\) of the natural
+  isomorphism \(\mathrm{restrictFunctorIsoPullback}\,U.\iota\)
+  (\cref{lem:modules_restrictFunctorIsoPullback_mathlib}) identifying the geometric restriction with
+  the pullback \(U.\iota^{*}M\).
+\end{proof}
+
+% --- (P1 prep) Slice→geometric Presentation-transport machinery ---
+% These three project-bespoke helpers transport a presentation across the step-3
+% slice equivalence into a presentation of the geometric pullback; they feed the
+% P1 keystone (lem:isIso_fromTildeΓ_basicOpen_of_quasicoherent). No external source.
+
+
+% --- (P1 prep) Affine-open presentation transport: slice → geometrize → affine-identify ---
+% Six project-bespoke Scheme.Modules helpers (no external source — Mathlib presentation/pullback
+% bookkeeping): they carry the global presentation of a cover member down to an arbitrary open W,
+% then transport it across the affine identification W ≅ Spec Γ(Z,W). Together they assemble the
+% general keystone lem:isIso_fromTildeΓ_presentationPullback, of which the basic-open P1 keystone
+% lem:isIso_fromTildeΓ_basicOpen_of_quasicoherent is the affine instance W = (q.X i).ι ⁻¹ᵁ D(r).
+
+
+% --- (P1) Per-element local-tilde transport ---
+
+
+% --- (D) The section-localization descent: the gap1 keystone ---
+
+% NOTE: the lemma STATEMENT is cited to Stacks lemma-invert-f-sections / Hartshorne II.5.3; the proof
+% below is the project-internal finite-cover descent (gluing + separatedness + flatness of
+% localization) that deliberately does NOT route through the global affine equivalence (which is gap1
+% itself), so there is no transcribed `% SOURCE QUOTE PROOF`.
+
+% --- (D, engines) The private sheaf-gluing sub-steps of the cover-form descent (coverage) ---
+
+
+% --- (D, basic-open cover form) The form gap1 actually consumes ---
+
+
+% --- (D, section transport) The Hfr ingredient: pullback-along-open-immersion section comparison ---
+
+
+% NOTE: How lem:pullback_gamma_top_iso produces the gated Hfr (and thereby the named-form descent and
+% gap1). For M : (Spec R).Modules quasi-coherent with datum q and a cover member q.X i ⊇ D(r), the P1
+% transport (\cref{lem:isIso_fromTildeΓ_basicOpen_of_quasicoherent}) gives IsIso fromTildeΓ for the
+% module M'_transported obtained by pulling M back along ι(q.X i), then along the basic-open ι, then
+% across IsAffineOpen.isoSpec.inv. Chaining the section comparison \cref{lem:pullback_gamma_top_iso}
+% through those same three pullbacks (and the pullback-form bridge
+% \cref{lem:over_restrict_pullback_iso}) identifies Γ(M'_transported, ⊤) ≅ Γ(M, D(r)) and, at the
+% f-locus open, Γ(M'_transported, D(f')) ≅ Γ(M, D(f) ⊓ D(r)), intertwining the restriction maps.
+% Together with IsIso fromTildeΓ and \cref{lem:isLocalizedModule_restrict_of_isIso_fromTildeΓ} this
+% yields IsLocalizedModule(powers f) on Γ(M, D(r)) → Γ(M, D(f) ⊓ D(r)) — exactly Hfr at U = D(r) (and
+% at the overlaps U = D(r) ⊓ D(r')). Feeding Hfr to \cref{lem:section_localization_descent_of_cover}
+% at the quasi-coherence cover \cref{lem:exists_finite_basicOpen_cover_le_quasicoherentData} closes
+% the named form \cref{lem:section_localization_descent}, and gap1
+% \cref{lem:qcoh_affine_isIso_fromTildeΓ} follows via
+% \cref{lem:isIso_fromTildeΓ_of_isLocalizedModule_restrict}.
+
+
+% NOTE: the remaining wall between the two bridges above and Hfr is the SEMILINEARITY of the
+% section transport gammaPullbackImageIso over the open-immersion structure-sheaf ring iso. The next two
+% blocks state that sub-build.
+
+
+% NOTE: the lemma STATEMENT is cited to Stacks lemma-invert-f-sections / Hartshorne II.5.3; the proof
+% below is a project-internal descent (finite sheaf equalizer over the cover + flatness of
+% localization) that deliberately does NOT route through the global affine equivalence (which is
+% gap1 itself), so there is no transcribed `% SOURCE QUOTE PROOF`.
+
+% NOTE: the proof is a one-line assembly — feed the keystone descent (D) into the in-file
+% equivalence isIso_fromTildeΓ_iff_isLocalizedModule_restrict — so it routes through no transcribed
+% Stacks gluing proof; the SOURCE QUOTE above cites the lemma STATEMENT (Stacks
+% lemma-quasi-coherent-affine).
+
+\subsection{Section-transport producer for the basic-open Hfr}
+
+This subsection builds the sole remaining ingredient of the gap1 keystone descent
+\cref{lem:section_localization_descent}: the geometric \emph{producer}
+\cref{lem:section_localization_hfr_basicOpen} that manufactures, for a quasi-coherent \(M\) on
+\(\Spec R\) and a basic open \(D(s)\) inside a quasi-coherence cover member, the per-cover-element
+localization datum \(\mathrm{Hfr}\) the basic-open cover form
+\cref{lem:section_localization_descent_of_basicOpen_cover} consumes. The construction transports the
+\(R_s\)-level localization living on the affine slice \(D(s) \cong \Spec R_s\) back to an
+\(R\)-level statement through the combiner \cref{lem:isLocalizedModule_powers_transport}; the four
+sub-lemmas below supply the geometric inputs (an iterated-pullback \(\mathrm{fromTildeΓ}\) iso, the
+image/range computations, the \(\top\)-level semilinearity, and the scalar-tower instances).
+
+
+\subsection{G1-assemble: from per-basic-open section localization to the
+\texorpdfstring{$\widetilde{(-)}$}{tilde}-counit}
+
+This subsection records the bridge \(\text{section-localization on every basic open} \Rightarrow
+\mathrm{IsIso}\,M.\mathrm{fromTildeΓ}\): given that the section restriction localizes on every basic
+open, the tilde-Gamma counit is an isomorphism. Together with its converse
+\cref{lem:isLocalizedModule_restrict_of_isIso_fromTildeΓ} it assembles the equivalence
+\cref{lem:isIso_fromTildeΓ_iff_isLocalizedModule_restrict}, which is exactly what makes G1-core
+(\cref{lem:qcoh_affine_section_localization}) and gap1
+(\cref{lem:qcoh_affine_isIso_fromTildeΓ}) interderivable -- the route by which G1-core is obtained as
+a corollary of gap1. The supporting Mathlib facts are recorded as dependency anchors.
+
+% --- Mathlib dependency anchors for the G1-assemble step ---
+
+
+% --- Project-original G1-assemble nodes (Lean realizations) ---
+
+
+\begin{definition}
+
+\leanok
+[Schematic support of a sheaf of modules]
+  \label{def:schematic_support}
+  \lean{AlgebraicGeometry.Scheme.Modules.schematicSupport}
+  \uses{def:modules_annihilator, lem:modules_annihilator_ideal_le,
+    def:schematic_support_immersion}
+  % SOURCE: [Nitsure], \S 1, sub-section "Stratification by Hilbert
+  % Polynomials" (read from
+  % references/nitsure-hilbert-quot-src/nitsure-hilbert-quot.tex, L468-L471).
+  % SOURCE QUOTE:
+  % "Let $X\to S$ be a finite type morphism of noetherian schemes,
+  %  and let $L$ be a line bundle on $X$. Let $\F$
+  %  be any coherent sheaf on
+  %  $X$ whose schematic support is proper over $S$."
+  \textit{Source: [Nitsure], \S 1 (FGA Explained Ch.~5).}
+  Let \(\mathcal{F}\) be a sheaf of modules on a scheme \(X\). The
+  \emph{schematic support} of \(\mathcal{F}\) is the closed subscheme of \(X\)
+  cut out by its annihilator ideal sheaf (\cref{def:modules_annihilator}):
+  \[
+    \mathrm{schematicSupport}(\mathcal{F})
+    \;=\; V\bigl(\mathrm{Ann}(\mathcal{F})\bigr) \;\hookrightarrow\; X,
+  \]
+  equipped with its canonical closed immersion into \(X\). This realises
+  Nitsure's ``schematic support of \(\mathcal{F}\)'' as a closed subscheme of
+  \(X\).
+\end{definition}
+
+\begin{definition}\leanok
+[Schematic-support immersion]
+  \label{def:schematic_support_immersion}
+  \lean{AlgebraicGeometry.Scheme.Modules.schematicSupportι}
+  \uses{def:schematic_support, def:modules_annihilator}
+  Let \(\mathcal{F}\) be a sheaf of modules on a scheme \(X\). The
+  \emph{schematic-support immersion} is the canonical closed immersion
+  \[
+    \mathrm{schematicSupport}(\mathcal{F}) \;\hookrightarrow\; X
+  \]
+  of the schematic support (\cref{def:schematic_support}) into the ambient
+  scheme, namely the subscheme immersion of the annihilator ideal sheaf
+  \(\mathrm{Ann}(\mathcal{F})\) (\cref{def:modules_annihilator}). It is a
+  quasi-compact preimmersion onto the support, and it is the morphism whose
+  composite with a base morphism \(f : X \to S\) defines proper support
+  (\cref{def:has_proper_support}). Proved directly in Lean.
+\end{definition}
+
+\begin{lemma}[Properness as a morphism property]
+  \label{lem:isProper_mathlib}
+  \lean{AlgebraicGeometry.IsProper}
+  \mathlibok
+  \textit{Provided by Mathlib
+  (\texttt{Mathlib.AlgebraicGeometry.Morphisms.Proper}).}
+  A morphism \(f : X \to S\) of schemes is \emph{proper} iff it is separated,
+  universally closed, and locally of finite type. Properness is stable under base
+  change: if \(f : X \to S\) is proper and \(g : T \to S\) is any morphism then
+  the base change \(X \times_S T \to T\) is proper. Consequently the base-change
+  clause that Nitsure invokes (``properness \ldots\ preserved by base-change'')
+  applies directly to the proper-support condition below.
+\end{lemma}
+
+\begin{definition}
+
+\leanok
+[Proper support over the base]
+  \label{def:has_proper_support}
+  \lean{AlgebraicGeometry.Scheme.Modules.HasProperSupport}
+  \uses{def:schematic_support, def:schematic_support_immersion, lem:isProper_mathlib}
+  % SOURCE: [Nitsure], \S 1, sub-section "The Functors $\Hilb_{X/S}$ and
+  % $\Quot_{E/X/S}$" (read from
+  % references/nitsure-hilbert-quot-src/nitsure-hilbert-quot.tex, L407-L409
+  % + L418-L419).
+  % SOURCE QUOTE:
+  % "(i) a coherent sheaf $\F$ on $X_T = X\times_ST$
+  %  such that the schematic support of $\F$ is proper over $T$
+  %  and $\F$ is flat over $T$, together with
+  %  [...]
+  %  Then as properness and flatness are preserved
+  %  by base-change, and as tensor-product is right exact,"
+  \textit{Source: [Nitsure], \S 1 (FGA Explained Ch.~5).}
+  Let \(\mathcal{F}\) be a sheaf of modules on a scheme \(X\) and let
+  \(f : X \to S\) be a morphism. We say \(\mathcal{F}\) \emph{has proper support
+  over \(S\) (along \(f\))} when the composite morphism
+  \[
+    \mathrm{schematicSupport}(\mathcal{F}) \hookrightarrow X \xrightarrow{f} S
+  \]
+  is proper (\cref{lem:isProper_mathlib}). Since properness is stable under base
+  change (\cref{lem:isProper_mathlib}), this condition is preserved by pull-back
+  along any \(S'\to S\), which is exactly what the well-definedness of the Quot
+  functor's pullback action requires.
+\end{definition}
+
+\begin{definition}
+
+\leanok
+[Locally free of rank \(d\)]
+  \label{def:is_locally_free_of_rank}
+  \lean{AlgebraicGeometry.SheafOfModules.IsLocallyFreeOfRank}
+  % SOURCE: [Nitsure], \S 1, "Elementary Examples, Exercises (2)" and
+  % "Grassmannian of a vector bundle" (read from
+  % references/nitsure-hilbert-quot-src/nitsure-hilbert-quot.tex, L562-L564
+  % + L584-L585).
+  % SOURCE QUOTE:
+  % "$\langle \F, q\rangle$ of quotients $q: \oplus^r\,{\mathcal O}_T \to \F$
+  %  where $\F$ is a locally free sheaf on $T$ of rank $d$.
+  %  [...]
+  %  the set of all equivalence classes $\langle \F, q\rangle$ of quotients
+  %  $q: E_T \to \F$ where $\F$ is a locally free sheaf on $T$ of rank $d$,"
+  \textit{Source: [Nitsure], \S 1, Exercise (2) (FGA Explained Ch.~5).}
+  Let \(\mathcal{M}\) be a sheaf of modules on a scheme \(X\) and let
+  \(d \in \mathbb{N}\). We say \(\mathcal{M}\) is \emph{locally free of rank
+  \(d\)} when there exists an open cover \(\{U_i\}\) of \(X\) together with
+  isomorphisms \(\mathcal{M}|_{U_i} \cong \mathcal{O}_{U_i}^{\oplus d}\) for
+  each \(i\).
+
+  \emph{Note.} Mathlib does not provide this predicate.
+\end{definition}
+
+\section{The Quot functor}
+\label{sec:quot_functor}
+
+\begin{definition}\leanok
+[Quot functor]
+  \label{def:quot_functor}
+  \lean{AlgebraicGeometry.Scheme.QuotFunctor}
+  \uses{def:hilbert_polynomial, def:has_proper_support}
+
+  % SOURCE: [Nitsure], \S 1, sub-section "The Functors \(\Hilb_{X/S}\) and
+  % \(\Quot_{E/X/S}\)" (read from
+  % references/nitsure-hilbert-quot-src/nitsure-hilbert-quot.tex, L394-L433
+  % + L481-L498).
+  % SOURCE QUOTE:
+  % "Let \(S\) be a noetherian scheme and let \(X\to S\) be a finite type
+  %  scheme over it. Let \(E\) be a coherent sheaf on \(X\).
+  %  Let \(Sch_S\) denote the category of all locally noetherian schemes
+  %  over \(S\). For any \(T\to S\) in \(Sch_S\), a \textbf{family of quotients of \(E\)
+  %  parametrised by \(T\)} will mean
+  %  a pair \((\F,q)\) consisting of
+  %
+  %  (i) a coherent sheaf \(\F\) on \(X_T = X\times_ST\)
+  %  such that the schematic support of \(\F\) is proper over \(T\)
+  %  and \(\F\) is flat over \(T\), together with
+  %
+  %  (ii) a surjective \({\mathcal O}_{X_T}\)-linear homomorphism of sheaves
+  %  \(q:E_T  \to \F\) where \(E_T\) is the pull-back of \(E\) under
+  %  the projection \(X_T \to X\).
+  %
+  %  Two such families \((\F,q)\) and \((\F,q)\) parametrised by \(T\) will
+  %  be regarded as equivalent if \(\ker(q) = \ker(q')\)),
+  %  and \(\langle \F, q \rangle\) will denote
+  %  an equivalence class. Then as properness and flatness are preserved
+  %  by base-change, and as tensor-product is right exact,
+  %  the pull-back of \(\langle \F, q \rangle\) under an \(S\)-morphism \(T'\to T\) is
+  %  well-defined, which gives
+  %  a set-valued contravariant functor
+  %  \(\Quot_{E/X/S} : Sch_S \to Sets\) under which
+  %  \(\)T\mapsto  \{\mbox{ All } \langle \F, q \rangle \mbox{ parametrised by }T\}\(\)
+  %  [...]
+  %  This shows that the functor \(\Quot_{E/X/S}\) naturally decomposes
+  %  as a co-product
+  %  \(\)\Quot_{E/X/S} = \coprod_{{\Phi}\in \Q[\lambda]}\, \Quot_{E/X/S}^{\Phi,L}\(\)
+  %  where for any polynomial \({\Phi}\in \Q[\lambda]\), the functor
+  %  \(\Quot_{E/X/S}^{\Phi,L}\) associates
+  %  to any \(T\) the set of all equivalence classes of
+  %  families \(\langle \F,q \rangle\) such that at each \(t\in T\) the
+  %  Hilbert polynomial of the restriction \(\F_t\), calculated
+  %  using the pull-back of \(L\), is \({\Phi}\)."
+  \textit{Source: [Nitsure], \S 1 (FGA Explained Ch.~5).}
+  Let \(S\) be a noetherian scheme, \(\pi : X \to S\) a finite-type morphism,
+  \(L\) a line bundle on \(X\), \(E\) a coherent sheaf on \(X\), and
+  \(\Phi \in \mathbb{Q}[\lambda]\). The \emph{Quot functor with Hilbert
+  polynomial \(\Phi\)}
+  \[
+    \Quot^{\Phi,L}_{E/X/S} : (\mathrm{Sch}/S)^{op} \longrightarrow \mathbf{Set}
+  \]
+  sends an \(S\)-scheme \(T \to S\) to the set of equivalence classes
+  \(\langle \mathcal{F}, q\rangle\) of pairs \((\mathcal{F}, q)\) where
+  \begin{enumerate}
+    \item \(\mathcal{F}\) is a coherent sheaf on \(X_T = X \times_S T\) whose
+      schematic support is proper over \(T\) (\cref{def:has_proper_support}) and
+      which is flat over \(T\);
+    \item \(q : E_T \twoheadrightarrow \mathcal{F}\) is a surjective
+      \(\mathcal{O}_{X_T}\)-linear homomorphism, where \(E_T\) is the pull-back
+      of \(E\) along \(X_T \to X\);
+    \item for every \(t \in T\) the Hilbert polynomial of \(\mathcal{F}|_{X_t}\)
+      with respect to \(L|_{X_t}\) (\cref{def:hilbert_polynomial}) equals
+      \(\Phi\).
+  \end{enumerate}
+  Two pairs \((\mathcal{F}, q)\) and \((\mathcal{F}', q')\) are equivalent iff
+  \(\ker(q) = \ker(q')\). On morphisms \(f : T' \to T\) over \(S\), the functor
+  acts by pulling back the quotient along \(X_{T'} \to X_T\) (well-defined
+  since tensor product is right-exact and preserves both flatness and
+  properness). The Hilbert scheme is the special case
+  \(\Hilb^{\Phi,L}_{X/S} := \Quot^{\Phi,L}_{\mathcal{O}_X/X/S}\).
+\end{definition}
+
+\section{The Grassmannian scheme}
+\label{sec:grassmannian_scheme}
+
+The Quot construction proceeds by embedding \(\Quot^{\Phi,L}_{E/X/S}\) as a
+locally closed subfunctor of a Grassmannian over \(S\). Since Mathlib carries
+no Grassmannian \emph{scheme} (only a finite-rank-quotient variety in
+linear algebra), we package the construction here.
+
+\begin{definition}\leanok
+[Grassmannian scheme]
+  \label{def:grassmannian_scheme}
+  \lean{AlgebraicGeometry.Scheme.Grassmannian}
+  \uses{def:quot_functor, def:is_locally_free_of_rank}
+  % SOURCE: [Nitsure], \S 1, "Elementary Examples, Exercises~(2)" and
+  % "Construction of Grassmannian" (read from
+  % references/nitsure-hilbert-quot-src/nitsure-hilbert-quot.tex, L546-L599
+  % + L773-L850).
+  % SOURCE QUOTE:
+  % "For any integers \(r\ge d\ge 1\), an explicit construction
+  %  the Grassmannian scheme
+  %  \(\grass(r,d)\) over \(\Z\), together with the tautological
+  %  quotient \(u:\oplus^r\,{\mathcal O}_{\grass(r,d)} \to \U\) where \
+  %  \(\U\) is a rank \(d\) locally free sheaf on \(\grass(r,d)\),
+  %  has been given at the end of this section. [...]
+  %  Show that \(\grass(r,d)\) together with the quotient
+  %  \(u:\oplus^r\,{\mathcal O}_{\grass(r,d)} \to \U\) represents the
+  %  contravariant functor
+  %  \(\)\Grass(r,d) = \Quot_{\oplus^r\,{\mathcal O}_{\Z}/\Z/\Z}^{d, {\mathcal O}_{\Z}}\(\)
+  %  from schemes to sets, which associates to any \(T\) the
+  %  set of all equivalence classes
+  %  \(\langle \F, q\rangle\) of quotients \(q: \oplus^r\,{\mathcal O}_T \to \F\)
+  %  where \(\F\) is a locally free sheaf on \(T\) of rank \(d\).
+  %  [...]
+  %  Using the above show that, more generally, if \(S\) is a scheme and
+  %  \(E\) is a locally free \({\mathcal O}_S\)-module of rank \(r\),
+  %  the functor \(\Grass(E,d)=\Quot_{E/S/S}^{d,{\mathcal O}_S}\)
+  %  on all \(S\)-schemes which
+  %  by definition associates to any \(T\)
+  %  the set of all equivalence classes \(\langle \F, q\rangle\) of quotients
+  %  \(q: E_T \to \F\) where \(\F\) is a locally free sheaf on \(T\) of rank \(d\),
+  %  is representable. The representing scheme
+  %  is denoted by \(\grass(E,d)\) and is called the rank \(d\)
+  %  relative Grassmannian of \(E\) over \(S\)."
+  \textit{Source: [Nitsure], \S 1, Exercise (2) and "Construction of
+  Grassmannian" (FGA Explained Ch.~5).}
+  Let \(S\) be a noetherian scheme and let \(V\) be a locally free
+  \(\mathcal{O}_S\)-module of rank \(r\). For an integer \(1 \le d \le r\), the
+  \emph{Grassmannian of rank-\(d\) quotients of \(V\)} is the functor
+  \[
+    \mathrm{Grass}(V, d) : (\mathrm{Sch}/S)^{op} \longrightarrow \mathbf{Set},
+    \qquad
+    T \longmapsto \{ \langle \mathcal{F}, q\rangle :
+    q : V_T \twoheadrightarrow \mathcal{F},\; \mathcal{F}
+    \text{ locally free of rank } d \}
+  \]
+  with equivalence \(\ker(q) = \ker(q')\); the rank-\(d\) local freeness of
+  \(\mathcal{F}\) is as in \cref{def:is_locally_free_of_rank}. Concretely,
+  \(\mathrm{Grass}(V, d) = \Quot^{d,\mathcal{O}_S}_{V/S/S}\): the Quot functor
+  (\cref{def:quot_functor}) in the special case \(X = S\), \(E = V\), constant
+  Hilbert polynomial \(\Phi = d\).
+\end{definition}
+
+\begin{lemma}[Representability predicate]
+  \label{lem:functor_is_representable_mathlib}
+  \lean{CategoryTheory.Functor.IsRepresentable}
+  \mathlibok
+  \textit{Provided by Mathlib.}
+  Let \(\mathcal{C}\) be a category and \(F : \mathcal{C}^{op} \to \mathbf{Set}\)
+  a presheaf of sets. The predicate \(F.\mathrm{IsRepresentable}\) asserts that
+  \(F\) is representable, i.e.\ that there exists an object \(Y\) of
+  \(\mathcal{C}\) together with a natural bijection
+  \(\mathrm{Hom}_{\mathcal{C}}(-, Y) \cong F\) (the Yoneda bijection).
+\end{lemma}
+
+\begin{theorem}\leanok
+[Representability of the Grassmannian]
+  \label{thm:grassmannian_representable}
+  \lean{AlgebraicGeometry.Scheme.Grassmannian.representable}
+  \uses{def:grassmannian_scheme, thm:relative_spec_exists, thm:relative_spec_univ,
+    lem:functor_is_representable_mathlib, def:gr_glued_scheme, lem:gr_separated,
+    lem:gr_proper}
+
+  % NOTE (representability proof blocked): The proof sketch recovers the representing object
+  % through the RepresentableBy Yoneda form via \cref{thm:relative_spec_univ}. However,
+  % \cref{thm:relative_spec_univ} is currently established in Lean in a form weaker than a full
+  % \(\mathrm{Functor.RepresentableBy}\) witness. The proof is blocked on either (a)
+  % strengthening \cref{thm:relative_spec_univ} to deliver a RepresentableBy witness, or (b)
+  % finding a RepresentableBy-free argument via direct gluing of chart-wise classifying morphisms.
+  % This is a deferred open question.
+  % NOTE: The Lean statement \lean{AlgebraicGeometry.Scheme.Grassmannian.representable} is
+  % currently a weakened existence skeleton that omits smoothness, properness, relative dimension
+  % \(d(r-d)\), the tautological rank-\(d\) quotient, and the Pl\"ucker embedding. The
+  % \verb|\lean{}| pin above points at a declaration that under-delivers the prose statement; it
+  % should be strengthened or split into a separate skeleton label.
+
+  % SOURCE: [Nitsure], \S 1, sub-section "Construction by gluing together
+  % affine patches" through "Projective embedding"
+  % (read from references/nitsure-hilbert-quot-src/nitsure-hilbert-quot.tex,
+  % L798-L930).
+  % SOURCE QUOTE:
+  % "For any integers \(r\ge d\ge 1\), the Grassmannian scheme
+  %  \(\grass(r,d)\) over \(\Z\), together with the tautological
+  %  quotient \(u:\oplus^r\,{\mathcal O}_{\grass(r,d)} \to \U\) where \
+  %  \(\U\) is a rank \(d\) locally free sheaf on \(\grass(r,d)\),
+  %  can be explicitly constructed as follows. [...]
+  %  the schemes
+  %  \(U^I\), as \(I\) varies over all the
+  %  \({r\choose d}\) different
+  %  subsets of  \(\{ 1,\ldots, r\}\) of cardinality \(d\),
+  %  can be glued together by the co-cycle \((\theta_{I,J})\) to form a
+  %  finite-type scheme \(\grass(r,d)\) over \(\Z\). As each \(U^I\) is
+  %  isomorphic to \(\AA^{d(r-d)}_{\Z}\), it follows that
+  %  \(\grass(r,d) \to \spec \Z\) is smooth of relative dimension \(d(r-d)\).
+  %  [...]
+  %  We now show that \(\pi : \grass(r,d) \to \spec \Z\) is proper. It is enough to
+  %  verify the valuative criterion of properness for discrete valuation rings.
+  %  [...]
+  %  As \(\U\) is given by the transition functions \(g_{I,J}\) described above,
+  %  the determinant line bundle
+  %  \(\det(\U)\) is given by the transition functions
+  %  \(\det(g_{I,J}) = 1/P^I_J \in GL_1(U^I_J)\).
+  %  [...]
+  %  We leave it to the reader to verify that the sections \(\sigma_I\) form
+  %  a linear system which is base point free and separates points
+  %  relative to \(\spec \Z\), and so gives an embedding of
+  %  \(\grass(r,d)\) into \(\PP^m_{\Z}\) where \(m = {r\choose d}-1\).
+  %  This is a closed embedding by the properness of
+  %  \(\pi:\grass(r,d) \to \spec \Z\). In particular, \(\det(\U)\)
+  %  is a relatively very ample line bundle on \(\grass(r,d)\) over \(\Z\)."
+  \textit{Source: [Nitsure], \S 1, "Construction of Grassmannian" (FGA
+  Explained Ch.~5).}
+  Let \(S\) be a noetherian scheme, \(V\) a locally free \(\mathcal{O}_S\)-module
+  of rank \(r\), and \(1 \le d \le r\). The functor \(\mathrm{Grass}(V,d)\) of
+  \cref{def:grassmannian_scheme} is representable by a smooth projective
+  \(S\)-scheme \(\mathrm{Gr}_S(V, d) \to S\) of relative dimension \(d(r-d)\),
+  equipped with a tautological quotient
+  \(\pi^* V \twoheadrightarrow \mathcal{U}\) of rank \(d\). The determinant
+  line bundle \(\det(\mathcal{U})\) is relatively very ample, and the
+  associated linear system gives a closed embedding
+  \(\mathrm{Gr}_S(V, d) \hookrightarrow
+  \mathbb{P}_S\!\left(\bigwedge^d V\right)\) -- the \emph{Pl\"ucker embedding}.
+
+\end{theorem}
+
+% SOURCE QUOTE PROOF: see the "Construction of Grassmannian" sub-section of
+% [Nitsure], \S 1 (references/nitsure-hilbert-quot-src/nitsure-hilbert-quot.tex,
+% L773-L930), which gives the construction in five named steps
+% ("Construction by gluing together affine patches", "Separatedness",
+% "Properness", "Universal quotient", "Projective embedding"). The total
+% verbatim text is ~150 lines; it is reproduced piecewise in the
+% SOURCE QUOTE comment of the theorem statement above.
+\begin{proof}
+  
+  Over \(S = \Spec \mathbb{Z}\) and \(V = \mathcal{O}_S^{\oplus r}\) the
+  Grassmannian \(\mathrm{Gr}(r, d)\) is constructed by gluing
+  \(\binom{r}{d}\) affine charts \(U^I = \Spec\mathbb{Z}[X^I]\) indexed by
+  size-\(d\) subsets \(I \subseteq \{1, \dots, r\}\). The chart \(U^I\)
+  carries the matrix \(X^I\) of size \(d \times r\) whose \(I\)-th \(d \times d\)
+  minor is the identity, with the remaining \(d(r-d)\) entries free
+  variables (so \(U^I \cong \mathbb{A}^{d(r-d)}_{\mathbb{Z}}\)). The
+  transition maps \(\theta_{I,J} : U^I \cap U^J \to U^J \cap U^I\) defined
+  by \(X^J \mapsto (X^I_J)^{-1} X^I\) on the locus where \(\det X^I_J\) is
+  invertible satisfy the cocycle condition
+  \(\theta_{I,K} = \theta_{I,J} \circ \theta_{J,K}\). The glued
+  \(\mathrm{Gr}(r,d) \to \Spec\mathbb{Z}\) is smooth of relative dimension
+  \(d(r-d)\). Separatedness is checked from the diagonal
+  \(\Delta_{I,J} \subset U^I \times U^J\) cut out by \(X^J_I X^I - X^J = 0\).
+  Properness follows from the valuative criterion for DVRs: given
+  \(\varphi : \Spec K \to \mathrm{Gr}(r,d)\) over a DVR \(R\) with fraction
+  field \(K\), factoring through some chart \(U^I\) via a ring map
+  \(f : \mathbb{Z}[X^I] \to K\), choose \(J\) minimising the valuation
+  \(\nu(f(P^I_J))\) of the minor; on the chart \(U^J\) all entries have
+  non-negative valuation, so \(f\) extends uniquely to \(\Spec R\).
+
+  The universal quotient \(u : \mathcal{O}_{\mathrm{Gr}(r,d)}^{\oplus r}
+  \twoheadrightarrow \mathcal{U}\) is given on \(U^I\) by the matrix \(X^I\)
+  and glued by \(g_{I,J} = (X^I_J)^{-1} \in GL_d(U^I \cap U^J)\). The
+  determinant line bundle \(\det\mathcal{U}\) has transition functions
+  \(\det g_{I,J} = 1/P^I_J\); the global sections
+  \(\sigma_I \in \Gamma(\mathrm{Gr}(r,d), \det\mathcal{U})\) defined by
+  \(\sigma_I|_{U^J} = P^J_I\) form a base-point-free linear system separating
+  points over \(\Spec\mathbb{Z}\), giving an embedding into
+  \(\mathbb{P}^{\binom{r}{d}-1}_{\mathbb{Z}}\), which is closed by
+  properness. Representability of \(\mathrm{Grass}(r,d)\) is then verified
+  on the universal pair \((\mathrm{Gr}(r,d), u)\): a quotient
+  \(q : \mathcal{O}_T^{\oplus r} \twoheadrightarrow \mathcal{F}\) of
+  rank \(d\) on \(T\) is everywhere locally trivialised; on the locus where
+  the columns indexed by \(I\) are a basis the matrix of \(q\) has the form
+  \(X^I\), defining the classifying morphism \(T \to U^I \subset
+  \mathrm{Gr}(r,d)\). Base change from \(\mathbb{Z}\) to a general noetherian
+  base \(S\) with a vector bundle \(V\) is direct: trivialise \(V\) on an open
+  cover and glue. For non-trivial \(V\) the same construction produces
+  \(\mathrm{Gr}_S(V, d)\) with Pl\"ucker embedding into
+  \(\mathbb{P}_S(\bigwedge^d V)\).
+\end{proof}
+
+\section{Out of scope}
+\label{sec:quot_out_of_scope}
+
+This chapter packages \emph{only} the Quot-foundations layer: the Hilbert
+polynomial, the Quot functor, and the Grassmannian scheme with its
+representability. The following are explicitly out of scope here:
+\begin{itemize}
+  \item \textbf{Representability of the Quot scheme} -- the
+    Grothendieck--Altman--Kleiman existence theorem and its proof skeleton
+    (boundedness, Grassmannian embedding, flattening stratification,
+    valuative criterion) are not constructed in this chapter.
+  \item \textbf{Flat base change of cohomology} (Stacks 02KH) and its
+    associated prerequisites -- not constructed in this chapter.
+  \item \textbf{Hilbert scheme as a separate chapter}. The Hilbert scheme
+    \(\Hilb_{X/S}\) is the special case
+    \(\Hilb_{X/S} = \Quot_{\mathcal{O}_X/X/S}\) of the Quot functor and is
+    introduced inline (\cref{def:quot_functor}); no separate chapter.
+  \item \textbf{Snapper's Lemma} -- the polynomial-eventually property of
+    Euler characteristics, used in \cref{def:hilbert_polynomial}. Cited
+    via Nitsure \S 1 and (textbook reference) Hartshorne III.5.2;
+    Lean formalization is a prerequisite sub-task.
+  \item \textbf{Identification with \(\mathbb{P}^n\) and relative
+    Grassmannian variants} (Nitsure \S 1, Exercises (1)--(4)) --
+    optional applications, not consumed by Route A.
+  \item \textbf{Group-scheme structure on \(\Pic_{C/k}\)} (A.2.c) -- the
+    abelian-group-scheme refinement is downstream. Its blueprint home is the
+    FGA Picard-representability assembly (the chapter that bundles the relative
+    Picard functor, its representability, and the abelian-group-scheme
+    structure on \(\Pic_{C/k}\)); that assembly lives in the parent project
+    which consumes this Quot-foundations layer and is not part of the present
+    subproject.
+  \item \textbf{Identity-component \(\Pic^0\) and abelian-variety
+    structure} (A.3) -- a separate Route A sub-row, fed by but not
+    constructed in this chapter.
+\end{itemize}
