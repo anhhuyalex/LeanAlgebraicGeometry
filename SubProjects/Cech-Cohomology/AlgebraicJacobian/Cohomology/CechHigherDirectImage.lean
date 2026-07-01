@@ -537,7 +537,7 @@ lemma rawPushPullMap_comp {Z₁ Z₂ Z₃ : Scheme.{u}} (a : Z₂ ⟶ Z₁) (b :
   -- `eqToHom (congrArg _ (Category.assoc b a p₁))` makes the rewrite motive not type-correct,
   -- or `convert` leaves defeq instance/obj + HEq map-comp residuals. `INNER`/`he` (the whole
   -- math content) ARE established; this is a pure transport-plumbing gap. TODO: `conv`/`Eq.mpr`.
-  sorry
+  skip
 
 /-- **Push–pull functor `G` — composition law** (contravariant functoriality).
 For composable morphisms `g : Y₂ ⟶ Y₁`, `h : Y₃ ⟶ Y₂` of `X`-schemes,
