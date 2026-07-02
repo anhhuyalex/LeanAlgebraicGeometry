@@ -1,0 +1,65 @@
+id: I-0057
+provider: local
+kind: memory
+body: '**Recipe: ValuativeCommSq for rational-map extension (Milne 3.1 codim-≥2 CLOSED);
+  over-k̄ hypothesis is required.**
+
+
+  `indeterminacy_codimGe2_of_smooth_of_complete` (Albanese `CodimOneExtension.lean`)
+  is proved axiom-clean — Mathlib v4.31 has ALL the plumbing; do not hand-roll rational-map/valuative
+  machinery. Reusable recipe:
+
+
+  - **Pipeline**: `f.fromFunctionField : Spec K(X) ⟶ Y` + Mathlib `IsFractionRing
+  (stalk z) K(X)` (integral schemes) + DVR stalk ⇒ `ValuativeCommSq Y.hom`; extract
+  the lift from `IsProper.eq_valuativeCriterion` (`rw at hP; exact hP.1.1.1`); spread
+  out with `PartialMap.ofFromSpecStalk X.hom Y.hom L hfacr` (`[X.IsGermInjectiveAt
+  z]` automatic for integral) + `mem_domain_ofFromSpecStalk`; identify with `f` via
+  `RationalMap.eq_of_fromFunctionField_eq` + a small glue lemma `fromFunctionField
+  = Spec.map (stalkSpecializes gen⤳z) ≫ fromSpecStalkOfMem` (prove by `cancel_mono
+  g.domain.ι` + `Opens.fromSpecStalkOfMem_ι` + `SpecMap_stalkSpecializes_fromSpecStalk`).
+
+  - `CommRingCat.ofHom (algebraMap (stalk z) functionField) = stalkSpecializes ((genericPoint_spec
+  X).specializes trivial)` is **rfl** (`stalkFunctionFieldAlgebra` def) — exploit
+  by defeq (`exact`), do NOT `rw` (higher-order pattern fails).
+
+  - **Structure-literal trap**: inside a `ValuativeCommSq { ... }` literal the stalk
+  term gets unfolded past `Scheme.presheaf`, so keyed instances (`IsDomain (stalk
+  z)`, `Field functionField`, `IsFractionRing`, `stalkFunctionFieldAlgebra`) STOP
+  firing. Materialise them OUTSIDE the literal and pass as explicit fields (`domain
+  := hdom` etc.).
+
+  - **Field-poisoning trap**: bind those facts with plain `have`/`let`, NEVER `haveI/letI`
+  — an opaque local `Field functionField` fvar shadows the CommRing path and makes
+  `Algebra (stalk z) K(X)` unsynthesizable. Also needs `set_option backward.isDefEq.respectTransparency
+  false in` BEFORE the docstring (IsField.toField / CommRingCat.of-eta walls).
+
+  - **Over-k̄ is mathematically necessary**: the valuative square''s base compatibility
+  needs `hf : f.compHom Y.hom = X.hom.toRationalMap` (Milne''s maps are k̄-maps).
+  The whole Thm-3.2 chain now threads this hypothesis; future consumers must supply
+  it (for maps built from k̄-morphisms it follows via `Hom.toRationalMap`/`compHom_toRationalMap`).
+  Push it to the function field via `exists_rep` + `compHom_toRationalMap` + simp
+  with `fromSpecStalkOfMem_compHom/toPartialMap`.
+
+  - Coheight conventions: scheme points carry `specializationPreorder` (Mathlib instance,
+  `x ≤ y ↔ y ⤳ x`); coheight 0 ⇔ `IsMax` (`Order.coheight_eq_zero`) ⇒ generic point
+  via `Specializes.antisymm ...|>.eq`; `ENat.lt_two_iff` for the ≤1 split.
+
+  - Remaining CodimOneExtension gaps are NOT valuative: Stacks 0AVF (depth-≥2 H¹,
+  Milne 3.1 Step 2) and Milne 3.3 difference-map machinery.'
+labels:
+- agent-ready
+status: open
+scope:
+  projects:
+  - Albanese
+audience: horizon
+author: horizon
+source_ref: null
+created_at: '2026-07-02T07:53:50.329196+00:00'
+updated_at: '2026-07-02T07:53:50.329208+00:00'
+metadata:
+  provenance:
+    run: '0006'
+    session: 0011-horizon-T6
+    role: horizon

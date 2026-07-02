@@ -1,0 +1,24 @@
+All done. Final report:
+
+## Summary
+
+- **Closed the recommended target**: `indeterminacy_codimGe2_of_smooth_of_complete` (Milne 3.1's codim-≥2 half, `CodimOneExtension.lean`) is now **proved and axiom-clean** (`propext, Classical.choice, Quot.sound`, verified with `#print axioms`).
+- Proof route exactly as Ground suggested: Mathlib v4.31's valuative-criterion API (`ValuativeCommSq`, `IsProper.eq_valuativeCriterion`) + rational-map spreading-out (`PartialMap.ofFromSpecStalk`), fed by the project's DVR stalk lemma `localRing_dvr_of_codim_one`. One new private glue lemma `fromFunctionField_factor` (~15 LOC); nothing hand-rolled.
+- **Statement change (mathematically necessary)**: the lemma and the whole Thm-3.2 chain now carry the over-k̄ hypothesis `f.compHom Y.hom = X.hom.toRationalMap` — Milne's ambient "rational map of k̄-varieties" assumption, needed for the valuative square's base compatibility. Threaded through `extend_of_codimOneFree_of_smooth`, `indeterminacy_pure_codim_one_into_grpScheme`, and the three Thm32 helpers up to `extend_to_av`; no consumer outside the two in-scope files calls these (AlbaneseUP references are doc-only, its bodies are typed sorries).
+
+## Progress
+
+- Full `lake build` **GREEN** (8582 jobs). Albanese sorry-decls 14 → 13; `CodimOneExtension.lean` down to 2 sorries.
+- Blueprint updated: `thm:indeterminacy_codimGe2` proof marked `\leanok` with the valuative-square proof text; over-k̄ clauses added to `thm:codim_one_extension`, `lem:milne_codim1_indeterminacy`, `thm:rational_map_to_av_extends`, and the two Thm32 helper nodes.
+- Filed: task T6 comment, roadmap `ALB.codim1` comment (status stays **active**), and memory `I-0057` with the reusable recipe (structure-literal instance-key trap, Field-poisoning trap, over-k̄ requirement).
+- Dead-code cleanup (task target 1) was already completed by the first T6 session — verified absent; build confirmed.
+
+## Issues
+
+- Two Lean-elaboration traps cost most of the iteration time, now recorded in memory: inside a `ValuativeCommSq { ... }` literal the stalk term unfolds past `Scheme.presheaf` so keyed instances stop firing (fix: materialize instances outside, pass as explicit fields); a `haveI`-bound local `Field K(X)` poisons `Algebra`-synthesis (fix: plain `have`/`let` + `respectTransparency false`).
+- Remaining `CodimOneExtension` sorries are genuinely large, multi-session builds: `extend_of_codimOneFree_of_smooth` Step 2 needs Stacks 0AVF (depth-≥2 local-cohomology extension, absent from Mathlib v4.31); Milne 3.3 needs difference-map + pole-divisor machinery. Not attempted beyond scoping — deliberate time-box per the recommendation.
+
+## Next
+
+- Milne 3.3 (`indeterminacy_pure_codim_one_into_grpScheme`) is the natural next Albanese leaf: substeps 1–3 (difference map, domain criterion, local-ring pullback) look buildable on the now-proven valuative/function-field plumbing; substep 4 (pure-codim-1 pole divisors) is the hard core.
+- Alternatively scope Stacks 0AVF: check whether Mathlib's `RingTheory/LocalCohomology` or depth API has grown enough for the Hartogs-style Step 2.

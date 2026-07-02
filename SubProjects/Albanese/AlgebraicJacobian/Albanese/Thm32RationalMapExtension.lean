@@ -234,13 +234,16 @@ Combining (1) ∨ (2): pure codim 1 contradicts codim `≥ 2`, so the
 indeterminacy locus is empty; trivially every point — and in particular
 every codim-1 point — lies in `f.domain`, so `CodimOneFree f`.
 
-**Status (run-0006 T6).** The codim-≥2 conclusion of Milne 3.1 is now
-exposed as the standalone lemma
-`indeterminacy_codimGe2_of_smooth_of_complete` in
-`Albanese/CodimOneExtension.lean` (itself a named `sorry`, gated on the
-rational-map valuative-criterion machinery), and this helper's body is
-`sorry`-free: branch 2 derives the contradiction `2 ≤ coheight x = 1`
-directly from that lemma.
+**Status (run-0006 T6, second session).** The codim-≥2 conclusion of Milne
+3.1 is the standalone lemma `indeterminacy_codimGe2_of_smooth_of_complete`
+in `Albanese/CodimOneExtension.lean`, now **proved axiom-clean** (valuative
+criterion of properness at the DVR stalk + Mathlib rational-map
+spreading-out). It requires `f` to be a rational map *over `k̄`*
+(hypothesis `hover`, Milne's ambient assumption), which this helper and its
+consumers thread through. This helper's body is `sorry`-free: branch 2
+derives the contradiction `2 ≤ coheight x = 1` directly from that lemma;
+the remaining gap of this chain is Milne Lemma 3.3
+(`indeterminacy_pure_codim_one_into_grpScheme`).
 
 This is the iter-180 Lane G refactor's split: the `CodimOneFree f`
 conjunct is split off into a self-contained named lemma with the
@@ -254,7 +257,8 @@ private theorem av_codimOneFree_of_indeterminacy
     {A : Over (Spec (.of kbar))}
     [GrpObj A] [IsProper A.hom] [Smooth A.hom]
     [GeometricallyIrreducible A.hom]
-    (f : X.left.RationalMap A.left) :
+    (f : X.left.RationalMap A.left)
+    (hover : f.compHom A.hom = X.hom.toRationalMap) :
     CodimOneFree f := by
   -- **Iter-182 structural refactor.** Materialise the variety-package
   -- instances on `A.left` needed by Milne Lemma 3.3
@@ -268,7 +272,7 @@ private theorem av_codimOneFree_of_indeterminacy
   haveI : LocallyOfFiniteType A.hom := inferInstance
   -- Apply Milne Lemma 3.3: the indeterminacy locus is empty or every point
   -- of it lies in the closure of a codim-1 generic point.
-  have hdisj := indeterminacy_pure_codim_one_into_grpScheme f
+  have hdisj := indeterminacy_pure_codim_one_into_grpScheme f hover
   intro x hx
   rcases hdisj with hempty | hpure
   · -- **Branch 1 (CLOSED).** Empty indeterminacy locus: every point of `X`
@@ -285,7 +289,7 @@ private theorem av_codimOneFree_of_indeterminacy
     -- locus, so `x ∈ f.domain`. (The pure-codim-1 disjunct of Milne 3.3 is
     -- not needed once the codim-≥2 conclusion is available.)
     by_contra hnotin
-    have h2 := indeterminacy_codimGe2_of_smooth_of_complete f x hnotin
+    have h2 := indeterminacy_codimGe2_of_smooth_of_complete f hover x hnotin
     rw [hx] at h2
     norm_num at h2
 
@@ -325,10 +329,11 @@ private theorem av_isIntegral_and_codimOneFree
     {A : Over (Spec (.of kbar))}
     [GrpObj A] [IsProper A.hom] [Smooth A.hom]
     [GeometricallyIrreducible A.hom]
-    (f : X.left.RationalMap A.left) :
+    (f : X.left.RationalMap A.left)
+    (hover : f.compHom A.hom = X.hom.toRationalMap) :
     IsIntegral A.left ∧ CodimOneFree f :=
   ⟨av_isIntegral_of_smooth_geomIrred A,
-    av_codimOneFree_of_indeterminacy f⟩
+    av_codimOneFree_of_indeterminacy f hover⟩
 
 /-- **Milne Theorem 3.2 — a rational map from a nonsingular variety to an
 abelian variety extends, uniquely, to a regular morphism.**
@@ -358,8 +363,8 @@ Milne's two-line argument:
    `indeterminacy_pure_codim_one_into_grpScheme` (Milne Lemma 3.3 — pure
    codim 1 or empty indeterminacy for grpScheme targets) with the codim-≥2
    half of Milne 3.1 (`indeterminacy_codimGe2_of_smooth_of_complete`,
-   the named-`sorry` lemma in `Albanese/CodimOneExtension.lean` that now
-   carries the remaining math content).
+   proved axiom-clean in `Albanese/CodimOneExtension.lean`; the remaining
+   math content of this chain is Milne Lemma 3.3).
 
 3. Materialize the remaining variety-package instances on `A.left`:
    `IsSeparated A.hom` from `IsProper A.hom` (Mathlib instance),
@@ -378,16 +383,17 @@ theorem extend_to_av
     {A : Over (Spec (.of kbar))}
     [GrpObj A] [IsProper A.hom] [Smooth A.hom]
     [GeometricallyIrreducible A.hom]
-    (f : X.left.RationalMap A.left) :
+    (f : X.left.RationalMap A.left)
+    (hover : f.compHom A.hom = X.hom.toRationalMap) :
     ∃! (g : X.left ⟶ A.left), g.toRationalMap = f := by
   -- Step 3: materialise the missing variety-package instances on A.left.
   haveI : IsSeparated A.hom := inferInstance
   haveI : LocallyOfFiniteType A.hom := inferInstance
-  obtain ⟨hint, hcod⟩ := av_isIntegral_and_codimOneFree f
+  obtain ⟨hint, hcod⟩ := av_isIntegral_and_codimOneFree f hover
   haveI := hint
   haveI : IsReduced A.left := inferInstance
   -- Steps 1–2: apply Milne Theorem 3.1 with the `CodimOneFree` discharged.
-  exact extend_of_codimOneFree_of_smooth f hcod
+  exact extend_of_codimOneFree_of_smooth f hover hcod
 
 end RationalMap
 
