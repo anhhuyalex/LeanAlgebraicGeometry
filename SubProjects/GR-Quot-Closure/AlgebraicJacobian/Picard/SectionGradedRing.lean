@@ -1663,6 +1663,18 @@ private lemma tensorObjUnitIso_eq (G : X.Modules) :
     MonoidalCategory.tensorIso_hom, Iso.symm_hom]
   rw [← hnat, hlu]
   simp only [Category.assoc]
+  -- v4.31: the leading `⊗ₘ`-vs-whisker pair is `tensorHom_def'` (a theorem, not a defeq in the
+  -- transported structure).  `simp`/`erw` congruence cannot descend into the goal (type-incorrect
+  -- at `instances` transparency via `X.ringCatSheaf.obj`), so restate by `show` (checked at
+  -- default transparency) to expose the `⊗ₘ` head syntactically, then rewrite at top level.
+  show (((unitModule X).sheafificationCounitIso.inv ⊗ₘ G.sheafificationCounitIso.inv) ≫
+      (Localization.Monoidal.μ (sheafificationMon X) (sheafificationW X) (localizationUnitIso X)
+        ((toPresheafOfModules X).obj (unitModule X)) ((toPresheafOfModules X).obj G)).hom) ≫
+      (sheafification.map (MonoidalCategory.leftUnitor (C := MonoidalPresheaf X)
+          ((toPresheafOfModules X).obj G)).hom ≫
+        G.sheafificationCounitIso.hom) = _
+  rw [MonoidalCategory.tensorHom_def']
+  simp only [Category.assoc]
   rfl
 
 set_option backward.isDefEq.respectTransparency false in
