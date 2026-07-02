@@ -20,6 +20,9 @@ verified free of `Cohomology/Cech*` and the 02KH flat-base-change engine):
 
 Blueprint chapters for the same cone live under `blueprint/src/chapters/` (dangling
 cross-chapter `\cref`s demoted to `\texttt` per the Albanese extraction precedent).
+The 3 isolated DAG nodes (`def:Scheme_IsCechAcyclicCover` + 2 theorems) are pruning
+artifacts — their only consumers live in the pruned `Cohomology_MayerVietoris`
+chapter; they are kept so the files stay byte-identical to AJC for merge-back.
 
 ## Status / known sorries
 
