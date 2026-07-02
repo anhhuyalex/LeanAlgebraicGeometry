@@ -142,17 +142,27 @@ iter-176+ proof skeleton:
    `AlgebraicGeometry.ext_of_isDominant` and reducedness of `X` they agree
    everywhere. -/
 
-/-- **Mathlib gap (Stacks `034V`/`02G4`)**: a scheme smooth over a
-reduced base is reduced. Used to derive `IsReduced A.left` in
-`av_isIntegral_of_smooth_geomIrred` below. Typed sorry; the gap is
-the scheme-level packaging of the Stacks lemma.
-**Demoted from inline sorry per lean-auditor iter-196 must-fix**: isolates
-the `sorryAx` to a single named declaration. -/
+/-- **A scheme smooth over an algebraically closed field is reduced**
+(Stacks `056S`/`033B` over `k̄`). Used to derive `IsReduced A.left` in
+`av_isIntegral_of_smooth_geomIrred` below.
+
+**CLOSED (run 0002, T3 session 0021)** — no longer a typed sorry. The former
+Mathlib gap is discharged by the project-side
+`isReduced_of_smooth_of_isAlgClosed` in `Albanese/CodimOneExtension.lean`
+(§3.B Step B.e): stalks are localisations of standard-smooth `k̄`-algebras,
+whose maximal-ideal localisations are regular local (Step B.d′) hence domains
+(`RingTheory.CohenMacaulay.isDomain_of_regularLocal`, Stacks `00NP` in
+`AuslanderBuchsbaum.lean`), and reducedness is checked at maximal
+localisations then transported to stalks and glued. The hypothesis is
+accordingly strengthened from `[Field kbar]` to `[Field kbar] [IsAlgClosed
+kbar]` (its unique consumer `av_isIntegral_of_smooth_geomIrred` already
+assumes algebraic closure). Axiom-clean. -/
 private theorem isReduced_of_smooth_over_field
-    {kbar : Type u} [Field kbar]
+    {kbar : Type u} [Field kbar] [IsAlgClosed kbar]
     (A : Over (Spec (.of kbar)))
     [Smooth A.hom] :
-    IsReduced A.left := sorry
+    IsReduced A.left :=
+  isReduced_of_smooth_of_isAlgClosed A
 
 /-- **Iter-180 Lane G split (1/2): integrality of the abelian variety.**
 
@@ -171,15 +181,11 @@ the underlying scheme `A.left` is integral.
 3. `IrreducibleSpace + IsReduced ⟹ IsIntegral` via Mathlib's
    `isIntegral_of_irreducibleSpace_of_isReduced`.
 
-The substantive Mathlib gap is the implication `Smooth A.hom ⟹ IsReduced A.left`
-(at the project's pinned commit, Mathlib's `Smooth` morphism class does not
-ship a `IsReduced` consequence for the source over a reduced base). The
-gap is isolated to the single `IsReduced A.left` hypothesis in the proof,
-which is left as a `sorry`; all other steps close axiom-clean.
-
-When Mathlib ships the bridge (Stacks `034V` / `02G4` over a field
-direction), the single `sorry` discharges and this helper becomes
-axiom-clean automatically.
+The implication `Smooth A.hom ⟹ IsReduced A.left` — formerly the substantive
+Mathlib gap of this helper — is now supplied project-side by
+`isReduced_of_smooth_over_field` (backed by
+`isReduced_of_smooth_of_isAlgClosed` in `Albanese/CodimOneExtension.lean`),
+so this helper is **axiom-clean** as of run 0002, T3 session 0021.
 
 This is the iter-180 Lane G refactor of the iter-179 helper
 `av_isIntegral_and_codimOneFree`, splitting its `IsIntegral A.left`
@@ -199,9 +205,9 @@ private theorem av_isIntegral_of_smooth_geomIrred
   -- Step 2: geometric irreducibility over a singleton base gives `IrreducibleSpace`.
   haveI : IrreducibleSpace A.left :=
     GeometricallyIrreducible.irreducibleSpace_of_subsingleton A.hom
-  -- Step 3 (Mathlib gap): smoothness over a field forces reducedness of the
-  -- source. Named typed-sorry helper `isReduced_of_smooth_over_field` isolates
-  -- the `sorryAx` per lean-auditor iter-196 must-fix.
+  -- Step 3: smoothness over the algebraically closed base field forces
+  -- reducedness of the source (`isReduced_of_smooth_over_field`, closed in
+  -- run 0002 session 0021 via `isReduced_of_smooth_of_isAlgClosed`).
   haveI : IsReduced A.left := isReduced_of_smooth_over_field A
   exact isIntegral_of_irreducibleSpace_of_isReduced A.left
 
@@ -312,7 +318,7 @@ for `extend_to_av`.**
 
 The conjunction of the two named iter-180 Lane G splits:
 `av_isIntegral_of_smooth_geomIrred` (the `IsIntegral A.left` conjunct, with
-its `IsReduced A.left` Mathlib gap isolated) and
+its former `IsReduced A.left` Mathlib gap now closed axiom-clean) and
 `av_codimOneFree_of_indeterminacy` (the `CodimOneFree f` conjunct, with its
 codim-≥2-from-Milne-3.1 gap isolated).
 

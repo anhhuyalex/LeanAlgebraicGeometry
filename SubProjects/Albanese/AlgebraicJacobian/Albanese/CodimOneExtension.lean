@@ -1087,6 +1087,86 @@ theorem isRegularLocalRing_localizationAtPrime_of_isStandardSmooth_of_isAlgClose
     IsScalarTower.algebraMap_eq k (S ⧸ m) m.ResidueField]
   exact h2.comp h1
 
+/-- **Lane COE Step B.e — standard-smooth algebras over an algebraically closed
+field are reduced (Stacks `033B`/`00TT` corollary).** For a standard-smooth
+algebra `S` over an algebraically closed field `k`, the ring `S` is reduced.
+
+Route: reducedness is checked at localisations at maximal ideals
+(`isReduced_ofLocalizationMaximal`); each localisation `Sₘ` is a regular local
+ring by the Step B.d′ closed-point theorem
+(`isRegularLocalRing_localizationAtPrime_of_isStandardSmooth_of_isAlgClosed`),
+regular local rings are domains
+(`RingTheory.CohenMacaulay.isDomain_of_regularLocal`, the project-local
+Stacks `00NP` from `AuslanderBuchsbaum.lean`), and domains are reduced.
+The trivial-ring case is reduced vacuously. Axiom-clean. -/
+theorem isReduced_of_isStandardSmooth_of_isAlgClosed
+    (k : Type u) [Field k] [IsAlgClosed k]
+    (S : Type u) [CommRing S] [Algebra k S]
+    [Algebra.IsStandardSmooth k S] :
+    _root_.IsReduced S := by
+  cases subsingleton_or_nontrivial S with
+  | inl _ => exact ⟨fun x _ => Subsingleton.elim x 0⟩
+  | inr _ =>
+    refine isReduced_ofLocalizationMaximal S (fun m hm => ?_)
+    haveI := hm.isPrime
+    haveI : IsRegularLocalRing (Localization.AtPrime m) :=
+      isRegularLocalRing_localizationAtPrime_of_isStandardSmooth_of_isAlgClosed
+        (k := k) m hm
+    haveI : IsDomain (Localization.AtPrime m) :=
+      RingTheory.CohenMacaulay.isDomain_of_regularLocal _
+    infer_instance
+
+/-- **Stacks `056S`/`033B` over an algebraically closed field: a scheme smooth
+over `Spec k̄` is reduced.** This discharges the former Mathlib-gap helper
+`isReduced_of_smooth_over_field` in `Thm32RationalMapExtension.lean` (the
+`IsReduced A.left` input to `av_isIntegral_of_smooth_geomIrred`).
+
+Route: reducedness is stalk-local (`isReduced_of_isReduced_stalk`). At each
+point `z`, Stage 2 (`exists_isStandardSmooth_at_of_smooth`) produces an affine
+chart `V ∋ z` over an affine open `U ⊆ Spec k̄` with
+`Γ(X.left, V)` standard-smooth over `Γ(Spec k̄, U)`; the base identification
+`Γ(Spec k̄, U) ≃+* k̄` (`gammaSpecField_ringEquiv`, `U` is nonempty since it
+contains the image of `z`) transports standard-smoothness to a `k̄`-algebra
+structure (`RingHom.isStandardSmooth_respectsIso`), Step B.e above gives
+`IsReduced Γ(X.left, V)`, and the stalk — the localisation of `Γ(X.left, V)`
+at the prime of `z` (`IsAffineOpen.isLocalization_stalk`) — is reduced by
+`isReduced_localizationPreserves`.
+
+Unlike the still-open regularity keystone `isRegularLocalRing_stalk_of_smooth`
+(blocked on Stacks `00OF` at non-closed points), reducedness only needs the
+maximal-ideal localisations of the chart ring, so the closed-point theorem
+B.d′ suffices at EVERY point `z`. Axiom-clean. -/
+theorem isReduced_of_smooth_of_isAlgClosed
+    {kbar : Type u} [Field kbar] [IsAlgClosed kbar]
+    (X : Over (Spec (.of kbar)))
+    [Smooth X.hom] :
+    IsReduced X.left := by
+  haveI hstalk : ∀ z : X.left.toPresheafedSpace,
+      _root_.IsReduced (X.left.presheaf.stalk z) := by
+    intro z
+    -- Stage 2: standard-smooth chart at z, RingHom form.
+    obtain ⟨U, hU, V, hV, hzV, e, hSS⟩ := exists_isStandardSmooth_at_of_smooth X z
+    -- Base identification: U contains the image of z, so Γ(Spec k̄, U) ≃+* k̄.
+    let ε : kbar ≃+* Γ(Spec (.of kbar), U) :=
+      (gammaSpecField_ringEquiv kbar U ⟨⟨_, e hzV⟩⟩).symm
+    -- Transport standard-smoothness along the base iso.
+    have hSS' : ((X.hom.appLE U V e).hom.comp ε.toRingHom).IsStandardSmooth :=
+      RingHom.isStandardSmooth_respectsIso.2 _ ε hSS
+    letI : Algebra kbar Γ(X.left, V) :=
+      ((X.hom.appLE U V e).hom.comp ε.toRingHom).toAlgebra
+    haveI : Algebra.IsStandardSmooth kbar Γ(X.left, V) := hSS'.toAlgebra
+    -- Sections over V are reduced (Step B.e).
+    haveI hSred : _root_.IsReduced Γ(X.left, V) :=
+      isReduced_of_isStandardSmooth_of_isAlgClosed kbar Γ(X.left, V)
+    -- The stalk is a localisation of Γ(X.left, V); reducedness localises.
+    letI : Algebra Γ(X.left, V) (X.left.presheaf.stalk z) :=
+      TopCat.Presheaf.algebra_section_stalk X.left.presheaf ⟨z, hzV⟩
+    haveI : IsLocalization.AtPrime (X.left.presheaf.stalk z)
+        (hV.primeIdealOf ⟨z, hzV⟩).asIdeal := hV.isLocalization_stalk ⟨z, hzV⟩
+    exact isReduced_localizationPreserves
+      (hV.primeIdealOf ⟨z, hzV⟩).asIdeal.primeCompl (X.left.presheaf.stalk z) hSred
+  exact isReduced_of_isReduced_stalk X.left
+
 /-! ## §3.C. Project-local Mathlib supplement — Matsumura regular-sequence bridge (iter-203, Step A1)
 
 Lane COE Step A1 substrate (Matsumura *Commutative Ring Theory* Thm 14.2 /
