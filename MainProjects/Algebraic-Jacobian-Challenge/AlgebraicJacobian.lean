@@ -64,6 +64,7 @@ import AlgebraicJacobian.Picard.RelPicFunctor
 import AlgebraicJacobian.Picard.FGAPicRepresentability
 import AlgebraicJacobian.Picard.IdentityComponent
 import AlgebraicJacobian.Picard.TangentSpaceDualNumbers
+import AlgebraicJacobian.Picard.TangentSpaceSchemePoints
 import AlgebraicJacobian.Picard.Pic0AbelianVariety
 import AlgebraicJacobian.Picard.FlatteningStratification
 import AlgebraicJacobian.Picard.QuotScheme

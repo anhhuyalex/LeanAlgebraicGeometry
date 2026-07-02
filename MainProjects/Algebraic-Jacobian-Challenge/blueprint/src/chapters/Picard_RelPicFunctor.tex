@@ -299,6 +299,27 @@ one-to-one Lean correspondence; all are proved directly in Lean.
   \lean{AlgebraicGeometry.Scheme.PicSharp.pInverseUnique}
   \uses{lem:tensorobj_lift_onproduct, lem:tensorobj_unit_iso,
     lem:tensorobj_comm_iso, lem:tensorobj_assoc_iso}
+  % SOURCE: [Stacks Project], Tag 0B8K (Lemma, \S 17.25 ``Invertible modules'',
+  % Modules on Ringed Spaces) (read from references/stacks-modules.tex, L4066-L4079).
+  % SOURCE QUOTE:
+  % "\begin{lemma}
+  % \label{lemma-invertible}
+  % Let $(X, \mathcal{O}_X)$ be a ringed space. Let $\mathcal{L}$
+  % be an $\mathcal{O}_X$-module. Equivalent are
+  % \begin{enumerate}
+  % \item $\mathcal{L}$ is invertible, and
+  % \item there exists an $\mathcal{O}_X$-module $\mathcal{N}$
+  % such that
+  % $\mathcal{L} \otimes_{\mathcal{O}_X} \mathcal{N} \cong \mathcal{O}_X$.
+  % \end{enumerate}
+  % In this case $\mathcal{L}$ is locally a direct summand of a finite free
+  % $\mathcal{O}_X$-module and the module $\mathcal{N}$ in (2) is isomorphic to
+  % $\SheafHom_{\mathcal{O}_X}(\mathcal{L}, \mathcal{O}_X)$.
+  % \end{lemma}"
+  \textit{Source: [Stacks Project], Tag 0B8K (\S 17.25, invertible modules): any
+  two \(\otimes\)-inverses of \(\mathcal{L}\) are each isomorphic to
+  \(\SheafHom_{\mathcal{O}_X}(\mathcal{L}, \mathcal{O}_X)\), hence to one
+  another.}
   Let \(M, N, N'\) be relative line bundles, and suppose there are
   isomorphisms
   \[
@@ -382,6 +403,255 @@ one-to-one Lean correspondence; all are proved directly in Lean.
   the same class up to the isomorphism \(L \cong M\), hence
   \(L^{\mathrm{inv}} \cong M^{\mathrm{inv}}\), so \([L^{\mathrm{inv}}]\) is
   independent of the representative.
+\end{proof}
+
+The realized carrier of \cref{lem:rel_pic_sharp_groupoid} is the
+locally-trivial iso-class set modulo the \(H_T\)-coset relation \(\sim\), in
+its multiplicative form
+\[
+  L \sim L' \quad\Longleftrightarrow\quad
+    \exists\, N \text{ locally trivial on } T,\;
+    L \cong \pi_T^* N \otimes L' .
+\]
+Keeping the tensor inverse out of the definition --- it appears only in the
+symmetry and negation steps --- confines the bridge
+\(\text{locally trivial} \Rightarrow \text{invertible}\) to those two
+places. The following helpers assemble the quotient directly: the relation
+itself, the iso-class inclusion bridge, its three setoid axioms, the setoid it
+defines, the middle-four interchange, the well-definedness of addition, and
+the compatibility of negation. Each is recorded here for the one-to-one Lean
+correspondence.
+
+\begin{definition}\leanok
+[The \(H_T\)-coset relation on locally-trivial bundles]
+  \label{lem:relpic_rel}
+  \lean{AlgebraicGeometry.Scheme.PicSharp.relPicRel}
+  \uses{def:line_bundle_on_product, def:pullback_along_projection}
+  On the locally-trivial carrier \(\mathrm{OnProduct}(\pi_C, \pi_T)\) of
+  \cref{def:line_bundle_on_product}, define, for locally-trivial \(L, L'\) on
+  \(C \times_k T\), the relation
+  \[
+    L \sim L' \quad\Longleftrightarrow\quad
+      \exists\, N \text{ locally trivial on } T,\;
+      L \;\cong\; \pi_T^* N \otimes L' ,
+  \]
+  where \(\pi_T^* N = \mathtt{pullbackAlongProjection}\,\pi_C\,\pi_T\,N\) is the
+  pullback of \cref{def:pullback_along_projection}. This \emph{multiplicative
+  form} is the left-coset relation of \(H_T := \pi_T^*\Pic(T)\): it holds exactly
+  when \([L]\) and \([L']\) differ by an element of \(H_T\) (equivalently
+  \(L \otimes L'^{-1} \cong \pi_T^* N\)). It is coarser than the absolute
+  iso-class relation \(\mathtt{RelPicPresheaf.preimage\_subgroup}\).
+\end{definition}
+
+\begin{lemma}\leanok
+[Iso-class inclusion into the \(H_T\)-coset relation]
+  \label{lem:relpic_rel_of_iso}
+  \lean{AlgebraicGeometry.Scheme.PicSharp.relPicRel_of_iso}
+  \uses{lem:relpic_rel, def:pullback_along_projection, lem:pullback_unit_iso, lem:tensorobj_unit_iso}
+  If \(L\) and \(L'\) have isomorphic underlying bundles, then \(L \sim L'\); in
+  particular \(\sim\) is coarser than the absolute iso-class relation, which is
+  what lets the objectwise coherence isomorphisms descend to the quotient.
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:relpic_rel, lem:pullback_unit_iso, lem:tensorobj_unit_iso}
+  \leanok
+  Take \(N = \mathcal{O}_T\). Then
+  \[
+    \pi_T^* \mathcal{O}_T \otimes L'
+      \cong \mathcal{O}_{C \times_k T} \otimes L'
+      \cong L' \cong L ,
+  \]
+  the first isomorphism by the pullback--unit isomorphism
+  \cref{lem:pullback_unit_iso}, the second by the left unitor
+  \cref{lem:tensorobj_unit_iso}, and the last by hypothesis. Hence
+  \(L \cong \pi_T^* \mathcal{O}_T \otimes L'\), so \(L \sim L'\).
+\end{proof}
+
+\begin{lemma}[Reflexivity of the \(H_T\)-relation]\leanok
+  \label{lem:relpic_setoid_refl}
+  \lean{AlgebraicGeometry.Scheme.PicSharp.relPicRel_refl}
+  \uses{lem:relpic_rel, lem:relpic_rel_of_iso}
+  For every locally-trivial \(L\) on \(C \times_k T\) one has \(L \sim L\).
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:relpic_rel_of_iso}
+  Immediate from \cref{lem:relpic_rel_of_iso} applied to the identity
+  isomorphism \(L \cong L\). Concretely, taking \(N = \mathcal{O}_T\) gives
+  \(\pi_T^* \mathcal{O}_T \otimes L \cong \mathcal{O}_{C \times_k T} \otimes L
+  \cong L\), so \(L \sim L\).
+\leanok
+\end{proof}
+
+\begin{lemma}[Symmetry of the \(H_T\)-relation]\leanok
+  \label{lem:relpic_setoid_symm}
+  \lean{AlgebraicGeometry.Scheme.PicSharp.relPicRel_symm}
+  \uses{lem:relpic_rel, lem:tensorobj_inverse_invertible, lem:tensorobj_assoc_iso, lem:tensorobj_comm_iso, lem:tensorobj_unit_iso, lem:pullback_tensor_iso_loctriv, lem:pullback_unit_iso}
+  If \(L \sim L'\) then \(L' \sim L\).
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:relpic_rel, lem:tensorobj_inverse_invertible, lem:tensorobj_assoc_iso, lem:tensorobj_comm_iso, lem:tensorobj_unit_iso, lem:pullback_tensor_iso_loctriv, lem:pullback_unit_iso}
+  Suppose \(L \cong \pi_T^* N \otimes L'\) with \(N\) locally trivial, and let
+  \(N^{-1}\) be its tensor inverse on \(T\)
+  (\cref{lem:tensorobj_inverse_invertible}), again locally trivial. Tensoring
+  the hypothesis by \(\pi_T^*(N^{-1})\) and multiplying the pullbacks through
+  the locally-trivial comparison isomorphism
+  \cref{lem:pullback_tensor_iso_loctriv},
+  \[
+    \pi_T^*(N^{-1}) \otimes L
+      \cong \pi_T^*(N^{-1}) \otimes \pi_T^* N \otimes L'
+      \cong \pi_T^*(N^{-1} \otimes N) \otimes L'
+      \cong \pi_T^* \mathcal{O}_T \otimes L'
+      \cong L' ,
+  \]
+  after reassociating and braiding with
+  \cref{lem:tensorobj_assoc_iso,lem:tensorobj_comm_iso,lem:tensorobj_unit_iso}
+  and applying the pullback--unit isomorphism \cref{lem:pullback_unit_iso}.
+  Hence \(L' \cong \pi_T^*(N^{-1}) \otimes L\) with \(N^{-1}\) locally trivial,
+  so \(L' \sim L\).
+\leanok
+\end{proof}
+
+\begin{lemma}[Transitivity of the \(H_T\)-relation]\leanok
+  \label{lem:relpic_setoid_trans}
+  \lean{AlgebraicGeometry.Scheme.PicSharp.relPicRel_trans}
+  \uses{lem:relpic_rel, lem:pullback_tensor_iso_loctriv, lem:tensorobj_assoc_iso, lem:tensorobj_preserves_locally_trivial}
+  If \(L \sim L'\) and \(L' \sim L''\) then \(L \sim L''\).
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:relpic_rel, lem:pullback_tensor_iso_loctriv, lem:tensorobj_assoc_iso, lem:tensorobj_preserves_locally_trivial}
+  Suppose \(L \cong \pi_T^* N \otimes L'\) and \(L' \cong \pi_T^* N' \otimes L''\)
+  with \(N, N'\) locally trivial. Substituting and reassociating with the
+  associator \cref{lem:tensorobj_assoc_iso},
+  \[
+    L \cong \pi_T^* N \otimes (\pi_T^* N' \otimes L'')
+      \cong (\pi_T^* N \otimes \pi_T^* N') \otimes L''
+      \cong \pi_T^*(N \otimes N') \otimes L'' ,
+  \]
+  the last isomorphism by the locally-trivial comparison
+  \cref{lem:pullback_tensor_iso_loctriv}. Since \(N \otimes N'\) is locally
+  trivial (\cref{lem:tensorobj_preserves_locally_trivial}), \(L \sim L''\).
+\leanok
+\end{proof}
+
+\begin{lemma}\leanok
+[Middle-four interchange for \(\otimes\)]
+  \label{lem:tensor_middle_four}
+  \lean{AlgebraicGeometry.Scheme.PicSharp.tensorMiddleFour}
+  \uses{lem:tensorobj_assoc_iso, lem:tensorobj_comm_iso, def:tensorobjisoofiso}
+  For arbitrary modules \(A, B, C, D\) on a scheme \(X\) there is a canonical
+  isomorphism
+  \[
+    (A \otimes B) \otimes (C \otimes D)
+      \;\cong\;
+    (A \otimes C) \otimes (B \otimes D)
+  \]
+  that interchanges the two inner factors. It is the coherence isomorphism used
+  to show that the objectwise tensor product descends to a well-defined addition
+  on the relative Picard quotient (\cref{lem:relpic_add_welldef}).
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:tensorobj_assoc_iso, lem:tensorobj_comm_iso, def:tensorobjisoofiso}
+  \leanok
+  The isomorphism is assembled entirely from the unconditional associator
+  \cref{lem:tensorobj_assoc_iso} and the braiding \cref{lem:tensorobj_comm_iso},
+  applied to a factor through the bifunctoriality of \(\otimes\)
+  (\cref{def:tensorobjisoofiso}); no coherence pentagon is invoked.
+  Reassociating and braiding the middle pair,
+  \[
+    (A \otimes B) \otimes (C \otimes D)
+      \cong A \otimes \bigl(B \otimes (C \otimes D)\bigr)
+      \cong A \otimes \bigl((B \otimes C) \otimes D\bigr)
+      \cong A \otimes \bigl((C \otimes B) \otimes D\bigr)
+      \cong A \otimes \bigl(C \otimes (B \otimes D)\bigr)
+      \cong (A \otimes C) \otimes (B \otimes D) ,
+  \]
+  where the first, third-to-last, and last isomorphisms are instances of the
+  associator, the middle isomorphism braids \(B \otimes C \cong C \otimes B\)
+  inside the fixed outer factors, and each step past the first is transported
+  through \(\otimes\) by \cref{def:tensorobjisoofiso}.
+\end{proof}
+
+\begin{lemma}[Addition is well defined on the \(H_T\)-quotient]\leanok
+  \label{lem:relpic_add_welldef}
+  \lean{AlgebraicGeometry.Scheme.PicSharp.relPicRel_add}
+  \uses{lem:relpic_rel, lem:tensor_middle_four, lem:pullback_tensor_iso_loctriv, lem:tensorobj_assoc_iso, lem:tensorobj_comm_iso, lem:tensorobj_preserves_locally_trivial}
+  If \(L_1 \sim L_2\) and \(L_1' \sim L_2'\) then
+  \(L_1 \otimes L_1' \sim L_2 \otimes L_2'\); hence the descended tensor product
+  \(+\) is well defined on the quotient
+  \(\mathrm{OnProduct}(\pi_C, \pi_T) / {\sim}\).
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:relpic_rel, lem:tensor_middle_four, lem:pullback_tensor_iso_loctriv, lem:tensorobj_assoc_iso, lem:tensorobj_comm_iso, lem:tensorobj_preserves_locally_trivial}
+  Suppose \(L_1 \cong \pi_T^* N \otimes L_2\) and
+  \(L_1' \cong \pi_T^* N' \otimes L_2'\) with \(N, N'\) locally trivial. By the
+  middle-four interchange
+  \((A \otimes B) \otimes (C \otimes D) \cong (A \otimes C) \otimes (B \otimes D)\)
+  of \cref{lem:tensor_middle_four}, assembled from the associator and the
+  braiding \cref{lem:tensorobj_assoc_iso,lem:tensorobj_comm_iso},
+  \[
+    L_1 \otimes L_1'
+      \cong (\pi_T^* N \otimes L_2) \otimes (\pi_T^* N' \otimes L_2')
+      \cong (\pi_T^* N \otimes \pi_T^* N') \otimes (L_2 \otimes L_2')
+      \cong \pi_T^*(N \otimes N') \otimes (L_2 \otimes L_2') ,
+  \]
+  the last step by the locally-trivial comparison
+  \cref{lem:pullback_tensor_iso_loctriv}. As \(N \otimes N'\) is locally
+  trivial (\cref{lem:tensorobj_preserves_locally_trivial}),
+  \(L_1 \otimes L_1' \sim L_2 \otimes L_2'\).
+\leanok
+\end{proof}
+
+\begin{definition}\leanok
+[The relative Picard carrier setoid]
+  \label{lem:relpic_setoid}
+  \lean{AlgebraicGeometry.Scheme.PicSharp.relPicSetoid}
+  \uses{lem:relpic_rel, lem:relpic_setoid_refl, lem:relpic_setoid_symm, lem:relpic_setoid_trans}
+  The \(H_T\)-coset relation \(\sim\) of \cref{lem:relpic_rel} is an equivalence
+  relation on \(\mathrm{OnProduct}(\pi_C, \pi_T)\), by reflexivity
+  \cref{lem:relpic_setoid_refl}, symmetry \cref{lem:relpic_setoid_symm}, and
+  transitivity \cref{lem:relpic_setoid_trans}. The resulting setoid presents the
+  relative Picard quotient \(\Pic(C \times_k T) / H_T\), distinct from the
+  absolute iso-class setoid \(\mathtt{RelPicPresheaf.preimage\_subgroup}\).
+\end{definition}
+
+\begin{lemma}\leanok
+[Negation is compatible with the \(H_T\)-relation]
+  \label{lem:relpic_rel_neg}
+  \lean{AlgebraicGeometry.Scheme.PicSharp.relPicRel_neg}
+  \uses{lem:relpic_rel, lem:tensorobj_inverse_invertible, lem:tensorobj_assoc_iso, lem:tensorobj_comm_iso, lem:tensorobj_unit_iso, lem:pullback_tensor_iso_loctriv, lem:pullback_unit_iso, lem:rel_pic_sharp_inverse_unique}
+  If \(L \sim M\), then their chosen tensor inverses satisfy \(L^{-1} \sim
+  M^{-1}\). Hence the descended negation \([L] \mapsto [L^{-1}]\) is well defined
+  on the quotient \(\mathrm{OnProduct}(\pi_C, \pi_T) / {\sim}\).
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:relpic_rel, lem:tensorobj_inverse_invertible, lem:tensorobj_assoc_iso, lem:tensorobj_comm_iso, lem:tensorobj_unit_iso, lem:pullback_tensor_iso_loctriv, lem:pullback_unit_iso, lem:rel_pic_sharp_inverse_unique}
+  \leanok
+  Suppose \(L \cong \pi_T^* N \otimes M\) with \(N\) locally trivial, and let
+  \(N^{-1}\) be its tensor inverse (\cref{lem:tensorobj_inverse_invertible}),
+  again locally trivial. Write \(L^{-1}, M^{-1}\) for the chosen tensor inverses
+  of \(L, M\). We show \(\pi_T^*(N^{-1}) \otimes M^{-1}\) is a tensor inverse of
+  \(L\): tensoring the hypothesis with \(\pi_T^*(N^{-1}) \otimes M^{-1}\),
+  reassociating and braiding with
+  \cref{lem:tensorobj_assoc_iso,lem:tensorobj_comm_iso,lem:tensorobj_unit_iso},
+  and multiplying the pullbacks through the locally-trivial comparison
+  isomorphism \cref{lem:pullback_tensor_iso_loctriv},
+  \[
+    L \otimes \bigl(\pi_T^*(N^{-1}) \otimes M^{-1}\bigr)
+      \cong \pi_T^*(N \otimes N^{-1}) \otimes (M \otimes M^{-1})
+      \cong \pi_T^* \mathcal{O}_T \otimes \mathcal{O}_{C \times_k T}
+      \cong \mathcal{O}_{C \times_k T} ,
+  \]
+  using \(M \otimes M^{-1} \cong \mathcal{O}\) and the pullback--unit
+  isomorphism \cref{lem:pullback_unit_iso}. By uniqueness of tensor inverses
+  (\cref{lem:rel_pic_sharp_inverse_unique}),
+  \(L^{-1} \cong \pi_T^*(N^{-1}) \otimes M^{-1}\), i.e.\ \(L^{-1} \sim M^{-1}\).
 \end{proof}
 
 \section{The relative Picard presheaf as a group-valued presheaf}
