@@ -7,6 +7,7 @@ import Mathlib
 import AlgebraicJacobian.RiemannRoch.WeilDivisor
 import AlgebraicJacobian.Albanese.CoheightBridge
 import AlgebraicJacobian.Albanese.AuslanderBuchsbaum
+import AlgebraicJacobian.Albanese.StandardSmoothDimension
 
 /-!
 # Codimension-1 indeterminacy extension (A.4.a)
@@ -987,6 +988,105 @@ noncomputable def gammaSpecField_ringEquiv (kbar : Type u) [Field kbar]
   subst h
   exact (Scheme.ΓSpecIso (.of kbar)).commRingCatIsoToRingEquiv
 
+/-- **Lane COE Step B.d — Stacks `00TT` at a rational closed point, algebra
+level (this iter).** For a standard-smooth algebra `S` over a field `k`, a
+maximal ideal `m ⊆ S` whose induced residue map `k → κ(m)` is bijective (the
+`k`-rational-point condition, automatic over an algebraically closed field by
+the Nullstellensatz), the localisation `Sₘ` is a regular local ring.
+
+This *closes sub-gap (ii.B) at closed points*: the proof combines
+* the iter-199 sub-gap (ii.A) cotangent computation
+  `finrank_cotangentSpace_of_bijective_algebraMap_residue`
+  (`finrank κ (m/m²) = n`, from formal smoothness + free Kähler differentials
+  of rank `n`), with
+* the new `StandardSmoothDimension.lean` dimension lower bound
+  `Algebra.IsStandardSmoothOfRelativeDimension.le_ringKrullDim_of_isLocalization_atPrime`
+  (`n ≤ ringKrullDim Sₘ`, via the polynomial-ring height computation and
+  Krull's height theorem — no transcendence-degree theory needed), through
+* the generic glue `IsRegularLocalRing.of_finrank_cotangentSpace_le_ringKrullDim`
+  (a Noetherian local ring with `dim_κ m/m² ≤ ringKrullDim` is regular).
+
+The consumer `isRegularLocalRing_stalk_of_smooth` still carries its `sorry`
+because its statement quantifies over *all* points `z`: at a non-closed point
+the residue field is a transcendental extension of `k̄` and the bijectivity
+hypothesis fails; localising this closed-point witness to a general point is
+Stacks `00OF` (localisations of regular local rings are regular), the one
+remaining genuine Mathlib gap of the pipeline. Axiom-clean. -/
+theorem isRegularLocalRing_localization_of_isStandardSmooth_of_bijective_residue
+    {k : Type u} [Field k]
+    {S : Type u} [CommRing S] [Nontrivial S] [Algebra k S]
+    [Algebra.IsStandardSmooth k S]
+    (m : Ideal S) (hm : m.IsMaximal)
+    (Sₘ : Type u) [CommRing Sₘ] [IsLocalRing Sₘ] [Algebra k Sₘ] [Algebra S Sₘ]
+    [IsScalarTower k S Sₘ] [IsLocalization.AtPrime Sₘ m]
+    (hbij : Function.Bijective (algebraMap k (IsLocalRing.ResidueField Sₘ))) :
+    IsRegularLocalRing Sₘ := by
+  haveI := hm.isPrime
+  -- Noetherian structure: standard-smooth ⟹ finite presentation ⟹ Noetherian
+  -- over the base field; localisation preserves Noetherianness.
+  haveI : IsNoetherianRing S := Algebra.FiniteType.isNoetherianRing k S
+  haveI : IsNoetherianRing Sₘ := IsLocalization.isNoetherianRing m.primeCompl Sₘ ‹_›
+  -- Extract the relative dimension n.
+  obtain ⟨n, hn⟩ :=
+    exists_isStandardSmoothOfRelativeDimension_of_isStandardSmooth (R := k) (S := S)
+  haveI := hn
+  -- Kähler package at the localisation (Stages 4, 5a, 5b).
+  haveI : Module.Free S (Ω[S⁄k]) := module_free_kaehlerDifferential_of_isStandardSmooth
+  haveI : Module.Free Sₘ (Ω[Sₘ⁄k]) :=
+    module_free_kaehlerDifferential_localization m.primeCompl Sₘ
+  have hrank : Module.rank Sₘ (Ω[Sₘ⁄k]) = n :=
+    rank_kaehlerDifferential_localization_eq_relativeDimension n m.primeCompl Sₘ
+  -- Formal smoothness of the localisation over k.
+  haveI : Algebra.FormallySmooth S Sₘ := Algebra.FormallySmooth.of_isLocalization m.primeCompl
+  haveI : Algebra.FormallySmooth k Sₘ := Algebra.FormallySmooth.comp k S Sₘ
+  -- (ii.A): cotangent finrank = n at the k-rational closed point.
+  have hcot := finrank_cotangentSpace_of_bijective_algebraMap_residue hbij n hrank
+  -- (ii.B): dimension lower bound n ≤ dim Sₘ.
+  have hdim :=
+    Algebra.IsStandardSmoothOfRelativeDimension.le_ringKrullDim_of_isLocalization_atPrime
+      (k := k) n m hm Sₘ
+  exact IsRegularLocalRing.of_finrank_cotangentSpace_le_ringKrullDim
+    (by rw [hcot]; exact_mod_cast hdim)
+
+/-- **Lane COE Step B.d′ — Stacks `00TT` at closed points over an algebraically
+closed field, unconditional form.** Over an algebraically closed base field the
+`k`-rationality hypothesis of Step B.d is automatic: for any maximal ideal
+`m ⊆ S` of the standard-smooth algebra `S`, the residue field `S ⧸ m` is a
+finite (Zariski's lemma, `finite_of_finite_type_of_isJacobsonRing`) hence
+algebraic extension of `k`, so `k → κ(m)` is bijective
+(`IsAlgClosed.algebraMap_bijective_of_isIntegral` composed with
+`Ideal.bijective_algebraMap_quotient_residueField`). Hence the local ring of a
+standard-smooth `k̄`-algebra at **every** closed point is regular. Stated for
+the model localisation `Localization.AtPrime m`; transport to an abstract
+localisation (e.g. a scheme stalk) via `IsRegularLocalRing.of_ringEquiv` along
+`IsLocalization.algEquiv`. Axiom-clean. -/
+theorem isRegularLocalRing_localizationAtPrime_of_isStandardSmooth_of_isAlgClosed
+    {k : Type u} [Field k] [IsAlgClosed k]
+    {S : Type u} [CommRing S] [Nontrivial S] [Algebra k S]
+    [Algebra.IsStandardSmooth k S]
+    (m : Ideal S) (hm : m.IsMaximal) :
+    IsRegularLocalRing (Localization.AtPrime m) := by
+  haveI := hm.isPrime
+  refine isRegularLocalRing_localization_of_isStandardSmooth_of_bijective_residue
+    (k := k) m hm (Localization.AtPrime m) ?_
+  -- Zariski's lemma: the residue field `S ⧸ m` is module-finite over `k`.
+  -- (The `Field` instance must be installed FIRST so all subsequent instance
+  -- searches on `S ⧸ m` share its semiring key.)
+  letI := Ideal.Quotient.field m
+  haveI : Algebra.FiniteType k (S ⧸ m) :=
+    Algebra.FiniteType.of_surjective (Ideal.Quotient.mkₐ k m) Ideal.Quotient.mk_surjective
+  haveI : Module.Finite k (S ⧸ m) := finite_of_finite_type_of_isJacobsonRing k (S ⧸ m)
+  haveI : Algebra.IsIntegral k (S ⧸ m) := Algebra.IsIntegral.of_finite k (S ⧸ m)
+  -- `k → S ⧸ m` is bijective since `k` is algebraically closed.
+  have h1 : Function.Bijective (algebraMap k (S ⧸ m)) :=
+    IsAlgClosed.algebraMap_bijective_of_isIntegral
+  -- `S ⧸ m → κ(m)` is bijective since `m` is maximal.
+  have h2 := m.bijective_algebraMap_quotient_residueField
+  rw [show algebraMap k (IsLocalRing.ResidueField (Localization.AtPrime m))
+      = (algebraMap (S ⧸ m) m.ResidueField).comp (algebraMap k (S ⧸ m)) from
+    IsScalarTower.algebraMap_eq k (S ⧸ m) m.ResidueField]
+  exact h2.comp h1
+
 /-! ## §3.C. Project-local Mathlib supplement — Matsumura regular-sequence bridge (iter-203, Step A1)
 
 Lane COE Step A1 substrate (Matsumura *Commutative Ring Theory* Thm 14.2 /
@@ -1320,27 +1420,31 @@ The 6-stage proof chain is now scaffolded as follows.
   `Subsingleton Ω[κ⁄R]`. Composed with the iter-198 6.B-RHS substrate
   it gives `finrank κ (CotangentSpace Sₘ) = n` axiom-clean — the
   cotangent input of the regularity criterion. Iter-199.
-* Stage 6 (Stacks `00OE`, the *residual* Mathlib gap iter-199):
-  one specific bridge remains unbuilt at commit `b80f227`:
-    (ii.B) **Smooth-algebra Krull-dimension formula (Stacks 00OE)**:
-        `ringKrullDim Sₘ = n` for a standard-smooth `R`-algebra of
-        relative dim `n`. Mathlib has
-        `IsLocalization.AtPrime.ringKrullDim_eq_height` but no bridge
-        from `IsStandardSmoothOfRelativeDimension` / the algebra-side
-        relative dim to either side of the formula. Project-side build:
-        ~200--300 LOC on `transcendenceDegree` + Noether normalisation.
-
-Once Stage 6 sub-gap (ii.B) closes upstream, the body of this helper closes
-axiom-clean via the closure pattern (sub-gap (ii.A) is already landed
-iter-199 via `finrank_cotangentSpace_of_formallySmooth_residue` /
-`…_of_bijective_algebraMap_residue`):
-   `have hcotN : finrank κ (CotangentSpace Sₘ) = n :=`
-     `finrank_cotangentSpace_of_bijective_algebraMap_residue _ n hRank`
-   `have hdimN : ringKrullDim Sₘ = n := (ii.B applied)`
-   `exact (IsRegularLocalRing.iff_finrank_cotangentSpace _).mpr (...)`
-Every downstream consumer
-(`smooth_codim_one_maximalIdeal_isPrincipal_and_ne_bot`,
-`localRing_dvr_of_codim_one`) inherits the closure automatically.
+* **Stage 6 sub-gap (ii.B) DISCHARGED (this iter)** — Smooth-algebra
+  Krull-dimension formula (Stacks 00OE), closed-point form: the new module
+  `Albanese/StandardSmoothDimension.lean` proves
+  `MvPolynomial.height_eq_natCard_of_isMaximal` (maximal ideals of finite
+  polynomial rings over a field have full height) and the lower bound
+  `Algebra.IsStandardSmoothOfRelativeDimension.le_ringKrullDim_of_isLocalization_atPrime`
+  (`n ≤ ringKrullDim Sₘ` at any maximal `m`) via Krull's height theorem —
+  no transcendence-degree theory needed. Combined with (ii.A) in
+  `isRegularLocalRing_localization_of_isStandardSmooth_of_bijective_residue`
+  (§3.B Step B.d) and its unconditional k̄-form
+  `isRegularLocalRing_localizationAtPrime_of_isStandardSmooth_of_isAlgClosed`
+  (B.d′), the **closed-point case of Stacks 00TT is now proved axiom-clean**:
+  the local ring of a standard-smooth `k̄`-algebra at every *maximal* ideal
+  is regular.
+* Stage 6 residual gap (the reason this helper still carries a `sorry`):
+  the statement quantifies over ALL points `z`, and at a **non-closed** `z`
+  the prime `primeIdealOf z` is not maximal: the residue field is a
+  transcendental extension of `k̄` (so (ii.A)'s bijectivity hypothesis
+  genuinely fails — indeed `finrank κ (CotangentSpace Sₘ) = ht z ≠ n` there),
+  and the closed-point witness must instead be **localised**: Stacks `00OF`
+  (localisations of regular local rings are regular, via Serre's homological
+  characterisation) is the one remaining genuine Mathlib gap. Every
+  downstream consumer (`smooth_codim_one_maximalIdeal_isPrincipal_and_ne_bot`,
+  `localRing_dvr_of_codim_one`) inherits the closure automatically once
+  00OF lands.
 
 Blueprint reference: `\cref{lem:smooth_to_regular_local_ring}` in
 `blueprint/src/chapters/Albanese_CodimOneExtension.tex` (also Stacks
@@ -1423,52 +1527,39 @@ private theorem isRegularLocalRing_stalk_of_smooth
           (IsLocalRing.ResidueField (X.left.presheaf.stalk z))
           (Ω[(X.left.presheaf.stalk z)⁄Γ(Spec (.of kbar), U)])) = n :=
     finrank_residueField_tensor_kaehlerDifferential_of_free_rank_eq n hRank
-  -- **Residual Stage 6 gap (iter-199 surface).** Sub-gaps (i) and (ii.A) are
-  -- now DISCHARGED axiom-clean above
-  -- (`exists_isStandardSmoothOfRelativeDimension_of_isStandardSmooth` and
-  -- `finrank_cotangentSpace_of_formallySmooth_residue` /
-  -- `…_of_bijective_algebraMap_residue` respectively). One genuine Mathlib
-  -- gap remains:
+  -- **Residual Stage 6 gap (this-iter surface).** Sub-gaps (i), (ii.A) AND
+  -- (ii.B) are now all DISCHARGED axiom-clean
+  -- (`exists_isStandardSmoothOfRelativeDimension_of_isStandardSmooth`,
+  -- `finrank_cotangentSpace_of_bijective_algebraMap_residue`, and the new
+  -- `Albanese/StandardSmoothDimension.lean` +
+  -- `isRegularLocalRing_localization_of_isStandardSmooth_of_bijective_residue`
+  -- / `isRegularLocalRing_localizationAtPrime_of_isStandardSmooth_of_isAlgClosed`
+  -- in §3.B, which together prove the **closed-point case** of this helper:
+  -- the local ring of a standard-smooth k̄-algebra at every MAXIMAL ideal is
+  -- regular).
   --
-  -- **Sub-gap (ii.B) — smooth-algebra Krull-dimension formula (Stacks 00OE).**
-  -- For a standard-smooth `R`-algebra of relative dim `n`, the localisation
-  -- `Sₘ` at any prime has Krull dimension equal to the *geometric* dimension
-  -- at the corresponding point, which for a closed point over alg-closed `R`
-  -- is `n`. Mathlib has `IsLocalization.AtPrime.ringKrullDim_eq_height`
-  -- (`ringKrullDim Sₘ = m.height`) but no bridge from `IsStandardSmooth` /
-  -- the algebra-side `relativeDimension` to either side of this equation.
-  -- Project-side build: ~200--300 LOC on top of Mathlib's
-  -- `transcendenceDegree` API + Noether normalisation chain
-  -- `(exists_finite_inj_algHom_of_fg`).
+  -- What remains for THIS statement (arbitrary `z`) is the **non-closed
+  -- point** case. There `(hV.primeIdealOf ⟨z, hzV⟩).asIdeal` is a non-maximal
+  -- prime: the residue field κ(z) has positive transcendence degree over k̄,
+  -- so (ii.A)'s bijectivity hypothesis genuinely fails (correctly so:
+  -- `finrank κ (CotangentSpace Sₘ) = ht z ≠ n` there — the conormal sequence
+  -- acquires the `Ω[κ(z)⁄k̄]` quotient). The classical route localises the
+  -- closed-point regularity witness:
   --
-  -- **Note (iter-199).** Promoting the (ii.A) helper to a usable in-body
-  -- `finrank κ (CotangentSpace Sₘ) = n` further requires either
-  --   (a) the closed-point-style typeclasses
-  --       `[Algebra.FormallySmooth (Γ U) (stalk z)]`,
-  --       `[Algebra.FormallySmooth (Γ U) (ResidueField (stalk z))]`,
-  --       `[Subsingleton Ω[ResidueField (stalk z)⁄(Γ U)]]`
-  --   (b) or the bundled-bijective hypothesis
-  --       `Bijective (algebraMap (Γ U) (ResidueField (stalk z)))`
-  -- which on a kbar-rational closed point reduces to the Nullstellensatz
-  -- identification `ResidueField (stalk z) = kbar`. For codim-1 points
-  -- (the actual consumer of `localRing_dvr_of_codim_one`) the residue
-  -- field is a transcendence-degree-1 extension of kbar and the
-  -- closed-point form is not directly applicable; the consumer route
-  -- instead localises a closed-point regularity witness via Stacks 00OF
-  -- (`IsRegularLocalRing.localization`). Closing the consumer therefore
-  -- still requires either the closed-point + 00OF chain or sub-gap (ii.B).
+  -- **Stacks 00OF — localisations of regular local rings are regular** (via
+  -- Serre's homological characterisation `regular ⟺ finite global
+  -- dimension`, Stacks 00O7/00OE-part-2). Neither direction of Serre's
+  -- characterisation exists in Mathlib at v4.31 (`IsRegularLocalRing` has
+  -- only the `RegularLocalRing/Defs.lean` spanFinrank definition layer), so
+  -- this is the one remaining genuine Mathlib gap of the pipeline.
   --
-  -- **Closure pattern (post-(ii.B)).**
-  --   `have hcotN : finrank κ (CotangentSpace Sₘ) = n :=`
-  --     `finrank_cotangentSpace_of_bijective_algebraMap_residue hBij n hRank`
-  --   `have hdimN : ringKrullDim Sₘ = n := (ii.B applied)`
-  --   `exact (IsRegularLocalRing.iff_finrank_cotangentSpace _).mpr (by`
-  --     `rw [hcotN, hdimN]; rfl)`
-  --
-  -- Iter-200+ tracked: `mathlib-analogist` sweep on (ii.B) smooth-algebra
-  -- Krull-dim formula. The Stage 1-5a-5b-6.B-RHS-iiA chain already in place
-  -- handles freeness, rank, residue-tensor-finrank, and cotangent
-  -- finrank-bridge substrate.
+  -- **Closure pattern (post-00OF).** Pick a closed specialisation `x` of `z`
+  -- in `V` (exists: `V` affine ⟹ quasi-compact sober); then
+  -- `stalk z ≅ (stalk x)_{q}` for the prime `q` of `z`, `stalk x` is regular
+  -- by the §3.B closed-point theorem (transported along
+  -- `IsLocalization.algEquiv` + `IsRegularLocalRing.of_ringEquiv`), and 00OF
+  -- localises. The Stage 1-5a-5b-6.B-(ii.A)-(ii.B) chain above already
+  -- supplies every other ingredient.
   sorry
 
 /-- **Helper for `localRing_dvr_of_codim_one`.** On a smooth integral variety
