@@ -13618,8 +13618,10 @@ of an affine open-immersion cover of a separated scheme.
     \end{array}
   \]
   be the cartesian square obtained by restricting \(g' : X' \to X\) over an \emph{open
-  immersion} \(p : V \hookrightarrow X\) \emph{with \(V\) affine}, so that
-  \(p' : V' \hookrightarrow X'\) is again an open immersion (the pullback of \(p\) along
+  immersion} \(p : V \hookrightarrow X\) \emph{with \(V\) affine} (in Lean \(p\) is taken to be
+  the inclusion \(V_0.\iota\) of an affine open \(V_0 : X.\mathrm{Opens}\),
+  \(\mathrm{IsAffineOpen}\,V_0\) --- the form in which every consumer instantiates the square),
+  so that \(p' : V' \hookrightarrow X'\) is again an open immersion (the pullback of \(p\) along
   \(g'\), with image the preimage \((g')^{-1}(V)\)). Assume in addition that \(X\) is
   \emph{separated} (so that the affine \(V\) meets every affine open of \(X\) in an affine;
   in Lean this is a separatedness hypothesis on \(X\) --- e.g.\ \([\mathrm{IsSeparated}\,
@@ -13642,7 +13644,7 @@ of an affine open-immersion cover of a separated scheme.
   the consumer discharges it from its own separatedness hypothesis through
   \cref{lem:cech_interopen_isaffine}.
 \end{lemma}
-\begin{proof}
+\begin{proof}\leanok
   \uses{def:push_pull_obj, lem:openimm_bareBC, lem:openimm_bc_telescope,
         lem:restrictFunctorIsoPullback_mathlib, lem:openimm_bareBC_isIso}
   Throughout write \(G := p^*\mathcal{F}\) for the restricted module on \(V\). A warning on the
@@ -13729,15 +13731,17 @@ of an affine open-immersion cover of a separated scheme.
   Beck--Chevalley.
 \end{proof}
 
-% NOTE (status, 2026-07-02 session 0003-horizon-T2): the soundness re-signing flagged by the
-% earlier note is DONE (openImmersion_beckChevalley carries `[IsAffine V]`,
-% `hF : F.IsQuasicoherent`, `[IsSeparated (terminal.from X)]`).  Stage 2 is now decomposed
-% differently (and more finely) than the original legs-restriction plan: the mate formula
-% factors bareBC.app as (p'-unit) ≫ isos (\cref{lem:openimm_pullback_counit_isIso} inverts the
-% p-counit), fully-faithful p'_* turns the unit node into essential-image membership, membership
-% is cover-local (\cref{lem:essimage_pushforward_cover_local}, sorry-free), and the SOLE residual
-% is the affine-local member node \cref{lem:openimm_bareBC_app_isIso_affine}
-% (`openImmersion_pushPull_essImage_member`).
+% NOTE (status, 2026-07-02 session 0007-horizon-T2): the Stage-2 chain is now fully CLOSED.
+% The member node \cref{lem:openimm_bareBC_app_isIso_affine} is proved in the new
+% Cohomology/AffinePushPullEssImage.lean (restrict_pullback_pushforward_essImage): the pullback
+% pseudofunctor + the open-open pushforward--restriction commutation
+% (pushforwardRestrictOpensIso, the same-opens-functor pattern) + the affine heart
+% (pullback_pushforward_affineOpen_essImage: affinePushforwardPullbackBaseChange over the
+% ABSTRACT ring pushout, Spec of which is cartesian, with the isoOfRangeEq range transport).
+% For the affine tilde dictionary the square of \cref{lem:openimm_beckchevalley} is specialized
+% in Lean to p = V₀.ι of an affine open V₀ : X.Opens (the form every consumer instantiates).
+% Consequently \cref{lem:openimm_bareBC_isIso}, \cref{lem:openimm_beckchevalley} and
+% \cref{lem:twisted_cech_nerve_per_sigma} are sorry-free.
 
 % =====================================================================================
 % Stage-2 decomposition chain for lem:openimm_beckchevalley (carved iter-329, slug obc329).
@@ -13847,18 +13851,27 @@ of an affine open-immersion cover of a separated scheme.
   isomorphism and \(M\) lies in the essential image of \(p'_*\).
 \end{proof}
 
-\begin{lemma}
+\begin{lemma}\leanok
 [Stage 2, member node: over each affine \(W_j\) the pulled-back push--pull module is a pushforward]
   \label{lem:openimm_bareBC_app_isIso_affine}
-  \lean{AlgebraicGeometry.openImmersion_pushPull_essImage_member}
+  \lean{AlgebraicGeometry.openImmersion_pushPull_essImage_member,
+        AlgebraicGeometry.restrict_pullback_pushforward_essImage,
+        AlgebraicGeometry.pullback_pushforward_affineOpen_essImage,
+        AlgebraicGeometry.pushforwardRestrictOpensIso,
+        AlgebraicGeometry.opensInter_image_eq,
+        AlgebraicGeometry.opensInter_appIso_compat,
+        AlgebraicGeometry.Scheme.Modules.pullbackIsoPushforwardInv}
   \uses{lem:affine_pushforward_pullback_baseChange,
         lem:pullback_preserves_quasicoherent, lem:pullback_spec_tilde_iso,
-        lem:openimm_refining_affine_cover}
+        lem:openimm_refining_affine_cover, lem:restrictFunctorIsoPullback_mathlib}
   Keep the data of \cref{lem:openimm_beckchevalley}, and assume explicitly the hypotheses this
-  member node consumes: \(V\) affine (\([\mathrm{IsAffine}\,V]\)), \(X\) separated (the
-  separatedness predicate of \cref{lem:openimm_beckchevalley} --- e.g.\ \([\mathrm{IsSeparated}\,
-  (\mathrm{terminal.from}\,X)]\), or an equivalent affine-intersection input, at the prover's
-  choice), and \(\mathcal{F}\) quasi-coherent (\(\mathtt{hF} : \mathcal{F}.\mathrm{IsQuasicoherent}\)).
+  member node consumes: \(V\) an \emph{affine open} of \(X\) (in Lean the open immersion \(p\) is
+  the inclusion \(V_0.\iota\) of an affine open \(V_0 : X.\mathrm{Opens}\) with
+  \(\mathrm{IsAffineOpen}\,V_0\) --- the form in which every consumer instantiates it), \(X\)
+  separated (the separatedness predicate of \cref{lem:openimm_beckchevalley} --- e.g.\
+  \([\mathrm{IsSeparated}\,(\mathrm{terminal.from}\,X)]\), or an equivalent affine-intersection
+  input, at the prover's choice), and \(\mathcal{F}\) quasi-coherent
+  (\(\mathtt{hF} : \mathcal{F}.\mathrm{IsQuasicoherent}\)).
   Write \(M := (g')^*(p_*\,p^*\mathcal{F})\).  Let \(W_j = \operatorname{Spec} B \subseteq X'\),
   \(U_j = \operatorname{Spec} A \subseteq X\) be as in \cref{lem:openimm_refining_affine_cover},
   with \(g'|_{W_j} = \operatorname{Spec}\varphi\), \(\varphi : A \to B\). Since \(V\) is affine and
@@ -13868,10 +13881,10 @@ of an affine open-immersion cover of a separated scheme.
   the essential image of the pushforward along the open inclusion
   \(W_j \cap (g')^{-1}(V) \hookrightarrow W_j\).
 \end{lemma}
-\begin{proof}
+\begin{proof}\leanok
   \uses{lem:affine_pushforward_pullback_baseChange,
         lem:pullback_preserves_quasicoherent, lem:pullback_spec_tilde_iso,
-        lem:openimm_refining_affine_cover}
+        lem:openimm_refining_affine_cover, lem:restrictFunctorIsoPullback_mathlib}
   By the pullback pseudofunctor along \(w_j \cdot g' = g'|_{W_j} \cdot (U_j \hookrightarrow X)\),
   the restriction \(M|_{W_j}\) is the pullback along \(g'|_{W_j} = \operatorname{Spec}\varphi\) of
   the restriction \((p_*\,p^*\mathcal{F})|_{U_j}\); the open-restriction identity
@@ -13905,7 +13918,7 @@ of an affine open-immersion cover of a separated scheme.
   \(W_j \cap (g')^{-1}(V) \hookrightarrow W_j\), as claimed.
 \end{proof}
 
-\begin{lemma}
+\begin{lemma}\leanok
 [Stage 2, assembly: \(\operatorname{bareBC}\) is an isomorphism]
   \label{lem:openimm_bareBC_isIso}
   \lean{AlgebraicGeometry.openImmersion_bareBC_app_eq,
@@ -13927,7 +13940,7 @@ of an affine open-immersion cover of a separated scheme.
   hence \(V\) affine and \(X\) separated --- and needs \(p^*\mathcal{F}\) quasi-coherent ---
   hence \(\mathtt{hF}\). The arbitrary-\(\mathcal{F}\) form is false.)
 \end{lemma}
-\begin{proof}
+\begin{proof}\leanok
   \uses{lem:openimm_pullback_counit_isIso, lem:essimage_pushforward_cover_local,
         lem:openimm_refining_affine_cover, lem:openimm_bareBC_app_isIso_affine,
         lem:openimm_bareBC, lem:openimm_bc_telescope,
@@ -14058,8 +14071,9 @@ of an affine open-immersion cover of a separated scheme.
   preimage commutes with the cover intersection only for finite index families); in the
   {\v C}ech application \(\sigma\) ranges over the finite index sets of the nerve.
 \end{lemma}
-\begin{proof}
-  \uses{lem:coverinteropen_basechange_eq, lem:openimm_beckchevalley, lem:pushPullObj_iso_tilde}
+\begin{proof}\leanok
+  \uses{lem:coverinteropen_basechange_eq, lem:openimm_beckchevalley, lem:pushPullObj_iso_tilde,
+        lem:cech_interopen_isaffine, lem:restricted_cartesian_affine_pushout}
   The restriction \(j_\sigma : U_\sigma \hookrightarrow X\) is an open immersion, and its
   pullback along \(g'\) is the open immersion \(j'_\sigma : U'_\sigma \hookrightarrow X'\) onto
   the preimage \((g')^{-1}(U_\sigma)\), which by \cref{lem:coverinteropen_basechange_eq} is

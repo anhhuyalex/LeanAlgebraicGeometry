@@ -9,6 +9,7 @@ import AlgebraicJacobian.Cohomology.FlatBaseChange
 import AlgebraicJacobian.Cohomology.QcohTildeSections
 import AlgebraicJacobian.Cohomology.CechTermAcyclic
 import AlgebraicJacobian.Cohomology.ModulesCoverConservativity
+import AlgebraicJacobian.Cohomology.AffinePushPullEssImage
 
 /- USER (2026-06-29): `cech_flatBaseChange` (Stacks 02KH) is the Kleiman-4.8 Step-1 prerequisite and the
    active target. PER USER, close it via the ČECH-TO-COHOMOLOGY SPECTRAL SEQUENCE: build the relative SS
@@ -34,26 +35,29 @@ these two specific lemmas, so they are reinstated here on top of the merged
 
 * `cechHigherDirectImage` is sorry-free (a one-liner on the merged `CechComplex`).
 * `cech_flatBaseChange` (Stacks 02KH) is now sorry-free *modulo* the following named leaves
-  (currently 7 open `sorry`s, all blueprinted): the homology-side flat left-exactness
+  (currently 5 open `sorry`s, all blueprinted): the homology-side flat left-exactness
   `pullback_preservesFiniteLimits` (the abstract-left-adjoint wall); the two degreewise
   Beck–Chevalley leaves `cech_pushforward_baseChange_natIso` (S-level square along `g`,
   `naturality` residual) and `twisted_cech_nerve_iso` (X-level square along `g'`, `naturality`
   residual); the per-σ single-open S-level base change `pushPullObj_coverInter_baseChange`
   (the affine-reduction heart — its LHS half is now LANDED via
-  `pushPullObj_pushforward_iso_tilde_affine`, residual = RHS half + affine gap); the RHS leaf
-  `pushPullObj_coverInter_baseChanged_pushforward_iso_tilde`; the X-level per-σ Beck–Chevalley
-  `twisted_cech_nerve_per_sigma`; and its core open-immersion Beck–Chevalley
-  `openImmersion_beckChevalley` — STAGE 1 (iter-326) is landed sorry-free (the pseudofunctor
-  telescope `openImmersion_bc_telescope` + the bare mate `openImmersion_bareBC` collapse it to the
-  single obligation `IsIso (openImmersion_bareBC … |>.app (p^* F))`); STAGE 2's mate
-  factorization is now ALSO landed sorry-free (this session: `openImmersion_bareBC_app_eq`
-  exhibits the mate as `p'`-unit ≫ isos, `openImmersion_pullback_counit_isIso` inverts the
-  `p`-counit, `openImmersion_unit_isIso_of_essImage` inverts the unit on the essential image
-  of the fully-faithful `p'_*`), and essential-image membership is cover-local
-  (`essImage_pushforward_of_openCover`, sorry-free, via plain presheaf components — no
-  push/pull coherence), so the residual is the single affine-local member node
-  `openImmersion_pushPull_essImage_member` (`M|_{W_j}` is a pushforward from
-  `W_j ∩ (g')⁻¹V`, for `W_j` in the refining affine cover). The abstract→affine
+  `pushPullObj_pushforward_iso_tilde_affine`, residual = RHS half + affine gap); and the RHS
+  leaf `pushPullObj_coverInter_baseChanged_pushforward_iso_tilde`.
+  The X-level per-σ Beck–Chevalley `twisted_cech_nerve_per_sigma` and its core
+  open-immersion Beck–Chevalley `openImmersion_beckChevalley` are now **CLOSED (sorry-free)**:
+  STAGE 1 (iter-326) is the pseudofunctor telescope `openImmersion_bc_telescope` + the bare
+  mate `openImmersion_bareBC` collapsing to `IsIso (bareBC.app (p^* F))`; STAGE 2's mate
+  factorization (`openImmersion_bareBC_app_eq` exhibits the mate as `p'`-unit ≫ isos,
+  `openImmersion_pullback_counit_isIso` inverts the `p`-counit,
+  `openImmersion_unit_isIso_of_essImage` inverts the unit on the essential image of the
+  fully-faithful `p'_*`) plus cover-local essential-image membership
+  (`essImage_pushforward_of_openCover`, plain presheaf components) reduce to the affine-local
+  member node `openImmersion_pushPull_essImage_member`, now proved by
+  `restrict_pullback_pushforward_essImage` (`Cohomology/AffinePushPullEssImage.lean`: the
+  pullback pseudofunctor + the open-open pushforward–restriction commutation
+  `pushforwardRestrictOpensIso` + the affine heart `pullback_pushforward_affineOpen_essImage`
+  over the abstract ring pushout, with the square specialized to `p = V₀.ι`, `V₀` an affine
+  open). The abstract→affine
   bridge `pushPullObj_pushforward_iso_tilde_affine` (abstract `[IsAffine S]`, transported along
   `S.isoSpec`) is sorry-free and axiom-clean (iter-325). The
   monolithic cosimplicial base-change iso `e` was decomposed (iter-315) and packaged
@@ -1163,51 +1167,70 @@ where `telescope = openImmersion_bc_telescope …` rewrites the RHS pullback `p'
 **single residual obligation** `IsIso ((openImmersion_bareBC g' p p' gV hsq).app (p^* F))` — the
 bare Beck–Chevalley comparison being an iso.
 
-**STAGE 2 (mate factorization LANDED; residual = the essential-image node).**  The mate formula
+**STAGE 2 (mate factorization LANDED; essential-image node CLOSED).**  The mate formula
 (`openImmersion_bareBC_app_eq`) factors `bareBC.app (p^* F)` as the `p'`-unit at
 `g'^*(p_*(p^* F))` followed by isomorphisms (the pullback-telescope components and the `p`-counit,
 invertible for open immersions by `openImmersion_pullback_counit_isIso`).  Since `p'_*` is fully
 faithful for the open immersion `p'`, the unit is an isomorphism at every module in the essential
-image of `p'_*` (`openImmersion_unit_isIso_of_essImage`), so the SOLE residual obligation is the
+image of `p'_*` (`openImmersion_unit_isIso_of_essImage`), so the last obligation was the
 essential-image node `openImmersion_pushPull_essImage`:
-`g'^*(p_*(p^* F)) ∈ essImage p'_*`.  (The earlier docstring sketch "`p_*` is extension-by-zero
-off `V`" was mathematically WRONG — `p_*` is the *right adjoint* direct image; the off-`V'` data
-is real and is exactly what the essential-image node encodes.)  Project-local; blueprint
-`lem:openimm_beckchevalley`. -/
-/-- **The member node** (the genuine Stage-2 frontier, post mate-factorization and
-cover-local assembly).  For the restricted cartesian square `hsq : IsPullback gV p' p g'`
-with `p` an open immersion, `V` affine, `X` separated, `F` quasi-coherent, and a member
+`g'^*(p_*(p^* F)) ∈ essImage p'_*` — now proved cover-locally over the refining affine cover,
+with the member node discharged by `restrict_pullback_pushforward_essImage`
+(`Cohomology/AffinePushPullEssImage.lean`); for the affine tilde dictionary the square is
+specialized to `p = V₀.ι` of an affine open `V₀ : X.Opens`.  (The earlier docstring sketch
+"`p_*` is extension-by-zero off `V`" was mathematically WRONG — `p_*` is the *right adjoint*
+direct image; the off-`V'` data is real and is exactly what the essential-image node encodes.)
+Project-local; blueprint `lem:openimm_beckchevalley`. -/
+/-- **The member node** (the Stage-2 frontier, post mate-factorization and cover-local
+assembly — now CLOSED).  For the restricted cartesian square `hsq : IsPullback gV p' V₀.ι g'`
+over an affine open `V₀ ⊆ X`, with `X` separated, `F` quasi-coherent, and a member
 `W_j` of the refining affine cover `𝒜` of `X'` (so `W_j` is affine and
 `g'(W_j) ⊆ U_j := 𝒜.U j` is an affine open of `X`), the restriction
-`M|_{W_j} = (restrictFunctor w_j).obj (g'^*(p_*(p^* F)))` is a pushforward from the open
-`w_j⁻¹(ran p') = W_j ∩ (g')⁻¹(V)` — i.e. lies in the essential image of the pushforward
-along `(𝒜.cover.f j) ⁻¹ᵁ p'.opensRange ↪ W_j`.  This is now a *fully affine-local*
-statement: no globality on `X'` remains.
+`M|_{W_j} = (restrictFunctor w_j).obj (g'^*((V₀.ι)_*(V₀.ι^* F)))` is a pushforward from the
+open `w_j⁻¹(ran p') = W_j ∩ (g')⁻¹(V₀)` — i.e. lies in the essential image of the
+pushforward along `(𝒜.cover.f j) ⁻¹ᵁ p'.opensRange ↪ W_j`.
 
-*(STUB — the hypotheses are exactly those under which the statement is true (the
-arbitrary-`F` form is FALSE, see the blueprint remark at `lem:openimm_beckchevalley`).
-Intended route (blueprint `lem:openimm_bareBC_app_isIso_affine`): with `w := 𝒜.cover.f j`,
-`M|_{W_j} ≅ (g'|_{W_j})^*((p_* p^* F)|_{U_j})` by the pullback pseudofunctor
-(`pullbackComp`/`pullbackCongr` along `w ≫ g' = g'|_{W_j} ≫ (U_j).ι` via
-`IsOpenImmersion.lift`), `(p_* p^* F)|_{U_j} ≅ (V∩U_j ↪ U_j)_*(p^*F|_{V∩U_j})` by the
-open-open pushforward–restriction commutation (the `glueOverlapBaseChangeIso` pattern of
-`Picard/GlueDescent`, both composites site-level pushforwards along the same opens
-functor), `V ∩ U_j` is affine (`X` separated, `V`, `U_j` affine), so the fully-affine
-brick `affinePushforwardPullbackBaseChange` + the tilde dictionary
-`qcoh_iso_tilde_sections`/`pullbackRestrict_iso_tilde` exhibit the pullback of that
-pushforward as a pushforward from `W_j ∩ (g')⁻¹(V)`, transported along `isoSpec` and an
-`isoOfRangeEq` for the range identification.)*
+The hypotheses are exactly those under which the statement is true (the arbitrary-`F` form
+is FALSE, see the blueprint remark at `lem:openimm_beckchevalley`).  Route (landed in
+`Cohomology/AffinePushPullEssImage.lean`): identify `ran p' = g'⁻¹(V₀)` (range of the base
+change of an open immersion, `IsOpenImmersion.range_pullbackSnd`), then apply the member
+assembly `restrict_pullback_pushforward_essImage` — the pullback pseudofunctor rewrites
+`M|_{W_j} ≅ gU^*(((V₀.ι)_* V₀.ι^* F)|_{U_j})`, the open-open pushforward–restriction
+commutation `pushforwardRestrictOpensIso` (the `glueOverlapBaseChangeIso` pattern) rewrites
+the restricted pushforward as `((U_j.ι⁻¹V₀).ι)_*` of a quasi-coherent restriction, `U_j ∩ V₀`
+is affine (`IsAffineOpen.inf`, `X` separated), and the affine heart
+`pullback_pushforward_affineOpen_essImage` (the sorry-free
+`affinePushforwardPullbackBaseChange` over the abstract ring pushout, transported along
+`isoSpec` and the `isoOfRangeEq` range identification) concludes.
 Project-local; blueprint `lem:openimm_bareBC_app_isIso_affine` (essential-image member). -/
-theorem openImmersion_pushPull_essImage_member {V V' : Scheme.{u}}
-    (g' : X' ⟶ X) (p : V ⟶ X) (p' : V' ⟶ X') (gV : V' ⟶ V)
-    (hsq : IsPullback gV p' p g') [IsOpenImmersion p] [IsOpenImmersion p'] [IsAffine V]
+theorem openImmersion_pushPull_essImage_member {V' : Scheme.{u}}
+    (g' : X' ⟶ X) {V₀ : X.Opens} (hV₀ : IsAffineOpen V₀) (p' : V' ⟶ X') (gV : V' ⟶ ↑V₀)
+    (hsq : IsPullback gV p' V₀.ι g')
     [IsSeparated (terminal.from X)] (F : X.Modules) (hF : F.IsQuasicoherent)
     (𝒜 : OpenImmersionRefiningAffineCover g') (j : 𝒜.cover.I₀) :
     (Scheme.Modules.pushforward ((𝒜.cover.f j) ⁻¹ᵁ p'.opensRange).ι).essImage
       ((Scheme.Modules.restrictFunctor (𝒜.cover.f j)).obj
-        ((Scheme.Modules.pullback g').obj ((Scheme.Modules.pushforward p).obj
-          ((Scheme.Modules.pullback p).obj F)))) := by
-  sorry
+        ((Scheme.Modules.pullback g').obj ((Scheme.Modules.pushforward V₀.ι).obj
+          ((Scheme.Modules.pullback V₀.ι).obj F)))) := by
+  haveI : IsOpenImmersion p' := isOpenImmersion_of_isPullback_left g' V₀.ι p' gV hsq
+  -- the range of `p'` is the preimage of `V₀` (range of the base-changed open immersion)
+  have hRange : p'.opensRange = g' ⁻¹ᵁ V₀ := by
+    have h1 : Set.range p' = Set.range (pullback.snd V₀.ι g') := by
+      rw [← hsq.isoPullback_hom_snd]
+      simp only [Scheme.Hom.comp_base, TopCat.coe_comp, Set.range_comp,
+        Set.range_eq_univ.mpr hsq.isoPullback.hom.surjective, Set.image_univ]
+    apply TopologicalSpace.Opens.ext
+    rw [show (p'.opensRange : Set X') = Set.range p' from rfl, h1,
+      IsOpenImmersion.range_pullbackSnd]
+    simp [Scheme.Opens.opensRange_ι]
+  rw [hRange]
+  -- separatedness gives the affine absolute diagonal consumed by `IsAffineOpen.inf`
+  haveI : IsClosedImmersion (pullback.diagonal (terminal.from X)) :=
+    IsSeparated.isClosedImmersion_diagonal
+  haveI : IsOpenImmersion (𝒜.cover.f j) := Scheme.Cover.map_prop 𝒜.cover j
+  haveI : IsAffine (𝒜.cover.X j) := 𝒜.isAffine_cover j
+  exact restrict_pullback_pushforward_essImage g' hV₀ (𝒜.cover.f j)
+    (𝒜.isAffineOpen_U j) (𝒜.le_U j) F hF
 
 /-- **The essential-image node**, reduced to the member node by the cover-local assembly
 `essImage_pushforward_of_openCover` over the refining affine cover
@@ -1215,16 +1238,16 @@ theorem openImmersion_pushPull_essImage_member {V V' : Scheme.{u}}
 open immersion, `V` affine, `X` separated and `F` quasi-coherent, the pulled-back
 push–pull module `g'^*(p_*(p^* F))` lies in the essential image of `p'_*`.  No `sorry`
 of its own.  Project-local; blueprint `lem:openimm_bareBC_isIso` (essential-image node). -/
-theorem openImmersion_pushPull_essImage {V V' : Scheme.{u}}
-    (g' : X' ⟶ X) (p : V ⟶ X) (p' : V' ⟶ X') (gV : V' ⟶ V)
-    (hsq : IsPullback gV p' p g') [IsOpenImmersion p] [IsAffine V]
+theorem openImmersion_pushPull_essImage {V' : Scheme.{u}}
+    (g' : X' ⟶ X) {V₀ : X.Opens} (hV₀ : IsAffineOpen V₀) (p' : V' ⟶ X') (gV : V' ⟶ ↑V₀)
+    (hsq : IsPullback gV p' V₀.ι g')
     [IsSeparated (terminal.from X)] (F : X.Modules) (hF : F.IsQuasicoherent) :
     (Scheme.Modules.pushforward p').essImage
-      ((Scheme.Modules.pullback g').obj ((Scheme.Modules.pushforward p).obj
-        ((Scheme.Modules.pullback p).obj F))) := by
-  haveI : IsOpenImmersion p' := isOpenImmersion_of_isPullback_left g' p p' gV hsq
+      ((Scheme.Modules.pullback g').obj ((Scheme.Modules.pushforward V₀.ι).obj
+        ((Scheme.Modules.pullback V₀.ι).obj F))) := by
+  haveI : IsOpenImmersion p' := isOpenImmersion_of_isPullback_left g' V₀.ι p' gV hsq
   exact essImage_pushforward_of_openCover p' _ (openImmersion_refiningAffineCover g').cover
-    (fun j => openImmersion_pushPull_essImage_member g' p p' gV hsq F hF
+    (fun j => openImmersion_pushPull_essImage_member g' hV₀ p' gV hsq F hF
       (openImmersion_refiningAffineCover g') j)
 
 /-- **The unit node**, derived from the essential-image node
@@ -1232,36 +1255,36 @@ theorem openImmersion_pushPull_essImage {V V' : Scheme.{u}}
 restricted cartesian square with `p` an open immersion, `V` affine, `X` separated and `F`
 quasi-coherent, the `p'`-unit is an isomorphism at `g'^*(p_*(p^* F))`.  No `sorry` of its
 own.  Project-local; blueprint `lem:openimm_bareBC_isIso` (unit node). -/
-theorem openImmersion_pushPull_unit_isIso {V V' : Scheme.{u}}
-    (g' : X' ⟶ X) (p : V ⟶ X) (p' : V' ⟶ X') (gV : V' ⟶ V)
-    (hsq : IsPullback gV p' p g') [IsOpenImmersion p] [IsAffine V]
+theorem openImmersion_pushPull_unit_isIso {V' : Scheme.{u}}
+    (g' : X' ⟶ X) {V₀ : X.Opens} (hV₀ : IsAffineOpen V₀) (p' : V' ⟶ X') (gV : V' ⟶ ↑V₀)
+    (hsq : IsPullback gV p' V₀.ι g')
     [IsSeparated (terminal.from X)] (F : X.Modules) (hF : F.IsQuasicoherent) :
     IsIso ((Scheme.Modules.pullbackPushforwardAdjunction p').unit.app
-      ((Scheme.Modules.pullback g').obj ((Scheme.Modules.pushforward p).obj
-        ((Scheme.Modules.pullback p).obj F)))) := by
-  haveI : IsOpenImmersion p' := isOpenImmersion_of_isPullback_left g' p p' gV hsq
+      ((Scheme.Modules.pullback g').obj ((Scheme.Modules.pushforward V₀.ι).obj
+        ((Scheme.Modules.pullback V₀.ι).obj F)))) := by
+  haveI : IsOpenImmersion p' := isOpenImmersion_of_isPullback_left g' V₀.ι p' gV hsq
   exact openImmersion_unit_isIso_of_essImage p' _
-    (openImmersion_pushPull_essImage g' p p' gV hsq F hF)
+    (openImmersion_pushPull_essImage g' hV₀ p' gV hsq F hF)
 
-noncomputable def openImmersion_beckChevalley {V V' : Scheme.{u}}
-    (g' : X' ⟶ X) (p : V ⟶ X) (p' : V' ⟶ X') (gV : V' ⟶ V)
-    (hsq : IsPullback gV p' p g') [IsOpenImmersion p] [IsAffine V]
+noncomputable def openImmersion_beckChevalley {V' : Scheme.{u}}
+    (g' : X' ⟶ X) {V₀ : X.Opens} (hV₀ : IsAffineOpen V₀) (p' : V' ⟶ X') (gV : V' ⟶ ↑V₀)
+    (hsq : IsPullback gV p' V₀.ι g')
     [IsSeparated (terminal.from X)] (F : X.Modules) (hF : F.IsQuasicoherent) :
-    (Scheme.Modules.pullback g').obj (pushPullObj F (Over.mk p)) ≅
+    (Scheme.Modules.pullback g').obj (pushPullObj F (Over.mk V₀.ι)) ≅
       pushPullObj ((Scheme.Modules.pullback g').obj F) (Over.mk p') := by
   -- STAGE 1 (sorry-free): the pseudofunctor telescope reduces the leaf to one `IsIso` on the
-  -- bare mate `openImmersion_bareBC … |>.app (p^* F)`.
-  haveI hiso : IsIso ((openImmersion_bareBC g' p p' gV hsq).app
-      ((Scheme.Modules.pullback p).obj F)) :=
+  -- bare mate `openImmersion_bareBC … |>.app (V₀.ι^* F)`.
+  haveI hiso : IsIso ((openImmersion_bareBC g' V₀.ι p' gV hsq).app
+      ((Scheme.Modules.pullback V₀.ι).obj F)) :=
     -- STAGE 2 (mate factorization landed): the telescope component and the `p`-counit factor
     -- are isos (`openImmersion_bareBC_app_isIso_of_unit`), so the comparison is an iso as soon
-    -- as the `p'`-unit is one at `g'^*(p_*(p^* F))` — the residual unit node
-    -- `openImmersion_pushPull_unit_isIso`.
-    openImmersion_bareBC_app_isIso_of_unit g' p p' gV hsq _
-      (openImmersion_pushPull_unit_isIso g' p p' gV hsq F hF)
-  exact (@asIso _ _ _ _ ((openImmersion_bareBC g' p p' gV hsq).app
-      ((Scheme.Modules.pullback p).obj F)) hiso) ≪≫
-    ((pushforward p').mapIso (openImmersion_bc_telescope g' p p' gV hsq F)).symm
+    -- as the `p'`-unit is one at `g'^*((V₀.ι)_*(V₀.ι^* F))` — the unit node
+    -- `openImmersion_pushPull_unit_isIso`, now CLOSED via the essential-image member node.
+    openImmersion_bareBC_app_isIso_of_unit g' V₀.ι p' gV hsq _
+      (openImmersion_pushPull_unit_isIso g' hV₀ p' gV hsq F hF)
+  exact (@asIso _ _ _ _ ((openImmersion_bareBC g' V₀.ι p' gV hsq).app
+      ((Scheme.Modules.pullback V₀.ι).obj F)) hiso) ≪≫
+    ((pushforward p').mapIso (openImmersion_bc_telescope g' V₀.ι p' gV hsq F)).symm
 
 /-- **Per-intersection-open X-level Beck–Chevalley** (the per-σ residual of the X-level leaf
 `twisted_cech_nerve_iso`, after the product decomposition `pushPull_sigma_iso`).  For a Čech
@@ -1276,10 +1299,12 @@ is the push–pull object of the base-changed data `(g'^* F)` over the correspon
 This is the open-immersion Beck–Chevalley identification for the cartesian square cut out over
 `U_σ` (`X`-level square, no base affineness): geometrically `U'_σ = (g')⁻¹(U_σ)` (pullback
 preserves the fibre powers `U_{i₀} ×_X ⋯ ×_X U_{iₚ}`), so the restricted square is cartesian and
-the push–pull of the restriction commutes with `g'^*`.  The residual `sorry` is exactly that
-cover-base-change identification `coverInterOpen 𝒰' σ = (g')⁻¹(coverInterOpen 𝒰 σ)` together with
-the open-immersion Beck–Chevalley for the restricted square — the genuine open content of this
-leaf, blueprinted `lem:twisted_cech_nerve_iso` (per-open instance).  Project-local. -/
+the push–pull of the restriction commutes with `g'^*`.  **CLOSED**: the cover-base-change
+identification `coverInterOpen 𝒰' σ = (g')⁻¹(coverInterOpen 𝒰 σ)` (`coverInterOpen_baseChange_eq`)
+plus the now sorry-free open-immersion Beck–Chevalley `openImmersion_beckChevalley` for the
+restricted square (`restrictedCartesianAffinePushout`), transported along the `isoOfRangeEq`
+slice iso by `pushPullObjCongr` — blueprinted `lem:twisted_cech_nerve_iso` (per-open instance).
+Project-local. -/
 noncomputable def twisted_cech_nerve_per_sigma
     (f : X ⟶ S) (g : S' ⟶ S) (f' : X' ⟶ S') (g' : X' ⟶ X)
     (h : IsPullback g' f' f g) (𝒰 : X.OpenCover) [IsSeparated f] [IsAffine S]
@@ -1290,20 +1315,33 @@ noncomputable def twisted_cech_nerve_per_sigma
         (pushPullObj F (Over.mk (Scheme.Opens.ι (coverInterOpen 𝒰 σ)))) ≅
       pushPullObj ((Scheme.Modules.pullback g').obj F)
         (Over.mk (Scheme.Opens.ι (coverInterOpen
-          ((Scheme.Pullback.openCoverOfLeft 𝒰 f g).pushforwardIso h.isoPullback.symm.hom) σ))) :=
-  -- RESIDUAL (the X-level open content) — now reduced to two CLOSED carved blocks + a transport:
+          ((Scheme.Pullback.openCoverOfLeft 𝒰 f g).pushforwardIso h.isoPullback.symm.hom) σ))) := by
+  -- CLOSED — three CLOSED carved blocks + the slice transport:
   --   (1) the restricted cartesian square over `U_σ = coverInterOpen 𝒰 σ` is supplied by the
-  --       sorry-free `restrictedCartesianAffinePushout g' 𝒰 σ`
-  --       (`IsPullback (pullback.snd g' (ι U_σ)) (pullback.fst g' (ι U_σ)) (ι U_σ) g'`);
-  --   (2) `openImmersion_beckChevalley g' (ι U_σ) (pullback.fst g' (ι U_σ)) (pullback.snd …) (…) F`
+  --       sorry-free `restrictedCartesianAffinePushout g' 𝒰 σ`;
+  --   (2) `openImmersion_beckChevalley` (now sorry-free via the essential-image member node)
   --       gives `g'^*(pushPullObj F (Over.mk (ι U_σ))) ≅ pushPullObj (g'^*F)
   --       (Over.mk (pullback.fst g' (ι U_σ)))`;
-  --   (3) `pullback.fst g' (ι U_σ)` and `ι (coverInterOpen 𝒰' σ)` are open immersions with the SAME
-  --       range `(g')⁻¹(U_σ)` — by `Scheme.Hom.opensRange_pullbackFst` and the CLOSED
-  --       `coverInterOpen_baseChange_eq` (needs `[Finite κ]`) — so an `IsOpenImmersion.isoOfRangeEq`
-  --       transports the `pushPullObj` to the asserted `Over.mk (ι (coverInterOpen 𝒰' σ))` form.
-  -- Only `openImmersion_beckChevalley` (the open-immersion Beck–Chevalley sheaf iso) remains a leaf.
-  sorry
+  --   (3) `pullback.fst g' (ι U_σ)` and `ι (coverInterOpen 𝒰' σ)` are open immersions with the
+  --       SAME range `(g')⁻¹(U_σ)` — `IsOpenImmersion.range_pullbackFst` and the CLOSED
+  --       `coverInterOpen_baseChange_eq` (needs `[Finite κ]`) — so the `isoOfRangeEq` slice iso
+  --       transports the `pushPullObj` along `pushPullObjCongr`.
+  haveI hsepX : IsSeparated (terminal.from X) := by
+    rw [← terminal.comp_from f]
+    exact IsSeparated.comp_iff.mpr ‹IsSeparated f›
+  have hre : Set.range (pullback.fst g' (Scheme.Opens.ι (coverInterOpen 𝒰 σ)))
+      = Set.range (Scheme.Opens.ι (coverInterOpen
+          ((Scheme.Pullback.openCoverOfLeft 𝒰 f g).pushforwardIso h.isoPullback.symm.hom) σ)) := by
+    rw [IsOpenImmersion.range_pullbackFst, Scheme.Opens.range_ι,
+      coverInterOpen_baseChange_eq f g f' g' h 𝒰 σ, Scheme.Opens.opensRange_ι]
+  exact (openImmersion_beckChevalley g' (coverInterOpen_isAffine f 𝒰 σ)
+      (pullback.fst g' (Scheme.Opens.ι (coverInterOpen 𝒰 σ)))
+      (pullback.snd g' (Scheme.Opens.ι (coverInterOpen 𝒰 σ)))
+      (restrictedCartesianAffinePushout g' 𝒰 σ) F hF) ≪≫
+    pushPullObjCongr _ (Over.isoMk
+      (IsOpenImmersion.isoOfRangeEq
+        (pullback.fst g' (Scheme.Opens.ι (coverInterOpen 𝒰 σ))) _ hre)
+      (IsOpenImmersion.isoOfRangeEq_hom_fac _ _ hre))
 
 /-- **The base-changed nerve is the nerve of the base-changed data** (Stacks 02KG, the
 mechanical half). Applying `(g')^*` (at the `X`-level) to the dropped Čech nerve of

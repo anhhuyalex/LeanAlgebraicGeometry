@@ -35,6 +35,8 @@ import AlgebraicJacobian.Cohomology.OpenImmersionPushforward
 import AlgebraicJacobian.Cohomology.CechTermAcyclic
 import AlgebraicJacobian.Cohomology.CechToHigherDirectImage
 import AlgebraicJacobian.Cohomology.ModulesCoverConservativity
+-- Affine essential-image heart of the open-immersion Beck–Chevalley (Stacks 02KG)
+import AlgebraicJacobian.Cohomology.AffinePushPullEssImage
 -- Target-local roadmap nodes preserved across the merge (unconditional Rⁱf_*
 -- packaging + Čech flat base change, Stacks 02KH) — see file header.
 import AlgebraicJacobian.Cohomology.CechHigherDirectImageUnconditional
