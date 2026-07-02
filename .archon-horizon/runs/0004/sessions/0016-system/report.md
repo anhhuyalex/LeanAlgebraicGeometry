@@ -1,0 +1,12 @@
+## Checklist
+
+- [x] Started Horizon task T1.
+- [x] Committed Algebraic-Jacobian-Challenge changes: b740588 (3 files: AlgebraicJacobian.lean, AlgebraicJacobian/Picard/TangentSpaceStalkAlgebra.lean, blueprint/src/chapters/Picard_Pic0AbelianVariety.tex).
+- [x] No project changes to commit for Line-Bundle-Comparison-Iso.
+- [x] Report saved: .archon-horizon/runs/0004/sessions/0015-horizon-T1/report.md.
+- [x] Finished Horizon task T1 with status: done.
+- [x] Integrated horizon session 0015-horizon-T1: 5f5e710; project commits Algebraic-Jacobian-Challenge b740588; 34 files: .archon-horizon/blueprints/Albanese.json, .archon-horizon/blueprints/Algebraic-Jacobian-Challenge.json, .archon-horizon/blueprints/Cech-Cohomology.json, .archon-horizon/blueprints/GR-Quot-Closure.json, .archon-horizon/blueprints/Line-Bundle-Comparison-Iso.json, .archon-horizon/blueprints/MR0555258-Compactifying-Picard.json, .archon-horizon/events.jsonl, .archon-horizon/inbox/local/comments/I-0016/C-0006.md, +26 more.
+
+## Issues
+
+- None.
