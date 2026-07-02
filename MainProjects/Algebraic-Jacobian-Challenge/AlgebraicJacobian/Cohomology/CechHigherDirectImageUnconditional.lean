@@ -49,8 +49,11 @@ these two specific lemmas, so they are reinstated here on top of the merged
   factorization is now ALSO landed sorry-free (this session: `openImmersion_bareBC_app_eq`
   exhibits the mate as `p'`-unit ≫ isos, `openImmersion_pullback_counit_isIso` inverts the
   `p`-counit, `openImmersion_unit_isIso_of_essImage` inverts the unit on the essential image
-  of the fully-faithful `p'_*`), so the residual is the single existence node
-  `openImmersion_pushPull_essImage` (`g'^*(p_*(p^* F)) ∈ essImage p'_*`). The abstract→affine
+  of the fully-faithful `p'_*`), and essential-image membership is cover-local
+  (`essImage_pushforward_of_openCover`, sorry-free, via plain presheaf components — no
+  push/pull coherence), so the residual is the single affine-local member node
+  `openImmersion_pushPull_essImage_member` (`M|_{W_j}` is a pushforward from
+  `W_j ∩ (g')⁻¹V`, for `W_j` in the refining affine cover). The abstract→affine
   bridge `pushPullObj_pushforward_iso_tilde_affine` (abstract `[IsAffine S]`, transported along
   `S.isoSpec`) is sorry-free and axiom-clean (iter-325). The
   monolithic cosimplicial base-change iso `e` was decomposed (iter-315) and packaged
@@ -965,6 +968,116 @@ theorem openImmersion_unit_isIso_of_essImage {V' : Scheme.{u}} (p' : V' ⟶ X')
   obtain ⟨K, ⟨e⟩⟩ := h
   exact (Scheme.Modules.pullbackPushforwardAdjunction p').isIso_unit_app_of_iso e.symm
 
+/-! ## Stage-2 assembly: essential-image membership is cover-local
+
+The essential-image node is verified member-by-member on an open cover of `X'`.  The
+engine is elementary: membership `M ∈ essImage p'_*` is equivalent (fully-faithful
+`p'_*`) to invertibility of the `p'`-unit at `M`; transported to the site-level
+`restrictAdjunction p'`, the unit's components are the plain presheaf restrictions
+`M(U) → M(U ∩ ran p')`, so cover-conservativity (`isIso_iff_isIso_restrict`) applies
+with NO pushforward/restriction commutation coherence: the restricted morphism again
+has plain `M.presheaf.map` components, compared against the member datum through a
+lattice identity of opens. -/
+
+/-- Component of a restricted morphism of modules is the component at the image open.
+Definitional. Project-local; blueprint `lem:essimage_pushforward_cover_local` (component). -/
+theorem restrictFunctor_map_app {W : Scheme.{u}} (w : W ⟶ X') [IsOpenImmersion w]
+    {M N : X'.Modules} (ψ : M ⟶ N) (O : W.Opens) :
+    ((Scheme.Modules.restrictFunctor w).map ψ).app O = ψ.app (w ''ᵁ O) := rfl
+
+/-- **Restriction maps of a pushforward-presented module are isomorphisms.**  If
+`N : W.Modules` is isomorphic to a pushforward `(O₀.ι)_* K` from the open `O₀ ⊆ W`, then
+for every open `O ⊆ W` the presheaf restriction `N(O) → N(O ⊓ O₀)` is an isomorphism: on
+the pushforward side it is `K.presheaf.map` of the identity inclusion
+`O₀.ι⁻¹(O ⊓ O₀) = O₀.ι⁻¹(O)` (an `eqToHom`), and the comparison iso conjugates.
+Project-local; blueprint `lem:restrictionMap_isIso_of_essImage`. -/
+theorem restrictionMap_isIso_of_essImage {W : Scheme.{u}} (O₀ : W.Opens)
+    (N : W.Modules) (h : (Scheme.Modules.pushforward O₀.ι).essImage N) (O : W.Opens) :
+    IsIso (N.presheaf.map (homOfLE (inf_le_left : O ⊓ O₀ ≤ O)).op) := by
+  obtain ⟨K, ⟨e⟩⟩ := h
+  have eP : ((Scheme.Modules.pushforward O₀.ι).obj K).presheaf ≅ N.presheaf :=
+    (Scheme.Modules.toPresheaf W).mapIso e
+  have hpre : Opposite.op (O₀.ι ⁻¹ᵁ O) = Opposite.op (O₀.ι ⁻¹ᵁ (O ⊓ O₀)) := by
+    rw [Scheme.Hom.preimage_inf, Scheme.Opens.ι_preimage_self, inf_top_eq]
+  haveI hK : IsIso
+      ((((Scheme.Modules.pushforward O₀.ι).obj K).presheaf.map
+        (homOfLE (inf_le_left : O ⊓ O₀ ≤ O)).op)) := by
+    rw [Scheme.Modules.pushforward_obj_presheaf_map]
+    have hcast : ((TopologicalSpace.Opens.map O₀.ι.base).map
+        (homOfLE (inf_le_left : O ⊓ O₀ ≤ O))).op = eqToHom hpre := by
+      apply Quiver.Hom.unop_inj
+      apply Subsingleton.elim
+    rw [hcast]
+    exact Functor.map_isIso _ _
+  have nat := eP.hom.naturality (homOfLE (inf_le_left : O ⊓ O₀ ≤ O)).op
+  exact IsIso.of_isIso_fac_left nat.symm
+
+set_option backward.isDefEq.respectTransparency false in
+/-- **Membership in the essential image of `p'_*` is cover-local** (Stage-2 assembly).
+If the restriction of `M` to every member `W_j` of an open cover of `X'` is a pushforward
+from the open `W_j ∩ (ran p')` — i.e. lies in the essential image of the pushforward
+along `(𝒞.f j) ⁻¹ᵁ p'.opensRange ↪ W_j` — then `M` itself lies in the essential image
+of `p'_*`.  Route: the site-level `restrictAdjunction p'` unit at `M` has components
+the plain presheaf restrictions `M(U) → M(U ∩ ran p')`; its invertibility is checked
+cover-locally (`isIso_iff_isIso_restrict`), where each component over `O ⊆ W_j` is,
+through the lattice identity `w''(O ⊓ w⁻¹(ran p')) = p'''(p'⁻¹(w''O))` and an `eqToHom`
+cast, the member restriction map handled by `restrictionMap_isIso_of_essImage`; the
+`leftAdjointUniq` comparison transports invertibility to the geometric unit, whence
+membership (`mem_essImage_of_unit_isIso`).  Sorry-free.  Project-local; blueprint
+`lem:essimage_pushforward_cover_local`. -/
+theorem essImage_pushforward_of_openCover {V' : Scheme.{u}} (p' : V' ⟶ X')
+    [IsOpenImmersion p'] (M : X'.Modules) (𝒞 : X'.OpenCover)
+    (hloc : ∀ j, (Scheme.Modules.pushforward ((𝒞.f j) ⁻¹ᵁ p'.opensRange).ι).essImage
+      ((Scheme.Modules.restrictFunctor (𝒞.f j)).obj M)) :
+    (Scheme.Modules.pushforward p').essImage M := by
+  -- the site-level unit is an isomorphism, checked cover-locally with plain components
+  have hsite : IsIso ((Scheme.Modules.restrictAdjunction p').unit.app M) := by
+    rw [Scheme.Modules.Hom.isIso_iff_isIso_restrict _ 𝒞]
+    intro j
+    haveI : IsOpenImmersion (𝒞.f j) := Scheme.Cover.map_prop 𝒞 j
+    rw [Scheme.Modules.Hom.isIso_iff_isIso_app]
+    intro O
+    rw [restrictFunctor_map_app, Scheme.Modules.restrictAdjunction_unit_app_app]
+    -- identify the target open: w''(O ⊓ w⁻¹(ran p')) = p'''(p'⁻¹(w''O))
+    have hOO : (𝒞.f j) ''ᵁ (O ⊓ (𝒞.f j) ⁻¹ᵁ p'.opensRange)
+        = p' ''ᵁ (p' ⁻¹ᵁ ((𝒞.f j) ''ᵁ O)) := by
+      rw [Scheme.Hom.image_preimage_eq_opensRange_inf]
+      apply TopologicalSpace.Opens.ext
+      show ((𝒞.f j) '' (O ∩ (𝒞.f j) ⁻¹' p'.opensRange) : Set X') = _
+      rw [Set.image_inter_preimage, TopologicalSpace.Opens.coe_inf, Set.inter_comm]
+      rfl
+    -- factor the unit component through the member restriction map + a cast
+    have hfac : M.presheaf.map (homOfLE (p'.image_preimage_le ((𝒞.f j) ''ᵁ O))).op
+        = M.presheaf.map
+            ((𝒞.f j).opensFunctor.map
+              (homOfLE (inf_le_left : O ⊓ (𝒞.f j) ⁻¹ᵁ p'.opensRange ≤ O))).op ≫
+          M.presheaf.map (eqToHom (congrArg Opposite.op hOO)) := by
+      rw [← Functor.map_comp]
+      congr 1
+    rw [hfac]
+    haveI hkey : IsIso (M.presheaf.map
+        ((𝒞.f j).opensFunctor.map
+          (homOfLE (inf_le_left : O ⊓ (𝒞.f j) ⁻¹ᵁ p'.opensRange ≤ O))).op) :=
+      restrictionMap_isIso_of_essImage _ _ (hloc j) O
+    haveI hcast : IsIso (M.presheaf.map (eqToHom (congrArg Opposite.op hOO))) :=
+      Functor.map_isIso _ _
+    exact IsIso.comp_isIso
+  -- transport to the geometric unit and conclude essential-image membership
+  haveI hunit : IsIso ((Scheme.Modules.pullbackPushforwardAdjunction p').unit.app M) := by
+    rw [← Adjunction.unit_leftAdjointUniq_hom_app (Scheme.Modules.restrictAdjunction p')
+      (Scheme.Modules.pullbackPushforwardAdjunction p') M]
+    haveI h1 : IsIso ((Adjunction.leftAdjointUniq (Scheme.Modules.restrictAdjunction p')
+        (Scheme.Modules.pullbackPushforwardAdjunction p')).hom) := Iso.isIso_hom _
+    haveI h2 : IsIso ((Adjunction.leftAdjointUniq (Scheme.Modules.restrictAdjunction p')
+        (Scheme.Modules.pullbackPushforwardAdjunction p')).hom.app M) :=
+      NatIso.isIso_app_of_isIso _ M
+    haveI h3 : IsIso ((Scheme.Modules.pushforward p').map
+        ((Adjunction.leftAdjointUniq (Scheme.Modules.restrictAdjunction p')
+          (Scheme.Modules.pullbackPushforwardAdjunction p')).hom.app M)) :=
+      Functor.map_isIso _ _
+    exact IsIso.comp_isIso' hsite h3
+  exact (Scheme.Modules.pullbackPushforwardAdjunction p').mem_essImage_of_unit_isIso M
+
 /-! ## Project-local Mathlib supplement — refining affine cover for the open-immersion
 Beck–Chevalley assembly (Stage-2 reduction of `openImmersion_beckChevalley`)
 
@@ -1061,30 +1174,47 @@ essential-image node `openImmersion_pushPull_essImage`:
 off `V`" was mathematically WRONG — `p_*` is the *right adjoint* direct image; the off-`V'` data
 is real and is exactly what the essential-image node encodes.)  Project-local; blueprint
 `lem:openimm_beckchevalley`. -/
-/-- **The essential-image node** (the genuine Stage-2 frontier, post mate-factorization).
-For the restricted cartesian square `hsq : IsPullback gV p' p g'` with `p` an open
-immersion, `V` affine, `X` separated and `F` quasi-coherent, the pulled-back push–pull
-module `g'^*(p_*(p^* F))` lies in the essential image of `p'_*` — its sections over
-`U ⊆ X'` are already determined by those over `U ∩ (g')⁻¹(V)`.  This is now the SOLE
-open obligation of `openImmersion_beckChevalley` (hence of `IsIso bareBC`): a bare
-existence statement `∃ K, p'_* K ≅ g'^*(p_*(p^* F))`, with no residual mate/adjunction
-matching.
+/-- **The member node** (the genuine Stage-2 frontier, post mate-factorization and
+cover-local assembly).  For the restricted cartesian square `hsq : IsPullback gV p' p g'`
+with `p` an open immersion, `V` affine, `X` separated, `F` quasi-coherent, and a member
+`W_j` of the refining affine cover `𝒜` of `X'` (so `W_j` is affine and
+`g'(W_j) ⊆ U_j := 𝒜.U j` is an affine open of `X`), the restriction
+`M|_{W_j} = (restrictFunctor w_j).obj (g'^*(p_*(p^* F)))` is a pushforward from the open
+`w_j⁻¹(ran p') = W_j ∩ (g')⁻¹(V)` — i.e. lies in the essential image of the pushforward
+along `(𝒜.cover.f j) ⁻¹ᵁ p'.opensRange ↪ W_j`.  This is now a *fully affine-local*
+statement: no globality on `X'` remains.
 
 *(STUB — the hypotheses are exactly those under which the statement is true (the
 arbitrary-`F` form is FALSE, see the blueprint remark at `lem:openimm_beckchevalley`).
-Intended route (blueprint `lem:openimm_bareBC_app_isIso_affine`): the candidate `K` is
-`gV^*(p^* F)`; comparing `p'_*(gV^*(p^* F))` with `g'^*(p_*(p^* F))` is iso-ness of a
-GLOBAL map only over a cover, so instead one shows directly that the *unit-style*
-restriction comparison for `M = g'^*(p_*(p^* F))` is an isomorphism cover-locally: check
-on the refining affine cover `openImmersion_refiningAffineCover g'`
-(`isIso_iff_isIso_restrict`); over each member `W_j = Spec B` with `g'(W_j) ⊆ U_j =
-Spec A`, the restriction `M|_{W_j}` is `(g'|_{W_j})^*((p_* p^* F)|_{U_j})` (pullback
-pseudofunctor), `(p_* p^* F)|_{U_j} = (V∩U_j ↪ U_j)_*(p^*F|_{V∩U_j})` (open-open
-pushforward–restriction commutation, the `glueOverlapBaseChangeIso` pattern of
-`Picard/GlueDescent`), `V ∩ U_j` is affine (`X` separated), so the fully-affine brick
-`affinePushforwardPullbackBaseChange` + the tilde dictionary `qcoh_iso_tilde_sections`
-exhibit `M|_{W_j}` as a pushforward from `W_j ∩ (g')⁻¹(V)`.)*
-Project-local; blueprint `lem:openimm_bareBC_isIso` (essential-image node). -/
+Intended route (blueprint `lem:openimm_bareBC_app_isIso_affine`): with `w := 𝒜.cover.f j`,
+`M|_{W_j} ≅ (g'|_{W_j})^*((p_* p^* F)|_{U_j})` by the pullback pseudofunctor
+(`pullbackComp`/`pullbackCongr` along `w ≫ g' = g'|_{W_j} ≫ (U_j).ι` via
+`IsOpenImmersion.lift`), `(p_* p^* F)|_{U_j} ≅ (V∩U_j ↪ U_j)_*(p^*F|_{V∩U_j})` by the
+open-open pushforward–restriction commutation (the `glueOverlapBaseChangeIso` pattern of
+`Picard/GlueDescent`, both composites site-level pushforwards along the same opens
+functor), `V ∩ U_j` is affine (`X` separated, `V`, `U_j` affine), so the fully-affine
+brick `affinePushforwardPullbackBaseChange` + the tilde dictionary
+`qcoh_iso_tilde_sections`/`pullbackRestrict_iso_tilde` exhibit the pullback of that
+pushforward as a pushforward from `W_j ∩ (g')⁻¹(V)`, transported along `isoSpec` and an
+`isoOfRangeEq` for the range identification.)*
+Project-local; blueprint `lem:openimm_bareBC_app_isIso_affine` (essential-image member). -/
+theorem openImmersion_pushPull_essImage_member {V V' : Scheme.{u}}
+    (g' : X' ⟶ X) (p : V ⟶ X) (p' : V' ⟶ X') (gV : V' ⟶ V)
+    (hsq : IsPullback gV p' p g') [IsOpenImmersion p] [IsOpenImmersion p'] [IsAffine V]
+    [IsSeparated (terminal.from X)] (F : X.Modules) (hF : F.IsQuasicoherent)
+    (𝒜 : OpenImmersionRefiningAffineCover g') (j : 𝒜.cover.I₀) :
+    (Scheme.Modules.pushforward ((𝒜.cover.f j) ⁻¹ᵁ p'.opensRange).ι).essImage
+      ((Scheme.Modules.restrictFunctor (𝒜.cover.f j)).obj
+        ((Scheme.Modules.pullback g').obj ((Scheme.Modules.pushforward p).obj
+          ((Scheme.Modules.pullback p).obj F)))) := by
+  sorry
+
+/-- **The essential-image node**, reduced to the member node by the cover-local assembly
+`essImage_pushforward_of_openCover` over the refining affine cover
+`openImmersion_refiningAffineCover g'`.  For the restricted cartesian square with `p` an
+open immersion, `V` affine, `X` separated and `F` quasi-coherent, the pulled-back
+push–pull module `g'^*(p_*(p^* F))` lies in the essential image of `p'_*`.  No `sorry`
+of its own.  Project-local; blueprint `lem:openimm_bareBC_isIso` (essential-image node). -/
 theorem openImmersion_pushPull_essImage {V V' : Scheme.{u}}
     (g' : X' ⟶ X) (p : V ⟶ X) (p' : V' ⟶ X') (gV : V' ⟶ V)
     (hsq : IsPullback gV p' p g') [IsOpenImmersion p] [IsAffine V]
@@ -1092,7 +1222,10 @@ theorem openImmersion_pushPull_essImage {V V' : Scheme.{u}}
     (Scheme.Modules.pushforward p').essImage
       ((Scheme.Modules.pullback g').obj ((Scheme.Modules.pushforward p).obj
         ((Scheme.Modules.pullback p).obj F))) := by
-  sorry
+  haveI : IsOpenImmersion p' := isOpenImmersion_of_isPullback_left g' p p' gV hsq
+  exact essImage_pushforward_of_openCover p' _ (openImmersion_refiningAffineCover g').cover
+    (fun j => openImmersion_pushPull_essImage_member g' p p' gV hsq F hF
+      (openImmersion_refiningAffineCover g') j)
 
 /-- **The unit node**, derived from the essential-image node
 (`openImmersion_pushPull_essImage` + `openImmersion_unit_isIso_of_essImage`): for the

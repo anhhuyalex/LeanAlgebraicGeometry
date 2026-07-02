@@ -1,0 +1,12 @@
+## Checklist
+
+- [x] Started Horizon task T3.
+- [ ] Write-domain violation for task T3: MainProjects/Algebraic-Jacobian-Challenge/scratch_probe.lean, MainProjects/Algebraic-Jacobian-Challenge/AlgebraicJacobian/Picard/TangentSpaceDualNumbers.lean.
+- [x] Committed Albanese changes: a0c673d (3 files: AlgebraicJacobian/Genus0BaseObjects/GmScaling.lean, AlgebraicJacobian/Genus0BaseObjects/Points.lean, blueprint/src/chapters/AbelianVarietyRigidity.tex).
+- [x] Report saved: .archon-horizon/runs/0002/sessions/0013-horizon-T3/report.md.
+- [x] Finished Horizon task T3 with status: done.
+- [x] Integrated horizon session 0013-horizon-T3: 3bc938f; project commits Albanese a0c673d; 34 files: .archon-horizon/blueprints/Albanese.json, .archon-horizon/blueprints/Algebraic-Jacobian-Challenge.json, .archon-horizon/events.jsonl, .archon-horizon/inbox/local/comments/I-0008/C-0003.md, .archon-horizon/inbox/local/history/I-0020.jsonl, .archon-horizon/inbox/local/history/I-0021.jsonl, .archon-horizon/inbox/local/history/I-0022.jsonl, .archon-horizon/inbox/local/items/I-0008.yaml, +26 more.
+
+## Issues
+
+- Write-domain violation for task T3: MainProjects/Algebraic-Jacobian-Challenge/scratch_probe.lean, MainProjects/Algebraic-Jacobian-Challenge/AlgebraicJacobian/Picard/TangentSpaceDualNumbers.lean.

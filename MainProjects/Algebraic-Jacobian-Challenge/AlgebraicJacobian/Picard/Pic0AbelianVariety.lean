@@ -5,6 +5,7 @@ Authors: Christian Merten
 -/
 import Mathlib
 import AlgebraicJacobian.Picard.IdentityComponent
+import AlgebraicJacobian.Picard.TangentSpaceDualNumbers
 import AlgebraicJacobian.Genus
 
 /-!
