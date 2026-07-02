@@ -1706,21 +1706,23 @@ private lemma tensorBraiding_eq (F G : X.Modules) :
       (localizationUnitIso X) ((toPresheafOfModules X).obj F) ((toPresheafOfModules X).obj G)
   dsimp only [tensorBraiding, tensorObjIso, Iso.trans_hom, Functor.mapIso_hom,
     MonoidalCategory.tensorIso_hom, Iso.symm_hom]
+  -- v4.31: subterm congruence is dead on this goal (type-incorrect at `instances` transparency via
+  -- `X.ringCatSheaf.obj`), so restate by `show` (checked at default transparency) to expose the
+  -- `⊗ₘ`/`≫` heads syntactically; then the top-level rewrites and the cancellation simp fire
+  -- (cf. `tensorObjUnitIso_eq`).
+  show ((F.sheafificationCounitIso.inv ⊗ₘ G.sheafificationCounitIso.inv) ≫
+      (Localization.Monoidal.μ (sheafificationMon X) (sheafificationW X) (localizationUnitIso X)
+        ((toPresheafOfModules X).obj F) ((toPresheafOfModules X).obj G)).hom) ≫
+      sheafification.map (BraidedCategory.braiding (C := MonoidalPresheaf X)
+        ((toPresheafOfModules X).obj F) ((toPresheafOfModules X).obj G)).hom
+    = (β_ F G).hom ≫
+      ((G.sheafificationCounitIso.inv ⊗ₘ F.sheafificationCounitIso.inv) ≫
+      (Localization.Monoidal.μ (sheafificationMon X) (sheafificationW X) (localizationUnitIso X)
+        ((toPresheafOfModules X).obj G) ((toPresheafOfModules X).obj F)).hom)
   rw [← hbnat, hβ]
-  -- Peel the common left factor `(F.inv ⊗ G.inv)`, collapse the counit cancellation
-  -- `(G.hom ⊗ F.hom) ≫ (G.inv ⊗ F.inv) = 𝟙`, then cancel `μ_{g,f}⁻¹ ≫ μ_{g,f} = 𝟙`.  The final
-  -- associativity steps are done in **term mode** (`Category.assoc _ _ _`): tactic `rw`/`simp` cannot
-  -- match the composition pattern across the `LocalizedMonoidal`/`X.Modules` instance diamond, but a
-  -- term-level `Category.assoc` is checked up to defeq and so goes through.
   simp only [Category.assoc, MonoidalCategory.tensorHom_comp_tensorHom_assoc, Iso.hom_inv_id,
-    MonoidalCategory.id_tensorHom_id, Category.id_comp]
-  congr 1
-  -- residual: `μ_{f,g} ≫ map = (μ_{f,g} ≫ map ≫ μ_{g,f}⁻¹) ≫ μ_{g,f}`.
-  refine Eq.symm ((Category.assoc _ _ _).trans ?_)
-  refine (congrArg _ (Category.assoc _ _ _)).trans ?_
-  -- `erw` (keyed matching at higher transparency) bridges the instance diamond that blocks `rw`.
-  erw [Iso.inv_hom_id, Category.comp_id]
-  rfl
+    MonoidalCategory.id_tensorHom_id, Category.id_comp, Iso.inv_hom_id, Category.comp_id,
+    Iso.inv_hom_id_assoc]
 
 /-! ## Associativity and tensor-power comparison (`cor:sheafTensorObjAssoc`, `lem:sheafTensorPow_add`)
 
@@ -1901,14 +1903,20 @@ private lemma tensorObjWhiskerLeftIso_eq (F : X.Modules) {G G' : X.Modules} (e :
       ((toPresheafOfModules X).map e.hom))
   dsimp only [tensorObjWhiskerLeftIso, tensorObjIso, Iso.trans_hom, Functor.mapIso_hom,
     MonoidalCategory.tensorIso_hom, Iso.symm_hom, MonoidalCategory.whiskerLeftIso_hom]
+  -- v4.31: restate by `show` to expose the `⊗ₘ`/`≫` heads (cf. `tensorObjUnitIso_eq`).
+  show ((F.sheafificationCounitIso.inv ⊗ₘ G.sheafificationCounitIso.inv) ≫
+      (Localization.Monoidal.μ (sheafificationMon X) (sheafificationW X) (localizationUnitIso X)
+        ((toPresheafOfModules X).obj F) ((toPresheafOfModules X).obj G)).hom) ≫
+      sheafification.map (MonoidalCategory.whiskerLeft (C := MonoidalPresheaf X)
+        ((toPresheafOfModules X).obj F) ((toPresheafOfModules X).map e.hom))
+    = F ◁ e.hom ≫
+      ((F.sheafificationCounitIso.inv ⊗ₘ G'.sheafificationCounitIso.inv) ≫
+      (Localization.Monoidal.μ (sheafificationMon X) (sheafificationW X) (localizationUnitIso X)
+        ((toPresheafOfModules X).obj F) ((toPresheafOfModules X).obj G')).hom)
   rw [← hwnat, hwμ]
   simp only [Category.assoc, MonoidalCategory.tensorHom_comp_tensorHom_assoc, Iso.hom_inv_id,
-    MonoidalCategory.id_tensorHom_id, Category.id_comp]
-  congr 1
-  refine Eq.symm ((Category.assoc _ _ _).trans ?_)
-  refine (congrArg _ (Category.assoc _ _ _)).trans ?_
-  erw [Iso.inv_hom_id, Category.comp_id]
-  rfl
+    MonoidalCategory.id_tensorHom_id, Category.id_comp, Iso.inv_hom_id, Category.comp_id,
+    Iso.inv_hom_id_assoc]
 
 set_option backward.isDefEq.respectTransparency false in
 /-- Bridge: the hand-built right-whiskering `tensorObjWhiskerRightIso e G` is the canonical right
@@ -1949,14 +1957,20 @@ private lemma tensorObjWhiskerRightIso_eq {F F' : X.Modules} (e : F ≅ F') (G :
       ((toPresheafOfModules X).obj G))
   dsimp only [tensorObjWhiskerRightIso, tensorObjIso, Iso.trans_hom, Functor.mapIso_hom,
     MonoidalCategory.tensorIso_hom, Iso.symm_hom, MonoidalCategory.whiskerRightIso_hom]
+  -- v4.31: restate by `show` to expose the `⊗ₘ`/`≫` heads (cf. `tensorObjUnitIso_eq`).
+  show ((F.sheafificationCounitIso.inv ⊗ₘ G.sheafificationCounitIso.inv) ≫
+      (Localization.Monoidal.μ (sheafificationMon X) (sheafificationW X) (localizationUnitIso X)
+        ((toPresheafOfModules X).obj F) ((toPresheafOfModules X).obj G)).hom) ≫
+      sheafification.map (MonoidalCategory.whiskerRight (C := MonoidalPresheaf X)
+        ((toPresheafOfModules X).map e.hom) ((toPresheafOfModules X).obj G))
+    = e.hom ▷ G ≫
+      ((F'.sheafificationCounitIso.inv ⊗ₘ G.sheafificationCounitIso.inv) ≫
+      (Localization.Monoidal.μ (sheafificationMon X) (sheafificationW X) (localizationUnitIso X)
+        ((toPresheafOfModules X).obj F') ((toPresheafOfModules X).obj G)).hom)
   rw [← hwnat, hwμ]
   simp only [Category.assoc, MonoidalCategory.tensorHom_comp_tensorHom_assoc, Iso.hom_inv_id,
-    MonoidalCategory.id_tensorHom_id, Category.id_comp]
-  congr 1
-  refine Eq.symm ((Category.assoc _ _ _).trans ?_)
-  refine (congrArg _ (Category.assoc _ _ _)).trans ?_
-  erw [Iso.inv_hom_id, Category.comp_id]
-  rfl
+    MonoidalCategory.id_tensorHom_id, Category.id_comp, Iso.inv_hom_id, Category.comp_id,
+    Iso.inv_hom_id_assoc]
 
 /-- Functoriality of the hand-built right-whiskering under iso-composition: route (b) of
 `analogies/whisker-synonym.md` (iter-020, lean_run_code-VERIFIED).  Proved by routing through the
@@ -2650,21 +2664,18 @@ private lemma tensorObjAssoc_eta_factor_sheaf (A B C : X.Modules) :
     MonoidalCategory.inv_hom_whiskerRight_assoc, MonoidalCategory.whiskerLeft_hom_inv_assoc,
     MonoidalCategory.hom_inv_whiskerRight_assoc, MonoidalCategory.whiskerLeft_inv_hom_assoc,
     Iso.inv_hom_id, Iso.hom_inv_id, Category.comp_id, Category.id_comp]
-  -- The residual `μ`/`εc` bridge pairs and the `α`-naturality coherence straddle the
-  -- `instCategory`/`LocalizedMonoidal` comp diamond; they resist positional `rw`/`simp` but each step
-  -- DOES fire under the defeq-tolerant `erw` (verified: `erw [Iso.hom_inv_id_assoc]` cancels the
-  -- cross-diamond `μ (A) (B⊗C)` pair, and `erw [MonoidalCategory.associator_naturality]` fires on the
-  -- coherence step).  One confirmed cancellation is applied below.
-  erw [Iso.hom_inv_id_assoc]
   -- iter-017 — CLOSED via the abstract, diamond-free monoidal coherence
   -- `tensorObjAssoc_associator_counit_coherence`, PINNED to the `LocalizedMonoidal` synonym instance
   -- `(M := LocalizedMonoidal …)`.  Head-alignment (NOT term-shrinking) is the lever: post-`hc` the goal
   -- carries the `LocalizedMonoidal` comp/monoidal head, so pinning `M` to the same synonym makes the
-  -- generic conclusion instantiate with that head ⇒ `exact`'s top-level `isDefEq` short-circuits
-  -- instead of traversing the ~1.2M-char `instCategory`/`LocalizedMonoidal` rfl-diamond.  All isos and
-  -- morphisms are supplied explicitly (`eA … m6`) so no unification search runs; `hm6 = m6 = eR.inv`
-  -- is `sheafification_map_unit_eq` (`L(η_P) = εc⁻¹`).  See analogies/coherence-placement.md, STEP A.
-  exact tensorObjAssoc_associator_counit_coherence
+  -- final `exact`'s `isDefEq` short-circuit instead of traversing the ~1.2M-char
+  -- `instCategory`/`LocalizedMonoidal` rfl-diamond.  All isos and morphisms are supplied explicitly
+  -- (`eA … m6`) so no unification search runs.
+  -- v4.31: the goal is now MORE normalised than the coherence conclusion (the `hc`-bridged simp above
+  -- already cancels the `n`/`eF` telescope, and `sheafification_map_unit_eq` already rewrote `L(η)` to
+  -- `εc⁻¹`), so bind the coherence as `key` with `m6 := eR.inv`/`hm6 := rfl`, cancel its telescope by
+  -- a uniform-instance `simp at key`, and `exact key`.
+  have key := tensorObjAssoc_associator_counit_coherence
     (M := LocalizedMonoidal (sheafificationMon X) (sheafificationW X) (localizationUnitIso X))
     A.sheafificationCounitIso B.sheafificationCounitIso C.sheafificationCounitIso
     (sheafification.obj (MonoidalCategory.tensorObj (C := MonoidalPresheaf X)
@@ -2687,10 +2698,12 @@ private lemma tensorObjAssoc_eta_factor_sheaf (A B C : X.Modules) :
       ((toPresheafOfModules X).obj A)
       ((toPresheafOfModules X).obj (sheafification.obj (MonoidalCategory.tensorObj
         (C := MonoidalPresheaf X) ((toPresheafOfModules X).obj B) ((toPresheafOfModules X).obj C))))).hom
-    (sheafification.map ((PresheafOfModules.sheafificationAdjunction (𝟙 X.ringCatSheaf.obj)).unit.app
-      (MonoidalCategory.tensorObj (C := MonoidalPresheaf X)
-        ((toPresheafOfModules X).obj B) ((toPresheafOfModules X).obj C))))
-    (sheafification_map_unit_eq _)
+    (sheafification.obj (MonoidalCategory.tensorObj (C := MonoidalPresheaf X)
+      ((toPresheafOfModules X).obj B) ((toPresheafOfModules X).obj C))).sheafificationCounitIso.inv
+    rfl
+  simp only [Category.assoc, Iso.hom_inv_id_assoc,
+    MonoidalCategory.inv_hom_whiskerRight_assoc] at key
+  exact key
 
 /-- **Presheaf-morphism factorization of the associator** (`lem:tensorObjAssoc_eta_factor`).
 As morphisms of presheaves of modules `(A ⊗ₚ B) ⊗ₚ C ⟶ (tensorObj A (tensorObj B C)).val`,
@@ -3012,11 +3025,12 @@ the bridge `hom`/`inv` pairs, and closes the residual associator-naturality squa
 private lemma tensorPowAdd_assoc_succ_core
     {M : Type*} [Category M] [MonoidalCategory M]
     {a b cc l ab abc bc r Pab Pcl Pbc Pbcl Pabc Q8
-      Q1 Q2 Q3 Q4 Q5 Q6 Q7 Q9 Q10 : M}
+      Q1 Q2 Q5 Q6 Q7 Q9 Q10 Q11 : M}
     (iAB_CL : Pab ⊗ Pcl ≅ Q1) (iCL : cc ⊗ l ≅ Pcl)
-    (iAB_C : Pab ⊗ cc ≅ Pabc) (iab_C : ab ⊗ cc ≅ Q2) (iab_CL : ab ⊗ Pcl ≅ Q3)
-    (iABC_L : abc ⊗ l ≅ Q4) (iR_L : r ⊗ l ≅ Q5)
+    (iAB_C : Pab ⊗ cc ≅ Pabc) (iab_C : ab ⊗ cc ≅ Q2)
+    (iR_L : r ⊗ l ≅ Q5)
     (iAB : a ⊗ b ≅ Pab) (iB_CL : b ⊗ Pcl ≅ Pbcl) (iB_C : b ⊗ cc ≅ Pbc)
+    (iT : Pbc ⊗ l ≅ Q11)
     (iBC_L : bc ⊗ l ≅ Q6) (iA_S : a ⊗ Q6 ≅ Q7)
     (iABCL : Pabc ⊗ l ≅ Q8) (iA_BC : a ⊗ Pbc ≅ Q9) (iA_bc : a ⊗ bc ≅ Q10)
     (μ1 : Pab ⟶ ab) (μ2 : Q2 ⟶ abc) (μ3 : Q10 ⟶ r) (μ4 : Pbc ⟶ bc) (μ5 : Q7 ⟶ Q5)
@@ -3027,13 +3041,16 @@ private lemma tensorPowAdd_assoc_succ_core
             ≫ (iA_BC.inv ≫ a ◁ μ4 ≫ iA_bc.hom) ▷ l ≫ μ3 ▷ l ≫ iR_L.hom)
     (hμ5 : iA_S.hom ≫ μ5
         = a ◁ iBC_L.inv ≫ (α_ a bc l).inv ≫ iA_bc.hom ▷ l ≫ μ3 ▷ l ≫ iR_L.hom) :
+    -- v4.31 statement shape: the goal this is `exact`ed against is now fully flattened with the
+    -- `iab_CL`/`iABC_L` hom/inv pairs already cancelled, and the right-hand `a ◁ (…)` factor split at
+    -- the bridge `iT` — mirror that shape here (the proof normalises both forms identically).
     iAB_CL.inv ≫ Pab ◁ iCL.inv ≫ (α_ Pab cc l).inv ≫ iAB_C.hom ▷ l
         ≫ (iAB_C.inv ≫ μ1 ▷ cc ≫ iab_C.hom) ▷ l ≫ iab_C.inv ▷ l ≫ (α_ ab cc l).hom
-        ≫ ab ◁ iCL.hom ≫ iab_CL.hom
-        ≫ (iab_CL.inv ≫ ab ◁ iCL.inv ≫ (α_ ab cc l).inv ≫ iab_C.hom ▷ l ≫ μ2 ▷ l ≫ iABC_L.hom)
-        ≫ iABC_L.inv ≫ e ▷ l ≫ iR_L.hom
+        ≫ ab ◁ iCL.hom ≫ ab ◁ iCL.inv ≫ (α_ ab cc l).inv ≫ iab_C.hom ▷ l ≫ μ2 ▷ l
+        ≫ e ▷ l ≫ iR_L.hom
       = iAB_CL.inv ≫ iAB.inv ▷ Pcl ≫ (α_ a b Pcl).hom ≫ a ◁ iB_CL.hom
-        ≫ a ◁ (iB_CL.inv ≫ b ◁ iCL.inv ≫ (α_ b cc l).inv ≫ iB_C.hom ▷ l ≫ μ4 ▷ l ≫ iBC_L.hom)
+        ≫ a ◁ (iB_CL.inv ≫ b ◁ iCL.inv ≫ (α_ b cc l).inv ≫ iB_C.hom ▷ l ≫ iT.hom)
+        ≫ a ◁ (iT.inv ≫ μ4 ▷ l ≫ iBC_L.hom)
         ≫ iA_S.hom ≫ μ5 := by
   rw [hμ5]
   have foldhyp' := (cancel_epi iABCL.inv).mp foldhyp
@@ -3156,7 +3173,7 @@ private lemma tensorPowAdd_assoc (L : X.Modules) (m m' m'' : ℕ) :
     -- `key` : align the trailing dependent reindexer with `ihRh`'s `WR(eqToIso, L)` trailing factor.
     have key : eqToIso (congrArg (tensorPow L) (add_assoc m m' (c + 1)))
         = tensorObjWhiskerRightIso (eqToIso (congrArg (tensorPow L) (add_assoc m m' c))) L := by
-      rw [tensorObjWhiskerRightIso_eqToIso]; rfl
+      rw [tensorObjWhiskerRightIso_eqToIso]  -- v4.31: `rw`'s auto-`rfl` already closes the goal
     simp only [tensorPow_succ, tensorPowAdd_succ, tensorObjWhiskerRightIso_tensorObj,
       tensorObjWhiskerLeftIso_trans, Iso.trans_assoc]
     rw [key]
@@ -3188,15 +3205,14 @@ private lemma tensorPowAdd_assoc (L : X.Modules) (m m' m'' : ℕ) :
         Iso.trans_inv, Iso.symm_inv, MonoidalCategory.whiskerRightIso_hom,
         MonoidalCategory.whiskerRightIso_inv, MonoidalCategory.whiskerLeftIso_inv, Category.assoc,
         Iso.hom_inv_id_assoc]
-      exact Iso.hom_inv_id_assoc _ _
+      -- v4.31: the simp above already closes this goal (`Iso.hom_inv_id_assoc` fires in-set).
     exact tensorPowAdd_assoc_succ_core
       (M := LocalizedMonoidal (sheafificationMon X) (sheafificationW X) (localizationUnitIso X))
       (iAB_CL :=
         ((L.tensorPow m).tensorObj (L.tensorPow m')).tensorObjIso ((L.tensorPow c).tensorObj L))
       (iCL := (L.tensorPow c).tensorObjIso L)
-      (iab_CL := (L.tensorPow (m + m')).tensorObjIso ((L.tensorPow c).tensorObj L))
-      (iABC_L := (L.tensorPow (m + m' + c)).tensorObjIso L)
       (iB_CL := (L.tensorPow m').tensorObjIso ((L.tensorPow c).tensorObj L))
+      (iT := ((L.tensorPow m').tensorObj (L.tensorPow c)).tensorObjIso L)
       (foldhyp := ihRh) (hμ5 := hμ5)
 
 /-- **Right-whisker naturality of the section product** (`lem:sectionsMul_whiskerRight_natural`),
@@ -3764,20 +3780,22 @@ reindex bridges, and `monoidal` closes.  Plugged in by `exact`.  Reindex/symmetr
 private lemma tensorPowAdd_comm_succ_core
     {M : Type*} [Category M] [MonoidalCategory M]
     {mm a l Pal Pmc Pcm Pm1 P1m Pcm_sum Pmc_sum Pfin
-      Qmtcl QmcL QcmL Qtclm : M}
+      Qmtcl QmcL QcmL : M}
     (imtcl : mm ⊗ Pal ≅ Qmtcl) (icl : a ⊗ l ≅ Pal) (imc : mm ⊗ a ≅ Pmc)
     (imcL : Pmc_sum ⊗ l ≅ QmcL) (icm : a ⊗ mm ≅ Pcm) (im1 : mm ⊗ l ≅ Pm1)
-    (i1m : l ⊗ mm ≅ P1m) (itclm : Pal ⊗ mm ≅ Qtclm) (icmL : Pcm_sum ⊗ l ≅ QcmL)
+    (i1m : l ⊗ mm ≅ P1m) (icmL : Pcm_sum ⊗ l ≅ QcmL)
     (βmc : Pmc ⟶ Pcm) (βm1 : Pm1 ⟶ P1m) (β1m : P1m ⟶ Pm1) (μ : Pcm ⟶ Pcm_sum)
     (r0 : Pcm_sum ⟶ Pmc_sum) (r2 : QcmL ⟶ Pfin) (rfinal : Pfin ⟶ QmcL)
     (hsymm : βm1 ≫ β1m = 𝟙 Pm1)
     (hk : r0 ▷ l ≫ imcL.hom = icmL.hom ≫ r2 ≫ rfinal) :
+    -- v4.31 statement shape: the goal this is `refine`d against is now fully flattened with the
+    -- `itclm` hom/inv pair already cancelled — mirror that shape here (the proof's first simp
+    -- normalises both forms identically).
     imtcl.inv ≫ mm ◁ icl.inv ≫ (α_ mm a l).inv ≫ imc.hom ▷ l ≫ βmc ▷ l ≫ μ ▷ l ≫ r0 ▷ l ≫ imcL.hom
-      = (imtcl.inv ≫ mm ◁ icl.inv ≫ (α_ mm a l).inv ≫ imc.hom ▷ l ≫ βmc ▷ l ≫ icm.inv ▷ l ≫
-            (α_ a mm l).hom ≫ a ◁ im1.hom ≫ a ◁ βm1 ≫ a ◁ i1m.inv ≫ (α_ a l mm).inv ≫
-            icl.hom ▷ mm ≫ itclm.hom) ≫
-          (itclm.inv ≫ icl.inv ▷ mm ≫ (α_ a l mm).hom ≫ a ◁ i1m.hom ≫ a ◁ β1m ≫ a ◁ im1.inv ≫
-            (α_ a mm l).inv ≫ icm.hom ▷ l ≫ μ ▷ l ≫ icmL.hom ≫ r2) ≫ rfinal := by
+      = imtcl.inv ≫ mm ◁ icl.inv ≫ (α_ mm a l).inv ≫ imc.hom ▷ l ≫ βmc ▷ l ≫ icm.inv ▷ l ≫
+          (α_ a mm l).hom ≫ a ◁ im1.hom ≫ a ◁ βm1 ≫ a ◁ i1m.inv ≫ (α_ a l mm).inv ≫
+          icl.hom ▷ mm ≫ icl.inv ▷ mm ≫ (α_ a l mm).hom ≫ a ◁ i1m.hom ≫ a ◁ β1m ≫ a ◁ im1.inv ≫
+          (α_ a mm l).inv ≫ icm.hom ▷ l ≫ μ ▷ l ≫ icmL.hom ≫ r2 ≫ rfinal := by
   simp only [Category.assoc, Iso.hom_inv_id_assoc, Iso.inv_hom_id_assoc,
     MonoidalCategory.hom_inv_whiskerRight_assoc, MonoidalCategory.inv_hom_whiskerRight_assoc,
     ← MonoidalCategory.whiskerLeft_comp_assoc, reassoc_of% hsymm, Iso.hom_inv_id,
@@ -3844,7 +3862,7 @@ lemma tensorPowAdd_comm (L : X.Modules) [IsInvertible L] (m m' : ℕ) :
       eqToIso.hom, Category.assoc, Iso.hom_inv_id_assoc]
     refine tensorPowAdd_comm_succ_core
       (M := LocalizedMonoidal (sheafificationMon X) (sheafificationW X) (localizationUnitIso X))
-      _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ?hsymm ?hk
+      _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ?hsymm ?hk
     · -- `hsymm`: opposite self-braidings cancel (symmetry `β_{L^m,L} ≫ β_{L,L^m} = 𝟙`).
       have h := congrArg Iso.hom (tensorBraiding_symm (L.tensorPow m) L)
       simp only [Iso.trans_hom, Iso.refl_hom] at h
@@ -3856,8 +3874,13 @@ lemma tensorPowAdd_comm (L : X.Modules) [IsInvertible L] (m m' : ℕ) :
                 eqToHom (congrArg (fun n => (L.tensorPow n).tensorObj L) hn.symm) := by
         rintro n1 n2 rfl
         simp
+      -- v4.31: `convert` now also splits the `LocalizedMonoidal`/`X.Modules` instance diamond into a
+      -- type-equality goal (`rfl`-defeq) before the `eqToHom` reconciliation.
       convert gen (show m + c = c + m from by omega) using 2
-      exact eqToHom_trans _ _
+      · rfl
+      · first
+          | exact eqToHom_trans _ _
+          | simp [eqToHom_trans]
 
 /-- Section-level functoriality of a composite of `X.Modules` isos at the top open: evaluating the
 `.hom` of a composite `f ≪≫ g` on a section is the composite of the two evaluations.  Project-local
