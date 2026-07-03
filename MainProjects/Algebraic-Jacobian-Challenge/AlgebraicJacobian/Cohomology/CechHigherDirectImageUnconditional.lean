@@ -10,6 +10,7 @@ import AlgebraicJacobian.Cohomology.QcohTildeSections
 import AlgebraicJacobian.Cohomology.CechTermAcyclic
 import AlgebraicJacobian.Cohomology.ModulesCoverConservativity
 import AlgebraicJacobian.Cohomology.AffinePushPullEssImage
+import AlgebraicJacobian.Cohomology.PullbackQuasicoherent
 
 /- USER (2026-06-29): `cech_flatBaseChange` (Stacks 02KH) is the Kleiman-4.8 Step-1 prerequisite and the
    active target. PER USER, close it via the ČECH-TO-COHOMOLOGY SPECTRAL SEQUENCE: build the relative SS
@@ -35,14 +36,20 @@ these two specific lemmas, so they are reinstated here on top of the merged
 
 * `cechHigherDirectImage` is sorry-free (a one-liner on the merged `CechComplex`).
 * `cech_flatBaseChange` (Stacks 02KH) is now sorry-free *modulo* the following named leaves
-  (currently 5 open `sorry`s, all blueprinted): the homology-side flat left-exactness
+  (currently 4 open `sorry`s, all blueprinted): the homology-side flat left-exactness
   `pullback_preservesFiniteLimits` (the abstract-left-adjoint wall); the two degreewise
   Beck–Chevalley leaves `cech_pushforward_baseChange_natIso` (S-level square along `g`,
   `naturality` residual) and `twisted_cech_nerve_iso` (X-level square along `g'`, `naturality`
-  residual); the per-σ single-open S-level base change `pushPullObj_coverInter_baseChange`
-  (the affine-reduction heart — its LHS half is now LANDED via
-  `pushPullObj_pushforward_iso_tilde_affine`, residual = RHS half + affine gap); and the RHS
-  leaf `pushPullObj_coverInter_baseChanged_pushforward_iso_tilde`.
+  residual); and the per-σ single-open S-level base change `pushPullObj_coverInter_baseChange`
+  (the affine-reduction heart — its LHS half is LANDED via
+  `pushPullObj_pushforward_iso_tilde_affine`, residual = the abstract↔Spec transport plus the
+  affine gap `cech_degree_affine_baseChange` matching). The RHS
+  leaf `pushPullObj_coverInter_baseChanged_pushforward_iso_tilde` is now **CLOSED (sorry-free)**:
+  it is the composite of the per-σ X-level Beck–Chevalley `twisted_cech_nerve_per_sigma` with
+  the altitude-2 bridge at the base-changed data, quasi-coherence of `g'^* F` being supplied by
+  the general-morphism pullback stability `pullback_isQuasicoherent_hom`
+  (`Cohomology/PullbackQuasicoherent.lean`, Stacks 01BG — new, closes the previously-documented
+  general-morphism gap).
   The X-level per-σ Beck–Chevalley `twisted_cech_nerve_per_sigma` and its core
   open-immersion Beck–Chevalley `openImmersion_beckChevalley` are now **CLOSED (sorry-free)**:
   STAGE 1 (iter-326) is the pseudofunctor telescope `openImmersion_bc_telescope` + the bare
@@ -388,9 +395,9 @@ All ingredients are axiom-clean project infrastructure: `isQuasicoherent_pullbac
 /-- **Pullback preserves quasi-coherence** (Stacks 01BG, open case).  For an open `V` of `X` and a
 quasi-coherent `F : X.Modules`, the restriction `(V.ι)^* F` is quasi-coherent on `V`.  This is the
 open-immersion case the fibre-power projections of the {\v C}ech nerve require (each
-`Y_n = U_{i₀} ∩ ⋯ ∩ U_{iₙ} ↪ X` is an open immersion); the general-morphism case is absent from both
-Mathlib and the project (the abstract left-adjoint route via `Presentation.map` only transports a
-*global* presentation, whereas quasi-coherence is *local*).  A thin re-export of
+`Y_n = U_{i₀} ∩ ⋯ ∩ U_{iₙ} ↪ X` is an open immersion); the general-morphism case is
+`pullback_isQuasicoherent_hom` (`Cohomology/PullbackQuasicoherent.lean`), which localizes the
+pullback along the preimage cover before transporting the presentation.  A thin re-export of
 `isQuasicoherent_pullback_opens` (proved via `IsQuasicoherent.of_coversTop` on the preimage cover).
 Project-local; blueprint `lem:pullback_preserves_quasicoherent`. -/
 theorem pullback_isQuasicoherent (V : X.Opens) (F : X.Modules) (hF : F.IsQuasicoherent) :
@@ -575,51 +582,6 @@ noncomputable def coverInter_baseChanged_sections_iso_tensor {R A R' B : CommRin
     (ModuleCat.restrictScalars σ'.hom).obj ((ModuleCat.extendScalars ρ.hom).obj N) ≅
       (ModuleCat.extendScalars ψ.hom).obj ((ModuleCat.restrictScalars φ.hom).obj N) :=
   (baseChangeCancelModuleIso φ ψ ρ σ' h N).symm
-
-/-- **RHS abstract → tilde for a single intersection open (base-changed side)** (carved block
-`lem:coverinter_rhs_iso_tilde`).  Over the affine bases `S = Spec R`, `S' = Spec R'`, for the
-cartesian base-change square `h : IsPullback g' f' f g` with `f : X ⟶ Spec R` separated, the
-base-changed RHS push–pull object `f'_*((g')^*(pushPullObj F (Over.mk j_σ)))` is the affine
-pushforward `(Spec ψ)_*(tilde (N ⊗_R R'))` of the tilde of the base-changed module, where
-`ψ : R' ⟶ A_σ ⊗_R R'` presents `f' ∘ j'_σ` as `Spec ψ` and `N = Γ(V, (j_σ)^* F)`.
-
-*(STUB — the largest carved piece, the previously-glossed multi-hundred-LOC gap.  Intended route:
-push `g'` through the per-σ X-level Beck–Chevalley `twisted_cech_nerve_per_sigma` to turn
-`(g')^*((j_σ)_*(j_σ)^* F)` into `(j'_σ)_*(j'_σ)^*((g')^*F) = pushPullObj ((g')^*F) (Over.mk j'_σ)`;
-the base-changed open `V' = X' ×_X V` is affine (`restrictedCartesianAffinePushout` over the affine
-`V`, `S'`), so the altitude-2 bridge `pushPullObj_pushforward_iso_tilde` for `f'` at `V'` gives
-`(Spec ψ)_*(tilde N')`; then `coverInter_baseChanged_sections_iso_tensor` identifies the corner module
-`N' ≅ N ⊗_R R'`.)*  Project-local; blueprint `lem:coverinter_rhs_iso_tilde`. -/
-noncomputable def pushPullObj_coverInter_baseChanged_pushforward_iso_tilde
-    {R R' : CommRingCat.{u}}
-    (f : X ⟶ Spec R) (g : Spec R' ⟶ Spec R) (f' : X' ⟶ Spec R') (g' : X' ⟶ X)
-    (h : IsPullback g' f' f g) [IsSeparated f] [IsSeparated f']
-    (𝒰 : X.OpenCover) [∀ i, IsAffine (𝒰.X i)]
-    [∀ i, IsAffine (((Scheme.Pullback.openCoverOfLeft 𝒰 f g).pushforwardIso
-      h.isoPullback.symm.hom).X i)]
-    (F : X.Modules) (hF : F.IsQuasicoherent)
-    {κ : Type} [Finite κ] [Nonempty κ] (σ : κ → 𝒰.I₀) :
-    (Scheme.Modules.pushforward f').obj
-        ((Scheme.Modules.pullback g').obj
-          (pushPullObj F (Over.mk (Scheme.Opens.ι (coverInterOpen 𝒰 σ))))) ≅
-      (Scheme.Modules.pushforward (Spec.map (Spec.preimage
-          ((coverInterOpen_isAffine f'
-            ((Scheme.Pullback.openCoverOfLeft 𝒰 f g).pushforwardIso h.isoPullback.symm.hom)
-            σ).fromSpec ≫ f')))).obj
-        (tilde (moduleSpecΓFunctor.obj
-          ((Scheme.Modules.pushforward (coverInterOpen_isAffine f'
-              ((Scheme.Pullback.openCoverOfLeft 𝒰 f g).pushforwardIso h.isoPullback.symm.hom)
-              σ).isoSpec.hom).obj
-            ((Scheme.Modules.pullback (Scheme.Opens.ι (coverInterOpen
-                ((Scheme.Pullback.openCoverOfLeft 𝒰 f g).pushforwardIso h.isoPullback.symm.hom)
-                σ))).obj
-              ((Scheme.Modules.pullback g').obj F))))) :=
-  -- RESIDUAL: the multi-hundred-LOC RHS abstract → tilde reduction (see docstring sketch).
-  -- Intended route: under `f'_*`, apply `twisted_cech_nerve_per_sigma` to rewrite
-  -- `(g')^*((j_σ)_*(j_σ)^* F)` as `pushPullObj ((g')^*F) (Over.mk j'_σ)` over the base-changed
-  -- intersection open `V' = coverInterOpen 𝒰' σ`, then apply the altitude-2 bridge
-  -- `pushPullObj_pushforward_iso_tilde f' (g'^*F) _ (coverInterOpen_isAffine f' 𝒰' σ)`.
-  sorry
 
 /-- **Per-intersection-open S-level base change** (the per-σ residual of the degreewise
 Beck–Chevalley leaf, after the product decomposition `pushPull_sigma_iso`).  For a Čech
@@ -1356,6 +1318,55 @@ noncomputable def twisted_cech_nerve_per_sigma
         (Scheme.Opens.ι (coverInterOpen
           ((Scheme.Pullback.openCoverOfLeft 𝒰 f g).pushforwardIso h.isoPullback.symm.hom) σ))
         hfst hι' hre))
+
+/-- **RHS abstract → tilde for a single intersection open (base-changed side)** (carved block
+`lem:coverinter_rhs_iso_tilde`).  Over the affine bases `S = Spec R`, `S' = Spec R'`, for the
+cartesian base-change square `h : IsPullback g' f' f g` with `f : X ⟶ Spec R` separated, the
+base-changed RHS push–pull object `f'_*((g')^*(pushPullObj F (Over.mk j_σ)))` is the affine
+pushforward of the tilde of the base-changed module of sections.
+
+**CLOSED** — the two-step composite of the intended route: push `g'` through the per-σ
+X-level Beck–Chevalley `twisted_cech_nerve_per_sigma` (now sorry-free) to turn
+`(g')^*((j_σ)_*(j_σ)^* F)` into `pushPullObj ((g')^*F) (Over.mk j'_σ)` over the base-changed
+intersection open `V' = coverInterOpen 𝒰' σ`, then apply the altitude-2 bridge
+`pushPullObj_coverInter_pushforward_iso_tilde` for `f'` at the base-changed data
+`(𝒰', (g')^* F)`.  Quasi-coherence of the base-changed module `(g')^* F` is the
+general-morphism pullback stability `pullback_isQuasicoherent_hom`
+(`PullbackQuasicoherent.lean`, Stacks 01BG).  The further identification of the
+base-changed section module with the tensor `N ⊗_R R'`
+(`coverInter_baseChanged_sections_iso_tensor`) is consumed downstream by the affine gap of
+`pushPullObj_coverInter_baseChange`, not here.  Project-local; blueprint
+`lem:coverinter_rhs_iso_tilde`. -/
+noncomputable def pushPullObj_coverInter_baseChanged_pushforward_iso_tilde
+    {R R' : CommRingCat.{u}}
+    (f : X ⟶ Spec R) (g : Spec R' ⟶ Spec R) (f' : X' ⟶ Spec R') (g' : X' ⟶ X)
+    (h : IsPullback g' f' f g) [IsSeparated f] [IsSeparated f']
+    (𝒰 : X.OpenCover) [∀ i, IsAffine (𝒰.X i)]
+    [∀ i, IsAffine (((Scheme.Pullback.openCoverOfLeft 𝒰 f g).pushforwardIso
+      h.isoPullback.symm.hom).X i)]
+    (F : X.Modules) (hF : F.IsQuasicoherent)
+    {κ : Type} [Finite κ] [Nonempty κ] (σ : κ → 𝒰.I₀) :
+    (Scheme.Modules.pushforward f').obj
+        ((Scheme.Modules.pullback g').obj
+          (pushPullObj F (Over.mk (Scheme.Opens.ι (coverInterOpen 𝒰 σ))))) ≅
+      (Scheme.Modules.pushforward (Spec.map (Spec.preimage
+          ((coverInterOpen_isAffine f'
+            ((Scheme.Pullback.openCoverOfLeft 𝒰 f g).pushforwardIso h.isoPullback.symm.hom)
+            σ).fromSpec ≫ f')))).obj
+        (tilde (moduleSpecΓFunctor.obj
+          ((Scheme.Modules.pushforward (coverInterOpen_isAffine f'
+              ((Scheme.Pullback.openCoverOfLeft 𝒰 f g).pushforwardIso h.isoPullback.symm.hom)
+              σ).isoSpec.hom).obj
+            ((Scheme.Modules.pullback (Scheme.Opens.ι (coverInterOpen
+                ((Scheme.Pullback.openCoverOfLeft 𝒰 f g).pushforwardIso h.isoPullback.symm.hom)
+                σ))).obj
+              ((Scheme.Modules.pullback g').obj F))))) :=
+  (Scheme.Modules.pushforward f').mapIso
+      (twisted_cech_nerve_per_sigma f g f' g' h 𝒰 F hF σ) ≪≫
+    pushPullObj_coverInter_pushforward_iso_tilde f'
+      ((Scheme.Pullback.openCoverOfLeft 𝒰 f g).pushforwardIso h.isoPullback.symm.hom)
+      ((Scheme.Modules.pullback g').obj F)
+      (pullback_isQuasicoherent_hom g' F hF) σ
 
 /-- **The base-changed nerve is the nerve of the base-changed data** (Stacks 02KG, the
 mechanical half). Applying `(g')^*` (at the `X`-level) to the dropped Čech nerve of
