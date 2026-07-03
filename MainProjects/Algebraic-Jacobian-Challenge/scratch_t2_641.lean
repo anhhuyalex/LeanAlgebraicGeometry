@@ -132,6 +132,7 @@ lemma coverInterCornerRingMap_SpecMap
   unfold coverInterCornerRingMap
   rw [Spec.map_preimage]
 
+set_option backward.isDefEq.respectTransparency false in
 /-- The restricted base-change square over the affine intersection open, as a
 pushout of rings `(φ, ψ, ρ, ψ')` with corner `Γ(X', V'_σ)`. -/
 theorem coverInter_ring_isPushout
@@ -162,12 +163,13 @@ theorem coverInter_ring_isPushout
   · -- e₁.hom ≫ pullback.snd = (ĩ.inv ≫ restrictedMap ≫ e.hom) ≫ e.inv
     simp [coverInterOpen_baseChange_restrictedMap]
   · -- e₁.hom ≫ (pullback.fst ≫ f') = (fromSpec ≫ f') ≫ 𝟙
-    have hfac := coverInterOpen_baseChange_sliceIso_inv_fst f g f' g' h 𝒰 σ
-    rw [Iso.trans_hom, Iso.symm_hom, Iso.symm_hom, Category.comp_id, Category.assoc,
-      ← Category.assoc ((coverInterOpen_baseChange_sliceIso f g f' g' h 𝒰 σ).inv),
-      hfac, ← IsAffineOpen.isoSpec_inv_ι, Category.assoc]
+    have hfac := reassoc_of% (coverInterOpen_baseChange_sliceIso_inv_fst f g f' g' h 𝒰 σ)
+    simp only [Iso.trans_hom, Iso.symm_hom, Iso.refl_hom, Category.comp_id, Category.assoc]
+    rw [hfac, ← IsAffineOpen.isoSpec_inv_ι, Category.assoc]
+    simp only [Iso.symm_hom]
   · -- e₂.hom ≫ (V.ι ≫ f) = (fromSpec ≫ f) ≫ 𝟙
-    rw [Iso.symm_hom, Category.comp_id, ← IsAffineOpen.isoSpec_inv_ι, Category.assoc]
+    simp only [Iso.symm_hom, Iso.refl_hom, Category.comp_id]
+    rw [← IsAffineOpen.isoSpec_inv_ι, Category.assoc]
   · simp
 
 end LiteralSpec
