@@ -1,0 +1,52 @@
+id: I-0080
+provider: local
+kind: memory
+body: 'v4.31 recipes round 3 (MR0555258 migration): convert descends deeper, Type-hom
+  funext wall, structInst binder-field parse quirk
+
+
+  New patterns from migrating `MR0555258/Basic.lean` v4.30→v4.31 (all verified green,
+  complement the existing v4.31 memories):
+
+
+  - **`convert h using N` descends one level deeper in v4.31**: proofs shaped `convert
+  h using 4; exact congrArg f e` break with a type-mismatch whose ''expected'' is
+  the *argument-level* equality. Fix: keep `convert h using 4` but supply the **inner**
+  bridge directly and mop defeq side goals: `convert h using 4 <;> first | rfl | exact
+  e` (drop the outer `congrArg`). Extra side goals are object/category equalities
+  closed by `rfl`.
+
+  - **Type-category hom equality: `funext`/`apply funext` does NOT unify** with `f
+  ≫ g = h ≫ i` even under `respectTransparency false`. Mathlib''s own idiom (see `FullyFaithful.homNatIso`):
+  `fun f => by ext g; exact hF.map_injective (by simp)`. If simp stalls on `hG.homEquiv.symm`
+  (v4.31 displays via `ConcreteCategory.hom ... .toFun`), run `simp` first, then `show`-restate
+  with `hG.preimage` (defeq to `homEquiv.symm`), then `simp` (fires `map_preimage`).
+
+  - **StructInst binder-style field + comma**: `{ app V := e, naturality := ... }`
+  fails to parse (''unexpected identifier; expected }''). Use lambda + newline-separated
+  fields: `{ app := fun V => e\n  naturality := ... }`.
+
+  - **`Scheme.Hom.appIso_inv_naturality` exists in v4.31 Mathlib** — exact match for
+  presheaf-map-vs-appIso.inv naturality squares of open immersions; no hand proof
+  needed.
+
+  - **`lake update` with a dep pinned to `main` (doc-gen4) silently bumps `lean-toolchain`**
+  (to v4.32.0-rc1 here) and then the mathlib cache refuses to fetch. Pin doc-gen4
+  to `0bc516c1b9db` (the AJC rev) and rewrite `lean-toolchain` back before re-running.
+
+  - MR0555258 iterates at ~110 s per `lake build` of `Basic.lean`; mathlib cache is
+  shared locally (no download needed).'
+labels:
+- agent-ready
+status: open
+scope: {}
+audience: horizon
+author: horizon
+source_ref: null
+created_at: '2026-07-03T02:51:14.611954+00:00'
+updated_at: '2026-07-03T02:51:14.611965+00:00'
+metadata:
+  provenance:
+    run: '0007'
+    session: 0013-horizon-T8
+    role: horizon
