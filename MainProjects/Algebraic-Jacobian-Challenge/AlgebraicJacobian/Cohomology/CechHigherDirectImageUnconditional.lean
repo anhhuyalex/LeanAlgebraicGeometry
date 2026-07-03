@@ -1144,7 +1144,7 @@ noncomputable def openImmersion_refiningAffineCover (g' : X' ⟶ X) :
             ≫ X.affineOpenCover.openCover.pullbackHom g' j.1).base y,
       by rw [hcomp, Scheme.Hom.comp_base]; rfl⟩
 
-/-- **Open-immersion Beck–Chevalley over a restricted cartesian square** (Stacks 02KG; carved
+/-! **Open-immersion Beck–Chevalley over a restricted cartesian square** (Stacks 02KG; carved
 block `lem:openimm_beckchevalley`).  Let `p : V ⟶ X` be an *open immersion* and let the square
 ```
   V' --gV--> V
@@ -1205,14 +1205,13 @@ is affine (`IsAffineOpen.inf`, `X` separated), and the affine heart
 Project-local; blueprint `lem:openimm_bareBC_app_isIso_affine` (essential-image member). -/
 theorem openImmersion_pushPull_essImage_member {V' : Scheme.{u}}
     (g' : X' ⟶ X) {V₀ : X.Opens} (hV₀ : IsAffineOpen V₀) (p' : V' ⟶ X') (gV : V' ⟶ ↑V₀)
-    (hsq : IsPullback gV p' V₀.ι g')
+    (hsq : IsPullback gV p' V₀.ι g') [IsOpenImmersion p']
     [IsSeparated (terminal.from X)] (F : X.Modules) (hF : F.IsQuasicoherent)
     (𝒜 : OpenImmersionRefiningAffineCover g') (j : 𝒜.cover.I₀) :
     (Scheme.Modules.pushforward ((𝒜.cover.f j) ⁻¹ᵁ p'.opensRange).ι).essImage
       ((Scheme.Modules.restrictFunctor (𝒜.cover.f j)).obj
         ((Scheme.Modules.pullback g').obj ((Scheme.Modules.pushforward V₀.ι).obj
           ((Scheme.Modules.pullback V₀.ι).obj F)))) := by
-  haveI : IsOpenImmersion p' := isOpenImmersion_of_isPullback_left g' V₀.ι p' gV hsq
   -- the range of `p'` is the preimage of `V₀` (range of the base-changed open immersion)
   have hRange : p'.opensRange = g' ⁻¹ᵁ V₀ := by
     have h1 : Set.range p' = Set.range (pullback.snd V₀.ι g') := by
@@ -1329,6 +1328,14 @@ noncomputable def twisted_cech_nerve_per_sigma
   haveI hsepX : IsSeparated (terminal.from X) := by
     rw [← terminal.comp_from f]
     exact IsSeparated.comp_iff.mpr ‹IsSeparated f›
+  haveI hfst : IsOpenImmersion (pullback.fst g' (Scheme.Opens.ι (coverInterOpen 𝒰 σ))) :=
+    isOpenImmersion_of_isPullback_left g' (Scheme.Opens.ι (coverInterOpen 𝒰 σ))
+      (pullback.fst g' (Scheme.Opens.ι (coverInterOpen 𝒰 σ)))
+      (pullback.snd g' (Scheme.Opens.ι (coverInterOpen 𝒰 σ)))
+      (restrictedCartesianAffinePushout g' 𝒰 σ)
+  haveI hι' : IsOpenImmersion (Scheme.Opens.ι (coverInterOpen
+      ((Scheme.Pullback.openCoverOfLeft 𝒰 f g).pushforwardIso h.isoPullback.symm.hom) σ)) :=
+    inferInstance
   have hre : Set.range (pullback.fst g' (Scheme.Opens.ι (coverInterOpen 𝒰 σ)))
       = Set.range (Scheme.Opens.ι (coverInterOpen
           ((Scheme.Pullback.openCoverOfLeft 𝒰 f g).pushforwardIso h.isoPullback.symm.hom) σ)) := by
@@ -1339,9 +1346,16 @@ noncomputable def twisted_cech_nerve_per_sigma
       (pullback.snd g' (Scheme.Opens.ι (coverInterOpen 𝒰 σ)))
       (restrictedCartesianAffinePushout g' 𝒰 σ) F hF) ≪≫
     pushPullObjCongr _ (Over.isoMk
-      (IsOpenImmersion.isoOfRangeEq
-        (pullback.fst g' (Scheme.Opens.ι (coverInterOpen 𝒰 σ))) _ hre)
-      (IsOpenImmersion.isoOfRangeEq_hom_fac _ _ hre))
+      (@IsOpenImmersion.isoOfRangeEq _ _ _
+        (pullback.fst g' (Scheme.Opens.ι (coverInterOpen 𝒰 σ)))
+        (Scheme.Opens.ι (coverInterOpen
+          ((Scheme.Pullback.openCoverOfLeft 𝒰 f g).pushforwardIso h.isoPullback.symm.hom) σ))
+        hfst hι' hre)
+      (@IsOpenImmersion.isoOfRangeEq_hom_fac _ _ _
+        (pullback.fst g' (Scheme.Opens.ι (coverInterOpen 𝒰 σ)))
+        (Scheme.Opens.ι (coverInterOpen
+          ((Scheme.Pullback.openCoverOfLeft 𝒰 f g).pushforwardIso h.isoPullback.symm.hom) σ))
+        hfst hι' hre))
 
 /-- **The base-changed nerve is the nerve of the base-changed data** (Stacks 02KG, the
 mechanical half). Applying `(g')^*` (at the `X`-level) to the dropped Čech nerve of
