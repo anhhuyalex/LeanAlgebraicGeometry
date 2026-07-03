@@ -3208,6 +3208,10 @@ private theorem pushforward_isQuasicoherent
   -- Mathlib gap at pinned commit b80f227. ~30 LOC body.
   exact sorry
 
+set_option backward.isDefEq.respectTransparency false in
+set_option maxHeartbeats 800000 in
+-- The unit-comparison and section-trace steps unify `Γ`-objects through the
+-- `𝟭`/`⋙`-composite functor forms (v4.31 instances-transparency wall).
 /-- **Step 1 pin (Stacks 01I8)**: quasi-coherent sheaf on an affine open is
 `tilde` of its sections.
 
@@ -3221,12 +3225,17 @@ For a quasi-coherent sheaf `N` on `X` and an affine open `V ⊆ X`, the
 pullback of `N` along `IsAffineOpen.fromSpec : Spec Γ(X, V) ⟶ X` is
 canonically isomorphic to `tilde Γ(N, V)` on `Spec Γ(X, V)`.
 
-iter-190+ body work (~20–40 LOC): extract a `Presentation` of
-`(N|_V).overSpec` from `[N.IsQuasicoherent]` (using `hV.isoSpec`
-transport), then apply `isIso_fromTildeΓ_of_presentation`. The Mathlib
-gap is the per-affine-open presentation extraction (Mathlib's
-`QuasicoherentData` ships per-cover-element presentations, not on a
-chosen affine open). -/
+PROVED (T12 session, 2026-07-03). The body assembles the union-merge
+substrate: quasi-coherence of the pullback (`isQuasicoherent_pullback_fromSpec`,
+Piece A) feeds the affine structure theorem (`isIso_fromTildeΓ_of_isQuasicoherent`,
+gap1) to invert the tilde–Γ counit; the Σ-pair base map is bijective because,
+through Mathlib's `Adjunction.unit_leftAdjointUniq_hom_app` (the two adjunctions
+share the right adjoint `pushforward j`), it factors as (restriction-adjunction
+unit component = presheaf restriction along `j ''ᵁ j ⁻¹ᵁ V = V`) ∘ (component of
+the `restrictFunctorIsoPullback` natural isomorphism) ∘ (restriction along
+`⊤ ≤ j ⁻¹ᵁ V = ⊤`). The iso is `(tilde.map b' ≫ fromTildeΓ)⁻¹`, and the
+Σ-pair identity is `toOpen`-naturality (`tilde.toOpen_map_app`) plus the
+counit computation at `⊤` (`toOpen_fromTildeΓ_app`). -/
 private theorem tildeIso_of_isQuasicoherent_isAffineOpen
     {X : Scheme.{u}} (N : X.Modules) [N.IsQuasicoherent]
     {V : X.Opens} (hV : IsAffineOpen V) :
@@ -3256,13 +3265,183 @@ private theorem tildeIso_of_isQuasicoherent_isAffineOpen
     Module.compHom _
       (hV.fromSpec.appLE V ⊤
         (le_of_eq hV.fromSpec_preimage_self.symm)).hom
-  -- iter-190+ body: Stacks 01I8 via QC-on-affine ⟺ tilde-on-affine.
-  -- iter-195+ Σ-pair refactor: the iso now carries the canonical
-  -- `iso.inv = (asIso fromTildeΓ).symm` section-level identity so that
-  -- consumers (Beck-Chevalley intertwining) can trace through the iso.
-  -- See `analogies/lane-f-isbasechange.md` Decision 3 row 1
-  -- (NEEDS_MATHLIB_GAP_FILL).
-  exact sorry
+  -- Step 0 (gap1 substrate, above): the pullback is quasi-coherent, so its
+  -- tilde–Γ counit is an isomorphism (Stacks 01I8).
+  haveI hGqc : ((Scheme.Modules.pullback hV.fromSpec).obj N).IsQuasicoherent :=
+    Scheme.Modules.isQuasicoherent_pullback_fromSpec N hV
+  haveI hP1 : IsIso (Scheme.Modules.fromTildeΓ
+      ((Scheme.Modules.pullback hV.fromSpec).obj N)) :=
+    Scheme.Modules.isIso_fromTildeΓ_of_isQuasicoherent _
+  -- Step 1: the base map `b` is bijective. By definition `b` is the composite of
+  -- the `V`-sections of the pullback–pushforward adjunction unit with the
+  -- presheaf restriction along `⊤ ≤ j ⁻¹ᵁ V` (an equality of opens). The unit
+  -- component is identified, through `unit_leftAdjointUniq_hom_app` (the two
+  -- adjunctions share the right adjoint `pushforward j`), with the
+  -- restriction-adjunction unit component — a presheaf restriction along the
+  -- equality `j ''ᵁ (j ⁻¹ᵁ V) = V` — followed by a component of the natural
+  -- isomorphism `restrictFunctorIsoPullback`. All three factors are bijective.
+  have him : hV.fromSpec ''ᵁ (hV.fromSpec ⁻¹ᵁ V) = V := by
+    rw [hV.fromSpec_preimage_self, Scheme.Hom.image_top_eq_opensRange,
+      hV.opensRange_fromSpec]
+  have hrestr : Function.Bijective
+      ((((Scheme.Modules.pullback hV.fromSpec).obj N).presheaf.map
+        (homOfLE (le_of_eq hV.fromSpec_preimage_self.symm)).op).hom) := by
+    rw [Subsingleton.elim
+      (homOfLE (le_of_eq hV.fromSpec_preimage_self.symm))
+      (eqToHom hV.fromSpec_preimage_self.symm),
+      eqToHom_op, eqToHom_map]
+    exact (ConcreteCategory.isIso_iff_bijective _).mp inferInstance
+  have h1 : Function.Bijective ((Scheme.Modules.Hom.app
+      ((Scheme.Modules.restrictAdjunction hV.fromSpec).unit.app N) V).hom) := by
+    rw [Scheme.Modules.restrictAdjunction_unit_app_app]
+    refine Function.bijective_iff_has_inverse.mpr
+      ⟨(N.presheaf.map (eqToHom him.symm).op).hom, fun y => ?_, fun y => ?_⟩
+    · change (AddCommGrpCat.Hom.hom (N.presheaf.map (eqToHom him.symm).op))
+          ((AddCommGrpCat.Hom.hom
+            (N.presheaf.map (homOfLE (hV.fromSpec.image_preimage_le V)).op)) y) = y
+      have hcomp1 : N.presheaf.map (homOfLE (hV.fromSpec.image_preimage_le V)).op ≫
+          N.presheaf.map (eqToHom him.symm).op = 𝟙 _ := by
+        rw [← Functor.map_comp, ← op_comp,
+          Subsingleton.elim
+            (eqToHom him.symm ≫ homOfLE (hV.fromSpec.image_preimage_le V)) (𝟙 V),
+          op_id, CategoryTheory.Functor.map_id]
+      exact congrArg (fun φ => (AddCommGrpCat.Hom.hom φ) y) hcomp1
+    · change (AddCommGrpCat.Hom.hom
+            (N.presheaf.map (homOfLE (hV.fromSpec.image_preimage_le V)).op))
+          ((AddCommGrpCat.Hom.hom (N.presheaf.map (eqToHom him.symm).op)) y) = y
+      have hcomp2 : N.presheaf.map (eqToHom him.symm).op ≫
+          N.presheaf.map (homOfLE (hV.fromSpec.image_preimage_le V)).op = 𝟙 _ := by
+        rw [← Functor.map_comp, ← op_comp,
+          Subsingleton.elim
+            (homOfLE (hV.fromSpec.image_preimage_le V) ≫ eqToHom him.symm)
+            (𝟙 (hV.fromSpec ''ᵁ (hV.fromSpec ⁻¹ᵁ V))),
+          op_id, CategoryTheory.Functor.map_id]
+      exact congrArg (fun φ => (AddCommGrpCat.Hom.hom φ) y) hcomp2
+  have h2 : Function.Bijective ((Scheme.Modules.Hom.app
+      ((Scheme.Modules.restrictFunctorIsoPullback hV.fromSpec).hom.app N)
+      (hV.fromSpec ⁻¹ᵁ V)).hom) := by
+    refine Function.bijective_iff_has_inverse.mpr
+      ⟨((Scheme.Modules.Hom.app
+        ((Scheme.Modules.restrictFunctorIsoPullback hV.fromSpec).inv.app N)
+        (hV.fromSpec ⁻¹ᵁ V)).hom), fun y => ?_, fun y => ?_⟩
+    · simp only [← AddCommGrpCat.comp_apply, ← Scheme.Modules.Hom.comp_app,
+        Iso.hom_inv_id_app, Scheme.Modules.Hom.id_app, AddCommGrpCat.hom_id,
+        AddMonoidHom.id_apply]
+    · simp only [← AddCommGrpCat.comp_apply, ← Scheme.Modules.Hom.comp_app,
+        Iso.inv_hom_id_app, Scheme.Modules.Hom.id_app, AddCommGrpCat.hom_id,
+        AddMonoidHom.id_apply]
+  -- Unit comparison: the two left adjoints of `pushforward j` have canonically
+  -- identified units.
+  have hcomp : (Scheme.Modules.restrictAdjunction hV.fromSpec).unit.app N ≫
+      (Scheme.Modules.pushforward hV.fromSpec).map
+        ((Scheme.Modules.restrictFunctorIsoPullback hV.fromSpec).hom.app N) =
+      (Scheme.Modules.pullbackPushforwardAdjunction hV.fromSpec).unit.app N :=
+    Adjunction.unit_leftAdjointUniq_hom_app _ _ N
+  have hunit : Function.Bijective (pullback_app_isoTensor_unitAtV hV.fromSpec N V) := by
+    have hfun : ∀ x : Γ(N, V), pullback_app_isoTensor_unitAtV hV.fromSpec N V x =
+        (Scheme.Modules.Hom.app
+          ((Scheme.Modules.restrictFunctorIsoPullback hV.fromSpec).hom.app N)
+          (hV.fromSpec ⁻¹ᵁ V)).hom
+        ((Scheme.Modules.Hom.app
+          ((Scheme.Modules.restrictAdjunction hV.fromSpec).unit.app N) V).hom x) :=
+      fun x => (congrArg (fun φ => (Scheme.Modules.Hom.app φ V).hom x) hcomp.symm)
+    have : ⇑(pullback_app_isoTensor_unitAtV hV.fromSpec N V) =
+        (fun y => (Scheme.Modules.Hom.app
+          ((Scheme.Modules.restrictFunctorIsoPullback hV.fromSpec).hom.app N)
+          (hV.fromSpec ⁻¹ᵁ V)).hom y) ∘
+        (fun x => (Scheme.Modules.Hom.app
+          ((Scheme.Modules.restrictAdjunction hV.fromSpec).unit.app N) V).hom x) :=
+      funext hfun
+    rw [this]
+    exact h2.comp h1
+  have hbij : Function.Bijective
+      (pullback_app_isoTensor_baseMap hV.fromSpec N
+        (le_of_eq hV.fromSpec_preimage_self.symm)) := by
+    have : ⇑(pullback_app_isoTensor_baseMap hV.fromSpec N
+        (le_of_eq hV.fromSpec_preimage_self.symm)) =
+        (fun y => (((Scheme.Modules.pullback hV.fromSpec).obj N).presheaf.map
+          (homOfLE (le_of_eq hV.fromSpec_preimage_self.symm)).op).hom y) ∘
+        (fun x => pullback_app_isoTensor_unitAtV hV.fromSpec N V x) := rfl
+    rw [this]
+    exact hrestr.comp hunit
+  -- Step 2: the compHom ring map is the canonical `(ΓSpecIso _).inv`, so `b`
+  -- packages as a morphism of `ModuleCat Γ(X, V)` into the module of global
+  -- sections of the pullback.
+  have hact : hV.fromSpec.appLE V ⊤ (le_of_eq hV.fromSpec_preimage_self.symm)
+      = (Scheme.ΓSpecIso Γ(X, V)).inv := by
+    rw [Scheme.Hom.appLE, hV.fromSpec_app_self, Category.assoc,
+      ← Functor.map_comp, ← op_comp,
+      Subsingleton.elim (homOfLE (le_of_eq hV.fromSpec_preimage_self.symm) ≫
+        eqToHom hV.fromSpec_preimage_self) (𝟙 (⊤ : (Spec Γ(X, V)).Opens)),
+      op_id, CategoryTheory.Functor.map_id, Category.comp_id]
+  let b' : ModuleCat.of Γ(X, V) Γ(N, V) ⟶
+      (modulesSpecToSheaf.obj ((Scheme.Modules.pullback hV.fromSpec).obj N)).presheaf.obj
+        (Opposite.op ⊤) :=
+    ConcreteCategory.ofHom
+      { toFun := fun t => pullback_app_isoTensor_baseMap hV.fromSpec N
+          (le_of_eq hV.fromSpec_preimage_self.symm) t
+        map_add' := fun t u => map_add _ t u
+        map_smul' := fun r t => by
+          have h1 := (pullback_app_isoTensor_baseMap hV.fromSpec N
+            (le_of_eq hV.fromSpec_preimage_self.symm)).map_smul r t
+          change pullback_app_isoTensor_baseMap hV.fromSpec N
+              (le_of_eq hV.fromSpec_preimage_self.symm) (r • t) =
+            ((Scheme.ΓSpecIso Γ(X, V)).inv.hom r) •
+              pullback_app_isoTensor_baseMap hV.fromSpec N
+                (le_of_eq hV.fromSpec_preimage_self.symm) t
+          rw [← hact]
+          exact h1 }
+  have hb'app : ∀ t : Γ(N, V), b'.hom t = pullback_app_isoTensor_baseMap hV.fromSpec N
+      (le_of_eq hV.fromSpec_preimage_self.symm) t := fun t => rfl
+  have hb'bij : Function.Bijective ⇑(ConcreteCategory.hom b') := by
+    have h : ⇑(ConcreteCategory.hom b') = ⇑(pullback_app_isoTensor_baseMap hV.fromSpec N
+        (le_of_eq hV.fromSpec_preimage_self.symm)) := funext hb'app
+    rw [h]; exact hbij
+  haveI hb : IsIso b' := (ConcreteCategory.isIso_iff_bijective b').mpr hb'bij
+  -- Step 3: assemble the iso `j^* N ≅ tilde Γ(N, V)` as the inverse of
+  -- `tilde.map b' ≫ fromTildeΓ` and verify the Σ-pair section identity by
+  -- `toOpen` naturality plus the counit computation at `⊤`.
+  haveI hmb : IsIso (tilde.map b') := inferInstanceAs (IsIso ((tilde.functor _).map b'))
+  refine ⟨⟨((asIso (tilde.map b')) ≪≫ (asIso (Scheme.Modules.fromTildeΓ
+    ((Scheme.Modules.pullback hV.fromSpec).obj N)))).symm, fun s => ?_⟩⟩
+  have hinv : (((asIso (tilde.map b')) ≪≫ (asIso (Scheme.Modules.fromTildeΓ
+      ((Scheme.Modules.pullback hV.fromSpec).obj N)))).symm).inv =
+      tilde.map b' ≫ Scheme.Modules.fromTildeΓ
+        ((Scheme.Modules.pullback hV.fromSpec).obj N) := rfl
+  rw [hinv]
+  have hnat := congrArg (fun (φ : ModuleCat.of Γ(X, V) Γ(N, V) ⟶ _) => φ.hom s)
+    (tilde.toOpen_map_app b' ⊤)
+  have hcounit := congrArg
+    (fun (φ : (modulesSpecToSheaf.obj
+        ((Scheme.Modules.pullback hV.fromSpec).obj N)).presheaf.obj (Opposite.op ⊤) ⟶ _) =>
+      φ.hom (b'.hom s))
+    (Scheme.Modules.toOpen_fromTildeΓ_app
+      ((Scheme.Modules.pullback hV.fromSpec).obj N) ⊤)
+  simp only [ModuleCat.hom_comp, LinearMap.comp_apply] at hnat hcounit
+  have step1 : (Scheme.Modules.Hom.app (tilde.map b' ≫ Scheme.Modules.fromTildeΓ
+        ((Scheme.Modules.pullback hV.fromSpec).obj N)) ⊤).hom
+        ((tilde.toOpen (ModuleCat.of Γ(X, V) Γ(N, V)) ⊤).hom s) =
+      (Scheme.Modules.Hom.app (Scheme.Modules.fromTildeΓ
+        ((Scheme.Modules.pullback hV.fromSpec).obj N)) ⊤).hom
+        ((tilde.toOpen ((modulesSpecToSheaf.obj
+          ((Scheme.Modules.pullback hV.fromSpec).obj N)).presheaf.obj (Opposite.op ⊤)) ⊤).hom
+          (b'.hom s)) := congrArg _ hnat
+  have hid : ((modulesSpecToSheaf.obj
+      ((Scheme.Modules.pullback hV.fromSpec).obj N)).1.map
+      (homOfLE (le_top : (⊤ : (Spec Γ(X, V)).Opens) ≤ ⊤)).op).hom (b'.hom s) =
+      b'.hom s := by
+    rw [Subsingleton.elim (homOfLE (le_top : (⊤ : (Spec Γ(X, V)).Opens) ≤ ⊤))
+      (𝟙 (⊤ : (Spec Γ(X, V)).Opens)), op_id, CategoryTheory.Functor.map_id]
+    rfl
+  have step2 : (Scheme.Modules.Hom.app (Scheme.Modules.fromTildeΓ
+        ((Scheme.Modules.pullback hV.fromSpec).obj N)) ⊤).hom
+        ((tilde.toOpen ((modulesSpecToSheaf.obj
+          ((Scheme.Modules.pullback hV.fromSpec).obj N)).presheaf.obj (Opposite.op ⊤)) ⊤).hom
+          (b'.hom s)) =
+      pullback_app_isoTensor_baseMap hV.fromSpec N
+        (le_of_eq hV.fromSpec_preimage_self.symm) s :=
+    hcounit.trans (hid.trans (hb'app s))
+  exact step1.trans step2
 
 /-- **Step 3 pin (transport)**: section-level transport for pullback along
 the affine-open's `fromSpec` map.
