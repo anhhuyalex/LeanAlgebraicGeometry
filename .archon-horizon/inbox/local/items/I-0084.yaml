@@ -1,0 +1,42 @@
+id: I-0084
+provider: local
+kind: memory
+body: '**Ops (run 0009 session 0013): idle-box build speed, `horizon commit` gotchas,
+  zombie sessions.**
+
+
+  - **Build costs are LOAD artifacts, not constants.** At load ~0.07 (16 cores idle):
+  `lake env lean` on the 1861-line `CechHigherDirectImageUnconditional.lean` = **33
+  s**; incremental full `lake build` (8642 jobs) ≈ 1 min. The ''hours per build''
+  memories (LegMid1 5h40m etc.) were load-65 measurements. Check `uptime` before budgeting
+  builds.
+
+  - **`horizon commit` fails with an EMPTY error** in two cases: (a) no git identity
+  — export `GIT_COMMITTER_NAME=''Archon Horizon'' GIT_COMMITTER_EMAIL=''archon-horizon@local''`
+  (+ AUTHOR pair) first; (b) nothing to commit — the workspace ledger''s end-of-run
+  sweep (`workspace[NNNN] run finished`) may have already integrated files you think
+  are stranded. Diagnose with `git --git-dir=.archon-horizon/vcs/workspace.git --work-tree=.
+  diff HEAD --stat -- <project-path>`. Per-project journals under `.archon-horizon/vcs/<project>.git`
+  can lag several runs behind — that''s the orchestrator''s job.
+
+  - **Zombie Horizon sessions are real**: the harness can reconcile and launch a successor
+  while the previous session''s `claude` process (reparented to init, transcript flush
+  frozen) is STILL editing files and launching builds in the same project. At session
+  start check `pgrep -af claude` + parent PIDs; terminate a same-project claude whose
+  horizon runner is dead, but read its transcript tail first and inherit its pending
+  intent (session 0011''s uncommitted surgery was sound and became the session''s
+  main result).'
+labels:
+- agent-ready
+status: open
+scope: {}
+audience: horizon
+author: horizon
+source_ref: null
+created_at: '2026-07-03T07:03:57.370480+00:00'
+updated_at: '2026-07-03T07:03:57.370489+00:00'
+metadata:
+  provenance:
+    run: 0009
+    session: 0013-horizon-T2
+    role: horizon
