@@ -4054,8 +4054,67 @@ phase-by-phase plan).
 The iter-187 \texttt{mathlib-analogist quotscheme-isbasechange-tilde}
 verdict (see \texttt{analogies/quotscheme-isbasechange-tilde.md})
 identified two distinct Mathlib substrate gaps at the pinned commit
-\texttt{b80f227}. Both are pinned here as named project-side typed
-sorries; closing either is iter-189+ sub-build work.
+\texttt{b80f227}. Both pins are now closed axiom-clean:
+\cref{lem:tildeIso_of_isQuasicoherent_isAffineOpen} via the gap1/gap2
+union-merge substrate, and \cref{lem:pullback_tildeIso} (2026-07-03,
+T12) by the adjoint-uniqueness route through
+\cref{lem:tilde_gamma_adjunction_mathlib} and
+\cref{lem:pullbackTilde_gammaBridge} below.
+
+\begin{lemma}[Tilde--global-sections adjunction on an affine scheme]
+  \label{lem:tilde_gamma_adjunction_mathlib}
+  \lean{AlgebraicGeometry.tilde.adjunction}
+  \mathlibok
+  \textit{Provided by Mathlib (\texttt{Mathlib.AlgebraicGeometry.Modules.Tilde}).}
+  For a commutative ring \(R\), the tilde functor
+  \(\widetilde{(\cdot)} : \mathrm{Mod}_{R} \to (\Spec R).\mathrm{Modules}\)
+  is left adjoint to the global-sections functor
+  \(\Gamma(\Spec R, -) : (\Spec R).\mathrm{Modules} \to \mathrm{Mod}_{R}\)
+  (\texttt{moduleSpecΓFunctor}); the unit is the isomorphism
+  \(M \to \Gamma(\widetilde M, \top)\) and the counit is the
+  tilde--\(\Gamma\) comparison
+  \(\widetilde{\Gamma(\mathcal N, \top)} \to \mathcal N\)
+  (\texttt{fromTildeΓ}). Mathlib also supplies the two companion
+  adjunctions used with it below: extension--restriction of scalars
+  \(B \otimes_A - \dashv \mathrm{res}_\varphi\)
+  (\texttt{ModuleCat.extendRestrictScalarsAdj}) and
+  pullback--pushforward \(\pi^* \dashv \pi_*\) for sheaves of modules
+  over schemes (\texttt{Scheme.Modules.pullbackPushforwardAdjunction}).
+\end{lemma}
+
+\begin{lemma}[Global sections of the pushforward as restricted scalars]
+  \label{lem:pullbackTilde_gammaBridge}
+  \lean{AlgebraicGeometry.pullbackTilde_gammaBridge}
+  \leanok
+  \uses{lem:tilde_gamma_adjunction_mathlib, lem:modules_pullback_mathlib}
+  For a ring homomorphism \(\varphi : A \to B\) with
+  \(\pi = \Spec\varphi : \Spec B \to \Spec A\), the two functors
+  \((\Spec B).\mathrm{Modules} \to \mathrm{Mod}_{A}\)
+  \[
+    \mathcal N \longmapsto \Gamma(\Spec A,\, \pi_{*}\mathcal N)
+    \qquad\text{and}\qquad
+    \mathcal N \longmapsto \mathrm{res}_{\varphi}\, \Gamma(\Spec B,\, \mathcal N)
+  \]
+  (global sections of the pushforward, with \(A\) acting through
+  \(\Gamma(\pi^{\sharp})\); respectively global sections, with \(A\)
+  acting through \(\varphi\)) are naturally isomorphic.
+\end{lemma}
+\begin{proof}
+  \leanok
+  \uses{lem:tilde_gamma_adjunction_mathlib, lem:modules_pullback_mathlib}
+  On carriers the component at \(\mathcal N\) is restriction of sections
+  along the equality of opens \(\pi^{-1}(\Spec A) = \Spec B\), a
+  bijection. It is \(A\)-linear: for \(a \in A\) the action on the
+  source is by \(\Gamma(\pi^{\sharp})(\iota_A(a))\) and on the target by
+  \(\iota_B(\varphi(a))\), where
+  \(\iota_R : R \cong \Gamma(\Spec R, \mathcal O)\) is the canonical
+  identification; these agree by naturality of \(\iota\) in \(R\)
+  applied to \(\varphi\) (that is,
+  \(\Gamma(\pi^{\sharp}) \circ \iota_A = \iota_B \circ \varphi\)),
+  combined with semilinearity of section restriction for the module
+  sheaf \(\mathcal N\). Naturality in \(\mathcal N\) is naturality of
+  section restriction against module-sheaf morphisms.
+\end{proof}
 
 \begin{lemma}
 
@@ -4063,7 +4122,7 @@ sorries; closing either is iter-189+ sub-build work.
 [Pullback of tilde is tilde of base change (Stacks 01HQ)]
   \label{lem:pullback_tildeIso}
   \lean{AlgebraicGeometry.pullback_tildeIso}
-  \uses{def:quot_canonical_basechange_map}
+  \uses{def:quot_pullback_app_isoTensor}
   \textit{Source: Stacks~\href{https://stacks.math.columbia.edu/tag/01HQ}{01HQ}
   / \href{https://stacks.math.columbia.edu/tag/0BJ8}{0BJ8} (pullback of
   quasi-coherent modules along a Spec morphism).}
@@ -4081,16 +4140,42 @@ sorries; closing either is iter-189+ sub-build work.
   only — the general-module form (Stacks 01HQ) is unowned.
 \end{lemma}
 \begin{proof}
-  \uses{def:quot_canonical_basechange_map}
-  Substantive body (Stacks 01HQ): construct via the
-  \texttt{tilde.adjunction} naturality square; the construction passes
-  through Spec-restriction transport.
+  \leanok
+  \uses{lem:tilde_gamma_adjunction_mathlib, lem:pullbackTilde_gammaBridge,
+    def:quot_pullback_app_isoTensor}
+  Write \(\pi = \Spec\varphi : \Spec B \to \Spec A\). Both composite
+  functors
+  \[
+    \mathrm{Mod}_{A} \xrightarrow{\ \widetilde{(\cdot)}\ }
+      (\Spec A).\mathrm{Modules} \xrightarrow{\ \pi^{*}\ }
+      (\Spec B).\mathrm{Modules}
+    \qquad\text{and}\qquad
+    \mathrm{Mod}_{A} \xrightarrow{\ B \otimes_A -\ } \mathrm{Mod}_{B}
+      \xrightarrow{\ \widetilde{(\cdot)}\ } (\Spec B).\mathrm{Modules}
+  \]
+  are left adjoints: the first of
+  \(\mathcal N \mapsto \Gamma(\Spec A, \pi_{*}\mathcal N)\) (compose the
+  tilde--\(\Gamma\) adjunction on \(\Spec A\),
+  \cref{lem:tilde_gamma_adjunction_mathlib}, with
+  \(\pi^{*} \dashv \pi_{*}\)), the second of
+  \(\mathcal N \mapsto \mathrm{res}_{\varphi}\,\Gamma(\Spec B, \mathcal N)\)
+  (compose extension--restriction of scalars along \(\varphi\) with the
+  tilde--\(\Gamma\) adjunction on \(\Spec B\)). By
+  \cref{lem:pullbackTilde_gammaBridge} the two right adjoints are
+  naturally isomorphic, so uniqueness of left adjoints yields a natural
+  isomorphism of the two composites; its component at \(M\) is the
+  required isomorphism
+  \(\pi^{*}\widetilde M \cong \widetilde{B \otimes_A M}\).
 
-  % NOTE (iter-188 plan-phase): body ~115-200 LOC, iter-189+ sub-build.
-  % The iter-188 prover does NOT target this body; the iter-188 Lane F
-  % target is the consumer `pullback_app_isoTensor_baseMap_isBaseChange`
-  % which is closable via `pullback_tildeIso` as a hypothesis-providing
-  % helper.
+  For the section-level identity, apply the unit compatibility of the
+  left-adjoint-uniqueness isomorphism at \(m \in M\): the unit of the
+  first composed adjunction sends \(m\) to the canonical base map
+  (\cref{def:quot_pullback_app_isoTensor}, at \(V = U = \top\)) of the
+  global section of \(\widetilde M\) attached to \(m\), while the unit
+  of the second sends \(m\) to the global section of
+  \(\widetilde{B \otimes_A M}\) attached to \(1 \otimes m\); the
+  compatibility square states precisely that the isomorphism carries
+  the former to the latter.
 \end{proof}
 
 \subsection{qcqs section localization and Stacks 01XJ}

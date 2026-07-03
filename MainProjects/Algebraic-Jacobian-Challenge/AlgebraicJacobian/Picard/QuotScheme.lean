@@ -3995,8 +3995,98 @@ end AlgebraicGeometry
 
 namespace AlgebraicGeometry
 
+/-! #### Substrate for `pullback_tildeIso` (Stacks 01HQ): adjoint-uniqueness route.
+
+The Spec-level "pullback of tilde = tilde of base change" identification is
+proved by uniqueness of left adjoints: both `tilde.functor A ⋙ pullback (Spec.map φ)`
+and `extendScalars φ ⋙ tilde.functor B` are left adjoint to "global sections as an
+`A`-module" — the first via `tilde.adjunction ∘ pullbackPushforwardAdjunction`, the
+second via `extendRestrictScalarsAdj ∘ tilde.adjunction` — once the two right adjoints
+`pushforward (Spec.map φ) ⋙ moduleSpecΓFunctor` and
+`moduleSpecΓFunctor ⋙ restrictScalars φ` are identified (`pullbackTilde_gammaBridge`:
+on carriers this is restriction along the equality of opens `⊤ = (Spec.map φ) ⁻¹ᵁ ⊤`;
+the `A`-action match is `ΓSpecIso_inv_naturality`). The Σ-pair section-level identity
+is then the unit-compatibility `Adjunction.unit_leftAdjointUniq_hom_app`, which the
+elaborator checks by definitional unfolding of both composed adjunction units
+(`toOpen`/`1 ⊗ₜ ·` on the two sides). -/
+
+set_option backward.isDefEq.respectTransparency false in
+/-- Restriction of a sheaf-of-modules along `⊤ ≤ g ⁻¹ᵁ ⊤` (an equality of opens) is
+the identity: the hom `homOfLE e : ⊤ ⟶ g ⁻¹ᵁ ⊤` is definitionally `𝟙 ⊤` by proof
+irrelevance since `g ⁻¹ᵁ ⊤` is definitionally `⊤`. -/
+private lemma modules_restr_preimage_top_eq_id {X Y : Scheme.{u}} (g : Y ⟶ X)
+    (N : Y.Modules) (e : (⊤ : Y.Opens) ≤ g ⁻¹ᵁ ⊤) :
+    N.presheaf.map (homOfLE e).op = 𝟙 _ :=
+  (congrArg N.presheaf.map
+    (show (homOfLE e).op = 𝟙 (Opposite.op (⊤ : Y.Opens)) from rfl)).trans
+    (N.presheaf.map_id _)
+
+set_option backward.isDefEq.respectTransparency false in
+/-- Ring-sheaf analogue of `modules_restr_preimage_top_eq_id`. -/
+private lemma ring_restr_preimage_top_eq_id {X Y : Scheme.{u}} (g : Y ⟶ X)
+    (e : (⊤ : Y.Opens) ≤ g ⁻¹ᵁ ⊤) :
+    Y.presheaf.map (homOfLE e).op = 𝟙 _ :=
+  (congrArg Y.presheaf.map
+    (show (homOfLE e).op = 𝟙 (Opposite.op (⊤ : Y.Opens)) from rfl)).trans
+    (Y.presheaf.map_id _)
+
+set_option backward.isDefEq.respectTransparency false in
+/-- Component hom of `pullbackTilde_gammaBridge`: restriction of global sections along
+`⊤ ≤ (Spec.map φ) ⁻¹ᵁ ⊤` (an equality of opens), bridging `Γ_A(π_* N)` (with the
+`A`-action through `π♯`) and `Γ_B(N)` (with the `A`-action through `φ`). `A`-linearity
+is `Scheme.Modules.map_smul` plus `ΓSpecIso_inv_naturality`. -/
+private noncomputable def pullbackTilde_gammaBridgeHom {A B : CommRingCat.{u}}
+    (φ : A ⟶ B) (N : (Spec B).Modules) :
+    (Scheme.Modules.pushforward (Spec.map φ) ⋙ moduleSpecΓFunctor (R := ↑A)).obj N ⟶
+      (moduleSpecΓFunctor (R := ↑B) ⋙ ModuleCat.restrictScalars φ.hom).obj N :=
+  ConcreteCategory.ofHom
+    { toFun := fun x =>
+        (N.presheaf.map (homOfLE (le_top :
+          (⊤ : (Spec B).Opens) ≤ Spec.map φ ⁻¹ᵁ ⊤)).op).hom x
+      map_add' := fun x y => map_add _ x y
+      map_smul' := fun a x =>
+        (Scheme.Modules.map_smul N (homOfLE (le_top :
+            (⊤ : (Spec B).Opens) ≤ Spec.map φ ⁻¹ᵁ ⊤))
+          (((Spec.map φ).app ⊤).hom ((Scheme.ΓSpecIso A).inv.hom a)) x).trans
+        (congrArg (fun r => r • (N.presheaf.map (homOfLE (le_top :
+            (⊤ : (Spec B).Opens) ≤ Spec.map φ ⁻¹ᵁ ⊤)).op).hom x)
+          ((congrArg (fun (k : Γ(Spec B, Spec.map φ ⁻¹ᵁ ⊤) ⟶ Γ(Spec B, ⊤)) =>
+              k.hom (((Spec.map φ).app ⊤).hom ((Scheme.ΓSpecIso A).inv.hom a)))
+            (ring_restr_preimage_top_eq_id (Spec.map φ) le_top)).trans
+           ((congrArg (fun (ψ : A ⟶ Γ(Spec B, ⊤)) => ψ.hom a)
+              (Scheme.ΓSpecIso_inv_naturality φ)).symm))) }
+
+set_option backward.isDefEq.respectTransparency false in
+private lemma pullbackTilde_gammaBridgeHom_isIso {A B : CommRingCat.{u}}
+    (φ : A ⟶ B) (N : (Spec B).Modules) : IsIso (pullbackTilde_gammaBridgeHom φ N) := by
+  rw [ConcreteCategory.isIso_iff_bijective]
+  show Function.Bijective (fun x => (N.presheaf.map (homOfLE (le_top :
+    (⊤ : (Spec B).Opens) ≤ Spec.map φ ⁻¹ᵁ ⊤)).op).hom x)
+  rw [modules_restr_preimage_top_eq_id (Spec.map φ) N le_top]
+  exact Function.bijective_id
+
+set_option backward.isDefEq.respectTransparency false in
+/-- The right adjoints of the two composed adjunctions agree: global sections of the
+pushforward along `Spec.map φ` (as an `A`-module via `π♯`) is naturally isomorphic to
+global sections restricted along `φ`. This is the bridge that makes
+`tilde.functor A ⋙ pullback (Spec.map φ)` and `extendScalars φ.hom ⋙ tilde.functor B`
+left adjoints of the SAME functor. -/
+private noncomputable def pullbackTilde_gammaBridge {A B : CommRingCat.{u}}
+    (φ : A ⟶ B) :
+    Scheme.Modules.pushforward (Spec.map φ) ⋙ moduleSpecΓFunctor (R := ↑A)
+      ≅ moduleSpecΓFunctor (R := ↑B) ⋙ ModuleCat.restrictScalars φ.hom := by
+  refine NatIso.ofComponents
+    (fun N => @asIso _ _ _ _ _ (pullbackTilde_gammaBridgeHom_isIso φ N))
+    (fun {N N'} h => ?_)
+  ext x
+  exact (congrArg (fun (k : Γ(N, Spec.map φ ⁻¹ᵁ ⊤) ⟶ Γ(N', ⊤)) => k.hom x)
+    ((Scheme.Modules.Hom.mapPresheaf h).naturality (homOfLE (le_top :
+      (⊤ : (Spec B).Opens) ≤ Spec.map φ ⁻¹ᵁ ⊤)).op)).symm
+
+set_option backward.isDefEq.respectTransparency false in
+set_option maxHeartbeats 1600000 in
 /-- **Spec-level pullback-of-tilde formula** (iter-187 Lane F NAMED HELPER,
-project-side typed-sorry).
+PROVED axiom-clean this session).
 
 For a ring map `φ : A ⟶ B` of commutative rings, the module-sheaf pullback
 along `Spec.map φ : Spec B ⟶ Spec A` sends `tilde M` to (the `tilde` of)
@@ -4009,11 +4099,16 @@ confirm Mathlib (pinned commit `b80f227`) has no such lemma; the only
 pullback formula at all is `pullbackObjFreeIso` on *free* sheaves
 (`PullbackFree.lean:122`), too restrictive for general modules.
 
-This declaration is the project-side named pin capturing the Mathlib gap.
-Its `Nonempty` form sidesteps the noncomputable / data choice issue: the
-substantive content is the *existence* of the iso (Stacks 01HQ). The
-body (~115-200 LOC) is iter-188+ sub-build work via naturality of
-`tilde.adjunction` + the Spec-level base change formula. -/
+PROVED (T12 session, 2026-07-03), axiom-clean, by uniqueness of left adjoints:
+`tilde.functor A ⋙ pullback (Spec.map φ)` and `extendScalars φ.hom ⋙ tilde.functor B`
+are both left adjoint to `pushforward (Spec.map φ) ⋙ moduleSpecΓFunctor ≅
+moduleSpecΓFunctor ⋙ restrictScalars φ.hom` (`pullbackTilde_gammaBridge`), so
+`Adjunction.leftAdjointUniq` produces the iso, whose evaluation at `M` is the
+required `(Spec.map φ)^* (tilde M) ≅ tilde (B ⊗_A M)`. The Σ-pair section identity
+is `Adjunction.unit_leftAdjointUniq_hom_app` applied at `m`: the unit of the first
+composed adjunction traced through the bridge is definitionally
+`pullback_app_isoTensor_baseMap ∘ tilde.toOpen`, while the unit of the second is
+definitionally `tilde.toOpen ∘ (1 ⊗ₜ ·)`. -/
 private theorem pullback_tildeIso
     {A B : CommRingCat.{u}} (φ : A ⟶ B) (M : ModuleCat.{u} A) :
     letI : Algebra A B := φ.hom.toAlgebra
@@ -4042,13 +4137,28 @@ private theorem pullback_tildeIso
   letI : Module Γ(Spec A, ⊤)
       Γ((Scheme.Modules.pullback (Spec.map φ)).obj (tilde M), ⊤) :=
     Module.compHom _ ((Spec.map φ).appLE ⊤ ⊤ le_top).hom
-  -- iter-188+ body: build the iso via tilde fully-faithfulness on the
-  -- essential image (Stacks 01HQ / 0BJ8 algebraic content). See analogist
-  -- file `analogies/quotscheme-isbasechange-tilde.md`.
-  -- iter-195+ Σ-pair refactor: the iso now carries the canonical Spec
-  -- base-change section-level identity so that consumers (Beck-Chevalley
-  -- intertwining at `_sectionLinearEquiv`) can trace `iso.hom (1 ⊗ₜ m)`.
-  exact sorry
+  -- The two composed adjunctions with the SAME right adjoint
+  -- `moduleSpecΓFunctor (R := ↑B) ⋙ restrictScalars φ.hom` (via the bridge).
+  let adj1 : (tilde.functor ↑A ⋙ Scheme.Modules.pullback (Spec.map φ)) ⊣
+      (moduleSpecΓFunctor (R := ↑B) ⋙ ModuleCat.restrictScalars φ.hom) :=
+    ((tilde.adjunction (R := ↑A)).comp
+      (Scheme.Modules.pullbackPushforwardAdjunction (Spec.map φ))).ofNatIsoRight
+      (pullbackTilde_gammaBridge φ)
+  let adj2 : (ModuleCat.extendScalars φ.hom ⋙ tilde.functor ↑B) ⊣
+      (moduleSpecΓFunctor (R := ↑B) ⋙ ModuleCat.restrictScalars φ.hom) :=
+    (ModuleCat.extendRestrictScalarsAdj φ.hom).comp (tilde.adjunction (R := ↑B))
+  -- Uniqueness of left adjoints.
+  let mainIso : (tilde.functor ↑A ⋙ Scheme.Modules.pullback (Spec.map φ)) ≅
+      (ModuleCat.extendScalars φ.hom ⋙ tilde.functor ↑B) :=
+    Adjunction.leftAdjointUniq adj1 adj2
+  refine ⟨⟨mainIso.app M, fun m => ?_⟩⟩
+  -- The unit-compatibility of `leftAdjointUniq`, applied at `m`; both sides
+  -- reduce definitionally to the stated Σ-pair identity (the first unit is
+  -- `baseMap ∘ toOpen` through the bridge; the second is `toOpen ∘ (1 ⊗ₜ ·)`).
+  have key := Adjunction.unit_leftAdjointUniq_hom_app adj1 adj2 M
+  exact congrArg (fun (f : M ⟶ (moduleSpecΓFunctor (R := ↑B) ⋙
+    ModuleCat.restrictScalars φ.hom).obj ((ModuleCat.extendScalars φ.hom ⋙
+      tilde.functor ↑B).obj M)) => f.hom m) key
 
 /-- **Pushforward preserves quasi-coherence** (Stacks tag 01XJ) — project-side
 helper named pin (iter-187 Lane F).
@@ -5033,3 +5143,4 @@ theorem flatBaseChangeCohomology {X X' S S' : Scheme.{u}}
   ⟨@asIso _ _ _ _ _ (canonicalBaseChangeMap_isIso sq F)⟩
 
 end AlgebraicGeometry
+
