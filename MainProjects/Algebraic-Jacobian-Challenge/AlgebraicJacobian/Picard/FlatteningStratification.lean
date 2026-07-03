@@ -526,7 +526,7 @@ theorem flatteningStratification.ofCurve {k : Type u} [Field k]
       (∀ f, Scheme.CoherentSheafFlat
         (pullback.snd (pullback.snd C.hom T.hom) (ι f))
         ((Scheme.Modules.pullback
-          (pullback.fst (pullback.snd C.hom T.hom) (ι f))).obj F)) := by
-  sorry
+          (pullback.fst (pullback.snd C.hom T.hom) (ι f))).obj F)) :=
+  flatteningStratification (pullback.snd C.hom T.hom) F
 
 end AlgebraicGeometry
