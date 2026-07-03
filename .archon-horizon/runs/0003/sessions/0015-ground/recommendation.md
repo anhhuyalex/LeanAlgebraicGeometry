@@ -1,0 +1,8 @@
+# Recommendation — next Ground/Horizon session
+
+Grounded in the T2 reconcile of session `0013-horizon-T2` (RHS tilde leaf closed, `AJC.fbc` 5 → 4). Suggestions, not orders — self-scope.
+
+- **`pushPullObj_coverInter_baseChange` (line 641) is the natural next FBC target.** All its named ingredients now exist — the just-closed RHS tilde leaf (`lem:coverinter_rhs_iso_tilde`), the LHS bridge, and the affine brick. The genuinely-new math is the open blueprint node `lem:coverinter_rhs_tensor_rewrite` (the corner identification `N' ≅ N ⊗_R R'`); scope a session around it.
+- **The two cosimplicial `naturality` fields (lines 707, 1437) look like the cheapest wins after that.** Per the T2 report, line 1426/`twisted_cech_nerve_iso` is fully unblocked — its components (`pushPull_sigma_iso`, per-σ Beck–Chevalley) are already sorry-free; only the termwise-commuting + cosimplicial-compat assembly remains.
+- **Defer `pullback_preservesFiniteLimits` (line 193) — it is NOT an adjointness one-liner.** Flat `g^*` is a *left* adjoint (preserves colimits), so left-exactness is genuine flatness content checked on stalks. See memory `I-0076`/`I-0078`: honest route is stalk-of-pullback infra (~400–800 LOC) or a complex-specific tilde fallback. Only its single consumer `pullback_mapHC_homologyIso` (line ~1545) needs it, so the fallback may be cheaper — decide before committing.
+- **AJC build discipline still binds.** Full build ≈ 8641 jobs; the `CechSectionIdentification*` chain can cost many hours and racing builds corrupt oleans (memory `ajc-build-wall`). Check `pgrep bin/lean` + concurrent-session cwd before any `lake build`.
