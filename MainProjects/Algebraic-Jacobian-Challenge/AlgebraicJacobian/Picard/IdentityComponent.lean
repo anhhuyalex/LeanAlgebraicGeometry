@@ -22,17 +22,20 @@ substrate for a `k`-group scheme locally of finite type and specialises it to
    of `C` when `C/k` is a smooth proper geometrically integral curve of
    positive genus).
 
-## Status (run 0005, session 0011)
+## Status (run 0008, T5 session)
 
-The §1 group-scheme substrate is now fully proved: `IdentityComponent`,
+The §1 group-scheme substrate is fully proved: `IdentityComponent`,
 `isOpenSubgroupScheme`, `isSubgroupHomomorphism` (Yoneda subgroup-presheaf
-route) and `baseChangeIso` are sorry-free. Remaining sorries (6):
+route) and `baseChangeIso` are sorry-free. Remaining sorries (4):
 `isFiniteTypeGeometricallyIrreducible`'s quasi-compactness/geometric-
 irreducibility conjunct (needs EGA IV₂ 4.6.1-type reduced-fiber-product
-input, not in Mathlib), and the five Pic⁰-specific declarations of §2–§4,
-which inherit the typed-sorry FGA representability foundation
-(`Picard/FGAPicRepresentability.lean`) and cannot be axiom-clean before
-`AJC.picrep` lands.
+input, not in Mathlib), and `degree` / `finrank_eq_genus` /
+`kPoints_iff_kerDegree` of §3–§4, which inherit the typed-sorry FGA
+representability foundation (`Picard/FGAPicRepresentability.lean`) and
+cannot be axiom-clean before `AJC.picrep` lands.
+`Pic0Scheme.isAbelianVariety` MOVED to sibling
+`Picard/Pic0AbelianVariety.lean` (run 0008), where it is assembled from
+the per-conjunct theorems of that chapter.
 
 The 5 blueprint-pinned declarations are:
 
@@ -1055,43 +1058,11 @@ Ex.~`ex:jac` + Rmk.~`rmk:Jac`; cf. Milne §I.1, Rmk. III.1.4(e)). -/
 
 namespace Pic0Scheme
 
-/-- **`Pic⁰_{C/k}` is an abelian variety.**
-
-For `C/k` a smooth proper geometrically integral curve of genus `g = g(C)`
-over a field `k`, the identity component `Pic⁰_{C/k}` of the Picard scheme
-is an *abelian variety over* `k`: a smooth, proper, geometrically
-irreducible `k`-group scheme. (Commutativity follows automatically from
-Milne §I.1, Cor. 1.4, and is not separately stated here.)
-
-The bundled statement: the four pieces `[IsProper] ∧ [Smooth] ∧
-[GeometricallyIrreducible] ∧ Nonempty (GrpObj _)` hold on
-`(Pic0Scheme C).hom` and `(Pic0Scheme C)` respectively.
-
-Dimension `g = g(C)`: not stated separately at the file-skeleton level
-(it requires `dim_k (Pic0Scheme C).left = AlgebraicGeometry.genus C`, which
-involves the Krull-dimension API on the underlying scheme); iter-186+
-follow-up.
-
-iter-186+: the body assembles the four conjuncts from
-- `GroupScheme.IdentityComponent.isOpenSubgroupScheme` (clopen subscheme of
-  `PicScheme C`),
-- Kleiman §5 Thm.~`th:qpp&p` (`X/k` projective + geom. integral ⟹
-  `Pic⁰_{X/k}` quasi-projective; upgrade to projective when geom. normal,
-  which holds for smooth proper curves of positive genus),
-- Kleiman §5 Cor.~`cor:sm` + Ex.~`ex:jac` (smoothness of `Pic_{X/k}` at the
-  identity for smooth proper curves; hence smooth of dimension
-  `dim_k H¹(C, O_C) = g(C)` everywhere by uniform smoothness on the open
-  identity component).
-For the iter-185 file-skeleton the body is a typed `sorry`. -/
-theorem isAbelianVariety {k : Type u} [Field k]
-    (C : Over (Spec (.of k)))
-    [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
-    [GeometricallyIntegral C.hom] [HasPicScheme C]
-    [PicScheme.PicSchemeLocallyOfFiniteType C] :
-    IsProper (Pic0Scheme C).hom ∧ Smooth (Pic0Scheme C).hom ∧
-      GeometricallyIrreducible (Pic0Scheme C).hom ∧
-      Nonempty (GrpObj (Pic0Scheme C)) :=
-  sorry
+/- `Pic0Scheme.isAbelianVariety` (blueprint pin
+`thm:pic_zero_is_abelian_variety`) MOVED (run 0008, T5) to sibling
+`Picard/Pic0AbelianVariety.lean`, where it is assembled sorry-free from the
+per-conjunct theorems `Pic0.proper` / `Pic0.smooth` /
+`Pic0.geometricallyIrreducible` / `Pic0.grpObj` of that chapter. -/
 
 /-- **Dimension of `Pic⁰_{C/k}` equals the genus of `C`.**
 

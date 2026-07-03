@@ -28,14 +28,22 @@ the origin (hence everywhere by translation), properness inherited from the
 projectivity of `Pic⁰_{C/k}` for `C/k` geometrically normal, and the assembly
 into an abelian variety in the sense of Milne §I.1.
 
-## Status (iter-193 NEW file-skeleton)
+## Status (run 0008, T5 session)
 
-Each of the five blueprint-pinned declarations carries the *intended*
-substantive type signature (matching the `\lean{...}` pin in
-`Picard_Pic0AbelianVariety.tex`) with a `sorry` body. The bodies are
-iter-194+ work; iter-193's mandate is the mechanical scaffold only.
+Proved sorry-free in this file: `grpObj` (the `GrpObj (Pic0Scheme C)`
+structure, via `IdentityComponent.isSubgroupHomomorphism` +
+`PicScheme.groupSchemeStructure`), `tangentSpaceCotangentDual`,
+`geometricallyIrreducible` (specialisation of the sibling's
+`isFiniteTypeGeometricallyIrreducible`, whose QC∧GeomIrred conjunct is the
+remaining upstream sorry), the `isAbelianVariety` assembly, and the moved
+`Pic0Scheme.isAbelianVariety` (blueprint pin `thm:pic_zero_is_abelian_variety`).
 
-The 5 pinned declarations are:
+Remaining `sorry` bodies: `tangentSpaceIso` (Kleiman §5 Thm 5.11 — needs the
+`Pic(C_ε) ≅ H¹(C_ε, O^×)` cocycle classification and the truncated-exponential
+kernel computation; the algebra-level splitting is in sibling
+`Picard/DualNumberUnits.lean`), `smooth`, `proper`.
+
+The 5 blueprint-pinned declarations are:
 
 1. `AlgebraicGeometry.Scheme.Pic0.tangentSpaceIso` (theorem, A.3.iii) — the
    canonical isomorphism `T₀ Pic⁰_{C/k} ≅ H¹(C, 𝒪_C)` (Kleiman §5
@@ -121,11 +129,28 @@ geometric irreducibility, abelian-variety assembly). -/
 
 namespace Pic0
 
+/-- **`Pic⁰_{C/k}` is a `k`-group scheme** — the group-object structure on
+the identity component of the Picard scheme, inherited from `Pic_{C/k}` via
+the clopen inclusion `Pic⁰_{C/k} ↪ Pic_{C/k}`.
+
+Since `Pic0Scheme C` unwinds definitionally to
+`GroupScheme.IdentityComponent (PicScheme C)` (run-0008 FGA rewire), this is
+`GroupScheme.IdentityComponent.isSubgroupHomomorphism` applied to
+`G = PicScheme C`, whose `GrpObj` instance is
+`PicScheme.groupSchemeStructure` (Yoneda transport of the abelian-group
+structure of the relative Picard presheaf) and whose local finiteness is the
+`PicSchemeLocallyOfFiniteType` carrier (Kleiman §4 Thm `th:main`(1)). -/
+theorem grpObj {k : Type u} [Field k]
+    (C : Over (Spec (.of k)))
+    [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
+    [GeometricallyIntegral C.hom] [HasPicScheme C]
+    [PicScheme.PicSchemeLocallyOfFiniteType C] :
+    Nonempty (GrpObj (Pic0Scheme C)) :=
+  GroupScheme.IdentityComponent.isSubgroupHomomorphism (PicScheme C)
+
 /-- **Dual-number points of `Pic⁰_{C/k}` at the identity are the cotangent
 dual** (Kleiman §5 Thm.~`thm:tgtsp`, LHS). Given the `k`-group-scheme
-structure on `Pic0Scheme C` (supplied by
-`GroupScheme.IdentityComponent.isSubgroupHomomorphism` once `Pic0Scheme`
-unwinds to `IdentityComponent (PicScheme C)`), the identity section
+structure on `Pic0Scheme C` (supplied by `Pic0.grpObj`), the identity section
 `e : Spec k ⟶ Pic⁰_{C/k}` hits a `k`-rational point, and the over-`Spec k`
 dual-number points of `Pic⁰_{C/k}` at `e` — the Zariski tangent space
 `T₀ Pic⁰_{C/k}` in its functor-of-points form — form the `κ(e)`-linear dual
@@ -138,8 +163,7 @@ theorem tangentSpaceCotangentDual {k : Type u} [Field k]
     (C : Over (Spec (.of k)))
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
     [GeometricallyIntegral C.hom] [HasPicScheme C]
-    [PicScheme.PicSchemeLocallyOfFiniteType C]
-    (hgrp : Nonempty (GrpObj (Pic0Scheme C))) :
+    [PicScheme.PicSchemeLocallyOfFiniteType C] :
     Nonempty (Σ' (e : Spec (.of k) ⟶ (Pic0Scheme C).left),
       (e ≫ (Pic0Scheme C).hom = 𝟙 (Spec (.of k))) ×'
       ({g : Spec (CommRingCat.of (DualNumber k)) ⟶ (Pic0Scheme C).left //
@@ -150,7 +174,7 @@ theorem tangentSpaceCotangentDual {k : Type u} [Field k]
           (IsLocalRing.ResidueField ((Pic0Scheme C).left.presheaf.stalk (e.base default)))
           (IsLocalRing.CotangentSpace
             ((Pic0Scheme C).left.presheaf.stalk (e.base default))))) := by
-  obtain ⟨i⟩ := hgrp
+  obtain ⟨i⟩ := grpObj C
   letI := i
   haveI : Subsingleton ↥(Spec (CommRingCat.of k)) :=
     inferInstanceAs (Subsingleton (PrimeSpectrum k))
@@ -241,17 +265,21 @@ specialisation of the abstract identity-component substrate
 `IdentityComponent.isFiniteTypeGeometricallyIrreducible` of
 `Picard/IdentityComponent.lean` to `G = PicScheme C`).
 
-The proof (iter-194+): apply `GroupScheme.IdentityComponent.isFiniteTypeGeometricallyIrreducible`
-to `G = PicScheme C` (locally of finite type by `FGAPicRepresentability`), and
-identify `IdentityComponent (PicScheme C)` with `Pic0Scheme C` via the
-`Pic0Scheme` definition (sibling). -/
+The proof: apply `GroupScheme.IdentityComponent.isFiniteTypeGeometricallyIrreducible`
+to `G = PicScheme C` (locally of finite type by the
+`PicSchemeLocallyOfFiniteType` carrier); `IdentityComponent (PicScheme C)`
+is `Pic0Scheme C` definitionally. The specialisation is complete here; the
+remaining mathematical obligation (Kleiman's translate-cover argument, EGA
+IV₂ 4.5.8/4.6.1) lives in the sibling's
+`isFiniteTypeGeometricallyIrreducible` sorry. -/
 theorem geometricallyIrreducible {k : Type u} [Field k]
     (C : Over (Spec (.of k)))
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
     [GeometricallyIntegral C.hom] [HasPicScheme C]
     [PicScheme.PicSchemeLocallyOfFiniteType C] :
     GeometricallyIrreducible (Pic0Scheme C).hom :=
-  sorry
+  (GroupScheme.IdentityComponent.isFiniteTypeGeometricallyIrreducible
+    (PicScheme C)).2.2
 
 /-- **`Pic⁰_{C/k}` is an abelian variety (A.3.vii assembly).**
 
@@ -268,11 +296,13 @@ Milne §I.1, p.~8: "A complete connected group variety is called an abelian
 variety." This is the load-bearing A.3.vii gate of Route~A for
 `thm:nonempty_jacobianWitness`.
 
-The proof (iter-194+) assembles the four conjuncts: `proper` (this file),
-`smooth` (this file), `geometricallyIrreducible` (this file), and the
-`Nonempty (GrpObj (Pic0Scheme C))` slot, the latter from
-`GroupScheme.IdentityComponent.isSubgroupHomomorphism` applied to
-`G = PicScheme C` (sibling `Picard/IdentityComponent.lean`). -/
+The proof assembles the four conjuncts: `proper` (this file), `smooth`
+(this file), `geometricallyIrreducible` (this file), and the
+`Nonempty (GrpObj (Pic0Scheme C))` slot from `Pic0.grpObj` (this file,
+via `GroupScheme.IdentityComponent.isSubgroupHomomorphism` applied to
+`G = PicScheme C`). The assembly itself is sorry-free; the remaining
+obligations live in the `smooth` / `proper` conjuncts and the
+geometric-irreducibility substrate. -/
 theorem isAbelianVariety {k : Type u} [Field k]
     (C : Over (Spec (.of k)))
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
@@ -281,9 +311,28 @@ theorem isAbelianVariety {k : Type u} [Field k]
     IsProper (Pic0Scheme C).hom ∧ Smooth (Pic0Scheme C).hom ∧
       GeometricallyIrreducible (Pic0Scheme C).hom ∧
       Nonempty (GrpObj (Pic0Scheme C)) :=
-  sorry
+  ⟨proper C, smooth C, geometricallyIrreducible C, grpObj C⟩
 
 end Pic0
+
+namespace Pic0Scheme
+
+/-- **`Pic⁰_{C/k}` is an abelian variety** — the `Pic0Scheme`-namespace form
+pinned by the blueprint node `thm:pic_zero_is_abelian_variety`
+(`Picard_IdentityComponent.tex`). Moved here (run 0008) from sibling
+`Picard/IdentityComponent.lean` so it can consume the per-conjunct theorems
+of this chapter; it is literally `Pic0.isAbelianVariety`. -/
+theorem isAbelianVariety {k : Type u} [Field k]
+    (C : Over (Spec (.of k)))
+    [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
+    [GeometricallyIntegral C.hom] [HasPicScheme C]
+    [PicScheme.PicSchemeLocallyOfFiniteType C] :
+    IsProper (Pic0Scheme C).hom ∧ Smooth (Pic0Scheme C).hom ∧
+      GeometricallyIrreducible (Pic0Scheme C).hom ∧
+      Nonempty (GrpObj (Pic0Scheme C)) :=
+  Pic0.isAbelianVariety C
+
+end Pic0Scheme
 
 end Scheme
 
