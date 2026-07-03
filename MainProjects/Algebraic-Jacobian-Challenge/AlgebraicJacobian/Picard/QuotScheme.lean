@@ -540,6 +540,146 @@ private noncomputable def pullback_app_isoTensor_baseMap
     rw [unit.map_smul]
     exact ((Scheme.Modules.pullback g).obj N).map_smul (homOfLE e) _ _
 
+/-! #### `baseMap` coherence lemmas (T12, 2026-07-03)
+
+The (N1)/(N2)/(N3) substrate helpers for the Beck-Chevalley intertwining at
+`pullback_app_isoTensor_baseMap_sectionLinearEquiv` (see the 6-stage plan in
+its body). All three are proved elementwise by `congrArg`/`Eq.trans` chains
+from unit naturality, `unit_conjugateEquiv` + Mathlib's
+`conjugateEquiv_pullbackComp_inv`, and proof irrelevance of `Opens`-homs. -/
+
+set_option backward.isDefEq.respectTransparency false in
+/-- Composition collapse for section restrictions of a sheaf of modules. -/
+private lemma modules_res_res {Y : Scheme.{u}} (N : Y.Modules) {W₁ W₂ W₃ : Y.Opens}
+    (i₁ : W₁ ≤ W₂) (i₂ : W₂ ≤ W₃) (i₃ : W₁ ≤ W₃) (ξ : Γ(N, W₃)) :
+    (N.presheaf.map (homOfLE i₁).op).hom ((N.presheaf.map (homOfLE i₂).op).hom ξ) =
+      (N.presheaf.map (homOfLE i₃).op).hom ξ := by
+  rw [← AddCommGrpCat.comp_apply, ← Functor.map_comp, ← op_comp]
+  exact (congrArg (fun (i : W₁ ⟶ W₃) =>
+    (AddCommGrpCat.Hom.hom (N.presheaf.map i.op)) ξ) (Subsingleton.elim _ _)).symm
+
+set_option backward.isDefEq.respectTransparency false in
+/-- Hom-generic variant of `modules_res_res` (for non-`homOfLE` opens homs, e.g.
+`opensFunctor`-images and `eqToHom`s; `Opens`-homs are proof-irrelevant). -/
+private lemma modules_res_res_hom {Y : Scheme.{u}} (N : Y.Modules) {W₁ W₂ W₃ : Y.Opens}
+    (i₁ : W₁ ⟶ W₂) (i₂ : W₂ ⟶ W₃) (i₃ : W₁ ⟶ W₃) (ξ : Γ(N, W₃)) :
+    (N.presheaf.map i₁.op).hom ((N.presheaf.map i₂.op).hom ξ) =
+      (N.presheaf.map i₃.op).hom ξ := by
+  rw [← AddCommGrpCat.comp_apply, ← Functor.map_comp, ← op_comp]
+  exact (congrArg (fun (i : W₁ ⟶ W₃) =>
+    (AddCommGrpCat.Hom.hom (N.presheaf.map i.op)) ξ) (Subsingleton.elim _ _)).symm
+
+set_option backward.isDefEq.respectTransparency false in
+/-- **(N1) `baseMap` naturality in the sheaf argument**: the canonical base map
+commutes with morphisms of sheaves of modules, via naturality of the
+`pullback ⊣ pushforward` adjunction unit. -/
+private lemma pullback_app_isoTensor_baseMap_naturality
+    {X Y : Scheme.{u}} (g : Y ⟶ X) {N N' : X.Modules}
+    (h : N ⟶ N') {U : Y.Opens} {V : X.Opens} (e : U ≤ g ⁻¹ᵁ V) (x : Γ(N, V)) :
+    (Scheme.Modules.Hom.app ((Scheme.Modules.pullback g).map h) U).hom
+        (pullback_app_isoTensor_baseMap g N e x) =
+      pullback_app_isoTensor_baseMap g N' e ((Scheme.Modules.Hom.app h V).hom x) := by
+  -- (b) unit naturality at `V`-sections:
+  have hb := congrArg
+    (fun (k : N ⟶ (Scheme.Modules.pushforward g).obj
+        ((Scheme.Modules.pullback g).obj N')) =>
+      (Scheme.Modules.Hom.app k V).hom x)
+    ((Scheme.Modules.pullbackPushforwardAdjunction g).unit.naturality h)
+  -- (a) naturality of `(pullback g).map h` against the restriction `U ≤ g ⁻¹ᵁ V`:
+  have ha := congrArg
+    (fun (k : Γ((Scheme.Modules.pullback g).obj N, g ⁻¹ᵁ V) ⟶
+        Γ((Scheme.Modules.pullback g).obj N', U)) =>
+      (AddCommGrpCat.Hom.hom k) (pullback_app_isoTensor_unitAtV g N V x))
+    ((Scheme.Modules.Hom.mapPresheaf ((Scheme.Modules.pullback g).map h)).naturality
+      (homOfLE e).op)
+  exact ha.trans (congrArg
+    (fun w => ((((Scheme.Modules.pullback g).obj N').presheaf.map (homOfLE e).op).hom) w)
+    hb.symm)
+
+set_option backward.isDefEq.respectTransparency false in
+/-- **(N3) `baseMap` transport along `pullbackCongr`** (propositional equality of
+morphisms). -/
+private lemma pullback_app_isoTensor_baseMap_congr
+    {X Y : Scheme.{u}} {g g' : Y ⟶ X} (hgg' : g = g')
+    (N : X.Modules) {U : Y.Opens} {V : X.Opens} (e : U ≤ g ⁻¹ᵁ V) (e' : U ≤ g' ⁻¹ᵁ V)
+    (x : Γ(N, V)) :
+    (Scheme.Modules.Hom.app ((Scheme.Modules.pullbackCongr hgg').hom.app N) U).hom
+        (pullback_app_isoTensor_baseMap g N e x) =
+      pullback_app_isoTensor_baseMap g' N e' x := by
+  subst hgg'
+  rfl
+
+set_option backward.isDefEq.respectTransparency false in
+set_option maxHeartbeats 1600000 in
+/-- **(N2) `baseMap` compatibility with `pullbackComp`**: iterated base maps along a
+composable pair compose (through `pullbackComp`) to the base map of the composite.
+From `unit_conjugateEquiv` and Mathlib's `conjugateEquiv_pullbackComp_inv`. -/
+private lemma pullback_app_isoTensor_baseMap_comp
+    {X Y Z : Scheme.{u}} (f : X ⟶ Y) (g : Y ⟶ Z) (N : Z.Modules)
+    {T : X.Opens} {V : Y.Opens} {U : Z.Opens}
+    (eV : V ≤ g ⁻¹ᵁ U) (eT : T ≤ f ⁻¹ᵁ V) (eTU : T ≤ (f ≫ g) ⁻¹ᵁ U) (x : Γ(N, U)) :
+    (Scheme.Modules.Hom.app ((Scheme.Modules.pullbackComp f g).hom.app N) T).hom
+        (pullback_app_isoTensor_baseMap f ((Scheme.Modules.pullback g).obj N) eT
+          (pullback_app_isoTensor_baseMap g N eV x)) =
+      pullback_app_isoTensor_baseMap (f ≫ g) N eTU x := by
+  -- (s1) naturality of the `f`-unit component against the restriction `V ≤ g ⁻¹ᵁ U`:
+  have hs1 := congrArg
+    (fun (k : Γ((Scheme.Modules.pullback g).obj N, g ⁻¹ᵁ U) ⟶
+        Γ((Scheme.Modules.pushforward f).obj ((Scheme.Modules.pullback f).obj
+          ((Scheme.Modules.pullback g).obj N)), V)) =>
+      (AddCommGrpCat.Hom.hom k) (pullback_app_isoTensor_unitAtV g N U x))
+    ((Scheme.Modules.Hom.mapPresheaf
+      ((Scheme.Modules.pullbackPushforwardAdjunction f).unit.app
+        ((Scheme.Modules.pullback g).obj N))).naturality (homOfLE eV).op)
+  -- (s2) the composed-adjunction unit is the `pullbackComp.inv`-twist of the
+  -- `(f ≫ g)`-unit.
+  have hconj := Scheme.Modules.conjugateEquiv_pullbackComp_inv f g
+  have hunit := unit_conjugateEquiv
+    ((Scheme.Modules.pullbackPushforwardAdjunction g).comp
+      (Scheme.Modules.pullbackPushforwardAdjunction f))
+    (Scheme.Modules.pullbackPushforwardAdjunction (f ≫ g))
+    ((Scheme.Modules.pullbackComp f g).inv) N
+  rw [hconj] at hunit
+  have hs2 := congrArg
+    (fun (k : N ⟶ (Scheme.Modules.pushforward (f ≫ g)).obj
+        ((Scheme.Modules.pullback f).obj ((Scheme.Modules.pullback g).obj N))) =>
+      (Scheme.Modules.Hom.app k U).hom x) hunit
+  -- (s3) naturality of `pullbackComp.inv.app N` against the restriction
+  -- `T ≤ (f ≫ g) ⁻¹ᵁ U`:
+  have hs3 := congrArg
+    (fun (k : Γ((Scheme.Modules.pullback (f ≫ g)).obj N, (f ≫ g) ⁻¹ᵁ U) ⟶
+        Γ((Scheme.Modules.pullback f).obj ((Scheme.Modules.pullback g).obj N), T)) =>
+      (AddCommGrpCat.Hom.hom k) (pullback_app_isoTensor_unitAtV (f ≫ g) N U x))
+    ((Scheme.Modules.Hom.mapPresheaf
+      ((Scheme.Modules.pullbackComp f g).inv.app N)).naturality (homOfLE eTU).op)
+  -- (s4) hom-inv cancellation of `pullbackComp` at `T`-sections:
+  have hs4 : ∀ (ξ : Γ((Scheme.Modules.pullback (f ≫ g)).obj N, T)),
+      (Scheme.Modules.Hom.app ((Scheme.Modules.pullbackComp f g).hom.app N) T).hom
+        ((Scheme.Modules.Hom.app ((Scheme.Modules.pullbackComp f g).inv.app N) T).hom ξ)
+        = ξ := fun ξ => congrArg
+    (fun (k : (Scheme.Modules.pullback (f ≫ g)).obj N ⟶
+        (Scheme.Modules.pullback (f ≫ g)).obj N) =>
+      (Scheme.Modules.Hom.app k T).hom ξ)
+    (Iso.inv_hom_id_app (Scheme.Modules.pullbackComp f g) N)
+  refine (congrArg (fun w =>
+    (Scheme.Modules.Hom.app ((Scheme.Modules.pullbackComp f g).hom.app N) T).hom
+      ((((Scheme.Modules.pullback f).obj ((Scheme.Modules.pullback g).obj N)).presheaf.map
+        (homOfLE eT).op).hom w)) hs1).trans ?_
+  refine (congrArg (fun w =>
+    (Scheme.Modules.Hom.app ((Scheme.Modules.pullbackComp f g).hom.app N) T).hom w)
+    (modules_res_res ((Scheme.Modules.pullback f).obj ((Scheme.Modules.pullback g).obj N))
+      eT ((fun _ ha => eV ha) : f ⁻¹ᵁ V ≤ f ⁻¹ᵁ (g ⁻¹ᵁ U))
+      eTU (pullback_app_isoTensor_unitAtV f ((Scheme.Modules.pullback g).obj N) (g ⁻¹ᵁ U)
+        (pullback_app_isoTensor_unitAtV g N U x)))).trans ?_
+  refine (congrArg (fun w =>
+    (Scheme.Modules.Hom.app ((Scheme.Modules.pullbackComp f g).hom.app N) T).hom
+      ((((Scheme.Modules.pullback f).obj ((Scheme.Modules.pullback g).obj N)).presheaf.map
+        (homOfLE eTU).op).hom w)) hs2).trans ?_
+  refine (congrArg (fun w =>
+    (Scheme.Modules.Hom.app ((Scheme.Modules.pullbackComp f g).hom.app N) T).hom w)
+    hs3.symm).trans ?_
+  exact hs4 _
+
 
 
 /-! ============================================================================
@@ -4426,6 +4566,8 @@ private theorem tildeIso_of_isQuasicoherent_isAffineOpen
     hcounit.trans (hid.trans (hb'app s))
   exact step1.trans step2
 
+set_option backward.isDefEq.respectTransparency false in
+set_option maxHeartbeats 1600000 in
 /-- **Step 3 pin (transport)**: section-level transport for pullback along
 the affine-open's `fromSpec` map.
 
@@ -4461,8 +4603,13 @@ private theorem pullback_of_openImmersion_iso_restrict
       (Scheme.ΓSpecIso _).inv.hom.toAlgebra
     letI : Module Γ(Y, U) Γ((Scheme.Modules.pullback hU.fromSpec).obj N, ⊤) :=
       Module.compHom _ (Scheme.ΓSpecIso _).inv.hom
-    Nonempty (Γ((Scheme.Modules.pullback hU.fromSpec).obj N, ⊤) ≃ₗ[Γ(Y, U)]
-      Γ(N, U)) := by
+    -- (N4) Σ-pair characterization (T12, 2026-07-03): the inverse of the equiv is
+    -- the canonical base map `pullback_app_isoTensor_baseMap` at `V = U`, `U = ⊤`.
+    Nonempty {f : Γ((Scheme.Modules.pullback hU.fromSpec).obj N, ⊤) ≃ₗ[Γ(Y, U)]
+        Γ(N, U) //
+      ∀ (y : Γ(N, U)),
+        f.symm y = pullback_app_isoTensor_baseMap hU.fromSpec N
+          (le_of_eq hU.fromSpec_preimage_self.symm) y} := by
   letI algInst : Algebra Γ(Y, U) Γ((Spec Γ(Y, U)), ⊤) :=
     (Scheme.ΓSpecIso _).inv.hom.toAlgebra
   letI modInst : Module Γ(Y, U) Γ((Scheme.Modules.pullback hU.fromSpec).obj N, ⊤) :=
@@ -4470,7 +4617,8 @@ private theorem pullback_of_openImmersion_iso_restrict
   -- Step 1: Identify pullback along `hU.fromSpec` with the restriction functor.
   -- Mathlib's `restrictFunctorIsoPullback` gives this for any open immersion;
   -- `hU.fromSpec` is an open immersion by `IsAffineOpen.isOpenImmersion_fromSpec`.
-  have isoSheaf : (Scheme.Modules.pullback hU.fromSpec).obj N ≅ N.restrict hU.fromSpec :=
+  -- (`let`, not `have`: the (N4) characterization below needs its value.)
+  let isoSheaf : (Scheme.Modules.pullback hU.fromSpec).obj N ≅ N.restrict hU.fromSpec :=
     ((Scheme.Modules.restrictFunctorIsoPullback hU.fromSpec).app N).symm
   -- Step 2: The image of ⊤ under hU.fromSpec equals U (Stacks 01HH-style bridge).
   have hImg : (hU.fromSpec ''ᵁ (⊤ : (Spec Γ(Y, U)).Opens) : Y.Opens) = U := by
@@ -4514,7 +4662,7 @@ private theorem pullback_of_openImmersion_iso_restrict
       right_inv := right_inv
       map_add' := map_add' }
   -- Upgrade to a `Γ(Y, U)`-LinearEquiv via the smul compatibility.
-  refine ⟨addEq.toLinearEquiv ?_⟩
+  refine ⟨⟨addEq.toLinearEquiv ?_, ?_⟩⟩
   -- Smul-compatibility:
   intro r x
   -- The LHS `r • x` is `Module.compHom`-action: `r • x = (ΓSpecIso _).inv.hom r • x`
@@ -4581,6 +4729,38 @@ private theorem pullback_of_openImmersion_iso_restrict
     simp
   -- Apply h_key elementwise to r.
   exact congr($h_key r)
+  -- (N4) characterization: the inverse of the equiv is the canonical base map.
+  -- Route: the unit-compatibility `Adjunction.unit_leftAdjointUniq_hom_app` for
+  -- `restrictAdjunction` vs `pullbackPushforwardAdjunction` (whose `leftAdjointUniq`
+  -- IS `restrictFunctorIsoPullback`), then naturality of the comparison against the
+  -- restriction `⊤ ≤ fromSpec ⁻¹ᵁ U`, then collapse of the two `N`-restrictions
+  -- (`restrictAdjunction`'s unit component is a plain presheaf restriction, rfl).
+  intro y
+  have hk := congrArg
+    (fun (k : N ⟶ (Scheme.Modules.pushforward hU.fromSpec).obj
+        ((Scheme.Modules.pullback hU.fromSpec).obj N)) =>
+      (Scheme.Modules.Hom.app k U).hom y)
+    (Adjunction.unit_leftAdjointUniq_hom_app
+      (Scheme.Modules.restrictAdjunction hU.fromSpec)
+      (Scheme.Modules.pullbackPushforwardAdjunction hU.fromSpec) N)
+  have hnat := congrArg
+    (fun (k : Γ(N.restrict hU.fromSpec, hU.fromSpec ⁻¹ᵁ U) ⟶
+        Γ((Scheme.Modules.pullback hU.fromSpec).obj N, ⊤)) =>
+      (AddCommGrpCat.Hom.hom k)
+        ((N.presheaf.map (homOfLE (hU.fromSpec.image_preimage_le U)).op).hom y))
+    ((Scheme.Modules.Hom.mapPresheaf
+      ((Scheme.Modules.restrictFunctorIsoPullback hU.fromSpec).hom.app N)).naturality
+      (homOfLE (le_of_eq hU.fromSpec_preimage_self.symm)).op)
+  have hcol := modules_res_res_hom N
+    (hU.fromSpec.opensFunctor.map (homOfLE (le_of_eq hU.fromSpec_preimage_self.symm)))
+    (homOfLE (hU.fromSpec.image_preimage_le U)) (eqToHom hImg) y
+  exact (congrArg (fun w =>
+      (Scheme.Modules.Hom.app
+        ((Scheme.Modules.restrictFunctorIsoPullback hU.fromSpec).hom.app N) ⊤).hom w)
+    hcol.symm).trans
+    (hnat.trans (congrArg (fun w =>
+      ((((Scheme.Modules.pullback hU.fromSpec).obj N).presheaf.map
+        (homOfLE (le_of_eq hU.fromSpec_preimage_self.symm)).op).hom) w) hk))
 
 /-- **Section-level LinearEquiv via the Tilde route** (iter-188 Lane F NAMED
 HELPER, iter-189 unbundling refactor).
@@ -4654,7 +4834,7 @@ private theorem pullback_app_isoTensor_baseMap_sectionLinearEquiv
     tildeIso_of_isQuasicoherent_isAffineOpen N _hV
   obtain ⟨⟨step2, _step2_apply⟩⟩ :=
     pullback_tildeIso (g.appLE V U e) (ModuleCat.of Γ(X, V) Γ(N, V))
-  obtain ⟨step3⟩ :=
+  obtain ⟨⟨step3, _step3_symm_apply⟩⟩ :=
     pullback_of_openImmersion_iso_restrict
       ((Scheme.Modules.pullback g).obj N) _hU
   -- iter-193 Lane F: assemble the iso chain at the sheaf level.
