@@ -1029,7 +1029,7 @@ the leading coefficient. For the iter-185 file-skeleton the body is a typed
 noncomputable def degree {k : Type u} [Field k]
     (C : Over (Spec (.of k)))
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
-    [GeometricallyIntegral C.hom] :
+    [GeometricallyIntegral C.hom] [HasPicScheme C] :
     (Spec (.of k) ⟶ (PicScheme C).left) → ℤ :=
   sorry
 
@@ -1122,7 +1122,7 @@ zero. -/
 theorem kPoints_iff_kerDegree {k : Type u} [Field k]
     (C : Over (Spec (.of k)))
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
-    [GeometricallyIntegral C.hom] :
+    [GeometricallyIntegral C.hom] [HasPicScheme C] :
     Nonempty (Σ' (inc : (Pic0Scheme C).left ⟶ (PicScheme C).left),
       ∀ (lambda : Spec (.of k) ⟶ (PicScheme C).left),
         (∃ mu : Spec (.of k) ⟶ (Pic0Scheme C).left, mu ≫ inc = lambda) ↔
