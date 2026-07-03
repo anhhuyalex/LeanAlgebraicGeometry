@@ -4486,19 +4486,27 @@ remains Step 2 of the 3-step chain).
   unbundle.
 \end{lemma}
 \begin{proof}
-  \uses{def:quot_canonical_basechange_map}
-  Substantive body: chain \texttt{hU.toSpecΓ\_fromSpec} (identifies
-  \texttt{pullback hU.fromSpec} with \texttt{restrict\_to\_U} up to
-  natural iso) with naturality of \texttt{tilde.isoTop} (extracts the
-  \(\top\)-section of \texttt{tilde} as the input module), then transport
-  the \(\Gamma(Y, U)\)-linear structure through the chain.
+  \leanok
+  \uses{def:quot_canonical_basechange_map,
+    lem:modules_restrictFunctorIsoPullback_mathlib}
+  The underlying additive equivalence is the composite of the
+  \(\top\)-section of the natural isomorphism
+  \(j^{*} \cong \mathrm{restrict}\,j\) for the open immersion
+  \(j = \mathtt{hU.fromSpec}\)
+  (\cref{lem:modules_restrictFunctorIsoPullback_mathlib}) with the
+  restriction of \(\mathcal N\) along the equality of opens
+  \(j(\top) = U\); its \(\Gamma(Y, U)\)-linearity reduces (through
+  \texttt{Hom.app\_smul} and semilinearity of section restriction) to
+  the ring identity
+  \(\iota^{-1} \circ (j^{\sharp}\top)^{-1} \circ
+    \mathrm{res}_{U = j(\top)} = \mathrm{id}\), which follows from
+  \texttt{fromSpec\_app\_self}.
 
-  % NOTE (iter-189 plan-phase): body ~30-50 LOC, iter-190+ sub-build.
-  % This is Step 3 of the 3-pin unbundle of `_sectionLinearEquiv`, and
-  % is the LIGHTEST of the 3 pins per the analogist verdict (the chain
-  % `hU.toSpecΓ_fromSpec` + `tilde.isoTop` naturality is a routine but
-  % multi-step compositional transport). The iter-190 Lane F prover
-  % targets this pin axiom-clean.
+  The additional \(\Sigma\)-pair characterization (T12, 2026-07-03) —
+  the inverse of the equivalence is the canonical base map — is the
+  unit-compatibility of \texttt{Adjunction.leftAdjointUniq} for the
+  restriction adjunction versus the pullback--pushforward adjunction,
+  as spelled out in \cref{lem:baseMap_inv_step3_open_immersion}.
 \end{proof}
 
 \subsection{Iter-195 Beck-Chevalley 6-stage decomposition + (N1)--(N4) substrate}
@@ -4512,11 +4520,11 @@ iso-characterizing identities \texttt{\_step1\_apply} and
 Beck-Chevalley intertwining of
 \cref{def:pullback_app_isoTensor_sigma} unfolds into the six named
 stages spelled out in the prose of that definition; mirror copy at
-\texttt{AlgebraicJacobian/Picard/QuotScheme.lean:999-1037}. Stage~1
-is closed axiom-clean by the iter-195 Lane F prover; Stages 2--6 are
-gated on four substrate naturality lemmas (N1)--(N4) for the
-project-side helper \texttt{Scheme.Modules.baseMap}, introduced here
-as the iter-196+ prover targets.
+\texttt{AlgebraicJacobian/Picard/QuotScheme.lean:999-1037}. All six
+stages are now closed axiom-clean (T12, 2026-07-03): the four
+substrate naturality lemmas (N1)--(N4) below are proved, and the
+stage chain is assembled elementwise in the Lean body of
+\cref{def:pullback_app_isoTensor_sigma}, which is sorry-free.
 
 The four substrate lemmas all follow a single logical pattern. The
 project's \texttt{Scheme.Modules.baseMap} is defined from the unit of
@@ -4537,7 +4545,8 @@ substrate).
 \begin{lemma}
 [(N1) baseMap naturality in input sheaf]
   \label{lem:baseMap_pullbackComp_apply}
-  \lean{AlgebraicGeometry.Scheme.Modules.baseMap_pullbackComp_apply}
+  \lean{AlgebraicGeometry.pullback_app_isoTensor_baseMap_naturality}
+  \leanok
   \uses{def:quot_canonical_basechange_map, lem:pullback_tildeIso}
   Let \(g : X \to Y\) be a morphism of schemes, let \(\mathcal N\),
   \(\mathcal N'\) be \(\mathcal O_Y\)-modules, and let
@@ -4560,21 +4569,20 @@ substrate).
 \end{lemma}
 \begin{proof}
   \uses{def:quot_canonical_basechange_map}
+  \leanok
   Direct from the naturality square of
   \texttt{pullbackPushforwardAdjunction.unit} at the morphism
-  \(\eta : \mathcal N \to \mathcal N'\) in the input category, then
-  passed to the section level via the definitional unfolding of
-  \texttt{Scheme.Modules.baseMap} (which is a section-level reading
-  of the unit composed with the canonical pushforward-section map).
-
-  % NOTE (iter-196 plan-phase): body ~20-30 LOC. (N1) of the iter-195
-  % 6-stage Beck-Chevalley decomposition; iter-196+ Lane F prover target.
+  \(\eta : \mathcal N \to \mathcal N'\) in the input category
+  (giving the unit half), combined with the naturality of the
+  section restriction against \((\text{pullback}\,g).\mathrm{map}\,\eta\)
+  (giving the restriction half); the two squares chain elementwise.
 \end{proof}
 
 \begin{lemma}
 [(N2) baseMap composition via pullbackComp]
   \label{lem:baseMap_pullback_comp_apply}
-  \lean{AlgebraicGeometry.Scheme.Modules.baseMap_pullback_comp_apply}
+  \lean{AlgebraicGeometry.pullback_app_isoTensor_baseMap_comp}
+  \leanok
   \uses{def:quot_canonical_basechange_map, lem:pullback_tildeIso}
   Let \(f : X \to Y\) and \(g : Y \to Z\) be morphisms of schemes and
   let \(\mathcal N\) be an \(\mathcal O_Z\)-module. The
@@ -4600,24 +4608,29 @@ substrate).
 \end{lemma}
 \begin{proof}
   \uses{def:quot_canonical_basechange_map}
+  \leanok
   The unit of a composition of left adjoints
   \(F \circ G \dashv R \circ R'\) satisfies the canonical composition
-  identity \(\eta_{FG} = R'(\eta_F) \circ \eta_G\) (cf.\ Mathlib
-  \texttt{Adjunction.comp} unit decomposition). Specialised to the
-  pullback-pushforward adjunction at the triple of schemes
-  \(X \xrightarrow{f} Y \xrightarrow{g} Z\) and transported to the
-  section level via \texttt{Scheme.Modules.baseMap}'s definition,
-  this yields the stated formula.
-
-  % NOTE (iter-196 plan-phase): body ~25-35 LOC. (N2) of the iter-195
-  % 6-stage Beck-Chevalley decomposition; iter-196+ Lane F prover target.
-  % Used twice in the decomposition (Stages 3 and 5).
+  identity \(\eta_{FG} = R'(\eta_F) \circ \eta_G\) (Mathlib
+  \texttt{Adjunction.comp}). The composed unit is identified with the
+  \(\text{pullbackComp}\)-twist of the unit of the composite by the
+  conjugation identity \texttt{unit\_conjugateEquiv} applied to
+  Mathlib's \texttt{conjugateEquiv\_pullbackComp\_inv} (the components
+  of \texttt{pushforwardComp} are identities). Together with the
+  naturality of the \(f\)-unit component against the restriction
+  \(V \le g^{-1}U\), the collapse of consecutive section
+  restrictions, the naturality of
+  \(\text{pullbackComp}.\mathrm{inv}\) against the restriction
+  \(T \le (f \circ g)^{-1}U\), and the hom--inv cancellation of
+  \(\text{pullbackComp}\) at \(T\)-sections, this yields the stated
+  formula elementwise. Used twice (Stages~3 and~5).
 \end{proof}
 
 \begin{lemma}
 [(N3) baseMap transport via pullbackCongr]
   \label{lem:baseMap_pullbackCongr_apply}
-  \lean{AlgebraicGeometry.Scheme.Modules.baseMap_pullbackCongr_apply}
+  \lean{AlgebraicGeometry.pullback_app_isoTensor_baseMap_congr}
+  \leanok
   \uses{def:quot_canonical_basechange_map, lem:pullback_tildeIso}
   Let \(f_1, f_2 : X \to Y\) be morphisms of schemes with
   \(f_1 = f_2\) as a propositional equality \(h_{eq}\), and let
@@ -4644,24 +4657,19 @@ substrate).
 \end{lemma}
 \begin{proof}
   \uses{def:quot_canonical_basechange_map}
-  By propositional-equality elimination: write
-  \(\text{pullbackCongr}\,h_{eq}\) as
-  \(\text{eqToIso}\,(\text{congrArg}\,\text{pullback}\,h_{eq})\) and
-  unfold \texttt{eqToIso\_app} to reduce to \texttt{Eq.mpr}; the
-  definition of \texttt{baseMap} depends on the morphism argument only
-  through \texttt{pullbackPushforwardAdjunction.unit}, which is itself
-  definitionally invariant under \texttt{Eq.mpr} along
-  \(h_{eq}\).
-
-  % NOTE (iter-196 plan-phase): body ~15-25 LOC; the easiest of the
-  % four — almost pure equality transport. (N3) of the iter-195 6-stage
-  % Beck-Chevalley decomposition; iter-196+ Lane F prover target.
+  \leanok
+  By propositional-equality elimination (\texttt{subst} on
+  \(h_{eq}\)): after substitution \(\text{pullbackCongr}\,\mathrm{rfl}\)
+  is the identity isomorphism by iota-reduction of \texttt{eqToHom},
+  and the two \(\le\)-witnesses are proof-irrelevant, so both sides
+  are definitionally equal.
 \end{proof}
 
 \begin{lemma}
 [(N4) step3 inversion identity for an open immersion]
   \label{lem:baseMap_inv_step3_open_immersion}
-  \lean{AlgebraicGeometry.Scheme.Modules.baseMap_inv_step3_open_immersion}
+  \lean{AlgebraicGeometry.pullback_of_openImmersion_iso_restrict}
+  \leanok
   \uses{def:quot_canonical_basechange_map,
         lem:pullback_of_openImmersion_iso_restrict}
   Let \(Y\) be a scheme, \(U \subseteq Y\) an affine open with
@@ -4689,19 +4697,22 @@ substrate).
 \begin{proof}
   \uses{def:quot_canonical_basechange_map,
         lem:pullback_of_openImmersion_iso_restrict}
-  The transport iso \texttt{step3} is built (in
-  \cref{lem:pullback_of_openImmersion_iso_restrict}) from
-  \texttt{restrictFunctorIsoPullback} (Mathlib
-  \texttt{AlgebraicGeometry.OpenImmersion}), which exhibits, for an
-  open immersion \(j\), a natural iso between \(j^*\) and the
-  restriction functor \(\text{restrict}\,j\). At the \(\top\)-section
-  of \(\text{Spec}\,\Gamma(Y, U)\), the inverse of this natural iso is
-  exactly \texttt{baseMap}\,\(\mathtt{\_hU.fromSpec}\), because the
-  adjunction unit for an open-immersion pullback acts at \(\top\) as
-  the canonical restriction-to-section map.
-
-  % NOTE (iter-196 plan-phase): body ~20-30 LOC. (N4) of the iter-195
-  % 6-stage Beck-Chevalley decomposition; iter-196+ Lane F prover target.
+  \leanok
+  Realized as the \(\Sigma\)-pair characterization carried by
+  \cref{lem:pullback_of_openImmersion_iso_restrict}: the inverse of
+  its equivalence IS the canonical base map. The proof is the
+  unit-compatibility of \texttt{Adjunction.leftAdjointUniq} for
+  \texttt{restrictAdjunction} versus
+  \texttt{pullbackPushforwardAdjunction} (whose
+  \texttt{leftAdjointUniq} is Mathlib's
+  \texttt{restrictFunctorIsoPullback}), combined with the fact that
+  the unit of the restriction adjunction is a plain presheaf
+  restriction (definitional in Mathlib), the naturality of the
+  comparison against the restriction
+  \(\top \le j^{-1}U\), and the collapse of consecutive
+  restrictions along the equality \(j(\top) = U\). The stated
+  inversion identity then follows by applying the equivalence to both
+  sides of the characterization.
 \end{proof}
 
 \section{Lean encoding}

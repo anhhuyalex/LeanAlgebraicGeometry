@@ -4762,6 +4762,8 @@ private theorem pullback_of_openImmersion_iso_restrict
       ((((Scheme.Modules.pullback hU.fromSpec).obj N).presheaf.map
         (homOfLE (le_of_eq hU.fromSpec_preimage_self.symm)).op).hom) w) hk))
 
+set_option backward.isDefEq.respectTransparency false in
+set_option maxHeartbeats 3200000 in
 /-- **Section-level LinearEquiv via the Tilde route** (iter-188 Lane F NAMED
 HELPER, iter-189 unbundling refactor).
 
@@ -4951,21 +4953,13 @@ private theorem pullback_app_isoTensor_baseMap_sectionLinearEquiv
   --   Stage 6 ((N4) step3 inversion of baseMap _hU.fromSpec on open imm):
   --     step3 (baseMap _hU.fromSpec ((pullback g) N) le_top' y) = y.
   --
-  -- Substantive Mathlib-shaped gaps (iter-196+ project-side helpers):
-  --   (N1) `baseMap` naturality in input sheaf (~20-30 LOC) — directly
-  --        from naturality of `pullbackPushforwardAdjunction.unit`.
-  --   (N2) `baseMap` compatibility with `pullbackComp` (~30-40 LOC) —
-  --        adjunction-composition rule for the unit at a triple-of-morphisms.
-  --   (N3) `baseMap` compatibility with `pullbackCongr` (~10-20 LOC) —
-  --        transport along propositional equality of morphisms.
-  --   (N4) `step3` inversion identity (~20-30 LOC) — `step3` is built from
-  --        `restrictFunctorIsoPullback` for the open immersion `_hU.fromSpec`;
-  --        its inverse is `baseMap _hU.fromSpec ((pullback g) N) le_top'`.
-  --
-  -- Iter-195 Lane F prover (this iter): Stage 1 closed axiom-clean below
-  -- as a structured `have`. The remaining Stages 2-6 are sorry'd with type
-  -- signatures pinning the four named substrate helpers (N1)-(N4) for
-  -- iter-196 prover.
+  -- The four substrate helpers (N1)-(N4) are PROVED (T12, 2026-07-03):
+  --   (N1) `pullback_app_isoTensor_baseMap_naturality`,
+  --   (N2) `pullback_app_isoTensor_baseMap_comp`,
+  --   (N3) `pullback_app_isoTensor_baseMap_congr`,
+  --   (N4) the Σ-pair characterization `_step3_symm_apply` of
+  --        `pullback_of_openImmersion_iso_restrict`.
+  -- The stages are assembled below as `congrArg`/`Eq.trans` chains.
   --
   -- Local abbreviations:
   --   ΓNV := ModuleCat.of ↑Γ(X, V) ↑Γ(N, V)
@@ -4977,23 +4971,105 @@ private theorem pullback_app_isoTensor_baseMap_sectionLinearEquiv
   --   ι5 := step2
   -- composedIso = ι1 ≪≫ ι2 ≪≫ ι3 ≪≫ ι4 ≪≫ ι5.
   --
-  -- ## Stage 1 (axiom-clean): apply step2.inv via _step2_apply.
-  -- The `_step2_apply` identity together with `step2.hom_inv_id` gives a
-  -- closed-form computation of `step2.inv .app ⊤ (tilde.toOpen TR ⊤ (1 ⊗ x))`
-  -- as a `baseMap`-of-`tilde.toOpen` composition. Documented as a `have`
-  -- for the iter-196 prover to chain into Stages 2-6.
-  have stage1 := _step2_apply x
-  -- stage1 : step2.hom .app ⊤ (baseMap (Spec.map φ) (tilde ΓNV) le_top
-  --                            (tilde.toOpen ΓNV ⊤ x))
-  --        = tilde.toOpen TR ⊤ (1 ⊗ x)
-  -- (Note: writing the inverted form `step2.inv .app ⊤ (RHS) = LHS` as a
-  -- typed `have` runs into the `Γ(X, V) : Ab vs CommRingCat` notation
-  -- ambiguity at the `tilde (ModuleCat.of ↑Γ(X, V) ↑Γ(N, V))` reading;
-  -- iter-196 prover route: chain `stage1` via `Iso.inv_hom_id_apply` instead
-  -- of restating the equation in inverted form.)
-  --
-  -- ## Stages 2-6: substantive Mathlib-shaped gaps (N1)-(N4); typed sorry.
-  exact sorry
+  -- ## Stage 1: invert `_step2_apply` via `step2.hom_inv_id` elementwise.
+  have hcancel2 : ∀ (w : Γ((Scheme.Modules.pullback (Spec.map (g.appLE V U e))).obj
+      (tilde (ModuleCat.of Γ(X, V) Γ(N, V))), ⊤)),
+      (Scheme.Modules.Hom.app step2.inv ⊤).hom
+        ((Scheme.Modules.Hom.app step2.hom ⊤).hom w) = w := fun w =>
+    congrArg (fun (k : (Scheme.Modules.pullback (Spec.map (g.appLE V U e))).obj
+        (tilde (ModuleCat.of Γ(X, V) Γ(N, V))) ⟶
+        (Scheme.Modules.pullback (Spec.map (g.appLE V U e))).obj
+        (tilde (ModuleCat.of Γ(X, V) Γ(N, V)))) =>
+      (Scheme.Modules.Hom.app k ⊤).hom w) step2.hom_inv_id
+  have h1 := (congrArg (fun w => (Scheme.Modules.Hom.app step2.inv ⊤).hom w)
+    (_step2_apply x).symm).trans (hcancel2 _)
+  -- ## Stage 2: (N1) naturality along `step1.inv`, then `_step1_apply`.
+  -- (The `⊤`-opens must be pinned explicitly: a bare `le_top` collapses
+  -- `Spec.map φ ⁻¹ᵁ ⊤` to `⊤` and leaves the lemma's opens as metavariables.)
+  have h2 := (pullback_app_isoTensor_baseMap_naturality (Spec.map (g.appLE V U e))
+      step1.inv (U := (⊤ : (Spec Γ(Y, U)).Opens)) (V := (⊤ : (Spec Γ(X, V)).Opens))
+      le_top ((tilde.toOpen (ModuleCat.of Γ(X, V) Γ(N, V)) ⊤).hom x)).trans
+    (congrArg (fun w => pullback_app_isoTensor_baseMap (Spec.map (g.appLE V U e))
+      ((Scheme.Modules.pullback _hV.fromSpec).obj N)
+      (U := (⊤ : (Spec Γ(Y, U)).Opens)) (V := (⊤ : (Spec Γ(X, V)).Opens))
+      le_top w) (_step1_apply x))
+  -- ## Stage 3: (N2) composition through `pullbackComp (Spec.map φ) hV.fromSpec`.
+  have eTU3 : (⊤ : (Spec Γ(Y, U)).Opens) ≤
+      (Spec.map (g.appLE V U e) ≫ _hV.fromSpec) ⁻¹ᵁ V := by
+    rw [Scheme.Hom.comp_preimage, _hV.fromSpec_preimage_self]
+    exact le_top
+  have h3 := pullback_app_isoTensor_baseMap_comp (Spec.map (g.appLE V U e)) _hV.fromSpec N
+    (le_of_eq _hV.fromSpec_preimage_self.symm) le_top eTU3 x
+  -- ## Stage 4: (N3) transport along `pullbackCongr h_eq.symm`.
+  have eTU4 : (⊤ : (Spec Γ(Y, U)).Opens) ≤ (_hU.fromSpec ≫ g) ⁻¹ᵁ V := by
+    rw [Scheme.Hom.comp_preimage]
+    exact le_trans (le_of_eq _hU.fromSpec_preimage_self.symm) (fun a ha => e ha)
+  have h4 := pullback_app_isoTensor_baseMap_congr h_eq.symm N eTU3 eTU4 x
+  -- ## Stage 5: (N2) inverted, through `pullbackComp hU.fromSpec g`.
+  have h5' := pullback_app_isoTensor_baseMap_comp _hU.fromSpec g N e
+    (le_of_eq _hU.fromSpec_preimage_self.symm) eTU4 x
+  have hcancel1 : ∀ (w : Γ((Scheme.Modules.pullback _hU.fromSpec).obj
+      ((Scheme.Modules.pullback g).obj N), ⊤)),
+      (Scheme.Modules.Hom.app
+          ((Scheme.Modules.pullbackComp _hU.fromSpec g).inv.app N) ⊤).hom
+        ((Scheme.Modules.Hom.app
+          ((Scheme.Modules.pullbackComp _hU.fromSpec g).hom.app N) ⊤).hom w) = w :=
+    fun w => congrArg (fun (k : (Scheme.Modules.pullback g ⋙
+        Scheme.Modules.pullback _hU.fromSpec).obj N ⟶
+        (Scheme.Modules.pullback g ⋙ Scheme.Modules.pullback _hU.fromSpec).obj N) =>
+      (Scheme.Modules.Hom.app k ⊤).hom w)
+      (Iso.hom_inv_id_app (Scheme.Modules.pullbackComp _hU.fromSpec g) N)
+  have h5 := (congrArg (fun w =>
+    (Scheme.Modules.Hom.app
+      ((Scheme.Modules.pullbackComp _hU.fromSpec g).inv.app N) ⊤).hom w)
+    h5'.symm).trans (hcancel1 _)
+  -- ## Stage 6: (N4) `step3` inversion via `_step3_symm_apply`.
+  have h6 := (congrArg (fun w => step3 w)
+    (_step3_symm_apply (pullback_app_isoTensor_baseMap g N e x)).symm).trans
+    (step3.apply_symm_apply (pullback_app_isoTensor_baseMap g N e x))
+  -- ## Assembly: decompose `f (1 ⊗ x)` through the iso chain and chain the stages.
+  show step3
+    ((Scheme.Modules.Hom.app
+        ((Scheme.Modules.pullbackComp _hU.fromSpec g).inv.app N) ⊤).hom
+      ((Scheme.Modules.Hom.app
+          ((Scheme.Modules.pullbackCongr h_eq).inv.app N) ⊤).hom
+        ((Scheme.Modules.Hom.app
+            ((Scheme.Modules.pullbackComp (Spec.map (g.appLE V U e))
+              _hV.fromSpec).hom.app N) ⊤).hom
+          ((Scheme.Modules.Hom.app
+              ((Scheme.Modules.pullback (Spec.map (g.appLE V U e))).map step1.inv) ⊤).hom
+            ((Scheme.Modules.Hom.app step2.inv ⊤).hom
+              ((tilde.toOpen TR ⊤).hom (1 ⊗ₜ[Γ(X, V)] x))))))) =
+    pullback_app_isoTensor_baseMap g N e x
+  exact (congrArg (fun w => step3
+      ((Scheme.Modules.Hom.app
+          ((Scheme.Modules.pullbackComp _hU.fromSpec g).inv.app N) ⊤).hom
+        ((Scheme.Modules.Hom.app
+            ((Scheme.Modules.pullbackCongr h_eq).inv.app N) ⊤).hom
+          ((Scheme.Modules.Hom.app
+              ((Scheme.Modules.pullbackComp (Spec.map (g.appLE V U e))
+                _hV.fromSpec).hom.app N) ⊤).hom
+            ((Scheme.Modules.Hom.app
+                ((Scheme.Modules.pullback (Spec.map (g.appLE V U e))).map
+                  step1.inv) ⊤).hom w))))) h1).trans
+    ((congrArg (fun w => step3
+      ((Scheme.Modules.Hom.app
+          ((Scheme.Modules.pullbackComp _hU.fromSpec g).inv.app N) ⊤).hom
+        ((Scheme.Modules.Hom.app
+            ((Scheme.Modules.pullbackCongr h_eq).inv.app N) ⊤).hom
+          ((Scheme.Modules.Hom.app
+              ((Scheme.Modules.pullbackComp (Spec.map (g.appLE V U e))
+                _hV.fromSpec).hom.app N) ⊤).hom w)))) h2).trans
+      ((congrArg (fun w => step3
+        ((Scheme.Modules.Hom.app
+            ((Scheme.Modules.pullbackComp _hU.fromSpec g).inv.app N) ⊤).hom
+          ((Scheme.Modules.Hom.app
+              ((Scheme.Modules.pullbackCongr h_eq).inv.app N) ⊤).hom w))) h3).trans
+        ((congrArg (fun w => step3
+          ((Scheme.Modules.Hom.app
+              ((Scheme.Modules.pullbackComp _hU.fromSpec g).inv.app N) ⊤).hom w))
+            h4).trans
+          ((congrArg (fun w => step3 w) h5).trans h6))))
 
 /-- **Substantive `IsBaseChange` claim** for the affine-open section formula
 (iter-187 Lane F — analogist-informed refactor; iter-188 closes axiom-clean
