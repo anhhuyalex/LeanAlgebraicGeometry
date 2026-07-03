@@ -1,0 +1,9 @@
+# Orientation — after run 0010 T12 (Stacks 01XJ closed)
+
+- Useful context: run 0010 T12 closed `Scheme.Modules.pushforward_isQuasicoherent` (Stacks 01XJ, qcqs pushforward preserves quasi-coherence) in `MainProjects/Algebraic-Jacobian-Challenge/AlgebraicJacobian/Picard/QuotScheme.lean` (decls at ~3456–3990, namespace `AlgebraicGeometry.Scheme.Modules`), axiom-clean (`propext, Classical.choice, Quot.sound`); the reusable engine is `isLocalizedModule_basicOpen_of_isCompact` (01P0, Mayer–Vietoris over compact opens) + the converse transport `isIso_fromTildeΓ_pullback_fromSpec_of_isLocalizedModule`. `QuotScheme.lean` real sorries are now 10.
+
+- Relevant files/nodes: blueprint `blueprint/src/chapters/Picard_QuotScheme.tex` — the new qcqs-localization node cluster (`lem:qcqs_section_localization{,_torsion,_surj}`, `lem:fromTildeGamma_pullback_fromSpec_converse`, `lem:pushforward_section_localization`) and `lem:pushforward_isQuasicoherent`; the helper `pushforward_isQuasicoherent_over_affine` (line ~3929) has no node yet (content inlined in the 01XJ proof).
+
+- Consistency note: `I-0087` remains open — the gap1/gap2 union-merge machinery in `QuotScheme.lean` is sorry-free but blueprint-absent, with several dangling `\cref`s in `Picard_QuotScheme.tex` (`lem:qcoh_affine_section_localization`, `lem:section_localization_descent`, `lem:isLocalizedModule_restrict_of_isIso_fromTilde…`, …); run 0010 repaired only `lem:qcoh_section_localization_basicOpen`.
+
+- Nearby leaves in the same cone (memory `I-0089`): `_sectionLinearEquiv` Stages 2–6 (N1–N4 `baseMap`-coherence helpers; N1 is pure adjunction-unit naturality, blueprint nodes `lem:baseMap_*` exist) and `pullback_tildeIso` (Stacks 01HQ, tensor side); the new qcqs-localization substrate is the natural base for further 01P0-type / coherent-χ needs. Idle box (load ~1): `lake build AlgebraicJacobian.Picard.QuotScheme` ≈ a few minutes; full build ~1 min incremental.
