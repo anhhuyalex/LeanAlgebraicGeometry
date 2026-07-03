@@ -37,6 +37,8 @@ import AlgebraicJacobian.Cohomology.CechToHigherDirectImage
 import AlgebraicJacobian.Cohomology.ModulesCoverConservativity
 -- Affine essential-image heart of the open-immersion Beck–Chevalley (Stacks 02KG)
 import AlgebraicJacobian.Cohomology.AffinePushPullEssImage
+-- Pullback of quasi-coherent modules along an arbitrary morphism (Stacks 01BG)
+import AlgebraicJacobian.Cohomology.PullbackQuasicoherent
 -- Target-local roadmap nodes preserved across the merge (unconditional Rⁱf_*
 -- packaging + Čech flat base change, Stacks 02KH) — see file header.
 import AlgebraicJacobian.Cohomology.CechHigherDirectImageUnconditional
