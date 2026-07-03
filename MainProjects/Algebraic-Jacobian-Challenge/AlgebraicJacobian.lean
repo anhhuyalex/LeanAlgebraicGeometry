@@ -72,6 +72,7 @@ import AlgebraicJacobian.Picard.TangentSpaceDualNumbers
 import AlgebraicJacobian.Picard.TangentSpaceSchemePoints
 import AlgebraicJacobian.Picard.TangentSpaceStalkAlgebra
 import AlgebraicJacobian.Picard.TangentSpaceIdentitySection
+import AlgebraicJacobian.Picard.DualNumberUnits
 import AlgebraicJacobian.Picard.Pic0AbelianVariety
 import AlgebraicJacobian.Picard.FlatteningStratification
 import AlgebraicJacobian.Picard.QuotScheme
