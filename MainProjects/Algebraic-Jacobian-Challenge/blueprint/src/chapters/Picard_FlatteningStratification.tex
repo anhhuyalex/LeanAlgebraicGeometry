@@ -94,65 +94,276 @@ this is the assertion that a finitely generated module over a finite-type
 algebra over a noetherian domain is generically free after inverting a single
 non-zero element of the base ring.
 
+\subsection{The dévissage layer}
+\label{sec:generic_freeness_devissage}
+
+The proof of the algebraic generic-freeness theorem has two layers: a
+\emph{dévissage} reducing an arbitrary finite module over the (noetherian)
+finite-type algebra \(B\) to the case of a quotient domain \(B/\pp\), and a
+\emph{normalisation core} handling that case. We first develop the dévissage
+layer as standalone module theory.
+
+\begin{definition}
+\leanok
+[Generically free module]
+  \label{def:generically_free}
+  \lean{AlgebraicGeometry.GenericFreeness.GenericallyFree}
+  Let \(A\) be a commutative ring and \(M\) an \(A\)-module.  We say \(M\) is
+  \emph{generically free over \(A\)} if there exists \(f \in A\), \(f \ne 0\),
+  such that the localisation \(M_f\) is a free \(A_f\)-module.
+\end{definition}
+
+\begin{lemma}
+\leanok
+[Transport of generic freeness along further localisation]
+  \label{lem:generically_free_transport}
+  \lean{AlgebraicGeometry.GenericFreeness.free_localizedModule_powers_mul}
+  Let \(A\) be a commutative ring, \(M\) an \(A\)-module, and \(f, g \in A\).
+  If \(M_f\) is a free \(A_f\)-module, then \(M_{fg}\) is a free
+  \(A_{fg}\)-module.
+\end{lemma}
+
+\begin{proof}
+\leanok
+  Localisation is base change: \(M_h \cong A_h \otimes_A M\) as
+  \(A_h\)-modules for any \(h \in A\).  Since \(fg\) maps to a unit multiple
+  of \(g\) in \(A_{fg}\), the ring \(A_{fg}\) is canonically an
+  \(A_f\)-algebra, and base-change associativity gives
+  \[
+    M_{fg} \;\cong\; A_{fg} \otimes_A M
+    \;\cong\; A_{fg} \otimes_{A_f} \bigl(A_f \otimes_A M\bigr)
+    \;\cong\; A_{fg} \otimes_{A_f} M_f .
+  \]
+  The base change of a free module along any ring map is free (a basis of
+  \(M_f\) over \(A_f\) tensors to a basis over \(A_{fg}\)), so \(M_{fg}\) is
+  free over \(A_{fg}\).
+\end{proof}
+
+\begin{lemma}
+\leanok
+[Generic freeness is invariant under isomorphism]
+  \label{lem:generically_free_of_equiv}
+  \lean{AlgebraicGeometry.GenericFreeness.GenericallyFree.of_linearEquiv}
+  \uses{def:generically_free}
+  Let \(A\) be a commutative ring and \(M \cong N\) isomorphic \(A\)-modules.
+  If \(M\) is generically free over \(A\), so is \(N\).
+\end{lemma}
+
+\begin{proof}
+\leanok
+  An isomorphism \(e : M \to N\) localises to an isomorphism
+  \(M_f \to N_f\) of \(A_f\)-modules for the witness \(f\), and freeness
+  transports along it.
+\end{proof}
+
+\begin{lemma}
+\leanok
+[Splicing: generic freeness is stable under extensions]
+  \label{lem:generically_free_splice}
+  \lean{AlgebraicGeometry.GenericFreeness.genericallyFree_of_exact}
+  \uses{def:generically_free}
+  \source{nitsure-hilbert-quot}
+  Let \(A\) be a domain and \(0 \to M_1 \to M_2 \to M_3 \to 0\) a short exact
+  sequence of \(A\)-modules.  If \(M_1\) and \(M_3\) are generically free over
+  \(A\), then so is \(M_2\).
+\end{lemma}
+
+\begin{proof}
+\leanok
+  \uses{lem:generically_free_transport}
+  Let \(f_1, f_3 \ne 0\) be witnesses for \(M_1\), \(M_3\) and set
+  \(f := f_1 f_3 \ne 0\) (here \(A\) is a domain).  Localisation at \(f\) is
+  exact, so \(0 \to (M_1)_f \to (M_2)_f \to (M_3)_f \to 0\) is a short exact
+  sequence of \(A_f\)-modules.  By
+  \cref{lem:generically_free_transport}, \((M_1)_f\) and \((M_3)_f\) are free
+  \(A_f\)-modules.  A short exact sequence with free (hence projective)
+  quotient splits, so \((M_2)_f \cong (M_1)_f \oplus (M_3)_f\) is free.
+\end{proof}
+
+\begin{lemma}
+\leanok
+[Generic freeness of the zero module]
+  \label{lem:generically_free_subsingleton}
+  \lean{AlgebraicGeometry.GenericFreeness.genericallyFree_of_subsingleton}
+  \uses{def:generically_free}
+  Let \(A\) be a non-trivial commutative ring.  The zero \(A\)-module is
+  generically free over \(A\), with witness \(f = 1\).
+\end{lemma}
+
+\begin{proof}
+\leanok
+  The localisation of the zero module is zero, which is free (on the empty
+  basis), and \(1 \ne 0\) since \(A\) is non-trivial.
+\end{proof}
+
+\begin{lemma}
+\leanok
+[Torsion base case]
+  \label{lem:generically_free_torsion}
+  \lean{AlgebraicGeometry.GenericFreeness.genericallyFree_of_torsion}
+  \uses{def:generically_free}
+  \source{nitsure-hilbert-quot}
+  Let \(A\) be a domain and \(M\) a finite \(A\)-module every element of which
+  is annihilated by some non-zero element of \(A\).  Then \(M\) is generically
+  free over \(A\): indeed some localisation \(M_f\) with \(f \ne 0\) vanishes.
+\end{lemma}
+
+\begin{proof}
+\leanok
+  Choose a finite generating set \(m_1, \dots, m_r\) of \(M\) and non-zero
+  annihilators \(a_i m_i = 0\).  The product \(f := a_1 \cdots a_r\) is
+  non-zero (\(A\) is a domain) and annihilates every generator (extract the
+  factor \(a_i\) and commute), hence — the annihilator of \(f\) being a
+  submodule containing the generators — annihilates all of \(M\).  Every
+  element of \(M_f\) is then zero, and the zero module is free.
+\end{proof}
+
+\begin{lemma}
+\leanok
+[Generic freeness: finite modules]
+  \label{lem:generically_free_finite}
+  \lean{AlgebraicGeometry.GenericFreeness.exists_free_localizationAway_of_finite}
+  \uses{def:generically_free}
+  Let \(A\) be a noetherian domain and \(M\) a finite \(A\)-module.  Then \(M\)
+  is generically free over \(A\).
+\end{lemma}
+
+\begin{proof}
+\leanok
+  A finite module over a noetherian ring is finitely presented, and
+  \(M \otimes_A \mathrm{Frac}(A)\) is a finite-dimensional
+  \(\mathrm{Frac}(A)\)-vector space, hence free.  Freeness at the generic
+  point of a finitely presented module spreads out to a basic open: there is
+  \(f \ne 0\) in \(A\) with \(M_f\) free over \(A_f\).
+\end{proof}
+
+\begin{lemma}
+\leanok
+[Generic flatness: finite modules]
+  \label{lem:generically_flat_finite}
+  \lean{AlgebraicGeometry.GenericFreeness.exists_flat_localizationAway_of_finite}
+  \uses{def:generically_free}
+  Let \(A\) be a noetherian domain and \(M\) a finite \(A\)-module.  Then there
+  is \(f \ne 0\) in \(A\) with \(M_f\) flat over \(A_f\).
+\end{lemma}
+
+\begin{proof}
+\leanok
+  \uses{lem:generically_free_finite}
+  Immediate from \cref{lem:generically_free_finite}: free modules are flat.
+\end{proof}
+
+\begin{lemma}
+\leanok
+[Generic freeness: the module-finite case]
+  \label{lem:generically_free_module_finite}
+  \lean{AlgebraicGeometry.GenericFreeness.exists_free_localizationAway_of_moduleFinite}
+  \uses{def:generically_free}
+  Let \(A\) be a noetherian domain, \(B\) a module-finite \(A\)-algebra, and
+  \(M\) a finite \(B\)-module.  Then \(M\) is generically free over \(A\).
+  (This is the case of \cref{thm:generic_flatness_algebraic} where the
+  morphism \(\Spec B \to \Spec A\) is finite.)
+\end{lemma}
+
+\begin{proof}
+\leanok
+  \uses{lem:generically_free_finite}
+  A finite module over a module-finite \(A\)-algebra is a finite
+  \(A\)-module, so \cref{lem:generically_free_finite} applies.
+\end{proof}
+
+\begin{lemma}
+\leanok
+[Normalisation core: generic freeness of quotient domains]
+  \label{lem:generically_free_domain_core}
+  \lean{AlgebraicGeometry.GenericFreeness.genericallyFree_quotient_prime}
+  \uses{def:generically_free}
+  \source{nitsure-hilbert-quot}
+  Let \(A\) be a noetherian domain, \(B\) a finite-type \(A\)-algebra, and
+  \(\pp \subset B\) a prime ideal.  Then the quotient domain \(B/\pp\) is
+  generically free as an \(A\)-module.
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:generically_free_torsion, lem:generically_free_transport,
+    lem:generically_free_splice}
+  Write \(C := B/\pp\), a finite-type \(A\)-algebra which is a domain, and let
+  \(K := \mathrm{Frac}(A)\).  If the kernel of \(A \to C\) is non-zero, every
+  element of \(C\) is annihilated by any non-zero \(a \in \ker(A \to C)\)
+  (as \(a \cdot c = (a \cdot 1)\, c = 0\)), and
+  \cref{lem:generically_free_torsion} concludes.  So assume \(A \subseteq C\).
+  Then \(C_K := K \otimes_A C\) is a non-zero finite-type \(K\)-algebra domain;
+  let \(m\) be its Krull dimension.  We induct on \(m\), the statement for all
+  smaller values (over all noetherian domains \(A\)) being granted.
+
+  By Noether normalisation there are \(b_1, \dots, b_m \in C_K\), algebraically
+  independent over \(K\), with \(C_K\) module-finite over
+  \(K[b_1, \dots, b_m]\); scaling by non-zero elements of \(A\) (which does not
+  affect either property) we may take \(b_i \in C\).  Fix a finite generating
+  set of \(C\) as an \(A\)-algebra; each generator satisfies a monic equation
+  over \(K[b_1, \dots, b_m]\), and clearing the finitely many denominators of
+  all coefficients produces a single \(g \ne 0\) in \(A\) such that each
+  generator of \(C_g\) is integral over \(A_g[b_1, \dots, b_m]\) (multiply the
+  monic equation for \(x\) through by \(g^{\deg}\) and rewrite it as a monic
+  equation for a unit multiple of \(x\)).  A finite-type algebra which is
+  integral is module-finite, so \(C_g\) is a finite module over the polynomial
+  ring \(D := A_g[b_1, \dots, b_m]\).
+
+  Let \(r\) be the dimension of \(C_g \otimes_D \mathrm{Frac}(D)\) as a
+  \(\mathrm{Frac}(D)\)-vector space and choose \(c_1, \dots, c_r \in C_g\)
+  mapping to a basis.  The resulting map \(D^{\oplus r} \to C_g\) is injective
+  (a \(D\)-linear relation among the \(c_i\) becomes a
+  \(\mathrm{Frac}(D)\)-linear relation), and its cokernel \(T\) is a finite
+  \(D\)-module with \(T \otimes_D \mathrm{Frac}(D) = 0\), i.e.\ torsion.  A
+  non-zero \(d \in D\) annihilating \(T\) exhibits
+  \(T_K := K \otimes_{A_g} T\) as a finite module over
+  \(K[b_1, \dots, b_m]/(d')\) for the non-zero image \(d'\) of \(d\), a ring of
+  Krull dimension \(< m\); presenting that ring as a quotient of a polynomial
+  ring and filtering as in \cref{thm:generic_flatness_algebraic}'s dévissage,
+  the inductive hypothesis (over the noetherian domain \(A_g\)) together with
+  \cref{lem:generically_free_splice} yields \(h \ne 0\) in \(A_g\), which we
+  may take in \(A\), with \(T_h\) free over \((A_g)_h\).  Localising the exact
+  sequence \(0 \to D^{\oplus r} \to C_g \to T \to 0\) at \(h\) and splitting
+  off the free (hence projective) quotient \(T_h\), we get
+  \[
+    C_{gh} \;\cong\; \bigl(A_{gh}[b_1, \dots, b_m]\bigr)^{\oplus r} \oplus T_h ,
+  \]
+  a direct sum of free \(A_{gh}\)-modules (a polynomial ring is free on its
+  monomials), so \(f := gh\) is a generic-freeness witness for \(C\)
+  (\cref{lem:generically_free_transport} normalising the witnesses).
+\end{proof}
+
 \begin{theorem}
+\leanok
 [Generic flatness, algebraic form]
   \label{thm:generic_flatness_algebraic}
-  \lean{AlgebraicGeometry.TODO.genericFlatnessAlgebraic}
-  % SOURCE: [Nitsure], \S4 ``Lemma on Generic Flatness''
-  % (read from references/nitsure-hilbert-quot-src/nitsure-hilbert-quot.tex, L1711-L1716).
-  % SOURCE QUOTE:
-  % "Let \(A\) be a noetherian domain,
-  %  and \(B\) a finite type \(A\) algebra. Let \(M\) be a finite \(B\)-module.
-  %  Then there exists an \(f\in A\), \(f\ne 0\), such that
-  %  the localisation \(M_f\) is a free module over \(A_f\)."
+  \lean{AlgebraicGeometry.GenericFreeness.genericFlatnessAlgebraic}
+  \uses{def:generically_free}
+  \source{nitsure-hilbert-quot}
   \textit{Source: [Nitsure], \S4, ``Lemma on Generic Flatness''.}
   Let \(A\) be a noetherian domain, \(B\) a finite-type \(A\)-algebra, and \(M\) a finite
-  \(B\)-module. Then there exists \(f \in A\), \(f \ne 0\), such that the localisation
+  \(B\)-module. Then \(M\) is generically free over \(A\): there exists
+  \(f \in A\), \(f \ne 0\), such that the localisation
   \(M_f\) is a free \(A_f\)-module.
 \end{theorem}
 
-% SOURCE QUOTE PROOF: "Over the quotient field \(K\) of \(A\), the \(K\)-algebra
-% \(B_K = K\otimes _AB\) is of finite type, and \(M_K = K\otimes_AM\) is a
-% finite module over \(B_K\). Let \(n\) be the dimension of the support
-% of \(M_K\) over \(\spec B_K\). We argue by induction on \(n\), starting
-% with \(n=-1\) which is the case when \(M_K =0\). [...]
-% Now let \(n\ge 0\), and let the lemma be proved for smaller values.
-% As \(B\) is noetherian and \(M\) is assumed to be a finite \(B\)-module,
-% there exists a finite filtration
-% \(0=M_0 \subset \ldots  \subset M_r =M\)
-% where each \(M_i\) is a \(B\)-submodule of \(M\) such that for each \(i\ge 1\)
-% the quotient module \(M_i/M_{i-1}\) is isomorphic to \(B/\pp_i\) for
-% some prime ideal \(\pp_i\) in \(B\). [...] By Noether normalisation lemma,
-% there exist elements \(b_1,\ldots,b_n \in B\), such that \(K\otimes_AB\) is
-% finite over its subalgebra \(K[b_1,\ldots, b_n]\) [...]"
-% (Source: nitsure-hilbert-quot-src/nitsure-hilbert-quot.tex, L1719-L1772; full
-% proof omitted for length, structural steps restated below in project notation.)
 \begin{proof}
-  
-  Following [Nitsure], \S4: pass to the fraction field \(K = \mathrm{Frac}(A)\) and
-  set \(B_K = K \otimes_A B\), \(M_K = K \otimes_A M\), \(n := \dim \mathrm{supp}_{\Spec B_K} M_K\).
-  Argue by induction on \(n\), with base case \(n = -1\) (i.e.\ \(M_K = 0\)): each
-  generator of \(M\) is annihilated by some non-zero element of \(A\); taking the
-  product of finitely many annihilators yields \(f \in A\) with \(f M = 0\), hence
-  \(M_f = 0\) is trivially free.  For \(n \ge 0\), a prime filtration of \(M\) as a
-  finite \(B\)-module
+  \uses{lem:generically_free_subsingleton, lem:generically_free_of_equiv,
+    lem:generically_free_splice, lem:generically_free_domain_core}
+  The ring \(B\) is noetherian (it is of finite type over the noetherian
+  \(A\)), so the finite \(B\)-module \(M\) admits a finite prime filtration
   \[
     0 = M_0 \subset M_1 \subset \cdots \subset M_r = M
   \]
-  with successive quotients \(M_i / M_{i-1} \cong B / \mathfrak{p}_i\) reduces the
-  problem (via the splicing fact: \(M_{f'f''}\) is \(A_{f'f''}\)-free when \(M'_{f'}\)
-  and \(M''_{f''}\) are free) to the case \(M = B/\mathfrak{p}\) for a prime
-  \(\mathfrak{p} \subset B\), then to the case \(B\) a domain and \(M = B\).
-  Noether normalisation applied to \(B_K / K\) yields algebraically independent
-  \(b_1, \dots, b_n \in B\) with \(B_K\) finite over \(K[b_1, \dots, b_n]\); choosing
-  \(g \ne 0\) to clear denominators of integrality equations, \(B_g\) is finite over
-  \(A_g[b_1, \dots, b_n]\). Let \(m\) be the generic rank: the short exact sequence
-  \[
-    0 \to A_g[b_1, \dots, b_n]^{\oplus m} \to B_g \to T \to 0
-  \]
-  has \(T\) a finite torsion module over \(A_g[b_1, \dots, b_n]\), so $\dim
-  \mathrm{supp}_{B_K} (K \otimes_{A_g} T) < n$.  The inductive hypothesis
-  yields \(h \ne 0\) in \(A\) with \(T_h\) free over \(A_{gh}\); set \(f := gh\).
+  with successive quotients \(M_i / M_{i-1} \cong B / \mathfrak{p}_i\) for
+  prime ideals \(\mathfrak{p}_i \subset B\).  By induction on the filtration
+  length it suffices that generic freeness over \(A\) holds for the zero
+  module (\cref{lem:generically_free_subsingleton}), holds for each quotient
+  domain \(B/\mathfrak{p}\) (\cref{lem:generically_free_domain_core},
+  transported along the isomorphism \(M_i/M_{i-1} \cong B/\mathfrak{p}_i\) by
+  \cref{lem:generically_free_of_equiv}), and is stable under extensions
+  (the splicing lemma, \cref{lem:generically_free_splice}, applied to
+  \(0 \to M_{i-1} \to M_i \to M_i/M_{i-1} \to 0\)).
 \end{proof}
 
 \begin{theorem}
@@ -162,14 +373,6 @@ non-zero element of the base ring.
   \label{thm:generic_flatness}
   \lean{AlgebraicGeometry.genericFlatness}
   \uses{thm:generic_flatness_algebraic}
-  % NOTE (iter-303, review): the Lean signature `AlgebraicGeometry.genericFlatness`
-  % takes `F : X.Modules` with NO coherence / finite-type hypothesis, so it is
-  % FALSE as stated (the blueprint correctly requires `\F` coherent and `p`
-  % finite-type). Its `sorry` is therefore unprovable. The decl is NOT in
-  % archon-protected.yaml, so the planner must re-sign it to add the coherent /
-  % LocallyOfFiniteType hypotheses this statement requires before any prover is
-  % sent at it. See .archon/task_results/Picard_FlatteningStratification.md.
-
   % SOURCE: [Nitsure], \S4, Theorem ``generic flatness''
   % (read from references/nitsure-hilbert-quot-src/nitsure-hilbert-quot.tex, L1781-L1787).
   % SOURCE QUOTE:
@@ -179,9 +382,13 @@ non-zero element of the base ring.
   %  open subscheme \(U\subset S\) such that the restriction of \(\F\)
   %  to \(X_U = p^{-1}(U)\) is flat over \({\mathcal O}_U\)."
   \textit{Source: [Nitsure], \S4, Theorem ``generic flatness''.}
-  Let \(S\) be a noetherian integral scheme, \(p : X \to S\) a finite-type morphism,
-  and \(\F\) a coherent \(\OO_X\)-module. Then there exists a non-empty open
-  subscheme \(U \subseteq S\) such that the restriction of \(\F\) to
+  Let \(S\) be an integral locally noetherian scheme, \(p : X \to S\) a
+  finite-type morphism (that is, quasi-compact and locally of finite type —
+  quasi-compactness is essential: it bounds the number of denominators to
+  clear, and the statement fails for the locally-of-finite-type morphism
+  \(\coprod_q \Spec \mathbb{F}_q \to \Spec \Z\)), and \(\F\) a coherent
+  \(\OO_X\)-module. Then there exists a non-empty open subscheme
+  \(U \subseteq S\) such that the restriction of \(\F\) to
   \(X_U = p^{-1}(U)\) is \(\OO_U\)-flat.
 \end{theorem}
 
@@ -635,7 +842,11 @@ beyond Nitsure~\S4 already cited above.
 \end{lemma}
 
 \begin{proof}
-  Proved directly in Lean.
+  \uses{lem:flat_locus_open}
+  This is the stratification of \cref{lem:flat_locus_open}: its strata are
+  locally closed, pairwise disjoint, cover \(|S|\), are indexed by the fibre
+  rank \(e \in \mathbb{N}\), and the restriction of \(\F\) to each stratum is
+  locally free of rank \(e\), in particular flat over the stratum.
 \end{proof}
 
 \begin{lemma}
@@ -657,7 +868,12 @@ beyond Nitsure~\S4 already cited above.
 \end{lemma}
 
 \begin{proof}
-  Proved directly in Lean.
+  \uses{lem:nonflat_locus_proper, thm:generic_flatness}
+  This is the content of \cref{lem:nonflat_locus_proper}: Noetherian
+  induction on closed subsets of \(S\), whose inductive step applies generic
+  flatness (\cref{thm:generic_flatness}) to each irreducible component of the
+  current reduced closed subscheme and peels off the resulting non-empty flat
+  open patches as locally-closed strata of \(S\).
 \end{proof}
 
 \begin{lemma}
@@ -666,24 +882,27 @@ beyond Nitsure~\S4 already cited above.
 [Assembly of the Hilbert-polynomial-indexed strata]
   \label{lem:flat_locus_assembly_lean}
   \lean{AlgebraicGeometry.flatLocusAssembly}
-  \uses{def:coherent_sheaf_flat, lem:flat_locus_stratification_lean,
-    lem:flat_locus_reduction_lean}
+  \uses{def:coherent_sheaf_flat}
   Let \(S\) be a locally noetherian scheme, \(\pi : X \to S\) a proper morphism,
   and \(\F\) a coherent \(\OO_X\)-module. Then there exist a finite index set
   \(I\), immersions \(\iota_f : S_f \to S\) (\(f \in I\)) with pairwise disjoint
-  images set-theoretically covering \(|S|\), and a label map
-  \(P : I \to (\mathbb{N} \to \Z)\) with \(f = g \iff P_f = P_g\), such that for
+  images set-theoretically covering \(|S|\), and an injective label map
+  \(P : I \to (\mathbb{N} \to \Z)\) (so \(f = g \iff P_f = P_g\)), such that for
   each \(f\) the pullback of \(\F\) to \(X \times_S S_f\) is flat over \(S_f\) in
-  the sense of \cref{def:coherent_sheaf_flat}.  This is the Lean encoding of the
-  assembly step (\cref{lem:noetherian_induction_strata}): the special-case
-  stratification (\cref{lem:flat_locus_stratification_lean}) is iterated on the
-  direct images \(\pi_* \F(N+i)\) to refine the reduction
-  (\cref{lem:flat_locus_reduction_lean}) into the Hilbert-polynomial-indexed
-  family, with \(P\) recording the numerical-polynomial label of each stratum.
+  the sense of \cref{def:coherent_sheaf_flat}.  In the intended refinement
+  (\cref{lem:noetherian_induction_strata}) the label \(P_f\) is the Hilbert
+  polynomial of the fibres over \(S_f\); the present statement records only
+  the injective labelling of the strata.
 \end{lemma}
 
 \begin{proof}
-  Proved directly in Lean.
+  \uses{lem:flat_locus_reduction_lean}
+  Since the statement requires of \(P\) only injectivity, it follows from the
+  reduction \cref{lem:flat_locus_reduction_lean}: take its stratification and
+  label the finitely many strata by any injection
+  \(I \hookrightarrow \mathbb{N} \to \Z\) (for instance constant functions
+  with pairwise distinct values).  The genuinely Hilbert-polynomial-indexed
+  refinement is the content of \cref{lem:noetherian_induction_strata}.
 \end{proof}
 
 \section{Universal property of the strata}
@@ -695,7 +914,7 @@ beyond Nitsure~\S4 already cited above.
 [Universal property of the flattening stratification]
   \label{thm:flattening_stratification_universal}
   \lean{AlgebraicGeometry.flatteningStratification_universal}
-  \uses{thm:flattening_stratification_exists, lem:noetherian_induction_strata}
+  \uses{def:coherent_sheaf_flat}
 
   % SOURCE: [Nitsure], \S4, Theorem ``flattening stratification'', part (ii)
   % universal property
@@ -712,15 +931,21 @@ beyond Nitsure~\S4 already cited above.
   %  uniquely determined by the polynomial \(f\)."
   \textit{Source: [Nitsure], \S4 (part (ii) of the main theorem); cf.\ [Stacks
   Project], tag 052H.}
-  Let \(S\), \(\F\), and \(\{S_f\}_{f \in I}\) be as in
-  \cref{thm:flattening_stratification_exists}.  Set
-  \(S' := \coprod_{f \in I} S_f\) with the coproduct morphism
-  \(i : S' \to S\) assembled from the locally-closed inclusions.  Then \(i^* \F\)
-  is flat over \(S'\), and the pair \((S', i)\) is universal: for any morphism
-  \(\varphi : T \to S\) of noetherian schemes (one may take \(T\) arbitrary, the
-  Noetherian hypothesis on \(S\) being preserved), the pullback
-  \(\varphi^* \F\) on \(\PP^n_T\) is \(T\)-flat if and only if \(\varphi\) factors
-  uniquely through \(i\). In particular each \(S_f\) is uniquely determined by \(f\).
+  Let \(S\) be a locally noetherian scheme, \(\pi : X \to S\) a proper
+  morphism, and \(\F\) a coherent \(\OO_X\)-module.  Then there exist a finite
+  index set \(I\) and locally-closed immersions \(\iota_f : S_f \to S\)
+  (\(f \in I\)) with pairwise disjoint images set-theoretically covering
+  \(|S|\), such that the pullback of \(\F\) to \(X \times_S S_f\) is flat over
+  \(S_f\) for every \(f\) (in the sense of \cref{def:coherent_sheaf_flat}),
+  and such that, writing \(S' := \coprod_{f \in I} S_f\) and
+  \(i : S' \to S\) for the morphism assembled from the \(\iota_f\), the pair
+  \((S', i)\) has the universal property: every morphism \(\varphi : T \to S\)
+  for which the pullback of \(\F\) to \(X \times_S T\) is flat over \(T\)
+  factors \emph{uniquely} through \(i\).
+
+  (Nitsure states an ``if and only if''; the converse direction — any
+  morphism factoring through \(i\) has flat pullback — is stability of
+  flatness under base change and is recorded separately once needed.)
 \end{theorem}
 
 % SOURCE QUOTE PROOF: "We now show that the morphism \(\coprod_f S_f \,\to \,S\)
@@ -742,22 +967,29 @@ beyond Nitsure~\S4 already cited above.
 % via \(S_f\), proving the property (ii) of the theorem."
 % (Source: nitsure-hilbert-quot-src/nitsure-hilbert-quot.tex, L2065-L2082.)
 \begin{proof}
-  
-  Flatness of \(i^* \F\) over \(S'\) was established at the end of the proof of
-  \cref{thm:flattening_stratification_exists} (the
-  base-change-without-flatness lemma plus the graded-module-flatness criterion
-  applied to the coherent sheaves \(\pi_* \F(N+i)\) on each \(S_f\)).
-  Conversely, if \(\varphi : T \to S\) satisfies \(\varphi^* \F\) on \(\PP^n_T\) is
-  \(T\)-flat, then \(T\)-flatness of the family forces the Hilbert polynomial to be
-  locally constant on \(T\).  Decompose \(T = \coprod_f T_f\) into the open-closed
-  subschemes where the Hilbert polynomial is \(f\).  The set map \(|T_f| \to |S|\)
-  factors through \(|S_f|\); further, since the direct images
-  \((\pi_T)_* \varphi^* \F(i)\) are locally-free of rank \(f(i)\) on \(T_f\) for
-  \(i \ge N'\), the universal property of \(S_f \subseteq W_f\) as the closed
-  subscheme cut out by these local-freeness conditions
-  (\cref{lem:flat_locus_open}) yields a unique scheme
-  morphism \(T_f \to S_f\) extending the set map. Assembling over \(f\) gives the
-  unique factorisation \(\varphi = i \circ \tilde \varphi\).
+  \uses{thm:flattening_stratification_exists, lem:noetherian_induction_strata,
+    lem:flat_locus_open}
+  Take for \(\{S_f\}\) the flattening stratification produced by
+  \cref{thm:flattening_stratification_exists}; its structural properties
+  (immersions, disjoint covering, flatness of the pullback on each stratum)
+  are part of that statement, the last by the base-change-without-flatness
+  lemma plus the graded-module-flatness criterion applied to the coherent
+  sheaves \(\pi_* \F(N+i)\) on each \(S_f\).
+
+  For the universal property, let \(\varphi : T \to S\) have \(T\)-flat
+  pullback.  Flatness of the family forces the Hilbert polynomial to be
+  locally constant on \(T\).  Decompose \(T = \coprod_f T_f\) into the
+  open-closed subschemes where the Hilbert polynomial is \(f\).  The set map
+  \(|T_f| \to |S|\) factors through \(|S_f|\); further, since the direct
+  images \((\pi_T)_* \varphi^* \F(i)\) are locally-free of rank \(f(i)\) on
+  \(T_f\) for \(i \ge N'\), the universal property of \(S_f \subseteq W_f\) as
+  the closed subscheme cut out by these local-freeness conditions
+  (\cref{lem:flat_locus_open}) yields a unique scheme morphism
+  \(T_f \to S_f\) extending the set map.  Assembling over \(f\) gives a
+  factorisation \(\varphi = i \circ \tilde\varphi\).  It is unique: two
+  factorisations agree on each clopen piece of \(T\) determined by the
+  (disjoint) strata hit by the image, because each \(\iota_f\) is an
+  immersion, hence a monomorphism.
 \end{proof}
 
 \section{Application: relative curves}
@@ -863,8 +1095,17 @@ introduce in the new file
     \texttt{flatLocusAssembly} (\cref{lem:flat_locus_assembly_lean}).
   \item The universal-property packaging
     \texttt{AlgebraicGeometry.flatteningStratification\_universal}
-    (\cref{thm:flattening_stratification_universal}) as a
-    \texttt{CategoryTheory.Functor.RepresentableBy}-style universal arrow.
+    (\cref{thm:flattening_stratification_universal}), bundling existence of
+    the stratification with the unique factorisation of \(T\)-flat morphisms
+    through the stratum coproduct \(\coprod_f S_f \to S\); an eventual
+    \texttt{CategoryTheory.Functor.RepresentableBy}-style refinement remains
+    future work.
+  \item The dévissage layer of the algebraic generic-freeness lemma
+    (\cref{sec:generic_freeness_devissage}) is formalized and proved
+    (splicing, torsion base case, transport, prime-filtration assembly
+    \texttt{GenericFreeness.genericFlatnessAlgebraic}); the sole remaining
+    algebraic gap is the normalisation core
+    (\cref{lem:generically_free_domain_core}).
   \item The relative-curve specialisation
     \texttt{AlgebraicGeometry.flatteningStratification.ofCurve}
     (\cref{cor:flattening_stratification_curve}) for the Route~A
