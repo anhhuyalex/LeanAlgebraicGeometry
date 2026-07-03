@@ -3555,6 +3555,424 @@ theorem annihilator_ideal (F : X.Modules) [F.IsQuasicoherent]
     haveI := hfin V
     exact annihilator_map_basicOpen F V f
 
+variable {Y : Scheme.{u}}
+
+private lemma resRing_res_hom {A B C : Y.Opens} (hBA : B ≤ A) (i : C ⟶ B)
+    (hCA : C ≤ A) (g : Γ(Y, A)) :
+    Y.presheaf.map i.op (Y.presheaf.map (homOfLE hBA).op g)
+      = Y.presheaf.map (homOfLE hCA).op g := by
+  rw [← ConcreteCategory.comp_apply, ← Functor.map_comp, ← op_comp]
+  exact congrArg (fun (k : C ⟶ A) => Y.presheaf.map k.op g) (Subsingleton.elim _ _)
+
+/-- Additive section transport across an equality of opens, by mutual restriction. -/
+private noncomputable def resAddEquivOfEq (N : Y.Modules) {A B : Y.Opens} (h : A = B) :
+    Γ(N, A) ≃+ Γ(N, B) where
+  toFun := N.presheaf.map (homOfLE h.ge).op
+  invFun := N.presheaf.map (homOfLE h.le).op
+  left_inv x := by rw [res_res N h.ge h.le le_rfl, res_self N x]
+  right_inv x := by rw [res_res N h.le h.ge le_rfl, res_self N x]
+  map_add' := map_add _
+
+/-- Inverse-direction semilinearity of the pullback section transport. -/
+private lemma gammaPullbackImageIso_symm_semilinear {X Y : Scheme.{u}} (j : X ⟶ Y)
+    [IsOpenImmersion j] (M : Y.Modules) (V : X.Opens) (a : Γ(X, V))
+    (t : ToType Γ(M, j ''ᵁ V)) :
+    (gammaPullbackImageIso j M V).addCommGroupIsoToAddEquiv.symm
+        (gammaImageRingEquiv j V a • t)
+      = a • (gammaPullbackImageIso j M V).addCommGroupIsoToAddEquiv.symm t := by
+  apply (gammaPullbackImageIso j M V).addCommGroupIsoToAddEquiv.injective
+  rw [AddEquiv.apply_symm_apply]
+  exact ((gammaPullbackImageIso_hom_semilinear j M V a
+    ((gammaPullbackImageIso j M V).addCommGroupIsoToAddEquiv.symm t)).trans
+    (congrArg (gammaImageRingEquiv j V a • ·)
+      ((gammaPullbackImageIso j M V).addCommGroupIsoToAddEquiv.apply_symm_apply t))).symm
+
+/-- **Converse transport: section localization on the ambient scheme forces the P1 datum.**
+For an affine open `U ⊆ Y` with `j = hU.fromSpec` and a sheaf of modules `N` on `Y`, if for
+every `f' : Γ(Y, U)` the section restriction `Γ(N, U) → Γ(N, D(f'))` is
+`IsLocalizedModule (powers f')` over `Γ(Y, U)`, then the tilde–Γ counit of the pullback
+`j^* N` is an isomorphism. This is the reverse of the gap2 chain
+(`section_localization_hfr_aux_general` + `isLocalizedModule_basicOpen_of_hP1` run backwards):
+the `gammaPullbackImageIso` section comparisons and the `fromSpec` open identifications
+(`fromSpec_image_basicOpen`, `image_top = U`) transport the localization to the `Spec`-side
+sections, where the affine engine `isIso_fromTildeΓ_of_isLocalizedModule_restrict` applies.
+Project-local. -/
+theorem isIso_fromTildeΓ_pullback_fromSpec_of_isLocalizedModule
+    (N : Y.Modules) {U : Y.Opens} (hU : IsAffineOpen U)
+    (H : ∀ f' : Γ(Y, U),
+      letI : Module Γ(Y, U) Γ(N, Y.basicOpen f') :=
+        Module.compHom _ (algebraMap Γ(Y, U) Γ(Y, Y.basicOpen f'))
+      letI : IsScalarTower Γ(Y, U) Γ(Y, Y.basicOpen f') Γ(N, Y.basicOpen f') :=
+        IsScalarTower.of_algebraMap_smul (fun _ _ => rfl)
+      IsLocalizedModule (Submonoid.powers f') (restrictBasicOpenₗ N f')) :
+    IsIso (Scheme.Modules.fromTildeΓ
+      ((Scheme.Modules.pullback hU.fromSpec).obj N)) := by
+  set j := hU.fromSpec with hj
+  apply isIso_fromTildeΓ_of_isLocalizedModule_restrict
+  intro f'
+  set M' := (Scheme.Modules.pullback j).obj N with hM'
+  have eT : (j ''ᵁ (⊤ : (Spec Γ(Y, U)).Opens)) = U :=
+    (Scheme.Hom.image_top_eq_opensRange j).trans hU.opensRange_fromSpec
+  have eB : (j ''ᵁ (PrimeSpectrum.basicOpen f')) = Y.basicOpen f' :=
+    hU.fromSpec_image_basicOpen f'
+  -- module instances on the ambient side
+  letI : Module Γ(Y, U) Γ(N, Y.basicOpen f') :=
+    Module.compHom _ (algebraMap Γ(Y, U) Γ(Y, Y.basicOpen f'))
+  haveI : IsScalarTower Γ(Y, U) Γ(Y, Y.basicOpen f') Γ(N, Y.basicOpen f') :=
+    IsScalarTower.of_algebraMap_smul (fun _ _ => rfl)
+  haveI hloc := H f'
+  -- the additive section comparisons
+  let E₁ : ToType Γ(N, U) ≃+
+      ToType ((modulesSpecToSheaf.obj M').presheaf.obj (.op ⊤)) :=
+    ((resAddEquivOfEq N eT.symm).trans
+      (gammaPullbackImageIso j N ⊤).addCommGroupIsoToAddEquiv.symm)
+  let E₂ : ToType Γ(N, Y.basicOpen f') ≃+
+      ToType ((modulesSpecToSheaf.obj M').presheaf.obj (.op (PrimeSpectrum.basicOpen f'))) :=
+    ((resAddEquivOfEq N eB.symm).trans
+      (gammaPullbackImageIso j N (PrimeSpectrum.basicOpen f')).addCommGroupIsoToAddEquiv.symm)
+  -- the Spec-side restriction, R-linearly
+  let h : ToType ((modulesSpecToSheaf.obj M').presheaf.obj (.op ⊤))
+      →ₗ[Γ(Y, U)]
+        ToType ((modulesSpecToSheaf.obj M').presheaf.obj (.op (PrimeSpectrum.basicOpen f'))) :=
+    ((modulesSpecToSheaf.obj M').presheaf.map
+      (homOfLE (le_top : PrimeSpectrum.basicOpen f' ≤ ⊤)).op).hom
+  -- semilinearity (over the identity of `Γ(Y, U)`)
+  -- the top-level coherence: `Y`-restriction `U → j''ᵁ⊤` matches the ring comparison
+  have C1 : ∀ a : Γ(Y, U), Y.presheaf.map (homOfLE eT.le).op a
+      = (gammaImageRingEquiv j ⊤) ((Scheme.ΓSpecIso Γ(Y, U)).inv a) := by
+    intro a
+    have hcoh := fromSpec_image_top_section_coherence hU eT
+    have happ := congrArg (fun (φ : Γ(Y, j ''ᵁ (⊤ : (Spec Γ(Y, U)).Opens)) ⟶ Γ(Y, U)) =>
+      φ.hom (Y.presheaf.map (homOfLE eT.le).op a)) hcoh
+    simp only [CommRingCat.hom_comp, RingHom.comp_apply] at happ
+    have hres : (Y.presheaf.map (eqToHom eT.symm).op).hom
+        (Y.presheaf.map (homOfLE eT.le).op a) = a := by
+      rw [Subsingleton.elim (eqToHom eT.symm) (homOfLE eT.ge)]
+      show Y.presheaf.map (homOfLE eT.ge).op (Y.presheaf.map (homOfLE eT.le).op a) = a
+      rw [resRing_res eT.le eT.ge le_rfl a, resRing_self a]
+    rw [hres] at happ
+    -- happ : a = ΓSpecIso.hom (appIso.hom (res a))
+    refine (gammaImageRingEquiv j ⊤).symm.injective ?_
+    rw [RingEquiv.symm_apply_apply]
+    refine (Scheme.ΓSpecIso Γ(Y, U)).commRingCatIsoToRingEquiv.injective ?_
+    have hcancel := congrArg (fun (φ : Γ(Y, U) ⟶ Γ(Y, U)) => φ.hom a)
+      (Scheme.ΓSpecIso Γ(Y, U)).inv_hom_id
+    simp only [CommRingCat.hom_comp, RingHom.comp_apply, CommRingCat.hom_id,
+      RingHom.id_apply] at hcancel
+    show (Scheme.ΓSpecIso Γ(Y, U)).hom.hom ((j.appIso ⊤).hom.hom
+        (Y.presheaf.map (homOfLE eT.le).op a))
+      = (Scheme.ΓSpecIso Γ(Y, U)).hom.hom ((Scheme.ΓSpecIso Γ(Y, U)).inv.hom a)
+    rw [← happ, hcancel]
+  have he₁ : ∀ (a : Γ(Y, U)) (x : ToType Γ(N, U)),
+      E₁ (a • x) = a • E₁ x := by
+    intro a x
+    simp only [E₁, AddEquiv.trans_apply]
+    have hN : (N.resAddEquivOfEq eT.symm) (a • x)
+        = (gammaImageRingEquiv j ⊤) ((Scheme.ΓSpecIso Γ(Y, U)).inv a)
+          • (N.resAddEquivOfEq eT.symm) x := by
+      show N.presheaf.map (homOfLE eT.le).op (a • x)
+        = _ • N.presheaf.map (homOfLE eT.le).op x
+      rw [Scheme.Modules.map_smul N (homOfLE eT.le) a x, C1 a]
+    rw [hN]
+    exact gammaPullbackImageIso_symm_semilinear j N ⊤ ((Scheme.ΓSpecIso Γ(Y, U)).inv a) _
+  have hjDU : (j ''ᵁ (PrimeSpectrum.basicOpen f')) ≤ U := eB.trans_le (Y.basicOpen_le f')
+  have hsub : (j.opensFunctor.map (homOfLE (le_top : PrimeSpectrum.basicOpen f' ≤ ⊤)))
+      = homOfLE (leOfHom (j.opensFunctor.map (homOfLE le_top))) := Subsingleton.elim _ _
+  have C2 : ∀ a : Γ(Y, U), Y.presheaf.map (homOfLE hjDU).op a
+      = (gammaImageRingEquiv j (PrimeSpectrum.basicOpen f'))
+          ((Spec Γ(Y, U)).presheaf.map (homOfLE (le_top : PrimeSpectrum.basicOpen f' ≤ ⊤)).op
+            ((Scheme.ΓSpecIso Γ(Y, U)).inv a)) := by
+    intro a
+    have key0 := j.appIso_inv_naturality (U := (⊤ : (Spec Γ(Y, U)).Opens))
+      (V := PrimeSpectrum.basicOpen f') (homOfLE le_top).op
+    have key : (gammaImageRingEquiv j (PrimeSpectrum.basicOpen f'))
+        ((Spec Γ(Y, U)).presheaf.map (homOfLE (le_top : PrimeSpectrum.basicOpen f' ≤ ⊤)).op
+          ((Scheme.ΓSpecIso Γ(Y, U)).inv a))
+        = (Y.presheaf.map (j.opensFunctor.map (homOfLE le_top)).op).hom
+          ((gammaImageRingEquiv j ⊤) ((Scheme.ΓSpecIso Γ(Y, U)).inv a)) :=
+      congrArg (fun φ => φ.hom ((Scheme.ΓSpecIso Γ(Y, U)).inv a)) key0
+    rw [key, ← C1 a]
+    exact (resRing_res_hom eT.le (j.opensFunctor.map (homOfLE le_top)) hjDU a).symm
+  have he₂ : ∀ (a : Γ(Y, U)) (x : ToType Γ(N, Y.basicOpen f')),
+      E₂ (a • x) = a • E₂ x := by
+    intro a x
+    simp only [E₂, AddEquiv.trans_apply]
+    have hN : (N.resAddEquivOfEq eB.symm) (a • x)
+        = (gammaImageRingEquiv j (PrimeSpectrum.basicOpen f'))
+            ((Spec Γ(Y, U)).presheaf.map
+              (homOfLE (le_top : PrimeSpectrum.basicOpen f' ≤ ⊤)).op
+              ((Scheme.ΓSpecIso Γ(Y, U)).inv a))
+          • (N.resAddEquivOfEq eB.symm) x := by
+      show N.presheaf.map (homOfLE eB.le).op
+          ((Y.presheaf.map (homOfLE (Y.basicOpen_le f')).op a) • x)
+        = _ • N.presheaf.map (homOfLE eB.le).op x
+      rw [Scheme.Modules.map_smul N (homOfLE eB.le), resRing_res (Y.basicOpen_le f')
+        eB.le hjDU a, C2 a]
+    rw [hN]
+    exact gammaPullbackImageIso_symm_semilinear j N (PrimeSpectrum.basicOpen f')
+      ((Spec Γ(Y, U)).presheaf.map (homOfLE (le_top : PrimeSpectrum.basicOpen f' ≤ ⊤)).op
+        ((Scheme.ΓSpecIso Γ(Y, U)).inv a)) _
+  -- intertwining
+  have hh : ∀ x, h (E₁ x) = E₂ (restrictBasicOpenₗ N f' x) := by
+    intro x
+    apply (gammaPullbackImageIso j N
+      (PrimeSpectrum.basicOpen f')).addCommGroupIsoToAddEquiv.injective
+    have hn := ConcreteCategory.congr_hom
+      (gammaPullbackImageIso_hom_naturality j N
+        (homOfLE (le_top : PrimeSpectrum.basicOpen f' ≤ ⊤)))
+      (((gammaPullbackImageIso j N ⊤).addCommGroupIsoToAddEquiv.symm
+        ((N.resAddEquivOfEq eT.symm) x)))
+    simp only [CategoryTheory.comp_apply] at hn
+    -- LHS: naturality then the unit-cancellation of `gamma ∘ gamma.symm`
+    have hL : (gammaPullbackImageIso j N
+        (PrimeSpectrum.basicOpen f')).addCommGroupIsoToAddEquiv (h (E₁ x))
+        = N.presheaf.map (homOfLE (leOfHom (j.opensFunctor.map
+            (homOfLE (le_top : PrimeSpectrum.basicOpen f' ≤ ⊤))))).op
+          ((N.resAddEquivOfEq eT.symm) x) := by
+      refine hn.trans ?_
+      rw [hsub]
+      exact congrArg _ ((gammaPullbackImageIso j
+        N ⊤).addCommGroupIsoToAddEquiv.apply_symm_apply _)
+    have hR : (gammaPullbackImageIso j N
+        (PrimeSpectrum.basicOpen f')).addCommGroupIsoToAddEquiv
+          (E₂ (restrictBasicOpenₗ N f' x))
+        = (N.resAddEquivOfEq eB.symm) (restrictBasicOpenₗ N f' x) := by
+      simp only [E₂, AddEquiv.trans_apply]
+      exact (gammaPullbackImageIso j N
+        (PrimeSpectrum.basicOpen f')).addCommGroupIsoToAddEquiv.apply_symm_apply _
+    rw [hL, hR]
+    show N.presheaf.map (homOfLE (leOfHom (j.opensFunctor.map
+          (homOfLE (le_top : PrimeSpectrum.basicOpen f' ≤ ⊤))))).op
+        (N.presheaf.map (homOfLE eT.le).op x)
+      = N.presheaf.map (homOfLE eB.le).op
+        (N.presheaf.map (homOfLE (Y.basicOpen_le f')).op x)
+    exact (res_res N eT.le (leOfHom (j.opensFunctor.map (homOfLE le_top))) hjDU x).trans
+      (res_res N (Y.basicOpen_le f') eB.le hjDU x).symm
+  have RESULT : IsLocalizedModule
+      ((Submonoid.powers f').map ((RingEquiv.refl Γ(Y, U)) : Γ(Y, U) →+* Γ(Y, U))) h :=
+    isLocalizedModule_of_ringEquiv_semilinear (RingEquiv.refl Γ(Y, U))
+      (Submonoid.powers f') (restrictBasicOpenₗ N f') E₁ E₂ he₁ he₂ h hh
+  have key : (Submonoid.powers f').map ((RingEquiv.refl Γ(Y, U)) : Γ(Y, U) →+* Γ(Y, U))
+      = Submonoid.powers f' := by
+    rw [Submonoid.map_powers]
+    rfl
+  rw [key] at RESULT
+  exact RESULT
+
+/-- Module version of `resRing_res_hom`: composite of a `homOfLE`-restriction with an
+arbitrary poset hom collapses to the direct restriction. -/
+private lemma res_res_hom (N : Y.Modules) {A B C : Y.Opens} (hBA : B ≤ A) (i : C ⟶ B)
+    (hCA : C ≤ A) (x : Γ(N, A)) :
+    N.presheaf.map i.op (N.presheaf.map (homOfLE hBA).op x)
+      = N.presheaf.map (homOfLE hCA).op x := by
+  rw [← ConcreteCategory.comp_apply, ← Functor.map_comp, ← op_comp]
+  exact congrArg (fun (k : C ⟶ A) => N.presheaf.map k.op x) (Subsingleton.elim _ _)
+
+/-- Restriction along an arbitrary poset hom equals restriction along `homOfLE`. -/
+private lemma res_hom_eq_res (N : Y.Modules) {A B : Y.Opens} (i : B ⟶ A) (x : Γ(N, A)) :
+    N.presheaf.map i.op x = N.presheaf.map (homOfLE (leOfHom i)).op x :=
+  congrArg (fun (k : B ⟶ A) => N.presheaf.map k.op x) (Subsingleton.elim _ _)
+
+private lemma resRing_hom_eq_res {A B : Y.Opens} (i : B ⟶ A) (g : Γ(Y, A)) :
+    Y.presheaf.map i.op g = Y.presheaf.map (homOfLE (leOfHom i)).op g :=
+  congrArg (fun (k : B ⟶ A) => Y.presheaf.map k.op g) (Subsingleton.elim _ _)
+
+
+/-- **Pushforward-level basic-open section localization.** For a quasi-compact
+quasi-separated `π : X ⟶ S`, a quasi-coherent `F` on `X`, and an affine open `U ⊆ S`, the
+section restriction of the pushforward `Γ(π_*F, U) → Γ(π_*F, D(f'))` at any `f' : Γ(S, U)` is
+a localization at `powers f'` over `Γ(S, U)`. The qcqs section-localization engine
+`isLocalizedModule_basicOpen_of_isCompact` applies on `X` at `g = π♯ f'` over the compact
+quasi-separated preimage `π ⁻¹ᵁ U`, and `π ⁻¹ᵁ D_S(f') = D_X(g)` (`preimage_basicOpen`)
+identifies the two restriction maps. Project-local (the sheaf-level heart of Stacks 01XJ). -/
+theorem isLocalizedModule_basicOpen_pushforward
+    {X S : Scheme.{u}} (π : X ⟶ S) [QuasiCompact π] [QuasiSeparated π]
+    (F : X.Modules) [F.IsQuasicoherent]
+    {U : S.Opens} (hU : IsAffineOpen U) (f' : Γ(S, U)) :
+    letI : Module Γ(S, U) Γ((Scheme.Modules.pushforward π).obj F, S.basicOpen f') :=
+      Module.compHom _ (algebraMap Γ(S, U) Γ(S, S.basicOpen f'))
+    letI : IsScalarTower Γ(S, U) Γ(S, S.basicOpen f')
+        Γ((Scheme.Modules.pushforward π).obj F, S.basicOpen f') :=
+      IsScalarTower.of_algebraMap_smul (fun _ _ => rfl)
+    IsLocalizedModule (Submonoid.powers f')
+      (restrictBasicOpenₗ ((Scheme.Modules.pushforward π).obj F) f') := by
+  letI : Module Γ(S, U) Γ((Scheme.Modules.pushforward π).obj F, S.basicOpen f') :=
+    Module.compHom _ (algebraMap Γ(S, U) Γ(S, S.basicOpen f'))
+  letI : IsScalarTower Γ(S, U) Γ(S, S.basicOpen f')
+      Γ((Scheme.Modules.pushforward π).obj F, S.basicOpen f') :=
+    IsScalarTower.of_algebraMap_smul (fun _ _ => rfl)
+  have hW : IsCompact ((π ⁻¹ᵁ U : X.Opens) : Set X) :=
+    π.isCompact_preimage hU.isCompact
+  have hsep : IsQuasiSeparated ((π ⁻¹ᵁ U : X.Opens) : Set X) :=
+    π.isQuasiSeparated_preimage hU.isQuasiSeparated
+  set g : Γ(X, π ⁻¹ᵁ U) := π.app U f' with hg
+  letI : Module Γ(X, π ⁻¹ᵁ U) Γ(F, X.basicOpen g) :=
+    Module.compHom _ (algebraMap Γ(X, π ⁻¹ᵁ U) Γ(X, X.basicOpen g))
+  haveI : IsScalarTower Γ(X, π ⁻¹ᵁ U) Γ(X, X.basicOpen g) Γ(F, X.basicOpen g) :=
+    IsScalarTower.of_algebraMap_smul (fun _ _ => rfl)
+  haveI hXloc := isLocalizedModule_basicOpen_of_isCompact F hW hsep g
+  have hpre : π ⁻¹ᵁ (S.basicOpen f') = X.basicOpen g := Scheme.preimage_basicOpen π f'
+  have hle : π ⁻¹ᵁ (S.basicOpen f') ≤ π ⁻¹ᵁ U := hpre.le.trans (X.basicOpen_le g)
+  -- ring coherence: restricting `π♯ f'` matches `π♯` of the restriction
+  have hring : X.presheaf.map (homOfLE hle).op g
+      = π.app (S.basicOpen f') (algebraMap Γ(S, U) Γ(S, S.basicOpen f') f') := by
+    show X.presheaf.map (homOfLE hle).op g
+      = π.app (S.basicOpen f') (S.presheaf.map (homOfLE (S.basicOpen_le f')).op f')
+    have hnat := congrArg
+      (fun (φ : Γ(S, U) ⟶ Γ(X, π ⁻¹ᵁ (S.basicOpen f'))) => φ.hom f')
+      (π.naturality (homOfLE (S.basicOpen_le f')).op)
+    simp only [CommRingCat.hom_comp, RingHom.comp_apply] at hnat
+    rw [hg]
+    refine Eq.trans ?_ hnat.symm
+    exact (resRing_hom_eq_res ((Opens.map π.base).map (homOfLE (S.basicOpen_le f')))
+      (π.app U f')).symm
+  refine ⟨?_, ?_, ?_⟩
+  · -- map_units
+    intro s
+    obtain ⟨k, hk⟩ := s.2
+    have hu : IsUnit (algebraMap Γ(S, U) Γ(S, S.basicOpen f') (s : Γ(S, U))) := by
+      rw [← hk, map_pow]
+      exact (S.toLocallyRingedSpace.toRingedSpace.isUnit_res_basicOpen f').pow k
+    exact isUnit_algebraMap_end_of_isUnit_algebraMap hu
+  · -- surj
+    intro y
+    let yF : ToType Γ(F, π ⁻¹ᵁ (S.basicOpen f')) := y
+    obtain ⟨⟨x, c⟩, hc⟩ := IsLocalizedModule.surj (S := Submonoid.powers g)
+      (f := restrictBasicOpenₗ F g) (F.presheaf.map (homOfLE hpre.ge).op yF)
+    have hk : g ^ c.2.choose = (c : Γ(X, π ⁻¹ᵁ U)) := c.2.choose_spec
+    refine ⟨⟨x, ⟨f' ^ c.2.choose, c.2.choose, rfl⟩⟩, ?_⟩
+    -- push `hc` back along the opens identity `π ⁻¹ᵁ D_S(f') = D_X(g)`
+    have hc0 : (c : Γ(X, π ⁻¹ᵁ U)) • (F.presheaf.map (homOfLE hpre.ge).op yF)
+        = restrictBasicOpenₗ F g x := hc
+    have hc' := congrArg (F.presheaf.map (homOfLE hpre.le).op) hc0
+    -- expand the compHom action of `c` on the `X`-side
+    have hcL : F.presheaf.map (homOfLE hpre.le).op
+        ((c : Γ(X, π ⁻¹ᵁ U)) • (F.presheaf.map (homOfLE hpre.ge).op yF))
+        = (X.presheaf.map (homOfLE hle).op (c : Γ(X, π ⁻¹ᵁ U))) • yF := by
+      show F.presheaf.map (homOfLE hpre.le).op
+          ((X.presheaf.map (homOfLE (X.basicOpen_le g)).op (c : Γ(X, π ⁻¹ᵁ U)))
+            • (F.presheaf.map (homOfLE hpre.ge).op yF))
+        = (X.presheaf.map (homOfLE hle).op (c : Γ(X, π ⁻¹ᵁ U))) • yF
+      rw [Scheme.Modules.map_smul F (homOfLE hpre.le),
+        resRing_res (X.basicOpen_le g) hpre.le hle (c : Γ(X, π ⁻¹ᵁ U)),
+        res_res F hpre.ge hpre.le le_rfl yF, res_self F yF]
+    have hcR : F.presheaf.map (homOfLE hpre.le).op (restrictBasicOpenₗ F g x)
+        = F.presheaf.map (homOfLE hle).op x := by
+      show F.presheaf.map (homOfLE hpre.le).op
+          (F.presheaf.map (homOfLE (X.basicOpen_le g)).op x)
+        = F.presheaf.map (homOfLE hle).op x
+      exact res_res F (X.basicOpen_le g) hpre.le hle x
+    rw [hcL, hcR] at hc'
+    -- identify with the pushforward-side statement
+    show (f' ^ c.2.choose : Γ(S, U)) • y
+      = ((Scheme.Modules.pushforward π).obj F).presheaf.map
+          (homOfLE (S.basicOpen_le f')).op x
+    have hact : (f' ^ c.2.choose : Γ(S, U)) • y
+        = (X.presheaf.map (homOfLE hle).op (c : Γ(X, π ⁻¹ᵁ U))) • yF := by
+      show (π.app (S.basicOpen f')
+          (algebraMap Γ(S, U) Γ(S, S.basicOpen f') (f' ^ c.2.choose))) • yF
+        = (X.presheaf.map (homOfLE hle).op (c : Γ(X, π ⁻¹ᵁ U))) • yF
+      rw [map_pow, map_pow, ← hring, ← map_pow]
+      exact congrArg (fun t => (X.presheaf.map (homOfLE hle).op t) • yF) hk
+    rw [hact, hc']
+    exact (show ((Scheme.Modules.pushforward π).obj F).presheaf.map
+        (homOfLE (S.basicOpen_le f')).op x = F.presheaf.map (homOfLE hle).op x from
+      res_hom_eq_res F ((Opens.map π.base).map (homOfLE (S.basicOpen_le f'))) x).symm
+  · -- exists_of_eq
+    intro x₁ x₂ h
+    have h' : F.presheaf.map (homOfLE hle).op x₁ = F.presheaf.map (homOfLE hle).op x₂ := by
+      have e1 : ((Scheme.Modules.pushforward π).obj F).presheaf.map
+          (homOfLE (S.basicOpen_le f')).op x₁ = F.presheaf.map (homOfLE hle).op x₁ :=
+        res_hom_eq_res F ((Opens.map π.base).map (homOfLE (S.basicOpen_le f'))) x₁
+      have e2 : ((Scheme.Modules.pushforward π).obj F).presheaf.map
+          (homOfLE (S.basicOpen_le f')).op x₂ = F.presheaf.map (homOfLE hle).op x₂ :=
+        res_hom_eq_res F ((Opens.map π.base).map (homOfLE (S.basicOpen_le f'))) x₂
+      exact e1.symm.trans (h.trans e2)
+    have h'' : restrictBasicOpenₗ F g x₁ = restrictBasicOpenₗ F g x₂ := by
+      show F.presheaf.map (homOfLE (X.basicOpen_le g)).op x₁
+        = F.presheaf.map (homOfLE (X.basicOpen_le g)).op x₂
+      have r1 := res_res F hle hpre.ge (X.basicOpen_le g) x₁
+      have r2 := res_res F hle hpre.ge (X.basicOpen_le g) x₂
+      rw [← r1, ← r2, h']
+    obtain ⟨c, hc⟩ := IsLocalizedModule.exists_of_eq
+      (S := Submonoid.powers g) (f := restrictBasicOpenₗ F g) h''
+    have hk : g ^ c.2.choose = (c : Γ(X, π ⁻¹ᵁ U)) := c.2.choose_spec
+    refine ⟨⟨f' ^ c.2.choose, c.2.choose, rfl⟩, ?_⟩
+    let xF₁ : ToType Γ(F, π ⁻¹ᵁ U) := x₁
+    let xF₂ : ToType Γ(F, π ⁻¹ᵁ U) := x₂
+    show (π.app U (f' ^ c.2.choose)) • xF₁ = (π.app U (f' ^ c.2.choose)) • xF₂
+    rw [map_pow]
+    show (g : Γ(X, π ⁻¹ᵁ U)) ^ c.2.choose • xF₁ = g ^ c.2.choose • xF₂
+    rw [hk]
+    exact hc
+
+/-- The family of all affine opens covers a scheme (for the opens Grothendieck topology). -/
+private theorem coversTop_affineOpens (S : Scheme.{u}) :
+    (Opens.grothendieckTopology ↥S).CoversTop
+      (fun U : S.affineOpens => U.1) := by
+  intro W y hy
+  obtain ⟨V, hVaff, hyV, hVW⟩ :=
+    TopologicalSpace.Opens.isBasis_iff_nbhd.mp (Scheme.isBasis_affineOpens S) hy
+  refine ⟨V, homOfLE hVW, ?_, hyV⟩
+  rw [CategoryTheory.Sieve.mem_ofObjects_iff]
+  exact ⟨⟨V, hVaff⟩, ⟨𝟙 V⟩⟩
+
+set_option maxHeartbeats 1600000 in
+set_option synthInstance.maxHeartbeats 800000 in
+/-- **Per-affine slice quasi-coherence of a qcqs pushforward.** For qcqs `π : X ⟶ S`, `F`
+quasi-coherent on `X`, and an affine open `U ⊆ S`, the slice `(π_* F).over U` is
+quasi-coherent: the pushforward-level section localization
+(`isLocalizedModule_basicOpen_pushforward`) feeds the converse transport
+(`isIso_fromTildeΓ_pullback_fromSpec_of_isLocalizedModule`) to produce the P1 datum, whose
+tilde presentation transports along `U.ι = isoSpec.hom ≫ fromSpec` back to the geometric
+restriction and then to the slice (`overRestrictPresentationInv`). Project-local. -/
+theorem pushforward_isQuasicoherent_over_affine
+    {X S : Scheme.{u}} (π : X ⟶ S) [QuasiCompact π] [QuasiSeparated π]
+    (F : X.Modules) [F.IsQuasicoherent] {U : S.Opens} (hU : IsAffineOpen U) :
+    (((Scheme.Modules.pushforward π).obj F).over U).IsQuasicoherent := by
+  set N := (Scheme.Modules.pushforward π).obj F with hN
+  haveI hP1 : IsIso (Scheme.Modules.fromTildeΓ
+      ((Scheme.Modules.pullback hU.fromSpec).obj N)) :=
+    isIso_fromTildeΓ_pullback_fromSpec_of_isLocalizedModule N hU
+      (fun f' => isLocalizedModule_basicOpen_pushforward π F hU f')
+  -- global presentation of the `fromSpec`-pullback, via the tilde presentation
+  let eT' : tilde ((modulesSpecToSheaf.obj
+        ((Scheme.Modules.pullback hU.fromSpec).obj N)).presheaf.obj (Opposite.op ⊤))
+      ≅ (Scheme.Modules.pullback hU.fromSpec).obj N :=
+    @asIso _ _ _ _
+      (Scheme.Modules.fromTildeΓ ((Scheme.Modules.pullback hU.fromSpec).obj N)) hP1
+  have P_M' : ((Scheme.Modules.pullback hU.fromSpec).obj N).Presentation :=
+    SheafOfModules.Presentation.ofIsIso.{u} eT'.hom
+      (AlgebraicGeometry.presentationTilde.{u} _ Set.univ (by simp) _ (Submodule.span_eq _))
+  -- transport along `U.ι = isoSpec.hom ≫ fromSpec`
+  have hcomp : hU.isoSpec.hom ≫ hU.fromSpec = U.ι := by
+    rw [← hU.isoSpec_inv_ι, Iso.hom_inv_id_assoc]
+  have P_ι : ((Scheme.Modules.pullback U.ι).obj N).Presentation :=
+    SheafOfModules.Presentation.ofIsIso.{u, u, u}
+      ((Scheme.Modules.pullbackComp hU.isoSpec.hom hU.fromSpec).app N ≪≫
+        (Scheme.Modules.pullbackCongr hcomp).app N).hom
+      (presentationPullbackOfSchemeIso hU.isoSpec.symm
+        ((Scheme.Modules.pullback hU.fromSpec).obj N) P_M')
+  exact (Scheme.Modules.overRestrictPresentationInv U N P_ι).isQuasicoherent
+
+set_option maxHeartbeats 1600000 in
+set_option synthInstance.maxHeartbeats 800000 in
+/-- **Pushforward preserves quasi-coherence** (Stacks tag 01XJ). For a quasi-compact
+quasi-separated morphism of schemes `π : X ⟶ S` and a quasi-coherent sheaf of modules `F` on
+`X`, the pushforward `π_* F` is quasi-coherent. Quasi-coherence is checked on the affine-opens
+cover of `S` (`IsQuasicoherent.of_coversTop`), where the slice statement is
+`pushforward_isQuasicoherent_over_affine`. Project-local (Mathlib gap at the pinned commit). -/
+theorem pushforward_isQuasicoherent
+    {X S : Scheme.{u}} (π : X ⟶ S) [QuasiCompact π] [QuasiSeparated π]
+    (F : X.Modules) [F.IsQuasicoherent] :
+    ((Scheme.Modules.pushforward π).obj F).IsQuasicoherent := by
+  haveI : ∀ U : S.affineOpens,
+      (((Scheme.Modules.pushforward π).obj F).over U.1).IsQuasicoherent :=
+    fun U => pushforward_isQuasicoherent_over_affine π F U.2
+  exact SheafOfModules.IsQuasicoherent.of_coversTop
+    ((Scheme.Modules.pushforward π).obj F)
+    (fun U : S.affineOpens => U.1) (coversTop_affineOpens S)
+
 end Scheme.Modules
 
 end BasicOpenPresentationDescent
@@ -3643,18 +4061,25 @@ argument `N := (pushforward f).obj F` is fed into `pullback_app_isoTensor`,
 which (per the iter-187 analogist verdict) requires `[N.IsQuasicoherent]`;
 this helper produces the instance from `[F.IsQuasicoherent]` + qcqs `f`.
 
-The body is a typed sorry; the substantive content is Stacks 01XJ (the
-adjoint-functor proof: pushforward is right adjoint to pullback;
-right adjoints preserve coherent / quasi-coherent stuff under qcqs
-finiteness conditions). Mathlib gap at the pinned commit; ~30 LOC. -/
+PROVED (T12 session, 2026-07-03), axiom-clean. The substantive content is
+Stacks 01XJ, delegated to `Scheme.Modules.pushforward_isQuasicoherent` in the
+union-merge section: quasi-coherence is checked on the affine-opens cover of
+`S`; on each affine `U` the qcqs section-localization engine
+(`isLocalizedModule_basicOpen_of_isCompact`, Stacks 01P0 beyond the affine
+case) applied on `X` over the compact quasi-separated preimage `π ⁻¹ᵁ U`
+supplies the pushforward-level basic-open localization, the converse
+`fromTildeΓ` transport turns it into the P1 datum for the `fromSpec`
+pullback, and the tilde presentation transports back to the slice. (The old
+"right adjoints preserve quasi-coherence" proof sketch here was wrong —
+adjointness gives colimit preservation, not this.) -/
 private theorem pushforward_isQuasicoherent
     {X S : Scheme.{u}} (f : X ⟶ S)
     [QuasiCompact f] [QuasiSeparated f]
     (F : X.Modules) [F.IsQuasicoherent] :
-    ((Scheme.Modules.pushforward f).obj F).IsQuasicoherent := by
-  -- Stacks 01XJ: pushforward of quasi-coherent along qcqs preserves qc.
-  -- Mathlib gap at pinned commit b80f227. ~30 LOC body.
-  exact sorry
+    ((Scheme.Modules.pushforward f).obj F).IsQuasicoherent :=
+  -- Stacks 01XJ, proved in the union-merge section above (T12 session, 2026-07-03):
+  -- the qcqs section-localization engine + the converse fromTildeΓ transport.
+  Scheme.Modules.pushforward_isQuasicoherent f F
 
 set_option backward.isDefEq.respectTransparency false in
 set_option maxHeartbeats 800000 in
