@@ -2407,6 +2407,54 @@ free of a fixed rank}. This section introduces both predicates.
 
 % --- gap-2 supporting infrastructure (the named pieces of the gap-2 transport above) ---
 
+\begin{lemma}[Annihilator of a finitely generated module commutes with localization]
+  \label{lem:annihilator_localization_eq_map}
+  \lean{Module.annihilator_isLocalizedModule_eq_map}
+  \leanok
+  % SOURCE: Stacks, Algebra, section "Supports and annihilators",
+  % \texttt{lemma-annihilator-flat-base-change} (read from
+  % references/stacks-algebra.tex, L9349-L9368): for a flat ring map R -> S and a
+  % finite R-module M, Ann_R(M)S = Ann_S(M ⊗_R S). Localization at a submonoid is
+  % the special case S = R_S, M ⊗_R R_S = M_S.
+  \textit{Source: Stacks, Algebra, Lemma \texttt{annihilator-flat-base-change}
+  (localization instance for finite modules).}
+  Let \(R\) be a commutative ring, \(S \subseteq R\) a multiplicative submonoid, and
+  \(R_S\) the localization of \(R\) at \(S\). Let \(M\) be a \emph{finitely
+  generated} \(R\)-module and let \(g : M \to M_S\) exhibit \(M_S\) as the
+  localization of \(M\) at \(S\) (an \(R_S\)-module whose \(R\)-action is the
+  restriction of the \(R_S\)-action along \(R \to R_S\)). Then
+  \[
+    \mathrm{Ann}_{R_S}(M_S) \;=\; \mathrm{Ann}_R(M) \cdot R_S,
+  \]
+  the extension of the annihilator ideal along the canonical map
+  \(R \to R_S\). Finite generation is essential: for a general module only the
+  inclusion \(\supseteq\) holds.
+\end{lemma}
+\begin{proof}
+  \leanok
+  Fix a finite generating set \(m_1, \dots, m_n\) of \(M\). An element of \(R\)
+  annihilating every \(m_i\) annihilates all of \(M\): the elements it kills form
+  a submodule (they are closed under sums and scalar multiples), and that
+  submodule contains the generators.
+
+  (\(\supseteq\)) It suffices that the image of \(\mathrm{Ann}_R(M)\)
+  annihilates \(M_S\). Every element of \(M_S\) has the form \(g(m)/s\) with
+  \(m \in M\), \(s \in S\); for \(a \in \mathrm{Ann}_R(M)\),
+  \((a/1)\cdot(g(m)/s) = g(a \cdot m)/s = 0\).
+
+  (\(\subseteq\)) Let \(y \in \mathrm{Ann}_{R_S}(M_S)\) and write \(y = a/s\)
+  with \(a \in R\), \(s \in S\). For each \(i\) the hypothesis gives
+  \(y \cdot (g(m_i)/1) = g(a \cdot m_i)/s = 0\) in \(M_S\), so there is
+  \(u_i \in S\) with \(u_i \cdot a \cdot m_i = 0\) in \(M\). Put
+  \(u := u_1 \cdots u_n \in S\); since each \(u_i\) divides \(u\) in \(S\),
+  \((u a) \cdot m_i = 0\) for every \(i\), hence
+  \(u a \in \mathrm{Ann}_R(M)\) by the generating-set criterion. Finally
+  \[
+    \frac{a}{s} \;=\; \frac{ua}{1} \cdot \frac{1}{us}
+  \]
+  exhibits \(y\) as an \(R_S\)-multiple of the image of
+  \(ua \in \mathrm{Ann}_R(M)\), so \(y \in \mathrm{Ann}_R(M) \cdot R_S\).
+\end{proof}
 
 % --- Pullback of a quasi-coherent sheaf along an open immersion is quasi-coherent ---
 
@@ -2629,12 +2677,36 @@ free of a fixed rank}. This section introduces both predicates.
 
 % --- (C, step 3) The module-level equivalence and its functor identification ---
 
-% The two blocks below are the module-category layer assembled on top of the topological
-% sheaf-congruence def:overEquivalence_sheafCongr: the step-3 equivalence of categories of sheaves of
-% modules (def:over_restrict_equiv) and the step-4 functor identification (lem:over_restrict_functor_iso)
-% whose object component is the slice-touching bridge lem:over_restrict_iso below. They are
-% project-bespoke infrastructure (no external source).
+% The block below is the module-category layer assembled on top of the topological
+% sheaf-congruence def:overEquivalence_sheafCongr: the step-3 equivalence of categories of sheaves
+% of modules (def:over_restrict_equiv). Its step-4 functor identification is realized object-wise
+% by the slice-touching bridge lem:over_restrict_iso below. Project-bespoke infrastructure (no
+% external source).
 
+\begin{definition}[The slice-to-geometric equivalence of module categories (gap1, C, step 3)]
+  \label{def:over_restrict_equiv}
+  \lean{AlgebraicGeometry.Scheme.Modules.overRestrictEquiv}
+  \leanok
+  \uses{lem:opens_overEquivalence_mathlib, lem:pushforwardPushforwardEquivalence_mathlib,
+    lem:overEquivalence_functor_isContinuous, lem:overEquivalence_inverse_isContinuous}
+  Let \(X\) be a scheme and \(U \subseteq X\) an open. The category of sheaves of modules
+  over the sliced structure sheaf \(\mathcal{O}_X.\mathrm{over}\,U\) on the slice site
+  \(J_X|_U\) is equivalent to the category of sheaves of modules on the open subscheme
+  \(U.\mathrm{toScheme}\):
+  \[
+    \mathrm{SheafOfModules}\bigl(\mathcal{O}_X.\mathrm{over}\,U\bigr)
+    \;\simeq\; U.\mathrm{toScheme}.\mathrm{Modules}.
+  \]
+  The equivalence is obtained by lifting the site equivalence
+  \(\mathrm{Opens.overEquivalence}\,U\) (\cref{lem:opens_overEquivalence_mathlib}) — both of
+  whose legs are continuous (\cref{lem:overEquivalence_functor_isContinuous},
+  \cref{lem:overEquivalence_inverse_isContinuous}) — to module categories through the
+  ringed-site transport of \cref{lem:pushforwardPushforwardEquivalence_mathlib}. The two
+  ring-sheaf comparison morphisms that transport consumes are the unit of the site
+  equivalence whiskered into the sliced structure presheaf, and the identity: the structure
+  sheaf of the open subscheme is precisely the transport of the sliced structure sheaf
+  across the site equivalence.
+\end{definition}
 
 % --- (C) The single slice-touching bridge ---
 
@@ -2644,6 +2716,7 @@ free of a fixed rank}. This section introduces both predicates.
   \lean{AlgebraicGeometry.Scheme.Modules.overRestrictIso}
   \uses{lem:modules_restrictFunctor_mathlib, lem:modules_restrictFunctorIsoPullback_mathlib,
     lem:isLocalization_basicOpen_mathlib, def:overEquivalence_sheafCongr,
+    def:over_restrict_equiv,
     lem:overEquivalence_functor_isContinuous, lem:overEquivalence_inverse_isContinuous,
     lem:opens_overEquivalence_mathlib, lem:pushforwardPushforwardEquivalence_mathlib}
   % NOTE: RESOLVED and axiom-clean. AlgebraicGeometry.Scheme.Modules.overRestrictIso
@@ -2670,7 +2743,8 @@ free of a fixed rank}. This section introduces both predicates.
   (\cref{lem:isLocalization_basicOpen_mathlib}).
 \end{lemma}
 \begin{proof}
-  \uses{def:overEquivalence_sheafCongr, lem:overEquivalence_functor_isContinuous,
+  \uses{def:overEquivalence_sheafCongr, def:over_restrict_equiv,
+    lem:overEquivalence_functor_isContinuous,
     lem:overEquivalence_inverse_isContinuous, lem:opens_overEquivalence_mathlib,
     lem:pushforwardPushforwardEquivalence_mathlib, lem:modules_restrictFunctor_mathlib,
     lem:modules_restrictFunctorIsoPullback_mathlib, lem:isLocalization_basicOpen_mathlib}
@@ -2728,7 +2802,8 @@ free of a fixed rank}. This section introduces both predicates.
 [The slice-to-geometric isomorphism in pullback form (gap1, C, step 4')]
   \label{lem:over_restrict_pullback_iso}
   \lean{AlgebraicGeometry.Scheme.Modules.overRestrictPullbackIso}
-  \uses{lem:over_restrict_iso, lem:modules_restrictFunctorIsoPullback_mathlib,
+  \uses{lem:over_restrict_iso, def:over_restrict_equiv,
+    lem:modules_restrictFunctorIsoPullback_mathlib,
     lem:modules_pullback_mathlib}
   \textit{The pullback packaging of the slice-touching bridge; the form consumed by the P1 transport.}
   With \(X\) and \(U \subseteq X\) as above and \(M\) a sheaf of modules on \(X\), the transport of the
@@ -2771,85 +2846,470 @@ free of a fixed rank}. This section introduces both predicates.
 
 % --- (P1) Per-element local-tilde transport ---
 
+\begin{lemma}[Quasi-coherent modules restrict to a tilde on basic opens of the cover
+(gap1, P1)]
+  \label{lem:isIso_fromTildeΓ_basicOpen_of_quasicoherent}
+  \lean{AlgebraicGeometry.Scheme.Modules.isIso_fromTildeΓ_restrict_basicOpen}
+  \leanok
+  \uses{def:over_restrict_equiv, lem:over_restrict_pullback_iso,
+    lem:modules_pullback_mathlib, lem:tilde_gamma_adjunction_mathlib,
+    lem:isLocalization_basicOpen_mathlib}
+  Let \(M\) be a sheaf of modules on \(\Spec R\) equipped with quasi-coherence data: an
+  open cover \(\{X_i\}\) of \(\Spec R\) together with, for each \(i\), a presentation of
+  the slice restriction \(M.\mathrm{over}\,X_i\) — an exhibition of it as the cokernel of
+  a map between coproducts of copies of the unit module. Let \(r \in R\) with
+  \(D(r) \subseteq X_i\) for some \(i\), and let \(W := \iota_{X_i}^{-1}(D(r))\) be the
+  corresponding affine open of the subscheme \(Z := X_i\). Then the restriction of \(M\)
+  to \(D(r)\) — the pullback of \(M\) to \(Z\), then to \(W\), transported across the
+  affine identification \(W \cong \Spec\Gamma(Z, W)\) — has invertible
+  tilde--\(\Gamma\) counit (\cref{lem:tilde_gamma_adjunction_mathlib}); that is,
+  \(M|_{D(r)}\) is the tilde of its section module over
+  \(\Gamma(Z, W) \cong R_r\) (\cref{lem:isLocalization_basicOpen_mathlib}).
+\end{lemma}
+\begin{proof}
+  \leanok
+  \uses{def:over_restrict_equiv, lem:over_restrict_pullback_iso,
+    lem:modules_pullback_mathlib, lem:tilde_gamma_adjunction_mathlib}
+  \emph{Step 1 (geometrize the datum).} The quasi-coherence datum supplies a presentation
+  of the slice restriction \(M.\mathrm{over}\,X_i\). The slice-to-geometric equivalence
+  (\cref{def:over_restrict_equiv}) preserves colimits and carries the unit module to the
+  unit module, so the image of this presentation, transported along the isomorphism of
+  \cref{lem:over_restrict_pullback_iso}, is a presentation of the geometric pullback
+  \(N := \iota_{X_i}^{*} M\) on the scheme \(Z\).
+
+  \emph{Step 2 (restrict to \(W\)).} Restriction to the slice site over \(W\) again
+  preserves colimits and the unit, so the global presentation of \(N\) slices to a
+  presentation of \(N.\mathrm{over}\,W\); geometrizing across the slice-to-geometric
+  equivalence at \(W\) (\cref{def:over_restrict_equiv},
+  \cref{lem:over_restrict_pullback_iso}) yields a presentation of the geometric
+  restriction \(\iota_W^{*} N\) on the open subscheme \(W\).
+
+  \emph{Step 3 (affine identification).} \(W\) is affine: \(D(r)\) is a basic open of the
+  affine scheme \(\Spec R\), and its preimage under the open immersion \(\iota_{X_i}\) is
+  again affine because \(D(r)\) is contained in the immersion's range. Pull the
+  presentation back across the isomorphism \(W \cong \Spec\Gamma(Z, W)\): the pullback of
+  sheaves of modules along an isomorphism of schemes
+  (\cref{lem:modules_pullback_mathlib}) preserves colimits, being a left adjoint, and
+  carries the unit module to the unit module, since the induced functor on opens sites is
+  an equivalence. This lands a global presentation of the transported module on the
+  affine scheme \(\Spec\Gamma(Z, W)\).
+
+  \emph{Step 4 (a presented module on \(\Spec S\) is a tilde).} Let \(P\) be a sheaf of
+  modules on \(\Spec S\) with a presentation
+  \(\mathcal{O}^{\oplus J} \to \mathcal{O}^{\oplus K} \to P \to 0\). The map of coproducts
+  of units corresponds under the tilde--\(\Gamma\) adjunction
+  (\cref{lem:tilde_gamma_adjunction_mathlib}) to a map of free modules
+  \(S^{\oplus J} \to S^{\oplus K}\), because \(\mathcal{O}^{\oplus K}\) is the tilde of
+  \(S^{\oplus K}\) and the unit of the adjunction is an isomorphism. Since the tilde
+  functor preserves cokernels (it is a left adjoint), \(P\) is isomorphic to the tilde of
+  the cokernel of that module map. Finally, a module isomorphic to a tilde has invertible
+  counit: on a tilde \(\widetilde{N}\) the triangle identity of the adjunction shows the
+  counit is inverse to the tilde of the unit isomorphism \(N \cong
+  \Gamma(\widetilde{N}, \top)\), and invertibility of the counit transports across any
+  isomorphism of modules by naturality. Applying this to the transported module of
+  Step~3 concludes.
+\end{proof}
 
 % --- (D) The section-localization descent: the gap1 keystone ---
 
-% NOTE: the lemma STATEMENT is cited to Stacks lemma-invert-f-sections / Hartshorne II.5.3; the proof
-% below is the project-internal finite-cover descent (gluing + separatedness + flatness of
-% localization) that deliberately does NOT route through the global affine equivalence (which is gap1
-% itself), so there is no transcribed `% SOURCE QUOTE PROOF`.
+% NOTE: the descent is stated for an ARBITRARY sheaf of modules under an explicit
+% per-cover-element localization hypothesis; it deliberately does NOT route through the global
+% affine equivalence (which is gap1 itself). The sheaf-gluing engines (separatedness, unique
+% gluing over the finite cover) are steps inside the proofs below.
 
-% --- (D, engines) The private sheaf-gluing sub-steps of the cover-form descent (coverage) ---
+\begin{lemma}[Section-localization descent from per-cover localization data (gap1, D,
+cover form)]
+  \label{lem:section_localization_descent_of_cover}
+  \lean{AlgebraicGeometry.Scheme.Modules.isLocalizedModule_basicOpen_descent_of_cover}
+  \leanok
+  \uses{lem:eq_of_locally_eq_mathlib}
+  Let \(M\) be a sheaf of modules on \(\Spec R\), \(f \in R\), and
+  \(t \subseteq R\) a finite subset generating the unit ideal, so that the basic opens
+  \(\{D(r)\}_{r \in t}\) cover \(\Spec R\). Assume the localization datum: for every open
+  \(U\) contained in some \(D(r)\) with \(r \in t\), the section restriction
+  \[
+    \Gamma(M, U) \longrightarrow \Gamma\bigl(M, D(f) \cap U\bigr)
+  \]
+  exhibits the target as the localization of \(\Gamma(M, U)\) at the powers of \(f\),
+  over \(R\). Then the global section restriction
+  \(\Gamma(M, \top) \to \Gamma(M, D(f))\) exhibits \(\Gamma(M, D(f))\) as the
+  localization \(\Gamma(M, \top)[1/f]\) over \(R\).
+\end{lemma}
+\begin{proof}
+  \leanok
+  \uses{lem:eq_of_locally_eq_mathlib}
+  We verify the three conditions characterizing the localization map.
 
+  \emph{Units.} Every power of \(f\) acts invertibly on \(\Gamma(M, D(f))\): the action
+  of \(f\) on sections over \(D(f)\) is through the restriction of \(f\) to
+  \(\Gamma(\Spec R, D(f))\), which is a unit there (\(f\) is invertible on its own basic
+  open), and multiplication by a unit of the acting ring is bijective. This holds for an
+  arbitrary \(M\), without the covering hypothesis.
+
+  \emph{Torsion.} Let \(x \in \Gamma(M, \top)\) restrict to \(0\) on \(D(f)\); we find
+  \(n\) with \(f^n \cdot x = 0\) (applied to a difference \(x_1 - x_2\), this is the
+  uniqueness condition). For each \(r \in t\), the restriction \(x|_{D(r)}\) restricts to
+  \(0\) on \(D(f) \cap D(r)\) (functoriality of restriction through \(D(f)\)); the
+  localization datum at \(U = D(r)\) then provides \(k_r\) with
+  \(f^{k_r} \cdot x|_{D(r)} = 0\). Take \(n := \max_{r \in t} k_r\); then
+  \((f^n \cdot x)|_{D(r)} = f^{\,n-k_r} \cdot \bigl(f^{k_r} \cdot x|_{D(r)}\bigr) = 0\)
+  for every \(r\), and since the \(D(r)\) cover \(\Spec R\), sheaf separatedness
+  (\cref{lem:eq_of_locally_eq_mathlib}) gives \(f^n \cdot x = 0\).
+
+  \emph{Surjectivity.} Let \(y \in \Gamma(M, D(f))\); we find a global \(x\) and \(n\)
+  with \(f^n \cdot y = x|_{D(f)}\). For each \(r \in t\), the localization datum at
+  \(U = D(r)\) writes \(f^{m_r} \cdot y|_{D(f) \cap D(r)}\) as the restriction of a
+  section \(b_r \in \Gamma(M, D(r))\); normalizing with the common exponent
+  \(N := \max_r m_r\) (replace \(b_r\) by \(f^{\,N-m_r} \cdot b_r\)) we may assume
+  \(b_r|_{D(f) \cap D(r)} = f^{N} \cdot y|_{D(f) \cap D(r)}\) for every \(r\). On a
+  pairwise overlap \(D(r) \cap D(r')\) — an open contained in \(D(r)\) — the difference
+  \(b_r - b_{r'}\) restricts to \(0\) on \(D(f) \cap D(r) \cap D(r')\), since both terms
+  restrict to \(f^N \cdot y\) there; the localization datum at
+  \(U = D(r) \cap D(r')\) provides a power \(f^{P_{r,r'}}\) killing the difference, and
+  taking \(P := \max P_{r,r'}\) over the finitely many pairs, the family
+  \(\{f^P \cdot b_r\}_{r \in t}\) agrees on all overlaps. By the sheaf axiom (unique
+  gluing over the finite cover \(\{D(r)\}_{r \in t}\) of \(\Spec R\)) the family glues to
+  a global section \(x \in \Gamma(M, \top)\). Finally
+  \(x|_{D(f)} = f^{N+P} \cdot y\): the two sides agree on each member of the cover
+  \(\{D(f) \cap D(r)\}_{r \in t}\) of \(D(f)\), so they are equal by separatedness
+  (\cref{lem:eq_of_locally_eq_mathlib}).
+\end{proof}
 
 % --- (D, basic-open cover form) The form gap1 actually consumes ---
 
+\begin{lemma}[Section-localization descent, basic-open hypothesis form (gap1, D)]
+  \label{lem:section_localization_descent_of_basicOpen_cover}
+  \lean{AlgebraicGeometry.Scheme.Modules.isLocalizedModule_basicOpen_descent_of_basicOpen_cover}
+  \leanok
+  \uses{lem:section_localization_descent_of_cover, lem:eq_of_locally_eq_mathlib}
+  Let \(M\), \(f\), and \(t\) be as in \cref{lem:section_localization_descent_of_cover},
+  but assume the localization datum only for \emph{basic} opens: for every \(s \in R\)
+  with \(D(s) \subseteq D(r)\) for some \(r \in t\), the restriction
+  \(\Gamma(M, D(s)) \to \Gamma(M, D(f) \cap D(s))\) is the localization of
+  \(\Gamma(M, D(s))\) at the powers of \(f\) over \(R\). Then the conclusion of
+  \cref{lem:section_localization_descent_of_cover} still holds: the global restriction
+  \(\Gamma(M, \top) \to \Gamma(M, D(f))\) is the localization at the powers of \(f\)
+  over \(R\).
+\end{lemma}
+\begin{proof}
+  \leanok
+  \uses{lem:section_localization_descent_of_cover, lem:eq_of_locally_eq_mathlib}
+  The proof of \cref{lem:section_localization_descent_of_cover} consults the
+  localization datum only at the cover members \(U = D(r)\) (\(r \in t\)) and at their
+  pairwise intersections \(U = D(r) \cap D(r') = D(r r')\) — all of them \emph{basic}
+  opens contained in a cover member. The datum restricted to basic opens therefore
+  suffices, and the same three-part verification applies verbatim. (The restriction of
+  the hypothesis matters: the geometric producer below furnishes the localization datum
+  only at basic opens, a general open of \(\Spec R\) being neither affine nor
+  quasi-compact in general.)
+\end{proof}
 
-% --- (D, section transport) The Hfr ingredient: pullback-along-open-immersion section comparison ---
-
-
-% NOTE: How lem:pullback_gamma_top_iso produces the gated Hfr (and thereby the named-form descent and
-% gap1). For M : (Spec R).Modules quasi-coherent with datum q and a cover member q.X i ⊇ D(r), the P1
-% transport (\cref{lem:isIso_fromTildeΓ_basicOpen_of_quasicoherent}) gives IsIso fromTildeΓ for the
-% module M'_transported obtained by pulling M back along ι(q.X i), then along the basic-open ι, then
-% across IsAffineOpen.isoSpec.inv. Chaining the section comparison \cref{lem:pullback_gamma_top_iso}
-% through those same three pullbacks (and the pullback-form bridge
-% \cref{lem:over_restrict_pullback_iso}) identifies Γ(M'_transported, ⊤) ≅ Γ(M, D(r)) and, at the
-% f-locus open, Γ(M'_transported, D(f')) ≅ Γ(M, D(f) ⊓ D(r)), intertwining the restriction maps.
-% Together with IsIso fromTildeΓ and \cref{lem:isLocalizedModule_restrict_of_isIso_fromTildeΓ} this
-% yields IsLocalizedModule(powers f) on Γ(M, D(r)) → Γ(M, D(f) ⊓ D(r)) — exactly Hfr at U = D(r) (and
-% at the overlaps U = D(r) ⊓ D(r')). Feeding Hfr to \cref{lem:section_localization_descent_of_cover}
-% at the quasi-coherence cover \cref{lem:exists_finite_basicOpen_cover_le_quasicoherentData} closes
-% the named form \cref{lem:section_localization_descent}, and gap1
-% \cref{lem:qcoh_affine_isIso_fromTildeΓ} follows via
-% \cref{lem:isIso_fromTildeΓ_of_isLocalizedModule_restrict}.
-
-
-% NOTE: the remaining wall between the two bridges above and Hfr is the SEMILINEARITY of the
-% section transport gammaPullbackImageIso over the open-immersion structure-sheaf ring iso. The next two
-% blocks state that sub-build.
-
-
-% NOTE: the lemma STATEMENT is cited to Stacks lemma-invert-f-sections / Hartshorne II.5.3; the proof
-% below is a project-internal descent (finite sheaf equalizer over the cover + flatness of
-% localization) that deliberately does NOT route through the global affine equivalence (which is
-% gap1 itself), so there is no transcribed `% SOURCE QUOTE PROOF`.
-
-% NOTE: the proof is a one-line assembly — feed the keystone descent (D) into the in-file
-% equivalence isIso_fromTildeΓ_iff_isLocalizedModule_restrict — so it routes through no transcribed
-% Stacks gluing proof; the SOURCE QUOTE above cites the lemma STATEMENT (Stacks
-% lemma-quasi-coherent-affine).
 
 \subsection{Section-transport producer for the basic-open Hfr}
 
-This subsection builds the sole remaining ingredient of the gap1 keystone descent
+This subsection builds the geometric input of the gap1 keystone descent
 \cref{lem:section_localization_descent}: the geometric \emph{producer}
 \cref{lem:section_localization_hfr_basicOpen} that manufactures, for a quasi-coherent \(M\) on
 \(\Spec R\) and a basic open \(D(s)\) inside a quasi-coherence cover member, the per-cover-element
 localization datum \(\mathrm{Hfr}\) the basic-open cover form
 \cref{lem:section_localization_descent_of_basicOpen_cover} consumes. The construction transports the
 \(R_s\)-level localization living on the affine slice \(D(s) \cong \Spec R_s\) back to an
-\(R\)-level statement through the combiner \cref{lem:isLocalizedModule_powers_transport}; the four
-sub-lemmas below supply the geometric inputs (an iterated-pullback \(\mathrm{fromTildeΓ}\) iso, the
-image/range computations, the \(\top\)-level semilinearity, and the scalar-tower instances).
+\(R\)-level statement through the combiner \cref{lem:isLocalizedModule_powers_transport}; the
+geometric inputs --- the iterated-pullback tilde--\(\Gamma\) isomorphism, the identification of the
+immersion's image opens, and the semilinear section comparisons --- enter in the proof of the
+producer.
+
+\begin{lemma}[Localization transport across a semilinear section comparison]
+  \label{lem:isLocalizedModule_powers_transport}
+  \lean{AlgebraicGeometry.Scheme.Modules.isLocalizedModule_powers_transport}
+  \leanok
+  Let \(R\) be a commutative ring, \(A\) an \(R\)-algebra, \(S\) a commutative ring, and
+  \(\sigma : S \xrightarrow{\ \sim\ } A\) a ring isomorphism; let \(f \in R\) and
+  \(f' \in S\) with \(\sigma(f')\) equal to the image of \(f\) in \(A\). Let
+  \(g : M_1 \to M_2\) be an \(S\)-linear map exhibiting \(M_2\) as the localization of
+  \(M_1\) at the powers of \(f'\); let \(N_1, N_2\) be \(A\)-modules, regarded also as
+  \(R\)-modules through \(R \to A\); let \(e_1 : M_1 \to N_1\) and \(e_2 : M_2 \to N_2\)
+  be additive isomorphisms that are \(\sigma\)-semilinear, i.e.
+  \(e_i(a \cdot x) = \sigma(a) \cdot e_i(x)\) for \(a \in S\); and let
+  \(h : N_1 \to N_2\) be an \(A\)-linear map intertwining \(g\), i.e.
+  \(h \circ e_1 = e_2 \circ g\). Then \(h\), regarded as an \(R\)-linear map, exhibits
+  \(N_2\) as the localization of \(N_1\) at the powers of \(f\).
+\end{lemma}
+\begin{proof}
+  \leanok
+  We check the three localization conditions in two stages.
+
+  \emph{Stage I: crossing \(\sigma\).} The map \(h\) is a localization at the powers of
+  \(\sigma(f')\) over \(A\).
+  \emph{Units:} for \(k \ge 0\), the semilinearity of \(e_2\) gives that the action of
+  \(\sigma(f')^k = \sigma(f'^k)\) on \(N_2\) equals
+  \(e_2 \circ (\text{action of } f'^k \text{ on } M_2) \circ e_2^{-1}\), a composite of
+  bijections because \(f'^k\) acts invertibly on the localization \(M_2\).
+  \emph{Surjectivity:} given \(y \in N_2\), choose \(x \in M_1\) and \(k\) with
+  \(f'^k \cdot e_2^{-1}(y) = g(x)\); applying \(e_2\) and semilinearity,
+  \(\sigma(f')^k \cdot y = e_2(g(x)) = h(e_1(x))\).
+  \emph{Uniqueness:} if \(h(y_1) = h(y_2)\) then, by the intertwining relation,
+  \(e_2\bigl(g(e_1^{-1} y_1)\bigr) = e_2\bigl(g(e_1^{-1} y_2)\bigr)\), so
+  \(g(e_1^{-1} y_1) = g(e_1^{-1} y_2)\); hence
+  \(f'^k \cdot e_1^{-1} y_1 = f'^k \cdot e_1^{-1} y_2\) for some \(k\), and applying
+  \(e_1\), \(\sigma(f')^k \cdot y_1 = \sigma(f')^k \cdot y_2\).
+
+  \emph{Stage II: descending to \(R\).} By hypothesis \(\sigma(f')\) is the image of
+  \(f\) under \(R \to A\), and by compatibility of the two module structures the action
+  of \(f^k\) through \(R\) coincides with the action of the image of \(f^k\) through
+  \(A\), on \(N_1\) and on \(N_2\). Each of the three conditions at the powers of \(f\)
+  over \(R\) is therefore literally the corresponding Stage-I condition at the powers of
+  \(\sigma(f')\) over \(A\): the units condition transfers because the two actions
+  coincide; surjectivity reads \(f^k \cdot y = \sigma(f')^k \cdot y = h(x)\); and
+  uniqueness likewise.
+\end{proof}
+
+\begin{lemma}[Section-transport producer: basic-open localization inside a cover member
+(gap1, Hfr)]
+  \label{lem:section_localization_hfr_basicOpen}
+  \lean{AlgebraicGeometry.Scheme.Modules.section_localization_hfr_basicOpen}
+  \leanok
+  \uses{lem:isIso_fromTildeΓ_basicOpen_of_quasicoherent,
+    lem:isLocalizedModule_restrict_of_isIso_fromTildeΓ,
+    lem:isLocalizedModule_powers_transport,
+    lem:modules_restrictFunctorIsoPullback_mathlib, lem:modules_pullback_mathlib}
+  Let \(M\) be a sheaf of modules on \(\Spec R\) with quasi-coherence data (an open cover
+  \(\{X_i\}\) with per-member presentations, as in
+  \cref{lem:isIso_fromTildeΓ_basicOpen_of_quasicoherent}), let \(f, s \in R\), and
+  suppose \(D(s) \subseteq X_i\) for some \(i\). Then the section restriction
+  \[
+    \Gamma\bigl(M, D(s)\bigr) \longrightarrow \Gamma\bigl(M, D(f) \cap D(s)\bigr)
+  \]
+  exhibits the target as the localization of \(\Gamma(M, D(s))\) at the powers of \(f\),
+  over \(R\).
+\end{lemma}
+\begin{proof}
+  \leanok
+  \uses{lem:isIso_fromTildeΓ_basicOpen_of_quasicoherent,
+    lem:isLocalizedModule_restrict_of_isIso_fromTildeΓ,
+    lem:isLocalizedModule_powers_transport,
+    lem:modules_restrictFunctorIsoPullback_mathlib, lem:modules_pullback_mathlib}
+  Let \(W := \iota_{X_i}^{-1}(D(s))\) be the affine open of the subscheme \(Z := X_i\)
+  corresponding to \(D(s)\), put \(S := \Gamma(Z, W)\), and let
+  \(j : \Spec S \to \Spec R\) be the composite open immersion
+  \(\Spec S \cong W \hookrightarrow Z \hookrightarrow \Spec R\) (the affine
+  identification of \(W\) followed by the two canonical immersions). Its image is
+  \(D(s)\): the first leg is an isomorphism onto \(W\), and
+  \(\iota_{X_i}(W) = X_i \cap D(s) = D(s)\).
+
+  Write \(M' := j^{*} M\) (\cref{lem:modules_pullback_mathlib}). The per-element
+  transport \cref{lem:isIso_fromTildeΓ_basicOpen_of_quasicoherent} gives invertibility of
+  the tilde--\(\Gamma\) counit for the iterated pullback of \(M\) along the three legs of
+  \(j\); pullback along a composite agrees with the composite of the pullbacks up to
+  canonical natural isomorphism, and invertibility of the counit is invariant under
+  isomorphism of modules (the essential image of the tilde functor is closed under
+  isomorphism). Hence the counit of \(M'\) is invertible, and by
+  \cref{lem:isLocalizedModule_restrict_of_isIso_fromTildeΓ}, for every \(f' \in S\) the
+  restriction \(\Gamma(M', \top) \to \Gamma(M', D(f'))\) is the localization at the
+  powers of \(f'\) over \(S\).
+
+  Let \(\sigma : S \xrightarrow{\ \sim\ } \Gamma(\Spec R, D(s))\) be the ring comparison
+  of the open immersion \(j\) on top sections
+  (\(S \cong \Gamma(\Spec S, \top) \cong \Gamma(\Spec R, j(\top))\), and
+  \(j(\top) = D(s)\)), and choose \(f' := \sigma^{-1}\bigl(f|_{D(s)}\bigr)\). The image
+  \(j\bigl(D(f')\bigr)\) is the locus of \(D(s)\) where \(\sigma(f') = f|_{D(s)}\) is
+  invertible, that is, \(j\bigl(D(f')\bigr) = D(f) \cap D(s)\).
+
+  Since \(j\) is an open immersion, applying the section functor to the identification of
+  the pullback with the restriction (\cref{lem:modules_restrictFunctorIsoPullback_mathlib})
+  gives additive isomorphisms
+  \(e_1 : \Gamma(M', \top) \cong \Gamma\bigl(M, D(s)\bigr)\) and
+  \(e_2 : \Gamma(M', D(f')) \cong \Gamma\bigl(M, D(f) \cap D(s)\bigr)\) which intertwine
+  the two restriction maps (naturality of the identification in the open) and are
+  \(\sigma\)-semilinear over the structure-sheaf comparisons: the action on the sections
+  of the pullback is through the immersion's section-ring isomorphism.
+
+  Finally apply the combiner \cref{lem:isLocalizedModule_powers_transport} with
+  \(A := \Gamma(\Spec R, D(s))\) — an \(R\)-algebra through restriction of global
+  sections — the isomorphism \(\sigma\), the elements \(f\) and \(f'\) (so that
+  \(\sigma(f')\) is the image of \(f\) in \(A\)), the localization
+  \(g := \bigl(\Gamma(M', \top) \to \Gamma(M', D(f'))\bigr)\), the comparisons
+  \(e_1, e_2\), and \(h := \bigl(\Gamma(M, D(s)) \to \Gamma(M, D(f) \cap D(s))\bigr)\):
+  the conclusion is that \(h\) is the localization at the powers of \(f\) over \(R\).
+\end{proof}
+
+\begin{lemma}[Section-localization descent for quasi-coherent modules (gap1 keystone)]
+  \label{lem:section_localization_descent}
+  \lean{AlgebraicGeometry.Scheme.Modules.isLocalizedModule_basicOpen_descent}
+  \leanok
+  \uses{lem:section_localization_descent_of_basicOpen_cover,
+    lem:section_localization_hfr_basicOpen}
+  For a quasi-coherent sheaf of modules \(M\) on \(\Spec R\) and \(f \in R\), the section
+  restriction \(\Gamma(M, \top) \to \Gamma(M, D(f))\) exhibits the target as the
+  localization \(\Gamma(M, \top)[1/f]\) over \(R\). This is the statement of
+  \cref{lem:qcoh_section_localization_basicOpen} at the affine open \(\top\) of
+  \(\Spec R\), proved here by finite-cover descent --- not through the affine
+  equivalence of quasi-coherent modules with modules, which is instead \emph{derived}
+  from this lemma in \cref{lem:qcoh_affine_isIso_fromTildeΓ}.
+\end{lemma}
+\begin{proof}
+  \leanok
+  \uses{lem:section_localization_descent_of_basicOpen_cover,
+    lem:section_localization_hfr_basicOpen}
+  Quasi-coherence provides a cover \(\{X_i\}\) of \(\Spec R\) with per-member
+  presentations. Refine it to a finite basic-open cover: the basic opens form a basis of
+  \(\Spec R\), so every point has a basic-open neighbourhood contained in some \(X_i\);
+  quasi-compactness of \(\Spec R\) extracts a finite family \(t \subseteq R\) with each
+  \(D(r)\), \(r \in t\), contained in some \(X_i\), and covering is equivalent to \(t\)
+  generating the unit ideal. For every basic open \(D(u)\) contained in some \(D(r)\)
+  with \(r \in t\) — hence contained in a cover member \(X_i\) — the producer
+  \cref{lem:section_localization_hfr_basicOpen} supplies the localization datum at
+  \(D(u)\). The basic-open cover form
+  \cref{lem:section_localization_descent_of_basicOpen_cover} then yields the conclusion.
+\end{proof}
 
 
 \subsection{G1-assemble: from per-basic-open section localization to the
 \texorpdfstring{$\widetilde{(-)}$}{tilde}-counit}
 
-This subsection records the bridge \(\text{section-localization on every basic open} \Rightarrow
-\mathrm{IsIso}\,M.\mathrm{fromTildeΓ}\): given that the section restriction localizes on every basic
-open, the tilde-Gamma counit is an isomorphism. Together with its converse
+This subsection records the bridge \emph{section localization on every basic open}
+\(\Rightarrow\) \emph{invertible tilde--\(\Gamma\) counit}: given that the section
+restriction localizes on every basic open, the tilde--\(\Gamma\) counit is an
+isomorphism. Together with its converse
 \cref{lem:isLocalizedModule_restrict_of_isIso_fromTildeΓ} it assembles the equivalence
 \cref{lem:isIso_fromTildeΓ_iff_isLocalizedModule_restrict}, which is exactly what makes G1-core
 (\cref{lem:qcoh_affine_section_localization}) and gap1
 (\cref{lem:qcoh_affine_isIso_fromTildeΓ}) interderivable -- the route by which G1-core is obtained as
-a corollary of gap1. The supporting Mathlib facts are recorded as dependency anchors.
-
-% --- Mathlib dependency anchors for the G1-assemble step ---
-
+a corollary of gap1. The supporting Mathlib facts enter through the tilde--\(\Gamma\)
+adjunction anchor (\cref{lem:tilde_gamma_adjunction_mathlib}).
 
 % --- Project-original G1-assemble nodes (Lean realizations) ---
+
+\begin{lemma}[Basic-open section localization for a module with invertible
+tilde--\(\Gamma\) counit]
+  \label{lem:isLocalizedModule_restrict_of_isIso_fromTildeΓ}
+  \lean{AlgebraicGeometry.isLocalizedModule_restrict_of_isIso_fromTildeΓ}
+  \leanok
+  \uses{lem:tilde_gamma_adjunction_mathlib}
+  % SOURCE: Stacks, Schemes, Lemma \texttt{lemma-widetilde-pullback} and the remark
+  % following it (restricting a tilde to a standard open D(f) yields the tilde of the
+  % localized module; read from references/stacks-schemes.tex, L1242-L1274).
+  \textit{Source: Stacks, Schemes, Lemma \texttt{widetilde-pullback} (sections of a
+  tilde over a basic open are the localized module).}
+  Let \(M\) be a sheaf of modules on \(\Spec R\) whose tilde--\(\Gamma\) counit
+  \(\widetilde{\Gamma(M, \top)} \to M\) (\cref{lem:tilde_gamma_adjunction_mathlib}) is an
+  isomorphism. Then for every \(f \in R\) the section restriction
+  \(\Gamma(M, \top) \to \Gamma(M, D(f))\) exhibits the target as the localization of
+  \(\Gamma(M, \top)\) at the powers of \(f\), over \(R\).
+\end{lemma}
+\begin{proof}
+  \leanok
+  \uses{lem:tilde_gamma_adjunction_mathlib}
+  First let \(M = \widetilde{N}\) be a tilde. The unit
+  \(N \to \Gamma(\widetilde{N}, \top)\) of the adjunction
+  (\cref{lem:tilde_gamma_adjunction_mathlib}) is an isomorphism, and the canonical map
+  \(N \to \Gamma(\widetilde{N}, D(f))\) exhibits the target as the localized module
+  \(N_f\) — the sections of a tilde over a basic open are the localization. The
+  canonical map factors as the unit followed by the section restriction, so the
+  restriction \(\Gamma(\widetilde{N}, \top) \to \Gamma(\widetilde{N}, D(f))\) is the
+  composite of the inverse unit isomorphism with a localization map, hence itself a
+  localization at the powers of \(f\).
+
+  For general \(M\), put \(N := \Gamma(M, \top)\). The counit isomorphism
+  \(\widetilde{N} \cong M\) induces, naturally in the open, \(R\)-linear isomorphisms
+  \(\Gamma(\widetilde{N}, \top) \cong \Gamma(M, \top)\) and
+  \(\Gamma(\widetilde{N}, D(f)) \cong \Gamma(M, D(f))\) intertwining the two restriction
+  maps. Pre- and post-composing a localization map with \(R\)-linear isomorphisms
+  compatible in this way preserves the localization property.
+\end{proof}
+
+\begin{lemma}[Characterization of the invertible tilde--\(\Gamma\) counit by
+section localization]
+  \label{lem:isIso_fromTildeΓ_iff_isLocalizedModule_restrict}
+  \lean{AlgebraicGeometry.isIso_fromTildeΓ_iff_isLocalizedModule_restrict}
+  \leanok
+  \uses{lem:isLocalizedModule_restrict_of_isIso_fromTildeΓ,
+    lem:tilde_gamma_adjunction_mathlib}
+  For a sheaf of modules \(M\) on \(\Spec R\), the tilde--\(\Gamma\) counit
+  \(\widetilde{\Gamma(M, \top)} \to M\) is an isomorphism if and only if for every
+  \(f \in R\) the section restriction \(\Gamma(M, \top) \to \Gamma(M, D(f))\) exhibits
+  the target as the localization of \(\Gamma(M, \top)\) at the powers of \(f\) over
+  \(R\).
+\end{lemma}
+\begin{proof}
+  \leanok
+  \uses{lem:isLocalizedModule_restrict_of_isIso_fromTildeΓ,
+    lem:tilde_gamma_adjunction_mathlib}
+  The forward direction is \cref{lem:isLocalizedModule_restrict_of_isIso_fromTildeΓ}.
+
+  For the converse, write \(N := \Gamma(M, \top)\) and let
+  \(\varepsilon : \widetilde{N} \to M\) be the counit. Fix \(f \in R\). The
+  \(D(f)\)-component of \(\varepsilon\) is a map between two localizations of \(N\) at
+  the powers of \(f\): the source \(\Gamma(\widetilde{N}, D(f))\) receives the canonical
+  map from \(N\) (sections of a tilde over a basic open, as in the forward direction),
+  and the target \(\Gamma(M, D(f))\) receives the restriction
+  \(N = \Gamma(M, \top) \to \Gamma(M, D(f))\), a localization by hypothesis. The
+  component intertwines these two maps out of \(N\): the counit composed with the
+  canonical section map is the section restriction, by the compatibility of the counit
+  with the adjunction unit (\cref{lem:tilde_gamma_adjunction_mathlib}) and naturality.
+  A map between two localizations of the same module at the same multiplicative set
+  commuting with the two localization maps is the canonical isomorphism between them,
+  hence bijective. Thus \(\varepsilon\) is an isomorphism on every basic open.
+
+  Since the basic opens form a basis of \(\Spec R\), \(\varepsilon\) is an isomorphism
+  on every stalk: injective, because a germ in the kernel is represented by a section
+  over some basic neighbourhood killed by \(\varepsilon\) there, hence zero; surjective,
+  because every germ of \(M\) is the germ of a section over some basic open, which is
+  hit by the corresponding section of \(\widetilde{N}\). A morphism of sheaves that is
+  an isomorphism on all stalks is an isomorphism, and a morphism of sheaves of
+  modules whose underlying morphism of sheaves is an isomorphism is itself an
+  isomorphism.
+\end{proof}
+
+\begin{lemma}[A quasi-coherent module on an affine scheme is the tilde of its sections
+(gap1, Stacks 01I8)]
+  \label{lem:qcoh_affine_isIso_fromTildeΓ}
+  \lean{AlgebraicGeometry.Scheme.Modules.isIso_fromTildeΓ_of_isQuasicoherent}
+  \leanok
+  \uses{lem:section_localization_descent,
+    lem:isIso_fromTildeΓ_iff_isLocalizedModule_restrict}
+  % SOURCE: Stacks, Schemes, Lemma \texttt{lemma-quasi-coherent-affine} (read from
+  % references/stacks-schemes.tex, L1278-L1340): a quasi-coherent module on Spec(R) is
+  % isomorphic to the sheaf associated to the R-module of its global sections.
+  \textit{Source: Stacks~\href{https://stacks.math.columbia.edu/tag/01I8}{01I8}
+  (\texttt{lemma-quasi-coherent-affine}).}
+  For a quasi-coherent sheaf of modules \(M\) on \(\Spec R\), the tilde--\(\Gamma\)
+  counit \(\widetilde{\Gamma(M, \top)} \to M\) is an isomorphism; equivalently, \(M\)
+  lies in the essential image of the tilde functor, i.e. \(M\) is isomorphic to the
+  tilde of an \(R\)-module.
+\end{lemma}
+\begin{proof}
+  \leanok
+  \uses{lem:section_localization_descent,
+    lem:isIso_fromTildeΓ_iff_isLocalizedModule_restrict}
+  By the keystone descent \cref{lem:section_localization_descent}, every basic-open
+  section restriction \(\Gamma(M, \top) \to \Gamma(M, D(f))\) is the localization at the
+  powers of \(f\). The reverse implication of
+  \cref{lem:isIso_fromTildeΓ_iff_isLocalizedModule_restrict} concludes.
+\end{proof}
+
+\begin{lemma}[Affine section localization for quasi-coherent modules (G1-core)]
+  \label{lem:qcoh_affine_section_localization}
+  \lean{AlgebraicGeometry.Scheme.Modules.isLocalizedModule_basicOpen_of_isQuasicoherent}
+  \leanok
+  \uses{lem:qcoh_affine_isIso_fromTildeΓ,
+    lem:isLocalizedModule_restrict_of_isIso_fromTildeΓ}
+  For a quasi-coherent sheaf of modules \(M\) on \(\Spec R\) and \(f \in R\), the
+  section restriction \(\Gamma(M, \top) \to \Gamma(M, D(f))\) exhibits the target as the
+  localization \(\Gamma(M, \top)[1/f]\) over \(R\). This is the statement of
+  \cref{lem:section_localization_descent} in its clean named form — obtained here as a
+  corollary of gap1 rather than by re-running the descent — and the affine instance
+  (\(X = \Spec R\), \(U = \top\)) of the general-scheme keystone
+  \cref{lem:qcoh_section_localization_basicOpen}.
+\end{lemma}
+\begin{proof}
+  \leanok
+  \uses{lem:qcoh_affine_isIso_fromTildeΓ,
+    lem:isLocalizedModule_restrict_of_isIso_fromTildeΓ}
+  Gap1 (\cref{lem:qcoh_affine_isIso_fromTildeΓ}) makes the tilde--\(\Gamma\) counit of
+  \(M\) an isomorphism, and
+  \cref{lem:isLocalizedModule_restrict_of_isIso_fromTildeΓ} applies.
+\end{proof}
 
 
 \begin{definition}
@@ -4188,6 +4648,8 @@ the tilde--$\Gamma$ comparison backwards at each affine open of the base.
   \label{lem:qcoh_section_localization_basicOpen}
   \lean{AlgebraicGeometry.Scheme.Modules.isLocalizedModule_basicOpen}
   \leanok
+  \uses{lem:qcoh_affine_isIso_fromTildeΓ,
+    lem:isLocalizedModule_restrict_of_isIso_fromTildeΓ}
   \textit{Source: Stacks~\href{https://stacks.math.columbia.edu/tag/01IB}{01IB}
   / Hartshorne II.5.3 (\texttt{lemma-invert-f-sections}, affine case).}
   Let $X$ be a scheme, $\mathcal{M}$ a quasi-coherent
@@ -4198,13 +4660,17 @@ the tilde--$\Gamma$ comparison backwards at each affine open of the base.
 \end{lemma}
 \begin{proof}
   \leanok
+  \uses{lem:qcoh_affine_isIso_fromTildeΓ,
+    lem:isLocalizedModule_restrict_of_isIso_fromTildeΓ}
   Pull $\mathcal{M}$ back along the affine immersion
   $\operatorname{Spec} \Gamma(X, U) \to X$; the pullback is quasi-coherent
   (pullback along an open immersion preserves quasi-coherence), so its
-  tilde--$\Gamma$ counit is an isomorphism, identifying it with
+  tilde--$\Gamma$ counit is an isomorphism
+  (\cref{lem:qcoh_affine_isIso_fromTildeΓ}), identifying it with
   $\widetilde{\Gamma(\mathcal{M}, U)}$; the sections of a tilde over a basic
-  open are the localization, and the section comparison transports the
-  statement back to $X$.
+  open are the localization
+  (\cref{lem:isLocalizedModule_restrict_of_isIso_fromTildeΓ}), and the
+  section comparison transports the statement back to $X$.
 \end{proof}
 
 \begin{lemma}[qcqs section localization, torsion half]
@@ -4387,7 +4853,7 @@ remains Step 2 of the 3-step chain).
 [Quasi-coherent module on an affine open is \texttt{tilde} of its sections (Stacks 01I8)]
   \label{lem:tildeIso_of_isQuasicoherent_isAffineOpen}
   \lean{AlgebraicGeometry.tildeIso_of_isQuasicoherent_isAffineOpen}
-  \uses{def:quot_canonical_basechange_map}
+  \uses{def:quot_canonical_basechange_map, lem:qcoh_affine_isIso_fromTildeΓ}
   \textit{Source: Stacks~\href{https://stacks.math.columbia.edu/tag/01I8}{01I8}
   (a quasi-coherent module on an affine scheme is \(\widetilde M\) for
   some module).}
@@ -4412,14 +4878,14 @@ remains Step 2 of the 3-step chain).
 \begin{proof}
   \leanok
   \uses{def:quot_canonical_basechange_map, lem:modules_pullback_mathlib,
-    lem:modules_restrictFunctorIsoPullback_mathlib}
+    lem:modules_restrictFunctorIsoPullback_mathlib,
+    lem:qcoh_affine_isIso_fromTildeΓ}
   Write \(j = \mathtt{hV.fromSpec} : \Spec\Gamma(X,V) \to X\) (an open
   immersion with image \(V\)) and \(G = j^{*}\mathcal N\). Pullback along an
-  open immersion preserves quasi-coherence
-  (Lean \texttt{isQuasicoherent\_pullback\_fromSpec}), so \(G\) is a
+  open immersion preserves quasi-coherence, so \(G\) is a
   quasi-coherent module on the affine scheme \(\Spec\Gamma(X,V)\); by the
-  affine structure theorem (Stacks 01I8, Lean
-  \texttt{isIso\_fromTildeΓ\_of\_isQuasicoherent}) the tilde--\(\Gamma\)
+  affine structure theorem (\cref{lem:qcoh_affine_isIso_fromTildeΓ},
+  Stacks 01I8) the tilde--\(\Gamma\)
   counit \(\widetilde{\Gamma(G,\top)} \to G\) is an isomorphism.
 
   The canonical base map \(b : \Gamma(\mathcal N, V) \to \Gamma(G, \top)\)
