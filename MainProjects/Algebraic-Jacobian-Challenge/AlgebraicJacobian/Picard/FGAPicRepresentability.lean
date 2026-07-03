@@ -473,6 +473,51 @@ noncomputable instance groupSchemeStructure {k : Type u} [Field k]
   CommGrpObj.ofRepresentableBy (PicScheme C) (picSharpCommGrp C)
     ((representable C).ofIso (picSharpCommGrpForgetIso C))
 
+/-! ## §6. Local finiteness of the Picard scheme
+
+Kleiman §4 Thm `th:main`(1): the Picard scheme is separated and locally of
+finite type over the base. `HasPicScheme` packages only the representability
+existential (run-0005 T5 check, memory `I-0037`), so local finiteness needs
+its own carrier. It is what the identity-component substrate
+(`Picard/IdentityComponent.lean`, `GroupScheme.IdentityComponent`) consumes
+to specialise to `G = PicScheme C`. -/
+
+/-- Typeclass asserting that the structural morphism of the Picard scheme is
+locally of finite type (Kleiman §4 Thm `th:main`(1): `Pic_{C/k}` is a
+disjoint union of open quasi-projective `k`-subschemes, hence locally of
+finite type). The `⟨sorry⟩` instance below, conditional on
+`[HasRationalPoint C]`, is the unique sorry-carrying site; the statement is
+true because representing objects are unique up to isomorphism and
+`LocallyOfFiniteType` is invariant under isomorphism, so the property
+transfers from Kleiman's construction to the `Classical.choose` witness. -/
+class PicSchemeLocallyOfFiniteType {k : Type u} [Field k]
+    (C : Over (Spec (.of k)))
+    [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
+    [GeometricallyIntegral C.hom] [HasPicScheme C] : Prop where
+  locallyOfFiniteType : LocallyOfFiniteType (PicScheme C).hom
+
+/-- Existence instance for `PicSchemeLocallyOfFiniteType`, conditional on the
+`k`-rational point (like `instHasPicScheme`, on which it depends). This is
+one of the sorry-carrying sites of the file; content: Kleiman §4 Thm
+`th:main`(1). -/
+instance instPicSchemeLocallyOfFiniteType {k : Type u} [Field k]
+    (C : Over (Spec (.of k)))
+    [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
+    [GeometricallyIntegral C.hom] [HasRationalPoint C] :
+    PicSchemeLocallyOfFiniteType C :=
+  ⟨sorry⟩
+
+/-- Projection of `PicSchemeLocallyOfFiniteType` to the Mathlib morphism
+property, so that instance search finds `LocallyOfFiniteType (PicScheme
+C).hom` whenever the carrier class is in scope (as the identity-component
+substrate requires). -/
+instance {k : Type u} [Field k] (C : Over (Spec (.of k)))
+    [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
+    [GeometricallyIntegral C.hom] [HasPicScheme C]
+    [PicSchemeLocallyOfFiniteType C] :
+    LocallyOfFiniteType (PicScheme C).hom :=
+  PicSchemeLocallyOfFiniteType.locallyOfFiniteType
+
 end PicScheme
 
 end Scheme

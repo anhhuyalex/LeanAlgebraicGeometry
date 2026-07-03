@@ -137,7 +137,8 @@ representability cone) closes `thm:pic0_tangent_space_iso`. -/
 theorem tangentSpaceCotangentDual {k : Type u} [Field k]
     (C : Over (Spec (.of k)))
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
-    [GeometricallyIntegral C.hom]
+    [GeometricallyIntegral C.hom] [HasPicScheme C]
+    [PicScheme.PicSchemeLocallyOfFiniteType C]
     (hgrp : Nonempty (GrpObj (Pic0Scheme C))) :
     Nonempty (Σ' (e : Spec (.of k) ⟶ (Pic0Scheme C).left),
       (e ≫ (Pic0Scheme C).hom = 𝟙 (Spec (.of k))) ×'
@@ -182,7 +183,8 @@ the dimension corollary `dim_k T₀ Pic⁰ = dim_k H¹ = g(C)`. -/
 theorem tangentSpaceIso {k : Type u} [Field k]
     (C : Over (Spec (.of k)))
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
-    [GeometricallyIntegral C.hom] :
+    [GeometricallyIntegral C.hom] [HasPicScheme C]
+    [PicScheme.PicSchemeLocallyOfFiniteType C] :
     Nonempty (Σ' (e : Spec (.of k) ⟶ (Pic0Scheme C).left),
       IsLocalRing.CotangentSpace ((Pic0Scheme C).left.presheaf.stalk (e.base default))
         ≃+ Scheme.HModule k (Scheme.toModuleKSheaf C) 1) :=
@@ -206,7 +208,8 @@ vanishing `H²(C, 𝒪_C) = 0` (the obstruction to lifting tangent vectors). -/
 theorem smooth {k : Type u} [Field k]
     (C : Over (Spec (.of k)))
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
-    [GeometricallyIntegral C.hom] :
+    [GeometricallyIntegral C.hom] [HasPicScheme C]
+    [PicScheme.PicSchemeLocallyOfFiniteType C] :
     Smooth (Pic0Scheme C).hom :=
   sorry
 
@@ -225,7 +228,8 @@ a normal integral scheme are sheaves of Cartier divisors). -/
 theorem proper {k : Type u} [Field k]
     (C : Over (Spec (.of k)))
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
-    [GeometricallyIntegral C.hom] :
+    [GeometricallyIntegral C.hom] [HasPicScheme C]
+    [PicScheme.PicSchemeLocallyOfFiniteType C] :
     IsProper (Pic0Scheme C).hom :=
   sorry
 
@@ -244,7 +248,8 @@ identify `IdentityComponent (PicScheme C)` with `Pic0Scheme C` via the
 theorem geometricallyIrreducible {k : Type u} [Field k]
     (C : Over (Spec (.of k)))
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
-    [GeometricallyIntegral C.hom] :
+    [GeometricallyIntegral C.hom] [HasPicScheme C]
+    [PicScheme.PicSchemeLocallyOfFiniteType C] :
     GeometricallyIrreducible (Pic0Scheme C).hom :=
   sorry
 
@@ -271,7 +276,8 @@ The proof (iter-194+) assembles the four conjuncts: `proper` (this file),
 theorem isAbelianVariety {k : Type u} [Field k]
     (C : Over (Spec (.of k)))
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
-    [GeometricallyIntegral C.hom] :
+    [GeometricallyIntegral C.hom] [HasPicScheme C]
+    [PicScheme.PicSchemeLocallyOfFiniteType C] :
     IsProper (Pic0Scheme C).hom ∧ Smooth (Pic0Scheme C).hom ∧
       GeometricallyIrreducible (Pic0Scheme C).hom ∧
       Nonempty (GrpObj (Pic0Scheme C)) :=

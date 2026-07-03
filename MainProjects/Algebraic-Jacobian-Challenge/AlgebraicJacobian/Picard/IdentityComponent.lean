@@ -980,17 +980,23 @@ open and closed subgroup scheme of `Pic_{C/k}` of finite type over `k`,
 geometrically irreducible, and its formation commutes with extension of the
 base field.
 
-iter-186+: the body unwinds to `GroupScheme.IdentityComponent (PicScheme C)`
-once the `[LocallyOfFiniteType (PicScheme C).hom]` instance lands on
-`PicScheme C` (it follows from the Kleiman §4 structure: `Pic_{C/k}` is
-locally of finite type as the disjoint union of open quasi-projective
-`k`-subschemes). For the iter-185 file-skeleton the body is a typed `sorry`. -/
+Run 0008: the body is REAL — it unwinds to
+`GroupScheme.IdentityComponent (PicScheme C)`, as the iter-186 docstring
+promised. The two ingredients landed with the run-0008 FGA rewire: the
+group structure `GrpObj (PicScheme C)` is genuinely proved (Yoneda
+transport, `PicScheme.groupSchemeStructure`), and local finiteness is the
+new typed-sorry carrier `PicSchemeLocallyOfFiniteType` (true by Kleiman §4
+Thm `th:main`(1)). Consequently all the §1 substrate theorems
+(`isOpenSubgroupScheme`, `isSubgroupHomomorphism`,
+`identityComponent_geometricallyConnected`, `baseChangeIso`) now apply to
+`Pic⁰_{C/k}` definitionally. -/
 noncomputable def Pic0Scheme {k : Type u} [Field k]
     (C : Over (Spec (.of k)))
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
-    [GeometricallyIntegral C.hom] :
+    [GeometricallyIntegral C.hom] [HasPicScheme C]
+    [PicScheme.PicSchemeLocallyOfFiniteType C] :
     Over (Spec (.of k)) :=
-  sorry
+  GroupScheme.IdentityComponent (PicScheme C)
 
 /-! ## §3. The degree map
 
@@ -1080,7 +1086,8 @@ For the iter-185 file-skeleton the body is a typed `sorry`. -/
 theorem isAbelianVariety {k : Type u} [Field k]
     (C : Over (Spec (.of k)))
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
-    [GeometricallyIntegral C.hom] :
+    [GeometricallyIntegral C.hom] [HasPicScheme C]
+    [PicScheme.PicSchemeLocallyOfFiniteType C] :
     IsProper (Pic0Scheme C).hom ∧ Smooth (Pic0Scheme C).hom ∧
       GeometricallyIrreducible (Pic0Scheme C).hom ∧
       Nonempty (GrpObj (Pic0Scheme C)) :=
@@ -1100,7 +1107,8 @@ by `def:genus`. -/
 theorem finrank_eq_genus {k : Type u} [Field k]
     (C : Over (Spec (.of k)))
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
-    [GeometricallyIntegral C.hom] :
+    [GeometricallyIntegral C.hom] [HasPicScheme C]
+    [PicScheme.PicSchemeLocallyOfFiniteType C] :
     topologicalKrullDim (Pic0Scheme C).left = (AlgebraicGeometry.genus C : WithBot ℕ∞) :=
   sorry
 
@@ -1122,7 +1130,8 @@ zero. -/
 theorem kPoints_iff_kerDegree {k : Type u} [Field k]
     (C : Over (Spec (.of k)))
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
-    [GeometricallyIntegral C.hom] [HasPicScheme C] :
+    [GeometricallyIntegral C.hom] [HasPicScheme C]
+    [PicScheme.PicSchemeLocallyOfFiniteType C] :
     Nonempty (Σ' (inc : (Pic0Scheme C).left ⟶ (PicScheme C).left),
       ∀ (lambda : Spec (.of k) ⟶ (PicScheme C).left),
         (∃ mu : Spec (.of k) ⟶ (Pic0Scheme C).left, mu ≫ inc = lambda) ↔
