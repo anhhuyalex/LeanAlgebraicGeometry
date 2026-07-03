@@ -843,11 +843,10 @@ stratification conclusion of `flatteningStratification` applies to
 stratification `{T_f ⊆ T}` set-theoretically covering `T` disjointly,
 such that `𝓕|_{C ×_k T_f}` is flat over `T_f` for each `f`.
 
-iter-177+: the body invokes `flatteningStratification` on the
-base-changed morphism `pullback.snd C.hom T.hom : (C ×_k T) ⟶ T`,
-using that `IsProper (pullback.snd C.hom T.hom)` holds by base change
-of `IsProper C.hom`. For the iter-176 file-skeleton the body is a
-typed `sorry`. -/
+The body invokes `flatteningStratification` on the base-changed
+morphism `pullback.snd C.hom T.hom : (C ×_k T) ⟶ T`, using that
+`IsProper (pullback.snd C.hom T.hom)` holds by base change of
+`IsProper C.hom`; hence this corollary is proved (no `sorry`). -/
 theorem flatteningStratification.ofCurve {k : Type u} [Field k]
     (C : Over (Spec (.of k)))
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
