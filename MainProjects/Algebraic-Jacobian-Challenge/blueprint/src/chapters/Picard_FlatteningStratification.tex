@@ -366,10 +366,189 @@ layer as standalone module theory.
   \(0 \to M_{i-1} \to M_i \to M_i/M_{i-1} \to 0\)).
 \end{proof}
 
-\begin{theorem}
+\section{Geometric glue: from generic freeness to generic flatness}
 
-\leanok
-[Generic flatness, geometric form]
+The algebraic statement concerns one module over one algebra; the geometric
+statement quantifies over all affine pairs below the witness open. The glue
+consists of a mixed-base stability lemma for flatness under module
+localization, two restriction-compatibility lemmas for the induced module
+structures, and a two-layer basic-open reduction.
+
+\begin{lemma}[Mixed-base stability of flatness under module localization]
+  \leanok
+  \label{lem:flat_localizedModule_algebra}
+  \lean{Module.Flat.of_isLocalizedModule_algebra}
+  Let \(B\) be an algebra over a commutative ring \(R\), let \(N\) be a
+  \(B\)-module which is flat as an \(R\)-module, and let
+  \(g : N \to N'\) be a localization of \(B\)-modules at a submonoid
+  \(p \subseteq B\). Then \(N'\) is flat as an \(R\)-module.
+\end{lemma}
+\begin{proof}
+  \leanok
+  Let \(f : Q \hookrightarrow Q'\) be an injective map of \(R\)-modules. The
+  square
+  \[
+    \begin{array}{ccc}
+      N \otimes_R Q & \longrightarrow & N \otimes_R Q' \\
+      \downarrow & & \downarrow \\
+      N' \otimes_R Q & \longrightarrow & N' \otimes_R Q'
+    \end{array}
+  \]
+  identifies the bottom map \(\mathrm{id}_{N'} \otimes f\) with the
+  localization at \(p\) of the top map \(\mathrm{id}_N \otimes f\): indeed
+  \(N' \otimes_R Q\) is the localization of the \(B\)-module
+  \(N \otimes_R Q\) at \(p\) (localization commutes with \(\, \otimes_R Q\),
+  because \(S^{-1}(N \otimes_R Q) = S^{-1}B \otimes_B (N \otimes_R Q)
+  = (S^{-1}B \otimes_B N) \otimes_R Q\)), and localizing the top map yields
+  the bottom one. The top map is injective by flatness of \(N\) over \(R\),
+  and localization of modules preserves injectivity; hence
+  \(\mathrm{id}_{N'} \otimes f\) is injective.
+\end{proof}
+
+\begin{lemma}[Fibre-side restriction compatibility of \(\mathrm{appLE}\)]
+  \leanok
+  \label{lem:appLE_res_apply}
+  \lean{AlgebraicGeometry.appLE_res_apply}
+  Let \(p : X \to S\) be a morphism of schemes, \(U \subseteq S\) open,
+  \(W' \subseteq W \subseteq p^{-1}(U)\) opens of \(X\), and
+  \(u \in \Gamma(S, U)\). Then restricting
+  \(p^\sharp_{U,W}(u) \in \Gamma(X, W)\) to \(W'\) yields
+  \(p^\sharp_{U,W'}(u)\).
+\end{lemma}
+\begin{proof}
+  \leanok
+  Both sides are the composite of \(p^\sharp\) with restriction along
+  \(W' \subseteq W \subseteq p^{-1}(U)\); this is the naturality of
+  \(p^\sharp\) in the target open.
+\end{proof}
+
+\begin{lemma}[Base-side restriction compatibility of \(\mathrm{appLE}\)]
+  \leanok
+  \label{lem:appLE_base_res_apply}
+  \lean{AlgebraicGeometry.appLE_base_res_apply}
+  Let \(p : X \to S\) be a morphism of schemes, \(U' \subseteq U \subseteq S\)
+  opens, \(W \subseteq p^{-1}(U')\) an open of \(X\), and
+  \(u \in \Gamma(S, U)\). Then
+  \(p^\sharp_{U',W}\bigl(u|_{U'}\bigr) = p^\sharp_{U,W}(u)\).
+\end{lemma}
+\begin{proof}
+  \leanok
+  Naturality of \(p^\sharp\) in the source open.
+\end{proof}
+
+\begin{lemma}[Section flatness transports along equal opens]
+  \leanok
+  \label{lem:flat_sections_congr}
+  \lean{AlgebraicGeometry.flat_sections_congr}
+  Let \(p : X \to S\), \(\mathcal F\) a module sheaf on \(X\),
+  \(U_0 \subseteq S\) open, and \(O_1 = O_2 \subseteq p^{-1}(U_0)\) equal
+  opens of \(X\). If \(\Gamma(\mathcal F, O_1)\) is flat over
+  \(\Gamma(S, U_0)\) (via \(p^\sharp\)), then so is
+  \(\Gamma(\mathcal F, O_2)\).
+\end{lemma}
+\begin{proof}
+  \leanok
+  Immediate: the two data coincide.
+\end{proof}
+
+\begin{lemma}[Chart-basic core of generic flatness]
+  \leanok
+  \label{lem:flat_section_chartBasic}
+  \lean{AlgebraicGeometry.flat_section_chartBasic}
+  \uses{def:coherent_sheaf_flat}
+  Let \(p : X \to S\), let \(\mathcal F\) be quasi-coherent on \(X\), let
+  \(U_0 \subseteq S\) be open, and let \(W_j \subseteq p^{-1}(U_0)\) be an
+  affine chart. Let \(g \in A := \Gamma(S, U_0)\) be such that the localized
+  section module \(\Gamma(\mathcal F, W_j)_g\) is free over \(A_g\). Then for
+  every \(c \in \Gamma(X, W_j)\) with \(D(c) \subseteq p^{-1}(D(g))\), the
+  module \(\Gamma(\mathcal F, D(c))\) is flat over \(A\).
+\end{lemma}
+\begin{proof}
+  \leanok
+  \uses{lem:flat_localizedModule_algebra, lem:appLE_res_apply,
+    lem:flat_sections_congr, lem:qcoh_section_localization_basicOpen}
+  Write \(\beta := p^\sharp_{U_0, W_j}(g) \in B_j := \Gamma(X, W_j)\), so that
+  \(D(\beta) = W_j \cap p^{-1}(D(g))\). By the quasi-compact--quasi-separated
+  section-localization theorem
+  (\cref{lem:qcoh_section_localization_basicOpen}, applied to the affine
+  \(W_j\)), the restriction
+  \(\Gamma(\mathcal F, W_j) \to \Gamma(\mathcal F, D(\beta))\) is the
+  localization of \(B_j\)-modules at the powers of \(\beta\); since
+  \(\beta^k\) acts on these modules as \(g^k\) acts through \(p^\sharp\), it
+  is also the localization of \(A\)-modules at the powers of \(g\). Hence
+  \(\Gamma(\mathcal F, D(\beta)) \cong \Gamma(\mathcal F, W_j)_g\) is free,
+  in particular flat, over \(A_g\), and therefore flat over \(A\) (flatness
+  over \(A\) and over the localization \(A_g\) agree for
+  \(A_g\)-modules).
+
+  Since \(D(c) \subseteq D(\beta)\), the further restriction
+  \(\Gamma(\mathcal F, D(\beta)) \to \Gamma(\mathcal F, D(c))\) is again a
+  section localization (\cref{lem:qcoh_section_localization_basicOpen} on the
+  affine \(D(\beta)\), at the restricted element \(c|_{D(\beta)}\), whose
+  basic open is \(D(c)\)) — a localization of
+  \(\Gamma(X, D(\beta))\)-modules. Mixed-base stability
+  (\cref{lem:flat_localizedModule_algebra}, with base \(A\) and fibre algebra
+  \(\Gamma(X, D(\beta))\)) shows \(\Gamma(\mathcal F, D(c|_{D(\beta)}))\) is
+  flat over \(A\); the induced-structure compatibilities are
+  \cref{lem:appLE_res_apply}, and \cref{lem:flat_sections_congr} transports
+  the conclusion along \(D(c|_{D(\beta)}) = D(c)\).
+\end{proof}
+
+\begin{lemma}[Two-layer basic-open reduction]
+  \leanok
+  \label{lem:flat_section_pair}
+  \lean{AlgebraicGeometry.flat_section_pair}
+  \uses{def:coherent_sheaf_flat}
+  Let \(p : X \to S\), \(\mathcal F\) quasi-coherent on \(X\),
+  \(U_0 \subseteq S\) an affine open with \(A := \Gamma(S, U_0)\), and let
+  \(\{W_c^{(j)}\}_{j}\) be affine charts contained in and covering
+  \(p^{-1}(U_0)\). Let \(f \in A\) be such that each localized section
+  module \(\Gamma(\mathcal F, W_c^{(j)})_f\) is free over \(A_f\). Then for
+  every affine pair \(U \subseteq D(f)\), \(W \subseteq p^{-1}(U)\), the
+  module \(\Gamma(\mathcal F, W)\) is flat over \(\Gamma(S, U)\) via
+  \(p^\sharp\).
+\end{lemma}
+\begin{proof}
+  \leanok
+  \uses{lem:flat_section_chartBasic, lem:appLE_base_res_apply,
+    lem:qcoh_section_localization_basicOpen, lem:generically_free_transport}
+  For each \(x \in W\): choose (affine interchange on \(S\), applied to the
+  affines \(U\) and \(U_0\) at the point \(p(x) \in U \cap U_0\)) sections
+  \(a \in \Gamma(S, U)\), \(a' \in A\) with
+  \(D(a) = D(a') \ni p(x)\); choose a chart \(W_c^{(j)} \ni x\); shrink to a
+  basic open of \(W\) inside \(W \cap p^{-1}(D(a)) \cap W_c^{(j)}\)
+  containing \(x\); and apply affine interchange on \(X\) to that basic open
+  and the affine \(W_c^{(j)}\) to obtain \(b \in \Gamma(X, W)\),
+  \(c \in \Gamma(X, W_c^{(j)})\) with
+  \(x \in D(b) = D(c) \subseteq p^{-1}(D(a))\).
+
+  The basic opens \(D(b)\) obtained this way cover \(W\), so the chosen
+  elements \(b\) generate the unit ideal of \(\Gamma(X, W)\). Since each
+  restriction \(\Gamma(\mathcal F, W) \to \Gamma(\mathcal F, D(b))\) is a
+  localization of \(\Gamma(X, W)\)-modules at the powers of \(b\)
+  (\cref{lem:qcoh_section_localization_basicOpen}), flatness of
+  \(\Gamma(\mathcal F, W)\) over \(\Gamma(S, U)\) may be checked on the
+  pieces \(\Gamma(\mathcal F, D(b))\) (flatness over the base is local with
+  respect to a spanning family of the fibre algebra).
+
+  Fix a piece, with its data \(a, a', j, c\). Freeness of
+  \(\Gamma(\mathcal F, W_c^{(j)})_f\) localizes further to
+  \(f a'\) (\cref{lem:generically_free_transport}), and
+  \(D(c) = D(b) \subseteq p^{-1}(D(a)) = p^{-1}(D(a'))
+  \subseteq p^{-1}(D(f a'))\) since \(D(a) \subseteq U \subseteq D(f)\).
+  The chart-basic core (\cref{lem:flat_section_chartBasic}, at the element
+  \(f a'\) and the chart section \(c\)) gives flatness of
+  \(\Gamma(\mathcal F, D(b))\) over \(A\). Finally exchange the base ring
+  twice along the localizations \(A \to \Gamma(S, D(a')) = \Gamma(S, D(a))\)
+  and \(\Gamma(S, U) \to \Gamma(S, D(a))\) (for a module over a localized
+  ring, flatness over the ring and over its localization agree; the
+  compatibility of the induced structures is
+  \cref{lem:appLE_base_res_apply}), obtaining flatness of
+  \(\Gamma(\mathcal F, D(b))\) over \(\Gamma(S, U)\).
+\end{proof}
+
+\begin{theorem}[Generic flatness, geometric form]
+  \leanok
   \label{thm:generic_flatness}
   \lean{AlgebraicGeometry.genericFlatness}
   \uses{thm:generic_flatness_algebraic}
@@ -400,14 +579,27 @@ layer as standalone module theory.
 % by restricting to a non-empty
 % affine open of \(S\), where the situation reduces to the algebraic statement.)
 \begin{proof}
-  
-  Restrict to a non-empty affine open \(\Spec A \subseteq S\) where \(A\) is a
-  noetherian domain. The morphism \(p\) is of finite type, so locally on \(X\)
-  above this affine \(\F\) is the sheaf \(\widetilde{M}\) for \(M\) a finite module
-  over a finite-type \(A\)-algebra \(B\). \cref{thm:generic_flatness_algebraic}
-  produces \(f \in A\), \(f \ne 0\), with \(M_f\) free over \(A_f\) on each such patch;
-  shrinking to the basic open \(D(f) \subseteq \Spec A\) globalises by patching
-  finitely many such opens (using noetherianity of \(X\) above the affine).
+  \uses{thm:generic_flatness_algebraic, lem:flat_section_pair,
+    lem:affine_finite_sections_nhds}
+  Choose a non-empty affine open \(U_0 \subseteq S\); its section ring
+  \(A := \Gamma(S, U_0)\) is a noetherian domain because \(S\) is integral and
+  locally noetherian. The preimage \(p^{-1}(U_0)\) is quasi-compact
+  (\(p\) is quasi-compact and \(U_0\) is), and every point of it has an
+  affine open neighbourhood inside \(p^{-1}(U_0)\) on which the sections of
+  \(\F\) are a finite module over the sections of \(\OO_X\)
+  (\cref{lem:affine_finite_sections_nhds}); extract a finite subcover by
+  affine charts \(W^{(1)}, \dots, W^{(r)}\). Each
+  \(B_i := \Gamma(X, W^{(i)})\) is of finite type over \(A\) (as \(p\) is
+  locally of finite type and both opens are affine) and each
+  \(M_i := \Gamma(\F, W^{(i)})\) is a finite \(B_i\)-module, so algebraic
+  generic freeness (\cref{thm:generic_flatness_algebraic}) produces
+  \(f_i \in A \setminus \{0\}\) with \((M_i)_{f_i}\) free over \(A_{f_i}\).
+  Set \(f := f_1 \cdots f_r \ne 0\); freeness localizes from each \(f_i\) to
+  \(f\), so every \((M_i)_f\) is free over \(A_f\). The witness open is
+  \(V := D(f) \subseteq U_0\), non-empty because \(S\) is reduced and
+  \(f \ne 0\). The required flatness on every affine pair
+  \(U \subseteq V\), \(W \subseteq p^{-1}(U)\) is exactly the two-layer
+  basic-open reduction, \cref{lem:flat_section_pair}.
 \end{proof}
 
 \section{Existence of the flattening stratification}
