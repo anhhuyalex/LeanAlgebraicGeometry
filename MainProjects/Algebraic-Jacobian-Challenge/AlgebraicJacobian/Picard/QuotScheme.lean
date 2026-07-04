@@ -5398,5 +5398,172 @@ theorem flatBaseChangeCohomology {X X' S S' : Scheme.{u}}
   -- using the iso-claim from `canonicalBaseChangeMap_isIso`.
   ⟨@asIso _ _ _ _ _ (canonicalBaseChangeMap_isIso sq F)⟩
 
+/-! ## Finite generation of affine sections (Stacks 01PC, finite-type half)
+
+For a sheaf of modules of finite presentation `F` on a scheme `X`
+(Mathlib's `SheafOfModules.IsFinitePresentation`), the module of sections
+`Γ(F, V)` over any affine open `V` contained in a member of the presenting
+cover is a *finite* `Γ(X, V)`-module.  This is the chart-level input that
+Nitsure §4 generic flatness (`AlgebraicGeometry.genericFlatness`, file
+`FlatteningStratification.lean`) feeds to the algebraic generic-freeness
+theorem `GenericFreeness.genericFlatnessAlgebraic`.
+
+Route (every bridge already exists in this file):
+1. the slice generating sections of `F.over (q.X i)` geometrize across the
+   slice-to-geometric equivalence (`overRestrictEquiv` / `overRestrictPullbackIso`,
+   via Mathlib's `GeneratingSections.map`) to the open subscheme `(q.X i).toScheme`;
+2. they pull back along the open-immersion factorization
+   `k : Spec Γ(X, V) ⟶ (q.X i).toScheme` of `hV.fromSpec` (unit datum
+   `pullbackOpenImmersionUnitIso`), and the pseudofunctor isos
+   `pullbackComp`/`pullbackCongr` carry them onto `(pullback hV.fromSpec).obj F`;
+3. the Stacks 01I8 identification `tildeIso_of_isQuasicoherent_isAffineOpen`
+   lands them on `tilde Γ(F, V)`;
+4. a finite generating epimorphism onto a tilde forces finite generation of the
+   underlying module (`module_finite_of_tilde_genSections`): transposing the
+   epimorphism through the tilde–Γ adjunction gives a module map out of a finite
+   free module which is epi, because the adjunction counit at a tilde is
+   invertible and `tilde.functor` is faithful. -/
+
+namespace Scheme.Modules
+
+set_option backward.isDefEq.respectTransparency false in
+set_option synthInstance.maxHeartbeats 400000 in
+-- Headroom for the `IsIso`/`Epi` instance chains through the tilde–Γ adjunction
+-- (`NatTrans.app` iso components, functor-map isos), as elsewhere in this file.
+set_option maxHeartbeats 800000 in
+/-- **Finite generation from a finite generating family of the tilde** (Stacks 01PC,
+module-side heart). If `tilde N` on `Spec R` admits finitely many generating
+sections, then `N` is a finite `R`-module: the generating epimorphism
+`free σ.I ⟶ tilde N` transposes through the tilde–Γ adjunction to a module map
+`(σ.I →₀ R) ⟶ N` (after inverting the adjunction unit), which is an epimorphism
+because the counit at a tilde is invertible and `tilde.functor` is faithful.
+Project-local. -/
+theorem module_finite_of_tilde_genSections {R : CommRingCat.{u}} (N : ModuleCat.{u} R)
+    (σ : (tilde N).GeneratingSections) [σ.IsFiniteType] :
+    Module.Finite R N := by
+  haveI hσπ : Epi σ.π := σ.epi
+  -- the generating epimorphism, sourced at the tilde of a finite free module
+  let π' : (tilde.functor R).obj (ModuleCat.of R (σ.I →₀ R)) ⟶ tilde N :=
+    (tildeFinsupp σ.I).hom ≫ σ.π
+  haveI hπ' : Epi π' := epi_comp _ _
+  -- transpose through the adjunction
+  let t : ModuleCat.of R (σ.I →₀ R) ⟶ moduleSpecΓFunctor.obj (tilde N) :=
+    (tilde.adjunction.homEquiv _ _) π'
+  have hfac : (tilde.functor R).map t ≫ tilde.adjunction.counit.app (tilde N) = π' :=
+    (Adjunction.homEquiv_counit tilde.adjunction _ _ t).symm.trans
+      ((tilde.adjunction.homEquiv _ _).symm_apply_apply π')
+  -- the counit at a tilde is invertible (triangle identity + invertible unit)
+  haveI hu : IsIso (tilde.adjunction.unit.app N) := inferInstance
+  haveI hmu : IsIso ((tilde.functor R).map (tilde.adjunction.unit.app N)) :=
+    inferInstance
+  haveI hcomp : IsIso ((tilde.functor R).map (tilde.adjunction.unit.app N) ≫
+      tilde.adjunction.counit.app ((tilde.functor R).obj N)) := by
+    rw [tilde.adjunction.left_triangle_components N]
+    infer_instance
+  haveI hcu : IsIso (tilde.adjunction.counit.app (tilde N)) :=
+    IsIso.of_isIso_comp_left
+      ((tilde.functor R).map (tilde.adjunction.unit.app N))
+      (tilde.adjunction.counit.app ((tilde.functor R).obj N))
+  haveI hmt : Epi ((tilde.functor R).map t) := by
+    have hre : (tilde.functor R).map t =
+        π' ≫ inv (tilde.adjunction.counit.app (tilde N)) := by
+      rw [← hfac, Category.assoc, IsIso.hom_inv_id, Category.comp_id]
+    rw [hre]
+    exact epi_comp _ _
+  haveI ht : Epi t := (tilde.functor R).epi_of_epi_map hmt
+  -- invert the unit and conclude by surjectivity
+  haveI : Epi (t ≫ inv (tilde.adjunction.unit.app N)) := epi_comp _ _
+  exact Module.Finite.of_surjective
+    (ModuleCat.Hom.hom (t ≫ inv (tilde.adjunction.unit.app N)))
+    ((ModuleCat.epi_iff_surjective _).mp ‹_›)
+
+set_option backward.isDefEq.respectTransparency false in
+set_option maxHeartbeats 2000000 in
+set_option synthInstance.maxHeartbeats 800000 in
+-- Heartbeat headroom for the slice-site `HasSheafify` synthesis triggered by
+-- `GeneratingSections.map` across the slice equivalence, as elsewhere in this file.
+/-- **Affine sections of a finitely presented module sheaf are finitely generated**
+(Stacks 01PC, finite-type half; chart-level form). If `F` is quasi-coherent, `q` is
+a quasi-coherence datum with finite presentations, and `V ≤ q.X i` is an affine
+open, then `Γ(F, V)` is a finite `Γ(X, V)`-module. The generating sections of the
+slice `F.over (q.X i)` geometrize, pull back to `Spec Γ(X, V)` along the
+factorization of `hV.fromSpec` through the cover member, land on `tilde Γ(F, V)`
+by the 01I8 identification, and force finite generation via
+`module_finite_of_tilde_genSections`. Project-local. -/
+theorem module_finite_sections_of_quasicoherentData {X : Scheme.{u}} (F : X.Modules)
+    [F.IsQuasicoherent] (q : SheafOfModules.QuasicoherentData.{u, u, u, u} F)
+    [q.IsFinitePresentation] (i : q.I) {V : X.Opens} (hV : IsAffineOpen V)
+    (hle : V ≤ q.X i) :
+    Module.Finite Γ(X, V) Γ(F, V) := by
+  -- slice generators of the cover member, with their finiteness
+  haveI hσ₀ : (q.presentation i).generators.IsFiniteType := inferInstance
+  -- the open-immersion factorization `k` of `fromSpec` through the cover member
+  have hrange : Set.range hV.fromSpec.base ⊆ Set.range (Scheme.Opens.ι (q.X i)).base := by
+    rw [hV.range_fromSpec, Scheme.Opens.range_ι]
+    exact hle
+  haveI hklift : IsOpenImmersion
+      (IsOpenImmersion.lift (Scheme.Opens.ι (q.X i)) hV.fromSpec hrange ≫
+        Scheme.Opens.ι (q.X i)) := by
+    rw [IsOpenImmersion.lift_fac]
+    infer_instance
+  haveI hk : IsOpenImmersion
+      (IsOpenImmersion.lift (Scheme.Opens.ι (q.X i)) hV.fromSpec hrange) :=
+    IsOpenImmersion.of_comp _ (Scheme.Opens.ι (q.X i))
+  haveI : PreservesColimitsOfSize.{u, u, u, u, u + 1, u + 1}
+      (Scheme.Modules.pullback
+        (IsOpenImmersion.lift (Scheme.Opens.ι (q.X i)) hV.fromSpec hrange)) :=
+    (Scheme.Modules.pullbackPushforwardAdjunction _).leftAdjoint_preservesColimits
+  -- pseudofunctoriality: composite pullback = pullback of `fromSpec`
+  let e₄ : (Scheme.Modules.pullback
+      (IsOpenImmersion.lift (Scheme.Opens.ι (q.X i)) hV.fromSpec hrange)).obj
+        ((Scheme.Modules.pullback (Scheme.Opens.ι (q.X i))).obj F) ≅
+      (Scheme.Modules.pullback hV.fromSpec).obj F :=
+    (Scheme.Modules.pullbackComp
+        (IsOpenImmersion.lift (Scheme.Opens.ι (q.X i)) hV.fromSpec hrange)
+        (Scheme.Opens.ι (q.X i))).app F ≪≫
+      (Scheme.Modules.pullbackCongr (IsOpenImmersion.lift_fac _ _ hrange)).app F
+  -- the 01I8 tilde identification of the pullback along `fromSpec`
+  obtain ⟨⟨e₅, -⟩⟩ := tildeIso_of_isQuasicoherent_isAffineOpen F hV
+  -- transport the generators all the way onto the tilde
+  let σ₆ : (tilde (ModuleCat.of Γ(X, V) Γ(F, V))).GeneratingSections :=
+    (((((q.presentation i).generators.map
+        (overRestrictEquiv (q.X i)).functor (overRestrictUnitIso (q.X i))).ofEpi
+          (overRestrictPullbackIso (q.X i) F).hom).map
+        (Scheme.Modules.pullback
+          (IsOpenImmersion.lift (Scheme.Opens.ι (q.X i)) hV.fromSpec hrange))
+        (pullbackOpenImmersionUnitIso
+          (IsOpenImmersion.lift (Scheme.Opens.ι (q.X i)) hV.fromSpec hrange)).symm).ofEpi
+      e₄.hom).ofEpi e₅.hom
+  haveI : σ₆.IsFiniteType := inferInstanceAs
+    ((((((q.presentation i).generators.map _ _).ofEpi _).map _ _).ofEpi _).ofEpi
+      e₅.hom).IsFiniteType
+  exact module_finite_of_tilde_genSections (ModuleCat.of Γ(X, V) Γ(F, V)) σ₆
+
+/-- **Every point has arbitrarily small affine neighbourhoods with finitely
+generated sections** (Stacks 01PC, finite-type half; chart-supply form). For a
+finitely presented sheaf of modules `F` on `X`, every point `x` in an open `O` has
+an affine open neighbourhood `V ≤ O` with `Γ(F, V)` a finite `Γ(X, V)`-module.
+This is the chart supply consumed by generic flatness (Nitsure §4).
+Project-local. -/
+theorem exists_affine_finite_sections_nhds {X : Scheme.{u}} (F : X.Modules)
+    [F.IsFinitePresentation] (x : X) (O : X.Opens) (hxO : x ∈ O) :
+    ∃ V : X.Opens, IsAffineOpen V ∧ x ∈ V ∧ V ≤ O ∧
+      Module.Finite Γ(X, V) Γ(F, V) := by
+  obtain ⟨q, hq⟩ := SheafOfModules.IsFinitePresentation.exists_quasicoherentData F
+  haveI := hq
+  -- `x` lies in some member of the presenting cover
+  obtain ⟨U', f, hf, hxU'⟩ := q.coversTop ⊤ x (TopologicalSpace.Opens.mem_top x)
+  obtain ⟨i, ⟨g⟩⟩ := hf
+  have hxi : x ∈ q.X i := leOfHom g hxU'
+  -- shrink to an affine open inside `O ⊓ q.X i`
+  obtain ⟨_, ⟨V, hV, rfl⟩, hxV, hVle⟩ :=
+    X.isBasis_affineOpens.exists_subset_of_mem_open
+      (show x ∈ ((O ⊓ q.X i : X.Opens) : Set X) from ⟨hxO, hxi⟩) (O ⊓ q.X i).2
+  have hVle' : V ≤ O ⊓ q.X i := hVle
+  exact ⟨V, hV, hxV, hVle'.trans inf_le_left,
+    module_finite_sections_of_quasicoherentData F q i hV (hVle'.trans inf_le_right)⟩
+
+end Scheme.Modules
+
 end AlgebraicGeometry
 
