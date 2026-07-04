@@ -1387,6 +1387,84 @@ theorem flat_stratum_of_irreducible (hirr : IsIrreducible (Zc : Set S)) :
 
 end FlatStratum
 
+/-! ## §7b. Transport of coherent-sheaf flatness along base isomorphisms
+
+`CoherentSheafFlat` is insensitive to an isomorphism on the base leg: if a
+module sheaf is flat for `q ≫ w` with `w` an isomorphism of schemes, it is
+flat for `q`.  The section-level content is that flatness of a module
+transports along a factorization of the acting ring map through a bijective
+ring map (`Module.compHom` structures; the section module is unchanged). -/
+
+section IsoTransport
+
+/-- Flatness of a module transports along a factorization of the acting ring
+map through a bijective ring map: if `ψ = φ ∘ ρ` with `ρ : R →+* R'`
+bijective and `M` flat for the `R'`-action through `φ`, then `M` is flat for
+the `R`-action through `ψ`.  (`R'` is a free `R`-module of rank one via `ρ`,
+so this is `Module.Flat.trans` along the scalar tower `R → R' → M`.) -/
+private theorem flat_of_ringHom_comp_bijective {R R' O M : Type v} [CommRing R]
+    [CommRing R'] [CommRing O] [AddCommGroup M] [Module O M] (ρ : R →+* R')
+    (hρ : Function.Bijective ρ) (φ : R' →+* O) (ψ : R →+* O)
+    (hψ : ψ = φ.comp ρ)
+    (h : letI : Module R' M := Module.compHom M φ; Module.Flat R' M) :
+    letI : Module R M := Module.compHom M ψ; Module.Flat R M := by
+  subst hψ
+  letI : Module R' M := Module.compHom M φ
+  letI : Module R M := Module.compHom M (φ.comp ρ)
+  letI : Algebra R R' := ρ.toAlgebra
+  haveI : Module.Flat R' M := h
+  haveI : Module.Flat R R' := by
+    have hcoe : ⇑(Algebra.linearMap R R') = ⇑ρ := by
+      funext x
+      simp [RingHom.algebraMap_toAlgebra]
+    exact Module.Flat.of_linearEquiv
+      ((LinearEquiv.ofBijective (Algebra.linearMap R R')
+        (by rw [hcoe]; exact hρ)).symm)
+  haveI : IsScalarTower R R' M :=
+    ⟨fun r r' m => by
+      change φ (ρ r * r') • m = φ (ρ r) • (φ r' • m)
+      rw [map_mul, mul_smul]⟩
+  exact Module.Flat.trans R R' M
+
+/-- **Coherent-sheaf flatness absorbs an isomorphism on the base**: if `𝓖` is
+flat for `q ≫ w` with `w` an isomorphism of schemes, then `𝓖` is flat for
+`q`.  Applied below with `q = 𝟙 P` to convert flatness over an isomorphic
+copy of `P` (e.g. `pullback.snd` of a pullback along an identity) into
+flatness over `P` itself. -/
+theorem coherentSheafFlat_of_comp_isIso {P W W' : Scheme.{u}} (q : P ⟶ W)
+    (w : W ⟶ W') [IsIso w] (G : P.Modules)
+    (h : Scheme.CoherentSheafFlat (q ≫ w) G) : Scheme.CoherentSheafFlat q G := by
+  intro U hU V hV eV
+  have hrange : U ≤ (inv w).opensRange := by
+    intro x hx
+    refine ⟨w.base x, ?_⟩
+    rw [← Scheme.Hom.comp_apply, IsIso.hom_inv_id]
+    simp
+  have hU' : IsAffineOpen ((inv w) ⁻¹ᵁ U) :=
+    hU.preimage_of_isOpenImmersion (inv w) hrange
+  have heq : (q ≫ w) ⁻¹ᵁ ((inv w) ⁻¹ᵁ U) = q ⁻¹ᵁ U := by
+    rw [← Scheme.Hom.comp_preimage, Category.assoc, IsIso.hom_inv_id,
+      Category.comp_id]
+  have eV' : V ≤ (q ≫ w) ⁻¹ᵁ ((inv w) ⁻¹ᵁ U) := eV.trans heq.ge
+  have hflat := h hU' hV eV'
+  have hfact : q.appLE U V eV =
+      (inv w).appLE U ((inv w) ⁻¹ᵁ U) le_rfl ≫
+        (q ≫ w).appLE ((inv w) ⁻¹ᵁ U) V eV' := by
+    rw [Scheme.Hom.appLE_comp_appLE]
+    have hmor : (q ≫ w) ≫ inv w = q := by
+      rw [Category.assoc, IsIso.hom_inv_id, Category.comp_id]
+    simp only [hmor]
+  haveI : IsIso ((inv w).appLE U ((inv w) ⁻¹ᵁ U) le_rfl) := by
+    rw [← Scheme.Hom.app_eq_appLE]
+    infer_instance
+  exact flat_of_ringHom_comp_bijective
+    ((inv w).appLE U ((inv w) ⁻¹ᵁ U) le_rfl).hom
+    (ConcreteCategory.bijective_of_isIso _)
+    ((q ≫ w).appLE ((inv w) ⁻¹ᵁ U) V eV').hom (q.appLE U V eV).hom
+    (by rw [hfact]; rfl) hflat
+
+end IsoTransport
+
 /-! ## §8. The flattening stratification (statements moved from
 `FlatteningStratification.lean`)
 
@@ -1396,47 +1474,6 @@ because the proof of Lemma 6 (`flatLocusReduction`) consumes
 `genericFlatness`, which needs the QuotScheme engine that
 `FlatteningStratification.lean` deliberately does not import.  Blueprint
 pointers are unchanged (they pin fully qualified declaration names). -/
-
-/-- **Lemma 5 (special case `n = 0`).** [Nitsure §4 special case]
-
-For `S` noetherian and `𝓕` a coherent `𝓞_S`-module, there exists a
-countable family `S_e ⊆ S` (indexed by `e ∈ ℕ`) of locally-closed
-subschemes such that
-- each `S_e` is a (locally-closed) immersion `S_e ⟶ S`;
-- the underlying sets `|S_e|` partition `|S|`;
-- the pullback `𝓕|_{S_e}` is flat over `𝓞_{S_e}` — encoded as
-  `CoherentSheafFlat (𝟙 (S_ e))`, i.e. flatness of the section modules of
-  the pulled-back sheaf over the section rings of the stratum *itself*.
-  (The *rank*-`e` locally-free refinement is future work once the
-  locally-free-of-rank-`e` predicate is in scope.)
-
-Statement repair (run 0010, T12 r2): the former conclusion asserted
-`CoherentSheafFlat (ι e)` — flatness of the pulled-back sheaf over the
-*ambient* `S` via the immersion — which is FALSE for any non-open stratum:
-a nonzero module supported on a closed stratum `V(x) ⊆ 𝔸¹` is killed by
-`x`, hence torsion, hence not flat over `𝓞_{𝔸¹}`-sections (e.g. the rank
-stratification of the skyscraper `k(0)` on `𝔸¹` refutes it). Nitsure's
-content is flatness (indeed local freeness) over the stratum, which is
-`CoherentSheafFlat (𝟙 (S_ e))`.
-
-The function `s ↦ dim_{κ(s)} 𝓕|_s` is upper-semicontinuous (this is
-content (iii) of Nitsure's special case), encoded indirectly by the
-fact that the strata are locally-closed and disjoint.
-
-Nitsure's proof: Nakayama produces a local presentation
-`𝓞_V^{⊕m} ⟶ 𝓞_V^{⊕e} ⟶ 𝓕|_V ⟶ 0`; the closed subscheme `V_e ⊆ V`
-defined by the matrix-entry ideal of the first map represents the
-locus of locally-free-of-rank-`e`; gluing over a cover and intersecting
-with `V ∖ ⋃_{e' > e} V_{e'}` produces the locally-closed `S_e`. -/
-lemma flatLocusStratification {S : Scheme.{u}} [IsLocallyNoetherian S]
-    (F : S.Modules) [F.IsFinitePresentation] :
-    ∃ (S_ : ℕ → Scheme.{u}) (ι : ∀ e, S_ e ⟶ S),
-      (∀ e, IsImmersion (ι e)) ∧
-      (∀ e e', e ≠ e' → Disjoint (Set.range (ι e).base) (Set.range (ι e').base)) ∧
-      (∀ s : S, ∃ e, s ∈ Set.range (ι e).base) ∧
-      (∀ e, Scheme.CoherentSheafFlat (𝟙 (S_ e))
-        ((Scheme.Modules.pullback (ι e)).obj F)) := by
-  sorry
 
 set_option maxHeartbeats 1200000 in
 /-- **Lemma 6 (Noetherian-induction reduction).** [Nitsure §4 general
@@ -1802,35 +1839,208 @@ theorem flatteningStratification {S X : Scheme.{u}} [IsNoetherian S]
   obtain ⟨I, hI, V_, ι, himm, hdisj, hcov, hflat⟩ := flatLocusReduction π F
   exact ⟨I, hI, V_, ι, himm, hcov, hdisj, hflat⟩
 
-/-- **Universal property of the flattening stratification**
-[Nitsure §4 (ii) / Stacks 052H].
+/-- **Lemma 5 (special case `n = 0`).** [Nitsure §4 special case]
 
-There is a finite locally-closed stratification `{S_f}` of `S` — with the
-four structural properties of `flatteningStratification` (immersions,
-covering, disjoint, flat pullback on each stratum) — such that every
-`φ : T ⟶ S` whose pullback `𝓕|_{X ×_S T}` is `T`-flat factors uniquely
-through `Sigma.desc ι : ∐ S_ ⟶ S`.
+For `S` noetherian and `𝓕` a coherent `𝓞_S`-module, there exists a
+countable family `S_e ⊆ S` (indexed by `e ∈ ℕ`) of locally-closed
+subschemes such that
+- each `S_e ⟶ S` is a (locally-closed) immersion;
+- the underlying sets `|S_e|` partition `|S|`;
+- the pullback `𝓕|_{S_e}` is flat over `𝓞_{S_e}` — encoded as
+  `CoherentSheafFlat (𝟙 (S_ e))`, i.e. flatness of the section modules of
+  the pulled-back sheaf over the section rings of the stratum *itself*.
+  (The *rank*-`e` locally-free refinement is future work once the
+  locally-free-of-rank-`e` predicate is in scope.)
 
-(The converse direction — every morphism factoring through the coproduct
-has flat pullback — is also part of Nitsure's part (ii); it amounts to
-stability of `CoherentSheafFlat` under base change and should be added as
-a separate lemma when the base-change API for the predicate lands.)
+Statement repair (run 0010, T12 r2): the former conclusion asserted
+`CoherentSheafFlat (ι e)` — flatness of the pulled-back sheaf over the
+*ambient* `S` via the immersion — which is FALSE for any non-open stratum
+(the rank stratification of the skyscraper `k(0)` on `𝔸¹` refutes it);
+Nitsure's content is flatness (indeed local freeness) over the stratum,
+which is `CoherentSheafFlat (𝟙 (S_ e))`.
 
-iter-177+: refine to a `Functor.RepresentableBy`-style universal arrow
-once the contravariant functor `T ↦ {φ : T ⟶ S | 𝓕|_{X_T} is T-flat}` is
-available. -/
-theorem flatteningStratification_universal {S X : Scheme.{u}}
-    [IsNoetherian S] (π : X ⟶ S) [IsProper π] (F : X.Modules)
-    [F.IsFinitePresentation] :
+Statement repair (run 0010, T12 r7): hypothesis strengthened from
+`IsLocallyNoetherian` to `IsNoetherian`, matching the standing noetherian
+assumption of [Nitsure] §4.  With the rank-`e` labeling dropped (previous
+repair) the strata are no longer canonical, so the gluing argument that
+would extend the ℕ-indexed statement to a merely locally noetherian base
+(canonical rank strata glue over any affine cover) is not available to this
+statement; the noetherian form is what the `AJC.picrep` cone consumes.
+
+Proof (run 0010, T12 r7): from the existence theorem
+`flatteningStratification` applied to `π = 𝟙 S`.  The finitely many strata
+`V_f` are re-indexed over `ℕ` via `Fintype.equivFin`, with the *pullback
+scheme* `(𝟙 S) ×_S V_f` itself as stratum and `pullback.fst` as the
+immersion (equal to `pullback.snd ≫ ι f` with `pullback.snd` an
+isomorphism, since `𝟙 S` is), padded by the empty scheme for indices
+`≥ card I`.  Flatness over the stratum transports from the conclusion of
+`flatteningStratification` by `coherentSheafFlat_of_comp_isIso`, and over
+the empty scheme every section module is flat (the section rings are
+trivial). -/
+lemma flatLocusStratification {S : Scheme.{u}} [IsNoetherian S]
+    (F : S.Modules) [F.IsFinitePresentation] :
+    ∃ (S_ : ℕ → Scheme.{u}) (ι : ∀ e, S_ e ⟶ S),
+      (∀ e, IsImmersion (ι e)) ∧
+      (∀ e e', e ≠ e' → Disjoint (Set.range (ι e).base) (Set.range (ι e').base)) ∧
+      (∀ s : S, ∃ e, s ∈ Set.range (ι e).base) ∧
+      (∀ e, Scheme.CoherentSheafFlat (𝟙 (S_ e))
+        ((Scheme.Modules.pullback (ι e)).obj F)) := by
+  classical
+  haveI : IsProper (𝟙 S) := MorphismProperty.id_mem _ S
+  obtain ⟨I, hI, V_, ι₀, himm, hcov, hdisj, hflat⟩ := flatteningStratification (𝟙 S) F
+  haveI := hI
+  haveI := Fintype.ofFinite I
+  let eqv := Fintype.equivFin I
+  -- the first projection is the composition of the iso `pullback.snd` with `ι₀`
+  have hfst : ∀ i : I,
+      pullback.fst (𝟙 S) (ι₀ i) = pullback.snd (𝟙 S) (ι₀ i) ≫ ι₀ i := fun i => by
+    simpa using pullback.condition (f := 𝟙 S) (g := ι₀ i)
+  have hrange : ∀ i : I,
+      Set.range (pullback.fst (𝟙 S) (ι₀ i)).base = Set.range (ι₀ i).base := by
+    intro i
+    have hsurj : Function.Surjective (pullback.snd (𝟙 S) (ι₀ i)).base :=
+      (ConcreteCategory.bijective_of_isIso (pullback.snd (𝟙 S) (ι₀ i)).base).2
+    rw [hfst i]
+    simp only [Scheme.Hom.comp_base, TopCat.coe_comp, Set.range_comp]
+    rw [hsurj.range_eq, Set.image_univ]
+  -- reindex the finite strata over `ℕ`, padding with the empty scheme
+  let P : ℕ → Σ X : Scheme.{u}, X ⟶ S := fun e =>
+    if h : e < Fintype.card I then
+      ⟨pullback (𝟙 S) (ι₀ (eqv.symm ⟨e, h⟩)),
+        pullback.fst (𝟙 S) (ι₀ (eqv.symm ⟨e, h⟩))⟩
+    else ⟨∅, Scheme.emptyTo S⟩
+  -- the branch values of `P`, as equalities of the full dependent pair (the
+  -- `dite` cannot be reduced under the projections: the motive would not be
+  -- type-correct)
+  have hPpos : ∀ (e : ℕ) (h : e < Fintype.card I),
+      P e = ⟨pullback (𝟙 S) (ι₀ (eqv.symm ⟨e, h⟩)),
+        pullback.fst (𝟙 S) (ι₀ (eqv.symm ⟨e, h⟩))⟩ := fun e h => dif_pos h
+  have hPneg : ∀ (e : ℕ), ¬ e < Fintype.card I →
+      P e = ⟨∅, Scheme.emptyTo S⟩ := fun e h => dif_neg h
+  refine ⟨fun e => (P e).1, fun e => (P e).2, ?_, ?_, ?_, ?_⟩
+  · -- immersions
+    intro e
+    change IsImmersion (P e).2
+    by_cases h : e < Fintype.card I
+    · rw [hPpos e h]
+      change IsImmersion (pullback.fst (𝟙 S) (ι₀ (eqv.symm ⟨e, h⟩)))
+      haveI := himm (eqv.symm ⟨e, h⟩)
+      rw [hfst (eqv.symm ⟨e, h⟩)]
+      infer_instance
+    · rw [hPneg e h]
+      change IsImmersion (Scheme.emptyTo S)
+      infer_instance
+  · -- disjoint ranges
+    intro e e' hne
+    change Disjoint (Set.range (P e).2.base) (Set.range (P e').2.base)
+    by_cases h : e < Fintype.card I
+    · by_cases h' : e' < Fintype.card I
+      · rw [hPpos e h, hPpos e' h']
+        change Disjoint
+          (Set.range (pullback.fst (𝟙 S) (ι₀ (eqv.symm ⟨e, h⟩))).base)
+          (Set.range (pullback.fst (𝟙 S) (ι₀ (eqv.symm ⟨e', h'⟩))).base)
+        rw [hrange _, hrange _]
+        refine hdisj _ _ fun hcontra => hne ?_
+        have h2 := congrArg eqv hcontra
+        rw [Equiv.apply_symm_apply, Equiv.apply_symm_apply] at h2
+        exact congrArg Fin.val h2
+      · rw [hPneg e' h']
+        change Disjoint (Set.range (P e).2.base) (Set.range (Scheme.emptyTo S).base)
+        rw [Set.range_eq_empty (Scheme.emptyTo S).base]
+        exact Set.disjoint_empty _
+    · rw [hPneg e h]
+      change Disjoint (Set.range (Scheme.emptyTo S).base) (Set.range (P e').2.base)
+      rw [Set.range_eq_empty (Scheme.emptyTo S).base]
+      exact Set.empty_disjoint _
+  · -- covering
+    intro s
+    obtain ⟨f, hf⟩ := hcov s
+    refine ⟨(eqv f : ℕ), ?_⟩
+    change s ∈ Set.range (P ((eqv f : Fin _) : ℕ)).2.base
+    have hlt : ((eqv f : Fin _) : ℕ) < Fintype.card I := (eqv f).isLt
+    rw [hPpos _ hlt]
+    change s ∈ Set.range (pullback.fst (𝟙 S) (ι₀ (eqv.symm ⟨((eqv f : Fin _) : ℕ), hlt⟩))).base
+    rw [hrange _]
+    have heq : eqv.symm ⟨((eqv f : Fin _) : ℕ), hlt⟩ = f := by
+      simp
+    rw [heq]
+    exact hf
+  · -- flatness over each stratum
+    intro e
+    change Scheme.CoherentSheafFlat (𝟙 (P e).1)
+      ((Scheme.Modules.pullback (P e).2).obj F)
+    obtain h | h := Nat.lt_or_ge e (Fintype.card I)
+    · rw [hPpos e h]
+      change Scheme.CoherentSheafFlat
+        (𝟙 (pullback (𝟙 S) (ι₀ (eqv.symm ⟨e, h⟩))))
+        ((Scheme.Modules.pullback (pullback.fst (𝟙 S) (ι₀ (eqv.symm ⟨e, h⟩)))).obj F)
+      refine coherentSheafFlat_of_comp_isIso
+        (𝟙 (pullback (𝟙 S) (ι₀ (eqv.symm ⟨e, h⟩))))
+        (pullback.snd (𝟙 S) (ι₀ (eqv.symm ⟨e, h⟩)))
+        ((Scheme.Modules.pullback (pullback.fst (𝟙 S) (ι₀ (eqv.symm ⟨e, h⟩)))).obj F) ?_
+      rw [Category.id_comp]
+      exact hflat _
+    · rw [hPneg e (not_lt.mpr h)]
+      change Scheme.CoherentSheafFlat (𝟙 (∅ : Scheme.{u}))
+        ((Scheme.Modules.pullback (Scheme.emptyTo S)).obj F)
+      intro U hU V hV eV
+      haveI : Subsingleton Γ((∅ : Scheme.{u}), U) :=
+        inferInstanceAs (Subsingleton PUnit)
+      letI : Module Γ((∅ : Scheme.{u}), U)
+          Γ((Scheme.Modules.pullback (Scheme.emptyTo S)).obj F, V) :=
+        Module.compHom _ (Scheme.Hom.appLE (𝟙 (∅ : Scheme.{u})) U V eV).hom
+      haveI := Module.Free.of_subsingleton' Γ((∅ : Scheme.{u}), U)
+        Γ((Scheme.Modules.pullback (Scheme.emptyTo S)).obj F, V)
+      infer_instance
+
+/-- **Universal property of the flat-locus stratification (the `n = 0`
+flattening stratification)** [Nitsure §4, special case, parts (i) + (ii)].
+
+For `S` noetherian and `𝓕` a coherent `𝓞_S`-module there is a *finite*
+locally-closed stratification `{S_f}` of `S` — immersions, set-theoretically
+covering `|S|`, pairwise disjoint, `𝓕|_{S_f}` flat over `S_f` — such that,
+writing `i : ∐ S_f ⟶ S` for `Sigma.desc` of the inclusions, every morphism
+`φ : T ⟶ S` for which `φ^*𝓕` is flat over `T` factors *uniquely* through
+`i`.
+
+Source: [Nitsure], §4, proof of the flattening-stratification theorem,
+special case `n = 0` (Nakayama prolongation of a fibre basis to a local
+presentation `𝓞_V^{⊕m} →ψ 𝓞_V^{⊕e} → 𝓕|_V → 0`, the closed subscheme
+`V_e ⊆ V` cut out by the entry ideal of `ψ`, base change: `f^*𝓕` is locally
+free of rank `e` iff `f^*ψ = 0` iff `f` factors through `V_e`; the local
+strata glue by their universal property).  Flatness replaces
+locally-free-of-rank-`e`: for finitely presented `𝓕` they agree, with the
+rank decomposing `T` into clopen pieces.
+
+Statement repair (run 0010, T12 r7): the previous statement generalized
+Nitsure's part (ii) from `𝓕` on `ℙⁿ_S` to an arbitrary *proper*
+`π : X ⟶ S`.  That generality is not in the cited source (Nitsure proves
+the theorem for `ℙⁿ_S`, hence for projective `π`) and no reference for the
+proper case is in the workspace library; moreover the reduced strata of
+`flatLocusReduction` provably cannot witness it (over `S = Spec k[ε]` with
+`𝓕 = 𝓞_S` flat, `𝟙 S` must factor through the stratification, forcing the
+canonical non-reduced stratum structure).  The statement is therefore
+specialized to `π = 𝟙 S` — exactly Nitsure's special case, which his
+general-case proof consumes.  The projective upgrade (the Route-A consumer
+shape, `π = pr_T : C ×_k T → T` for a projective curve `C`) needs `ℙⁿ_S`
+vocabulary and the §3 cohomology-and-base-change layer; it returns with the
+Quot-scheme endgame.
+
+Proof route (future session): the canonical rank strata via the
+matrix-entry ideal of a local Nakayama presentation (Mathlib v4.31 has no
+Fitting ideals; the entry ideal substitutes), base change of the entry
+ideal, gluing of the local `V_e` by their universal property, uniqueness
+from the strata being immersions (monomorphisms) with disjoint images. -/
+theorem flatLocusStratification_universal {S : Scheme.{u}} [IsNoetherian S]
+    (F : S.Modules) [F.IsFinitePresentation] :
     ∃ (I : Type u) (_ : Finite I) (S_ : I → Scheme.{u}) (ι : ∀ f, S_ f ⟶ S),
       (∀ f, IsImmersion (ι f)) ∧
       (∀ s : S, ∃ f, s ∈ Set.range (ι f).base) ∧
       (∀ f g, f ≠ g → Disjoint (Set.range (ι f).base) (Set.range (ι g).base)) ∧
-      (∀ f, Scheme.CoherentSheafFlat (pullback.snd π (ι f))
-        ((Scheme.Modules.pullback (pullback.fst π (ι f))).obj F)) ∧
+      (∀ f, Scheme.CoherentSheafFlat (𝟙 (S_ f))
+        ((Scheme.Modules.pullback (ι f)).obj F)) ∧
       (∀ {T : Scheme.{u}} (φ : T ⟶ S),
-        Scheme.CoherentSheafFlat (pullback.snd π φ)
-          ((Scheme.Modules.pullback (pullback.fst π φ)).obj F) →
+        Scheme.CoherentSheafFlat (𝟙 T) ((Scheme.Modules.pullback φ).obj F) →
         ∃! ψ : T ⟶ ∐ S_, ψ ≫ Sigma.desc ι = φ) := by
   sorry
 

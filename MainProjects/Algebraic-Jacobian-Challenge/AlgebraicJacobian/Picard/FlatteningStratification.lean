@@ -53,14 +53,16 @@ by a scoped `maxSynthPendingDepth` bump.
 
 Earlier r2 repairs of three FALSE pinned statements (quasi-compactness in
 `genericFlatness`, flatness-over-the-stratum in `flatLocusStratification`,
-the bundled universal property in `flatteningStratification_universal`) are
+the bundled universal property in the universal-property theorem, since r7
+specialized to `n = 0` and renamed `flatLocusStratification_universal`) are
 documented in the per-declaration docstrings.
 
-Remaining `sorry`s in this file (3, all TRUE statements, all in the
-*geometric* layer): `flatLocusStratification`, `flatLocusReduction`,
-`flatteningStratification_universal`.  (`genericFlatness` is proved
-axiom-clean in `GenericFlatnessGeometric.lean`, now unconditionally —
-the algebraic core it consumes is closed.)
+This file is **sorry-free**: the geometric statements (`genericFlatness`,
+`flatLocusStratification`, `flatLocusReduction`,
+`flatteningStratification`(+`_universal`, `ofCurve`)) live in
+`GenericFlatnessGeometric.lean`, where all are proved axiom-clean except
+the single remaining `sorry` `flatLocusStratification_universal` (the
+`n = 0` universal property, canonical entry-ideal strata).
 
 The 4 blueprint-pinned declarations are:
 
