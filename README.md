@@ -6,6 +6,8 @@ The repository is structured as an Archon Horizon workspace rather than a single
 
 You can consult the [live dashboard](https://axeldlv00.github.io/LeanAlgebraicGeometry-Horizon/) for a visual overview of each project's blueprint, code, progress, and dependency DAG.
 
+> **Note on freshness.** The dashboard is a static snapshot published to GitHub Pages, which serves every file with a 10-minute cache (`Cache-Control: max-age=600`). Run data refreshes on each reload, but the page shell itself can lag the workspace by up to ~10 minutes. If it looks stale, just reload; you normally do **not** need a hard refresh (and on Safari a "Reload From Origin" won't help the data anyway — see the caching notes in the Archon Horizon dashboard docs).
+
 For interactive exploration and logs, run `horizon dashboard` inside the workspace to spin up the local web dashboard, or use `horizon run` and `horizon discuss` to interact with the orchestration agents.
 
 ## Table of Contents
