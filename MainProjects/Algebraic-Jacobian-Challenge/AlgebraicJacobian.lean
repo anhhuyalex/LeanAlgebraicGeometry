@@ -77,6 +77,7 @@ import AlgebraicJacobian.Picard.Pic0AbelianVariety
 import AlgebraicJacobian.Picard.FlatteningStratification
 import AlgebraicJacobian.Picard.EntryIdeal
 import AlgebraicJacobian.Picard.EntryIdealStratum
+import AlgebraicJacobian.Picard.FlatteningStratificationUniversal
 import AlgebraicJacobian.Picard.GenericFlatnessGeometric
 import AlgebraicJacobian.Picard.QuotScheme
 -- Grassmannian/Quot representability development merged from the
