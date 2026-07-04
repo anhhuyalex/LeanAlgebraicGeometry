@@ -7,6 +7,7 @@ import Mathlib
 import AlgebraicJacobian.Picard.FlatteningStratification
 import AlgebraicJacobian.Picard.QuotScheme
 import AlgebraicJacobian.Cohomology.QcohTildeSections
+import AlgebraicJacobian.Cohomology.PullbackQuasicoherent
 
 /-!
 # Generic flatness: the geometric statement (Nitsure §4)
@@ -1013,5 +1014,94 @@ theorem flat_section_of_affine_cover {T Y : Scheme.{u}} (q : Y ⟶ T) (G : Y.Mod
     Γ(G, Y.basicOpen r.1)).mp h2
 
 end FlatAffineLocal
+
+/-! ## §6. Reduced closed subschemes and flatness transport
+
+Support facts for the Noetherian induction: the vanishing-ideal subscheme of
+a closed subset is reduced (its ideal sheaf is radical, so the affine cover
+pieces `Spec (Γ(S,U)/I(U))` are reduced); if the closed subset is
+irreducible, the subscheme is integral.  `coherentSheafFlat_of_iso`
+transports the coherent-sheaf-flatness predicate along an isomorphism of
+module sheaves. -/
+
+section ReducedSubscheme
+
+variable {S : Scheme.{u}}
+
+lemma support_vanishingIdeal (Z : TopologicalSpace.Closeds S) :
+    (Scheme.IdealSheafData.vanishingIdeal Z).support = Z := by
+  ext1
+  exact Scheme.IdealSheafData.coe_support_vanishingIdeal (X := S) Z
+
+lemma radical_vanishingIdeal (Z : TopologicalSpace.Closeds S) :
+    (Scheme.IdealSheafData.vanishingIdeal Z).radical =
+      Scheme.IdealSheafData.vanishingIdeal Z := by
+  rw [← Scheme.IdealSheafData.vanishingIdeal_support, support_vanishingIdeal]
+
+lemma isRadical_vanishingIdeal_ideal (Z : TopologicalSpace.Closeds S)
+    (U : S.affineOpens) :
+    ((Scheme.IdealSheafData.vanishingIdeal Z).ideal U).IsRadical := by
+  have h := congrArg (fun I => Scheme.IdealSheafData.ideal I U)
+    (radical_vanishingIdeal Z)
+  simp only [Scheme.IdealSheafData.radical_ideal] at h
+  rw [← h]
+  exact Ideal.radical_isRadical _
+
+instance isReduced_vanishingIdeal_subscheme (Z : TopologicalSpace.Closeds S) :
+    IsReduced (Scheme.IdealSheafData.vanishingIdeal Z).subscheme := by
+  haveI : ∀ U, IsReduced
+      ((Scheme.IdealSheafData.vanishingIdeal Z).subschemeCover.openCover.X U) := by
+    intro U
+    haveI : _root_.IsReduced
+        (Γ(S, U.1) ⧸ (Scheme.IdealSheafData.vanishingIdeal Z).ideal U) :=
+      (Ideal.isRadical_iff_quotient_reduced _).mp
+        (isRadical_vanishingIdeal_ideal Z U)
+    exact inferInstanceAs (IsReduced (Spec (.of
+      (Γ(S, U.1) ⧸ (Scheme.IdealSheafData.vanishingIdeal Z).ideal U))))
+  exact IsReduced.of_openCover
+    (𝒰 := (Scheme.IdealSheafData.vanishingIdeal Z).subschemeCover.openCover)
+
+lemma isIntegral_vanishingIdeal_subscheme (Z : TopologicalSpace.Closeds S)
+    (hZ : IsIrreducible (Z : Set S)) :
+    IsIntegral (Scheme.IdealSheafData.vanishingIdeal Z).subscheme := by
+  haveI : IrreducibleSpace ((Scheme.IdealSheafData.vanishingIdeal Z).subscheme) := by
+    have h : IsIrreducible
+        (((Scheme.IdealSheafData.vanishingIdeal Z).support : Set S)) := by
+      rw [show (((Scheme.IdealSheafData.vanishingIdeal Z).support : Set S)) = (Z : Set S) by
+        rw [support_vanishingIdeal]]
+      exact hZ
+    exact Subtype.irreducibleSpace h
+  exact isIntegral_of_irreducibleSpace_of_isReduced _
+
+/-- Transport of `CoherentSheafFlat` along an isomorphism of module sheaves. -/
+lemma coherentSheafFlat_of_iso {T' Y' : Scheme.{u}} (q : Y' ⟶ T') {G G' : Y'.Modules}
+    (e : G ≅ G') (h : Scheme.CoherentSheafFlat q G) : Scheme.CoherentSheafFlat q G' := by
+  intro U hU V hV eV
+  letI : Module Γ(T', U) Γ(G', V) := Module.compHom _ (q.appLE U V eV).hom
+  letI : Module Γ(T', U) Γ(G, V) := Module.compHom _ (q.appLE U V eV).hom
+  haveI hG : Module.Flat Γ(T', U) Γ(G, V) := h hU hV eV
+  refine Module.Flat.of_linearEquiv (M := Γ(G, V)) (e := ?_)
+  exact
+    { toFun := fun x => (Scheme.Modules.Hom.app e.inv V).hom x
+      invFun := fun x => (Scheme.Modules.Hom.app e.hom V).hom x
+      left_inv := fun x => by
+        have h1 := congrArg
+          (fun (φ : G' ⟶ G') => (Scheme.Modules.Hom.app φ V).hom x) e.inv_hom_id
+        simp only [Scheme.Modules.Hom.comp_app, Scheme.Modules.Hom.id_app,
+          AddCommGrpCat.hom_comp, AddMonoidHom.coe_comp, Function.comp_apply,
+          AddCommGrpCat.hom_id, AddMonoidHom.id_apply] at h1
+        exact h1
+      right_inv := fun x => by
+        have h1 := congrArg
+          (fun (φ : G ⟶ G) => (Scheme.Modules.Hom.app φ V).hom x) e.hom_inv_id
+        simp only [Scheme.Modules.Hom.comp_app, Scheme.Modules.Hom.id_app,
+          AddCommGrpCat.hom_comp, AddMonoidHom.coe_comp, Function.comp_apply,
+          AddCommGrpCat.hom_id, AddMonoidHom.id_apply] at h1
+        exact h1
+      map_add' := fun x y => map_add _ x y
+      map_smul' := fun r x => Scheme.Modules.Hom.app_smul e.inv
+        ((q.appLE U V eV).hom r) x }
+
+end ReducedSubscheme
 
 end AlgebraicGeometry
