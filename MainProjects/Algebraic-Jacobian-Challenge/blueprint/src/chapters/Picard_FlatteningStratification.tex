@@ -1081,6 +1081,227 @@ beyond Nitsure~\S4 already cited above.
   locally free of rank \(e\), in particular flat over the stratum.
 \end{proof}
 
+\subsection{Flatness transfer to strata}
+\label{subsec:flat_transfer_strata}
+
+The Noetherian-induction reduction is assembled from four transfer lemmas
+(run 0010, T12 r6): flatness under pushout base change, the affine piece
+analysis of a fibre product, affine-locality of flatness over the base, and
+the flat stratum over one irreducible component.
+
+\begin{lemma}[Flatness under pushout base change]
+
+\leanok
+  \label{lem:flat_pushout_base_change}
+  \lean{Module.Flat.of_isPushout}
+  % Module form of Stacks 00HI (3): flatness is stable under arbitrary base
+  % change. Mathlib has the special case A = R, B = S
+  % (\texttt{Module.Flat.baseChange}) and the ring form
+  % (\texttt{RingHom.Flat.isStableUnderBaseChange}).
+  Let \(R \to S\) and \(R \to A\) be commutative ring maps with pushout
+  \(B = S \otimes_R A\), let \(M\) be an \(A\)-module which is flat over
+  \(R\), and let \(N\) be a \(B\)-module which is a base change of \(M\)
+  along \(A \to B\), i.e.\ \(N \cong B \otimes_A M\) as \(B\)-modules.  Then
+  \(N\) is flat over \(S\).
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  It suffices to prove that \(B \otimes_A M\) is flat over \(S\), and for
+  this we show that the canonical \(R\)-linear map
+  \(\eta : M \to B \otimes_A M\), \(m \mapsto 1 \otimes m\), exhibits
+  \(B \otimes_A M\) as the base change \(S \otimes_R M\); flatness over
+  \(S\) then follows from flatness of \(M\) over \(R\) since base change
+  along \(R \to S\) preserves flatness.  We verify the universal property:
+  let \(Q\) be an \(S\)-module and \(g : M \to Q\) an \(R\)-linear map.  The
+  family \(\beta : A \to \operatorname{Hom}_R(M, Q)\),
+  \(\beta(a)(m) = g(am)\), is \(R\)-linear into an \(S\)-module, so by the
+  universal property of the ring base change \(B = S \otimes_R A\) it lifts
+  to an \(S\)-linear map \(\Lambda : B \to \operatorname{Hom}_R(M, Q)\) with
+  \(\Lambda(1 \otimes a) = \beta(a)\).  The pairing
+  \((b, m) \mapsto \Lambda(b)(m)\) is additive, \(S\)-linear in \(b\), and
+  \(A\)-balanced: on generators \(b = s (1 \otimes a')\) of \(B\) one has
+  \(\Lambda((1 \otimes a) b)(m) = s\, g(a a' m) = \Lambda(b)(a m)\), and the
+  general case follows since such elements generate \(B\) additively.  Hence
+  the pairing descends to an \(S\)-linear map
+  \(h : B \otimes_A M \to Q\) with \(h \circ \eta = g\).  Uniqueness: any
+  \(S\)-linear \(h'\) with \(h' \circ \eta = g\) agrees with \(h\) on
+  elements \((s(1 \otimes a)) \otimes m = s\,(1 \otimes am)\), hence on all
+  of \(B \otimes_A M\).
+\end{proof}
+
+\begin{lemma}[Flat sections on an affine piece of a fibre product]
+
+\leanok
+  \label{lem:flat_section_pullback_piece}
+  \lean{AlgebraicGeometry.flat_section_pullback_piece}
+  \uses{def:coherent_sheaf_flat, lem:flat_pushout_base_change,
+    def:pullback_app_isoTensor_sigma}
+  Let
+  \[
+    \begin{array}{ccc}
+      Y & \xrightarrow{\;g\;} & X \\
+      \downarrow{\scriptstyle i_Y} & & \downarrow{\scriptstyle i_X} \\
+      T & \xrightarrow{\;f\;} & S
+    \end{array}
+  \]
+  be a cartesian square of schemes, and let \(U_S \subseteq S\),
+  \(U_X \subseteq i_X^{-1}(U_S)\), \(U_T \subseteq f^{-1}(U_S)\) be affine
+  opens.  Consider the \emph{piece}
+  \(U_Y := g^{-1}(U_X) \cap i_Y^{-1}(U_T) \subseteq Y\).  Then \(U_Y\) is an
+  affine open, the section-ring square
+  \(\Gamma(S, U_S) \to \Gamma(X, U_X),\ \Gamma(S, U_S) \to \Gamma(T, U_T)\)
+  with corner \(\Gamma(Y, U_Y)\) is a pushout of commutative rings, and for
+  every quasi-coherent \(\OO_X\)-module \(\F\) such that
+  \(\Gamma(\F, U_X)\) is flat over \(\Gamma(S, U_S)\), the sections
+  \(\Gamma(g^* \F, U_Y)\) are flat over \(\Gamma(T, U_T)\).  If moreover
+  \(\Gamma(\F, U_X)\) is a finite \(\Gamma(X, U_X)\)-module, then
+  \(\Gamma(g^* \F, U_Y)\) is a finite \(\Gamma(Y, U_Y)\)-module.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  Restricting the cartesian square over the affine cospan
+  \(U_X \to U_S \leftarrow U_T\) exhibits \(U_Y\) as the fibre product
+  \(U_X \times_{U_S} U_T\) of affine schemes
+  (Mathlib: \texttt{Scheme.Hom.isPullback\_resLE}), which is affine; applying
+  global sections to this pullback of affines and reflecting along
+  \(\Spec\) yields the pushout of section rings (Mathlib:
+  \texttt{AlgebraicGeometry.isIso\_pushoutSection\_of\_isAffineOpen}).
+  Since \(U_Y \subseteq g^{-1}(U_X)\) with \(U_X\), \(U_Y\) affine and
+  \(\F\) quasi-coherent, the base-change section formula
+  (\cref{def:pullback_app_isoTensor_sigma}, Stacks 01HQ/01I8) identifies
+  \(\Gamma(g^* \F, U_Y) \cong
+    \Gamma(Y, U_Y) \otimes_{\Gamma(X, U_X)} \Gamma(\F, U_X)\)
+  as \(\Gamma(Y, U_Y)\)-modules, i.e.\ exhibits \(\Gamma(g^*\F, U_Y)\) as a
+  base change of \(\Gamma(\F, U_X)\) along
+  \(\Gamma(X, U_X) \to \Gamma(Y, U_Y)\).  Flatness over \(\Gamma(T, U_T)\)
+  is now \cref{lem:flat_pushout_base_change} applied to the section-ring
+  pushout square; finiteness is preserved because a base change of a finite
+  module is finite.
+\end{proof}
+
+\begin{lemma}[Flatness over the base is affine-local]
+
+\leanok
+  \label{lem:flat_affine_local}
+  \lean{AlgebraicGeometry.flat_section_of_affine_cover}
+  \uses{def:coherent_sheaf_flat, lem:appLE_base_res_apply}
+  Let \(q : Y \to T\) be a morphism of schemes and \(\mathcal G\) a quasi-coherent
+  \(\OO_Y\)-module.  Suppose given affine opens
+  \(U_j \subseteq T\) and \(W_j \subseteq q^{-1}(U_j)\) (\(j \in J\)) such
+  that the \(W_j\) cover \(Y\) and each \(\Gamma(\mathcal G, W_j)\) is flat over
+  \(\Gamma(T, U_j)\).  Then for \emph{every} pair of affine opens
+  \(U \subseteq T\), \(W \subseteq q^{-1}(U)\), the sections
+  \(\Gamma(\mathcal G, W)\) are flat over \(\Gamma(T, U)\).
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  This is the two-layer basic-open reduction of
+  \cref{lem:flat_section_pair}, with the freeness input replaced by chart
+  flatness.  Fix an affine pair \((U, W)\).  For each \(x \in W\) choose a
+  chart \(W_j \ni x\); since \(q(x) \in U \cap U_j\) and both are affine,
+  there is a basic open \(D(a) = D(a')\) of \(T\) common to \(U\) and
+  \(U_j\) containing \(q(x)\), and then a basic open
+  \(D(b) = D(c) \ni x\) common to \(W\) and \(W_j\) with
+  \(D(b) \subseteq q^{-1}(D(a))\).  The elements \(b\) generate the unit
+  ideal of \(\Gamma(Y, W)\), and each restriction
+  \(\Gamma(\mathcal G, W) \to \Gamma(\mathcal G, D(b))\) is a localization at the powers of
+  \(b\) (\cref{lem:qcoh_section_localization_basicOpen}), so flatness of
+  \(\Gamma(\mathcal G, W)\) over \(\Gamma(T, U)\) may be checked on the pieces
+  \(\Gamma(\mathcal G, D(b))\).  On a piece: flatness of \(\Gamma(\mathcal G, W_j)\) over
+  \(\Gamma(T, U_j)\) passes to the fibre-side localization
+  \(\Gamma(\mathcal G, D(c))\) (mixed-base stability of flatness under localization
+  of the module at a submonoid of the fibre algebra), and then the base ring
+  is exchanged twice along
+  \(\Gamma(T, U_j) \to \Gamma(T, D(a')) = \Gamma(T, D(a))\) and
+  \(\Gamma(T, U) \to \Gamma(T, D(a))\) (for a module over a localized ring,
+  flatness over the ring and over its localization agree; the compatibility
+  of the induced module structures is \cref{lem:appLE_base_res_apply}).
+\end{proof}
+
+\begin{lemma}[Reduced subscheme of an irreducible closed subset is integral]
+
+\leanok
+  \label{lem:vanishing_ideal_subscheme_integral}
+  \lean{AlgebraicGeometry.isIntegral_vanishingIdeal_subscheme}
+  Let \(S\) be a scheme and \(Z \subseteq S\) a closed subset.  The
+  subscheme cut out by the vanishing ideal sheaf of \(Z\) (the reduced
+  induced structure) is reduced; if \(Z\) is irreducible (in particular
+  non-empty), it is integral.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  The vanishing ideal sheaf is radical: it equals the vanishing ideal of
+  its own support (Galois connection between supports and vanishing
+  ideals), which is the radical.  The subscheme is covered by the affine
+  charts \(\Spec(\Gamma(S, U)/I(U))\) for \(U\) ranging over affine opens
+  of \(S\), and each \(I(U)\) is a radical ideal, so each chart is the
+  spectrum of a reduced ring; hence the subscheme is reduced.  Its
+  underlying space is the subspace \(Z\), which is irreducible by
+  hypothesis, and a reduced scheme with irreducible non-empty underlying
+  space is integral.
+\end{proof}
+
+\begin{lemma}[Flat stratum over an irreducible component]
+
+\leanok
+  \label{lem:flat_stratum_component}
+  \lean{AlgebraicGeometry.flat_stratum_of_irreducible}
+  \uses{def:coherent_sheaf_flat, thm:generic_flatness,
+    lem:vanishing_ideal_subscheme_integral, lem:flat_section_pullback_piece,
+    lem:flat_affine_local}
+  Let \(S\) be a noetherian scheme, \(\pi : X \to S\) proper, \(\F\) a
+  coherent \(\OO_X\)-module, and \(Z_c \subseteq S\) an irreducible closed
+  subset with reduced subscheme \(T \to S\).  Then there is a non-empty open
+  \(\Omega \subseteq T\) such that for \emph{every} open
+  \(\mathit{St} \subseteq \Omega\), regarded as a locally closed subscheme
+  \(\mathit{St} \to S\), the pullback of \(\F\) to
+  \(X \times_S \mathit{St}\) is flat over \(\mathit{St}\) in the sense of
+  \cref{def:coherent_sheaf_flat}.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  \(T\) is integral (\cref{lem:vanishing_ideal_subscheme_integral}) and
+  noetherian (a closed subscheme of a noetherian scheme), and the base
+  change \(p : X \times_S T \to T\) is proper, hence quasi-compact and
+  locally of finite type.  The pullback of \(\F\) to \(X \times_S T\) is
+  quasi-coherent, and it admits affine charts with finite section modules:
+  around any point, choose affine opens \(U_S \subseteq S\),
+  \(U_T \subseteq T\) above it, and an affine chart \(W_X \subseteq X\)
+  with finite sections (Stacks 01PC); the corresponding piece is an affine
+  chart of \(X \times_S T\) whose sections are the base change of
+  \(\Gamma(\F, W_X)\), hence finite (\cref{lem:flat_section_pullback_piece}),
+  and this finiteness localizes to a basic open inside any given
+  neighbourhood.  Generic flatness (\cref{thm:generic_flatness}, in its
+  quasi-coherent form with this chart supply) yields a non-empty open
+  \(\Omega \subseteq T\) with flat sections on all affine pairs below
+  \(\Omega\).
+
+  Now let \(\mathit{St} \subseteq \Omega\) be open.  The stratum family
+  \(X \times_S \mathit{St} \to \mathit{St}\) maps to the component family by
+  the comparison morphism
+  \(\kappa : X \times_S \mathit{St} \to X \times_S T\), and the square
+  formed by \(\kappa\) and the two projections over
+  \(\mathit{St} \hookrightarrow T\) is cartesian (cancellation of pasted
+  pullback squares).  Cover \(X \times_S \mathit{St}\) by pieces
+  \(g^{-1}(W_X) \cap q^{-1}(U')\) with \(U' \subseteq \mathit{St}\) affine
+  lying over an affine \(U_1 \subseteq \Omega\); on each such piece,
+  applying \cref{lem:flat_section_pullback_piece} to the cartesian
+  \(\kappa\)-square with flatness input from the generic-flatness output on
+  the corresponding piece of \(X \times_S T\) (an affine open below
+  \(\Omega\)) yields flat sections over \(U'\).  By affine-locality
+  (\cref{lem:flat_affine_local}) all affine pairs of the stratum family
+  have flat sections; finally the pulled-back sheaf along \(\kappa\)
+  composed with the projection is identified with the pullback of \(\F\)
+  along the projection of the stratum family (functoriality of pullback,
+  \(g \circ \kappa = g'\)), so the flatness predicate transports along this
+  isomorphism of module sheaves.
+\end{proof}
+
 \begin{lemma}
 
 \leanok
@@ -1113,12 +1334,48 @@ beyond Nitsure~\S4 already cited above.
 \end{lemma}
 
 \begin{proof}
-  \uses{lem:nonflat_locus_proper, thm:generic_flatness}
-  This is the content of \cref{lem:nonflat_locus_proper}: Noetherian
-  induction on closed subsets of \(S\), whose inductive step applies generic
-  flatness (\cref{thm:generic_flatness}) to each irreducible component of the
-  current reduced closed subscheme and peels off the resulting non-empty flat
-  open patches as locally-closed strata of \(S\).
+  \leanok
+  \uses{lem:nonflat_locus_proper, thm:generic_flatness,
+    lem:flat_stratum_component, lem:vanishing_ideal_subscheme_integral}
+  By well-founded induction on the closed subsets of \(S\) (the noetherian
+  hypothesis makes strict inclusion of closed subsets well-founded), we prove:
+  for every closed \(Z \subseteq S\) there is a finite family of immersions
+  with pairwise disjoint images whose union is exactly \(Z\) and with flat
+  pullback of \(\F\) on each member.  For \(Z = \emptyset\) take the empty
+  family.
+
+  For \(Z \neq \emptyset\), let \(Z_1, \dots, Z_r \subseteq S\) be the images
+  of the (finitely many, by noetherianity) irreducible components of the
+  subspace \(Z\); each \(Z_c\) is an irreducible closed subset of \(S\)
+  contained in \(Z\), and together they cover \(Z\).
+  \Cref{lem:flat_stratum_component} applied to the reduced subscheme
+  \(T_c \to S\) of \(Z_c\) yields a non-empty open \(\Omega_c \subseteq T_c\)
+  all of whose open subsets are flat strata.  Let
+  \(E_c \subseteq S\) be the open complement of the union of the other
+  components, and take as stratum the open
+  \(\mathit{St}_c := \Omega_c \cap (T_c \to S)^{-1}(E_c) \subseteq T_c\),
+  a locally closed subscheme of \(S\) via
+  \(\mathit{St}_c \hookrightarrow T_c \to S\), with flat pullback by the
+  choice of \(\Omega_c\).
+
+  The images of the \(\mathit{St}_c\) are pairwise disjoint: the image of
+  \(\mathit{St}_c\) is contained in \(Z_c \setminus \bigcup_{c' \neq c} Z_{c'}\).
+  Their union \(V\) is relatively open in \(Z\): realizing the open image of
+  each \(\mathit{St}_c\) inside \(Z_c\) by an open \(W_c \subseteq S\), one has
+  \(V = Z \cap \bigcup_c (W_c \cap E_c)\), because a point of
+  \(Z \cap W_c \cap E_c\) avoids all components other than \(Z_c\), hence lies
+  in \(Z_c\), hence in the image of \(\mathit{St}_c\).  Moreover \(V\) is
+  non-empty: for any component \(Z_{c}\), irredundancy of the component
+  decomposition shows \(Z_c \not\subseteq \bigcup_{c' \neq c} Z_{c'}\), so the
+  open \((T_c \to S)^{-1}(E_c)\) is non-empty, and two non-empty opens of the
+  irreducible space \(T_c\) intersect, so \(\mathit{St}_c \neq \emptyset\).
+
+  Therefore \(Z' := Z \setminus V\) is a closed subset strictly smaller than
+  \(Z\); the induction hypothesis provides a finite disjoint flat family with
+  union \(Z'\), and adjoining the strata \(\mathit{St}_c\) gives the required
+  family for \(Z\) (disjointness across the two groups holds because the
+  recursive family lies in \(Z'\), which is disjoint from \(V\)).  Applying
+  the statement to \(Z = S\) proves the lemma.
 \end{proof}
 
 \begin{lemma}
@@ -1141,6 +1398,7 @@ beyond Nitsure~\S4 already cited above.
 \end{lemma}
 
 \begin{proof}
+  \leanok
   \uses{lem:flat_locus_reduction_lean}
   Since the statement requires of \(P\) only injectivity, it follows from the
   reduction \cref{lem:flat_locus_reduction_lean}: take its stratification and
@@ -1307,6 +1565,21 @@ no extra work is required to instantiate the theorem in our setting.
 
 \section{Mathlib status}
 \label{sec:flatstrat_mathlib_status}
+
+\emph{Formalization status (run 0010, T12 r6).}  The Lean-typed existence
+statement (\texttt{AlgebraicGeometry.flatteningStratification}: finite
+disjoint locally-closed cover with flat pullbacks, without the
+Hilbert-polynomial indexing) is now proved sorry-free and axiom-clean,
+through \cref{lem:flat_locus_reduction_lean} and the transfer lemmas of
+\cref{subsec:flat_transfer_strata}; the Lean sections \S3--\S6 of the
+statements live in \texttt{GenericFlatnessGeometric.lean} because the proof
+consumes generic flatness, whose glue needs the QuotScheme engine.  The
+remaining Lean gaps in this chapter are the \(n = 0\) rank stratification
+(\texttt{flatLocusStratification}, \cref{lem:flat_locus_open}) and the
+bundled universal property
+(\texttt{flatteningStratification\_universal}); the
+Hilbert-polynomial-indexed refinement of the main statement additionally
+awaits the coherent-\(\chi\) substrate.
 
 Mathlib (master \texttt{b80f227}) provides:
 \begin{itemize}
