@@ -422,10 +422,14 @@ each finite-type-algebra patch of `X` above `Spec A`.
 
 Blueprint reference: `thm:generic_flatness` (Nitsure §4). -/
 
-/-- **Generic flatness theorem** (Nitsure §4 / Stacks ?).
+/-- **Generic flatness theorem, quasi-coherent core** (Nitsure §4).
 
 For a noetherian integral scheme `S`, a finite-type morphism `p : X ⟶ S`,
-and a coherent `𝓞_X`-module `𝓕`, there exists a non-empty open subscheme
+and a quasi-coherent `𝓞_X`-module `𝓕` equipped with a supply of affine
+charts with finite section modules (`hfin` — for finitely presented `𝓕`
+this is Stacks 01PC, see `genericFlatness` below; for pulled-back sheaves
+in the flattening-stratification induction it comes from
+`finite_section_pullback_piece`), there exists a non-empty open subscheme
 `V ⊆ S` such that `𝓕|_{X_V} = 𝓕|_{p⁻¹V}` is flat over `𝓞_V`.
 
 PROVED (run 0010, T12 r4), following Nitsure §4: pass to a non-empty affine
@@ -445,9 +449,11 @@ structure sheaf finitely presented) every non-empty open `V ⊆ Spec ℤ`
 contains all but finitely many primes `q`, and `𝔽_q` is never flat over the
 corresponding `ℤ[1/n]`. Quasi-compactness is what bounds the number of
 denominators to clear. Hence the `[QuasiCompact p]` hypothesis below. -/
-theorem genericFlatness {S X : Scheme.{u}} [IsIntegral S] [IsLocallyNoetherian S]
-    (p : X ⟶ S) [QuasiCompact p] [LocallyOfFiniteType p] (F : X.Modules)
-    [F.IsFinitePresentation] :
+theorem genericFlatness_of_finite_sections {S X : Scheme.{u}} [IsIntegral S]
+    [IsLocallyNoetherian S] (p : X ⟶ S) [QuasiCompact p] [LocallyOfFiniteType p]
+    (F : X.Modules) [F.IsQuasicoherent]
+    (hfin : ∀ (x : X) (O : X.Opens), x ∈ O → ∃ V : X.Opens, IsAffineOpen V ∧
+      x ∈ V ∧ V ≤ O ∧ Module.Finite Γ(X, V) Γ(F, V)) :
     ∃ (V : S.Opens), (V : Set S).Nonempty ∧
       ∀ {U : S.Opens} (_ : IsAffineOpen U) (_ : U ≤ V) {W : X.Opens}
         (_ : IsAffineOpen W) (e : W ≤ p ⁻¹ᵁ U),
@@ -466,7 +472,7 @@ theorem genericFlatness {S X : Scheme.{u}} [IsIntegral S] [IsLocallyNoetherian S
     p.isCompact_preimage hU₀.isCompact
   have HX : ∀ x : X, x ∈ p ⁻¹ᵁ U₀ → ∃ V : X.Opens, IsAffineOpen V ∧ x ∈ V ∧
       V ≤ p ⁻¹ᵁ U₀ ∧ Module.Finite Γ(X, V) Γ(F, V) := fun x hx =>
-    Scheme.Modules.exists_affine_finite_sections_nhds F x (p ⁻¹ᵁ U₀) hx
+    hfin x (p ⁻¹ᵁ U₀) hx
   choose! V hVaff hxV hVle hVfin using HX
   obtain ⟨t, ht⟩ := hK.elim_finite_subcover
     (fun x : ↥(p ⁻¹ᵁ U₀ : X.Opens) => ((V x.1 : X.Opens) : Set X))
@@ -519,6 +525,21 @@ theorem genericFlatness {S X : Scheme.{u}} [IsIntegral S] [IsLocallyNoetherian S
       have h1 := GenericFreeness.free_localizedModule_powers_mul Γ(S, U₀)
         Γ(F, V i.1.1) (ff i) (∏ j ∈ Finset.univ.erase i, ff j) (hffree i)
       rwa [Finset.mul_prod_erase _ _ (Finset.mem_univ i)] at h1
+
+/-- **Generic flatness theorem**, finitely-presented form (Nitsure §4).  The
+statement of `thm:generic_flatness`: the chart supply of
+`genericFlatness_of_finite_sections` is discharged by Stacks 01PC
+(`Scheme.Modules.exists_affine_finite_sections_nhds`). -/
+theorem genericFlatness {S X : Scheme.{u}} [IsIntegral S] [IsLocallyNoetherian S]
+    (p : X ⟶ S) [QuasiCompact p] [LocallyOfFiniteType p] (F : X.Modules)
+    [F.IsFinitePresentation] :
+    ∃ (V : S.Opens), (V : Set S).Nonempty ∧
+      ∀ {U : S.Opens} (_ : IsAffineOpen U) (_ : U ≤ V) {W : X.Opens}
+        (_ : IsAffineOpen W) (e : W ≤ p ⁻¹ᵁ U),
+        letI : Module Γ(S, U) Γ(F, W) := Module.compHom _ (p.appLE U W e).hom
+        Module.Flat Γ(S, U) Γ(F, W) :=
+  genericFlatness_of_finite_sections p F
+    (fun x O hxO => Scheme.Modules.exists_affine_finite_sections_nhds F x O hxO)
 
 /-! ## §3. Flatness under pushout base change (algebra core)
 
