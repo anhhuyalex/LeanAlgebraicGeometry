@@ -365,6 +365,170 @@ theorem pointRank_eq_chartFiberRank {V : X.affineOpens} (x : X)
     (hx : x ∈ V.1) : pointRank X G x = chartFiberRank G x hx :=
   chartFiberRank_eq G x _ hx
 
+/-! ## §4 Locality and chart-independence of entry-ideal membership -/
+
+omit [SheafOfModules.IsQuasicoherent G] in
+/-- Restriction of sections is transitive (any parallel pair of `Opens`
+homs agree, so the composite collapses). -/
+lemma presheaf_res_res {A B C : X.Opens} (j : B ⟶ A) (i : C ⟶ B)
+    (k : C ⟶ A) (x : Γ(X, A)) :
+    X.presheaf.map i.op (X.presheaf.map j.op x) = X.presheaf.map k.op x := by
+  rw [← CommRingCat.comp_apply, ← Functor.map_comp, ← op_comp,
+    Subsingleton.elim (i ≫ j) k]
+
+/-- Transport of a matrix presentation of the sections of `G` along an
+equality of opens. -/
+def transportOpens {U V : X.Opens} (h : U = V) {e mm : ℕ}
+    (P : MatrixPresentation Γ(X, U) Γ(G, U) e mm) :
+    MatrixPresentation Γ(X, V) Γ(G, V) e mm := h ▸ P
+
+omit [SheafOfModules.IsQuasicoherent G] in
+/-- The entry ideal of a transported presentation is the image of the
+entry ideal under the `eqToHom` restriction. -/
+lemma entryIdeal_transportOpens {U V : X.Opens} (h : U = V) {e mm : ℕ}
+    (P : MatrixPresentation Γ(X, U) Γ(G, U) e mm) :
+    (transportOpens G h P).entryIdeal =
+      P.entryIdeal.map (X.presheaf.map (eqToHom h.symm).op).hom := by
+  subst h
+  simp only [transportOpens, eqToHom_refl, op_id, CategoryTheory.Functor.map_id]
+  exact (Ideal.map_id _).symm
+
+variable {e : ℕ}
+
+/-- The entry ideal of the basic-open restriction of a presentation is the
+image ideal of the entry ideal. -/
+lemma entryIdeal_matrixPresentationBasicOpen {mm : ℕ} {V : X.affineOpens}
+    (P : MatrixPresentation Γ(X, V.1) Γ(G, V.1) e mm) (f : Γ(X, V.1)) :
+    (MatrixPresentationBasicOpen G P f).entryIdeal =
+      P.entryIdeal.map (X.presheaf.map (homOfLE (X.basicOpen_le f)).op).hom := by
+  haveI := V.2.isLocalization_basicOpen f
+  haveI := Scheme.Modules.isLocalizedModule_basicOpen G V.2 f
+  rw [MatrixPresentationBasicOpen, Module.MatrixPresentation.congr_entryIdeal,
+    Module.MatrixPresentation.entryIdeal_baseChange]
+  rfl
+
+/-- **Locality of entry-ideal membership on a chart**: if every point of
+the chart has a basic open on which the restriction of `r` lands in the
+entry ideal of the restricted presentation, then `r` is in the entry
+ideal. -/
+theorem mem_entryIdeal_of_locally {mm : ℕ} {V : X.affineOpens}
+    (P : MatrixPresentation Γ(X, V.1) Γ(G, V.1) e mm) (r : Γ(X, V.1))
+    (H : ∀ x ∈ V.1, ∃ g : Γ(X, V.1), x ∈ X.basicOpen g ∧
+      X.presheaf.map (homOfLE (X.basicOpen_le g)).op r ∈
+        (MatrixPresentationBasicOpen G P g).entryIdeal) :
+    r ∈ P.entryIdeal := by
+  classical
+  choose g hxg hgmem using H
+  -- the chosen basic opens cover the chart, so the `g x` span the unit
+  -- ideal
+  have hspan : Ideal.span (Set.range fun x : V.1 => g x.1 x.2) = ⊤ := by
+    rw [← V.2.iSup_basicOpen_eq_self_iff]
+    refine le_antisymm (iSup_le fun r => X.basicOpen_le _) fun y hy => ?_
+    refine TopologicalSpace.Opens.mem_iSup.mpr
+      ⟨⟨_, ⟨⟨y, hy⟩, rfl⟩⟩, hxg y hy⟩
+  refine Submodule.mem_of_span_eq_top_of_smul_pow_mem P.entryIdeal _ hspan r
+    (fun ⟨_, x, rfl⟩ => ?_)
+  -- membership after localization at `g x` gives a power `g x ^ n • r ∈ I`
+  haveI := V.2.isLocalization_basicOpen (g x.1 x.2)
+  have h1 := hgmem x.1 x.2
+  rw [entryIdeal_matrixPresentationBasicOpen] at h1
+  have h2 : algebraMap Γ(X, V.1) Γ(X, X.basicOpen (g x.1 x.2)) r ∈
+      P.entryIdeal.map (algebraMap Γ(X, V.1) Γ(X, X.basicOpen (g x.1 x.2))) := h1
+  obtain ⟨s, hs, hmem⟩ :=
+    (IsLocalization.algebraMap_mem_map_algebraMap_iff
+      (Submonoid.powers (g x.1 x.2)) _ _ _).mp h2
+  obtain ⟨n, rfl⟩ := hs
+  exact ⟨n, by simpa [smul_eq_mul] using hmem⟩
+
+omit [SheafOfModules.IsQuasicoherent G] in
+/-- Restriction along `U ≤ U` is the identity. -/
+lemma presheaf_map_self {U : X.Opens} (h : U ≤ U) (r : Γ(X, U)) :
+    X.presheaf.map (homOfLE h).op r = r := by
+  rw [Subsingleton.elim (homOfLE h) (𝟙 U), op_id,
+    CategoryTheory.Functor.map_id]
+  rfl
+
+/-- **Chart-to-chart transfer of the entry-ideal condition**: if the
+restriction of `r : Γ(X, U)` to a presentation chart `W ≤ U` lies in the
+entry ideal of `P_W`, then at every point of `W ⊓ V` for a second chart
+`V ≤ U` there is a basic open of `V` on which the restriction of `r` lies
+in the entry ideal of the restricted `P_V`.  Presentation-independence of
+the entry ideal (`Module.MatrixPresentation.entryIdeal_eq`) at a common
+basic open is the engine. -/
+theorem exists_basicOpen_mem_entryIdeal_of_chart {U : X.Opens}
+    (r : Γ(X, U)) {V W : X.affineOpens} (hVU : V.1 ≤ U) (hWU : W.1 ≤ U)
+    {mmV mmW : ℕ}
+    (PV : MatrixPresentation Γ(X, V.1) Γ(G, V.1) e mmV)
+    (PW : MatrixPresentation Γ(X, W.1) Γ(G, W.1) e mmW)
+    (hW : X.presheaf.map (homOfLE hWU).op r ∈ PW.entryIdeal)
+    (x : X) (hxV : x ∈ V.1) (hxW : x ∈ W.1) :
+    ∃ g : Γ(X, V.1), x ∈ X.basicOpen g ∧
+      X.presheaf.map (homOfLE (X.basicOpen_le g)).op
+          (X.presheaf.map (homOfLE hVU).op r) ∈
+        (MatrixPresentationBasicOpen G PV g).entryIdeal := by
+  obtain ⟨f, g, hfg, hxf⟩ :=
+    exists_basicOpen_le_affine_inter W.2 V.2 x ⟨hxW, hxV⟩
+  have hbofU : X.basicOpen f ≤ U := (X.basicOpen_le f).trans hWU
+  have hbogU : X.basicOpen g ≤ U := (X.basicOpen_le g).trans hVU
+  refine ⟨g, hfg ▸ hxf, ?_⟩
+  -- rewrite the doubly-restricted section as an `eqToHom`-transport of the
+  -- `W`-side restriction
+  have hz : X.presheaf.map (homOfLE (X.basicOpen_le g)).op
+      (X.presheaf.map (homOfLE hVU).op r) =
+      X.presheaf.map (eqToHom hfg.symm).op
+        (X.presheaf.map (homOfLE (X.basicOpen_le f)).op
+          (X.presheaf.map (homOfLE hWU).op r)) := by
+    rw [presheaf_res_res (homOfLE hVU)
+      (homOfLE (X.basicOpen_le g)) (homOfLE hbogU),
+      presheaf_res_res (homOfLE hWU)
+      (homOfLE (X.basicOpen_le f)) (homOfLE hbofU),
+      presheaf_res_res (homOfLE hbofU)
+      (eqToHom hfg.symm) (homOfLE hbogU)]
+  rw [hz,
+    ← Module.MatrixPresentation.entryIdeal_eq
+      (transportOpens G hfg (MatrixPresentationBasicOpen G PW f))
+      (MatrixPresentationBasicOpen G PV g),
+    entryIdeal_transportOpens]
+  refine Ideal.mem_map_of_mem _ ?_
+  rw [entryIdeal_matrixPresentationBasicOpen]
+  exact Ideal.mem_map_of_mem _ hW
+
+/-! ## §5 The strata ideal -/
+
+variable (e) in
+/-- The rank-`e` **strata ideal** at an affine open `U`: the intersection,
+over all `e`-generator presentation charts `V ≤ U`, of the preimages of the
+entry ideals under restriction [Nitsure §4, `n = 0`: the ideal sheaf of the
+canonical scheme structure on the rank-`e` locus]. -/
+noncomputable def strataIdeal (U : X.affineOpens) : Ideal Γ(X, U.1) :=
+  ⨅ (V : X.affineOpens) (h : V.1 ≤ U.1) (mm : ℕ)
+    (P : MatrixPresentation Γ(X, V.1) Γ(G, V.1) e mm),
+    P.entryIdeal.comap (X.presheaf.map (homOfLE h).op).hom
+
+omit [SheafOfModules.IsQuasicoherent G] in
+lemma mem_strataIdeal_iff {U : X.affineOpens} {r : Γ(X, U.1)} :
+    r ∈ strataIdeal G e U ↔ ∀ (V : X.affineOpens) (h : V.1 ≤ U.1) (mm : ℕ)
+      (P : MatrixPresentation Γ(X, V.1) Γ(G, V.1) e mm),
+      X.presheaf.map (homOfLE h).op r ∈ P.entryIdeal := by
+  simp only [strataIdeal, Submodule.mem_iInf, Ideal.mem_comap]
+
+/-- **Evaluation of the strata ideal on a presentation chart**: on an
+`e`-presentation chart the strata ideal is the entry ideal of any (hence
+every) `e`-generator presentation. -/
+theorem strataIdeal_eq_entryIdeal {V : X.affineOpens} {mm : ℕ}
+    (P : MatrixPresentation Γ(X, V.1) Γ(G, V.1) e mm) :
+    strataIdeal G e V = P.entryIdeal := by
+  refine le_antisymm ?_ ?_
+  · intro r hr
+    have h := (mem_strataIdeal_iff G).mp hr V le_rfl mm P
+    rwa [presheaf_map_self] at h
+  · intro r hr
+    rw [mem_strataIdeal_iff]
+    intro W hWV mmW Q
+    refine mem_entryIdeal_of_locally G Q _ (fun x hx => ?_)
+    exact exists_basicOpen_mem_entryIdeal_of_chart G r hWV le_rfl Q P
+      (by rwa [presheaf_map_self]) x hx (hWV hx)
+
 end Scheme.Modules
 
 end AlgebraicGeometry
