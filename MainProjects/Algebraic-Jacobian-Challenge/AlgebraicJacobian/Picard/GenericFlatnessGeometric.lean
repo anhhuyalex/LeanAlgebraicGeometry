@@ -1104,4 +1104,287 @@ lemma coherentSheafFlat_of_iso {T' Y' : Scheme.{u}} (q : Y' ⟶ T') {G G' : Y'.M
 
 end ReducedSubscheme
 
+/-! ## §7. The flat stratum over one irreducible component
+
+For an irreducible closed subset `Zc ⊆ S` with reduced subscheme `T`, generic
+flatness on the base-changed family `X ×_S T ⟶ T` produces a non-empty open
+`Ω ⊆ T` such that for *every* open `St ≤ Ω` the family restricted to the
+locally closed stratum `St ⟶ S` has flat pullback: chart flatness on the
+piece cover of `X ×_S St` comes from the generic-flatness output through the
+pasted pullback square (`IsPullback.of_bot`) and the per-piece transfer of
+§4, `flat_section_of_affine_cover` (§5) globalizes, and
+`coherentSheafFlat_of_iso` rewrites the pulled-back sheaf through
+`pullbackComp`. -/
+
+section FlatStratum
+
+variable {S X : Scheme.{u}} [IsNoetherian S] (π : X ⟶ S) [IsProper π]
+variable (F : X.Modules) [F.IsFinitePresentation]
+variable (Zc : TopologicalSpace.Closeds S)
+
+set_option quotPrecheck false in
+local notation "Tsch" => (Scheme.IdealSheafData.vanishingIdeal Zc).subscheme
+
+set_option quotPrecheck false in
+local notation "kT" => (Scheme.IdealSheafData.vanishingIdeal Zc).subschemeι
+
+set_option maxHeartbeats 1600000 in
+/-- **Flat stratum over an irreducible component** [Nitsure §4, induction
+step core].  For `Zc ⊆ S` irreducible closed with reduced subscheme `T`,
+there is a non-empty open `Ω ⊆ T` such that every open substratum
+`St ≤ Ω`, viewed as a locally closed subscheme of `S`, has flat pullback
+family. -/
+theorem flat_stratum_of_irreducible (hirr : IsIrreducible (Zc : Set S)) :
+    ∃ Ω : (Tsch).Opens, (Ω : Set Tsch).Nonempty ∧
+      ∀ St : (Tsch).Opens, St ≤ Ω →
+        Scheme.CoherentSheafFlat (pullback.snd π (St.ι ≫ kT))
+          ((Scheme.Modules.pullback (pullback.fst π (St.ι ≫ kT))).obj F) := by
+  classical
+  haveI : IsIntegral Tsch := isIntegral_vanishingIdeal_subscheme Zc hirr
+  haveI : IsLocallyNoetherian Tsch := LocallyOfFiniteType.isLocallyNoetherian kT
+  haveI hFqc : F.IsQuasicoherent := inferInstance
+  haveI hFTqc : ((Scheme.Modules.pullback (pullback.fst π kT)).obj F).IsQuasicoherent :=
+    pullback_isQuasicoherent_hom _ F hFqc
+  -- chart supply for the pulled-back module on `X ×_S T`
+  have hfinT : ∀ (x : ↑(pullback π kT)) (O : (pullback π kT).Opens), x ∈ O →
+      ∃ V : (pullback π kT).Opens, IsAffineOpen V ∧ x ∈ V ∧ V ≤ O ∧
+        Module.Finite Γ(pullback π kT, V)
+          Γ((Scheme.Modules.pullback (pullback.fst π kT)).obj F, V) := by
+    intro x O hxO
+    obtain ⟨_, ⟨US, hUS, rfl⟩, hs₀, -⟩ :=
+      S.isBasis_affineOpens.exists_subset_of_mem_open
+        (Set.mem_univ ((kT) ((pullback.snd π kT) x))) isOpen_univ
+    have hxt : (pullback.snd π kT) x ∈ kT ⁻¹ᵁ US := hs₀
+    obtain ⟨_, ⟨UT, hUT, rfl⟩, hxUT, hUTle⟩ :=
+      (Tsch).isBasis_affineOpens.exists_subset_of_mem_open hxt (kT ⁻¹ᵁ US).2
+    have hxw : (pullback.fst π kT) x ∈ π ⁻¹ᵁ US := by
+      have h1 : π ((pullback.fst π kT) x) = (kT) ((pullback.snd π kT) x) := by
+        rw [← Scheme.Hom.comp_apply, ← Scheme.Hom.comp_apply, pullback.condition]
+      show π ((pullback.fst π kT) x) ∈ US
+      rw [h1]
+      exact hs₀
+    obtain ⟨WX, hWX, hxWX, hWXle, hWfin⟩ :=
+      Scheme.Modules.exists_affine_finite_sections_nhds F
+        ((pullback.fst π kT).base x) (π ⁻¹ᵁ US) hxw
+    have hP : IsAffineOpen
+        ((pullback.fst π kT) ⁻¹ᵁ WX ⊓ (pullback.snd π kT) ⁻¹ᵁ UT) :=
+      isAffineOpen_pullback_piece (IsPullback.of_hasPullback π kT) hUTle hWXle
+        hUS hUT hWX
+    have hxP : x ∈ (pullback.fst π kT) ⁻¹ᵁ WX ⊓ (pullback.snd π kT) ⁻¹ᵁ UT :=
+      ⟨hxWX, hxUT⟩
+    have hPfin : Module.Finite
+        Γ(pullback π kT, (pullback.fst π kT) ⁻¹ᵁ WX ⊓ (pullback.snd π kT) ⁻¹ᵁ UT)
+        Γ((Scheme.Modules.pullback (pullback.fst π kT)).obj F,
+          (pullback.fst π kT) ⁻¹ᵁ WX ⊓ (pullback.snd π kT) ⁻¹ᵁ UT) :=
+      finite_section_pullback_piece (IsPullback.of_hasPullback π kT) hUTle hWXle
+        F hUS hUT hWX hWfin
+    obtain ⟨β, hβle, hxβ⟩ := hP.exists_basicOpen_le
+      (⟨x, ⟨hxP, hxO⟩⟩ : ↥(((pullback.fst π kT) ⁻¹ᵁ WX ⊓ (pullback.snd π kT) ⁻¹ᵁ UT) ⊓ O))
+      hxP
+    refine ⟨(pullback π kT).basicOpen β, hP.basicOpen β, hxβ,
+      hβle.trans inf_le_right, ?_⟩
+    -- localized finiteness on the basic open
+    letI : Module
+        Γ(pullback π kT, (pullback.fst π kT) ⁻¹ᵁ WX ⊓ (pullback.snd π kT) ⁻¹ᵁ UT)
+        Γ((Scheme.Modules.pullback (pullback.fst π kT)).obj F,
+          (pullback π kT).basicOpen β) :=
+      Module.compHom _ (algebraMap
+        Γ(pullback π kT, (pullback.fst π kT) ⁻¹ᵁ WX ⊓ (pullback.snd π kT) ⁻¹ᵁ UT)
+        Γ(pullback π kT, (pullback π kT).basicOpen β))
+    haveI : IsScalarTower
+        Γ(pullback π kT, (pullback.fst π kT) ⁻¹ᵁ WX ⊓ (pullback.snd π kT) ⁻¹ᵁ UT)
+        Γ(pullback π kT, (pullback π kT).basicOpen β)
+        Γ((Scheme.Modules.pullback (pullback.fst π kT)).obj F,
+          (pullback π kT).basicOpen β) :=
+      IsScalarTower.of_algebraMap_smul fun _ _ => rfl
+    haveI hloc : IsLocalizedModule (Submonoid.powers β)
+        (Scheme.Modules.restrictBasicOpenₗ
+          ((Scheme.Modules.pullback (pullback.fst π kT)).obj F) β) :=
+      Scheme.Modules.isLocalizedModule_basicOpen_of_isCompact _ hP.isCompact
+        hP.isQuasiSeparated β
+    haveI hlocR : IsLocalization.Away β
+        Γ(pullback π kT, (pullback π kT).basicOpen β) :=
+      hP.isLocalization_basicOpen β
+    exact Module.Finite.of_isLocalizedModule (Submonoid.powers β)
+      (Rₚ := Γ(pullback π kT, (pullback π kT).basicOpen β))
+      (Scheme.Modules.restrictBasicOpenₗ
+        ((Scheme.Modules.pullback (pullback.fst π kT)).obj F) β)
+  -- generic flatness on the reduced-component family
+  obtain ⟨Ω, hΩne, hΩflat⟩ := genericFlatness_of_finite_sections
+    (pullback.snd π kT) ((Scheme.Modules.pullback (pullback.fst π kT)).obj F) hfinT
+  refine ⟨Ω, hΩne, ?_⟩
+  intro St hStΩ
+  -- the comparison morphism into the component family
+  have hcondSt : pullback.fst π (St.ι ≫ kT) ≫ π =
+      (pullback.snd π (St.ι ≫ kT) ≫ St.ι) ≫ kT := by
+    rw [pullback.condition, Category.assoc]
+  -- κ : X ×_S St ⟶ X ×_S T
+  -- (over `𝟙 X` and `St.ι`)
+  have hκfst : pullback.lift (pullback.fst π (St.ι ≫ kT))
+      (pullback.snd π (St.ι ≫ kT) ≫ St.ι) hcondSt ≫ pullback.fst π kT =
+      pullback.fst π (St.ι ≫ kT) := pullback.lift_fst _ _ _
+  have hκsnd : pullback.lift (pullback.fst π (St.ι ≫ kT))
+      (pullback.snd π (St.ι ≫ kT) ≫ St.ι) hcondSt ≫ pullback.snd π kT =
+      pullback.snd π (St.ι ≫ kT) ≫ St.ι := pullback.lift_snd _ _ _
+  -- the left square of the vertical pasting is a pullback
+  have Hbig : IsPullback (pullback.snd π (St.ι ≫ kT))
+      (pullback.lift (pullback.fst π (St.ι ≫ kT))
+        (pullback.snd π (St.ι ≫ kT) ≫ St.ι) hcondSt ≫ pullback.fst π kT)
+      (St.ι ≫ kT) π := by
+    rw [hκfst]
+    exact (IsPullback.of_hasPullback π (St.ι ≫ kT)).flip
+  have Hleft : IsPullback
+      (pullback.lift (pullback.fst π (St.ι ≫ kT))
+        (pullback.snd π (St.ι ≫ kT) ≫ St.ι) hcondSt)
+      (pullback.snd π (St.ι ≫ kT)) (pullback.snd π kT) St.ι :=
+    (IsPullback.of_bot Hbig hκsnd.symm
+      ((IsPullback.of_hasPullback π kT).flip)).flip
+  -- per-point chart data on the stratum family
+  have Hch : ∀ y : ↑(pullback π (St.ι ≫ kT)),
+      ∃ (WX : X.Opens) (U₁ : (Tsch).Opens) (US : S.Opens),
+        IsAffineOpen WX ∧ IsAffineOpen U₁ ∧ IsAffineOpen US ∧ U₁ ≤ St ∧ U₁ ≤ Ω ∧
+        WX ≤ π ⁻¹ᵁ US ∧ U₁ ≤ kT ⁻¹ᵁ US ∧
+        y ∈ (pullback.fst π (St.ι ≫ kT)) ⁻¹ᵁ WX ∧
+        y ∈ (pullback.snd π (St.ι ≫ kT)) ⁻¹ᵁ (St.ι ⁻¹ᵁ U₁) := by
+    intro y
+    obtain ⟨_, ⟨US, hUS, rfl⟩, hs₀, -⟩ :=
+      S.isBasis_affineOpens.exists_subset_of_mem_open
+        (Set.mem_univ ((St.ι ≫ kT) ((pullback.snd π (St.ι ≫ kT)) y)))
+        isOpen_univ
+    have hmemSt : St.ι ((pullback.snd π (St.ι ≫ kT)) y) ∈ St := by
+      have hmr : St.ι ((pullback.snd π (St.ι ≫ kT)) y) ∈ Set.range St.ι.base :=
+        ⟨(pullback.snd π (St.ι ≫ kT)) y, rfl⟩
+      rwa [Scheme.Opens.range_ι] at hmr
+    have hxt : (St.ι ((pullback.snd π (St.ι ≫ kT)) y)) ∈
+        (St ⊓ Ω ⊓ kT ⁻¹ᵁ US : (Tsch).Opens) := by
+      refine ⟨⟨hmemSt, hStΩ hmemSt⟩, ?_⟩
+      show (kT) (St.ι ((pullback.snd π (St.ι ≫ kT)) y)) ∈ US
+      rwa [← Scheme.Hom.comp_apply] at hs₀
+    obtain ⟨_, ⟨U₁, hU₁, rfl⟩, hxU₁, hU₁le⟩ :=
+      (Tsch).isBasis_affineOpens.exists_subset_of_mem_open hxt
+        (St ⊓ Ω ⊓ kT ⁻¹ᵁ US).2
+    have hxw : (pullback.fst π (St.ι ≫ kT)) y ∈ π ⁻¹ᵁ US := by
+      have h1 : π ((pullback.fst π (St.ι ≫ kT)) y) =
+          (St.ι ≫ kT) ((pullback.snd π (St.ι ≫ kT)) y) := by
+        rw [← Scheme.Hom.comp_apply, ← Scheme.Hom.comp_apply, pullback.condition]
+      show π ((pullback.fst π (St.ι ≫ kT)) y) ∈ US
+      rw [h1]
+      exact hs₀
+    obtain ⟨_, ⟨WX, hWX, rfl⟩, hxWX, hWXle⟩ :=
+      X.isBasis_affineOpens.exists_subset_of_mem_open hxw (π ⁻¹ᵁ US).2
+    exact ⟨WX, U₁, US, hWX, hU₁, hUS, (hU₁le.trans inf_le_left).trans inf_le_left,
+      (hU₁le.trans inf_le_left).trans inf_le_right, hWXle, hU₁le.trans inf_le_right,
+      hxWX, hxU₁⟩
+  choose WXc U₁c USc hWXc hU₁c hUSc hU₁St hU₁Ω hWXle hU₁le hyWX hyU₁ using Hch
+  -- chart flatness for the `κ`-pulled-back module, fed by generic flatness
+  -- through the pasted square
+  have hchart : ∀ y : ↑(pullback π (St.ι ≫ kT)),
+      letI : Module Γ(St, St.ι ⁻¹ᵁ U₁c y)
+          Γ((Scheme.Modules.pullback (pullback.lift (pullback.fst π (St.ι ≫ kT))
+              (pullback.snd π (St.ι ≫ kT) ≫ St.ι) hcondSt)).obj
+            ((Scheme.Modules.pullback (pullback.fst π kT)).obj F),
+            (pullback.fst π (St.ι ≫ kT)) ⁻¹ᵁ WXc y ⊓
+              (pullback.snd π (St.ι ≫ kT)) ⁻¹ᵁ (St.ι ⁻¹ᵁ U₁c y)) :=
+        Module.compHom _ ((pullback.snd π (St.ι ≫ kT)).appLE (St.ι ⁻¹ᵁ U₁c y)
+          ((pullback.fst π (St.ι ≫ kT)) ⁻¹ᵁ WXc y ⊓
+            (pullback.snd π (St.ι ≫ kT)) ⁻¹ᵁ (St.ι ⁻¹ᵁ U₁c y)) inf_le_right).hom
+      Module.Flat Γ(St, St.ι ⁻¹ᵁ U₁c y)
+        Γ((Scheme.Modules.pullback (pullback.lift (pullback.fst π (St.ι ≫ kT))
+            (pullback.snd π (St.ι ≫ kT) ≫ St.ι) hcondSt)).obj
+          ((Scheme.Modules.pullback (pullback.fst π kT)).obj F),
+          (pullback.fst π (St.ι ≫ kT)) ⁻¹ᵁ WXc y ⊓
+            (pullback.snd π (St.ι ≫ kT)) ⁻¹ᵁ (St.ι ⁻¹ᵁ U₁c y)) := by
+    intro y
+    -- the piece of the component family
+    have hP₁ : IsAffineOpen
+        ((pullback.fst π kT) ⁻¹ᵁ WXc y ⊓ (pullback.snd π kT) ⁻¹ᵁ U₁c y) :=
+      isAffineOpen_pullback_piece (IsPullback.of_hasPullback π kT) (hU₁le y)
+        (hWXle y) (hUSc y) (hU₁c y) (hWXc y)
+    -- generic flatness on that piece
+    have hflat₁ :
+        letI : Module Γ(Tsch, U₁c y)
+            Γ((Scheme.Modules.pullback (pullback.fst π kT)).obj F,
+              (pullback.fst π kT) ⁻¹ᵁ WXc y ⊓ (pullback.snd π kT) ⁻¹ᵁ U₁c y) :=
+          Module.compHom _ ((pullback.snd π kT).appLE (U₁c y)
+            ((pullback.fst π kT) ⁻¹ᵁ WXc y ⊓ (pullback.snd π kT) ⁻¹ᵁ U₁c y)
+            inf_le_right).hom
+        Module.Flat Γ(Tsch, U₁c y)
+          Γ((Scheme.Modules.pullback (pullback.fst π kT)).obj F,
+            (pullback.fst π kT) ⁻¹ᵁ WXc y ⊓ (pullback.snd π kT) ⁻¹ᵁ U₁c y) :=
+      hΩflat (hU₁c y) (hU₁Ω y) hP₁ inf_le_right
+    -- affinity of the stratum chart
+    have hU₁' : IsAffineOpen (St.ι ⁻¹ᵁ U₁c y) :=
+      IsAffineOpen.preimage_of_isOpenImmersion (hU₁c y) St.ι
+        (by rw [Scheme.Opens.opensRange_ι]; exact hU₁St y)
+    -- the per-piece transfer over the left square
+    have htransfer :=
+      flat_section_pullback_piece (H := Hleft) (hUST := le_rfl)
+        (hUSX := inf_le_right)
+        ((Scheme.Modules.pullback (pullback.fst π kT)).obj F)
+        (hU₁c y) hU₁' hP₁ hflat₁
+    -- identify the piece with the stratum chart open
+    have hopeq : (pullback.lift (pullback.fst π (St.ι ≫ kT))
+        (pullback.snd π (St.ι ≫ kT) ≫ St.ι) hcondSt) ⁻¹ᵁ
+          ((pullback.fst π kT) ⁻¹ᵁ WXc y ⊓ (pullback.snd π kT) ⁻¹ᵁ U₁c y) ⊓
+        (pullback.snd π (St.ι ≫ kT)) ⁻¹ᵁ (St.ι ⁻¹ᵁ U₁c y) =
+        (pullback.fst π (St.ι ≫ kT)) ⁻¹ᵁ WXc y ⊓
+          (pullback.snd π (St.ι ≫ kT)) ⁻¹ᵁ (St.ι ⁻¹ᵁ U₁c y) := by
+      rw [Scheme.Hom.preimage_inf, ← Scheme.Hom.comp_preimage, hκfst,
+        ← Scheme.Hom.comp_preimage, hκsnd, Scheme.Hom.comp_preimage]
+      rw [inf_assoc, inf_idem]
+    exact flat_sections_congr (pullback.snd π (St.ι ≫ kT)) _ hopeq
+      (hopeq ▸ inf_le_right) inf_le_right htransfer
+  -- globalize over the stratum: all affine pairs are flat for the
+  -- `κ`-pulled-back module
+  have hallκ : Scheme.CoherentSheafFlat (pullback.snd π (St.ι ≫ kT))
+      ((Scheme.Modules.pullback (pullback.lift (pullback.fst π (St.ι ≫ kT))
+          (pullback.snd π (St.ι ≫ kT) ≫ St.ι) hcondSt)).obj
+        ((Scheme.Modules.pullback (pullback.fst π kT)).obj F)) := by
+    intro U hU V hV eV
+    haveI hκqc : ((Scheme.Modules.pullback (pullback.lift (pullback.fst π (St.ι ≫ kT))
+        (pullback.snd π (St.ι ≫ kT) ≫ St.ι) hcondSt)).obj
+          ((Scheme.Modules.pullback (pullback.fst π kT)).obj F)).IsQuasicoherent :=
+      pullback_isQuasicoherent_hom _ _ hFTqc
+    exact flat_section_of_affine_cover (pullback.snd π (St.ι ≫ kT)) _
+      (fun y => (pullback.fst π (St.ι ≫ kT)) ⁻¹ᵁ WXc y ⊓
+        (pullback.snd π (St.ι ≫ kT)) ⁻¹ᵁ (St.ι ⁻¹ᵁ U₁c y))
+      (fun y => by
+        have hP₁ : IsAffineOpen
+            ((pullback.fst π kT) ⁻¹ᵁ WXc y ⊓ (pullback.snd π kT) ⁻¹ᵁ U₁c y) :=
+          isAffineOpen_pullback_piece (IsPullback.of_hasPullback π kT) (hU₁le y)
+            (hWXle y) (hUSc y) (hU₁c y) (hWXc y)
+        have hU₁' : IsAffineOpen (St.ι ⁻¹ᵁ U₁c y) :=
+          IsAffineOpen.preimage_of_isOpenImmersion (hU₁c y) St.ι
+            (by rw [Scheme.Opens.opensRange_ι]; exact hU₁St y)
+        have hopeq : (pullback.lift (pullback.fst π (St.ι ≫ kT))
+            (pullback.snd π (St.ι ≫ kT) ≫ St.ι) hcondSt) ⁻¹ᵁ
+              ((pullback.fst π kT) ⁻¹ᵁ WXc y ⊓ (pullback.snd π kT) ⁻¹ᵁ U₁c y) ⊓
+            (pullback.snd π (St.ι ≫ kT)) ⁻¹ᵁ (St.ι ⁻¹ᵁ U₁c y) =
+            (pullback.fst π (St.ι ≫ kT)) ⁻¹ᵁ WXc y ⊓
+              (pullback.snd π (St.ι ≫ kT)) ⁻¹ᵁ (St.ι ⁻¹ᵁ U₁c y) := by
+          rw [Scheme.Hom.preimage_inf, ← Scheme.Hom.comp_preimage, hκfst,
+            ← Scheme.Hom.comp_preimage, hκsnd, Scheme.Hom.comp_preimage]
+          rw [inf_assoc, inf_idem]
+        rw [← hopeq]
+        exact isAffineOpen_pullback_piece (H := Hleft) (hUST := le_rfl)
+          (hUSX := inf_le_right) (hU₁c y) hU₁' hP₁)
+      (fun y => St.ι ⁻¹ᵁ U₁c y)
+      (fun y => IsAffineOpen.preimage_of_isOpenImmersion (hU₁c y) St.ι
+        (by rw [Scheme.Opens.opensRange_ι]; exact hU₁St y))
+      (fun y => inf_le_right)
+      (fun y => ⟨y, ⟨hyWX y, hyU₁ y⟩⟩)
+      hchart hU hV eV
+  -- transport along `pullbackComp` to the stratum family's sheaf
+  have esheaf : (Scheme.Modules.pullback (pullback.lift (pullback.fst π (St.ι ≫ kT))
+        (pullback.snd π (St.ι ≫ kT) ≫ St.ι) hcondSt)).obj
+      ((Scheme.Modules.pullback (pullback.fst π kT)).obj F) ≅
+      (Scheme.Modules.pullback (pullback.fst π (St.ι ≫ kT))).obj F :=
+    (Scheme.Modules.pullbackComp (pullback.lift (pullback.fst π (St.ι ≫ kT))
+      (pullback.snd π (St.ι ≫ kT) ≫ St.ι) hcondSt) (pullback.fst π kT)).app F ≪≫
+    (Scheme.Modules.pullbackCongr hκfst).app F
+  intro U hU V hV eV
+  exact coherentSheafFlat_of_iso (pullback.snd π (St.ι ≫ kT)) esheaf hallκ hU hV eV
+
+end FlatStratum
+
 end AlgebraicGeometry
