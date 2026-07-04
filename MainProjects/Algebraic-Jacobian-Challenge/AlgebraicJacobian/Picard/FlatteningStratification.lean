@@ -15,36 +15,48 @@ turns the absolute Quot-functor representability problem on a projective
 morphism `π : X ⟶ S` with coherent input `𝓕` into a finite collection of
 locally-closed strata over which `𝓕` becomes flat.
 
-## Status (run 0010, T12 r3 — algebraic generic freeness CLOSED)
+## Status (run 0010, T12 r4 — geometric glue closed; r3 algebraic core reopened)
 
-The `GenericFreeness` section is now **sorry-free**: Grothendieck's generic
-freeness (`genericFlatnessAlgebraic`, Stacks 051R over a noetherian base) is
-fully proved.  The run-r2 dévissage layer (splicing, torsion base case,
-localization transport, prime-filtration assembly) has been completed by the
-Noether-normalisation domain core `genericallyFree_quotient_prime`, proved
-this round by strong induction on the Krull dimension of the generic fibre
-(`genericallyFree_quotient_prime_of_fibre_dim_le`): Noether normalisation of
-the fibre with the two integral-dimension comparisons
-(`ringKrullDim_le_of_isIntegral`, `le_ringKrullDim_of_isIntegral_of_injective`
-— chains of primes under comap / lying-over + going-up), variable scaling
-into `C` (`exists_scaled_noether_datum`), denominator clearing through the
-constant-coefficient localization `A[X] → K[X]`
-(`exists_smul_isIntegralElem_of_fibre_finite`, via
-`IsIntegral.exists_multiple_integral_of_isLocalization`), the module-finite
-subalgebra `C'' ⊆ C` with `g`-saturated inclusion, the generic-rank exact
-sequence `0 → D^r → C'' → T → 0`, dévissage of the torsion cokernel over the
-hypersurface `D ⧸ (d)` (whose fibre dimension drops, feeding the induction),
-splicing, and transport along the saturating inclusion
-(`GenericallyFree.of_saturating_injection`).
+**`genericFlatness` is now proved** (sorry-free), in the companion file
+`AlgebraicJacobian.Picard.GenericFlatnessGeometric`: the geometric glue there
+turns the algebraic statement of this file into the scheme-level one.  The
+chart supply is `Scheme.Modules.exists_affine_finite_sections_nhds`
+(Stacks 01PC finite-type half, proved in `Picard/QuotScheme.lean` from the
+tilde–Γ adjunction); the per-pair reduction is `flat_section_pair` (a
+fibre-side `Module.flat_of_isLocalized_span` over simultaneous basic opens,
+then two `Module.flat_iff_of_isLocalization` base exchanges), whose per-piece
+core `flat_section_chartBasic` localizes the chart freeness through the qcqs
+section-localization engine (Stacks 01P0) and the mixed-base stability lemma
+`Module.Flat.of_isLocalizedModule_algebra`.  That companion file, not this
+one, imports the QuotScheme engine — keeping the instance environment of the
+heavy dévissage proofs below unperturbed.
+
+The `GenericFreeness` dévissage layer (splicing, torsion base case,
+localization transport, prime-filtration assembly) and the r3 sub-lemma
+layer for the domain core (integral-dimension comparisons
+`ringKrullDim_le_of_isIntegral` / `le_ringKrullDim_of_isIntegral_of_injective`,
+variable scaling `exists_scaled_noether_datum`, denominator clearing
+`exists_smul_isIntegralElem_of_fibre_finite`, fibre-dimension bound
+`exists_nat_fibre_dim_le`) are proved and kernel-checked.  The r3 proof of
+the strong induction `genericallyFree_quotient_prime_of_fibre_dim_le`
+(session 0027, which ended at a rate limit before verification) does **not**
+survive the batch kernel build — three localized-module/subtype instance
+walls (a `Module.Free` synthesis failure and two divergent-`whnf`
+deterministic timeouts) — and has been re-opened as a documented typed
+`sorry`; the full r3 text is preserved in ledger commit `6c30537`.
 
 Earlier r2 repairs of three FALSE pinned statements (quasi-compactness in
 `genericFlatness`, flatness-over-the-stratum in `flatLocusStratification`,
 the bundled universal property in `flatteningStratification_universal`) are
 documented in the per-declaration docstrings.
 
-Remaining `sorry`s (4, all TRUE statements, all in the *geometric* layer):
-`genericFlatness`, `flatLocusStratification`, `flatLocusReduction`,
-`flatteningStratification_universal`.
+Remaining `sorry`s in this file (4, all TRUE statements):
+`genericallyFree_quotient_prime_of_fibre_dim_le` (the re-opened r3 kernel
+wall, algebraic layer), and the three geometric-layer stubs
+`flatLocusStratification`, `flatLocusReduction`,
+`flatteningStratification_universal`.  (`genericFlatness` is proved in
+`GenericFlatnessGeometric.lean`, conditional on the algebraic core through
+`genericFlatnessAlgebraic`.)
 
 The 4 blueprint-pinned declarations are:
 
@@ -947,7 +959,6 @@ private theorem exists_nat_fibre_dim_le {A : Type*} [CommRing A] [IsDomain A]
     rw [ringKrullDim_eq_bot_of_subsingleton]
     exact bot_le
 
-set_option maxHeartbeats 1600000 in
 /-- **Auxiliary induction for the domain core** [Nitsure §4, "Lemma on Generic
 Flatness", normalisation step]: for a noetherian domain `A` and a finite-type
 `A`-algebra `E` with a prime `q`, if the generic fibre of `C := E ⧸ q` has
@@ -971,296 +982,23 @@ theorem genericallyFree_quotient_prime_of_fibre_dim_le (n : ℕ) :
       ringKrullDim (Localization (Algebra.algebraMapSubmonoid (E ⧸ q)
         (nonZeroDivisors A))) ≤ (n : WithBot ℕ∞) →
       GenericallyFree A (E ⧸ q) := by
-  induction n using Nat.strong_induction_on with
-  | _ n IH =>
-  intro A E _ _ _ _ _ _ q hq hdim
-  haveI := hq
-  by_cases hker : ∃ a : A, a ≠ 0 ∧ algebraMap A (E ⧸ q) a = 0
-  · -- kernel case: the whole quotient is annihilated by a non-zero scalar
-    obtain ⟨a, ha, ha0⟩ := hker
-    exact genericallyFree_of_annihilator ha fun m => by
-      rw [Algebra.smul_def, ha0, zero_mul]
-  -- main case: `A ↪ C`
-  have hinj : Function.Injective (algebraMap A (E ⧸ q)) := by
-    rw [injective_iff_map_eq_zero]
-    intro a h0
-    by_contra hne
-    exact hker ⟨a, hne, h0⟩
-  haveI hFdom : IsDomain (Localization (Algebra.algebraMapSubmonoid (E ⧸ q)
-      (nonZeroDivisors A))) := fibre_isDomain hinj
-  haveI : Algebra.FiniteType A (E ⧸ q) :=
-    Algebra.FiniteType.of_surjective (Ideal.Quotient.mkₐ A q)
-      (Ideal.Quotient.mkₐ_surjective A q)
-  obtain ⟨nn, ψ, hψ⟩ := Algebra.FiniteType.iff_quotient_mvPolynomial''.mp
-    ‹Algebra.FiniteType A (E ⧸ q)›
-  haveI : Algebra.FiniteType (FractionRing A)
-      (Localization (Algebra.algebraMapSubmonoid (E ⧸ q) (nonZeroDivisors A))) :=
-    Algebra.FiniteType.of_surjective _ (fibre_aeval_surjective ψ hψ)
-  obtain ⟨s, φ, hφinj, hφfin⟩ := exists_finite_inj_algHom_of_fg (FractionRing A)
-    (Localization (Algebra.algebraMapSubmonoid (E ⧸ q) (nonZeroDivisors A)))
-  -- the number of Noether variables is bounded by `n`
-  have hs_le : (s : WithBot ℕ∞) ≤ (n : WithBot ℕ∞) := by
-    have h1 : ringKrullDim (MvPolynomial (Fin s) (FractionRing A)) ≤
-        ringKrullDim (Localization (Algebra.algebraMapSubmonoid (E ⧸ q)
-          (nonZeroDivisors A))) := by
-      letI := φ.toRingHom.toAlgebra
-      haveI : Module.Finite (MvPolynomial (Fin s) (FractionRing A))
-          (Localization (Algebra.algebraMapSubmonoid (E ⧸ q)
-            (nonZeroDivisors A))) := hφfin
-      haveI := Algebra.IsIntegral.of_finite (MvPolynomial (Fin s) (FractionRing A))
-        (Localization (Algebra.algebraMapSubmonoid (E ⧸ q) (nonZeroDivisors A)))
-      exact le_ringKrullDim_of_isIntegral_of_injective _ _ hφinj
-    have h2 : ringKrullDim (MvPolynomial (Fin s) (FractionRing A)) =
-        (s : WithBot ℕ∞) := by
-      rw [MvPolynomial.ringKrullDim_of_isNoetherianRing,
-        ringKrullDim_eq_zero_of_field, Nat.card_eq_fintype_card,
-        Fintype.card_fin, zero_add]
-    calc (s : WithBot ℕ∞) = _ := h2.symm
-    _ ≤ _ := h1
-    _ ≤ (n : WithBot ℕ∞) := hdim
-  -- scale the Noether datum into `C` and clear denominators per generator
-  obtain ⟨b, φ', hφ'inj, hφ'fin, hb⟩ := exists_scaled_noether_datum φ hφinj hφfin
-  have hclear : ∀ j : Fin nn, ∃ a : A, a ≠ 0 ∧
-      (MvPolynomial.aeval b :
-        MvPolynomial (Fin s) A →ₐ[A] (E ⧸ q)).toRingHom.IsIntegralElem
-        (a • ψ (MvPolynomial.X j)) :=
-    fun j => exists_smul_isIntegralElem_of_fibre_finite hinj φ' hφ'fin hb _
-  choose aa haa hint using hclear
-  have hg0 : (∏ j, aa j) ≠ 0 := Finset.prod_ne_zero_iff.mpr fun j _ => haa j
-  -- `C''`: the subalgebra generated over `A[X₁,…,X_s]` by the cleared
-  -- generators; module-finite since the generators are integral
-  letI : Algebra (MvPolynomial (Fin s) A) (E ⧸ q) :=
-    (MvPolynomial.aeval b).toRingHom.toAlgebra
-  set C'' : Subalgebra (MvPolynomial (Fin s) A) (E ⧸ q) :=
-    Algebra.adjoin (MvPolynomial (Fin s) A)
-      (Set.range fun j => aa j • ψ (MvPolynomial.X j)) with hC''def
-  haveI hC''fin : Module.Finite (MvPolynomial (Fin s) A) ↥C'' := by
-    have hfg : (Subalgebra.toSubmodule C'').FG := by
-      apply fg_adjoin_of_finite (Set.finite_range _)
-      rintro x ⟨j, rfl⟩
-      exact hint j
-    exact Module.Finite.iff_fg.mpr hfg
-  -- saturation: a power of `g := ∏ aa j` pushes every element of `C` into `C''`
-  have hsat : ∀ c : E ⧸ q, ∃ (N : ℕ) (y : ↥C''), (∏ j, aa j) ^ N • c = ↑y := by
-    intro c
-    obtain ⟨p, rfl⟩ := hψ c
-    induction p using MvPolynomial.induction_on with
-    | C a =>
-      refine ⟨0, ⟨ψ (MvPolynomial.C a), ?_⟩, by rw [pow_zero, one_smul]⟩
-      have h2 : ψ (MvPolynomial.C a) =
-          algebraMap (MvPolynomial (Fin s) A) (E ⧸ q) (MvPolynomial.C a) := by
-        rw [show algebraMap (MvPolynomial (Fin s) A) (E ⧸ q) (MvPolynomial.C a) =
-            (MvPolynomial.aeval b) (MvPolynomial.C a) from rfl,
-          MvPolynomial.aeval_C, ← MvPolynomial.algebraMap_eq, AlgHom.commutes]
-      rw [h2]
-      exact Subalgebra.algebraMap_mem C'' _
-    | add p1 p2 h1 h2 =>
-      obtain ⟨N1, y1, hy1⟩ := h1
-      obtain ⟨N2, y2, hy2⟩ := h2
-      refine ⟨max N1 N2, (∏ j, aa j) ^ (max N1 N2 - N1) • y1 +
-        (∏ j, aa j) ^ (max N1 N2 - N2) • y2, ?_⟩
-      have hco : ((((∏ j, aa j) ^ (max N1 N2 - N1) • y1 +
-          (∏ j, aa j) ^ (max N1 N2 - N2) • y2 : ↥C'')) : E ⧸ q) =
-          (∏ j, aa j) ^ (max N1 N2 - N1) • (y1 : E ⧸ q) +
-          (∏ j, aa j) ^ (max N1 N2 - N2) • (y2 : E ⧸ q) := rfl
-      rw [map_add, smul_add, hco, ← hy1, ← hy2, smul_smul, smul_smul,
-        ← pow_add, ← pow_add, Nat.sub_add_cancel (le_max_left N1 N2),
-        Nat.sub_add_cancel (le_max_right N1 N2)]
-    | mul_X p j hp =>
-      obtain ⟨N, y, hy⟩ := hp
-      refine ⟨N + 1,
-        ((∏ k ∈ Finset.univ.erase j, aa k) • (⟨aa j • ψ (MvPolynomial.X j),
-          Algebra.subset_adjoin ⟨j, rfl⟩⟩ : ↥C'')) * y, ?_⟩
-      have hco : ((((∏ k ∈ Finset.univ.erase j, aa k) •
-          (⟨aa j • ψ (MvPolynomial.X j),
-            Algebra.subset_adjoin ⟨j, rfl⟩⟩ : ↥C'')) * y : ↥C'') : E ⧸ q) =
-          ((∏ k ∈ Finset.univ.erase j, aa k) •
-            (aa j • ψ (MvPolynomial.X j))) * (y : E ⧸ q) := rfl
-      rw [map_mul, hco, ← hy, smul_smul, smul_mul_smul_comm]
-      rw [show ψ p * ψ (MvPolynomial.X j) =
-        ψ (MvPolynomial.X j) * ψ p from mul_comm _ _]
-      congr 1
-      rw [pow_succ, ← Finset.mul_prod_erase Finset.univ aa (Finset.mem_univ j)]
-      ring
-  -- ===== the generic-rank exact sequence over `D := A[X₁,…,X_s]` =====
-  haveI hVfin : Module.Finite (FractionRing (MvPolynomial (Fin s) A))
-      (LocalizedModule (nonZeroDivisors (MvPolynomial (Fin s) A)) ↥C'') :=
-    Module.Finite.of_isLocalizedModule (nonZeroDivisors (MvPolynomial (Fin s) A))
-      (LocalizedModule.mkLinearMap _ _)
-  -- a basis of the generic fibre of `C''` consisting of images of `C''`
-  obtain ⟨r, cc, hccli, hccspan⟩ : ∃ (r : ℕ) (cc : Fin r → ↥C''),
-      LinearIndependent (FractionRing (MvPolynomial (Fin s) A))
-        (fun i => LocalizedModule.mkLinearMap
-          (nonZeroDivisors (MvPolynomial (Fin s) A)) ↥C'' (cc i)) ∧
-      Submodule.span (FractionRing (MvPolynomial (Fin s) A))
-        (Set.range fun i => LocalizedModule.mkLinearMap
-          (nonZeroDivisors (MvPolynomial (Fin s) A)) ↥C'' (cc i)) = ⊤ := by
-    have hdec : ∀ v : LocalizedModule (nonZeroDivisors (MvPolynomial (Fin s) A)) ↥C'',
-        ∃ (m : ↥C'') (dd : nonZeroDivisors (MvPolynomial (Fin s) A)),
-          LocalizedModule.mk m dd = v := by
-      intro v
-      induction v using LocalizedModule.induction_on with
-      | _ m dd => exact ⟨m, dd, rfl⟩
-    choose num den hnd using hdec
-    haveI : Module.Free (FractionRing (MvPolynomial (Fin s) A))
-        (LocalizedModule (nonZeroDivisors (MvPolynomial (Fin s) A)) ↥C'') := by
-      set_option synthInstance.maxHeartbeats 1000000 in infer_instance
-    let bV := Module.finBasis (FractionRing (MvPolynomial (Fin s) A))
-      (LocalizedModule (nonZeroDivisors (MvPolynomial (Fin s) A)) ↥C'')
-    let u : Fin (Module.finrank (FractionRing (MvPolynomial (Fin s) A))
-        (LocalizedModule (nonZeroDivisors (MvPolynomial (Fin s) A)) ↥C'')) →
-        (FractionRing (MvPolynomial (Fin s) A))ˣ := fun i =>
-      (IsLocalization.map_units (FractionRing (MvPolynomial (Fin s) A))
-        (den (bV i))).unit
-    have hkey : ⇑(bV.unitsSMul u) = fun i => LocalizedModule.mkLinearMap
-        (nonZeroDivisors (MvPolynomial (Fin s) A)) ↥C'' (num (bV i)) := by
-      funext i
-      rw [Module.Basis.unitsSMul_apply, Units.smul_def, IsUnit.unit_spec,
-        algebraMap_smul, LocalizedModule.mkLinearMap_apply]
-      have h := hnd (bV i)
-      generalize hnum : num (bV i) = nn' at h ⊢
-      generalize hden : den (bV i) = dd' at h ⊢
-      rw [← h, LocalizedModule.smul'_mk, ← Submonoid.mk_smul dd'.1 dd'.2 nn',
-        LocalizedModule.mk_cancel]
-    refine ⟨_, fun i => num (bV i), ?_, ?_⟩
-    · rw [← hkey]; exact (bV.unitsSMul u).linearIndependent
-    · rw [← hkey]; exact (bV.unitsSMul u).span_eq
-  -- the `D`-linear comparison map `D^r → C''`
-  let Φ : (Fin r → MvPolynomial (Fin s) A) →ₗ[MvPolynomial (Fin s) A] ↥C'' :=
-    { toFun := fun f => ∑ i, f i • cc i
-      map_add' := fun f g => by
-        simp only [Pi.add_apply, add_smul, Finset.sum_add_distrib]
-      map_smul' := fun d f => by
-        simp only [Pi.smul_apply, RingHom.id_apply, Finset.smul_sum, smul_smul,
-          smul_eq_mul] }
-  have hΦexp : ∀ f : Fin r → MvPolynomial (Fin s) A,
-      LocalizedModule.mkLinearMap (nonZeroDivisors (MvPolynomial (Fin s) A))
-        ↥C'' (Φ f) =
-      ∑ i, algebraMap (MvPolynomial (Fin s) A)
-        (FractionRing (MvPolynomial (Fin s) A)) (f i) •
-        LocalizedModule.mkLinearMap (nonZeroDivisors (MvPolynomial (Fin s) A))
-          ↥C'' (cc i) := by
-    intro f
-    rw [show Φ f = ∑ i, f i • cc i from rfl, map_sum]
-    congr 1
-    funext i
-    rw [map_smul, algebraMap_smul]
-  have hΦinj : Function.Injective Φ := by
-    rw [injective_iff_map_eq_zero]
-    intro f hf
-    have h0 := Fintype.linearIndependent_iff.mp hccli
-      (fun i => algebraMap (MvPolynomial (Fin s) A)
-        (FractionRing (MvPolynomial (Fin s) A)) (f i))
-      (by rw [← hΦexp, hf, map_zero])
-    funext i
-    exact IsFractionRing.injective (MvPolynomial (Fin s) A)
-      (FractionRing (MvPolynomial (Fin s) A))
-      (by rw [h0 i, Pi.zero_apply, map_zero])
-  -- the cokernel is torsion: a single non-zero `d ∈ D` annihilates it
-  have hTtors : ∀ t : (↥C'' ⧸ LinearMap.range Φ), ∃ dd : MvPolynomial (Fin s) A,
-      dd ≠ 0 ∧ dd • t = 0 := by
-    intro t
-    obtain ⟨y, rfl⟩ := Submodule.Quotient.mk_surjective _ t
-    have hy : (LocalizedModule.mkLinearMap (nonZeroDivisors (MvPolynomial (Fin s) A))
-        ↥C'' y) ∈ Submodule.span (FractionRing (MvPolynomial (Fin s) A))
-        (Set.range fun i => LocalizedModule.mkLinearMap
-          (nonZeroDivisors (MvPolynomial (Fin s) A)) ↥C'' (cc i)) := by
-      rw [hccspan]; trivial
-    rw [Submodule.mem_span_range_iff_exists_fun] at hy
-    obtain ⟨l, hl⟩ := hy
-    obtain ⟨dd, hdd⟩ := IsLocalization.exist_integer_multiples
-      (nonZeroDivisors (MvPolynomial (Fin s) A)) Finset.univ l
-    choose uu huu using fun i => hdd i (Finset.mem_univ i)
-    have hVzero : LocalizedModule.mkLinearMap
-        (nonZeroDivisors (MvPolynomial (Fin s) A)) ↥C''
-        ((dd : MvPolynomial (Fin s) A) • y - Φ uu) = 0 := by
-      rw [map_sub, map_smul, hΦexp, ← hl, Finset.smul_sum, sub_eq_zero]
-      refine Finset.sum_congr rfl fun i _ => ?_
-      rw [huu i, smul_assoc]
-    obtain ⟨e, he⟩ := (IsLocalizedModule.eq_zero_iff
-      (nonZeroDivisors (MvPolynomial (Fin s) A))
-      (LocalizedModule.mkLinearMap _ ↥C'')).mp hVzero
-    refine ⟨(e : MvPolynomial (Fin s) A) * (dd : MvPolynomial (Fin s) A),
-      mul_ne_zero (nonZeroDivisors.ne_zero e.2) (nonZeroDivisors.ne_zero dd.2), ?_⟩
-    rw [← Submodule.Quotient.mk_smul, Submodule.Quotient.mk_eq_zero]
-    have hyy : ((e : MvPolynomial (Fin s) A) * (dd : MvPolynomial (Fin s) A)) • y =
-        Φ ((e : MvPolynomial (Fin s) A) • uu) := by
-      have h2 : (e : MvPolynomial (Fin s) A) •
-          ((dd : MvPolynomial (Fin s) A) • y - Φ uu) = 0 := he
-      rw [smul_sub, sub_eq_zero] at h2
-      rw [mul_smul, h2, map_smul]
-    rw [hyy]
-    exact LinearMap.mem_range_self Φ _
-  -- a single non-zero `d ∈ D` annihilates the cokernel
-  obtain ⟨d, hd0, hdT⟩ := exists_annihilator_of_torsion (MvPolynomial (Fin s) A)
-    (↥C'' ⧸ LinearMap.range Φ) hTtors
-  -- ===== dévissage of the torsion cokernel over `E' := D ⧸ (d)` =====
-  have hTBS : Module.IsTorsionBySet (MvPolynomial (Fin s) A)
-      (↥C'' ⧸ LinearMap.range Φ)
-      ((Ideal.span {d} : Ideal (MvPolynomial (Fin s) A)) : Set (MvPolynomial (Fin s) A)) :=
-    (Module.isTorsionBySet_span_singleton_iff d).mpr hdT
-  letI : Module
-      (MvPolynomial (Fin s) A ⧸ (Ideal.span {d} : Ideal (MvPolynomial (Fin s) A)))
-      (↥C'' ⧸ LinearMap.range Φ) := hTBS.module
-  haveI : Module.Finite
-      (MvPolynomial (Fin s) A ⧸ (Ideal.span {d} : Ideal (MvPolynomial (Fin s) A)))
-      (↥C'' ⧸ LinearMap.range Φ) :=
-    Module.Finite.of_restrictScalars_finite (MvPolynomial (Fin s) A) _ _
-  -- every prime quotient of `E'` is generically free: kernel case or recursion
-  have hcore : ∀ (qt : Ideal (MvPolynomial (Fin s) A ⧸
-      (Ideal.span {d} : Ideal (MvPolynomial (Fin s) A)))), qt.IsPrime →
-      GenericallyFree A ((MvPolynomial (Fin s) A ⧸
-        (Ideal.span {d} : Ideal (MvPolynomial (Fin s) A))) ⧸ qt) := by
-    intro qt hqt
-    haveI := hqt
-    by_cases hker' : ∃ a : A, a ≠ 0 ∧ algebraMap A ((MvPolynomial (Fin s) A ⧸
-        (Ideal.span {d} : Ideal (MvPolynomial (Fin s) A))) ⧸ qt) a = 0
-    · obtain ⟨a, ha, ha0⟩ := hker'
-      exact genericallyFree_of_annihilator ha fun m => by
-        rw [Algebra.smul_def, ha0, zero_mul]
-    · have hinj' : Function.Injective (algebraMap A ((MvPolynomial (Fin s) A ⧸
-          (Ideal.span {d} : Ideal (MvPolynomial (Fin s) A))) ⧸ qt)) := by
-        rw [injective_iff_map_eq_zero]
-        intro a h0
-        by_contra hne
-        exact hker' ⟨a, hne, h0⟩
-      -- the composite presentation kills `d`, so the fibre dimension drops
-      have hπd : ((Ideal.Quotient.mkₐ A qt).comp
-          (Ideal.Quotient.mkₐ A (Ideal.span {d}))) d = 0 := by
-        rw [AlgHom.comp_apply, show (Ideal.Quotient.mkₐ A (Ideal.span {d})) d = 0 from
-          Ideal.Quotient.eq_zero_iff_mem.mpr (Ideal.mem_span_singleton_self d),
-          map_zero]
-      have h1 := fibre_dim_add_one_le_of_presentation
-        ((Ideal.Quotient.mkₐ A qt).comp (Ideal.Quotient.mkₐ A (Ideal.span {d})))
-        ((Ideal.Quotient.mkₐ_surjective A qt).comp
-          (Ideal.Quotient.mkₐ_surjective A (Ideal.span {d})))
-        hd0 hπd
-      haveI := fibre_isDomain hinj'
-      have h0 : (0 : WithBot ℕ∞) ≤ ringKrullDim (Localization
-          (Algebra.algebraMapSubmonoid ((MvPolynomial (Fin s) A ⧸
-            (Ideal.span {d} : Ideal (MvPolynomial (Fin s) A))) ⧸ qt)
-            (nonZeroDivisors A))) :=
-        ringKrullDim_nonneg_of_nontrivial
-      obtain ⟨m', hm'lt, hm'le⟩ := exists_nat_le_of_add_one_le h0 h1 hs_le
-      exact IH m' hm'lt A _ qt hqt hm'le
-  -- assemble: the cokernel is generically free by dévissage
-  have hGFT : GenericallyFree A (↥C'' ⧸ LinearMap.range Φ) :=
-    genericallyFree_of_forall_quotient_prime
-      (MvPolynomial (Fin s) A ⧸ (Ideal.span {d} : Ideal (MvPolynomial (Fin s) A)))
-      hcore (↥C'' ⧸ LinearMap.range Φ)
-  -- the free part is generically free
-  have hGFfree : GenericallyFree A (Fin r → MvPolynomial (Fin s) A) :=
-    GenericallyFree.of_free A _
-  -- splice the exact sequence `0 → D^r → C'' → T → 0` over `A`
-  have hGFC'' : GenericallyFree A ↥C'' := by
-    refine genericallyFree_of_exact (Φ.restrictScalars A)
-      (((LinearMap.range Φ).mkQ).restrictScalars A) hΦinj
-      (Submodule.Quotient.mk_surjective _) ?_ hGFfree hGFT
-    exact LinearMap.exact_iff.mpr (Submodule.ker_mkQ _)
-  -- transport along the `g`-saturating inclusion `C'' ⊆ C`
-  exact hGFC''.of_saturating_injection
-    ((Subalgebra.val C'').toLinearMap.restrictScalars A)
-    (fun x y h => Subtype.ext h) hg0 hsat
+  -- KERNEL WALL (run 0010 r4, session 0032). The ~300-line proof of this
+  -- induction (Noether normalisation of the fibre, variable scaling,
+  -- denominator clearing, generic-rank exact sequence, dévissage of the
+  -- torsion cokernel over the hypersurface, splice, saturating transport)
+  -- was developed in session 0027 against language-server feedback; that
+  -- session ended at a rate limit before verification, and the batch kernel
+  -- build rejects the proof at three localized-module/subtype instance
+  -- walls: a `Module.Free (FractionRing D) (LocalizedModule … ↥C'')`
+  -- synthesis failure and two divergent-`whnf`/`isDefEq` deterministic
+  -- timeouts (at 6.4M heartbeats; `clear_value C''` and pre-typed
+  -- application arguments do not cure them). The full proof text is
+  -- preserved in the workspace ledger (commit 6c30537); restoring it needs
+  -- the three walls repaired one at a time against kernel builds. The
+  -- statement is TRUE (Nitsure §4 / Stacks 051R normalisation core), and
+  -- the blueprint node `lem:generically_free_domain_core` carries the
+  -- complete mathematical proof.
+  sorry
 
 /-- **The domain core of algebraic generic freeness** [Nitsure §4, "Lemma on
 Generic Flatness", normalisation step]: for a noetherian domain `A`, a
@@ -1286,7 +1024,7 @@ theorem genericallyFree_quotient_prime (A B : Type*) [CommRing A] [IsDomain A]
     Algebra.FiniteType.of_surjective
       (Ideal.Quotient.mkₐ A (RingHom.ker ψ))
       (Ideal.Quotient.mkₐ_surjective A (RingHom.ker ψ))
-  obtain ⟨n, hn⟩ := exists_nat_fibre_dim_le
+  obtain ⟨n, hn⟩ := exists_nat_fibre_dim_le (A := A)
     (MvPolynomial (Fin nn) A ⧸ RingHom.ker ψ)
   have haux := genericallyFree_quotient_prime_of_fibre_dim_le n A
     (MvPolynomial (Fin nn) A) (RingHom.ker ψ) hkerp hn
@@ -1357,54 +1095,15 @@ def CoherentSheafFlat {X S : Scheme.{u}} (f : X ⟶ S) (F : X.Modules) : Prop :=
 
 end Scheme
 
-/-! ## §2. Generic flatness (Nitsure §4)
+/-! ## §2. Generic flatness (Nitsure §4) — see `GenericFlatnessGeometric.lean`
 
-Over a noetherian integral base `S`, a coherent sheaf on a finite-type
-`X ⟶ S` is flat above some non-empty open `V ⊆ S`. This is the inductive
-engine of the flattening-stratification theorem: combined with
-Noetherian induction on the closed complement `S ∖ V`, it produces the
-finite stratification of `S` by flatness loci.
-
-Algebraically (theorem `generic_flatness_algebraic`, no Lean pin): for a
-noetherian domain `A`, a finite-type `A`-algebra `B`, and a finite
-`B`-module `M`, there exists a non-zero `f ∈ A` such that `M_f` is a
-free `A_f`-module. The geometric form (this declaration) restricts to a
-non-empty affine open `Spec A ⊆ S` and applies the algebraic form on
-each finite-type-algebra patch of `X` above `Spec A`.
-
-Blueprint reference: `thm:generic_flatness` (Nitsure §4). -/
-
-/-- **Generic flatness theorem** (Nitsure §4 / Stacks ?).
-
-For a noetherian integral scheme `S`, a finite-type morphism `p : X ⟶ S`,
-and a coherent `𝓞_X`-module `𝓕`, there exists a non-empty open subscheme
-`V ⊆ S` such that `𝓕|_{X_V} = 𝓕|_{p⁻¹V}` is flat over `𝓞_V`.
-
-iter-177+: the body follows Nitsure §4: pass to a non-empty affine open
-`Spec A ⊆ S` where `A` is a noetherian domain, then apply the algebraic
-form (Noether normalisation + Auslander–Buchsbaum-style filtration
-argument) to each finite-type-`A`-algebra `B` arising from an affine
-cover of `p⁻¹(Spec A)`. The witness `V` is the common basic open
-`D(f_1 f_2 ⋯ f_r) ⊆ Spec A` clearing the finitely many
-generic-flatness elements `f_i ∈ A` produced on each patch.
-
-Statement repair (run 0010, T12 r2): Nitsure requires `p` of **finite type**
-(EGA sense: quasi-compact AND locally of finite type). With
-`LocallyOfFiniteType` alone the statement is FALSE: for
-`X = ⨿_q Spec 𝔽_q → Spec ℤ` (locally of finite type, not quasi-compact,
-structure sheaf finitely presented) every non-empty open `V ⊆ Spec ℤ`
-contains all but finitely many primes `q`, and `𝔽_q` is never flat over the
-corresponding `ℤ[1/n]`. Quasi-compactness is what bounds the number of
-denominators to clear. Hence the `[QuasiCompact p]` hypothesis below. -/
-theorem genericFlatness {S X : Scheme.{u}} [IsIntegral S] [IsLocallyNoetherian S]
-    (p : X ⟶ S) [QuasiCompact p] [LocallyOfFiniteType p] (F : X.Modules)
-    [F.IsFinitePresentation] :
-    ∃ (V : S.Opens), (V : Set S).Nonempty ∧
-      ∀ {U : S.Opens} (_ : IsAffineOpen U) (_ : U ≤ V) {W : X.Opens}
-        (_ : IsAffineOpen W) (e : W ≤ p ⁻¹ᵁ U),
-        letI : Module Γ(S, U) Γ(F, W) := Module.compHom _ (p.appLE U W e).hom
-        Module.Flat Γ(S, U) Γ(F, W) := by
-  sorry
+The geometric generic-flatness theorem `AlgebraicGeometry.genericFlatness`
+(blueprint `thm:generic_flatness`) is stated and **proved** in the separate
+file `AlgebraicJacobian.Picard.GenericFlatnessGeometric`, as the geometric
+glue over the algebraic engine of this file: it consumes the qcqs
+section-localization engine of `AlgebraicJacobian.Picard.QuotScheme`
+(Stacks 01P0/01PC/01I8), which this file deliberately does not import so
+that the instance environment of the dévissage proofs above stays fixed. -/
 
 /-! ## §3. Sub-lemmas of the existence proof
 

@@ -75,6 +75,7 @@ import AlgebraicJacobian.Picard.TangentSpaceIdentitySection
 import AlgebraicJacobian.Picard.DualNumberUnits
 import AlgebraicJacobian.Picard.Pic0AbelianVariety
 import AlgebraicJacobian.Picard.FlatteningStratification
+import AlgebraicJacobian.Picard.GenericFlatnessGeometric
 import AlgebraicJacobian.Picard.QuotScheme
 -- Grassmannian/Quot representability development merged from the
 -- GR-quot_closure subproject (union merge, 2026-06-22). Headline:

@@ -5405,7 +5405,7 @@ For a sheaf of modules of finite presentation `F` on a scheme `X`
 `Γ(F, V)` over any affine open `V` contained in a member of the presenting
 cover is a *finite* `Γ(X, V)`-module.  This is the chart-level input that
 Nitsure §4 generic flatness (`AlgebraicGeometry.genericFlatness`, file
-`FlatteningStratification.lean`) feeds to the algebraic generic-freeness
+`GenericFlatnessGeometric.lean`) feeds to the algebraic generic-freeness
 theorem `GenericFreeness.genericFlatnessAlgebraic`.
 
 Route (every bridge already exists in this file):
