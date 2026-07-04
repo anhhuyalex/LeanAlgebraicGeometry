@@ -15,7 +15,7 @@ turns the absolute Quot-functor representability problem on a projective
 morphism `π : X ⟶ S` with coherent input `𝓕` into a finite collection of
 locally-closed strata over which `𝓕` becomes flat.
 
-## Status (run 0010, T12 r4 — geometric glue closed; r3 algebraic core reopened)
+## Status (run 0010, T12 r5 — algebraic generic freeness CLOSED, axiom-clean)
 
 **`genericFlatness` is now proved** (sorry-free), in the companion file
 `AlgebraicJacobian.Picard.GenericFlatnessGeometric`: the geometric glue there
@@ -31,32 +31,36 @@ section-localization engine (Stacks 01P0) and the mixed-base stability lemma
 one, imports the QuotScheme engine — keeping the instance environment of the
 heavy dévissage proofs below unperturbed.
 
-The `GenericFreeness` dévissage layer (splicing, torsion base case,
-localization transport, prime-filtration assembly) and the r3 sub-lemma
-layer for the domain core (integral-dimension comparisons
-`ringKrullDim_le_of_isIntegral` / `le_ringKrullDim_of_isIntegral_of_injective`,
-variable scaling `exists_scaled_noether_datum`, denominator clearing
+The `GenericFreeness` section is **sorry-free and kernel-checked**
+(axioms: `propext`, `Classical.choice`, `Quot.sound` only): the dévissage
+layer (splicing, torsion base case, localization transport, prime-filtration
+assembly), the r3 sub-lemma layer for the domain core (integral-dimension
+comparisons `ringKrullDim_le_of_isIntegral` /
+`le_ringKrullDim_of_isIntegral_of_injective`, variable scaling
+`exists_scaled_noether_datum`, denominator clearing
 `exists_smul_isIntegralElem_of_fibre_finite`, fibre-dimension bound
-`exists_nat_fibre_dim_le`) are proved and kernel-checked.  The r3 proof of
-the strong induction `genericallyFree_quotient_prime_of_fibre_dim_le`
-(session 0027, which ended at a rate limit before verification) does **not**
-survive the batch kernel build — three localized-module/subtype instance
-walls (a `Module.Free` synthesis failure and two divergent-`whnf`
-deterministic timeouts) — and has been re-opened as a documented typed
-`sorry`; the full r3 text is preserved in ledger commit `6c30537`.
+`exists_nat_fibre_dim_le`), and the strong induction
+`genericallyFree_quotient_prime_of_fibre_dim_le` itself, assembled into
+`genericFlatnessAlgebraic` (Stacks 051R over a noetherian domain).  The r3
+kernel walls (issue `I-0093`: a `Module.Free` synthesis failure and two
+divergent-`whnf` timeouts, all inside the generic-rank block where the
+module was the `set`-bound subalgebra subtype `↥C''` under a `letI`
+algebra) were repaired in r5 by extracting that block into the standalone
+lemma `exists_generic_rank_comparison`, whose clean binder context
+(`D` a domain, `M` an abstract finite module) elaborates without incident;
+the residual double-quotient instance stuckness in the induction is cured
+by a scoped `maxSynthPendingDepth` bump.
 
 Earlier r2 repairs of three FALSE pinned statements (quasi-compactness in
 `genericFlatness`, flatness-over-the-stratum in `flatLocusStratification`,
 the bundled universal property in `flatteningStratification_universal`) are
 documented in the per-declaration docstrings.
 
-Remaining `sorry`s in this file (4, all TRUE statements):
-`genericallyFree_quotient_prime_of_fibre_dim_le` (the re-opened r3 kernel
-wall, algebraic layer), and the three geometric-layer stubs
-`flatLocusStratification`, `flatLocusReduction`,
-`flatteningStratification_universal`.  (`genericFlatness` is proved in
-`GenericFlatnessGeometric.lean`, conditional on the algebraic core through
-`genericFlatnessAlgebraic`.)
+Remaining `sorry`s in this file (3, all TRUE statements, all in the
+*geometric* layer): `flatLocusStratification`, `flatLocusReduction`,
+`flatteningStratification_universal`.  (`genericFlatness` is proved
+axiom-clean in `GenericFlatnessGeometric.lean`, now unconditionally —
+the algebraic core it consumes is closed.)
 
 The 4 blueprint-pinned declarations are:
 
@@ -959,6 +963,145 @@ private theorem exists_nat_fibre_dim_le {A : Type*} [CommRing A] [IsDomain A]
     rw [ringKrullDim_eq_bot_of_subsingleton]
     exact bot_le
 
+
+set_option maxHeartbeats 800000 in
+-- the `Frac D`-basis extraction in the localized module (`Module.finBasis` +
+-- `unitsSMul` denominator scaling) exceeds the default elaboration budget
+/-- **Generic-rank comparison for a finite module over a domain** [Nitsure
+§4, "Lemma on Generic Flatness", generic-rank step]: a finite module `M`
+over a domain `D` admits an injective `D`-linear map `Φ : D^r → M` from a
+finite free module whose cokernel is killed by a single non-zero `d ∈ D` —
+the exact sequence `0 → D^r → M → T → 0` with `T` torsion.
+
+Localizing at `D ∖ {0}` turns `M` into a finite-dimensional vector space
+over `Frac D`; scaling a basis by denominators (`Basis.unitsSMul`) realises
+it as the image of a family `cc : Fin r → M`, and `Φ` is the associated
+linear-combination map.  Injectivity localizes to the linear independence of
+the basis; for the cokernel, clearing the denominators of the coordinates of
+`y ∈ M` (`IsLocalization.exist_integer_multiples`) puts a non-zero multiple
+of `y` into the image, and `exists_annihilator_of_torsion` produces the
+uniform annihilator.
+
+Isolated as a standalone lemma (blueprint `lem:generic_rank_comparison`) so
+that its localized-module instance arguments elaborate in a clean binder
+context: inlined in the strong induction below (where `M := ↥C''` is a
+`set`-bound subalgebra subtype under a `letI` algebra), the same block hits
+a `Module.Free` synthesis failure and divergent-`whnf` instance walls
+(run 0010 r3/r4, issue `I-0093`). -/
+theorem exists_generic_rank_comparison (D : Type u) [CommRing D]
+    [IsDomain D] (M : Type v) [AddCommGroup M] [Module D M]
+    [Module.Finite D M] :
+    ∃ (r : ℕ) (Φ : (Fin r → D) →ₗ[D] M), Function.Injective Φ ∧
+      ∃ d : D, d ≠ 0 ∧ ∀ t : M ⧸ LinearMap.range Φ, d • t = 0 := by
+  haveI hVfin : Module.Finite (FractionRing D)
+      (LocalizedModule (nonZeroDivisors D) M) :=
+    Module.Finite.of_isLocalizedModule (nonZeroDivisors D)
+      (LocalizedModule.mkLinearMap _ _)
+  -- a basis of the generic fibre of `M` consisting of images of `M`
+  obtain ⟨r, cc, hccli, hccspan⟩ : ∃ (r : ℕ) (cc : Fin r → M),
+      LinearIndependent (FractionRing D)
+        (fun i => LocalizedModule.mkLinearMap (nonZeroDivisors D) M (cc i)) ∧
+      Submodule.span (FractionRing D)
+        (Set.range fun i => LocalizedModule.mkLinearMap
+          (nonZeroDivisors D) M (cc i)) = ⊤ := by
+    have hdec : ∀ v : LocalizedModule (nonZeroDivisors D) M,
+        ∃ (m : M) (dd : nonZeroDivisors D), LocalizedModule.mk m dd = v := by
+      intro v
+      induction v using LocalizedModule.induction_on with
+      | _ m dd => exact ⟨m, dd, rfl⟩
+    choose num den hnd using hdec
+    haveI : Module.Free (FractionRing D)
+        (LocalizedModule (nonZeroDivisors D) M) :=
+      Module.Free.of_divisionRing _ _
+    let bV := Module.finBasis (FractionRing D)
+      (LocalizedModule (nonZeroDivisors D) M)
+    let u : Fin (Module.finrank (FractionRing D)
+        (LocalizedModule (nonZeroDivisors D) M)) → (FractionRing D)ˣ := fun i =>
+      (IsLocalization.map_units (FractionRing D) (den (bV i))).unit
+    have hkey : ⇑(bV.unitsSMul u) = fun i => LocalizedModule.mkLinearMap
+        (nonZeroDivisors D) M (num (bV i)) := by
+      funext i
+      rw [Module.Basis.unitsSMul_apply, Units.smul_def, IsUnit.unit_spec,
+        algebraMap_smul, LocalizedModule.mkLinearMap_apply]
+      have h := hnd (bV i)
+      generalize hnum : num (bV i) = nn' at h ⊢
+      generalize hden : den (bV i) = dd' at h ⊢
+      rw [← h, LocalizedModule.smul'_mk, ← Submonoid.mk_smul dd'.1 dd'.2 nn',
+        LocalizedModule.mk_cancel]
+    refine ⟨_, fun i => num (bV i), ?_, ?_⟩
+    · rw [← hkey]; exact (bV.unitsSMul u).linearIndependent
+    · rw [← hkey]; exact (bV.unitsSMul u).span_eq
+  -- the `D`-linear comparison map `D^r → M`
+  let Φ : (Fin r → D) →ₗ[D] M :=
+    { toFun := fun f => ∑ i, f i • cc i
+      map_add' := fun f g => by
+        simp only [Pi.add_apply, add_smul, Finset.sum_add_distrib]
+      map_smul' := fun d f => by
+        simp only [Pi.smul_apply, RingHom.id_apply, Finset.smul_sum, smul_smul,
+          smul_eq_mul] }
+  have hΦexp : ∀ f : Fin r → D,
+      LocalizedModule.mkLinearMap (nonZeroDivisors D) M (Φ f) =
+      ∑ i, algebraMap D (FractionRing D) (f i) •
+        LocalizedModule.mkLinearMap (nonZeroDivisors D) M (cc i) := by
+    intro f
+    rw [show Φ f = ∑ i, f i • cc i from rfl, map_sum]
+    congr 1
+    funext i
+    rw [map_smul, algebraMap_smul]
+  have hΦinj : Function.Injective Φ := by
+    rw [injective_iff_map_eq_zero]
+    intro f hf
+    have hsum : ∑ i, algebraMap D (FractionRing D) (f i) •
+        LocalizedModule.mkLinearMap (nonZeroDivisors D) M (cc i) = 0 := by
+      rw [← hΦexp, hf, map_zero]
+    have h0 := Fintype.linearIndependent_iff.mp hccli
+      (fun i => algebraMap D (FractionRing D) (f i)) hsum
+    funext i
+    exact IsFractionRing.injective D (FractionRing D)
+      (by rw [h0 i, Pi.zero_apply, map_zero])
+  -- the cokernel is torsion: clear denominators of the span coefficients
+  have hTtors : ∀ t : (M ⧸ LinearMap.range Φ),
+      ∃ dd : D, dd ≠ 0 ∧ dd • t = 0 := by
+    intro t
+    obtain ⟨y, rfl⟩ := Submodule.Quotient.mk_surjective _ t
+    have hy : (LocalizedModule.mkLinearMap (nonZeroDivisors D) M y) ∈
+        Submodule.span (FractionRing D) (Set.range fun i =>
+          LocalizedModule.mkLinearMap (nonZeroDivisors D) M (cc i)) := by
+      rw [hccspan]; trivial
+    rw [Submodule.mem_span_range_iff_exists_fun] at hy
+    obtain ⟨l, hl⟩ := hy
+    obtain ⟨dd, hdd⟩ := IsLocalization.exist_integer_multiples
+      (nonZeroDivisors D) Finset.univ l
+    choose uu huu using fun i => hdd i (Finset.mem_univ i)
+    have hVzero : LocalizedModule.mkLinearMap (nonZeroDivisors D) M
+        ((dd : D) • y - Φ uu) = 0 := by
+      rw [map_sub, map_smul, hΦexp, ← hl, Finset.smul_sum, sub_eq_zero]
+      refine Finset.sum_congr rfl fun i _ => ?_
+      rw [huu i, smul_assoc]
+    obtain ⟨e, he⟩ := (IsLocalizedModule.eq_zero_iff (nonZeroDivisors D)
+      (LocalizedModule.mkLinearMap _ M)).mp hVzero
+    refine ⟨(e : D) * (dd : D),
+      mul_ne_zero (nonZeroDivisors.ne_zero e.2) (nonZeroDivisors.ne_zero dd.2), ?_⟩
+    rw [← Submodule.Quotient.mk_smul, Submodule.Quotient.mk_eq_zero]
+    have hyy : ((e : D) * (dd : D)) • y = Φ ((e : D) • uu) := by
+      have h2 : (e : D) • ((dd : D) • y - Φ uu) = 0 := he
+      rw [smul_sub, sub_eq_zero] at h2
+      rw [mul_smul, h2, map_smul]
+    rw [hyy]
+    exact LinearMap.mem_range_self Φ _
+  -- a single non-zero `d` annihilates the (finite) cokernel
+  obtain ⟨d, hd0, hdT⟩ := exists_annihilator_of_torsion D
+    (M ⧸ LinearMap.range Φ) hTtors
+  exact ⟨r, Φ, hΦinj, d, hd0, hdT⟩
+
+
+set_option maxHeartbeats 1600000 in
+-- the ~200-line strong induction (Noether normalisation + saturation +
+-- hypersurface dévissage) genuinely needs ~8× the default budget; the
+-- `maxSynthPendingDepth` bump un-sticks the `Algebra A ((D ⧸ (d)) ⧸ qt)`
+-- double-quotient instance chain, whose nested pending synthesis exceeds
+-- the workspace default of 3 (`by_cases` at the `hcore` kernel split)
+set_option maxSynthPendingDepth 8 in
 /-- **Auxiliary induction for the domain core** [Nitsure §4, "Lemma on Generic
 Flatness", normalisation step]: for a noetherian domain `A` and a finite-type
 `A`-algebra `E` with a prime `q`, if the generic fibre of `C := E ⧸ q` has
@@ -972,7 +1115,8 @@ integral-dimension comparison), scale the variables into `C`
 (`exists_smul_isIntegralElem_of_fibre_finite`) to obtain a module-finite
 subalgebra `C'' ⊆ C` over `D := A[X₁,…,X_s]` with `C''_g = C_g`, build the
 generic-rank exact sequence `0 → D^r → C'' → T → 0` with `T` killed by some
-`0 ≠ d ∈ D`, dispose of `T` by prime-filtration dévissage over `D ⧸ (d)`
+`0 ≠ d ∈ D` (`exists_generic_rank_comparison` applied to `M := ↥C''`),
+dispose of `T` by prime-filtration dévissage over `D ⧸ (d)`
 (whose fibre has dimension `< s ≤ n`, so the inductive hypothesis applies),
 splice, and transport along the `g`-saturating inclusion `C'' ⊆ C`. -/
 theorem genericallyFree_quotient_prime_of_fibre_dim_le (n : ℕ) :
@@ -982,23 +1126,202 @@ theorem genericallyFree_quotient_prime_of_fibre_dim_le (n : ℕ) :
       ringKrullDim (Localization (Algebra.algebraMapSubmonoid (E ⧸ q)
         (nonZeroDivisors A))) ≤ (n : WithBot ℕ∞) →
       GenericallyFree A (E ⧸ q) := by
-  -- KERNEL WALL (run 0010 r4, session 0032). The ~300-line proof of this
-  -- induction (Noether normalisation of the fibre, variable scaling,
-  -- denominator clearing, generic-rank exact sequence, dévissage of the
-  -- torsion cokernel over the hypersurface, splice, saturating transport)
-  -- was developed in session 0027 against language-server feedback; that
-  -- session ended at a rate limit before verification, and the batch kernel
-  -- build rejects the proof at three localized-module/subtype instance
-  -- walls: a `Module.Free (FractionRing D) (LocalizedModule … ↥C'')`
-  -- synthesis failure and two divergent-`whnf`/`isDefEq` deterministic
-  -- timeouts (at 6.4M heartbeats; `clear_value C''` and pre-typed
-  -- application arguments do not cure them). The full proof text is
-  -- preserved in the workspace ledger (commit 6c30537); restoring it needs
-  -- the three walls repaired one at a time against kernel builds. The
-  -- statement is TRUE (Nitsure §4 / Stacks 051R normalisation core), and
-  -- the blueprint node `lem:generically_free_domain_core` carries the
-  -- complete mathematical proof.
-  sorry
+  induction n using Nat.strong_induction_on with
+  | _ n IH =>
+  intro A E _ _ _ _ _ _ q hq hdim
+  haveI := hq
+  by_cases hker : ∃ a : A, a ≠ 0 ∧ algebraMap A (E ⧸ q) a = 0
+  · -- kernel case: the whole quotient is annihilated by a non-zero scalar
+    obtain ⟨a, ha, ha0⟩ := hker
+    exact genericallyFree_of_annihilator ha fun m => by
+      rw [Algebra.smul_def, ha0, zero_mul]
+  -- main case: `A ↪ C`
+  have hinj : Function.Injective (algebraMap A (E ⧸ q)) := by
+    rw [injective_iff_map_eq_zero]
+    intro a h0
+    by_contra hne
+    exact hker ⟨a, hne, h0⟩
+  haveI hFdom : IsDomain (Localization (Algebra.algebraMapSubmonoid (E ⧸ q)
+      (nonZeroDivisors A))) := fibre_isDomain hinj
+  haveI : Algebra.FiniteType A (E ⧸ q) :=
+    Algebra.FiniteType.of_surjective (Ideal.Quotient.mkₐ A q)
+      (Ideal.Quotient.mkₐ_surjective A q)
+  obtain ⟨nn, ψ, hψ⟩ := Algebra.FiniteType.iff_quotient_mvPolynomial''.mp
+    ‹Algebra.FiniteType A (E ⧸ q)›
+  haveI : Algebra.FiniteType (FractionRing A)
+      (Localization (Algebra.algebraMapSubmonoid (E ⧸ q) (nonZeroDivisors A))) :=
+    Algebra.FiniteType.of_surjective _ (fibre_aeval_surjective ψ hψ)
+  obtain ⟨s, φ, hφinj, hφfin⟩ := exists_finite_inj_algHom_of_fg (FractionRing A)
+    (Localization (Algebra.algebraMapSubmonoid (E ⧸ q) (nonZeroDivisors A)))
+  -- the number of Noether variables is bounded by `n`
+  have hs_le : (s : WithBot ℕ∞) ≤ (n : WithBot ℕ∞) := by
+    have h1 : ringKrullDim (MvPolynomial (Fin s) (FractionRing A)) ≤
+        ringKrullDim (Localization (Algebra.algebraMapSubmonoid (E ⧸ q)
+          (nonZeroDivisors A))) := by
+      letI := φ.toRingHom.toAlgebra
+      haveI : Module.Finite (MvPolynomial (Fin s) (FractionRing A))
+          (Localization (Algebra.algebraMapSubmonoid (E ⧸ q)
+            (nonZeroDivisors A))) := hφfin
+      haveI := Algebra.IsIntegral.of_finite (MvPolynomial (Fin s) (FractionRing A))
+        (Localization (Algebra.algebraMapSubmonoid (E ⧸ q) (nonZeroDivisors A)))
+      exact le_ringKrullDim_of_isIntegral_of_injective _ _ hφinj
+    have h2 : ringKrullDim (MvPolynomial (Fin s) (FractionRing A)) =
+        (s : WithBot ℕ∞) := by
+      rw [MvPolynomial.ringKrullDim_of_isNoetherianRing,
+        ringKrullDim_eq_zero_of_field, Nat.card_eq_fintype_card,
+        Fintype.card_fin, zero_add]
+    calc (s : WithBot ℕ∞) = _ := h2.symm
+    _ ≤ _ := h1
+    _ ≤ (n : WithBot ℕ∞) := hdim
+  -- scale the Noether datum into `C` and clear denominators per generator
+  obtain ⟨b, φ', hφ'inj, hφ'fin, hb⟩ := exists_scaled_noether_datum φ hφinj hφfin
+  have hclear : ∀ j : Fin nn, ∃ a : A, a ≠ 0 ∧
+      (MvPolynomial.aeval b :
+        MvPolynomial (Fin s) A →ₐ[A] (E ⧸ q)).toRingHom.IsIntegralElem
+        (a • ψ (MvPolynomial.X j)) :=
+    fun j => exists_smul_isIntegralElem_of_fibre_finite hinj φ' hφ'fin hb _
+  choose aa haa hint using hclear
+  have hg0 : (∏ j, aa j) ≠ 0 := Finset.prod_ne_zero_iff.mpr fun j _ => haa j
+  -- `C''`: the subalgebra generated over `A[X₁,…,X_s]` by the cleared
+  -- generators; module-finite since the generators are integral
+  letI : Algebra (MvPolynomial (Fin s) A) (E ⧸ q) :=
+    (MvPolynomial.aeval b).toRingHom.toAlgebra
+  haveI : IsScalarTower A (MvPolynomial (Fin s) A) (E ⧸ q) :=
+    IsScalarTower.of_algebraMap_eq' ((MvPolynomial.aeval b).comp_algebraMap).symm
+  set C'' : Subalgebra (MvPolynomial (Fin s) A) (E ⧸ q) :=
+    Algebra.adjoin (MvPolynomial (Fin s) A)
+      (Set.range fun j => aa j • ψ (MvPolynomial.X j)) with hC''def
+  haveI hC''fin : Module.Finite (MvPolynomial (Fin s) A) ↥C'' := by
+    have hfg : (Subalgebra.toSubmodule C'').FG := by
+      apply fg_adjoin_of_finite (Set.finite_range _)
+      rintro x ⟨j, rfl⟩
+      exact hint j
+    exact Module.Finite.iff_fg.mpr hfg
+  -- saturation: a power of `g := ∏ aa j` pushes every element of `C` into `C''`
+  have hsat : ∀ c : E ⧸ q, ∃ (N : ℕ) (y : ↥C''), (∏ j, aa j) ^ N • c = ↑y := by
+    intro c
+    obtain ⟨p, rfl⟩ := hψ c
+    induction p using MvPolynomial.induction_on with
+    | C a =>
+      refine ⟨0, ⟨ψ (MvPolynomial.C a), ?_⟩, by rw [pow_zero, one_smul]⟩
+      have h2 : ψ (MvPolynomial.C a) =
+          algebraMap (MvPolynomial (Fin s) A) (E ⧸ q) (MvPolynomial.C a) := by
+        rw [show algebraMap (MvPolynomial (Fin s) A) (E ⧸ q) (MvPolynomial.C a) =
+            (MvPolynomial.aeval b) (MvPolynomial.C a) from rfl,
+          MvPolynomial.aeval_C, ← MvPolynomial.algebraMap_eq, AlgHom.commutes]
+      rw [h2]
+      exact Subalgebra.algebraMap_mem C'' _
+    | add p1 p2 h1 h2 =>
+      obtain ⟨N1, y1, hy1⟩ := h1
+      obtain ⟨N2, y2, hy2⟩ := h2
+      refine ⟨max N1 N2, (∏ j, aa j) ^ (max N1 N2 - N1) • y1 +
+        (∏ j, aa j) ^ (max N1 N2 - N2) • y2, ?_⟩
+      have hco : ((((∏ j, aa j) ^ (max N1 N2 - N1) • y1 +
+          (∏ j, aa j) ^ (max N1 N2 - N2) • y2 : ↥C'')) : E ⧸ q) =
+          (∏ j, aa j) ^ (max N1 N2 - N1) • (y1 : E ⧸ q) +
+          (∏ j, aa j) ^ (max N1 N2 - N2) • (y2 : E ⧸ q) := rfl
+      rw [map_add, smul_add, hco, ← hy1, ← hy2, smul_smul, smul_smul,
+        ← pow_add, ← pow_add, Nat.sub_add_cancel (le_max_left N1 N2),
+        Nat.sub_add_cancel (le_max_right N1 N2)]
+    | mul_X p j hp =>
+      obtain ⟨N, y, hy⟩ := hp
+      refine ⟨N + 1,
+        ((∏ k ∈ Finset.univ.erase j, aa k) • (⟨aa j • ψ (MvPolynomial.X j),
+          Algebra.subset_adjoin ⟨j, rfl⟩⟩ : ↥C'')) * y, ?_⟩
+      have hco : ((((∏ k ∈ Finset.univ.erase j, aa k) •
+          (⟨aa j • ψ (MvPolynomial.X j),
+            Algebra.subset_adjoin ⟨j, rfl⟩⟩ : ↥C'')) * y : ↥C'') : E ⧸ q) =
+          ((∏ k ∈ Finset.univ.erase j, aa k) •
+            (aa j • ψ (MvPolynomial.X j))) * (y : E ⧸ q) := rfl
+      rw [map_mul, hco, ← hy, smul_smul, smul_mul_smul_comm]
+      rw [show ψ p * ψ (MvPolynomial.X j) =
+        ψ (MvPolynomial.X j) * ψ p from mul_comm _ _]
+      congr 1
+      rw [pow_succ, ← Finset.mul_prod_erase Finset.univ aa (Finset.mem_univ j)]
+      ring
+  -- ===== the generic-rank exact sequence over `D := A[X₁,…,X_s]` =====
+  obtain ⟨r, Φ, hΦinj, d, hd0, hdT⟩ :=
+    exists_generic_rank_comparison (MvPolynomial (Fin s) A) ↥C''
+  -- ===== dévissage of the torsion cokernel over `E' := D ⧸ (d)` =====
+  have hTBS : Module.IsTorsionBySet (MvPolynomial (Fin s) A)
+      (↥C'' ⧸ LinearMap.range Φ)
+      ((Ideal.span {d} : Ideal (MvPolynomial (Fin s) A)) : Set (MvPolynomial (Fin s) A)) :=
+    (Module.isTorsionBySet_span_singleton_iff d).mpr hdT
+  letI : Module
+      (MvPolynomial (Fin s) A ⧸ (Ideal.span {d} : Ideal (MvPolynomial (Fin s) A)))
+      (↥C'' ⧸ LinearMap.range Φ) := hTBS.module
+  haveI : IsScalarTower A
+      (MvPolynomial (Fin s) A ⧸ (Ideal.span {d} : Ideal (MvPolynomial (Fin s) A)))
+      (↥C'' ⧸ LinearMap.range Φ) :=
+    hTBS.isScalarTower
+  haveI : Module.Finite
+      (MvPolynomial (Fin s) A ⧸ (Ideal.span {d} : Ideal (MvPolynomial (Fin s) A)))
+      (↥C'' ⧸ LinearMap.range Φ) :=
+    Module.Finite.of_restrictScalars_finite (MvPolynomial (Fin s) A) _ _
+  -- every prime quotient of `E'` is generically free: kernel case or recursion
+  have hcore : ∀ (qt : Ideal (MvPolynomial (Fin s) A ⧸
+      (Ideal.span {d} : Ideal (MvPolynomial (Fin s) A)))), qt.IsPrime →
+      GenericallyFree A ((MvPolynomial (Fin s) A ⧸
+        (Ideal.span {d} : Ideal (MvPolynomial (Fin s) A))) ⧸ qt) := by
+    intro qt hqt
+    haveI := hqt
+    by_cases hker' : ∃ a : A, a ≠ 0 ∧ algebraMap A ((MvPolynomial (Fin s) A ⧸
+        (Ideal.span {d} : Ideal (MvPolynomial (Fin s) A))) ⧸ qt) a = 0
+    · obtain ⟨a, ha, ha0⟩ := hker'
+      exact genericallyFree_of_annihilator ha fun m => by
+        rw [Algebra.smul_def, ha0, zero_mul]
+    · have hinj' : Function.Injective (algebraMap A ((MvPolynomial (Fin s) A ⧸
+          (Ideal.span {d} : Ideal (MvPolynomial (Fin s) A))) ⧸ qt)) := by
+        rw [injective_iff_map_eq_zero]
+        intro a h0
+        by_contra hne
+        exact hker' ⟨a, hne, h0⟩
+      -- the composite presentation kills `d`, so the fibre dimension drops
+      have hπd : ((Ideal.Quotient.mkₐ A qt).comp
+          (Ideal.Quotient.mkₐ A (Ideal.span {d}))) d = 0 := by
+        rw [AlgHom.comp_apply, show (Ideal.Quotient.mkₐ A (Ideal.span {d})) d = 0 from
+          Ideal.Quotient.eq_zero_iff_mem.mpr (Ideal.mem_span_singleton_self d),
+          map_zero]
+      have h1 := fibre_dim_add_one_le_of_presentation
+        ((Ideal.Quotient.mkₐ A qt).comp (Ideal.Quotient.mkₐ A (Ideal.span {d})))
+        ((Ideal.Quotient.mkₐ_surjective A qt).comp
+          (Ideal.Quotient.mkₐ_surjective A (Ideal.span {d})))
+        hd0 hπd
+      haveI := fibre_isDomain hinj'
+      have h0 : (0 : WithBot ℕ∞) ≤ ringKrullDim (Localization
+          (Algebra.algebraMapSubmonoid ((MvPolynomial (Fin s) A ⧸
+            (Ideal.span {d} : Ideal (MvPolynomial (Fin s) A))) ⧸ qt)
+            (nonZeroDivisors A))) :=
+        ringKrullDim_nonneg_of_nontrivial
+      obtain ⟨m', hm'lt, hm'le⟩ := exists_nat_le_of_add_one_le h0 h1 hs_le
+      exact IH m' hm'lt A _ qt hqt hm'le
+  -- assemble: the cokernel is generically free by dévissage
+  have hGFT : GenericallyFree A (↥C'' ⧸ LinearMap.range Φ) :=
+    genericallyFree_of_forall_quotient_prime
+      (MvPolynomial (Fin s) A ⧸ (Ideal.span {d} : Ideal (MvPolynomial (Fin s) A)))
+      hcore (↥C'' ⧸ LinearMap.range Φ)
+  -- the free part is generically free
+  have hGFfree : GenericallyFree A (Fin r → MvPolynomial (Fin s) A) :=
+    GenericallyFree.of_free A _
+  -- splice the exact sequence `0 → D^r → C'' → T → 0` over `A`
+  have hGFC'' : GenericallyFree A ↥C'' := by
+    have hinj' : Function.Injective (Φ.restrictScalars A) := by
+      simpa only [LinearMap.coe_restrictScalars] using hΦinj
+    have hsurj' : Function.Surjective
+        (((LinearMap.range Φ).mkQ).restrictScalars A) := by
+      simpa only [LinearMap.coe_restrictScalars] using
+        (LinearMap.range Φ).mkQ_surjective
+    have hex' : Function.Exact (Φ.restrictScalars A)
+        (((LinearMap.range Φ).mkQ).restrictScalars A) := by
+      have hex : Function.Exact Φ (LinearMap.range Φ).mkQ :=
+        LinearMap.exact_iff.mpr (Submodule.ker_mkQ _)
+      simpa only [LinearMap.coe_restrictScalars] using hex
+    exact genericallyFree_of_exact (Φ.restrictScalars A)
+      (((LinearMap.range Φ).mkQ).restrictScalars A) hinj' hsurj' hex' hGFfree hGFT
+  -- transport along the `g`-saturating inclusion `C'' ⊆ C`
+  exact hGFC''.of_saturating_injection
+    ((Subalgebra.val C'').toLinearMap.restrictScalars A)
+    (fun x y h => Subtype.ext h) hg0 hsat
 
 /-- **The domain core of algebraic generic freeness** [Nitsure §4, "Lemma on
 Generic Flatness", normalisation step]: for a noetherian domain `A`, a
