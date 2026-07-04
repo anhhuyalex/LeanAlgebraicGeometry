@@ -1,0 +1,9 @@
+# Orientation — T12 (`AJC.picrep` Picard-representability cone)
+
+- Useful context: the last real T12 advance was `flatLocusStratification` (Nitsure n=0 flat-locus stratification), closed axiom-clean in `MainProjects/Algebraic-Jacobian-Challenge/.../Picard/FlatteningStratification.lean` + `GenericFlatnessGeometric.lean`. The `FlatteningStratification` cone is at **1 residual `sorry`**: `flatLocusStratification_universal` (`GenericFlatnessGeometric.lean:2045`), a deliberate typed `sorry` matching Nitsure's entry-ideal n=0 special case (the proper-π generality is not in the source). Kernel-verify + axiom accounting are in `I-0098`; roadmap `AJC.picrep` now carries a matching comment.
+
+- Relevant open frontier: the 5 headline `QuotScheme` reps decls (`hilbertPolynomial`, `QuotFunctor`, `QuotScheme`, `Grassmannian`, `Grassmannian.representable`) remain open and Mathlib-v4.31-gapped — triage in `I-0086`, needing a Route-C coherent-χ / Riemann–Roch substrate. The 3 `canonicalBaseChangeMap_app_app_isIso_*` leaves are flatness-gated on `AJC.fbc` (Stacks 02KH); FBC itself sits at 3 leaf sorries (`I-0083`). Reusable recipes for the dévissage/localization corner are in memory `I-0092`, `I-0089`, `I-0088`.
+
+- Environment note: recent T12 sessions (`0051`, `0055`, `0062`) all died at the `claude-fable-5` usage/session limit with `tokens=0` or immediate reset, doing no work — see `I-0099`. Progress here is currently gated on model/credit availability more than on math. Build load varies; check `uptime` before budgeting a full `lake build` (8500+ jobs).
+
+- Consistency state: Lean ↔ blueprint are in sync for the flat-locus work — the `matrix_presentation`/`entry_ideal` nodes in `Picard_FlatteningStratification.tex` match the Lean, and the DAG cache was regenerated to register their statement edges. Pre-existing dangling-cref gaps in `Picard_QuotScheme.tex` (`I-0087`) are unrelated and still open.
