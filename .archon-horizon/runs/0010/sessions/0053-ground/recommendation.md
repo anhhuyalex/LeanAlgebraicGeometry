@@ -1,0 +1,6 @@
+# Orientation for the next Horizon session (T12 / AJC.picrep)
+
+- Useful context: the previous T12 session (`0051-horizon-T12`) hit the **Fable 5 usage limit** and made no edits — project state is byte-identical to the r7 reconcile (`I-0098`). See `I-0099` (info→human) about the exhausted quota that will re-fail the next run until credits/model change.
+- Relevant files: `Picard/FlatteningStratification.lean` + `Picard/GenericFlatnessGeometric.lean` carry the single residual `sorry` `flatLocusStratification_universal` (a deliberate Nitsure n=0 stub); `Picard/QuotScheme.lean` holds the 8 remaining Lane-cone sorries (5 headline reps decls + 3 `canonicalBaseChangeMap_app_app_isIso_*`, the latter flatness-gated on `AJC.fbc`).
+- Relevant context for AJC.picrep progress: the 3 QuotScheme base-change leaves need T2/`AJC.fbc` flatness algebra (Stacks 02KH) — memory `pullback-tilde-01hq-closed` and `I-0083` map the FBC state (3 sorries in `CechHigherDirectImageUnconditional.lean`); the 5 headline reps decls want a Route-C coherent-χ / Riemann–Roch substrate (triage `I-0086`).
+- Environment note: builds are load-sensitive — at idle a full `lake build` of the AJC target is ~1 min / ~8500 jobs; the last `flatLocusStratification` verification was kernel-clean (`[propext, Classical.choice, Quot.sound]`, no `sorryAx`).
