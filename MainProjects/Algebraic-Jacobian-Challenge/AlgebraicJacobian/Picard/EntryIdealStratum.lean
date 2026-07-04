@@ -529,6 +529,278 @@ theorem strataIdeal_eq_entryIdeal {V : X.affineOpens} {mm : ℕ}
     exact exists_basicOpen_mem_entryIdeal_of_chart G r hWV le_rfl Q P
       (by rwa [presheaf_map_self]) x hx (hWV hx)
 
+/-- Membership in the strata ideal follows from membership at a family of
+charts covering `U`. -/
+theorem mem_strataIdeal_of_charts {U : X.affineOpens} (r : Γ(X, U.1))
+    {ι : Type*} (Vc : ι → X.affineOpens) (hVcU : ∀ i, (Vc i).1 ≤ U.1)
+    (mmc : ι → ℕ)
+    (Pc : ∀ i, MatrixPresentation Γ(X, (Vc i).1) Γ(G, (Vc i).1) e (mmc i))
+    (hmem : ∀ i, X.presheaf.map (homOfLE (hVcU i)).op r ∈ (Pc i).entryIdeal)
+    (hcov : ∀ x ∈ U.1, ∃ i, x ∈ (Vc i).1) :
+    r ∈ strataIdeal G e U := by
+  rw [mem_strataIdeal_iff]
+  intro W hWU mmW Q
+  refine mem_entryIdeal_of_locally G Q _ (fun x hx => ?_)
+  obtain ⟨i, hxi⟩ := hcov x (hWU hx)
+  exact exists_basicOpen_mem_entryIdeal_of_chart G r hWU (hVcU i) Q (Pc i)
+    (hmem i) x hx hxi
+
+variable (e) in
+/-- The standing hypothesis of the strata construction: every point of `X`
+lies in an `e`-presentation chart.  Holds on the union of all
+`e`-presentation charts, the ambient space of the rank-`e` stratum. -/
+def ChartsCover : Prop :=
+  ∀ x : X, ∃ V : X.affineOpens, x ∈ V.1 ∧ IsPresentationChart G e V
+
+/-- Under `ChartsCover`, every affine open of `X` is covered by finitely
+many `e`-presentation charts contained in it. -/
+theorem ChartsCover.exists_finite_charts (hcov : ChartsCover G e)
+    (U : X.affineOpens) :
+    ∃ (n : ℕ) (Vc : Fin n → X.affineOpens) (mmc : Fin n → ℕ)
+      (Pc : ∀ i, MatrixPresentation Γ(X, (Vc i).1) Γ(G, (Vc i).1) e (mmc i)),
+      (∀ i, (Vc i).1 ≤ U.1) ∧ ∀ x ∈ U.1, ∃ i, x ∈ (Vc i).1 := by
+  classical
+  -- the subtype of presentation charts contained in `U`
+  set J := {V : X.affineOpens // V.1 ≤ U.1 ∧ IsPresentationChart G e V}
+  -- they cover `U`: shrink a global chart through a simultaneous basic open
+  have hJcov : (U.1 : Set X) ⊆ ⋃ j : J, ((j.1.1 : TopologicalSpace.Opens X) : Set X) := by
+    intro x hx
+    obtain ⟨V, hxV, hVchart⟩ := hcov x
+    obtain ⟨f, g, hfg, hxf⟩ :=
+      exists_basicOpen_le_affine_inter U.2 V.2 x ⟨hx, hxV⟩
+    have hle : (X.affineBasicOpen g).1 ≤ U.1 := by
+      show X.basicOpen g ≤ U.1
+      rw [← hfg]; exact X.basicOpen_le f
+    refine Set.mem_iUnion.mpr
+      ⟨⟨X.affineBasicOpen g, hle, hVchart.basicOpen G g⟩, ?_⟩
+    show x ∈ X.basicOpen g
+    rw [← hfg]; exact hxf
+  -- extract a finite subcover by quasi-compactness of the affine open
+  obtain ⟨T, hT⟩ := U.2.isCompact.elim_finite_subcover
+    (fun j : J => ((j.1.1 : TopologicalSpace.Opens X) : Set X))
+    (fun j => j.1.1.2) hJcov
+  -- enumerate and choose presentations
+  obtain ⟨n, eT⟩ : ∃ n, Nonempty (T ≃ Fin n) := ⟨T.card, ⟨T.equivFin⟩⟩
+  obtain ⟨eT⟩ := eT
+  choose mmc Pc using fun j : T => (j.1.2.2 : IsPresentationChart G e j.1.1)
+  refine ⟨n, fun i => (eT.symm i).1.1, fun i => mmc (eT.symm i),
+    fun i => (Pc (eT.symm i)).some, fun i => (eT.symm i).1.2.1,
+    fun x hx => ?_⟩
+  obtain ⟨j, hjT, hxj⟩ := Set.mem_iUnion₂.mp (hT hx)
+  exact ⟨eT ⟨j, hjT⟩, by simpa using hxj⟩
+
+/-- Restriction to the relative basic open computes the localization
+fraction: restricting `mk' y (f₀ ^ n)` from `X.basicOpen f₀` to the basic
+open of `f₀|_V` inside a smaller affine `V` gives
+`mk' (y|_V) ((f₀|_V) ^ n)`. -/
+theorem res_mk'_basicOpen {U : X.affineOpens} (f₀ : Γ(X, U.1))
+    {V : X.affineOpens} (hVU : V.1 ≤ U.1) (y : Γ(X, U.1)) (n : ℕ)
+    (h₁ : X.basicOpen (X.presheaf.map (homOfLE hVU).op f₀) ≤ X.basicOpen f₀) :
+    haveI := U.2.isLocalization_basicOpen f₀
+    haveI := V.2.isLocalization_basicOpen (X.presheaf.map (homOfLE hVU).op f₀)
+    X.presheaf.map (homOfLE h₁).op
+        (IsLocalization.mk' Γ(X, X.basicOpen f₀) y
+          (⟨f₀ ^ n, pow_mem (Submonoid.mem_powers f₀) n⟩ :
+            Submonoid.powers f₀)) =
+      IsLocalization.mk' Γ(X, X.basicOpen (X.presheaf.map (homOfLE hVU).op f₀))
+        (X.presheaf.map (homOfLE hVU).op y)
+        (⟨(X.presheaf.map (homOfLE hVU).op f₀) ^ n,
+          pow_mem (Submonoid.mem_powers _) n⟩ :
+          Submonoid.powers (X.presheaf.map (homOfLE hVU).op f₀)) := by
+  haveI := U.2.isLocalization_basicOpen f₀
+  haveI := V.2.isLocalization_basicOpen (X.presheaf.map (homOfLE hVU).op f₀)
+  set fv := X.presheaf.map (homOfLE hVU).op f₀ with hfv
+  rw [eq_comm, IsLocalization.mk'_eq_iff_eq_mul]
+  -- both sides are restrictions from `Γ(X, X.basicOpen f₀)`
+  have hbase : (algebraMap Γ(X, V.1) Γ(X, X.basicOpen fv)) =
+      (X.presheaf.map (homOfLE (X.basicOpen_le fv)).op).hom := rfl
+  have hcalc : ∀ z : Γ(X, U.1),
+      algebraMap Γ(X, V.1) Γ(X, X.basicOpen fv)
+          (X.presheaf.map (homOfLE hVU).op z) =
+        X.presheaf.map (homOfLE h₁).op
+          (X.presheaf.map (homOfLE (X.basicOpen_le f₀)).op z) := by
+    intro z
+    rw [hbase]
+    show X.presheaf.map (homOfLE (X.basicOpen_le fv)).op
+        (X.presheaf.map (homOfLE hVU).op z) = _
+    rw [presheaf_res_res (homOfLE hVU) (homOfLE (X.basicOpen_le fv))
+        (homOfLE ((X.basicOpen_le fv).trans hVU)),
+      presheaf_res_res (homOfLE (X.basicOpen_le f₀)) (homOfLE h₁)
+        (homOfLE ((X.basicOpen_le fv).trans hVU))]
+  rw [hcalc y]
+  have hmul : (algebraMap Γ(X, V.1) Γ(X, X.basicOpen fv)) ↑(⟨fv ^ n,
+      pow_mem (Submonoid.mem_powers _) n⟩ : Submonoid.powers fv) =
+      X.presheaf.map (homOfLE h₁).op
+        (X.presheaf.map (homOfLE (X.basicOpen_le f₀)).op (f₀ ^ n)) := by
+    show algebraMap Γ(X, V.1) Γ(X, X.basicOpen fv) (fv ^ n) = _
+    rw [map_pow, hcalc f₀, ← map_pow, ← map_pow]
+  rw [hmul, ← map_mul]
+  congr 1
+  -- `mk' y (f₀^n) * (f₀^n)|_{D₀} = y|_{D₀}` is the defining property
+  have hspec := IsLocalization.mk'_spec Γ(X, X.basicOpen f₀) y
+    (⟨f₀ ^ n, pow_mem (Submonoid.mem_powers f₀) n⟩ : Submonoid.powers f₀)
+  calc X.presheaf.map (homOfLE (X.basicOpen_le f₀)).op y
+      = IsLocalization.mk' Γ(X, X.basicOpen f₀) y
+          (⟨f₀ ^ n, pow_mem (Submonoid.mem_powers f₀) n⟩ :
+            Submonoid.powers f₀) *
+        algebraMap Γ(X, U.1) Γ(X, X.basicOpen f₀) (f₀ ^ n) := hspec.symm
+    _ = _ := rfl
+
+set_option maxHeartbeats 1600000 in
+set_option backward.isDefEq.respectTransparency false in
+/-- **The strata ideal localizes along basic opens** (quasi-coherence of
+the strata ideal; the `map_ideal_basicOpen` field of the ideal-sheaf
+datum).  [Nitsure §4, `n = 0`: the local strata glue by their universal
+property.] -/
+theorem map_strataIdeal_basicOpen (hcov : ChartsCover G e)
+    (U : X.affineOpens) (f₀ : Γ(X, U.1)) :
+    (strataIdeal G e U).map
+        (X.presheaf.map (homOfLE (X.basicOpen_le f₀)).op).hom =
+      strataIdeal G e (X.affineBasicOpen f₀) := by
+  haveI := U.2.isLocalization_basicOpen f₀
+  refine le_antisymm ?_ ?_
+  · -- restriction preserves the chart conditions
+    rw [Ideal.map_le_iff_le_comap]
+    intro r hr
+    refine (mem_strataIdeal_iff G).mpr (fun W hWD mmW Q => ?_)
+    have hWU : W.1 ≤ U.1 := hWD.trans (X.basicOpen_le f₀)
+    have h := (mem_strataIdeal_iff G).mp hr W hWU mmW Q
+    have heq := presheaf_res_res (X := X) (homOfLE (X.basicOpen_le f₀))
+      (homOfLE hWD) (homOfLE hWU) r
+    show X.presheaf.map (homOfLE hWD).op
+      (X.presheaf.map (homOfLE (X.basicOpen_le f₀)).op r) ∈ Q.entryIdeal
+    exact heq.symm ▸ h
+  · -- a section satisfying the conditions over the basic open comes from
+    -- the strata ideal after clearing a power of `f₀`
+    intro r' hr'
+    obtain ⟨⟨y, s⟩, hys⟩ := IsLocalization.mk'_surjective
+      (M := Submonoid.powers f₀) (S := Γ(X, X.basicOpen f₀)) r'
+    dsimp only at hys
+    obtain ⟨n, hn⟩ := s.2
+    have hs : s = ⟨f₀ ^ n, pow_mem (Submonoid.mem_powers f₀) n⟩ :=
+      Subtype.ext hn.symm
+    rw [hs] at hys
+    -- finitely many charts covering `U`
+    obtain ⟨N, Vc, mmc, Pc, hVcU, hcovU⟩ :=
+      ChartsCover.exists_finite_charts G hcov U
+    -- per chart, a power of `f₀` clears the denominator
+    have hper : ∀ i : Fin N, ∃ m : ℕ,
+        X.presheaf.map (homOfLE (hVcU i)).op (f₀ ^ m * y) ∈
+          (Pc i).entryIdeal := by
+      intro i
+      haveI := (Vc i).2.isLocalization_basicOpen
+        (X.presheaf.map (homOfLE (hVcU i)).op f₀)
+      have h₁ : X.basicOpen (X.presheaf.map (homOfLE (hVcU i)).op f₀) ≤
+          X.basicOpen f₀ := by
+        rw [Scheme.basicOpen_res]
+        exact inf_le_right
+      -- the strata condition at the chart `D(f₀|_V) ≤ D(f₀)`
+      have hi := (mem_strataIdeal_iff G).mp hr'
+        (X.affineBasicOpen (X.presheaf.map (homOfLE (hVcU i)).op f₀)) h₁
+        (mmc i) (MatrixPresentationBasicOpen G (Pc i)
+          (X.presheaf.map (homOfLE (hVcU i)).op f₀))
+      rw [← hys] at hi
+      have hres := res_mk'_basicOpen f₀ (hVcU i) y n h₁
+      have hi' := (congrArg (fun z =>
+        z ∈ (MatrixPresentationBasicOpen G (Pc i)
+          (X.presheaf.map (homOfLE (hVcU i)).op f₀)).entryIdeal) hres).mp hi
+      have hE := entryIdeal_matrixPresentationBasicOpen G (Pc i)
+        (X.presheaf.map (homOfLE (hVcU i)).op f₀)
+      have hi'' := (congrArg (fun I => IsLocalization.mk'
+        Γ(X, X.basicOpen (X.presheaf.map (homOfLE (hVcU i)).op f₀))
+        (X.presheaf.map (homOfLE (hVcU i)).op y)
+        (⟨(X.presheaf.map (homOfLE (hVcU i)).op f₀) ^ n,
+          pow_mem (Submonoid.mem_powers _) n⟩ :
+          Submonoid.powers (X.presheaf.map (homOfLE (hVcU i)).op f₀)) ∈ I)
+        hE).mp hi'
+      obtain ⟨t, ht, hmem⟩ :=
+        (IsLocalization.mk'_mem_map_algebraMap_iff
+          (Submonoid.powers (X.presheaf.map (homOfLE (hVcU i)).op f₀))
+          _ _ _ _).mp hi''
+      obtain ⟨m, rfl⟩ := ht
+      refine ⟨m, ?_⟩
+      rw [map_mul, map_pow]
+      exact hmem
+    choose mc hmc using hper
+    set m := Finset.univ.sup mc with hm
+    have hmem : ∀ i : Fin N,
+        X.presheaf.map (homOfLE (hVcU i)).op (f₀ ^ m * y) ∈
+          (Pc i).entryIdeal := by
+      intro i
+      have hle : mc i ≤ m := Finset.le_sup (Finset.mem_univ i)
+      have hsplit : f₀ ^ m * y = f₀ ^ (m - mc i) * (f₀ ^ mc i * y) := by
+        rw [← mul_assoc, ← pow_add, Nat.sub_add_cancel hle]
+      rw [hsplit, map_mul]
+      exact Ideal.mul_mem_left _ _ (hmc i)
+    have hfin : f₀ ^ m * y ∈ strataIdeal G e U :=
+      mem_strataIdeal_of_charts G _ Vc hVcU mmc Pc hmem hcovU
+    have := (IsLocalization.mk'_mem_map_algebraMap_iff (Submonoid.powers f₀)
+      Γ(X, X.basicOpen f₀) (strataIdeal G e U) y
+      (⟨f₀ ^ n, pow_mem (Submonoid.mem_powers f₀) n⟩ :
+        Submonoid.powers f₀)).mpr
+      ⟨f₀ ^ m, pow_mem (Submonoid.mem_powers f₀) m, hfin⟩
+    rw [hys] at this
+    exact this
+
+/-! ## §6 The rank stratum as a closed subscheme -/
+
+variable (e) in
+/-- The rank-`e` **strata ideal sheaf datum** [Nitsure §4, `n = 0`: the
+canonical scheme structure on the rank-`e` stratum]. -/
+noncomputable def strataData (hcov : ChartsCover G e) : X.IdealSheafData where
+  ideal := strataIdeal G e
+  map_ideal_basicOpen U f₀ := map_strataIdeal_basicOpen G hcov U f₀
+
+@[simp] lemma strataData_ideal (hcov : ChartsCover G e) (U : X.affineOpens) :
+    (strataData G e hcov).ideal U = strataIdeal G e U := rfl
+
+variable (e) in
+/-- The **rank-`e` stratum** of a quasi-coherent module `G`: the closed
+subscheme of `X` cut out by the entry ideals of local `e`-generator
+presentations. -/
+noncomputable def stratum (hcov : ChartsCover G e) : Scheme.{u} :=
+  (strataData G e hcov).subscheme
+
+variable (e) in
+/-- The closed immersion of the rank-`e` stratum. -/
+noncomputable def stratumι (hcov : ChartsCover G e) :
+    stratum G e hcov ⟶ X :=
+  (strataData G e hcov).subschemeι
+
+instance (hcov : ChartsCover G e) :
+    IsClosedImmersion (stratumι G e hcov) :=
+  inferInstanceAs (IsClosedImmersion (strataData G e hcov).subschemeι)
+
+/-- **The support of the rank-`e` stratum is the rank-`e` locus**: a point
+lies in the image of the stratum iff the fiber of `G` there has dimension
+exactly `e` [Nitsure §4, part (i), `n = 0` case]. -/
+theorem mem_range_stratumι_iff (hcov : ChartsCover G e) (x : X) :
+    x ∈ Set.range (stratumι G e hcov) ↔ pointRank X G x = e := by
+  obtain ⟨V, hxV, hchart⟩ := hcov x
+  obtain ⟨mm, ⟨P⟩⟩ := hchart
+  have h0 : x ∈ Set.range (stratumι G e hcov) ↔
+      x ∈ (strataData G e hcov).support := by
+    change x ∈ Set.range ((strataData G e hcov).subschemeι) ↔ _
+    rw [Scheme.IdealSheafData.range_subschemeι]
+    exact Iff.rfl
+  have h1 : x ∈ (strataData G e hcov).support ↔
+      x ∈ X.zeroLocus (U := V.1)
+        (((strataData G e hcov).ideal V : Ideal Γ(X, V.1)) :
+          Set Γ(X, V.1)) :=
+    Scheme.IdealSheafData.mem_support_iff_of_mem hxV
+  have hIP : ((strataData G e hcov).ideal V : Ideal Γ(X, V.1)) =
+      P.entryIdeal := strataIdeal_eq_entryIdeal G P
+  have h2 : x ∈ X.zeroLocus (U := V.1)
+      (((strataData G e hcov).ideal V : Ideal Γ(X, V.1)) : Set Γ(X, V.1)) ↔
+      P.entryIdeal ≤ (V.2.primeIdealOf ⟨x, hxV⟩).asIdeal := by
+    rw [hIP]
+    exact V.2.mem_zeroLocus_iff_le_primeIdealOf P.entryIdeal ⟨x, hxV⟩
+  have h3 : P.entryIdeal ≤ (V.2.primeIdealOf ⟨x, hxV⟩).asIdeal ↔
+      pointRank X G x = e := by
+    rw [P.entryIdeal_le_prime_iff, pointRank_eq_chartFiberRank G x hxV]
+    exact Iff.rfl
+  exact ((h0.trans h1).trans h2).trans h3
+
 end Scheme.Modules
 
 end AlgebraicGeometry
