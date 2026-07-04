@@ -1993,56 +1993,14 @@ lemma flatLocusStratification {S : Scheme.{u}} [IsNoetherian S]
         Γ((Scheme.Modules.pullback (Scheme.emptyTo S)).obj F, V)
       infer_instance
 
-/-- **Universal property of the flat-locus stratification (the `n = 0`
-flattening stratification)** [Nitsure §4, special case, parts (i) + (ii)].
-
-For `S` noetherian and `𝓕` a coherent `𝓞_S`-module there is a *finite*
-locally-closed stratification `{S_f}` of `S` — immersions, set-theoretically
-covering `|S|`, pairwise disjoint, `𝓕|_{S_f}` flat over `S_f` — such that,
-writing `i : ∐ S_f ⟶ S` for `Sigma.desc` of the inclusions, every morphism
-`φ : T ⟶ S` for which `φ^*𝓕` is flat over `T` factors *uniquely* through
-`i`.
-
-Source: [Nitsure], §4, proof of the flattening-stratification theorem,
-special case `n = 0` (Nakayama prolongation of a fibre basis to a local
-presentation `𝓞_V^{⊕m} →ψ 𝓞_V^{⊕e} → 𝓕|_V → 0`, the closed subscheme
-`V_e ⊆ V` cut out by the entry ideal of `ψ`, base change: `f^*𝓕` is locally
-free of rank `e` iff `f^*ψ = 0` iff `f` factors through `V_e`; the local
-strata glue by their universal property).  Flatness replaces
-locally-free-of-rank-`e`: for finitely presented `𝓕` they agree, with the
-rank decomposing `T` into clopen pieces.
-
-Statement repair (run 0010, T12 r7): the previous statement generalized
-Nitsure's part (ii) from `𝓕` on `ℙⁿ_S` to an arbitrary *proper*
-`π : X ⟶ S`.  That generality is not in the cited source (Nitsure proves
-the theorem for `ℙⁿ_S`, hence for projective `π`) and no reference for the
-proper case is in the workspace library; moreover the reduced strata of
-`flatLocusReduction` provably cannot witness it (over `S = Spec k[ε]` with
-`𝓕 = 𝓞_S` flat, `𝟙 S` must factor through the stratification, forcing the
-canonical non-reduced stratum structure).  The statement is therefore
-specialized to `π = 𝟙 S` — exactly Nitsure's special case, which his
-general-case proof consumes.  The projective upgrade (the Route-A consumer
-shape, `π = pr_T : C ×_k T → T` for a projective curve `C`) needs `ℙⁿ_S`
-vocabulary and the §3 cohomology-and-base-change layer; it returns with the
-Quot-scheme endgame.
-
-Proof route (future session): the canonical rank strata via the
-matrix-entry ideal of a local Nakayama presentation (Mathlib v4.31 has no
-Fitting ideals; the entry ideal substitutes), base change of the entry
-ideal, gluing of the local `V_e` by their universal property, uniqueness
-from the strata being immersions (monomorphisms) with disjoint images. -/
-theorem flatLocusStratification_universal {S : Scheme.{u}} [IsNoetherian S]
-    (F : S.Modules) [F.IsFinitePresentation] :
-    ∃ (I : Type u) (_ : Finite I) (S_ : I → Scheme.{u}) (ι : ∀ f, S_ f ⟶ S),
-      (∀ f, IsImmersion (ι f)) ∧
-      (∀ s : S, ∃ f, s ∈ Set.range (ι f).base) ∧
-      (∀ f g, f ≠ g → Disjoint (Set.range (ι f).base) (Set.range (ι g).base)) ∧
-      (∀ f, Scheme.CoherentSheafFlat (𝟙 (S_ f))
-        ((Scheme.Modules.pullback (ι f)).obj F)) ∧
-      (∀ {T : Scheme.{u}} (φ : T ⟶ S),
-        Scheme.CoherentSheafFlat (𝟙 T) ((Scheme.Modules.pullback φ).obj F) →
-        ∃! ψ : T ⟶ ∐ S_, ψ ≫ Sigma.desc ι = φ) := by
-  sorry
+/-! The **universal property of the flat-locus stratification**
+(`AlgebraicGeometry.flatLocusStratification_universal`, [Nitsure §4,
+special case `n = 0`, parts (i) + (ii)]) is stated and proved in
+`AlgebraicJacobian.Picard.FlatteningStratificationUniversal`: its proof
+consumes the canonical rank strata of
+`AlgebraicJacobian.Picard.EntryIdealStratum`, which this file does not
+import.  The statement-repair history (specialization to `π = 𝟙 S`, run
+0010 T12 r7) is recorded in the docstring there. -/
 
 /-- **Flattening stratification for a coherent sheaf on a relative
 curve** [Nitsure §4 corollary; Route~A consumer A.2.a entry-point].

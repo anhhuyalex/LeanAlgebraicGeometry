@@ -59,10 +59,11 @@ documented in the per-declaration docstrings.
 
 This file is **sorry-free**: the geometric statements (`genericFlatness`,
 `flatLocusStratification`, `flatLocusReduction`,
-`flatteningStratification`(+`_universal`, `ofCurve`)) live in
-`GenericFlatnessGeometric.lean`, where all are proved axiom-clean except
-the single remaining `sorry` `flatLocusStratification_universal` (the
-`n = 0` universal property, canonical entry-ideal strata).
+`flatteningStratification`, `ofCurve`) live in
+`GenericFlatnessGeometric.lean` (all proved axiom-clean), and the `n = 0`
+universal property `flatLocusStratification_universal` (canonical
+entry-ideal strata) is proved axiom-clean in
+`FlatteningStratificationUniversal.lean`.
 
 The 4 blueprint-pinned declarations are:
 
