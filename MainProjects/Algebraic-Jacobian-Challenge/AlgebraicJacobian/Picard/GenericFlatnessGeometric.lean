@@ -837,4 +837,181 @@ theorem finite_section_pullback_piece (F : X.Modules) [F.IsQuasicoherent]
 
 end PullbackPiece
 
+/-! ## §5. Flatness over the base is affine-local (cover ⟹ all pairs)
+
+If a quasi-coherent module `G` on `Y ⟶ T` has flat sections on one family of
+affine chart pairs `(Uc j ⊆ T, Wc j ⊆ q⁻¹Uc j)` whose fibre-side charts cover
+`Y`, then *every* affine pair `(U, W)` has flat sections — Stacks 00HT-style
+affine-locality, in the two-layer basic-open reduction style of
+`flat_section_pair`: cover `W` by opens simultaneously basic in `W` and in a
+chart, lying above base basic opens common to `U` and the chart's base
+`Uc j`; per piece, restrict the chart flatness fibre-side (mixed-base
+stability `Module.Flat.of_isLocalizedModule_algebra`), then exchange the base
+ring twice (`Module.flat_iff_of_isLocalization`); glue with
+`Module.flat_of_isLocalized_span`. -/
+
+section FlatAffineLocal
+
+set_option maxHeartbeats 1600000 in
+-- Heartbeat headroom: per-piece instance provisioning under binders, as in
+-- `flat_section_pair`.
+/-- **Flatness over the base is affine-local.**  Chart flatness on an affine
+cover implies flatness on every affine pair. -/
+theorem flat_section_of_affine_cover {T Y : Scheme.{u}} (q : Y ⟶ T) (G : Y.Modules)
+    [G.IsQuasicoherent] {ι : Type u}
+    (Wc : ι → Y.Opens) (hWc : ∀ j, IsAffineOpen (Wc j))
+    (Uc : ι → T.Opens) (hUc : ∀ j, IsAffineOpen (Uc j))
+    (eWc : ∀ j, Wc j ≤ q ⁻¹ᵁ Uc j)
+    (hcover : ∀ y : Y, ∃ j, y ∈ Wc j)
+    (hflat : ∀ j,
+      letI : Module Γ(T, Uc j) Γ(G, Wc j) :=
+        Module.compHom _ (q.appLE (Uc j) (Wc j) (eWc j)).hom
+      Module.Flat Γ(T, Uc j) Γ(G, Wc j))
+    {U : T.Opens} (hU : IsAffineOpen U) {W : Y.Opens} (hW : IsAffineOpen W)
+    (e : W ≤ q ⁻¹ᵁ U) :
+    letI : Module Γ(T, U) Γ(G, W) := Module.compHom _ (q.appLE U W e).hom
+    Module.Flat Γ(T, U) Γ(G, W) := by
+  letI : Module Γ(T, U) Γ(G, W) := Module.compHom _ (q.appLE U W e).hom
+  -- per-point choice of a simultaneous basic open
+  have Hx : ∀ x : ↥W, ∃ (b : Γ(Y, W)) (j : ι) (a : Γ(T, U)) (a' : Γ(T, Uc j))
+      (c : Γ(Y, Wc j)),
+      Y.basicOpen b = Y.basicOpen c ∧ (x : Y) ∈ Y.basicOpen b ∧
+      T.basicOpen a = T.basicOpen a' ∧
+      Y.basicOpen b ≤ q ⁻¹ᵁ (T.basicOpen a) := by
+    intro x
+    obtain ⟨j, hxj⟩ := hcover x.1
+    have hxU : q.base x.1 ∈ U := e x.2
+    have hxUj : q.base x.1 ∈ Uc j := eWc j hxj
+    obtain ⟨a, a', haa', hqa⟩ :=
+      AlgebraicGeometry.exists_basicOpen_le_affine_inter hU (hUc j) (q.base x.1)
+        ⟨hxU, hxUj⟩
+    have hxT : x.1 ∈ (W ⊓ (q ⁻¹ᵁ T.basicOpen a ⊓ Wc j) : Y.Opens) :=
+      ⟨x.2, ⟨hqa, hxj⟩⟩
+    obtain ⟨b₁, hb₁le, hxb₁⟩ := hW.exists_basicOpen_le
+      (⟨x.1, hxT⟩ : ↥(W ⊓ (q ⁻¹ᵁ T.basicOpen a ⊓ Wc j) : Y.Opens)) x.2
+    obtain ⟨f₁, c, hfc, hxf₁⟩ := AlgebraicGeometry.exists_basicOpen_le_affine_inter
+      (hW.basicOpen b₁) (hWc j) x.1 ⟨hxb₁, hxj⟩
+    obtain ⟨b, hb⟩ := hW.basicOpen_basicOpen_is_basicOpen b₁ f₁
+    exact ⟨b, j, a, a', c, hb.trans hfc, hb.symm ▸ hxf₁, haa',
+      hb.symm ▸ ((Y.basicOpen_le f₁).trans
+        (hb₁le.trans (inf_le_right.trans inf_le_left)))⟩
+  choose bb jj aa aa' cc hbc hxb haa' hba using Hx
+  -- the covering family spans `Γ(Y, W)`
+  have hspan : Ideal.span (Set.range bb) = ⊤ := by
+    rw [← hW.iSup_basicOpen_eq_self_iff]
+    apply le_antisymm
+    · exact iSup_le fun r => Y.basicOpen_le _
+    · intro y hy
+      exact TopologicalSpace.Opens.mem_iSup.mpr
+        ⟨⟨bb ⟨y, hy⟩, Set.mem_range_self _⟩, hxb ⟨y, hy⟩⟩
+  -- instance packs for the span lemma
+  letI : Algebra Γ(T, U) Γ(Y, W) := (q.appLE U W e).hom.toAlgebra
+  haveI : IsScalarTower Γ(T, U) Γ(Y, W) Γ(G, W) :=
+    IsScalarTower.of_algebraMap_smul fun _ _ => rfl
+  letI instBpiece : ∀ r : Set.range bb, Module Γ(Y, W) Γ(G, Y.basicOpen r.1) :=
+    fun r => Module.compHom _ (algebraMap Γ(Y, W) Γ(Y, Y.basicOpen r.1))
+  haveI instTowerB : ∀ r : Set.range bb,
+      IsScalarTower Γ(Y, W) Γ(Y, Y.basicOpen r.1) Γ(G, Y.basicOpen r.1) :=
+    fun r => IsScalarTower.of_algebraMap_smul fun _ _ => rfl
+  haveI instLoc : ∀ r : Set.range bb, IsLocalizedModule (Submonoid.powers r.1)
+      (Scheme.Modules.restrictBasicOpenₗ G r.1) := fun r =>
+    Scheme.Modules.isLocalizedModule_basicOpen_of_isCompact G hW.isCompact
+      hW.isQuasiSeparated r.1
+  letI instRpiece : ∀ r : Set.range bb, Module Γ(T, U) Γ(G, Y.basicOpen r.1) :=
+    fun r =>
+      Module.compHom _ (q.appLE U (Y.basicOpen r.1) ((Y.basicOpen_le r.1).trans e)).hom
+  haveI instTowerR : ∀ r : Set.range bb,
+      IsScalarTower Γ(T, U) Γ(Y, W) Γ(G, Y.basicOpen r.1) := fun r =>
+    IsScalarTower.of_algebraMap_smul fun u n => by
+      change (Y.presheaf.map (homOfLE (Y.basicOpen_le r.1)).op).hom
+          ((q.appLE U W e).hom u) • n
+        = (q.appLE U (Y.basicOpen r.1) ((Y.basicOpen_le r.1).trans e)).hom u • n
+      rw [appLE_res_apply q e (Y.basicOpen_le r.1) u]
+  -- assemble by the span criterion; the pieces are handled below
+  refine Module.flat_of_isLocalized_span (R := Γ(T, U)) Γ(Y, W) Γ(G, W)
+    (Set.range bb) hspan (fun r => Γ(G, Y.basicOpen r.1))
+    (fun r => Scheme.Modules.restrictBasicOpenₗ G r.1) ?_
+  -- per-piece flatness
+  intro r
+  obtain ⟨x, hx⟩ := r.2
+  have hbar : Y.basicOpen r.1 ≤ q ⁻¹ᵁ (T.basicOpen (aa x)) := hx ▸ hba x
+  have hbcr : Y.basicOpen r.1 = Y.basicOpen (cc x) := hx ▸ hbc x
+  have hcWj : Y.basicOpen (cc x) ≤ Wc (jj x) := Y.basicOpen_le (cc x)
+  have hcUj : Y.basicOpen (cc x) ≤ q ⁻¹ᵁ Uc (jj x) :=
+    fun y hy => eWc (jj x) (hcWj hy)
+  have hrUj : Y.basicOpen r.1 ≤ q ⁻¹ᵁ Uc (jj x) := hbcr ▸ hcUj
+  have haU : T.basicOpen (aa x) ≤ U := T.basicOpen_le (aa x)
+  have haUj : T.basicOpen (aa x) ≤ Uc (jj x) :=
+    (haa' x).trans_le (T.basicOpen_le (aa' x))
+  -- (α) chart flatness restricts to the chart-basic open, mixed-base
+  have hA : (letI : Module Γ(T, Uc (jj x)) Γ(G, Y.basicOpen (cc x)) :=
+        Module.compHom _ (q.appLE (Uc (jj x)) (Y.basicOpen (cc x)) hcUj).hom
+      Module.Flat Γ(T, Uc (jj x)) Γ(G, Y.basicOpen (cc x))) := by
+    letI : Module Γ(T, Uc (jj x)) Γ(G, Wc (jj x)) :=
+      Module.compHom _ (q.appLE (Uc (jj x)) (Wc (jj x)) (eWc (jj x))).hom
+    letI : Algebra Γ(T, Uc (jj x)) Γ(Y, Wc (jj x)) :=
+      (q.appLE (Uc (jj x)) (Wc (jj x)) (eWc (jj x))).hom.toAlgebra
+    haveI : IsScalarTower Γ(T, Uc (jj x)) Γ(Y, Wc (jj x)) Γ(G, Wc (jj x)) :=
+      IsScalarTower.of_algebraMap_smul fun _ _ => rfl
+    letI : Module Γ(Y, Wc (jj x)) Γ(G, Y.basicOpen (cc x)) :=
+      Module.compHom _ (algebraMap Γ(Y, Wc (jj x)) Γ(Y, Y.basicOpen (cc x)))
+    haveI : IsScalarTower Γ(Y, Wc (jj x)) Γ(Y, Y.basicOpen (cc x))
+        Γ(G, Y.basicOpen (cc x)) :=
+      IsScalarTower.of_algebraMap_smul fun _ _ => rfl
+    letI : Module Γ(T, Uc (jj x)) Γ(G, Y.basicOpen (cc x)) :=
+      Module.compHom _ (q.appLE (Uc (jj x)) (Y.basicOpen (cc x)) hcUj).hom
+    haveI : IsScalarTower Γ(T, Uc (jj x)) Γ(Y, Wc (jj x))
+        Γ(G, Y.basicOpen (cc x)) :=
+      IsScalarTower.of_algebraMap_smul fun u n => by
+        change (Y.presheaf.map (homOfLE hcWj).op).hom
+            ((q.appLE (Uc (jj x)) (Wc (jj x)) (eWc (jj x))).hom u) • n
+          = (q.appLE (Uc (jj x)) (Y.basicOpen (cc x)) hcUj).hom u • n
+        rw [appLE_res_apply q (eWc (jj x)) hcWj u]
+    haveI hlocB : IsLocalizedModule (Submonoid.powers (cc x))
+        (Scheme.Modules.restrictBasicOpenₗ G (cc x)) :=
+      Scheme.Modules.isLocalizedModule_basicOpen_of_isCompact G
+        (hWc (jj x)).isCompact (hWc (jj x)).isQuasiSeparated (cc x)
+    haveI : Module.Flat Γ(T, Uc (jj x)) Γ(G, Wc (jj x)) := hflat (jj x)
+    exact Module.Flat.of_isLocalizedModule_algebra (Submonoid.powers (cc x))
+      (Scheme.Modules.restrictBasicOpenₗ G (cc x))
+  -- (β) transport along `D(r) = D(c)`
+  have hA' : (letI : Module Γ(T, Uc (jj x)) Γ(G, Y.basicOpen r.1) :=
+        Module.compHom _ (q.appLE (Uc (jj x)) (Y.basicOpen r.1) hrUj).hom
+      Module.Flat Γ(T, Uc (jj x)) Γ(G, Y.basicOpen r.1)) :=
+    flat_sections_congr q G hbcr.symm hcUj hrUj hA
+  -- (γ) exchange the base ring twice: `Uc (jj x) → D(aa x) → U`
+  letI mA : Module Γ(T, T.basicOpen (aa x)) Γ(G, Y.basicOpen r.1) :=
+    Module.compHom _ (q.appLE (T.basicOpen (aa x)) (Y.basicOpen r.1) hbar).hom
+  letI mA0 : Module Γ(T, Uc (jj x)) Γ(G, Y.basicOpen r.1) :=
+    Module.compHom _ (q.appLE (Uc (jj x)) (Y.basicOpen r.1) hrUj).hom
+  haveI hloc1 : IsLocalization.Away (aa x) Γ(T, T.basicOpen (aa x)) :=
+    hU.isLocalization_basicOpen (aa x)
+  haveI tow1 : IsScalarTower Γ(T, U) Γ(T, T.basicOpen (aa x))
+      Γ(G, Y.basicOpen r.1) :=
+    IsScalarTower.of_algebraMap_smul fun u n => by
+      change (q.appLE (T.basicOpen (aa x)) (Y.basicOpen r.1) hbar).hom
+          ((T.presheaf.map (homOfLE haU).op).hom u) • n
+        = (q.appLE U (Y.basicOpen r.1) ((Y.basicOpen_le r.1).trans e)).hom u • n
+      rw [appLE_base_res_apply q haU hbar ((Y.basicOpen_le r.1).trans e) u]
+  letI algA : Algebra Γ(T, Uc (jj x)) Γ(T, T.basicOpen (aa x)) :=
+    ((T.presheaf.map (homOfLE haUj).op).hom).toAlgebra
+  haveI hloc2 : IsLocalization.Away (aa' x) Γ(T, T.basicOpen (aa x)) :=
+    (hUc (jj x)).isLocalization_of_eq_basicOpen (aa' x) (homOfLE haUj) (haa' x)
+  haveI tow2 : IsScalarTower Γ(T, Uc (jj x)) Γ(T, T.basicOpen (aa x))
+      Γ(G, Y.basicOpen r.1) :=
+    IsScalarTower.of_algebraMap_smul fun u n => by
+      change (q.appLE (T.basicOpen (aa x)) (Y.basicOpen r.1) hbar).hom
+          ((T.presheaf.map (homOfLE haUj).op).hom u) • n
+        = (q.appLE (Uc (jj x)) (Y.basicOpen r.1) hrUj).hom u • n
+      rw [appLE_base_res_apply q haUj hbar hrUj u]
+  have h2 : Module.Flat Γ(T, T.basicOpen (aa x)) Γ(G, Y.basicOpen r.1) :=
+    (Module.flat_iff_of_isLocalization (R := Γ(T, Uc (jj x)))
+      Γ(T, T.basicOpen (aa x)) (Submonoid.powers (aa' x))
+      Γ(G, Y.basicOpen r.1)).mpr hA'
+  exact (Module.flat_iff_of_isLocalization (R := Γ(T, U))
+    Γ(T, T.basicOpen (aa x)) (Submonoid.powers (aa x))
+    Γ(G, Y.basicOpen r.1)).mp h2
+
+end FlatAffineLocal
+
 end AlgebraicGeometry
