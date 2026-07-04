@@ -520,4 +520,153 @@ theorem genericFlatness {S X : Scheme.{u}} [IsIntegral S] [IsLocallyNoetherian S
         Γ(F, V i.1.1) (ff i) (∏ j ∈ Finset.univ.erase i, ff j) (hffree i)
       rwa [Finset.mul_prod_erase _ _ (Finset.mem_univ i)] at h1
 
+/-! ## §3. Flatness under pushout base change (algebra core)
+
+Let `R → S` and `R → A` be ring maps with pushout `B = S ⊗[R] A`
+(`Algebra.IsPushout R S A B`), and let `M` be an `A`-module that is flat
+over `R`.  Then `B ⊗[A] M` — and hence any base change of `M` along
+`A → B` — is flat over `S`.  This is the module form of "flatness is
+stable under arbitrary base change" (Stacks 00HI item (3), relative
+form).  Mathlib has the special case `Module.Flat.baseChange`
+(`A = R`, `B = S`) and the ring form
+`RingHom.Flat.isStableUnderBaseChange`, but not this mixed module form.
+
+The engine is `isBaseChange_pushout_tensorProduct`: `B ⊗[A] M` *is* the
+base change of `M` along `R → S`, i.e. `B ⊗[A] M = S ⊗[R] M`.  The proof
+is by the universal property (`IsBaseChange.of_lift_unique`): an
+`R`-linear map `g : M → Q` into an `S`-module extends to `B ⊗[A] M` by
+lifting the `A`-indexed family `a ↦ (m ↦ g (a • m))` through the ring
+base change `B = S ⊗[R] A` (`Algebra.IsPushout.out.lift`) and applying
+the balanced-product constructor `TensorProduct.liftAddHom`. -/
+
+section FlatPushout
+
+open TensorProduct
+
+variable (R S A B : Type v) [CommRing R] [CommRing S] [CommRing A] [CommRing B]
+variable [Algebra R S] [Algebra R A] [Algebra R B] [Algebra A B] [Algebra S B]
+variable [IsScalarTower R A B] [IsScalarTower R S B]
+variable (M : Type v) [AddCommGroup M] [Module R M] [Module A M] [IsScalarTower R A M]
+
+attribute [local instance] SMulCommClass.of_commMonoid
+
+set_option maxSynthPendingDepth 3 in
+/-- **`B ⊗[A] M` is the base change of `M` along `R → S`** for a pushout square
+`B = S ⊗[R] A` [Stacks 00HI, module form].  The `S`-module structure on
+`B ⊗[A] M` is through the left factor. -/
+theorem isBaseChange_pushout_tensorProduct [h : Algebra.IsPushout R S A B] :
+    IsBaseChange S (((TensorProduct.mk A B M) 1).restrictScalars R) := by
+  apply IsBaseChange.of_lift_unique
+  intro Q _ _ _ _ g
+  -- the `A`-indexed family of `R`-linear maps `m ↦ g (a • m)`
+  let β : A →ₗ[R] (M →ₗ[R] Q) :=
+    { toFun := fun a =>
+        { toFun := fun m => g (a • m)
+          map_add' := fun x y => by rw [smul_add, map_add]
+          map_smul' := fun r x => by
+            rw [RingHom.id_apply, smul_comm, map_smul] }
+      map_add' := fun a₁ a₂ => LinearMap.ext fun m => by
+        simp only [LinearMap.coe_mk, AddHom.coe_mk, add_smul, map_add,
+          LinearMap.add_apply]
+      map_smul' := fun r a => LinearMap.ext fun m => by
+        simp only [LinearMap.coe_mk, AddHom.coe_mk, RingHom.id_apply,
+          LinearMap.smul_apply, ← map_smul, smul_assoc] }
+  -- lift it through the ring base change `B = S ⊗[R] A`
+  let Λ : B →ₗ[S] (M →ₗ[R] Q) := h.out.lift β
+  have hΛ_alg : ∀ a : A, Λ (algebraMap A B a) = β a := fun a => by
+    simpa only [AlgHom.toLinearMap_apply, IsScalarTower.coe_toAlgHom'] using
+      h.out.lift_eq β a
+  -- balancedness of the pairing `(b, m) ↦ Λ b m` over `A`
+  have hbal : ∀ (a : A) (b : B) (m : M),
+      Λ (algebraMap A B a * b) m = Λ b (a • m) := by
+    intro a b m
+    induction b using h.out.inductionOn with
+    | zero => rw [mul_zero, map_zero, LinearMap.zero_apply, LinearMap.zero_apply]
+    | tmul a' =>
+      rw [AlgHom.toLinearMap_apply, IsScalarTower.coe_toAlgHom', ← map_mul,
+        hΛ_alg, hΛ_alg]
+      show g ((a * a') • m) = g (a' • a • m)
+      rw [← smul_smul, smul_comm]
+    | smul s b e =>
+      rw [mul_smul_comm, map_smul, LinearMap.smul_apply, e, map_smul Λ s b,
+        LinearMap.smul_apply]
+    | add b₁ b₂ e₁ e₂ =>
+      rw [mul_add, map_add, map_add, LinearMap.add_apply, LinearMap.add_apply,
+        e₁, e₂]
+  -- the balanced-product extension `B ⊗[A] M →+ Q`
+  let h₀ : B ⊗[A] M →+ Q := TensorProduct.liftAddHom
+    { toFun := fun b => (Λ b).toAddMonoidHom
+      map_zero' := by ext m; simp only [map_zero, LinearMap.toAddMonoidHom_coe,
+        LinearMap.zero_apply, AddMonoidHom.zero_apply]
+      map_add' := fun b₁ b₂ => by
+        ext m
+        simp only [map_add, LinearMap.toAddMonoidHom_coe, LinearMap.add_apply,
+          AddMonoidHom.add_apply] }
+    (fun a b m => by
+      simpa only [Algebra.smul_def, LinearMap.toAddMonoidHom_coe,
+        AddMonoidHom.coe_mk, ZeroHom.coe_mk] using hbal a b m)
+  have h₀_tmul : ∀ (b : B) (m : M), h₀ (b ⊗ₜ m) = Λ b m := fun b m =>
+    TensorProduct.liftAddHom_tmul _ _ b m
+  -- `S`-linearity of the extension
+  have hS : ∀ (s : S) (x : B ⊗[A] M), h₀ (s • x) = s • h₀ x := by
+    intro s x
+    induction x with
+    | zero => rw [smul_zero, map_zero, smul_zero]
+    | tmul b m =>
+      rw [smul_tmul', h₀_tmul, h₀_tmul, map_smul, LinearMap.smul_apply]
+    | add x y ex ey => rw [smul_add, map_add, ex, ey, map_add, smul_add]
+  refine ⟨{ toFun := h₀, map_add' := map_add h₀, map_smul' := hS }, ?_, ?_⟩
+  · -- the extension restricts to `g` along `m ↦ 1 ⊗ m`
+    apply LinearMap.ext
+    intro m
+    show h₀ ((1 : B) ⊗ₜ m) = g m
+    rw [h₀_tmul, show (1 : B) = algebraMap A B 1 from (map_one _).symm, hΛ_alg]
+    show g ((1 : A) • m) = g m
+    rw [one_smul]
+  · -- uniqueness
+    intro h' hh'
+    apply LinearMap.ext
+    intro x
+    show h' x = h₀ x
+    induction x with
+    | zero => rw [map_zero, map_zero]
+    | tmul b m =>
+      rw [h₀_tmul]
+      induction b using h.out.inductionOn with
+      | zero => rw [zero_tmul, map_zero, map_zero, LinearMap.zero_apply]
+      | tmul a =>
+        rw [AlgHom.toLinearMap_apply, IsScalarTower.coe_toAlgHom', hΛ_alg]
+        have : (algebraMap A B a) ⊗ₜ[A] m = (1 : B) ⊗ₜ[A] (a • m) := by
+          rw [Algebra.algebraMap_eq_smul_one, smul_tmul]
+        rw [this]
+        have h2 := congrArg (fun (φ : M →ₗ[R] Q) => φ (a • m)) hh'
+        simp only [LinearMap.coe_comp, LinearMap.coe_restrictScalars,
+          Function.comp_apply, TensorProduct.mk_apply] at h2
+        exact h2
+      | smul s b e =>
+        rw [← smul_tmul', map_smul, e, map_smul Λ s b, LinearMap.smul_apply]
+      | add b₁ b₂ e₁ e₂ =>
+        rw [add_tmul, map_add, map_add, LinearMap.add_apply, e₁, e₂]
+    | add x y ex ey => rw [map_add, map_add, ex, ey]
+
+set_option maxSynthPendingDepth 3 in
+/-- **Flatness under pushout base change** [Stacks 00HI, module form].  Let
+`B = S ⊗[R] A` be a pushout of rings (`Algebra.IsPushout R S A B`), `M` an
+`A`-module flat over `R`, and `N` a `B`-module which is a base change of `M`
+along `A → B` (`IsBaseChange B f`).  Then `N` is flat over `S` (acting through
+`S → B`).  Mathlib covers `A = R`, `B = S` (`Module.Flat.baseChange`); this
+mixed form is the per-piece engine of the flattening stratification. -/
+theorem _root_.Module.Flat.of_isPushout [h : Algebra.IsPushout R S A B]
+    {N : Type v} [AddCommGroup N] [Module A N] [Module B N] [Module S N]
+    [IsScalarTower A B N] [IsScalarTower S B N]
+    {f : M →ₗ[A] N} (hf : IsBaseChange B f) [Module.Flat R M] :
+    Module.Flat S N := by
+  haveI : Module.Flat S (B ⊗[A] M) :=
+    Module.Flat.isBaseChange (R := R) (S := S) (M := M) (B ⊗[A] M)
+      (isBaseChange_pushout_tensorProduct R S A B M)
+  exact Module.Flat.of_linearEquiv (hf.equiv.restrictScalars S).symm
+
+end FlatPushout
+
+
 end AlgebraicGeometry
