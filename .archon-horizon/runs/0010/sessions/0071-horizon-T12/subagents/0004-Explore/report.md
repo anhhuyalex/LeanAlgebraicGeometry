@@ -1,0 +1,13 @@
+You are scouting a Lean 4 workspace. Working directory: /home/Axel/LeanAlgebraicGeometry-Horizon/MainProjects/Algebraic-Jacobian-Challenge (a Lean project; Mathlib source at .lake/packages/mathlib/Mathlib/).
+
+Answer these questions with verbatim evidence (file paths, line numbers, code):
+
+1. Which files in the whole project (grep AlgebraicJacobian/ recursively) mention `flatLocusStratification_universal` or import `AlgebraicJacobian.Picard.GenericFlatnessGeometric`? List every file and the matching lines. Also: which file is the project's root import aggregator (e.g. AlgebraicJacobian.lean) and does it list GenericFlatnessGeometric or EntryIdealStratum?
+2. In the blueprint: grep blueprint/src/chapters/Picard_FlatteningStratification.tex for `flatLocusStratification_universal` and `thm:flattening_stratification_universal` — copy the full blueprint node (theorem statement + proof environment) and any \lean{...} anchor lines. Also copy the section header/label of `sec:flatstrat_rank_stratum` and list the \lean anchors it contains (just the names).
+3. Mathlib Opens-restriction API: in .lake/packages/mathlib/Mathlib/AlgebraicGeometry/ (Restrict.lean, OpenImmersion.lean and neighbors), report exact signatures for: `Scheme.Opens.ι` (the open-subscheme inclusion morphism, type), `Scheme.restrictFunctor`, `IsAffineOpen.ι_image` or how `U.ι ''ᵁ V` works, the equivalence/map between `(↑U).Opens`/affineOpens and opens of X below U (e.g. `Scheme.Opens.ι_preimage`? `IsOpenImmersion.affineOpensEquiv`? `Scheme.Opens.functor`?), and any lemma `IsAffineOpen.image_of_isOpenImmersion` (affine opens map to affine opens along open immersions). Also `Scheme.homOfLE` and `Scheme.topIso`.
+4. Mathlib: `IsClopen` API for building open subschemes from clopen sets, and how one restricts a Scheme to an open SET (not Opens): `X ∣_ᵤ U` notation, `Scheme.restrict`. Signature of `TopologicalSpace.Opens` construction from an IsOpen proof.
+5. Project: grep AlgebraicJacobian/ for existing uses of `Scheme.Modules.pullback` composition isos: `pullbackComp`, `pullbackCongr`, `pullbackId` — where are they defined (which file, project or Mathlib?) and exact signatures. Also `Scheme.Modules.restrictFunctorIsoPullback` if it exists.
+6. Project: does anything already state/prove "pointRank of a pullback module at t equals pointRank at the image point"? grep for `pointRank` across the project — list every occurrence outside EntryIdealStratum.lean.
+7. Mathlib: `Module.Flat` transport lemmas: `Module.Flat.of_linearEquiv` / `Module.Flat.equiv` / `LinearEquiv.flat` — exact name and signature in current Mathlib (v4.31-era). Also `Module.Free.of_equiv`, and restriction-of-scalars flatness `Module.Flat.trans`.
+
+Return raw data organized by item number.
