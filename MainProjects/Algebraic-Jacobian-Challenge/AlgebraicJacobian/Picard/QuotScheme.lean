@@ -505,7 +505,7 @@ chain definitionally to give `Γ(X, V)`-linearity.
 
 This is axiom-clean; the substantive bijectivity claim is encapsulated in
 `pullback_app_isoTensor_baseMap_isBaseChange` (iter-186 Lane F helper #2). -/
-private noncomputable def pullback_app_isoTensor_baseMap
+noncomputable def pullback_app_isoTensor_baseMap
     {X Y : Scheme.{u}} (g : Y ⟶ X) (N : X.Modules)
     {U : Y.Opens} {V : X.Opens} (e : U ≤ g ⁻¹ᵁ V) :
     letI : Algebra Γ(X, V) Γ(Y, U) := (g.appLE V U e).hom.toAlgebra
@@ -4797,7 +4797,7 @@ factored into the present helper's body as a typed sorry. Once
 `pullback_tildeIso` lands axiom-clean (iter-189+ sub-build) and the
 transport infrastructure is in place, this helper closes axiom-clean
 in ~30-50 LOC. -/
-private theorem pullback_app_isoTensor_baseMap_sectionLinearEquiv
+theorem pullback_app_isoTensor_baseMap_sectionLinearEquiv
     {X Y : Scheme.{u}} (g : Y ⟶ X) (N : X.Modules) [N.IsQuasicoherent]
     {U : Y.Opens} {V : X.Opens}
     (_hU : IsAffineOpen U) (_hV : IsAffineOpen V)

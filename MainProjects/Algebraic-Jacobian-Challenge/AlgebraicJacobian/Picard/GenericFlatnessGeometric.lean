@@ -668,5 +668,152 @@ theorem _root_.Module.Flat.of_isPushout [h : Algebra.IsPushout R S A B]
 
 end FlatPushout
 
+/-! ## §4. Affine pieces of a fibre-product square
+
+For a cartesian square `H : IsPullback g iY iX f` (so `Y = X ×ₛ T` with
+projections `g : Y ⟶ X`, `iY : Y ⟶ T` over `iX : X ⟶ S`, `f : T ⟶ S`) and
+affine opens `US ⊆ S`, `UX ⊆ iX⁻¹US`, `UT ⊆ f⁻¹US`, the **piece**
+`UY := g⁻¹UX ⊓ iY⁻¹UT ⊆ Y` is an affine open whose section ring is the
+pushout `Γ(X,UX) ⊗_{Γ(S,US)} Γ(T,UT)` (Mathlib's
+`isIso_pushoutSection_of_isAffineOpen`), and whose `F`-pullback sections are
+the base change `Γ(Y,UY) ⊗_{Γ(X,UX)} Γ(F,UX)` (the Lane F section formula
+`pullback_app_isoTensor_baseMap_sectionLinearEquiv`, Stacks 01HQ/01I8).
+Combining the two with `Module.Flat.of_isPushout` (§3) transports flatness
+of `Γ(F,UX)` over `Γ(S,US)` to flatness of the piece sections over
+`Γ(T,UT)`; `Module.Finite.base_change` similarly transports finiteness over
+the fibre ring.  These are the two per-piece inputs of the
+flattening-stratification induction. -/
+
+section PullbackPiece
+
+open TensorProduct
+
+variable {X Y S T : Scheme.{u}} {f : T ⟶ S} {g : Y ⟶ X} {iX : X ⟶ S} {iY : Y ⟶ T}
+variable (H : IsPullback g iY iX f)
+variable {US : S.Opens} {UT : T.Opens} {UX : X.Opens}
+variable (hUST : UT ≤ f ⁻¹ᵁ US) (hUSX : UX ≤ iX ⁻¹ᵁ US)
+
+include H hUST hUSX
+
+/-- The piece `g⁻¹UX ⊓ iY⁻¹UT` of a fibre-product square over affine opens is
+affine: it is isomorphic to the pullback of the restricted affine cospan
+(`Scheme.Hom.isPullback_resLE`). -/
+theorem isAffineOpen_pullback_piece (hUS : IsAffineOpen US) (hUT : IsAffineOpen UT)
+    (hUX : IsAffineOpen UX) : IsAffineOpen (g ⁻¹ᵁ UX ⊓ iY ⁻¹ᵁ UT) := by
+  have : IsAffine US := hUS
+  have : IsAffine UT := hUT
+  have : IsAffine UX := hUX
+  exact IsAffine.of_isIso (Scheme.Hom.isPullback_resLE H hUST hUSX rfl).isoPullback.hom
+
+/-- The section-ring square of a fibre-product square at an affine piece is a
+pushout in `CommRingCat` (Mathlib's `isIso_pushoutSection_of_isAffineOpen`,
+repackaged). -/
+theorem isPushout_appLE_pullback_piece (hUS : IsAffineOpen US) (hUT : IsAffineOpen UT)
+    (hUX : IsAffineOpen UX) :
+    CategoryTheory.IsPushout (iX.appLE US UX hUSX) (f.appLE US UT hUST)
+      (g.appLE UX (g ⁻¹ᵁ UX ⊓ iY ⁻¹ᵁ UT) inf_le_left)
+      (iY.appLE UT (g ⁻¹ᵁ UX ⊓ iY ⁻¹ᵁ UT) inf_le_right) :=
+  (isIso_pushoutSection_iff H hUST hUSX rfl).mp
+    (isIso_pushoutSection_of_isAffineOpen H hUST hUSX rfl hUS hUT hUX)
+
+set_option maxSynthPendingDepth 3 in
+/-- **Per-piece flatness transfer.**  If the `F`-sections on the affine
+`UX ⊆ X` are flat over the affine `US ⊆ S`, then for any affine `UT ⊆ T`
+above `US`, the pulled-back sections on the piece `g⁻¹UX ⊓ iY⁻¹UT ⊆ Y` are
+flat over `UT`.  This is `Module.Flat.of_isPushout` (§3) fed with the ring
+pushout of `isPushout_appLE_pullback_piece` and the Lane F base-change
+section formula. -/
+theorem flat_section_pullback_piece (F : X.Modules) [F.IsQuasicoherent]
+    (hUS : IsAffineOpen US) (hUT : IsAffineOpen UT) (hUX : IsAffineOpen UX)
+    (hflat :
+      letI : Module Γ(S, US) Γ(F, UX) := Module.compHom _ (iX.appLE US UX hUSX).hom
+      Module.Flat Γ(S, US) Γ(F, UX)) :
+    letI : Module Γ(T, UT) Γ((Scheme.Modules.pullback g).obj F, g ⁻¹ᵁ UX ⊓ iY ⁻¹ᵁ UT) :=
+      Module.compHom _ (iY.appLE UT (g ⁻¹ᵁ UX ⊓ iY ⁻¹ᵁ UT) inf_le_right).hom
+    Module.Flat Γ(T, UT) Γ((Scheme.Modules.pullback g).obj F, g ⁻¹ᵁ UX ⊓ iY ⁻¹ᵁ UT) := by
+  have hUY : IsAffineOpen (g ⁻¹ᵁ UX ⊓ iY ⁻¹ᵁ UT) :=
+    isAffineOpen_pullback_piece H hUST hUSX hUS hUT hUX
+  -- ring algebra structures on the four corners
+  letI : Algebra Γ(S, US) Γ(X, UX) := (iX.appLE US UX hUSX).hom.toAlgebra
+  letI : Algebra Γ(S, US) Γ(T, UT) := (f.appLE US UT hUST).hom.toAlgebra
+  letI : Algebra Γ(X, UX) Γ(Y, g ⁻¹ᵁ UX ⊓ iY ⁻¹ᵁ UT) :=
+    (g.appLE UX (g ⁻¹ᵁ UX ⊓ iY ⁻¹ᵁ UT) inf_le_left).hom.toAlgebra
+  letI : Algebra Γ(T, UT) Γ(Y, g ⁻¹ᵁ UX ⊓ iY ⁻¹ᵁ UT) :=
+    (iY.appLE UT (g ⁻¹ᵁ UX ⊓ iY ⁻¹ᵁ UT) inf_le_right).hom.toAlgebra
+  letI : Algebra Γ(S, US) Γ(Y, g ⁻¹ᵁ UX ⊓ iY ⁻¹ᵁ UT) :=
+    ((g.appLE UX (g ⁻¹ᵁ UX ⊓ iY ⁻¹ᵁ UT) inf_le_left).hom.comp
+      (iX.appLE US UX hUSX).hom).toAlgebra
+  haveI : IsScalarTower Γ(S, US) Γ(X, UX) Γ(Y, g ⁻¹ᵁ UX ⊓ iY ⁻¹ᵁ UT) :=
+    IsScalarTower.of_algebraMap_eq' rfl
+  haveI : IsScalarTower Γ(S, US) Γ(T, UT) Γ(Y, g ⁻¹ᵁ UX ⊓ iY ⁻¹ᵁ UT) :=
+    IsScalarTower.of_algebraMap_eq' (by
+      show ((g.appLE UX _ inf_le_left).hom.comp (iX.appLE US UX hUSX).hom) =
+        (iY.appLE UT _ inf_le_right).hom.comp (f.appLE US UT hUST).hom
+      have key : ∀ (φ : Y ⟶ S) (_ : iY ≫ f = φ)
+          (w₁ : (g ⁻¹ᵁ UX ⊓ iY ⁻¹ᵁ UT) ≤ φ ⁻¹ᵁ US)
+          (w₂ : (g ⁻¹ᵁ UX ⊓ iY ⁻¹ᵁ UT) ≤ (iY ≫ f) ⁻¹ᵁ US),
+          φ.appLE US (g ⁻¹ᵁ UX ⊓ iY ⁻¹ᵁ UT) w₁ =
+            (iY ≫ f).appLE US (g ⁻¹ᵁ UX ⊓ iY ⁻¹ᵁ UT) w₂ := by
+        rintro φ rfl w₁ w₂; rfl
+      have h1 : iX.appLE US UX hUSX ≫ g.appLE UX (g ⁻¹ᵁ UX ⊓ iY ⁻¹ᵁ UT) inf_le_left =
+          f.appLE US UT hUST ≫ iY.appLE UT (g ⁻¹ᵁ UX ⊓ iY ⁻¹ᵁ UT) inf_le_right := by
+        rw [Scheme.Hom.appLE_comp_appLE, Scheme.Hom.appLE_comp_appLE]
+        exact key (g ≫ iX) H.w.symm _ _
+      exact congrArg CommRingCat.Hom.hom h1)
+  -- the pushout of section rings, in `Algebra.IsPushout` form
+  haveI hpo₁ : Algebra.IsPushout Γ(S, US) Γ(X, UX) Γ(T, UT)
+      Γ(Y, g ⁻¹ᵁ UX ⊓ iY ⁻¹ᵁ UT) :=
+    CommRingCat.isPushout_iff_isPushout.mp
+      (isPushout_appLE_pullback_piece H hUST hUSX hUS hUT hUX)
+  haveI hpo₂ : Algebra.IsPushout Γ(S, US) Γ(T, UT) Γ(X, UX)
+      Γ(Y, g ⁻¹ᵁ UX ⊓ iY ⁻¹ᵁ UT) := hpo₁.symm
+  -- module structures on the sections
+  letI : Module Γ(S, US) Γ(F, UX) := Module.compHom _ (iX.appLE US UX hUSX).hom
+  haveI : IsScalarTower Γ(S, US) Γ(X, UX) Γ(F, UX) :=
+    IsScalarTower.of_algebraMap_smul fun _ _ => rfl
+  letI : Module Γ(X, UX) Γ((Scheme.Modules.pullback g).obj F, g ⁻¹ᵁ UX ⊓ iY ⁻¹ᵁ UT) :=
+    Module.compHom _ (g.appLE UX (g ⁻¹ᵁ UX ⊓ iY ⁻¹ᵁ UT) inf_le_left).hom
+  letI : Module Γ(T, UT) Γ((Scheme.Modules.pullback g).obj F, g ⁻¹ᵁ UX ⊓ iY ⁻¹ᵁ UT) :=
+    Module.compHom _ (iY.appLE UT (g ⁻¹ᵁ UX ⊓ iY ⁻¹ᵁ UT) inf_le_right).hom
+  haveI : IsScalarTower Γ(X, UX) Γ(Y, g ⁻¹ᵁ UX ⊓ iY ⁻¹ᵁ UT)
+      Γ((Scheme.Modules.pullback g).obj F, g ⁻¹ᵁ UX ⊓ iY ⁻¹ᵁ UT) :=
+    IsScalarTower.of_algebraMap_smul fun _ _ => rfl
+  haveI : IsScalarTower Γ(T, UT) Γ(Y, g ⁻¹ᵁ UX ⊓ iY ⁻¹ᵁ UT)
+      Γ((Scheme.Modules.pullback g).obj F, g ⁻¹ᵁ UX ⊓ iY ⁻¹ᵁ UT) :=
+    IsScalarTower.of_algebraMap_smul fun _ _ => rfl
+  haveI hMflat : Module.Flat Γ(S, US) Γ(F, UX) := hflat
+  -- the Lane F base-change section formula
+  obtain ⟨⟨eqv, heqv⟩⟩ :=
+    pullback_app_isoTensor_baseMap_sectionLinearEquiv g F hUY hUX inf_le_left
+  have hbc : IsBaseChange Γ(Y, g ⁻¹ᵁ UX ⊓ iY ⁻¹ᵁ UT)
+      (pullback_app_isoTensor_baseMap g F (V := UX) inf_le_left) :=
+    IsBaseChange.of_equiv eqv heqv
+  exact Module.Flat.of_isPushout Γ(S, US) Γ(T, UT) Γ(X, UX)
+    Γ(Y, g ⁻¹ᵁ UX ⊓ iY ⁻¹ᵁ UT) Γ(F, UX) hbc
+
+set_option maxSynthPendingDepth 3 in
+/-- **Per-piece finiteness transfer.**  If the `F`-sections on the affine
+`UX ⊆ X` are finite over `Γ(X, UX)`, the pulled-back sections on the piece
+are finite over the piece's own section ring (base change of a finite module
+is finite). -/
+theorem finite_section_pullback_piece (F : X.Modules) [F.IsQuasicoherent]
+    (hUS : IsAffineOpen US) (hUT : IsAffineOpen UT) (hUX : IsAffineOpen UX)
+    (hfin : Module.Finite Γ(X, UX) Γ(F, UX)) :
+    Module.Finite Γ(Y, g ⁻¹ᵁ UX ⊓ iY ⁻¹ᵁ UT)
+      Γ((Scheme.Modules.pullback g).obj F, g ⁻¹ᵁ UX ⊓ iY ⁻¹ᵁ UT) := by
+  have hUY : IsAffineOpen (g ⁻¹ᵁ UX ⊓ iY ⁻¹ᵁ UT) :=
+    isAffineOpen_pullback_piece H hUST hUSX hUS hUT hUX
+  letI : Algebra Γ(X, UX) Γ(Y, g ⁻¹ᵁ UX ⊓ iY ⁻¹ᵁ UT) :=
+    (g.appLE UX (g ⁻¹ᵁ UX ⊓ iY ⁻¹ᵁ UT) inf_le_left).hom.toAlgebra
+  letI : Module Γ(X, UX) Γ((Scheme.Modules.pullback g).obj F, g ⁻¹ᵁ UX ⊓ iY ⁻¹ᵁ UT) :=
+    Module.compHom _ (g.appLE UX (g ⁻¹ᵁ UX ⊓ iY ⁻¹ᵁ UT) inf_le_left).hom
+  obtain ⟨⟨eqv, -⟩⟩ :=
+    pullback_app_isoTensor_baseMap_sectionLinearEquiv g F hUY hUX inf_le_left
+  haveI : Module.Finite Γ(Y, g ⁻¹ᵁ UX ⊓ iY ⁻¹ᵁ UT)
+      (TensorProduct Γ(X, UX) Γ(Y, g ⁻¹ᵁ UX ⊓ iY ⁻¹ᵁ UT) Γ(F, UX)) :=
+    Module.Finite.base_change _ _ _
+  exact Module.Finite.equiv eqv
+
+end PullbackPiece
 
 end AlgebraicGeometry
