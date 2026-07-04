@@ -1753,6 +1753,466 @@ of fiber rank \(e\).  Throughout, \(R\) is a commutative ring and \(M\) an
   generators.
 \end{proof}
 
+\section{The rank-\(e\) stratum as a closed subscheme}
+\label{sec:flatstrat_rank_stratum}
+
+The entry-ideal commutative algebra of \cref{sec:entry_ideal} is local to an
+affine chart.  This section globalises it: for a quasi-coherent module
+\(\mathcal G\) on a scheme \(X\) it assembles the local entry ideals into a
+quasi-coherent ideal sheaf whose closed subscheme --- the \emph{rank-\(e\)
+stratum} --- has support exactly the locus where the fibre of \(\mathcal G\)
+has dimension \(e\).  This is the geometric substrate of Nitsure's
+\(n = 0\) construction (\cref{lem:flat_locus_open}).  Throughout \(X\) is a
+scheme and \(\mathcal G\) a quasi-coherent \(\OO_X\)-module; \(\Gamma(\mathcal G, U)\)
+denotes its sections over an open \(U\), a module over \(\Gamma(X, U) = \OO_X(U)\).
+
+\subsection{Base change of the fibre rank}
+
+\begin{theorem}[Base-change invariance of the fibre rank]
+  \label{thm:fiber_rank_base_change}
+  \lean{Ideal.fiberRank_baseChange}
+  \leanok
+  \uses{def:fiber_rank}
+  Let \(A\) be an \(R\)-algebra, \(M\) an \(R\)-module, and \(\mathfrak q\) a
+  prime of \(A\) with contraction \(\mathfrak p = \mathfrak q \cap R\).  Then
+  the fibre rank of \(A \otimes_R M\) at \(\mathfrak q\) equals the fibre rank
+  of \(M\) at \(\mathfrak p\).  No flatness or finiteness hypotheses are
+  needed.
+\end{theorem}
+
+\begin{proof}
+  \leanok
+  The residue-field map \(R \to \kappa(\mathfrak p) \to \kappa(\mathfrak q)\)
+  makes \(\kappa(\mathfrak q)\) a \(\kappa(\mathfrak p)\)-algebra.  Cancelling
+  base changes gives \(\kappa(\mathfrak p)\)-linear, then
+  \(\kappa(\mathfrak q)\)-linear, isomorphisms
+  \[
+    \kappa(\mathfrak q) \otimes_A (A \otimes_R M)
+      \;\cong\; \kappa(\mathfrak q) \otimes_R M
+      \;\cong\; \kappa(\mathfrak q) \otimes_{\kappa(\mathfrak p)}
+        \bigl(\kappa(\mathfrak p) \otimes_R M\bigr).
+  \]
+  Extension of scalars along a field extension preserves dimension, so
+  \(\dim_{\kappa(\mathfrak q)}
+    \kappa(\mathfrak q) \otimes_{\kappa(\mathfrak p)}
+    (\kappa(\mathfrak p) \otimes_R M)
+    = \dim_{\kappa(\mathfrak p)}(\kappa(\mathfrak p) \otimes_R M)\),
+  which is the claim.
+\end{proof}
+
+\begin{lemma}[Fibre rank is a linear invariant]
+  \label{lem:fiber_rank_congr}
+  \lean{Ideal.fiberRank_congr}
+  \leanok
+  \uses{def:fiber_rank}
+  If \(\sigma : M \cong N\) is an isomorphism of \(R\)-modules, then \(M\) and
+  \(N\) have the same fibre rank at every prime \(\mathfrak p\).
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  Base change \(\sigma\) along \(R \to \kappa(\mathfrak p)\) to obtain a
+  \(\kappa(\mathfrak p)\)-linear isomorphism
+  \(\kappa(\mathfrak p) \otimes_R M \cong \kappa(\mathfrak p) \otimes_R N\);
+  isomorphic vector spaces have equal dimension.
+\end{proof}
+
+\begin{corollary}[Fibre rank of a localized module]
+  \label{cor:fiber_rank_localized}
+  \lean{Ideal.fiberRank_of_isLocalizedModule}
+  \leanok
+  \uses{thm:fiber_rank_base_change, lem:fiber_rank_congr}
+  Let \(R' = S^{-1}R\) be a localization, \(N = S^{-1}M\) the corresponding
+  localized module, and \(\mathfrak q\) a prime of \(R'\).  Then the fibre
+  rank of \(N\) at \(\mathfrak q\) equals the fibre rank of \(M\) at the
+  contraction \(\mathfrak q \cap R\).
+\end{corollary}
+
+\begin{proof}
+  \leanok
+  Localization is a base change: the canonical map \(M \to N\) induces an
+  \(R'\)-linear isomorphism \(R' \otimes_R M \cong N\).  By
+  \cref{lem:fiber_rank_congr} the fibre rank of \(N\) at \(\mathfrak q\)
+  equals that of \(R' \otimes_R M\), which by \cref{thm:fiber_rank_base_change}
+  equals the fibre rank of \(M\) at \(\mathfrak q \cap R\).
+\end{proof}
+
+\subsection{Presentation charts and the point rank}
+
+\begin{definition}[Presentation chart]
+  \label{def:presentation_chart}
+  \lean{AlgebraicGeometry.Scheme.Modules.IsPresentationChart}
+  \leanok
+  \uses{def:matrix_presentation}
+  \source{nitsure-hilbert-quot}
+  An affine open \(V \subseteq X\) is an \emph{\(e\)-presentation chart} for
+  \(\mathcal G\) if the section module \(\Gamma(\mathcal G, V)\) admits a
+  matrix presentation by \(e\) generators over \(\Gamma(X, V)\), that is, a
+  right-exact sequence
+  \(\OO_V^{\oplus m} \xrightarrow{\psi} \OO_V^{\oplus e}
+    \to \mathcal G|_V \to 0\).
+\end{definition}
+
+\begin{definition}[Restriction of a presentation to a basic open]
+  \label{def:presentation_basic_open}
+  \lean{AlgebraicGeometry.Scheme.Modules.MatrixPresentationBasicOpen}
+  \leanok
+  \uses{def:matrix_presentation_base_change, def:presentation_chart}
+  Let \(P = (\psi, \pi)\) be a matrix presentation of
+  \(\Gamma(\mathcal G, V)\) by \(e\) generators over an affine open \(V\), and
+  \(f \in \Gamma(X, V)\).  Since \(\mathcal G\) is quasi-coherent, restriction
+  exhibits \(\Gamma(\mathcal G, D(f))\) as the localization
+  \(\Gamma(\mathcal G, V) \otimes_{\Gamma(X, V)} \Gamma(X, D(f))\).  Base
+  change of \(P\) along \(\Gamma(X, V) \to \Gamma(X, D(f))\)
+  (\cref{def:matrix_presentation_base_change}), transported along this
+  localization isomorphism, is a matrix presentation of
+  \(\Gamma(\mathcal G, D(f))\) by \(e\) generators, the \emph{restriction of
+  \(P\) to \(D(f)\)}; its relation matrix is the entrywise restriction
+  \(\psi|_{D(f)}\).
+\end{definition}
+
+\begin{lemma}[Entry ideal of a restricted presentation]
+  \label{lem:entry_ideal_basic_open}
+  \lean{AlgebraicGeometry.Scheme.Modules.entryIdeal_matrixPresentationBasicOpen}
+  \leanok
+  \uses{def:presentation_basic_open, lem:entry_ideal_base_change}
+  With the notation of \cref{def:presentation_basic_open}, the entry ideal of
+  the restricted presentation is the image of \(I(\psi)\) under restriction:
+  \(I(\psi|_{D(f)}) = I(\psi) \cdot \Gamma(X, D(f))\).
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  The restricted presentation is a base change of \(P\), so its entry ideal is
+  the image ideal by \cref{lem:entry_ideal_base_change}.
+\end{proof}
+
+\begin{lemma}[Presentation charts pass to basic opens]
+  \label{lem:presentation_chart_basic_open}
+  \lean{AlgebraicGeometry.Scheme.Modules.IsPresentationChart.basicOpen}
+  \leanok
+  \uses{def:presentation_chart, def:presentation_basic_open}
+  If \(V\) is an \(e\)-presentation chart for \(\mathcal G\) and
+  \(f \in \Gamma(X, V)\), then the basic open \(D(f) \subseteq V\) is again an
+  \(e\)-presentation chart.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  Restrict a presentation of \(\Gamma(\mathcal G, V)\) to \(D(f)\) by
+  \cref{def:presentation_basic_open}.
+\end{proof}
+
+\begin{definition}[Chart fibre rank]
+  \label{def:chart_fiber_rank}
+  \lean{AlgebraicGeometry.Scheme.Modules.chartFiberRank}
+  \leanok
+  \uses{def:fiber_rank}
+  For an affine open chart \(V\) and a point \(x \in V\), the \emph{chart
+  fibre rank} of \(\mathcal G\) at \(x\) computed on \(V\) is the fibre rank
+  of the section module \(\Gamma(\mathcal G, V)\) at the prime
+  \(\mathfrak p_x \subseteq \Gamma(X, V)\) corresponding to \(x\).
+\end{definition}
+
+\begin{lemma}[Chart fibre rank under localization]
+  \label{lem:chart_fiber_rank_basic_open}
+  \lean{AlgebraicGeometry.Scheme.Modules.chartFiberRank_basicOpen}
+  \leanok
+  \uses{def:chart_fiber_rank, cor:fiber_rank_localized}
+  The chart fibre rank is unchanged by passing to a basic open of the chart:
+  for \(f \in \Gamma(X, V)\) and \(x \in D(f)\), the chart fibre rank computed
+  on \(V\) equals that computed on \(D(f)\).
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  \(\Gamma(\mathcal G, D(f))\) is the localization of
+  \(\Gamma(\mathcal G, V)\) at \(f\), and the prime of \(x\) in
+  \(\Gamma(X, D(f))\) contracts to the prime of \(x\) in \(\Gamma(X, V)\).
+  Apply \cref{cor:fiber_rank_localized}.
+\end{proof}
+
+\begin{theorem}[Chart-independence of the fibre rank]
+  \label{thm:chart_fiber_rank_eq}
+  \lean{AlgebraicGeometry.Scheme.Modules.chartFiberRank_eq}
+  \leanok
+  \uses{def:chart_fiber_rank, lem:chart_fiber_rank_basic_open}
+  Any two affine charts \(V, W\) containing a point \(x\) give the same chart
+  fibre rank of \(\mathcal G\) at \(x\).
+\end{theorem}
+
+\begin{proof}
+  \leanok
+  Choose a basic open of \(V\) and a basic open of \(W\) that coincide as an
+  open \(D \ni x\) contained in \(V \cap W\).  By
+  \cref{lem:chart_fiber_rank_basic_open} the chart fibre rank computed on
+  \(V\) and the one computed on \(W\) both equal the chart fibre rank computed
+  on \(D\), hence agree.
+\end{proof}
+
+\begin{definition}[Point rank]
+  \label{def:point_rank}
+  \lean{AlgebraicGeometry.Scheme.Modules.pointRank}
+  \leanok
+  \uses{def:chart_fiber_rank, thm:chart_fiber_rank_eq}
+  The \emph{point rank} of \(\mathcal G\) at a point \(x \in X\) is the
+  dimension of the fibre of \(\mathcal G\) at \(x\), computed as the chart
+  fibre rank on any affine chart through \(x\); it is well defined by
+  \cref{thm:chart_fiber_rank_eq}.
+\end{definition}
+
+\begin{lemma}[Point rank on a chart]
+  \label{lem:point_rank_eq_chart_fiber_rank}
+  \lean{AlgebraicGeometry.Scheme.Modules.pointRank_eq_chartFiberRank}
+  \leanok
+  \uses{def:point_rank, thm:chart_fiber_rank_eq}
+  For any affine chart \(V \ni x\), the point rank of \(\mathcal G\) at \(x\)
+  equals the chart fibre rank computed on \(V\).
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  Both are chart fibre ranks at \(x\); apply \cref{thm:chart_fiber_rank_eq}.
+\end{proof}
+
+\subsection{The strata ideal}
+
+\begin{lemma}[Locality of entry-ideal membership]
+  \label{lem:mem_entry_ideal_locally}
+  \lean{AlgebraicGeometry.Scheme.Modules.mem_entryIdeal_of_locally}
+  \leanok
+  \uses{def:entry_ideal, lem:entry_ideal_basic_open}
+  Let \(P = (\psi, \pi)\) be a matrix presentation of
+  \(\Gamma(\mathcal G, V)\) by \(e\) generators over an affine open \(V\), and
+  \(r \in \Gamma(X, V)\).  If every point of \(V\) has a basic open
+  \(D(g) \ni x\) on which the restriction of \(r\) lies in the entry ideal of
+  the restricted presentation \(\psi|_{D(g)}\), then \(r \in I(\psi)\).
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  Choose for each point such a \(g\); the basic opens \(D(g)\) cover \(V\), so
+  the corresponding \(g\) generate the unit ideal of \(\Gamma(X, V)\).  By
+  \cref{lem:entry_ideal_basic_open}, membership of \(r|_{D(g)}\) in
+  \(I(\psi|_{D(g)}) = I(\psi) \cdot \Gamma(X, D(g))\) means a power
+  \(g^{n} r\) lies in \(I(\psi)\).  A section that, after multiplication by a
+  power of each member of a family generating the unit ideal, lands in a
+  submodule, already lies in that submodule; hence \(r \in I(\psi)\).
+\end{proof}
+
+\begin{lemma}[Chart-to-chart transfer of the entry-ideal condition]
+  \label{lem:entry_ideal_chart_transfer}
+  \lean{AlgebraicGeometry.Scheme.Modules.exists_basicOpen_mem_entryIdeal_of_chart}
+  \leanok
+  \uses{thm:entry_ideal_presentation_independent, lem:entry_ideal_basic_open}
+  Let \(r \in \Gamma(X, U)\), let \(V, W \subseteq U\) be affine opens with
+  \(e\)-generator presentations \(P_V, P_W\), and suppose the restriction of
+  \(r\) to \(W\) lies in \(I(\psi_W)\).  Then for every point
+  \(x \in V \cap W\) there is a basic open \(D(g) \subseteq V\) with
+  \(x \in D(g)\) on which the restriction of \(r\) lies in
+  \(I(\psi_V|_{D(g)})\).
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  Choose a common basic open \(D \ni x\) contained in \(V \cap W\), realised
+  as a basic open \(D(g)\) of \(V\) and a basic open \(D(f)\) of \(W\).  On
+  \(D\) both \(\psi_V|_{D(g)}\) and \(\psi_W|_{D(f)}\) present
+  \(\Gamma(\mathcal G, D)\) by \(e\) generators, so by
+  \cref{thm:entry_ideal_presentation_independent} their entry ideals coincide.
+  By \cref{lem:entry_ideal_basic_open} the restriction of \(r|_W\) to \(D\)
+  lies in \(I(\psi_W|_{D(f)}) = I(\psi_V|_{D(g)})\).
+\end{proof}
+
+\begin{definition}[Strata ideal]
+  \label{def:strata_ideal}
+  \lean{AlgebraicGeometry.Scheme.Modules.strataIdeal}
+  \leanok
+  \uses{def:entry_ideal, def:presentation_chart}
+  \source{nitsure-hilbert-quot}
+  The rank-\(e\) \emph{strata ideal} of \(\mathcal G\) on an affine open \(U\)
+  is the ideal of \(\Gamma(X, U)\)
+  \[
+    I_e(U) \;=\; \bigcap_{V \le U} \; \bigcap_{P}
+      \; \bigl(\text{restriction } \Gamma(X, U) \to \Gamma(X, V)\bigr)^{-1}
+        \bigl(I(\psi_P)\bigr),
+  \]
+  the intersection over all affine opens \(V \subseteq U\) and all matrix
+  presentations \(P = (\psi_P, \pi_P)\) of \(\Gamma(\mathcal G, V)\) by \(e\)
+  generators, of the preimages of the entry ideals under restriction.
+\end{definition}
+
+\begin{theorem}[Strata ideal on a chart is the entry ideal]
+  \label{thm:strata_ideal_eq_entry_ideal}
+  \lean{AlgebraicGeometry.Scheme.Modules.strataIdeal_eq_entryIdeal}
+  \leanok
+  \uses{def:strata_ideal, lem:mem_entry_ideal_locally, lem:entry_ideal_chart_transfer}
+  If \(V\) is an \(e\)-presentation chart with presentation \(P\), then the
+  strata ideal on \(V\) is the entry ideal of \(P\): \(I_e(V) = I(\psi_P)\).
+\end{theorem}
+
+\begin{proof}
+  \leanok
+  For \(\subseteq\): the pair \((V, P)\) itself occurs in the defining
+  intersection, and restriction along \(V \le V\) is the identity, so every
+  element of \(I_e(V)\) lies in \(I(\psi_P)\).  For \(\supseteq\): let
+  \(r \in I(\psi_P)\) and let \((W, Q)\) be any presentation chart
+  \(W \subseteq V\).  By \cref{lem:mem_entry_ideal_locally} it suffices to
+  show that each point of \(W\) has a basic open on which \(r|_W\) lands in the
+  entry ideal of the restricted \(Q\); this is
+  \cref{lem:entry_ideal_chart_transfer} applied to the two charts \(W\) and
+  \(V\) (using \(r|_V = r \in I(\psi_P)\)).  Hence \(r|_W \in I(\psi_Q)\) for
+  every chart, i.e.\ \(r \in I_e(V)\).
+\end{proof}
+
+\begin{lemma}[Strata membership from a covering family of charts]
+  \label{lem:mem_strata_ideal_of_charts}
+  \lean{AlgebraicGeometry.Scheme.Modules.mem_strataIdeal_of_charts}
+  \leanok
+  \uses{def:strata_ideal, lem:mem_entry_ideal_locally, lem:entry_ideal_chart_transfer}
+  Let \(r \in \Gamma(X, U)\) and let \((V_i)\) be a family of affine
+  presentation charts \(V_i \subseteq U\), with presentations \(P_i\), whose
+  underlying opens cover \(U\).  If the restriction of \(r\) to each \(V_i\)
+  lies in \(I(\psi_{P_i})\), then \(r \in I_e(U)\).
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  Let \((W, Q)\) be any presentation chart \(W \subseteq U\).  By
+  \cref{lem:mem_entry_ideal_locally} it suffices to check local membership at
+  each \(x \in W\); choosing an index \(i\) with \(x \in V_i\),
+  \cref{lem:entry_ideal_chart_transfer} applied to \(W\) and \(V_i\) (using
+  \(r|_{V_i} \in I(\psi_{P_i})\)) supplies a basic open of \(W\) on which
+  \(r\) lands in the entry ideal of the restricted \(Q\).  Thus
+  \(r|_W \in I(\psi_Q)\) for every chart, i.e.\ \(r \in I_e(U)\).
+\end{proof}
+
+\begin{definition}[Charts-cover hypothesis]
+  \label{def:charts_cover}
+  \lean{AlgebraicGeometry.Scheme.Modules.ChartsCover}
+  \leanok
+  \uses{def:presentation_chart}
+  The module \(\mathcal G\) \emph{admits \(e\)-presentation charts} if every
+  point of \(X\) lies in an \(e\)-presentation chart.  This is the standing
+  hypothesis of the rank-\(e\) stratum construction; it holds on the union of
+  all \(e\)-presentation charts.
+\end{definition}
+
+\begin{lemma}[Finite chart covers]
+  \label{lem:charts_cover_finite}
+  \lean{AlgebraicGeometry.Scheme.Modules.ChartsCover.exists_finite_charts}
+  \leanok
+  \uses{def:charts_cover, lem:presentation_chart_basic_open}
+  If \(\mathcal G\) admits \(e\)-presentation charts, then every affine open
+  \(U \subseteq X\) is covered by finitely many \(e\)-presentation charts
+  contained in \(U\).
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  Each point of \(U\) lies in some \(e\)-presentation chart; refining to a
+  basic open contained in \(U\) keeps it a presentation chart
+  (\cref{lem:presentation_chart_basic_open}).  These charts cover \(U\), and
+  \(U\) is quasi-compact, being affine, so finitely many of them suffice.
+\end{proof}
+
+\begin{theorem}[The strata ideal is quasi-coherent]
+  \label{thm:map_strata_ideal_basic_open}
+  \lean{AlgebraicGeometry.Scheme.Modules.map_strataIdeal_basicOpen}
+  \leanok
+  \uses{def:strata_ideal, lem:charts_cover_finite, lem:mem_strata_ideal_of_charts,
+    lem:entry_ideal_basic_open, thm:strata_ideal_eq_entry_ideal}
+  \source{nitsure-hilbert-quot}
+  Suppose \(\mathcal G\) admits \(e\)-presentation charts.  For an affine open
+  \(U\) and \(f \in \Gamma(X, U)\), restriction along
+  \(\Gamma(X, U) \to \Gamma(X, D(f))\) carries the strata ideal to the strata
+  ideal: the image of \(I_e(U)\) generates \(I_e(D(f))\).  Consequently the
+  assignment \(U \mapsto I_e(U)\) is quasi-coherent.
+\end{theorem}
+
+\begin{proof}
+  \leanok
+  For \(\subseteq\): any presentation chart \(W \subseteq D(f)\) is also a
+  chart in \(U\), so a section of \(I_e(U)\) restricts into \(I(\psi_W)\);
+  hence its restriction to \(D(f)\) lies in \(I_e(D(f))\).
+
+  For \(\supseteq\): let \(r' \in I_e(D(f))\) and write
+  \(r' = y / f^{n}\) with \(y \in \Gamma(X, U)\).  By
+  \cref{lem:charts_cover_finite} choose finitely many presentation charts
+  \(V_1, \dots, V_N\) covering \(U\), with presentations \(P_i\).  On each
+  \(V_i\), the basic open \(D(f|_{V_i}) \subseteq D(f)\) is a chart, and the
+  strata condition on \(r'\) there says \(y / f^{n}\) restricts into
+  \(I(\psi_{P_i}|_{D(f|_{V_i})})\), the image ideal
+  (\cref{lem:entry_ideal_basic_open}); clearing the denominator yields an
+  exponent \(m_i\) with \(f^{m_i} y|_{V_i} \in I(\psi_{P_i})\).  Setting
+  \(m = \max_i m_i\), multiplying up gives
+  \(f^{m} y|_{V_i} \in I(\psi_{P_i})\) for all \(i\), so
+  \(f^{m} y \in I_e(U)\) by \cref{lem:mem_strata_ideal_of_charts}.  Therefore
+  \(r' = (f^{m} y) / f^{m + n}\) lies in the image of \(I_e(U)\) under
+  restriction.  (\cref{thm:strata_ideal_eq_entry_ideal} identifies the strata
+  ideal with the entry ideal on each chart, licensing the denominator
+  clearing.)
+\end{proof}
+
+\subsection{The rank stratum}
+
+\begin{definition}[Strata ideal-sheaf datum]
+  \label{def:strata_data}
+  \lean{AlgebraicGeometry.Scheme.Modules.strataData}
+  \leanok
+  \uses{def:strata_ideal, thm:map_strata_ideal_basic_open}
+  Suppose \(\mathcal G\) admits \(e\)-presentation charts.  The rank-\(e\)
+  \emph{strata ideal-sheaf datum} on \(X\) is the assignment
+  \(U \mapsto I_e(U)\) of \cref{def:strata_ideal}, which is a quasi-coherent
+  ideal sheaf by \cref{thm:map_strata_ideal_basic_open}.
+\end{definition}
+
+\begin{definition}[Rank-\(e\) stratum]
+  \label{def:stratum}
+  \lean{AlgebraicGeometry.Scheme.Modules.stratum}
+  \leanok
+  \uses{def:strata_data}
+  \source{nitsure-hilbert-quot}
+  The rank-\(e\) \emph{stratum} of \(\mathcal G\) is the closed subscheme of
+  \(X\) cut out by the strata ideal-sheaf datum of \cref{def:strata_data}.
+\end{definition}
+
+\begin{definition}[Closed immersion of the stratum]
+  \label{def:stratum_immersion}
+  \lean{AlgebraicGeometry.Scheme.Modules.stratumι}
+  \leanok
+  \uses{def:stratum}
+  The canonical morphism from the rank-\(e\) stratum to \(X\) is a closed
+  immersion.
+\end{definition}
+
+\begin{theorem}[Support of the rank-\(e\) stratum]
+  \label{thm:mem_range_stratum}
+  \lean{AlgebraicGeometry.Scheme.Modules.mem_range_stratumι_iff}
+  \leanok
+  \uses{def:stratum_immersion, thm:strata_ideal_eq_entry_ideal, thm:entry_ideal_prime_iff,
+    def:point_rank, lem:point_rank_eq_chart_fiber_rank}
+  \source{nitsure-hilbert-quot}
+  A point \(x \in X\) lies in the image of the closed immersion of the
+  rank-\(e\) stratum if and only if the point rank of \(\mathcal G\) at \(x\)
+  equals \(e\); that is, the support of the stratum is exactly the locus where
+  the fibre of \(\mathcal G\) has dimension exactly \(e\).
+\end{theorem}
+
+\begin{proof}
+  \leanok
+  Choose an \(e\)-presentation chart \(V \ni x\) with presentation \(P\).  The
+  image of the closed immersion is the support of the ideal sheaf, which meets
+  \(V\) in the zero locus of \(I_e(V)\); and \(I_e(V) = I(\psi_P)\) by
+  \cref{thm:strata_ideal_eq_entry_ideal}.  A point of an affine open lies in
+  the zero locus of an ideal of sections iff its prime contains that ideal, so
+  \(x\) lies in the stratum iff \(I(\psi_P) \subseteq \mathfrak p_x\).  By
+  \cref{thm:entry_ideal_prime_iff} this holds iff the fibre rank of
+  \(\Gamma(\mathcal G, V)\) at \(\mathfrak p_x\) --- the chart fibre rank at
+  \(x\), equal to the point rank by
+  \cref{lem:point_rank_eq_chart_fiber_rank} --- equals \(e\).
+\end{proof}
+
 \section{Universal property of the strata}
 \label{sec:flatstrat_universal}
 
@@ -1795,7 +2255,8 @@ of fiber rank \(e\).  Throughout, \(R\) is a commutative ring and \(M\) an
 \end{theorem}
 
 \begin{proof}
-  \uses{lem:flat_locus_open}
+  \uses{lem:flat_locus_open, def:stratum, def:stratum_immersion,
+    thm:mem_range_stratum, thm:map_strata_ideal_basic_open}
   By the case \(n = 0\) of the flattening stratification
   (\cref{lem:flat_locus_open}), with its canonical scheme structure: locally
   on \(S\), a basis of \(\F \otimes \kappa(s)\) prolongs by Nakayama to a
