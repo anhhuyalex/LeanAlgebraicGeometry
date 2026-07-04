@@ -1387,4 +1387,482 @@ theorem flat_stratum_of_irreducible (hirr : IsIrreducible (Zc : Set S)) :
 
 end FlatStratum
 
+/-! ## §8. The flattening stratification (statements moved from
+`FlatteningStratification.lean`)
+
+The geometric sections §3–§6 of `FlatteningStratification.lean` (Nitsure §4
+sub-lemmas, main theorem, universal property, curve specialisation) live here
+because the proof of Lemma 6 (`flatLocusReduction`) consumes
+`genericFlatness`, which needs the QuotScheme engine that
+`FlatteningStratification.lean` deliberately does not import.  Blueprint
+pointers are unchanged (they pin fully qualified declaration names). -/
+
+/-- **Lemma 5 (special case `n = 0`).** [Nitsure §4 special case]
+
+For `S` noetherian and `𝓕` a coherent `𝓞_S`-module, there exists a
+countable family `S_e ⊆ S` (indexed by `e ∈ ℕ`) of locally-closed
+subschemes such that
+- each `S_e` is a (locally-closed) immersion `S_e ⟶ S`;
+- the underlying sets `|S_e|` partition `|S|`;
+- the pullback `𝓕|_{S_e}` is flat over `𝓞_{S_e}` — encoded as
+  `CoherentSheafFlat (𝟙 (S_ e))`, i.e. flatness of the section modules of
+  the pulled-back sheaf over the section rings of the stratum *itself*.
+  (The *rank*-`e` locally-free refinement is future work once the
+  locally-free-of-rank-`e` predicate is in scope.)
+
+Statement repair (run 0010, T12 r2): the former conclusion asserted
+`CoherentSheafFlat (ι e)` — flatness of the pulled-back sheaf over the
+*ambient* `S` via the immersion — which is FALSE for any non-open stratum:
+a nonzero module supported on a closed stratum `V(x) ⊆ 𝔸¹` is killed by
+`x`, hence torsion, hence not flat over `𝓞_{𝔸¹}`-sections (e.g. the rank
+stratification of the skyscraper `k(0)` on `𝔸¹` refutes it). Nitsure's
+content is flatness (indeed local freeness) over the stratum, which is
+`CoherentSheafFlat (𝟙 (S_ e))`.
+
+The function `s ↦ dim_{κ(s)} 𝓕|_s` is upper-semicontinuous (this is
+content (iii) of Nitsure's special case), encoded indirectly by the
+fact that the strata are locally-closed and disjoint.
+
+Nitsure's proof: Nakayama produces a local presentation
+`𝓞_V^{⊕m} ⟶ 𝓞_V^{⊕e} ⟶ 𝓕|_V ⟶ 0`; the closed subscheme `V_e ⊆ V`
+defined by the matrix-entry ideal of the first map represents the
+locus of locally-free-of-rank-`e`; gluing over a cover and intersecting
+with `V ∖ ⋃_{e' > e} V_{e'}` produces the locally-closed `S_e`. -/
+lemma flatLocusStratification {S : Scheme.{u}} [IsLocallyNoetherian S]
+    (F : S.Modules) [F.IsFinitePresentation] :
+    ∃ (S_ : ℕ → Scheme.{u}) (ι : ∀ e, S_ e ⟶ S),
+      (∀ e, IsImmersion (ι e)) ∧
+      (∀ e e', e ≠ e' → Disjoint (Set.range (ι e).base) (Set.range (ι e').base)) ∧
+      (∀ s : S, ∃ e, s ∈ Set.range (ι e).base) ∧
+      (∀ e, Scheme.CoherentSheafFlat (𝟙 (S_ e))
+        ((Scheme.Modules.pullback (ι e)).obj F)) := by
+  sorry
+
+set_option maxHeartbeats 1200000 in
+/-- **Lemma 6 (Noetherian-induction reduction).** [Nitsure §4 general
+case opening]
+
+For `S` noetherian, `π : X ⟶ S` proper, and `𝓕` coherent on `X`, there
+exist finitely many reduced locally-closed immersions `V_i ⟶ S` with
+pairwise disjoint set-theoretic images covering `|S|`, such that the
+pullback `𝓕|_{X ×_S V_i}` is flat over `V_i`.
+
+Nitsure's proof: peel off non-empty open flat patches by
+`genericFlatness` applied to each irreducible component (with its
+reduced subscheme structure), induct on the closed complement
+`S ∖ V` (which is again noetherian, hence the induction terminates by
+Noetherianity).
+
+The substantive content over the special case (Lemma 5) is that the
+strata `V_i` are *reduced* and that `𝓕` becomes flat above them (not
+merely that strata exist); the polynomial-indexed refinement of the
+main theorem (`flatteningStratification`) requires further assembly
+(`flatLocusAssembly`).
+
+Statement repair (run 0010, T12 r5): the hypothesis is `IsNoetherian S`
+(Nitsure's "noetherian"), not merely `IsLocallyNoetherian S` as the
+iter-176 skeleton had it.  With only local noetherianity the *finite*
+family is impossible: on `S = ⊔_{n≥1} 𝔸ⁿ` give component `n` the coherent
+sheaf `⊕_{k≤n} (i_{V_k})_* 𝓞_{V_k}` for a strictly nested flag
+`V_1 ⊃ ⋯ ⊃ V_n`; a flat locally-closed stratum through the generic point
+`η_k` of `V_k` cannot contain `η_{k'}` for `k' ≠ k` (near `η_{k'}` every
+neighbourhood meets the dense lower level, so `T ∩ V_{k'}` is not open in
+`T`, contradicting the clopen-support criterion for local freeness), so
+component `n` needs at least `n + 1` strata and no finite family covers
+all components.  The same strengthening applies to every finite-strata
+statement below (`flatLocusAssembly`, `flatteningStratification`,
+`flatteningStratification_universal`, `.ofCurve`); the ℕ-indexed `n = 0`
+special case (Lemma 5) is correct for locally noetherian `S` because the
+fibre rank provides the global countable index.
+
+PROVED (run 0010, T12 r6): well-founded induction on the closed target
+(`WellFoundedLT (Closeds S)` from noetherianity).  For non-empty `Z`,
+each irreducible component (imaged in `S`, with reduced subscheme
+structure from `vanishingIdeal`) receives a flat relatively open stratum
+from `flat_stratum_of_irreducible`, shrunk to avoid the other components;
+the union of these strata is relatively open and dense in `Z`, so its
+closed complement is strictly smaller and the induction terminates. -/
+theorem flatLocusReduction {S X : Scheme.{u}} [IsNoetherian S]
+    (π : X ⟶ S) [IsProper π] (F : X.Modules) [F.IsFinitePresentation] :
+    ∃ (I : Type u) (_ : Finite I) (V_ : I → Scheme.{u}) (ι : ∀ i, V_ i ⟶ S),
+      (∀ i, IsImmersion (ι i)) ∧
+      (∀ i j, i ≠ j → Disjoint (Set.range (ι i).base) (Set.range (ι j).base)) ∧
+      (∀ s : S, ∃ i, s ∈ Set.range (ι i).base) ∧
+      (∀ i, Scheme.CoherentSheafFlat (pullback.snd π (ι i))
+        ((Scheme.Modules.pullback (pullback.fst π (ι i))).obj F)) := by
+  classical
+  suffices H : ∀ Z : TopologicalSpace.Closeds S,
+      ∃ (I : Type u) (_ : Finite I) (V_ : I → Scheme.{u}) (ι : ∀ i, V_ i ⟶ S),
+        (∀ i, IsImmersion (ι i)) ∧
+        (∀ i j, i ≠ j → Disjoint (Set.range (ι i).base) (Set.range (ι j).base)) ∧
+        (⋃ i, Set.range (ι i).base) = (Z : Set S) ∧
+        (∀ i, Scheme.CoherentSheafFlat (pullback.snd π (ι i))
+          ((Scheme.Modules.pullback (pullback.fst π (ι i))).obj F)) by
+    obtain ⟨I, hI, V_, ι, h1, h2, h3, h4⟩ := H ⊤
+    refine ⟨I, hI, V_, ι, h1, h2, fun s => ?_, h4⟩
+    have hs : s ∈ (⋃ i, Set.range (ι i).base) := by
+      rw [h3]; trivial
+    exact Set.mem_iUnion.mp hs
+  intro Z₀
+  haveI : TopologicalSpace.NoetherianSpace S := inferInstance
+  induction Z₀ using WellFoundedLT.induction with | ind Z IH => ?_
+  by_cases hZ : (Z : Set S) = ∅
+  · refine ⟨PEmpty.{u+1}, inferInstance, fun i => i.elim, fun i => i.elim,
+      fun i => i.elim, fun i j _ => i.elim, ?_, fun i => i.elim⟩
+    rw [hZ]
+    exact Set.iUnion_of_empty _
+  have hZne : (Z : Set S).Nonempty := Set.nonempty_iff_ne_empty.mpr hZ
+  -- the finitely many irreducible components of `Z`, imaged in `S`
+  haveI hNZ : TopologicalSpace.NoetherianSpace ↥(Z : Set S) :=
+    TopologicalSpace.NoetherianSpace.set _
+  have hfinC : (irreducibleComponents ↥(Z : Set S)).Finite :=
+    TopologicalSpace.NoetherianSpace.finite_irreducibleComponents
+  haveI : Finite ↥(irreducibleComponents ↥(Z : Set S)) := hfinC.to_subtype
+  have hZval : Topology.IsClosedEmbedding ((↑) : ↥(Z : Set S) → S) :=
+    Z.isClosed.isClosedEmbedding_subtypeVal
+  let Zc : ↥(irreducibleComponents ↥(Z : Set S)) → TopologicalSpace.Closeds S :=
+    fun c => ⟨Subtype.val '' c.1,
+      hZval.isClosedMap _ (isClosed_of_mem_irreducibleComponents _ c.2)⟩
+  have hirrc : ∀ c, IsIrreducible (Zc c : Set S) := fun c =>
+    c.2.1.image _ continuous_subtype_val.continuousOn
+  have hZcZ : ∀ c, (Zc c : Set S) ⊆ (Z : Set S) := fun c =>
+    Subtype.coe_image_subset _ _
+  have hcompcover : ∀ z ∈ (Z : Set S), ∃ c, z ∈ (Zc c : Set S) := by
+    intro z hz
+    exact ⟨⟨irreducibleComponent (⟨z, hz⟩ : ↥(Z : Set S)),
+      irreducibleComponent_mem_irreducibleComponents _⟩,
+      ⟨⟨z, hz⟩, mem_irreducibleComponent, rfl⟩⟩
+  -- flat strata over the reduced components
+  choose Ω hΩne hΩflat using fun c =>
+    flat_stratum_of_irreducible π F (Zc c) (hirrc c)
+  -- the open complement of the other components
+  let A : ↥(irreducibleComponents ↥(Z : Set S)) → Set S := fun c =>
+    ⋃ c' : {c' // c' ≠ c}, (Zc c'.1 : Set S)
+  have hAclosed : ∀ c, IsClosed (A c) := fun c =>
+    isClosed_iUnion_of_finite fun c' => (Zc c'.1).isClosed
+  let E : ↥(irreducibleComponents ↥(Z : Set S)) → S.Opens := fun c =>
+    ⟨(A c)ᶜ, (hAclosed c).isOpen_compl⟩
+  -- the strata
+  let St : ∀ c, ((Scheme.IdealSheafData.vanishingIdeal (Zc c)).subscheme).Opens :=
+    fun c => Ω c ⊓ (Scheme.IdealSheafData.vanishingIdeal (Zc c)).subschemeι ⁻¹ᵁ E c
+  let ιst : ∀ c, ((St c) : Scheme) ⟶ S := fun c =>
+    (St c).ι ≫ (Scheme.IdealSheafData.vanishingIdeal (Zc c)).subschemeι
+  have himm : ∀ c, IsImmersion (ιst c) := fun c =>
+    MorphismProperty.comp_mem @IsImmersion _ _ inferInstance inferInstance
+  have hrangek : ∀ c, Set.range
+      ((Scheme.IdealSheafData.vanishingIdeal (Zc c)).subschemeι).base = (Zc c : Set S) := by
+    intro c
+    show Set.range ((Scheme.IdealSheafData.vanishingIdeal (Zc c)).subschemeι) = _
+    rw [Scheme.IdealSheafData.range_subschemeι]
+    exact congrArg SetLike.coe (support_vanishingIdeal (Zc c))
+  have hrangest : ∀ c, Set.range (ιst c).base =
+      ((Scheme.IdealSheafData.vanishingIdeal (Zc c)).subschemeι).base ''
+        ((St c) : Set _) := by
+    intro c
+    show Set.range ((St c).ι ≫ _).base = _
+    rw [Scheme.Hom.comp_base, TopCat.coe_comp, Set.range_comp,
+      Scheme.Opens.range_ι]
+  -- S-open realizations of the strata
+  have hWc : ∀ c, ∃ W : Set S, IsOpen W ∧
+      ((Scheme.IdealSheafData.vanishingIdeal (Zc c)).subschemeι).base ⁻¹' W =
+        ((St c) : Set _) := by
+    intro c
+    haveI hCI : IsClosedImmersion
+        (Scheme.IdealSheafData.vanishingIdeal (Zc c)).subschemeι := inferInstance
+    obtain ⟨W, hW, hWeq⟩ := (hCI.isClosedEmbedding.isInducing.isOpen_iff).mp (St c).2
+    exact ⟨W, hW, hWeq⟩
+  choose W hWopen hWeq using hWc
+  have hrange_eq : ∀ c, Set.range (ιst c).base = W c ∩ (Zc c : Set S) := by
+    intro c
+    rw [hrangest c, ← hWeq c, Set.image_preimage_eq_inter_range, hrangek c]
+  have hstE : ∀ c, Set.range (ιst c).base ⊆ (E c : Set S) := by
+    intro c
+    rw [hrangest c]
+    rintro _ ⟨t, ht, rfl⟩
+    exact (ht.2 : _ ∈ _)
+  -- the union of the strata is relatively open in `Z`
+  have hVW : (⋃ c, Set.range (ιst c).base) =
+      (Z : Set S) ∩ ⋃ c, (W c ∩ (E c : Set S)) := by
+    apply subset_antisymm
+    · refine Set.iUnion_subset fun c => ?_
+      intro z hz
+      have h1 : z ∈ W c ∩ (Zc c : Set S) := hrange_eq c ▸ hz
+      exact ⟨hZcZ c h1.2, Set.mem_iUnion.mpr ⟨c, ⟨h1.1, hstE c hz⟩⟩⟩
+    · rintro z ⟨hzZ, hzW⟩
+      obtain ⟨c, hzWE⟩ := Set.mem_iUnion.mp hzW
+      obtain ⟨c', hzc'⟩ := hcompcover z hzZ
+      have hcc' : c' = c := by
+        by_contra hne
+        exact (hzWE.2 : z ∈ (E c : Set S))
+          (Set.mem_iUnion.mpr ⟨⟨c', hne⟩, hzc'⟩)
+      refine Set.mem_iUnion.mpr ⟨c, ?_⟩
+      rw [hrange_eq c]
+      exact ⟨hzWE.1, hcc' ▸ hzc'⟩
+  -- the complementary closed set
+  let Z' : TopologicalSpace.Closeds S :=
+    ⟨(Z : Set S) ∩ (⋃ c, (W c ∩ (E c : Set S)))ᶜ,
+      Z.isClosed.inter (isClosed_compl_iff.mpr (isOpen_iUnion fun c =>
+        (hWopen c).inter (E c).2))⟩
+  -- some component's stratum is non-empty
+  obtain ⟨z₀, hz₀⟩ := hZne
+  obtain ⟨c₀, hz₀c₀⟩ := hcompcover z₀ hz₀
+  have hnotsub : ¬ ((Zc c₀ : Set S) ⊆ A c₀) := by
+    intro hsub
+    have hsub' : c₀.1 ⊆ ⋃₀ (irreducibleComponents ↥(Z : Set S) \ {c₀.1}) := by
+      intro t ht
+      obtain ⟨c', hc'⟩ := Set.mem_iUnion.mp (hsub ⟨t, ht, rfl⟩)
+      obtain ⟨t', ht', hval⟩ := hc'
+      have hteq : t' = t := Subtype.val_injective hval
+      subst hteq
+      refine ⟨c'.1.1, ⟨c'.1.2, ?_⟩, ht'⟩
+      intro hmem
+      exact c'.2 (Subtype.ext (by simpa using hmem))
+    have hmem := mem_of_subset_sUnion_irreducibleComponents c₀.1 c₀.2 _
+      (hfinC.sdiff) Set.sdiff_subset hsub'
+    exact hmem.2 rfl
+  obtain ⟨z₁, hz₁Zc, hz₁A⟩ := Set.not_subset.mp hnotsub
+  have hz₁r : z₁ ∈ Set.range
+      ((Scheme.IdealSheafData.vanishingIdeal (Zc c₀)).subschemeι).base := by
+    rw [hrangek c₀]; exact hz₁Zc
+  obtain ⟨t₁, ht₁⟩ := hz₁r
+  haveI : IsIntegral (Scheme.IdealSheafData.vanishingIdeal (Zc c₀)).subscheme :=
+    isIntegral_vanishingIdeal_subscheme _ (hirrc c₀)
+  have hStne : ((St c₀ :
+      (Scheme.IdealSheafData.vanishingIdeal (Zc c₀)).subscheme.Opens) :
+      Set ↑((Scheme.IdealSheafData.vanishingIdeal (Zc c₀)).subscheme)).Nonempty := by
+    have h1 := hΩne c₀
+    have h2 : ((((Scheme.IdealSheafData.vanishingIdeal (Zc c₀)).subschemeι ⁻¹ᵁ E c₀) :
+        (Scheme.IdealSheafData.vanishingIdeal (Zc c₀)).subscheme.Opens) :
+        Set ↑((Scheme.IdealSheafData.vanishingIdeal (Zc c₀)).subscheme)).Nonempty := by
+      refine ⟨t₁, ?_⟩
+      show ((Scheme.IdealSheafData.vanishingIdeal (Zc c₀)).subschemeι).base t₁ ∈
+        (E c₀ : Set S)
+      rw [ht₁]
+      exact hz₁A
+    have h3 := (IrreducibleSpace.isIrreducible_univ
+      (↑((Scheme.IdealSheafData.vanishingIdeal (Zc c₀)).subscheme))).2
+      _ _ (Ω c₀).2
+      ((Scheme.IdealSheafData.vanishingIdeal (Zc c₀)).subschemeι ⁻¹ᵁ E c₀).2
+      (by simpa using h1) (by simpa using h2)
+    simpa only [St, TopologicalSpace.Opens.coe_inf, Set.univ_inter,
+      TopologicalSpace.Opens.carrier_eq_coe] using h3
+  -- strict decrease
+  have hZ'lt : Z' < Z := by
+    refine lt_of_le_of_ne (fun z hz => hz.1) ?_
+    intro heq
+    obtain ⟨t₀, ht₀⟩ := hStne
+    have hz₂ : (ιst c₀) ⟨t₀, ht₀⟩ ∈ ⋃ c, Set.range (ιst c).base :=
+      Set.mem_iUnion.mpr ⟨c₀, ⟨⟨t₀, ht₀⟩, rfl⟩⟩
+    rw [hVW] at hz₂
+    have hmem : (ιst c₀) ⟨t₀, ht₀⟩ ∈ (Z' : Set S) := by
+      rw [heq]; exact hz₂.1
+    exact hmem.2 hz₂.2
+  -- recurse and combine
+  obtain ⟨I', hI', V', ι', h1', h2', h3', h4'⟩ := IH Z' hZ'lt
+  haveI := hI'
+  refine ⟨↥(irreducibleComponents ↥(Z : Set S)) ⊕ I', inferInstance,
+    Sum.elim (fun c => ((St c) : Scheme)) V',
+    (fun i => match i with
+      | Sum.inl c => ιst c
+      | Sum.inr i' => ι' i'), ?_, ?_, ?_, ?_⟩
+  · rintro (c | i')
+    · exact himm c
+    · exact h1' i'
+  · rintro (c | i') (c' | j') hne
+    · have hne' : c ≠ c' := fun h => hne (congrArg Sum.inl h)
+      refine Set.disjoint_left.mpr fun {z} hz hz' => ?_
+      have h1 : z ∈ W c ∩ (Zc c : Set S) := hrange_eq c ▸ hz
+      have h2 := hstE c' hz'
+      exact (h2 : z ∈ (E c' : Set S))
+        (Set.mem_iUnion.mpr ⟨⟨c, hne'⟩, h1.2⟩)
+    · refine Set.disjoint_left.mpr fun {z} hz hz' => ?_
+      have hzV : z ∈ (Z : Set S) ∩ ⋃ c'', (W c'' ∩ (E c'' : Set S)) := by
+        rw [← hVW]; exact Set.mem_iUnion.mpr ⟨c, hz⟩
+      have hzZ' : z ∈ (Z' : Set S) := by
+        rw [← h3']
+        exact Set.mem_iUnion.mpr ⟨j', hz'⟩
+      exact hzZ'.2 hzV.2
+    · refine Set.disjoint_left.mpr fun {z} hz hz' => ?_
+      have hzV : z ∈ (Z : Set S) ∩ ⋃ c'', (W c'' ∩ (E c'' : Set S)) := by
+        rw [← hVW]; exact Set.mem_iUnion.mpr ⟨c', hz'⟩
+      have hzZ' : z ∈ (Z' : Set S) := by
+        rw [← h3']
+        exact Set.mem_iUnion.mpr ⟨i', hz⟩
+      exact hzZ'.2 hzV.2
+    · have hne' : i' ≠ j' := fun h => hne (congrArg Sum.inr h)
+      exact h2' i' j' hne'
+  · -- covering
+    apply subset_antisymm
+    · intro z hz
+      obtain ⟨i, hzi⟩ := Set.mem_iUnion.mp hz
+      match i with
+      | Sum.inl c =>
+        have : z ∈ (Z : Set S) ∩ ⋃ c'', (W c'' ∩ (E c'' : Set S)) := by
+          rw [← hVW]; exact Set.mem_iUnion.mpr ⟨c, hzi⟩
+        exact this.1
+      | Sum.inr i' =>
+        have : z ∈ (Z' : Set S) := by
+          rw [← h3']; exact Set.mem_iUnion.mpr ⟨i', hzi⟩
+        exact this.1
+    · intro z hzZ
+      by_cases hzW : z ∈ ⋃ c, (W c ∩ (E c : Set S))
+      · have hmem : z ∈ (Z : Set S) ∩ ⋃ c, (W c ∩ (E c : Set S)) := ⟨hzZ, hzW⟩
+        rw [← hVW] at hmem
+        obtain ⟨c, hc⟩ := Set.mem_iUnion.mp hmem
+        exact Set.mem_iUnion.mpr ⟨Sum.inl c, hc⟩
+      · have hmem : z ∈ (Z' : Set S) := ⟨hzZ, hzW⟩
+        rw [← h3'] at hmem
+        obtain ⟨i', hi'⟩ := Set.mem_iUnion.mp hmem
+        exact Set.mem_iUnion.mpr ⟨Sum.inr i', hi'⟩
+  · rintro (c | i')
+    · exact hΩflat c (St c) inf_le_left
+    · exact h4' i'
+
+/-- **Lemma 7 (assembly via direct images).** [Nitsure §4 assembly step]
+
+For `S` noetherian and `𝓕` coherent on a proper `π : X ⟶ S`, there
+exists an integer `N` such that iterating the `n=0` stratification
+(Lemma 5) on the direct images `E_i := π_*𝓕(N+i)` on `S`
+(`i = 0, 1, …`) produces, after finitely many refinements, the
+Hilbert-polynomial-indexed stratification of the main theorem.
+
+The substantive content is the existence of the uniform vanishing
+bound `N` together with the finite refinement chain producing the
+locally-closed strata `S_f` from the rank-strata `W_{e_0, …, e_n}`.
+
+For the iter-176 file-skeleton this is encoded by the existence of a
+finite locally-closed stratification refining Lemma 6, together with
+the assertion that the strata carry constant Hilbert polynomial (the
+"polynomial-locally-constant" content of Nitsure's statement (A)).
+The Hilbert polynomial itself is encoded abstractly as a function
+`I → (ℕ → ℤ)` (each numerical polynomial restricted to `ℕ`); the
+substantive refinement to `numericalPolynomial` of degree `≤ n` is
+iter-177+ work.
+
+Proof status (run 0010, T12 r2): as typed, the `P`-conjunct only demands
+*some* injection `I → (ℕ → ℤ)`, which any finite index type admits; the
+statement is therefore a formal corollary of `flatLocusReduction`, and is
+proved as such below. The genuinely-Hilbert-indexed refinement must
+strengthen the statement (tie `P f` to fibre Euler characteristics), which
+awaits the coherent-χ substrate. -/
+lemma flatLocusAssembly {S X : Scheme.{u}} [IsNoetherian S]
+    (π : X ⟶ S) [IsProper π] (F : X.Modules) [F.IsFinitePresentation] :
+    ∃ (I : Type u) (_ : Finite I) (S_ : I → Scheme.{u}) (ι : ∀ f, S_ f ⟶ S)
+      (P : I → ℕ → ℤ),
+      (∀ f, IsImmersion (ι f)) ∧
+      (∀ f g, f ≠ g → Disjoint (Set.range (ι f).base) (Set.range (ι g).base)) ∧
+      (∀ s : S, ∃ f, s ∈ Set.range (ι f).base) ∧
+      (∀ f, Scheme.CoherentSheafFlat (pullback.snd π (ι f))
+        ((Scheme.Modules.pullback (pullback.fst π (ι f))).obj F)) ∧
+      (∀ f g, f = g ↔ P f = P g) := by
+  obtain ⟨I, hI, V_, ι, himm, hdisj, hcov, hflat⟩ := flatLocusReduction π F
+  haveI := hI
+  haveI := Fintype.ofFinite I
+  refine ⟨I, hI, V_, ι, fun i _ => ((Fintype.equivFin I) i : ℤ), himm, hdisj, hcov, hflat,
+    fun f g => ⟨fun h => h ▸ rfl, fun h => ?_⟩⟩
+  have h0 : (((Fintype.equivFin I) f : ℕ) : ℤ) = (((Fintype.equivFin I) g : ℕ) : ℤ) :=
+    congrFun h 0
+  exact (Fintype.equivFin I).injective (Fin.val_injective (by exact_mod_cast h0))
+
+/-- **Flattening stratification existence theorem** [Nitsure §4 main /
+Stacks 052H].
+
+For a noetherian scheme `S`, a proper morphism `π : X ⟶ S`, and a
+coherent `𝓞_X`-module `𝓕`, there exists a finite locally-closed
+stratification `{S_f}` of `S` indexed by a finite set `I` such that
+- each `ι : S_f ⟶ S` is a (locally-closed) immersion;
+- the underlying sets `|S_f|` partition `|S|` (disjoint and covering);
+- the pullback `𝓕|_{X ×_S S_f}` is flat over `S_f` for each `f`.
+
+The (intended) substantive refinement is that the index set `I` is in
+bijection with the set of Hilbert polynomials arising on fibres, and
+that each `S_f` is uniquely determined by its Hilbert polynomial. For
+the iter-176 file-skeleton the substantive type captures the
+stratification + flatness; the Hilbert-polynomial labeling is encoded
+in `flatLocusAssembly`'s `P : I → ℕ → ℤ` injection but elided here for
+type-clarity.
+
+Proof status (run 0010, T12 r2): the conclusion as typed is exactly the
+conclusion of `flatLocusReduction` (Lemma 6) up to conjunct order, so the
+theorem is proved below by that reduction; the remaining mathematical
+content of this cone therefore lives in `flatLocusReduction` (Noetherian
+induction on `genericFlatness`) and `genericFlatness` itself. The
+Hilbert-polynomial-indexed refinement (which would need relative
+projective space `ℙⁿ_S`, Castelnuovo–Mumford regularity, direct-image
+base change 02KH) is deliberately not part of this statement; see
+`flatLocusAssembly` and the blueprint chapter §`Mathlib status`. -/
+theorem flatteningStratification {S X : Scheme.{u}} [IsNoetherian S]
+    (π : X ⟶ S) [IsProper π] (F : X.Modules) [F.IsFinitePresentation] :
+    ∃ (I : Type u) (_ : Finite I) (S_ : I → Scheme.{u}) (ι : ∀ f, S_ f ⟶ S),
+      (∀ f, IsImmersion (ι f)) ∧
+      (∀ s : S, ∃ f, s ∈ Set.range (ι f).base) ∧
+      (∀ f g, f ≠ g → Disjoint (Set.range (ι f).base) (Set.range (ι g).base)) ∧
+      (∀ f, Scheme.CoherentSheafFlat (pullback.snd π (ι f))
+        ((Scheme.Modules.pullback (pullback.fst π (ι f))).obj F)) := by
+  obtain ⟨I, hI, V_, ι, himm, hdisj, hcov, hflat⟩ := flatLocusReduction π F
+  exact ⟨I, hI, V_, ι, himm, hcov, hdisj, hflat⟩
+
+/-- **Universal property of the flattening stratification**
+[Nitsure §4 (ii) / Stacks 052H].
+
+There is a finite locally-closed stratification `{S_f}` of `S` — with the
+four structural properties of `flatteningStratification` (immersions,
+covering, disjoint, flat pullback on each stratum) — such that every
+`φ : T ⟶ S` whose pullback `𝓕|_{X ×_S T}` is `T`-flat factors uniquely
+through `Sigma.desc ι : ∐ S_ ⟶ S`.
+
+(The converse direction — every morphism factoring through the coproduct
+has flat pullback — is also part of Nitsure's part (ii); it amounts to
+stability of `CoherentSheafFlat` under base change and should be added as
+a separate lemma when the base-change API for the predicate lands.)
+
+iter-177+: refine to a `Functor.RepresentableBy`-style universal arrow
+once the contravariant functor `T ↦ {φ : T ⟶ S | 𝓕|_{X_T} is T-flat}` is
+available. -/
+theorem flatteningStratification_universal {S X : Scheme.{u}}
+    [IsNoetherian S] (π : X ⟶ S) [IsProper π] (F : X.Modules)
+    [F.IsFinitePresentation] :
+    ∃ (I : Type u) (_ : Finite I) (S_ : I → Scheme.{u}) (ι : ∀ f, S_ f ⟶ S),
+      (∀ f, IsImmersion (ι f)) ∧
+      (∀ s : S, ∃ f, s ∈ Set.range (ι f).base) ∧
+      (∀ f g, f ≠ g → Disjoint (Set.range (ι f).base) (Set.range (ι g).base)) ∧
+      (∀ f, Scheme.CoherentSheafFlat (pullback.snd π (ι f))
+        ((Scheme.Modules.pullback (pullback.fst π (ι f))).obj F)) ∧
+      (∀ {T : Scheme.{u}} (φ : T ⟶ S),
+        Scheme.CoherentSheafFlat (pullback.snd π φ)
+          ((Scheme.Modules.pullback (pullback.fst π φ)).obj F) →
+        ∃! ψ : T ⟶ ∐ S_, ψ ≫ Sigma.desc ι = φ) := by
+  sorry
+
+/-- **Flattening stratification for a coherent sheaf on a relative
+curve** [Nitsure §4 corollary; Route~A consumer A.2.a entry-point].
+
+Let `k` be a field, `C` a smooth proper curve over `k` (encoded as
+`C : Over (Spec k)` with `[SmoothOfRelativeDimension 1 C.hom]` and
+`[IsProper C.hom]`), and `T` a noetherian `k`-scheme. For any coherent
+sheaf `𝓕` on the relative curve `C ×_k T`, the flattening
+stratification conclusion of `flatteningStratification` applies to
+`π = pr_T : C ×_k T → T` and `𝓕`: there is a finite locally-closed
+stratification `{T_f ⊆ T}` set-theoretically covering `T` disjointly,
+such that `𝓕|_{C ×_k T_f}` is flat over `T_f` for each `f`.
+
+The body invokes `flatteningStratification` on the base-changed
+morphism `pullback.snd C.hom T.hom : (C ×_k T) ⟶ T`, using that
+`IsProper (pullback.snd C.hom T.hom)` holds by base change of
+`IsProper C.hom`; hence this corollary is proved (no `sorry`). -/
+theorem flatteningStratification.ofCurve {k : Type u} [Field k]
+    (C : Over (Spec (.of k)))
+    [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
+    (T : Over (Spec (.of k))) [IsNoetherian T.left]
+    (F : (Limits.pullback C.hom T.hom).Modules) [F.IsFinitePresentation] :
+    ∃ (I : Type u) (_ : Finite I) (T_ : I → Scheme.{u}) (ι : ∀ f, T_ f ⟶ T.left),
+      (∀ f, IsImmersion (ι f)) ∧
+      (∀ t : T.left, ∃ f, t ∈ Set.range (ι f).base) ∧
+      (∀ f g, f ≠ g → Disjoint (Set.range (ι f).base) (Set.range (ι g).base)) ∧
+      (∀ f, Scheme.CoherentSheafFlat
+        (pullback.snd (pullback.snd C.hom T.hom) (ι f))
+        ((Scheme.Modules.pullback
+          (pullback.fst (pullback.snd C.hom T.hom) (ι f))).obj F)) :=
+  flatteningStratification (pullback.snd C.hom T.hom) F
+
 end AlgebraicGeometry
