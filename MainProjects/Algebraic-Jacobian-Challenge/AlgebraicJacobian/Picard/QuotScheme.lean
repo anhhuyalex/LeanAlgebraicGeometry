@@ -4792,11 +4792,11 @@ The construction follows the iter-187 analogist-licensed Tilde route
     (the Beck-Chevalley compatibility check; ~30-50 LOC).
 
 The substantive Mathlib gap content (Stacks 01HQ "pullback of tilde =
-tilde of base change", plus the affine-open / Spec transport) is
-factored into the present helper's body as a typed sorry. Once
-`pullback_tildeIso` lands axiom-clean (iter-189+ sub-build) and the
-transport infrastructure is in place, this helper closes axiom-clean
-in ~30-50 LOC. -/
+tilde of base change", plus the affine-open / Spec transport) is now
+fully assembled in the body from `pullback_tildeIso`,
+`tildeIso_of_isQuasicoherent_isAffineOpen`,
+`pullback_of_openImmersion_iso_restrict`, and the N1-N4 naturality
+helpers — all sorry-free. This helper is closed axiom-clean. -/
 theorem pullback_app_isoTensor_baseMap_sectionLinearEquiv
     {X Y : Scheme.{u}} (g : Y ⟶ X) (N : X.Modules) [N.IsQuasicoherent]
     {U : Y.Opens} {V : X.Opens}
