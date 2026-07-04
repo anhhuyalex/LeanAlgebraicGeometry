@@ -1500,8 +1500,24 @@ The substantive content over the special case (Lemma 5) is that the
 strata `V_i` are *reduced* and that `𝓕` becomes flat above them (not
 merely that strata exist); the polynomial-indexed refinement of the
 main theorem (`flatteningStratification`) requires further assembly
-(`flatLocusAssembly`). -/
-lemma flatLocusReduction {S X : Scheme.{u}} [IsLocallyNoetherian S]
+(`flatLocusAssembly`).
+
+Statement repair (run 0010, T12 r5): the hypothesis is `IsNoetherian S`
+(Nitsure's "noetherian"), not merely `IsLocallyNoetherian S` as the
+iter-176 skeleton had it.  With only local noetherianity the *finite*
+family is impossible: on `S = ⊔_{n≥1} 𝔸ⁿ` give component `n` the coherent
+sheaf `⊕_{k≤n} (i_{V_k})_* 𝓞_{V_k}` for a strictly nested flag
+`V_1 ⊃ ⋯ ⊃ V_n`; a flat locally-closed stratum through the generic point
+`η_k` of `V_k` cannot contain `η_{k'}` for `k' ≠ k` (near `η_{k'}` every
+neighbourhood meets the dense lower level, so `T ∩ V_{k'}` is not open in
+`T`, contradicting the clopen-support criterion for local freeness), so
+component `n` needs at least `n + 1` strata and no finite family covers
+all components.  The same strengthening applies to every finite-strata
+statement below (`flatLocusAssembly`, `flatteningStratification`,
+`flatteningStratification_universal`, `.ofCurve`); the ℕ-indexed `n = 0`
+special case (Lemma 5) is correct for locally noetherian `S` because the
+fibre rank provides the global countable index. -/
+lemma flatLocusReduction {S X : Scheme.{u}} [IsNoetherian S]
     (π : X ⟶ S) [IsProper π] (F : X.Modules) [F.IsFinitePresentation] :
     ∃ (I : Type u) (_ : Finite I) (V_ : I → Scheme.{u}) (ι : ∀ i, V_ i ⟶ S),
       (∀ i, IsImmersion (ι i)) ∧
@@ -1538,7 +1554,7 @@ statement is therefore a formal corollary of `flatLocusReduction`, and is
 proved as such below. The genuinely-Hilbert-indexed refinement must
 strengthen the statement (tie `P f` to fibre Euler characteristics), which
 awaits the coherent-χ substrate. -/
-lemma flatLocusAssembly {S X : Scheme.{u}} [IsLocallyNoetherian S]
+lemma flatLocusAssembly {S X : Scheme.{u}} [IsNoetherian S]
     (π : X ⟶ S) [IsProper π] (F : X.Modules) [F.IsFinitePresentation] :
     ∃ (I : Type u) (_ : Finite I) (S_ : I → Scheme.{u}) (ι : ∀ f, S_ f ⟶ S)
       (P : I → ℕ → ℤ),
@@ -1595,7 +1611,7 @@ Hilbert-polynomial-indexed refinement (which would need relative
 projective space `ℙⁿ_S`, Castelnuovo–Mumford regularity, direct-image
 base change 02KH) is deliberately not part of this statement; see
 `flatLocusAssembly` and the blueprint chapter §`Mathlib status`. -/
-theorem flatteningStratification {S X : Scheme.{u}} [IsLocallyNoetherian S]
+theorem flatteningStratification {S X : Scheme.{u}} [IsNoetherian S]
     (π : X ⟶ S) [IsProper π] (F : X.Modules) [F.IsFinitePresentation] :
     ∃ (I : Type u) (_ : Finite I) (S_ : I → Scheme.{u}) (ι : ∀ f, S_ f ⟶ S),
       (∀ f, IsImmersion (ι f)) ∧
@@ -1650,7 +1666,7 @@ iter-177+: refine to a `Functor.RepresentableBy`-style universal arrow
 once the contravariant functor `T ↦ {φ : T ⟶ S | 𝓕|_{X_T} is T-flat}` is
 available. -/
 theorem flatteningStratification_universal {S X : Scheme.{u}}
-    [IsLocallyNoetherian S] (π : X ⟶ S) [IsProper π] (F : X.Modules)
+    [IsNoetherian S] (π : X ⟶ S) [IsProper π] (F : X.Modules)
     [F.IsFinitePresentation] :
     ∃ (I : Type u) (_ : Finite I) (S_ : I → Scheme.{u}) (ι : ∀ f, S_ f ⟶ S),
       (∀ f, IsImmersion (ι f)) ∧
@@ -1694,7 +1710,7 @@ morphism `pullback.snd C.hom T.hom : (C ×_k T) ⟶ T`, using that
 theorem flatteningStratification.ofCurve {k : Type u} [Field k]
     (C : Over (Spec (.of k)))
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
-    (T : Over (Spec (.of k))) [IsLocallyNoetherian T.left]
+    (T : Over (Spec (.of k))) [IsNoetherian T.left]
     (F : (Limits.pullback C.hom T.hom).Modules) [F.IsFinitePresentation] :
     ∃ (I : Type u) (_ : Finite I) (T_ : I → Scheme.{u}) (ι : ∀ f, T_ f ⟶ T.left),
       (∀ f, IsImmersion (ι f)) ∧
