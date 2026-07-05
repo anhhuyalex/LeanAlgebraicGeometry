@@ -3686,7 +3686,21 @@ section localization]
 [Quot functor]
   \label{def:quot_functor}
   \lean{AlgebraicGeometry.Scheme.QuotFunctor}
-  \uses{def:hilbert_polynomial, def:has_proper_support}
+  \uses{def:hilbert_polynomial, def:has_proper_support, def:coherent_sheaf_flat,
+    lem:pullback_finite_presentation, lem:coherent_flat_base_change,
+    lem:proper_support_base_change, lem:hilbert_fibre_base_change}
+  % NOTE (run 0010 T12): the Lean definition is now REAL
+  % (AlgebraicJacobian/Picard/QuotFunctorDef.lean): value at T = Setoid quotient of
+  % `Scheme.QuotFamily` (finitely presented + flat + proper support + eventual-match
+  % Hilbert condition), morphism action = pullback along `quotBaseMap`.  The
+  % "coherent" clause is encoded as finite presentation
+  % (`SheafOfModules.IsFinitePresentation`), which over a locally noetherian base is
+  % coherence; condition (3) is encoded by eventual agreement of the graded Hilbert
+  % function with \(\Phi\) (exactly "the Hilbert polynomial of the fibre is
+  % \(\Phi\)" per def:hilbert_polynomial, excluding the junk-value coincidence).
+  % The functor is Type-((u+1))-valued (sheaves of modules are large); the
+  % representability statements are unaffected (RepresentableBy is
+  % universe-polymorphic).
 
   % SOURCE: [Nitsure], \S 1, sub-section "The Functors \(\Hilb_{X/S}\) and
   % \(\Quot_{E/X/S}\)" (read from
@@ -3757,6 +3771,171 @@ section localization]
   \(\Hilb^{\Phi,L}_{X/S} := \Quot^{\Phi,L}_{\mathcal{O}_X/X/S}\).
 \end{definition}
 
+\subsection{Base-change well-definedness of the Quot functor}
+\label{sec:quot_base_change}
+
+The pullback action of the Quot functor (\cref{def:quot_functor}) along an
+\(S\)-morphism \(T' \to T\) is well defined because each of the four
+conditions on a family of quotients is preserved by base change; this is the
+content of the following four lemmas.  Throughout, write
+\(g' : X_{T'} \to X_T\) for the induced morphism on relative products, which
+is cartesian over \(T' \to T\).
+
+\begin{lemma}\leanok
+[Pullback preserves finite presentation]
+  \label{lem:pullback_finite_presentation}
+  \lean{AlgebraicGeometry.Scheme.Modules.pullback_isFinitePresentation}
+  % SOURCE: [Nitsure], \S 1 (read from
+  % references/nitsure-hilbert-quot-src/nitsure-hilbert-quot.tex, L418-L419):
+  % "Then as properness and flatness are preserved by base-change, and as
+  %  tensor-product is right exact, the pull-back of <F, q> ... is
+  %  well-defined"; cf. Stacks, Modules, "pullback of finitely presented
+  %  modules is finitely presented".
+  \textit{Source: [Nitsure], \S 1 (FGA Explained Ch.~5).}
+  Let \(g : Y \to X\) be a morphism of schemes and \(\mathcal{F}\) a finitely
+  presented sheaf of \(\mathcal{O}_X\)-modules (locally the cokernel of a map
+  of finite free modules).  Then \(g^* \mathcal{F}\) is a finitely presented
+  sheaf of \(\mathcal{O}_Y\)-modules.
+\end{lemma}
+\begin{proof}
+  % NOTE: the Lean proof is complete modulo the index-bookkeeping leaf
+  % `Modules.pullbackSlicePresentation_isFinite` (the transported presentation
+  % keeps its index types; the definitional reduction certifying this is
+  % recorded as a typed sorry for performance reasons).
+  Choose an open cover \(\{U_i\}\) of \(X\) on whose members \(\mathcal{F}\)
+  admits presentations
+  \(\mathcal{O}_{U_i}^{\oplus b_i} \to \mathcal{O}_{U_i}^{\oplus a_i} \to
+  \mathcal{F}|_{U_i} \to 0\) with \(a_i, b_i\) finite.  The preimages
+  \(g^{-1}(U_i)\) cover \(Y\).  The pullback functor is a left adjoint, hence
+  right exact, and it sends \(\mathcal{O}_X\) to \(\mathcal{O}_Y\) and finite
+  free modules to finite free modules of the same rank; moreover restriction
+  to \(g^{-1}(U_i)\) of the pullback is the pullback of the restriction along
+  \(g^{-1}(U_i) \to U_i\).  Applying the restricted pullback to the chosen
+  presentation therefore yields a presentation
+  \(\mathcal{O}^{\oplus b_i} \to \mathcal{O}^{\oplus a_i} \to
+  (g^*\mathcal{F})|_{g^{-1}(U_i)} \to 0\) with the same finite index sets.
+\end{proof}
+
+\begin{lemma}\leanok
+[Flatness over the base is stable under base change]
+  \label{lem:coherent_flat_base_change}
+  \lean{AlgebraicGeometry.Scheme.CoherentSheafFlat.of_isPullback}
+  \uses{def:coherent_sheaf_flat}
+  % SOURCE: [Nitsure], \S 1 (read from
+  % references/nitsure-hilbert-quot-src/nitsure-hilbert-quot.tex, L418-L419);
+  % cf. Stacks 01U9 (flatness of morphisms is stable under base change).
+  \textit{Source: [Nitsure], \S 1 (FGA Explained Ch.~5); Stacks 01U9.}
+  Let
+  \[
+    \begin{array}{ccc}
+      X' & \xrightarrow{\ g'\ } & X \\
+      \downarrow f' & & \downarrow f \\
+      S' & \xrightarrow{\ g\ } & S
+    \end{array}
+  \]
+  be a cartesian square of schemes and \(\mathcal{F}\) a quasi-coherent sheaf
+  of \(\mathcal{O}_X\)-modules that is flat over \(S\) in the sense of
+  \cref{def:coherent_sheaf_flat}.  Then \(g'^* \mathcal{F}\) is flat over
+  \(S'\).
+\end{lemma}
+\begin{proof}
+  For a quasi-coherent module, the affine-pair flatness predicate of
+  \cref{def:coherent_sheaf_flat} is equivalent to flatness of every stalk
+  \(\mathcal{F}_x\) over the local ring \(\mathcal{O}_{S, f(x)}\): a module
+  over a ring \(B\) with an action of \(A\) through \(A \to B\) is flat over
+  \(A\) if and only if all its localizations at primes of \(B\) are flat over
+  the corresponding localizations of \(A\).  The stalk of \(g'^*\mathcal{F}\)
+  at \(x' \in X'\) is
+  \(\mathcal{F}_{g'(x')} \otimes_{\mathcal{O}_{X, g'(x')}}
+  \mathcal{O}_{X', x'}\), and since the square is cartesian
+  \(\mathcal{O}_{X', x'}\) is a localization of
+  \(\mathcal{O}_{X, g'(x')} \otimes_{\mathcal{O}_{S, s}}
+  \mathcal{O}_{S', s'}\) (where \(s = f(g'(x'))\), \(s' = f'(x')\)).  Hence
+  \((g'^*\mathcal{F})_{x'}\) is a localization of
+  \(\mathcal{F}_{g'(x')} \otimes_{\mathcal{O}_{S,s}} \mathcal{O}_{S', s'}\);
+  flatness over \(\mathcal{O}_{S,s}\) base-changes to flatness over
+  \(\mathcal{O}_{S', s'}\) and is preserved by localization.
+\end{proof}
+
+\begin{lemma}\leanok
+[Proper support is stable under base change]
+  \label{lem:proper_support_base_change}
+  \lean{AlgebraicGeometry.Scheme.Modules.HasProperSupport.of_isPullback}
+  \uses{def:has_proper_support, def:modules_annihilator}
+  % SOURCE: [Nitsure], \S 1 (read from
+  % references/nitsure-hilbert-quot-src/nitsure-hilbert-quot.tex, L418-L419);
+  % cf. Stacks 01W4 (properness is stable under base change) and 056H
+  % (support of the pullback of a finite-type module).
+  \textit{Source: [Nitsure], \S 1 (FGA Explained Ch.~5).}
+  In the cartesian square of \cref{lem:coherent_flat_base_change}, let
+  \(\mathcal{F}\) be a finitely presented sheaf of
+  \(\mathcal{O}_X\)-modules whose schematic support is proper over \(S\)
+  (\cref{def:has_proper_support}).  Then the schematic support of
+  \(g'^* \mathcal{F}\) is proper over \(S'\).
+\end{lemma}
+\begin{proof}
+  A local section of \(\mathrm{Ann}(\mathcal{F})\) pulls back to a section
+  annihilating \(g'^* \mathcal{F}\), so the pullback ideal
+  \(\mathrm{Ann}(\mathcal{F}) \cdot \mathcal{O}_{X'}\) is contained in
+  \(\mathrm{Ann}(g'^*\mathcal{F})\) (\cref{def:modules_annihilator}).
+  Consequently the schematic support of \(g'^* \mathcal{F}\) is a closed
+  subscheme of the base change
+  \(Z' := Z \times_X X' = Z \times_S S'\) of the schematic support
+  \(Z\) of \(\mathcal{F}\).  Since \(Z \to S\) is proper and properness is
+  stable under base change, \(Z' \to S'\) is proper; a closed immersion
+  followed by a proper morphism is proper, so the schematic support of
+  \(g'^* \mathcal{F}\) is proper over \(S'\).
+\end{proof}
+
+\begin{lemma}\leanok
+[The fibrewise Hilbert function is invariant under base change]
+  \label{lem:hilbert_fibre_base_change}
+  \lean{AlgebraicGeometry.Scheme.hilbertFunction_quotBaseMap}
+  \uses{def:hilbert_polynomial, def:has_proper_support}
+  % SOURCE: [Nitsure], \S 1, sub-section "Stratification by Hilbert
+  % Polynomials" (read from
+  % references/nitsure-hilbert-quot-src/nitsure-hilbert-quot.tex, L453-L498):
+  % the decomposition Quot = \coprod_\Phi Quot^\Phi presupposes that the
+  % Hilbert polynomial of the fibres is invariant under base change.
+  \textit{Source: [Nitsure], \S 1 (FGA Explained Ch.~5).}
+  Let \(\pi : X \to S\) be locally of finite type, \(L\) a sheaf of
+  \(\mathcal{O}_X\)-modules, \(T' \to T\) a morphism of \(S\)-schemes, and
+  \(\mathcal{F}\) a finitely presented sheaf on \(X_T\) whose schematic
+  support is proper over \(T\).  For \(t' \in T'\) with image \(t \in T\)
+  and every \(m \in \mathbb{N}\),
+  \[
+    \dim_{\kappa(t')} \Gamma\bigl((X_{T'})_{t'},\,
+      (g'^*\mathcal{F})_{t'} \otimes L_{t'}^{\otimes m}\bigr)
+    \;=\;
+    \dim_{\kappa(t)} \Gamma\bigl((X_T)_t,\,
+      \mathcal{F}_t \otimes L_t^{\otimes m}\bigr),
+  \]
+  where \(g' : X_{T'} \to X_T\) is the induced morphism.  In particular the
+  graded Hilbert function of \cref{def:hilbert_polynomial} is invariant under
+  base change of the parameter scheme.
+\end{lemma}
+\begin{proof}
+  Since \(X_{T'} = X_T \times_T T'\), the fibre of \(X_{T'} \to T'\) at
+  \(t'\) is the base change \((X_T)_t \times_{\operatorname{Spec} \kappa(t)}
+  \operatorname{Spec} \kappa(t')\) of the fibre at \(t\) along the residue
+  field extension \(\kappa(t) \to \kappa(t')\), and under this identification
+  \((g'^*\mathcal{F})_{t'} \otimes L_{t'}^{\otimes m}\) is the pullback of
+  \(\mathcal{F}_t \otimes L_t^{\otimes m}\).  Sections of a module
+  annihilated by the ideal of a closed subscheme are computed on that
+  subscheme, so both sides are computed on the support of the twisted
+  module, which is proper — in particular quasi-compact and separated — over
+  the respective residue field.  Global sections of a quasi-coherent module
+  on a qcqs scheme commute with flat base change of the (affine) base; a
+  field extension \(\kappa(t) \to \kappa(t')\) is flat, so
+  \(\Gamma\) of the base-changed module is
+  \(\Gamma\bigl((X_T)_t, \mathcal{F}_t \otimes L_t^{\otimes m}\bigr)
+  \otimes_{\kappa(t)} \kappa(t')\).  Finally
+  \(\dim_{\kappa(t')} (V \otimes_{\kappa(t)} \kappa(t')) =
+  \dim_{\kappa(t)} V\) for any \(\kappa(t)\)-vector space \(V\) (in the
+  infinite-dimensional case both dimensions are infinite, and both sides of
+  the displayed equality carry the same junk value).
+\end{proof}
+
 \section{The Grassmannian scheme}
 \label{sec:grassmannian_scheme}
 
@@ -3769,7 +3948,16 @@ linear algebra), we package the construction here.
 [Grassmannian scheme]
   \label{def:grassmannian_scheme}
   \lean{AlgebraicGeometry.Scheme.Grassmannian}
-  \uses{def:quot_functor, def:is_locally_free_of_rank}
+  \uses{def:is_locally_free_of_rank}
+  % NOTE (run 0010 T12): the Lean definition is now REAL
+  % (AlgebraicJacobian/Picard/QuotFunctorDef.lean), encoding the displayed set of
+  % rank-d locally free quotients of V_T directly (`Scheme.LocallyFreeQuotient`,
+  % Setoid quotient, pullback action along \psi.left).  The definition does NOT
+  % factor through def:quot_functor: the locally-free encoding is the form of the
+  % universal property valid over an arbitrary base, and it is the form matched by
+  % the merged chart construction (`AlgebraicGeometry.Grassmannian.functor`).  The
+  % identification with the Quot special case (final sentence below) holds in the
+  % locally noetherian regime and is future work, not a definitional dependency.
   % SOURCE: [Nitsure], \S 1, "Elementary Examples, Exercises~(2)" and
   % "Construction of Grassmannian" (read from
   % references/nitsure-hilbert-quot-src/nitsure-hilbert-quot.tex, L546-L599
@@ -3813,10 +4001,11 @@ linear algebra), we package the construction here.
     \text{ locally free of rank } d \}
   \]
   with equivalence \(\ker(q) = \ker(q')\); the rank-\(d\) local freeness of
-  \(\mathcal{F}\) is as in \cref{def:is_locally_free_of_rank}. Concretely,
-  \(\mathrm{Grass}(V, d) = \Quot^{d,\mathcal{O}_S}_{V/S/S}\): the Quot functor
+  \(\mathcal{F}\) is as in \cref{def:is_locally_free_of_rank}. Over a locally
+  noetherian base this functor agrees with the Quot functor
   (\cref{def:quot_functor}) in the special case \(X = S\), \(E = V\), constant
-  Hilbert polynomial \(\Phi = d\).
+  Hilbert polynomial \(\Phi = d\): a flat finitely presented module whose fibre
+  dimension is \(d\) at every point is locally free of rank \(d\).
 \end{definition}
 
 \begin{lemma}[Representability predicate]
@@ -3846,11 +4035,16 @@ linear algebra), we package the construction here.
   % strengthening \cref{thm:relative_spec_univ} to deliver a RepresentableBy witness, or (b)
   % finding a RepresentableBy-free argument via direct gluing of chart-wise classifying morphisms.
   % This is a deferred open question.
-  % NOTE: The Lean statement \lean{AlgebraicGeometry.Scheme.Grassmannian.representable} is
-  % currently a weakened existence skeleton that omits smoothness, properness, relative dimension
-  % \(d(r-d)\), the tautological rank-\(d\) quotient, and the Pl\"ucker embedding. The
-  % \verb|\lean{}| pin above points at a declaration that under-delivers the prose statement; it
-  % should be strengthened or split into a separate skeleton label.
+  % NOTE (run 0010 T12): the Lean statement
+  % \lean{AlgebraicGeometry.Scheme.Grassmannian.representable} is now stated against the REAL
+  % Grassmannian functor (def:grassmannian_scheme, QuotFunctorDef.lean), but it remains a
+  % bare-representability skeleton omitting smoothness, properness, relative dimension
+  % \(d(r-d)\), the tautological rank-\(d\) quotient, and the Pl\"ucker embedding; those
+  % refinements should be strengthened or split into separate labels when the proof lands.
+  % The merged chart construction (`AlgebraicGeometry.Grassmannian.represents`,
+  % GrassmannianQuot.lean, sorry-free) proves the absolute case over \(\mathbb{Z}\) with
+  % \(V\) free; the relative statement glues the absolute one over a trivialising affine
+  % cover of \((S, V)\).
 
   % SOURCE: [Nitsure], \S 1, sub-section "Construction by gluing together
   % affine patches" through "Projective embedding"
