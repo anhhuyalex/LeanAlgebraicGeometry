@@ -103,6 +103,7 @@ import AlgebraicJacobian.Albanese.CoheightBridge
 import AlgebraicJacobian.Albanese.PolePurity
 import AlgebraicJacobian.Albanese.RationalMapFunctionField
 import AlgebraicJacobian.Albanese.RationalMapPrecomp
+import AlgebraicJacobian.Albanese.RationalMapProd
 import AlgebraicJacobian.Albanese.SmoothPrimeRegularity
 import AlgebraicJacobian.Albanese.StandardSmoothDimension
 import AlgebraicJacobian.Albanese.Thm32RationalMapExtension
