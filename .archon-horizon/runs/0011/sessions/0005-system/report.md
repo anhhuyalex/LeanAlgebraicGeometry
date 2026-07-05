@@ -1,0 +1,10 @@
+## Checklist
+
+- [x] Started Horizon task T13.
+- [x] Report saved: .archon-horizon/runs/0011/sessions/0004-horizon-T13/report.md.
+- [x] Finished Horizon task T13 with status: done.
+- [x] Integrated horizon session 0004-horizon-T13: eae3461; projects Algebraic-Jacobian-Challenge, Albanese; 60 files: .archon-horizon/events.jsonl, .archon-horizon/inbox/local/comments/I-0107/C-0001.md, .archon-horizon/inbox/local/items/I-0107.yaml, .archon-horizon/runs/0001/sessions/0005-ground/subagents/0001-diff-auditor/transcript.jsonl, .archon-horizon/runs/0001/sessions/0013-ground/subagents/0001-diff-auditor/transcript.jsonl, .archon-horizon/runs/0002/sessions/0011-ground/subagents/0001-diff-auditor/transcript.jsonl, .archon-horizon/runs/0002/sessions/0011-ground/subagents/0002-blueprint/transcript.jsonl, .archon-horizon/runs/0002/sessions/0013-horizon-T3/subagents/0001-debug/transcript.jsonl, +52 more.
+
+## Issues
+
+- None.

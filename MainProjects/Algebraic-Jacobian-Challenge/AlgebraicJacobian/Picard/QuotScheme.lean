@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Christian Merten
 -/
 import Mathlib
+import AlgebraicJacobian.Picard.HilbertPolynomial
 
 /-!
 # The Quot scheme (A.2.b)
@@ -17,23 +18,27 @@ polynomial `Φ` on every fiber — together with the in-project sub-build for
 the Grassmannian *scheme* (Mathlib at the pinned commit carries only a
 linear-algebra Grassmannian).
 
-## Status (iter-176 Lane H file-skeleton — re-dispatch)
+## Status (iter-176 Lane H file-skeleton — re-dispatch; §1 closed run 0011)
 
 iter-175 Lane H died to the Anthropic session-limit reset window without
 ever calling `Write` (the file was never created). iter-176 re-dispatches
-the file-skeleton verbatim. Each of the six blueprint-pinned declarations
-carries the *intended* substantive type signature (matching the
-`\lean{...}` pin in `blueprint/src/chapters/Picard_QuotScheme.tex`) with a
-`sorry` body. The bodies are iter-177+ work; the substantive proofs are
-deep (Nitsure §5: boundedness ⟶ Grassmannian embedding ⟶ flattening
-stratification ⟶ valuative criterion).
+the file-skeleton verbatim. Each blueprint-pinned declaration carries the
+*intended* substantive type signature (matching the `\lean{...}` pin in
+`blueprint/src/chapters/Picard_QuotScheme.tex`); declaration 1
+(`hilbertPolynomial`) is now a **real definition** imported from
+`AlgebraicJacobian.Picard.HilbertPolynomial` (run 0011), while the bodies
+of the remaining headline declarations are still typed `sorry`s — the
+substantive proofs are deep (Nitsure §5: boundedness ⟶ Grassmannian
+embedding ⟶ flattening stratification ⟶ valuative criterion).
 
 The 6 blueprint-pinned declarations are:
 
-1. `AlgebraicGeometry.Scheme.hilbertPolynomial` (def, ~5 LOC) — the
+1. `AlgebraicGeometry.Scheme.hilbertPolynomial` (def) — the
    **Hilbert polynomial function** `s ↦ Φ_{F,s} ∈ ℚ[λ]` of a coherent
    sheaf `F` on `X` over a finite-type `π : X ⟶ S` with respect to a
-   line bundle `L`. Encoded as a function `S → Polynomial ℚ`.
+   line bundle `L`. **Now a real definition** — provided (sorry-free,
+   with its uniqueness/spec API) by
+   `AlgebraicJacobian.Picard.HilbertPolynomial`; see §1 below.
 
 2. `AlgebraicGeometry.Scheme.QuotFunctor` (def, ~6 LOC) — the **Quot
    functor** `Quot^{Φ,L}_{E/X/S} : (Sch/S)^op ⥤ Set` sending an
@@ -138,39 +143,19 @@ namespace Scheme
 
 /-! ## §1. Hilbert polynomial of a coherent sheaf
 
-For a finite-type morphism `π : X ⟶ S` with `S` noetherian and a coherent
-sheaf `F` on `X` whose schematic support is proper over `S` (here encoded
-as plain `X.Modules` for the file-skeleton), the per-fiber Hilbert
-polynomial is the function
-
-`s ↦ Φ_{F,s} ∈ ℚ[λ],   Φ_{F,s}(m) = χ(X_s, F|_{X_s} ⊗ L_s^{⊗m})`.
-
-Snapper's Lemma ensures this is a polynomial in `m`; the proof requires
-graded-Euler-characteristic infrastructure and is not stated here.
+The **Hilbert polynomial** `AlgebraicGeometry.Scheme.hilbertPolynomial` is a
+**real definition** (no `sorry`), provided by
+`AlgebraicJacobian.Picard.HilbertPolynomial` (imported above): the unique
+`Φ_{F,s} ∈ ℚ[λ]` agreeing for `m ≫ 0` with the graded Hilbert function
+`m ↦ dim_{κ(s)} Γ(X_s, F_s ⊗ L_s^{⊗m})` of the fibre section module
+(`H⁰`-only encoding; agrees with the Euler-characteristic `χ(F(m))` form by
+Serre vanishing for proper `X_s` and ample `L_s`).  See
+`Scheme.hilbertPolynomial_eq_of_eventually` (uniqueness / well-definedness)
+and `Scheme.existsUnique_hilbertPolynomial_of_isRatHilb` (existence from the
+graded Hilbert–Serre engine of `AlgebraicJacobian.Picard.GradedHilbertSerre`).
 
 Blueprint reference: `def:hilbert_polynomial` (Nitsure §1; cf. Hartshorne
 III.5.2). -/
-
-/-- The **Hilbert polynomial** of a coherent sheaf `F` on `X` over `S` at
-the fiber over `s ∈ S` with respect to a line bundle `L` on `X`.
-
-Encoded as a function `s ↦ Φ_{F,s} ∈ ℚ[λ]`. The defining formula
-
-`Φ_{F,s}(m) = χ(X_s, F|_{X_s} ⊗ L_s^{⊗ m})
-            = Σ_i (-1)^i dim_{κ(s)} H^i(X_s, F|_{X_s} ⊗ L_s^{⊗m})`
-
-is a polynomial in `m` by Snapper's Lemma; the polynomial coefficients
-depend on `s` through the fiber `F|_{X_s}`. When `F` is `S`-flat the
-function `s ↦ Φ_{F,s}` is locally constant on `S`.
-
-iter-177+: the body unfolds to the graded-Euler-characteristic
-construction once `χ` of a coherent sheaf on a noetherian scheme +
-Snapper's polynomial-eventually-property are in scope. For the iter-176
-file-skeleton the body is a typed `sorry`. -/
-noncomputable def hilbertPolynomial {S X : Scheme.{u}} [IsLocallyNoetherian S]
-    (_π : X ⟶ S) [LocallyOfFiniteType _π] (_L _F : X.Modules) (_s : S) :
-    Polynomial ℚ :=
-  sorry
 
 /-! ## §2. The Quot functor
 

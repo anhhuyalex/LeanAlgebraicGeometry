@@ -79,6 +79,7 @@ import AlgebraicJacobian.Picard.EntryIdeal
 import AlgebraicJacobian.Picard.EntryIdealStratum
 import AlgebraicJacobian.Picard.FlatteningStratificationUniversal
 import AlgebraicJacobian.Picard.GenericFlatnessGeometric
+import AlgebraicJacobian.Picard.HilbertPolynomial
 import AlgebraicJacobian.Picard.QuotScheme
 -- Grassmannian/Quot representability development merged from the
 -- GR-quot_closure subproject (union merge, 2026-06-22). Headline:
