@@ -812,6 +812,362 @@ lemma isSheaf_gluedFunctor :
     ← Presieve.isSheafFor_iff_generate]
   exact isSheafFor_opens hF hU T W hW
 
+/-! ## §6. The charts
+
+Each local representing object `Y i` maps to the glued functor: a morphism
+`t : T ⟶ (Y i).left` classifies an `F`-section over
+`T → U i → S`, whose glued point is the chart image of `t`. -/
+
+include hF hU in
+/-- The classifying morphism of a glued point classifies the restriction of
+its section. -/
+lemma homEquiv_gamma {T : Scheme.{0}} (p : GluedPoint F Y R T) (i : ι) :
+    (R i).homEquiv (p.γ i)
+      = F.map (classifyInv U p.a i ≫
+          overResHom (Over.mk p.a) (pre U p.a i)).op (p.sect hF hU) :=
+  calc (R i).homEquiv (p.γ i)
+      = F.map (𝟙 _).op ((R i).homEquiv (p.γ i)) := (map_id_apply _).symm
+    _ = F.map (classifyInv U p.a i ≫ classifyHom U p.a i).op
+          ((R i).homEquiv (p.γ i)) :=
+        (map_congr (classifyInv_comp_hom p.a i) _).symm
+    _ = F.map (classifyInv U p.a i).op
+          (F.map (classifyHom U p.a i).op ((R i).homEquiv (p.γ i))) :=
+        (map_map _ _ _).symm
+    _ = F.map (classifyInv U p.a i).op
+          (F.map (overResHom (Over.mk p.a) (pre U p.a i)).op (p.sect hF hU)) :=
+        (congrArg (fun z => F.map (classifyInv U p.a i).op z)
+          (p.sect_spec hF hU i)).symm
+    _ = F.map (classifyInv U p.a i ≫
+          overResHom (Over.mk p.a) (pre U p.a i)).op (p.sect hF hU) :=
+        map_map _ _ _
+
+variable (Y R) in
+/-- The underlying function of the chart attached to `i`: a morphism
+`t : T ⟶ (Y i).left` yields the glued point of the `F`-section it
+classifies. -/
+noncomputable def chartFun (i : ι) {T : Scheme.{0}} (t : T ⟶ (Y i).left) :
+    GluedPoint F Y R T :=
+  ofSect Y R ((t ≫ (Y i).hom) ≫ (U i).ι)
+    ((R i).homEquiv (Over.homMk t rfl : Over.mk (t ≫ (Y i).hom) ⟶ Y i))
+
+@[simp]
+lemma chartFun_a (i : ι) {T : Scheme.{0}} (t : T ⟶ (Y i).left) :
+    (chartFun Y R i t).a = (t ≫ (Y i).hom) ≫ (U i).ι := rfl
+
+set_option backward.isDefEq.respectTransparency false in
+include hF hU in
+/-- Naturality of the chart function. -/
+lemma chartFun_natural (i : ι) {V T : Scheme.{0}} (b : V ⟶ T)
+    (t : T ⟶ (Y i).left) :
+    chartFun Y R i (b ≫ t) = GluedPoint.res R b (chartFun Y R i t) := by
+  have hOb : Over.mk (((b ≫ t) ≫ (Y i).hom) ≫ (U i).ι)
+      = Over.mk (b ≫ (t ≫ (Y i).hom) ≫ (U i).ι) :=
+    congrArg Over.mk (by simp only [Category.assoc])
+  refine Eq.trans ?_
+    (res_ofSect hF hU b ((t ≫ (Y i).hom) ≫ (U i).ι)
+      ((R i).homEquiv (Over.homMk t rfl : Over.mk (t ≫ (Y i).hom) ⟶ Y i))).symm
+  have hmor : (Over.homMk (b ≫ t) rfl :
+        Over.mk ((b ≫ t) ≫ (Y i).hom) ⟶ Y i)
+      = (Over.homMk b (Category.assoc b t (Y i).hom).symm :
+          Over.mk ((b ≫ t) ≫ (Y i).hom) ⟶ Over.mk (t ≫ (Y i).hom))
+        ≫ (Over.homMk t rfl : Over.mk (t ≫ (Y i).hom) ⟶ Y i) := by
+    apply CommaMorphism.ext
+    · simp only [Over.comp_left, Over.homMk_left]
+    · apply Subsingleton.elim
+  have hsq : (Over.map (U i).ι).map
+        (Over.homMk b (Category.assoc b t (Y i).hom).symm :
+          Over.mk ((b ≫ t) ≫ (Y i).hom) ⟶ Over.mk (t ≫ (Y i).hom))
+      = eqToHom hOb ≫ resSecHom b ((t ≫ (Y i).hom) ≫ (U i).ι) := by
+    have h := homMk_eqToHom_square hOb rfl
+      ((Over.map (U i).ι).map
+        (Over.homMk b (Category.assoc b t (Y i).hom).symm :
+          Over.mk ((b ≫ t) ≫ (Y i).hom) ⟶ Over.mk (t ≫ (Y i).hom)))
+      (resSecHom b ((t ≫ (Y i).hom) ≫ (U i).ι))
+      (heq_of_eq (by simp only [resSecHom, Over.homMk_left, Over.map_map_left]))
+    rwa [eqToHom_refl, Category.comp_id] at h
+  calc chartFun Y R i (b ≫ t)
+      = ofSect Y R (((b ≫ t) ≫ (Y i).hom) ≫ (U i).ι)
+          ((R i).homEquiv
+            ((Over.homMk b (Category.assoc b t (Y i).hom).symm :
+              Over.mk ((b ≫ t) ≫ (Y i).hom) ⟶ Over.mk (t ≫ (Y i).hom))
+             ≫ (Over.homMk t rfl : Over.mk (t ≫ (Y i).hom) ⟶ Y i))) := by
+        rw [chartFun, hmor]
+    _ = ofSect Y R (((b ≫ t) ≫ (Y i).hom) ≫ (U i).ι)
+          (F.map (eqToHom hOb ≫
+            resSecHom b ((t ≫ (Y i).hom) ≫ (U i).ι)).op
+            ((R i).homEquiv
+              (Over.homMk t rfl : Over.mk (t ≫ (Y i).hom) ⟶ Y i))) := by
+        refine congrArg (ofSect Y R _) ?_
+        refine ((R i).homEquiv_comp _ _).trans ?_
+        exact map_congr hsq _
+    _ = ofSect Y R (((b ≫ t) ≫ (Y i).hom) ≫ (U i).ι)
+          (F.map (eqToHom hOb).op
+            (F.map (resSecHom b ((t ≫ (Y i).hom) ≫ (U i).ι)).op
+              ((R i).homEquiv
+                (Over.homMk t rfl : Over.mk (t ≫ (Y i).hom) ⟶ Y i)))) :=
+        congrArg (ofSect Y R _) (map_map _ _ _).symm
+    _ = ofSect Y R (b ≫ (t ≫ (Y i).hom) ≫ (U i).ι)
+          (F.map (resSecHom b ((t ≫ (Y i).hom) ≫ (U i).ι)).op
+            ((R i).homEquiv
+              (Over.homMk t rfl : Over.mk (t ≫ (Y i).hom) ⟶ Y i))) :=
+        ofSect_congr (by simp only [Category.assoc]) _
+
+variable (F Y R) in
+/-- The chart natural transformation attached to `i`. -/
+noncomputable def chart (hF : IsZariskiSheafOver F) (hU : ⨆ i, U i = ⊤)
+    (i : ι) : yoneda.obj (Y i).left ⟶ gluedFunctor F Y R where
+  app T := TypeCat.ofHom fun t => chartFun Y R i t
+  naturality {T V} b := by
+    ext t
+    change chartFun Y R i (b.unop ≫ t)
+      = GluedPoint.res R b.unop (chartFun Y R i t)
+    exact chartFun_natural hF hU i b.unop t
+
+/-! ## §7. The charts are relatively representable open immersions
+
+The pullback of the chart `chart i` against a point `p` of the glued functor
+over `A` is the open subscheme `p.a⁻¹(U i) ⊆ A`, with structure morphism the
+total-space component of the classifying morphism `p.γ i`. -/
+
+set_option backward.isDefEq.respectTransparency false in
+include hF hU in
+/-- Compatibility of the chart function with restriction to the preimage
+open: the chart image of `w ≫ (p.γ i).left` is the restriction of `p`. -/
+lemma chartFun_comp {A V : Scheme.{0}} (p : GluedPoint F Y R A) (i : ι)
+    (w : V ⟶ (pre U p.a i).toScheme) :
+    chartFun Y R i (w ≫ (p.γ i).left)
+      = GluedPoint.res R (w ≫ (pre U p.a i).ι) p := by
+  have htri : (w ≫ (p.γ i).left) ≫ (Y i).hom
+      = w ≫ (Over.mk (preRes U p.a i)).hom :=
+    (Category.assoc w _ _).trans
+      (congrArg (fun z => w ≫ z) (Over.w (p.γ i)))
+  have ha' : ((w ≫ (p.γ i).left) ≫ (Y i).hom) ≫ (U i).ι
+      = (w ≫ (pre U p.a i).ι) ≫ p.a := by
+    rw [htri]
+    show (w ≫ p.a.resLE (U i) (pre U p.a i) le_rfl) ≫ (U i).ι = _
+    rw [Category.assoc, Scheme.Hom.resLE_comp_ι, ← Category.assoc,
+      Category.assoc]
+  have hOb : Over.mk (((w ≫ (p.γ i).left) ≫ (Y i).hom) ≫ (U i).ι)
+      = Over.mk ((w ≫ (pre U p.a i).ι) ≫ p.a) :=
+    congrArg Over.mk ha' 
+  have hmor : (Over.homMk (w ≫ (p.γ i).left) rfl :
+        Over.mk ((w ≫ (p.γ i).left) ≫ (Y i).hom) ⟶ Y i)
+      = (Over.homMk w htri.symm :
+          Over.mk ((w ≫ (p.γ i).left) ≫ (Y i).hom) ⟶
+            Over.mk (preRes U p.a i)) ≫ p.γ i := by
+    apply CommaMorphism.ext
+    · simp only [Over.comp_left, Over.homMk_left]
+    · apply Subsingleton.elim
+  have hsq : (Over.map (U i).ι).map
+        (Over.homMk w htri.symm :
+          Over.mk ((w ≫ (p.γ i).left) ≫ (Y i).hom) ⟶
+            Over.mk (preRes U p.a i))
+      ≫ (classifyInv U p.a i ≫ overResHom (Over.mk p.a) (pre U p.a i))
+      = eqToHom hOb ≫ resSecHom (w ≫ (pre U p.a i).ι) p.a := by
+    have h := homMk_eqToHom_square hOb rfl
+      ((Over.map (U i).ι).map
+        (Over.homMk w htri.symm :
+          Over.mk ((w ≫ (p.γ i).left) ≫ (Y i).hom) ⟶
+            Over.mk (preRes U p.a i))
+        ≫ (classifyInv U p.a i ≫ overResHom (Over.mk p.a) (pre U p.a i)))
+      (resSecHom (w ≫ (pre U p.a i).ι) p.a)
+      (heq_of_eq (by
+        simp only [Over.comp_left, Over.homMk_left, Over.map_map_left,
+          classifyInv, overResHom, resSecHom, Category.id_comp]
+        exact congrArg (fun z => w ≫ z) (Category.id_comp _)))
+    rwa [eqToHom_refl, Category.comp_id] at h
+  calc chartFun Y R i (w ≫ (p.γ i).left)
+      = ofSect Y R (((w ≫ (p.γ i).left) ≫ (Y i).hom) ≫ (U i).ι)
+          ((R i).homEquiv
+            ((Over.homMk w htri.symm :
+              Over.mk ((w ≫ (p.γ i).left) ≫ (Y i).hom) ⟶
+                Over.mk (preRes U p.a i)) ≫ p.γ i)) := by
+        rw [chartFun, hmor]
+    _ = ofSect Y R (((w ≫ (p.γ i).left) ≫ (Y i).hom) ≫ (U i).ι)
+          (F.map ((Over.map (U i).ι).map
+            (Over.homMk w htri.symm :
+              Over.mk ((w ≫ (p.γ i).left) ≫ (Y i).hom) ⟶
+                Over.mk (preRes U p.a i))).op
+            ((R i).homEquiv (p.γ i))) :=
+        congrArg (ofSect Y R _) ((R i).homEquiv_comp _ _)
+    _ = ofSect Y R (((w ≫ (p.γ i).left) ≫ (Y i).hom) ≫ (U i).ι)
+          (F.map ((Over.map (U i).ι).map
+            (Over.homMk w htri.symm :
+              Over.mk ((w ≫ (p.γ i).left) ≫ (Y i).hom) ⟶
+                Over.mk (preRes U p.a i))).op
+            (F.map (classifyInv U p.a i ≫
+              overResHom (Over.mk p.a) (pre U p.a i)).op (p.sect hF hU))) :=
+        congrArg (ofSect Y R _)
+          (congrArg (fun z => F.map ((Over.map (U i).ι).map
+            (Over.homMk w htri.symm :
+              Over.mk ((w ≫ (p.γ i).left) ≫ (Y i).hom) ⟶
+                Over.mk (preRes U p.a i))).op z) (homEquiv_gamma hF hU p i))
+    _ = ofSect Y R (((w ≫ (p.γ i).left) ≫ (Y i).hom) ≫ (U i).ι)
+          (F.map (eqToHom hOb ≫
+            resSecHom (w ≫ (pre U p.a i).ι) p.a).op (p.sect hF hU)) :=
+        congrArg (ofSect Y R _) ((map_map _ _ _).trans (map_congr hsq _))
+    _ = ofSect Y R (((w ≫ (p.γ i).left) ≫ (Y i).hom) ≫ (U i).ι)
+          (F.map (eqToHom hOb).op
+            (F.map (resSecHom (w ≫ (pre U p.a i).ι) p.a).op
+              (p.sect hF hU))) :=
+        congrArg (ofSect Y R _) (map_map _ _ _).symm
+    _ = ofSect Y R ((w ≫ (pre U p.a i).ι) ≫ p.a)
+          (F.map (resSecHom (w ≫ (pre U p.a i).ι) p.a).op (p.sect hF hU)) :=
+        ofSect_congr ha' _
+    _ = GluedPoint.res R (w ≫ (pre U p.a i).ι) p :=
+        (res_eq_ofSect hF hU (w ≫ (pre U p.a i).ι) p).symm
+
+set_option backward.isDefEq.respectTransparency false in
+set_option maxHeartbeats 1000000 in
+include hF hU in
+/-- **The chart pullback square**: the pullback of `chart i` against the
+point `p : yoneda.obj A ⟶ gluedFunctor` is the open subscheme
+`p.a⁻¹(U i) ⊆ A`. -/
+lemma chart_isPullback (i : ι) {A : Scheme.{0}} (p : GluedPoint F Y R A) :
+    IsPullback (yoneda.map (p.γ i).left) (yoneda.map (pre U p.a i).ι)
+      (chart F Y R hF hU i) (yonedaEquiv.symm p) := by
+  refine isPullback_of_app fun c => ?_
+  rw [Types.isPullback_iff]
+  refine ⟨?_, ?_, ?_⟩
+  · ext w
+    change chartFun Y R i (w ≫ (p.γ i).left)
+      = GluedPoint.res R (w ≫ (pre U p.a i).ι) p
+    exact chartFun_comp hF hU p i w
+  · intro w₁ w₂ hw
+    have h₂ : w₁ ≫ (pre U p.a i).ι = w₂ ≫ (pre U p.a i).ι := hw.2
+    exact (cancel_mono _).mp h₂
+  · intro s v hsv
+    have hsv' : chartFun Y R i s = GluedPoint.res R v p := hsv
+    have ha' : (s ≫ (Y i).hom) ≫ (U i).ι = v ≫ p.a :=
+      congrArg GluedPoint.a hsv'
+    have hrange : Set.range v.base ⊆ Set.range ((pre U p.a i).ι).base := by
+      rw [Scheme.Opens.range_ι]
+      rintro pt ⟨q, rfl⟩
+      have h1 : (v ≫ p.a).base q ∈ Set.range ((U i).ι).base := by
+        rw [← ha']
+        exact ⟨(s ≫ (Y i).hom).base q, rfl⟩
+      rw [Scheme.Opens.range_ι] at h1
+      exact h1
+    refine ⟨IsOpenImmersion.lift ((pre U p.a i).ι) v hrange, ?_, ?_⟩
+    swap
+    · exact IsOpenImmersion.lift_fac _ _ _
+    -- first coordinate: w ≫ (p.γ i).left = s
+    · set w := IsOpenImmersion.lift ((pre U p.a i).ι) v hrange with hw_def
+      have hw : w ≫ (pre U p.a i).ι = v := IsOpenImmersion.lift_fac _ _ _
+      have htri : w ≫ (Over.mk (preRes U p.a i)).hom = s ≫ (Y i).hom := by
+        rw [← cancel_mono ((U i).ι)]
+        show w ≫ p.a.resLE (U i) (pre U p.a i) le_rfl ≫ (U i).ι = _
+        rw [Scheme.Hom.resLE_comp_ι, ← Category.assoc, hw, ← ha',
+          Category.assoc]
+      have hOb : Over.mk ((s ≫ (Y i).hom) ≫ (U i).ι) = Over.mk (v ≫ p.a) :=
+        congrArg Over.mk ha'
+      have hsq : (Over.map (U i).ι).map
+            (Over.homMk w htri :
+              Over.mk (s ≫ (Y i).hom) ⟶ Over.mk (preRes U p.a i))
+          ≫ (classifyInv U p.a i ≫ overResHom (Over.mk p.a) (pre U p.a i))
+          = eqToHom hOb ≫ resSecHom v p.a := by
+        have h := homMk_eqToHom_square hOb rfl
+          ((Over.map (U i).ι).map
+            (Over.homMk w htri :
+              Over.mk (s ≫ (Y i).hom) ⟶ Over.mk (preRes U p.a i))
+            ≫ (classifyInv U p.a i ≫
+              overResHom (Over.mk p.a) (pre U p.a i)))
+          (resSecHom v p.a)
+          (heq_of_eq (by
+            simp only [Over.comp_left, Over.homMk_left, Over.map_map_left,
+              classifyInv, overResHom, resSecHom]
+            refine Eq.trans (congrArg (fun z => w ≫ z)
+              (Category.id_comp _)) hw))
+        rwa [eqToHom_refl, Category.comp_id] at h
+      have hkey : (Over.homMk s rfl : Over.mk (s ≫ (Y i).hom) ⟶ Y i)
+          = (Over.homMk w htri :
+              Over.mk (s ≫ (Y i).hom) ⟶ Over.mk (preRes U p.a i)) ≫ p.γ i := by
+        apply (R i).homEquiv.injective
+        calc (R i).homEquiv (Over.homMk s rfl :
+              Over.mk (s ≫ (Y i).hom) ⟶ Y i)
+            = (chartFun Y R i s).sect hF hU := (sect_ofSect hF hU _ _).symm
+          _ = F.map (eqToHom hOb).op
+                ((GluedPoint.res R v p).sect hF hU) := by
+              refine (sect_congr hF hU hsv').trans ?_
+              rfl
+          _ = F.map (eqToHom hOb).op
+                (F.map (resSecHom v p.a).op (p.sect hF hU)) :=
+              congrArg (fun z => F.map (eqToHom hOb).op z)
+                (sect_res hF hU v p)
+          _ = F.map (eqToHom hOb ≫ resSecHom v p.a).op (p.sect hF hU) :=
+              map_map _ _ _
+          _ = F.map ((Over.map (U i).ι).map
+                (Over.homMk w htri :
+                  Over.mk (s ≫ (Y i).hom) ⟶ Over.mk (preRes U p.a i))
+                ≫ (classifyInv U p.a i ≫
+                  overResHom (Over.mk p.a) (pre U p.a i))).op
+                (p.sect hF hU) := (map_congr hsq _).symm
+          _ = F.map ((Over.map (U i).ι).map
+                (Over.homMk w htri :
+                  Over.mk (s ≫ (Y i).hom) ⟶ Over.mk (preRes U p.a i))).op
+                (F.map (classifyInv U p.a i ≫
+                  overResHom (Over.mk p.a) (pre U p.a i)).op
+                  (p.sect hF hU)) := (map_map _ _ _).symm
+          _ = F.map ((Over.map (U i).ι).map
+                (Over.homMk w htri :
+                  Over.mk (s ≫ (Y i).hom) ⟶ Over.mk (preRes U p.a i))).op
+                ((R i).homEquiv (p.γ i)) :=
+              (congrArg (fun z => F.map ((Over.map (U i).ι).map
+                (Over.homMk w htri :
+                  Over.mk (s ≫ (Y i).hom) ⟶ Over.mk (preRes U p.a i))).op z)
+                (homEquiv_gamma hF hU p i)).symm
+          _ = (R i).homEquiv ((Over.homMk w htri :
+                Over.mk (s ≫ (Y i).hom) ⟶ Over.mk (preRes U p.a i))
+                ≫ p.γ i) := ((R i).homEquiv_comp _ _).symm
+      have hleft : s = w ≫ (p.γ i).left := by
+        simpa only [Over.homMk_left, Over.comp_left] using
+          congrArg CommaMorphism.left hkey
+      change w ≫ (p.γ i).left = s
+      exact hleft.symm
+
+include hF hU in
+/-- **The charts are relatively representable open immersions.** -/
+lemma chart_presheaf (i : ι) :
+    IsOpenImmersion.presheaf (chart F Y R hF hU i) := by
+  refine MorphismProperty.relative.of_exists ?_
+  intro A g
+  refine ⟨(pre U (yonedaEquiv g).a i).toScheme,
+    yoneda.map (((yonedaEquiv g).γ i).left),
+    (pre U (yonedaEquiv g).a i).ι, ?_, inferInstance⟩
+  have h := chart_isPullback hF hU i (yonedaEquiv g)
+  rwa [Equiv.symm_apply_apply] at h
+
+set_option backward.isDefEq.respectTransparency false in
+include hF hU in
+/-- **The charts are jointly locally surjective.** -/
+lemma isLocallySurjective_chart :
+    Presheaf.IsLocallySurjective Scheme.zariskiTopology
+      (Sigma.desc (fun i => chart F Y R hF hU i)) := by
+  constructor
+  intro A p
+  have hmem : ∀ (i : ι) (V : Scheme.{0}) (g' : V ⟶ (pre U p.a i).toScheme),
+      (Presheaf.imageSieve (Sigma.desc fun j => chart F Y R hF hU j) p).arrows
+        (g' ≫ (pre U p.a i).ι) := by
+    intro i V g'
+    refine ⟨yonedaEquiv (yoneda.map (g' ≫ (p.γ i).left) ≫
+      Sigma.ι (fun j : ι => yoneda.obj (Y j).left) i), ?_⟩
+    show yonedaEquiv ((yoneda.map (g' ≫ (p.γ i).left) ≫
+      Sigma.ι (fun j : ι => yoneda.obj (Y j).left) i) ≫
+        Sigma.desc fun j => chart F Y R hF hU j) = _
+    rw [Category.assoc, Sigma.ι_desc, ← yonedaEquiv_naturality]
+    show GluedPoint.res R (g' ≫ (p.γ i).left)
+      (chartFun Y R i (𝟙 (Y i).left)) = _
+    rw [← chartFun_natural hF hU, Category.comp_id]
+    exact chartFun_comp hF hU p i g'
+  refine GrothendieckTopology.superset_covering _ ?_
+    ((opensCover A (pre U p.a) (p.a.iSup_preimage_eq_top hU)).mem_grothendieckTopology)
+  intro V f hf
+  obtain ⟨Z', g', f', hR, rfl⟩ := hf
+  revert g'
+  obtain ⟨i⟩ := hR
+  intro g'
+  exact hmem i V g'
+
 end ZariskiDescent
 
 end Scheme
