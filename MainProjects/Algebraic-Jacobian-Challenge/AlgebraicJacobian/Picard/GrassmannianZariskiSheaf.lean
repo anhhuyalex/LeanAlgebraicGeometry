@@ -109,6 +109,15 @@ lemma exists_iso_of_cover_iso {T : Scheme.{0}} {ι : Type} {V : ι → T.Opens}
   · rw [← cancel_epi q', ← Category.assoc, Abelian.comp_epiDesc,
       Abelian.comp_epiDesc, Category.comp_id]
 
+/-- Rank-`d` local freeness transports along isomorphisms of sheaves of
+modules. -/
+lemma isLocallyFreeOfRank_of_iso {X : Scheme.{0}} {M N : X.Modules} (e : M ≅ N)
+    {d : ℕ} (h : SheafOfModules.IsLocallyFreeOfRank N d) :
+    SheafOfModules.IsLocallyFreeOfRank M d := by
+  obtain ⟨ι, U, hU, hloc⟩ := h
+  exact ⟨ι, U, hU, fun i =>
+    ⟨(Scheme.Modules.pullback (U i).ι).mapIso e ≪≫ (hloc i).some⟩⟩
+
 /-- **An epi-commuting isomorphism of quotients is unique when it exists.**
 The uniqueness principle behind the cocycle conditions of the gluing half of
 the Grassmannian sheaf axiom. -/
@@ -251,7 +260,8 @@ lemma triangleIso_cast_coherence {P Uk Ul G Sb : Scheme.{0}}
   -- transport `pullbackComp` along the square `hpc`
   rw [Scheme.Modules.pullbackComp_hom_app_congr_fst hpc a M]
   simp only [Scheme.Modules.pullbackCongr_hom_app, Category.assoc, eqToHom_trans,
-    eqToHom_refl, Category.comp_id, Iso.inv_hom_id_app_assoc]
+    eqToHom_trans_assoc, eqToHom_refl, Category.comp_id, Category.id_comp,
+    Iso.inv_hom_id_app_assoc]
 
 variable {κ : Type} (W : κ → T.left.Opens)
 
@@ -515,6 +525,23 @@ def GlueCompat : Prop :=
       (covGD W hW).f l k)).obj (y l).F,
     IsGlueIso W y k l rfl (glueSnd_ι W hW k l) α
 
+/-- The chart component of the glued quotient: the tautological source
+`(fromGlued ≫ T.hom)^* V`, restricted to the `k`-th chart, is re-presented
+through the triangle collapse and mapped by the chart quotient `(y k).q`. -/
+noncomputable def glueChartQuot (k : κ) :
+    (Scheme.Modules.pullback ((covGD W hW).ι k)).obj
+      ((Scheme.Modules.pullback ((opensCover T.left W hW).fromGlued ≫ T.hom)).obj V)
+      ⟶ (y k).F :=
+  (pullbackTriangleIso (glueChart_w W hW k) V).hom ≫ (y k).q
+
+/-- The transposed chart component, as a morphism into the pushforward — the
+input to the descent-equalizer lift `Scheme.Modules.glueLift`. -/
+noncomputable def glueLiftComponent (k : κ) :
+    (Scheme.Modules.pullback ((opensCover T.left W hW).fromGlued ≫ T.hom)).obj V ⟶
+      (Scheme.Modules.pushforward ((covGD W hW).ι k)).obj (y k).F :=
+  ((Scheme.Modules.pullbackPushforwardAdjunction ((covGD W hW).ι k)).homEquiv _ _)
+    (glueChartQuot W hW y k)
+
 variable {W hW y} (hcpt : GlueCompat W hW y)
 
 /-- The transition isomorphism over the overlap `V (k,l)` — the unique gluing
@@ -614,6 +641,71 @@ lemma glueTransition_cocycle (i j k : κ) :
   have hbc := ((glueTransition_isGlueIso hcpt i k).baseChange
     (pullback.snd ((covGD W hW).f i j) ((covGD W hW).f i k))).reindex hu'
   exact IsGlueIso.eq hL (hs.trans hbc)
+
+set_option backward.isDefEq.respectTransparency false in
+set_option maxHeartbeats 1600000 in
+/-- **The overlap condition of the glued quotient**, in the pullback-level form
+of `Scheme.Modules.glueLift_cond_iff`: over the overlap `V (k,l)`, the two
+restrictions of the chart components agree through the transition
+isomorphism.  Combines the intertwining property of the transition
+isomorphism with the cast coherence `triangleIso_cast_coherence`. -/
+lemma glueQuot_overlap (k l : κ) :
+    (Scheme.Modules.pullbackComp ((covGD W hW).f k l) ((covGD W hW).ι k)).inv.app
+        ((Scheme.Modules.pullback ((opensCover T.left W hW).fromGlued ≫ T.hom)).obj V) ≫
+      (Scheme.Modules.pullback ((covGD W hW).f k l)).map (glueChartQuot W hW y k)
+    = (Scheme.Modules.pullbackCongr
+        (show ((covGD W hW).t k l ≫ (covGD W hW).f l k) ≫ (covGD W hW).ι l
+            = (covGD W hW).f k l ≫ (covGD W hW).ι k by
+          rw [Category.assoc]; exact (covGD W hW).glue_condition k l)).inv.app
+        ((Scheme.Modules.pullback ((opensCover T.left W hW).fromGlued ≫ T.hom)).obj V) ≫
+      (Scheme.Modules.pullbackComp ((covGD W hW).t k l ≫ (covGD W hW).f l k)
+        ((covGD W hW).ι l)).inv.app
+        ((Scheme.Modules.pullback ((opensCover T.left W hW).fromGlued ≫ T.hom)).obj V) ≫
+      (Scheme.Modules.pullback ((covGD W hW).t k l ≫ (covGD W hW).f l k)).map
+        (glueChartQuot W hW y l) ≫ (glueTransition hcpt k l).inv := by
+  have spec := glueTransition_isGlueIso hcpt k l
+  change ((pullbackTriangleIso
+        (Over.w (chartRes W k ((covGD W hW).f k l) rfl)) V).inv ≫
+      (Scheme.Modules.pullback ((covGD W hW).f k l)).map (y k).q) ≫
+      (glueTransition hcpt k l).hom
+    = (pullbackTriangleIso (Over.w (chartRes W l
+        ((covGD W hW).t k l ≫ (covGD W hW).f l k) (glueSnd_ι W hW k l))) V).inv ≫
+      (Scheme.Modules.pullback ((covGD W hW).t k l ≫ (covGD W hW).f l k)).map (y l).q
+    at spec
+  have hqk : (Scheme.Modules.pullback ((covGD W hW).f k l)).map (y k).q
+      = (pullbackTriangleIso
+          (Over.w (chartRes W k ((covGD W hW).f k l) rfl)) V).hom ≫
+        (((pullbackTriangleIso (Over.w (chartRes W l
+              ((covGD W hW).t k l ≫ (covGD W hW).f l k) (glueSnd_ι W hW k l))) V).inv ≫
+          (Scheme.Modules.pullback ((covGD W hW).t k l ≫ (covGD W hW).f l k)).map
+            (y l).q) ≫ (glueTransition hcpt k l).inv) := by
+    rw [← spec]
+    simp only [Category.assoc, Iso.hom_inv_id, Category.comp_id, Iso.hom_inv_id_assoc,
+      Iso.inv_hom_id_assoc]
+  have tcc := triangleIso_cast_coherence
+    ((covGD W hW).f k l) ((covGD W hW).ι k)
+    ((covGD W hW).t k l ≫ (covGD W hW).f l k) ((covGD W hW).ι l)
+    ((opensCover T.left W hW).fromGlued ≫ T.hom)
+    (glueChart_w W hW k) (glueChart_w W hW l)
+    (show ((covGD W hW).t k l ≫ (covGD W hW).f l k) ≫ (covGD W hW).ι l
+        = (covGD W hW).f k l ≫ (covGD W hW).ι k by
+      rw [Category.assoc]; exact (covGD W hW).glue_condition k l)
+    (Over.w (chartRes W k ((covGD W hW).f k l) rfl))
+    (Over.w (chartRes W l ((covGD W hW).t k l ≫ (covGD W hW).f l k)
+      (glueSnd_ι W hW k l))) V
+  change (Scheme.Modules.pullbackComp ((covGD W hW).f k l) ((covGD W hW).ι k)).inv.app
+        ((Scheme.Modules.pullback ((opensCover T.left W hW).fromGlued ≫ T.hom)).obj V) ≫
+      (Scheme.Modules.pullback ((covGD W hW).f k l)).map
+        ((pullbackTriangleIso (glueChart_w W hW k) V).hom ≫ (y k).q)
+    = _
+  rw [Functor.map_comp, hqk]
+  rw [show (Scheme.Modules.pullback ((covGD W hW).t k l ≫ (covGD W hW).f l k)).map
+      (glueChartQuot W hW y l)
+    = (Scheme.Modules.pullback ((covGD W hW).t k l ≫ (covGD W hW).f l k)).map
+        ((pullbackTriangleIso (glueChart_w W hW l) V).hom ≫ (y l).q) from rfl]
+  rw [Functor.map_comp]
+  simp only [Category.assoc] at tcc ⊢
+  rw [reassoc_of% tcc]
 
 end CoverGlue
 
