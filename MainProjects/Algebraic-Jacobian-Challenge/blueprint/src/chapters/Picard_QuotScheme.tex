@@ -4020,6 +4020,18 @@ linear algebra), we package the construction here.
   \(\mathrm{Hom}_{\mathcal{C}}(-, Y) \cong F\) (the Yoneda bijection).
 \end{lemma}
 
+\begin{lemma}[Local representability of Zariski sheaves]
+  \label{lem:local_representability_mathlib}
+  \lean{AlgebraicGeometry.Scheme.LocalRepresentability.representableBy}
+  \mathlibok
+  \textit{Provided by Mathlib (Stacks tag 01JJ).}
+  Let \(G\) be a set-valued sheaf on the big Zariski site of schemes,
+  \(\{X_i\}\) a family of schemes and \(f_i : h_{X_i} \to G\) a family of
+  relatively representable open immersions of presheaves that is jointly
+  locally surjective.  Then \(G\) is representable, by the scheme glued from
+  the \(X_i\) along the pairwise pullbacks \(h_{X_i} \times_G h_{X_j}\).
+\end{lemma}
+
 \begin{lemma}\leanok
 [Representability of the Grassmannian, trivialised case]
   \label{lem:grassmannian_representable_free}
@@ -4087,7 +4099,8 @@ linear algebra), we package the construction here.
 [Zariski descent of representability]
   \label{thm:representability_zariski_descent}
   \lean{AlgebraicGeometry.Scheme.representable_of_openCover}
-  \uses{def:zariski_sheaf_over, lem:functor_is_representable_mathlib}
+  \uses{def:zariski_sheaf_over, lem:functor_is_representable_mathlib,
+    lem:local_representability_mathlib}
   % SOURCE: EGA 0_I 4.5.4 (relative representability is Zariski-local on the
   % base); cf. Stacks project tag 01JJ (a Zariski sheaf admitting an open
   % covering by representable open subfunctors is representable).  Stated
@@ -4102,36 +4115,51 @@ linear algebra), we package the construction here.
   by an \(S\)-scheme.
 \end{theorem}
 
-\begin{proof}
-  \uses{def:zariski_sheaf_over}
-  Over \(U_{ij} = U_i \cap U_j\) both \(Y_i|_{U_{ij}}\) and
-  \(Y_j|_{U_{ij}}\) represent the restriction of \(F\) to
-  \(\mathrm{Sch}/U_{ij}\): representability restricts along an open of the
-  base because the restriction of \(F\) is again the functor of points, and
-  morphisms into \(Y_i\) over \(U_{ij} \subseteq U_i\) are morphisms into
-  the open preimage \(Y_i|_{U_{ij}} = Y_i \times_{U_i} U_{ij}\).  Hence
-  there are canonical isomorphisms
-  \(\varphi_{ij} : Y_i|_{U_{ij}} \cong Y_j|_{U_{ij}}\) (uniqueness of
-  representing objects, through the Yoneda embedding), and over triple
-  overlaps \(\varphi_{jk} \circ \varphi_{ij} = \varphi_{ik}\) by the same
-  uniqueness.  Glue the \(Y_i\) along the \(\varphi_{ij}\) to a scheme
-  \(Y\); the structure morphisms \(Y_i \to U_i \subseteq S\) agree on
-  overlaps and glue to \(Y \to S\).
+\begin{proof}\leanok
+  \uses{def:zariski_sheaf_over, lem:local_representability_mathlib}
+  Form the \emph{total functor} \(G\) of \(F\) on the absolute category of
+  schemes: a point of \(G(T)\) is a morphism \(a : T \to S\) together with
+  a family of morphisms \(\gamma_i : T|_{a^{-1}(U_i)} \to Y_i\) over
+  \(U_i\) whose classified sections
+  \(x_i \in F(T|_{a^{-1}(U_i)})\) agree on pairwise overlaps.  By the
+  sheaf axiom of \(F\) applied to the cover \(\{a^{-1}(U_i)\}\) of \(T\),
+  such a datum is the same as a pair \((a, x)\) with \(x \in F(T, a)\)
+  (the compatible classified sections glue to a unique \(x\), and \(x\)
+  restricts back to the \(x_i\)); the encoding by classifying morphisms
+  realises \(G\) as a set-valued functor, restriction acting by composition
+  on \(a\) and by restriction of the \(\gamma_i\).
 
-  \(Y\) represents \(F\): for \(T \to S\), write \(T_i\) for the preimage
-  of \(U_i\) in \(T\), an open cover of \(T\).  A morphism
-  \(u : T \to Y\) over \(S\) restricts to morphisms
-  \(u_i : T_i \to Y_i\) over \(U_i\) (the preimage of \(Y_i \subseteq Y\)
-  under \(u\) contains \(T_i\)), giving sections
-  \(x_i \in F(T_i)\) via the representability of \(Y_i\); on overlaps the
-  restrictions agree, so by the sheaf axiom they glue to a unique
-  \(x \in F(T)\).  Conversely a section \(x \in F(T)\) restricts to
-  \(x_i \in F(T_i)\), whose classifying morphisms \(T_i \to Y_i \to Y\)
-  agree on \(T_i \cap T_j\) (both classify \(x|_{T_i \cap T_j}\) and
-  \(Y_i|_{U_{ij}} \to Y\) is a monomorphism onto an open), hence glue to
-  \(u : T \to Y\).  The two constructions are mutually inverse: morphism
-  equality into \(Y\) is local on \(T\), and section equality in \(F(T)\)
-  follows from the uniqueness half of the sheaf axiom.
+  \(G\) is a sheaf for the big Zariski topology: a covering family may be
+  replaced by the family of image opens (both generate the same sieve), and
+  for a cover of \(T\) by opens \(\{W_k\}\) with compatible points
+  \((a_k, x_k) \in G(W_k)\), the base morphisms glue to \(a : T \to S\)
+  because morphisms of schemes glue along open covers, and the sections
+  glue by the sheaf axiom of \(F\) at \((T, a)\); uniqueness follows from
+  locality of morphism equality and the uniqueness half of the sheaf axiom.
+
+  Each \(Y_i\) maps to \(G\) by the \emph{chart}
+  \(c_i : h_{Y_i} \to G\) sending \(t : T \to Y_i\) to the point with
+  base \(T \to Y_i \to U_i \subseteq S\) classified by the section that
+  \(t\) represents.  The pullback of \(c_i\) against an arbitrary point
+  \((a, x) : h_T \to G\) is the open subscheme \(a^{-1}(U_i) \subseteq T\)
+  (a morphism \(V \to T\) lifts along \(c_i\) iff its base lands in
+  \(U_i\), and then the lift is the unique classifying morphism of the
+  restricted section), so the \(c_i\) are relatively representable open
+  immersions; they are jointly locally surjective because every point of
+  \(G(T)\) restricts on the cover \(\{a^{-1}(U_i)\}\) to the chart image
+  of its classifying morphisms.  By
+  \cref{lem:local_representability_mathlib} the functor \(G\) is
+  representable by a scheme \(\hat{Y}\).
+
+  Finally, the tautological point of \(G(\hat{Y})\) corresponding to
+  \(\mathrm{id}_{\hat{Y}}\) has base \(\hat{a} : \hat{Y} \to S\), and for
+  \(T \to S\) the identification \(G(T) \cong \coprod_{a} F(T, a)\)
+  restricts to a natural bijection
+  \(\mathrm{Hom}_{\mathrm{Sch}/S}(T, (\hat{Y}, \hat{a})) \cong F(T)\):
+  a morphism \(u : T \to \hat{Y}\) over \(S\) corresponds to a point of
+  \(G(T)\) with base \(T \to S\), i.e.\ to a section of \(F(T)\), and
+  naturality is the restriction-compatibility of the glued sections.  Hence
+  \(F\) is representable by the \(S\)-scheme \((\hat{Y}, \hat{a})\).
 \end{proof}
 
 \begin{lemma}\leanok
