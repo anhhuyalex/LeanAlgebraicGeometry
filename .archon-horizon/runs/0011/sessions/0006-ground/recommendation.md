@@ -1,0 +1,9 @@
+# Orientation — run 0011, T13 reconcile (genus-0 / Route-C cleanup still pending)
+
+- Useful context: the prior T13 Horizon session (`0004-horizon-T13`) executed **no edits** — it re-ran the 0002-ground orientation and stopped. So the cleanup is exactly where it was after run 0010: nothing on disk changed. The precise, still-valid handoff is `t13-cleanup-manifest.md` in `sessions/0002-ground/`; the durable "carve don't delete" fact is memory `I-0106`; the reconcile verdict and scope note are on inbox `I-0107`.
+
+- Relevant files (all confirmed unchanged): `AlgebraicJacobian/RiemannRoch/WeilDivisor.lean` — `1334` lines, `2` sorries (`L830` keep-block, `L1138` delete-block); `L55–830` `PrimeDivisor`/`RationalMap.order`/`IsRegularInCodimensionOne` substrate is imported by `Albanese/CodimOneExtension.lean` (live `ALB.codim1`); §3–§6 RR→ℙ¹ block is dead genus-0 weight. `genusZero_curve_iso_P1` is already gone as a decl (only header-prose mention at `WeilDivisor.lean:14`).
+
+- Roadmap / blueprint state: the workspace-root `roadmap.md` still carries the stale AJC lines (`L70`, `L72` `×2`, `L77`, `L112`); `blueprint/src/chapters/RiemannRoch_WeilDivisor.tex` still frames RR.1–RR.4 around the retired bridge (prose only — no live `\lean{}` pin, so no dangling DAG edge). `.archon-horizon/roadmap/` CLI milestones carry no genus-0 item and read as accurate. `blueprint/web/` holds stale genus-0/RR HTML (regenerated output, not hand-edited).
+
+- Build/scope notes: no `lake build` ran (nothing changed since run 0010's verified green, `8646` jobs, `I-0105`). T13's own scope included root `roadmap.md` + `WeilDivisor.lean`, but that root file is outside the Ground reconcile globs. The AJC project VCS repo (`vcs/…git`) is checkpointed at run 0005 with a large uncommitted working tree — a longstanding lag, source-of-truth being the workspace integration commits.
