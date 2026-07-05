@@ -80,11 +80,12 @@ rational maps. -/
 lemma precomp_equiv {f g : X.PartialMap Y} (p : W ⟶ X) (hp : IsOpenMap p.base)
     (h : f.equiv g) : (f.precomp p hp).equiv (g.precomp p hp) := by
   obtain ⟨V, hV, hVl, hVr, e⟩ := h
-  refine ⟨p ⁻¹ᵁ V, hV.preimage hp, (Opens.map p.base).monotone hVl,
-    (Opens.map p.base).monotone hVr, ?_⟩
-  simp only [restrict_hom, precomp_hom, precomp_domain] at e ⊢
-  rw [← Category.assoc, homOfLE_comp_morphismRestrict p hVl,
-    ← Category.assoc, homOfLE_comp_morphismRestrict p hVr,
+  have hVd : Dense ((p ⁻¹ᵁ V : W.Opens) : Set W) := by
+    rw [TopologicalSpace.Opens.map_coe]; exact hV.preimage hp
+  refine ⟨p ⁻¹ᵁ V, hVd, p.preimage_mono hVl, p.preimage_mono hVr, ?_⟩
+  simp only [restrict_hom, precomp_hom] at e ⊢
+  rw [← Category.assoc, ← Category.assoc,
+    homOfLE_comp_morphismRestrict p hVl, homOfLE_comp_morphismRestrict p hVr,
     Category.assoc, Category.assoc, e]
 
 end PartialMap
@@ -109,7 +110,9 @@ lemma RationalMap.precomp_compHom (f : X ⤏ Y) (p : W ⟶ X) (hp : IsOpenMap p.
     (g : Y ⟶ Z) :
     (f.precomp p hp).compHom g = (f.compHom g).precomp p hp := by
   obtain ⟨f, rfl⟩ := f.exists_rep
-  rfl
+  refine congrArg PartialMap.toRationalMap (PartialMap.ext _ _ rfl ?_)
+  simp only [PartialMap.compHom_hom, PartialMap.compHom_domain, PartialMap.precomp_hom,
+    Scheme.isoOfEq_rfl, Iso.refl_hom, Category.id_comp, Category.assoc]
 
 end Scheme
 
