@@ -1,6 +1,6 @@
 \chapter{The Quot scheme}
 \label{chap:Picard_QuotScheme}
-% archon:covers AlgebraicJacobian/Picard/QuotScheme.lean AlgebraicJacobian/Picard/GradedHilbertSerre.lean
+% archon:covers AlgebraicJacobian/Picard/QuotScheme.lean AlgebraicJacobian/Picard/GradedHilbertSerre.lean AlgebraicJacobian/Picard/HilbertPolynomial.lean
 
 % STRATEGY NOTE. This chapter packages the Quot-foundations layer of the
 % Grothendieck--Altman--Kleiman Quot-scheme construction
@@ -58,44 +58,26 @@ polynomial (\cref{def:hilbert_polynomial}), the Quot functor
 [Hilbert polynomial]
   \label{def:hilbert_polynomial}
   \lean{AlgebraicGeometry.Scheme.hilbertPolynomial}
-  \uses{thm:hilbertPoly_of_sectionModule}
-  % ENCODING. `def:hilbert_polynomial` is formalized via the GRADED HILBERT
-  % FUNCTION of the section module ⊕_{m≥0} Γ(X_s, F_s ⊗ L_s^{⊗m})
-  % (def:sectionGradedModule), whose polynomiality is extracted in
-  % thm:hilbertPoly_of_sectionModule from the graded Hilbert–Serre rationality
-  % lemma (lem:gradedHilbertSerre_rational) together with the Mathlib lemma
-  % Polynomial.existsUnique_hilbertPoly (lem:hilbertPoly_exists_mathlib). The
-  % construction uses only H^0; for m≫0 it agrees with the Euler characteristic
-  % χ by Serre vanishing, so it is the classical Hilbert polynomial and no
-  % numerical invariant is lost.
+  \uses{def:fiber_hilbert_function, lem:hilbertPolynomial_unique}
+  \source{nitsure-hilbert-quot}
+  % ENCODING. Formalized sorry-free in
+  % AlgebraicJacobian/Picard/HilbertPolynomial.lean as a TOTAL definition on
+  % the graded Hilbert function hilbertFunction π L F s
+  % (def:fiber_hilbert_function): if some polynomial Φ ∈ ℚ[λ] agrees with the
+  % graded Hilbert function at all m > N for some N, then
+  % hilbertPolynomial π L F s is such a Φ, produced by classical choice --
+  % canonical because uniqueness holds UNCONDITIONALLY
+  % (lem:hilbertPolynomial_unique) -- and otherwise the junk value 0. The
+  % definition carries no properness/ampleness hypotheses; the geometric
+  % regime (proper X_s, ample L_s, coherent F_s) enters only through the
+  % existence statement thm:hilbertPoly_of_sectionModule and its
+  % IsRatHilb-conditional form lem:hilbertPoly_of_isRatHilb. The construction
+  % uses only H^0; for m≫0 it agrees with the Euler characteristic χ by Serre
+  % vanishing, so it is the classical Hilbert polynomial and no numerical
+  % invariant is lost.
   % SOURCE: [Nitsure], \S 1, sub-section "Stratification by Hilbert
   % Polynomials" (read from
   % references/nitsure-hilbert-quot-src/nitsure-hilbert-quot.tex, L453-L478).
-  % SOURCE QUOTE:
-  % "Let \(X\) be a finite type scheme over
-  %  a field \(k\), together with a line bundle \(L\).
-  %  Recall that if \(F\) is a coherent sheaf on
-  %  \(X\) whose support is proper over \(k\), then
-  %  the \textbf{Hilbert polynomial} \({\Phi}\in \Q[\lambda]\) of \(F\) is defined by
-  %  the function
-  %  \(\){\Phi}(m) = \chi(F(m)) =
-  %  \sum_{i=0}^n (-1)^i \dim_k H^i(X, F\otimes L^{\otimes m})\(\)
-  %  where the dimensions of the cohomologies are finite because of the
-  %  coherence and properness conditions. The fact that \(\chi(F(m))\)
-  %  is indeed a polynomial in \(m\) under the above assumption is a special
-  %  case of what is known as Snapper's Lemma (see Kleiman [K] for a proof).
-  %
-  %  Let \(X\to S\) be a finite type morphism of noetherian schemes,
-  %  and let \(L\) be a line bundle on \(X\). Let \(\F\)
-  %  be any coherent sheaf on
-  %  \(X\) whose schematic support is proper over \(S\). Then for each \(s\in S\),
-  %  we get a polynomial \({\Phi}_s \in  \Q[\lambda]\)
-  %  which is the Hilbert polynomial of
-  %  the restriction \(\F_s = F|_{X_s}\) of \(\F\) to the fiber \(X_s\) over \(s\),
-  %  calculated with respect to the line bundle \(L_s = L|_{X_s}\).
-  %  If \(\F\) is flat over \(S\) then the function \(s\mapsto {\Phi}_s\)
-  %  from the set of points of \(S\) to the polynomial ring \(\Q[\lambda]\) is
-  %  known to be locally constant on \(S\)."
   \textit{Source: [Nitsure], \S 1 (FGA Explained Ch.~5); cf.\ [Hartshorne],
   III.5.2.}
   Let \(X \to S\) be a finite-type morphism of noetherian schemes and let \(L\)
@@ -106,6 +88,7 @@ polynomial (\cref{def:hilbert_polynomial}), the Quot functor
   relative to \(L\)} is the unique polynomial
   \(\Phi_{\mathcal{F},s} \in \mathbb{Q}[\lambda]\) that agrees, for all
   \(m \gg 0\), with the graded Hilbert function
+  (\cref{def:fiber_hilbert_function})
   \[
     m \;\longmapsto\; \dim_{\kappa(s)} \Gamma\bigl(X_s,\, \mathcal{F}_s \otimes L_s^{\otimes m}\bigr)
   \]
@@ -114,9 +97,11 @@ polynomial (\cref{def:hilbert_polynomial}), the Quot functor
   (\cref{def:sectionGradedModule}), viewed as a finitely generated graded module
   over the homogeneous section ring
   \(\bigoplus_{m \ge 0} \Gamma(X_s, L_s^{\otimes m})\)
-  (\cref{def:sectionGradedRing}). Existence and uniqueness of
-  \(\Phi_{\mathcal{F},s}\) are the content of
-  \cref{thm:hilbertPoly_of_sectionModule}.
+  (\cref{def:sectionGradedRing}). Uniqueness of \(\Phi_{\mathcal{F},s}\) is
+  unconditional (\cref{lem:hilbertPolynomial_unique}: two polynomials agreeing
+  at all sufficiently large integers coincide); existence, for \(X_s\) proper
+  over \(\kappa(s)\), \(L_s\) ample and \(\mathcal{F}_s\) coherent, is the
+  content of \cref{thm:hilbertPoly_of_sectionModule}.
 
   This is the classical Hilbert polynomial. When \(\mathcal{F}_s\) is coherent
   and \(L_s\) is ample on the proper \(\kappa(s)\)-scheme \(X_s\), Serre vanishing
@@ -141,16 +126,85 @@ polynomial (\cref{def:hilbert_polynomial}), the Quot functor
 \label{sec:graded_hilbert_polynomial}
 
 This section gives the graded-Hilbert-function construction that underlies
-\cref{def:hilbert_polynomial}. Working over a single fibre \(X_s\) with its
-ample line bundle \(L_s\) and coherent sheaf \(\mathcal{F}_s\), it builds the
-section graded ring (\cref{def:sectionGradedRing}) and module
-(\cref{def:sectionGradedModule}), records their finite generation
+\cref{def:hilbert_polynomial}. It first records how a fibre \(X_s\) of a
+family \(\pi : X \to S\) carries the data the construction consumes: the
+restrictions \(\mathcal{F}_s\) and \(L_s\)
+(\cref{def:fiber_module_restriction}) and the \(\kappa(s)\)-vector-space
+structure on their sections (\cref{def:fiber_sections_module}). Working over
+the fibre \(X_s\) with its ample line bundle \(L_s\) and coherent sheaf
+\(\mathcal{F}_s\), it builds the section graded ring
+(\cref{def:sectionGradedRing}) and module (\cref{def:sectionGradedModule})
+together with the graded Hilbert function
+(\cref{def:fiber_hilbert_function}), records their finite generation
 (\cref{lem:sectionGradedModule_fg}), and extracts the Hilbert polynomial
-(\cref{thm:hilbertPoly_of_sectionModule}) by combining the graded
-Hilbert--Serre rationality of the Hilbert series
-(\cref{lem:gradedHilbertSerre_rational}) with Mathlib's polynomial-extraction
-lemma (\cref{lem:hilbertPoly_exists_mathlib}). The route uses only \(H^0\)
+(\cref{thm:hilbertPoly_of_sectionModule}): the graded Hilbert--Serre
+rationality of the Hilbert series (\cref{lem:gradedHilbertSerre_rational})
+combines with Mathlib's polynomial-extraction lemma
+(\cref{lem:hilbertPoly_exists_mathlib}) in \cref{lem:hilbertPoly_of_isRatHilb},
+and the extracted polynomial is unique by
+\cref{lem:hilbertPolynomial_unique}. The route uses only \(H^0\)
 (global sections), so it is independent of higher coherent cohomology.
+
+\begin{definition}\leanok
+[Restriction of a sheaf of modules to a fibre]
+  \label{def:fiber_module_restriction}
+  \lean{AlgebraicGeometry.Scheme.Hom.fiberModule}
+  \source{nitsure-hilbert-quot}
+  % ENCODING. The fibre X_s is Mathlib's scheme-theoretic fibre
+  % π.fiber s = pullback π (S.fromSpecResidueField s) = X ×_S Spec κ(s), with
+  % fibre embedding π.fiberι s : π.fiber s ⟶ X; the restriction is the module
+  % pullback (Scheme.Modules.pullback (π.fiberι s)).obj F. Formalized
+  % sorry-free in AlgebraicJacobian/Picard/HilbertPolynomial.lean.
+  \textit{Source: [Nitsure], \S 1 (FGA Explained Ch.~5).}
+  Let \(\pi : X \to S\) be a morphism of schemes and \(s \in S\) a point with
+  residue field \(\kappa(s)\). The \emph{fibre} of \(\pi\) over \(s\) is the
+  scheme
+  \[
+    X_s \;=\; X \times_S \Spec \kappa(s),
+  \]
+  the base change of \(\pi\) along the canonical morphism
+  \(\Spec \kappa(s) \to S\); write \(\iota_s : X_s \to X\) for the projection
+  to \(X\) (the \emph{fibre embedding}). For a sheaf of
+  \(\mathcal{O}_X\)-modules \(\mathcal{F}\) on \(X\), the \emph{restriction of
+  \(\mathcal{F}\) to the fibre} is the module pullback
+  \[
+    \mathcal{F}_s \;=\; \mathcal{F}|_{X_s} \;:=\; \iota_s^{*} \mathcal{F},
+  \]
+  a sheaf of \(\mathcal{O}_{X_s}\)-modules. In particular a line bundle \(L\)
+  on \(X\) restricts to a line bundle \(L_s = L|_{X_s}\) on \(X_s\).
+\end{definition}
+
+\begin{definition}\leanok
+[\(\kappa(s)\)-structure on sections over a fibre]
+  \label{def:fiber_sections_module}
+  \lean{AlgebraicGeometry.Scheme.Hom.fiberResidueMap,
+    AlgebraicGeometry.Scheme.Hom.fiberSectionsModule}
+  \uses{def:fiber_module_restriction}
+  \source{nitsure-hilbert-quot}
+  % ENCODING. One mathematical construction, two Lean declarations:
+  % Scheme.Hom.fiberResidueMap π s : S.residueField s ⟶ Γ(π.fiber s, ⊤) is
+  % Γ of the structural morphism π.fiberToSpecResidueField s transported along
+  % ΓSpecIso, and Scheme.Hom.fiberSectionsModule π s G is the resulting
+  % Module (S.residueField s) Γ(G, ⊤) by restriction of scalars
+  % (Module.compHom). Formalized sorry-free in
+  % AlgebraicJacobian/Picard/HilbertPolynomial.lean.
+  \textit{Source: [Nitsure], \S 1 (FGA Explained Ch.~5).}
+  Let \(\pi : X \to S\) be a morphism of schemes and \(s \in S\). The fibre
+  \(X_s = X \times_S \Spec \kappa(s)\) (\cref{def:fiber_module_restriction})
+  carries a structural morphism \(p_s : X_s \to \Spec \kappa(s)\), the second
+  projection of the fibre product. Taking global sections of \(p_s\) and
+  identifying \(\Gamma(\Spec \kappa(s), \mathcal{O}) = \kappa(s)\) yields the
+  \emph{structural ring homomorphism of the fibre}
+  \[
+    \kappa(s) \;\longrightarrow\; \Gamma\bigl(X_s,\, \mathcal{O}_{X_s}\bigr).
+  \]
+  For any sheaf of \(\mathcal{O}_{X_s}\)-modules \(\mathcal{G}\) on the fibre,
+  the global sections \(\Gamma(X_s, \mathcal{G})\) form a module over
+  \(\Gamma(X_s, \mathcal{O}_{X_s})\), hence, by restriction of scalars along
+  the structural homomorphism, a \(\kappa(s)\)-vector space. All dimensions
+  \(\dim_{\kappa(s)}\) of section spaces over a fibre are taken with respect
+  to this \(\kappa(s)\)-structure.
+\end{definition}
 
 \begin{definition}
 [Section graded ring]
@@ -232,6 +286,44 @@ lemma (\cref{lem:hilbertPoly_exists_mathlib}). The route uses only \(H^0\)
   \to \Gamma(X_s, \mathcal{F}_s \otimes L_s^{\otimes (m+m')})\). Its graded Hilbert
   function is \(m \mapsto \dim_{\kappa(s)}
   \Gamma(X_s, \mathcal{F}_s \otimes L_s^{\otimes m})\).
+\end{definition}
+
+\begin{definition}\leanok
+[Graded Hilbert function along a fibre]
+  \label{def:fiber_hilbert_function}
+  \lean{AlgebraicGeometry.Scheme.hilbertFunction}
+  \uses{def:fiber_module_restriction, def:fiber_sections_module,
+    def:sheafModuleTwist}
+  \source{nitsure-hilbert-quot}
+  % ENCODING. Scheme.hilbertFunction π L F s m is
+  % Module.finrank (S.residueField s)
+  % Γ(Scheme.Modules.moduleTensorPow (π.fiberModule s F) (π.fiberModule s L) m, ⊤)
+  % with the κ(s)-module structure brought into scope by
+  % π.fiberSectionsModule s (def:fiber_sections_module); the twist is
+  % def:sheafModuleTwist of chapter Picard_SectionGradedRing applied on the
+  % fibre. Module.finrank returns the junk value 0 when the dimension is not
+  % finite, so the Lean function is total. Formalized sorry-free in
+  % AlgebraicJacobian/Picard/HilbertPolynomial.lean.
+  \textit{Source: [Nitsure], \S 1 (FGA Explained Ch.~5).}
+  Let \(S\) be a locally noetherian scheme, \(\pi : X \to S\) a morphism
+  locally of finite type, \(L\) a line bundle and \(\mathcal{F}\) a sheaf of
+  \(\mathcal{O}_X\)-modules on \(X\), and \(s \in S\). The \emph{graded
+  Hilbert function of \(\mathcal{F}\) at \(s\) relative to \(L\)} is the
+  function
+  \[
+    h_{\mathcal{F},s} : \mathbb{N} \longrightarrow \mathbb{N}, \qquad
+    h_{\mathcal{F},s}(m) \;=\;
+    \dim_{\kappa(s)} \Gamma\bigl(X_s,\, \mathcal{F}_s \otimes L_s^{\otimes m}\bigr),
+  \]
+  where \(\mathcal{F}_s\) and \(L_s\) are the restrictions to the fibre
+  \(X_s\) (\cref{def:fiber_module_restriction}), the twist
+  \(\mathcal{F}_s \otimes L_s^{\otimes m}\) is the \(m\)-twist of
+  \(\mathcal{F}_s\) by \(L_s\) on \(X_s\) (\cref{def:sheafModuleTwist}), and
+  the dimension is taken with respect to the \(\kappa(s)\)-vector-space
+  structure on sections over the fibre (\cref{def:fiber_sections_module}).
+  This is exactly the graded Hilbert function of the section graded module
+  \(M(X_s, \mathcal{F}_s, L_s)\) (\cref{def:sectionGradedModule}); it uses
+  only global sections \(H^0\).
 \end{definition}
 
 \begin{lemma}
@@ -701,23 +793,95 @@ the level of power series; Mathlib supplies only the converse extraction
   \(\mathrm{IsRatHilb}(h_M, d+1)\).
 \end{proof}
 
+\begin{lemma}\leanok
+[Uniqueness of the Hilbert polynomial]
+  \label{lem:hilbertPolynomial_unique}
+  \lean{AlgebraicGeometry.Scheme.hilbertPolynomial_eq_of_eventually}
+  \uses{def:fiber_hilbert_function}
+  % ENCODING. In Lean the uniqueness is phrased against the chosen value:
+  % Scheme.hilbertPolynomial_eq_of_eventually states that ANY polynomial Φ
+  % eventually agreeing with hilbertFunction π L F s equals
+  % hilbertPolynomial π L F s. Its core is the private helper
+  % eq_of_eval_nat_eventually_eq (two rational polynomials agreeing at all
+  % large naturals are equal, via Polynomial.eq_of_infinite_eval_eq), which is
+  % the statement below. The thin corollary
+  % Scheme.hilbertPolynomial_eval_eventually (the defining eventual-agreement
+  % property of hilbertPolynomial under the existence hypothesis) is
+  % formalized in the same file and carried by this node. All sorry-free in
+  % AlgebraicJacobian/Picard/HilbertPolynomial.lean.
+  Let \(h_{\mathcal{F},s}\) be the graded Hilbert function of
+  \cref{def:fiber_hilbert_function}. If \(\Phi, \Psi \in \mathbb{Q}[\lambda]\)
+  both agree with \(h_{\mathcal{F},s}\) at all sufficiently large integers --
+  there are \(N_1, N_2 \in \mathbb{N}\) with
+  \(\Phi(m) = h_{\mathcal{F},s}(m)\) for all \(m > N_1\) and
+  \(\Psi(m) = h_{\mathcal{F},s}(m)\) for all \(m > N_2\) -- then
+  \(\Phi = \Psi\). In particular a polynomial agreeing with
+  \(h_{\mathcal{F},s}\) for all \(m \gg 0\) is unique when it exists.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  The difference \(\Phi - \Psi \in \mathbb{Q}[\lambda]\) vanishes at every
+  integer \(m > \max(N_1, N_2)\), hence at infinitely many points of
+  \(\mathbb{Q}\). A nonzero polynomial over a field has at most
+  \(\deg(\Phi - \Psi)\) roots, so \(\Phi - \Psi = 0\), that is
+  \(\Phi = \Psi\).
+\end{proof}
+
+\begin{lemma}\leanok
+[Hilbert polynomial from a rational Hilbert function]
+  \label{lem:hilbertPoly_of_isRatHilb}
+  \lean{AlgebraicGeometry.Scheme.existsUnique_hilbertPolynomial_of_isRatHilb}
+  \uses{def:fiber_hilbert_function, def:ratHilb}
+  % ENCODING. Scheme.existsUnique_hilbertPolynomial_of_isRatHilb: from
+  % IsRatHilb (fun m => (hilbertFunction π L F s m : ℚ)) d -- the output shape
+  % of the graded Hilbert-Serre engine gradedModule_hilbertSeries_rational
+  % (lem:gradedHilbertSerre_rational) -- an ∃! polynomial eventually agreeing
+  % with the graded Hilbert function, with witness Polynomial.hilbertPoly p d
+  % via Polynomial.coeff_mul_invOneSubPow_eq_hilbertPoly_eval
+  % (lem:hilbertPoly_exists_mathlib). The thin corollaries
+  % Scheme.hilbertPolynomial_eval_of_isRatHilb (under IsRatHilb,
+  % hilbertPolynomial itself eventually agrees with the graded Hilbert
+  % function) and Scheme.hilbertPolynomial_eq_hilbertPoly (under an explicit
+  % rational-series presentation, hilbertPolynomial π L F s =
+  % Polynomial.hilbertPoly p d) are formalized in the same file and carried by
+  % this node. All sorry-free in
+  % AlgebraicJacobian/Picard/HilbertPolynomial.lean.
+  Let \(h_{\mathcal{F},s}\) be the graded Hilbert function of
+  \cref{def:fiber_hilbert_function}, and suppose \(h_{\mathcal{F},s}\) is a
+  rational Hilbert function of some order \(d\) (\cref{def:ratHilb}): there
+  are \(p \in \mathbb{Q}[X]\) and \(N \in \mathbb{N}\) with
+  \(h_{\mathcal{F},s}(m) = [X^m]\bigl(p \cdot (1-X)^{-d}\bigr)\) for all
+  \(m > N\). Then there exists a unique polynomial
+  \(\Phi \in \mathbb{Q}[\lambda]\) such that
+  \(\Phi(m) = h_{\mathcal{F},s}(m)\) for all \(m \gg 0\).
+\end{lemma}
+
+\begin{proof}
+  \uses{def:ratHilb, lem:hilbertPoly_exists_mathlib,
+    lem:hilbertPolynomial_unique}
+  \leanok
+  Unfolding \cref{def:ratHilb} supplies \(p \in \mathbb{Q}[X]\),
+  \(d \in \mathbb{N}\) and \(N\) with
+  \(h_{\mathcal{F},s}(m) = [X^m](p\cdot(1-X)^{-d})\) for all \(m > N\). By
+  \cref{lem:hilbertPoly_exists_mathlib} over the characteristic-zero field
+  \(\mathbb{Q}\), applied to the pair \((p, d)\), there are a polynomial
+  \(h \in \mathbb{Q}[X]\) and an \(N'\) with
+  \(h(n) = [X^n](p\cdot(1-X)^{-d})\) for all \(n > N'\). Hence
+  \(\Phi := h\) satisfies \(\Phi(m) = h_{\mathcal{F},s}(m)\) for all
+  \(m > \max(N, N')\), proving existence. Uniqueness is
+  \cref{lem:hilbertPolynomial_unique}: any two polynomials agreeing with
+  \(h_{\mathcal{F},s}\) at all sufficiently large integers are equal.
+\end{proof}
+
 \begin{theorem}[Hilbert polynomial from the section module]
   \label{thm:hilbertPoly_of_sectionModule}
   \lean{AlgebraicGeometry.Scheme.hilbertPolynomialOfSectionModule}
-  \uses{lem:sectionGradedModule_fg, lem:gradedHilbertSerre_rational,
-    lem:hilbertPoly_exists_mathlib}
+  \uses{def:hilbert_polynomial, def:fiber_hilbert_function}
+  \source{nitsure-hilbert-quot}
   % SOURCE: [Nitsure], \S 1, sub-section "Stratification by Hilbert
   % Polynomials" (read from
   % references/nitsure-hilbert-quot-src/nitsure-hilbert-quot.tex, L468-L478).
-  % SOURCE QUOTE:
-  % "Let $X\to S$ be a finite type morphism of noetherian schemes,
-  %  and let $L$ be a line bundle on $X$. Let $\F$
-  %  be any coherent sheaf on
-  %  $X$ whose schematic support is proper over $S$. Then for each $s\in S$,
-  %  we get a polynomial ${\Phi}_s \in  \Q[\lambda]$
-  %  which is the Hilbert polynomial of
-  %  the restriction $\F_s = F|_{X_s}$ of $\F$ to the fiber $X_s$ over $s$,
-  %  calculated with respect to the line bundle $L_s = L|_{X_s}$."
   \textit{Source: [Nitsure], \S 1 (FGA Explained Ch.~5).}
   Let \(X_s\) be proper over the field \(\kappa(s)\), let \(L_s\) be an ample line
   bundle on \(X_s\), and let \(\mathcal{F}_s\) be a coherent sheaf on \(X_s\).
@@ -729,11 +893,20 @@ the level of power series; Mathlib supplies only the converse extraction
   \]
   This \(\Phi_{\mathcal{F},s}\) is the Hilbert polynomial of
   \cref{def:hilbert_polynomial}.
+
+  \emph{Status.} The polynomial-extraction half of this theorem is formalized:
+  uniqueness (\cref{lem:hilbertPolynomial_unique}) and the extraction of the
+  unique polynomial from a rational Hilbert function
+  (\cref{lem:hilbertPoly_of_isRatHilb},
+  \texttt{Scheme.existsUnique\_hilbertPolynomial\_of\_isRatHilb}) are
+  sorry-free. The remaining input is the geometric finite-generation theorem
+  \cref{lem:sectionGradedModule_fg} (Serre), which feeds the rationality
+  hypothesis through \cref{lem:gradedHilbertSerre_rational}.
 \end{theorem}
 
 \begin{proof}
   \uses{lem:sectionGradedModule_fg, lem:gradedHilbertSerre_rational,
-    lem:hilbertPoly_exists_mathlib}
+    lem:hilbertPoly_of_isRatHilb}
   By \cref{lem:sectionGradedModule_fg} the section graded module
   \(M(X_s, \mathcal{F}_s, L_s)\) is a finitely generated graded module over the
   Noetherian graded ring \(R(X_s, L_s)\), with finite-dimensional components and
@@ -743,20 +916,16 @@ the level of power series; Mathlib supplies only the converse extraction
   graded module \(M = M(X_s, \mathcal{F}_s, L_s)\) exhibits the graded Hilbert
   function
   \(m \mapsto \dim_{\kappa(s)} \Gamma(X_s, \mathcal{F}_s \otimes L_s^{\otimes m})\)
-  as the eventual coefficient function of a rational series: there are
-  \(p \in \mathbb{Q}[X]\) and \(d \in \mathbb{N}\) and an \(N\) with
+  (\cref{def:fiber_hilbert_function}) as a rational Hilbert function of some
+  order \(d\) (\cref{def:ratHilb}): there are \(p \in \mathbb{Q}[X]\),
+  \(d \in \mathbb{N}\) and an \(N\) with
   \(\dim_{\kappa(s)} \Gamma(X_s, \mathcal{F}_s \otimes L_s^{\otimes m})
-  = [X^m]\,(p \cdot (1 - X)^{-d})\) for \(m > N\). Apply
-  \cref{lem:hilbertPoly_exists_mathlib} over the characteristic-zero field
-  \(F = \mathbb{Q}\) to this pair \((p, d)\): it yields a unique polynomial
-  \(h \in \mathbb{Q}[X]\) whose values \(h(n)\) eventually equal
-  \([X^n]\,(p \cdot (1 - X)^{-d})\). Setting
-  \(\Phi_{\mathcal{F},s} := h\) (with the variable renamed \(\lambda\)) gives a
-  polynomial with \(\Phi_{\mathcal{F},s}(m) = \dim_{\kappa(s)}
-  \Gamma(X_s, \mathcal{F}_s \otimes L_s^{\otimes m})\) for \(m \gg 0\). Uniqueness
-  is the \(\exists!\) clause of \cref{lem:hilbertPoly_exists_mathlib}: any two
-  polynomials agreeing with the Hilbert function for \(m \gg 0\) agree at
-  infinitely many points, hence are equal.
+  = [X^m]\,(p \cdot (1 - X)^{-d})\) for \(m > N\). The extraction lemma
+  \cref{lem:hilbertPoly_of_isRatHilb} then yields a unique polynomial
+  \(\Phi_{\mathcal{F},s} \in \mathbb{Q}[\lambda]\) with
+  \(\Phi_{\mathcal{F},s}(m) = \dim_{\kappa(s)}
+  \Gamma(X_s, \mathcal{F}_s \otimes L_s^{\otimes m})\) for all \(m \gg 0\),
+  as claimed.
 \end{proof}
 
 \subsection{The ambient subquotient induction for the Stacks~00K1 step}
@@ -5281,15 +5450,18 @@ The Lean target file is the new
 proceeds in three phases.
 
 \paragraph{Phase 1: Hilbert polynomial (\cref{def:hilbert_polynomial}).}
-On a finite-type morphism \(\pi : X \to S\) with \(S\) noetherian and a
-coherent \(\mathcal{F}\) on \(X\) with proper support over \(S\), the per-fiber
-Hilbert polynomial is encoded as a function \(s \mapsto
-\Phi_{\mathcal{F},s} \in \mathbb{Q}[\lambda]\). Mathlib provides
-\texttt{CategoryTheory.PolynomialModule} and Euler-characteristic
-infrastructure on coherent sheaves on noetherian schemes; the polynomial
-property of \(m \mapsto \chi(\mathcal{F} \otimes L^{\otimes m})\) requires
-Snapper's Lemma, which is a project-side sub-build on top of the
-graded-Euler-characteristic infrastructure.
+On a locally-of-finite-type morphism \(\pi : X \to S\) with \(S\) locally
+noetherian, the per-fiber Hilbert polynomial is encoded as a total function
+\(s \mapsto \Phi_{\mathcal{F},s} \in \mathbb{Q}[\lambda]\), formalized
+sorry-free in \texttt{AlgebraicJacobian/Picard/HilbertPolynomial.lean}
+(\cref{def:fiber_module_restriction}, \cref{def:fiber_sections_module},
+\cref{def:fiber_hilbert_function}, \cref{lem:hilbertPolynomial_unique},
+\cref{lem:hilbertPoly_of_isRatHilb}). The \(H^0\)-only route through the
+graded Hilbert function of the section graded module avoids Snapper's Lemma
+and the Euler-characteristic infrastructure entirely; the outstanding
+geometric input is the finite generation \cref{lem:sectionGradedModule_fg},
+which feeds \cref{thm:hilbertPoly_of_sectionModule} through
+\cref{lem:gradedHilbertSerre_rational}.
 
 \paragraph{Phase 2: Grassmannian scheme (\cref{def:grassmannian_scheme},
 \cref{thm:grassmannian_representable}).} The Grassmannian
@@ -5364,9 +5536,12 @@ representability. The following are explicitly out of scope here:
     \(\Hilb_{X/S} = \Quot_{\mathcal{O}_X/X/S}\) of the Quot functor and is
     introduced inline (\cref{def:quot_functor}); no separate chapter.
   \item \textbf{Snapper's Lemma} -- the polynomial-eventually property of
-    Euler characteristics, used in \cref{def:hilbert_polynomial}. Cited
-    via Nitsure \S 1 and (textbook reference) Hartshorne III.5.2;
-    Lean formalization is a prerequisite sub-task.
+    Euler characteristics. Cited via Nitsure \S 1 and (textbook reference)
+    Hartshorne III.5.2. The \(H^0\)-only definition
+    \cref{def:hilbert_polynomial} does not consume it: Snapper's Lemma enters
+    only the (unformalized) comparison remark identifying
+    \(\Phi_{\mathcal{F},s}\) with the Euler-characteristic Hilbert polynomial
+    for \(m \gg 0\).
   \item \textbf{Identification with \(\mathbb{P}^n\) and relative
     Grassmannian variants} (Nitsure \S 1, Exercises (1)--(4)) --
     optional applications, not consumed by Route A.
