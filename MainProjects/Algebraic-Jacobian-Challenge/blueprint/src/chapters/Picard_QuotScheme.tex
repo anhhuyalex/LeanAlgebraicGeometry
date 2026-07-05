@@ -4020,31 +4020,194 @@ linear algebra), we package the construction here.
   \(\mathrm{Hom}_{\mathcal{C}}(-, Y) \cong F\) (the Yoneda bijection).
 \end{lemma}
 
+\begin{lemma}\leanok
+[Representability of the Grassmannian, trivialised case]
+  \label{lem:grassmannian_representable_free}
+  \lean{AlgebraicGeometry.Scheme.Grassmannian.representable_of_iso_free}
+  \uses{def:grassmannian_scheme, thm:grassmannian_universal_property,
+    lem:functor_is_representable_mathlib}
+  % SOURCE: [Nitsure], \S 1, Exercise (2), the relative Grassmannian of a
+  % locally free module, specialised to a globally trivialised module
+  % (read from references/nitsure-hilbert-quot-src/nitsure-hilbert-quot.tex,
+  % L580-L599).
+  % SOURCE QUOTE:
+  % "Using the above show that, more generally, if \(S\) is a scheme and
+  %  \(E\) is a locally free \({\mathcal O}_S\)-module of rank \(r\),
+  %  the functor \(\Grass(E,d)=\Quot_{E/S/S}^{d,{\mathcal O}_S}\)
+  %  on all \(S\)-schemes [...] is representable."
+  \textit{Source: [Nitsure], \S 1, Exercise (2).}
+  Let \(S\) be a locally noetherian scheme, \(V\) an \(\mathcal{O}_S\)-module
+  equipped with a global trivialisation \(V \cong \mathcal{O}_S^{\oplus r}\),
+  and \(1 \le d \le r\). Then the functor \(\mathrm{Grass}(V, d)\) of
+  \cref{def:grassmannian_scheme} is representable by the base change
+  \(S \times_{\Spec \mathbb{Z}} \mathrm{Gr}(d,r)\) of the absolute
+  Grassmannian, with structure morphism the first projection.
+\end{lemma}
+
+\begin{proof}\leanok
+  \uses{thm:grassmannian_universal_property, def:grassmannian_scheme}
+  Since \(\Spec \mathbb{Z}\) is the terminal scheme, the base change
+  \(S \times_{\Spec\mathbb{Z}} \mathrm{Gr}(d,r)\) is the binary product, and
+  for an \(S\)-scheme \(T \to S\) the \(S\)-morphisms
+  \(T \to S \times \mathrm{Gr}(d,r)\) (over the first projection) correspond,
+  by the universal property of the product, to the bare scheme morphisms
+  \(T \to \mathrm{Gr}(d,r)\); these are in natural bijection with
+  \(\mathrm{Grass}(r,d)(T)\) by \cref{thm:grassmannian_universal_property}.
+  It therefore suffices to identify \(\mathrm{Grass}(V,d)(T)\) with
+  \(\mathrm{Grass}(r,d)(T)\), naturally in \(T\).  A \(T\)-point of
+  \(\mathrm{Grass}(V,d)\) is a rank-\(d\) locally free quotient
+  \(q : V_T \twoheadrightarrow \mathcal{F}\); composing with the pullback of
+  the trivialisation and with the canonical identification
+  \((\mathcal{O}_S^{\oplus r})_T \cong \mathcal{O}_T^{\oplus r}\) of the
+  pullback of a free module re-presents it as a rank-\(d\) quotient of
+  \(\mathcal{O}_T^{\oplus r}\), i.e.\ a \(T\)-point of
+  \(\mathrm{Grass}(r,d)\); the inverse composes with the inverse
+  identifications, and both directions preserve the equivalence
+  \(\ker q = \ker q'\).  Naturality in \(T\) is the compatibility of the
+  free-module identification with composite pullbacks (the pseudofunctor
+  coherence of the module pullback on free modules), and the equivalence
+  classes match because the re-presentation composes with isomorphisms only.
+\end{proof}
+
+\begin{definition}\leanok
+[Zariski sheaf axiom on \(\mathrm{Sch}/S\)]
+  \label{def:zariski_sheaf_over}
+  \lean{AlgebraicGeometry.Scheme.IsZariskiSheafOver}
+  A presheaf \(F : (\mathrm{Sch}/S)^{op} \to \mathbf{Set}\) \emph{satisfies
+  the Zariski sheaf axiom} when for every \(S\)-scheme \(T \to S\) and every
+  open cover \(\{W_k\}\) of \(T\), every family of sections
+  \(x_k \in F(T|_{W_k})\) that agrees on the pairwise intersections
+  (\(x_k|_{W_k \cap W_l} = x_l|_{W_k \cap W_l}\) for all \(k, l\)) glues to a
+  unique section \(x_0 \in F(T)\) with \(x_0|_{W_k} = x_k\).  This is the
+  sheaf condition for the big Zariski site of \(S\), stated against open
+  covers of the total space; every representable presheaf satisfies it.
+\end{definition}
+
+\begin{theorem}\leanok
+[Zariski descent of representability]
+  \label{thm:representability_zariski_descent}
+  \lean{AlgebraicGeometry.Scheme.representable_of_openCover}
+  \uses{def:zariski_sheaf_over, lem:functor_is_representable_mathlib}
+  % SOURCE: EGA 0_I 4.5.4 (relative representability is Zariski-local on the
+  % base); cf. Stacks project tag 01JJ (a Zariski sheaf admitting an open
+  % covering by representable open subfunctors is representable).  Stated
+  % here in the base-cover form consumed by the Grassmannian and Quot
+  % constructions.
+  Let \(S\) be a scheme, \(F : (\mathrm{Sch}/S)^{op} \to \mathbf{Set}\) a
+  presheaf satisfying the Zariski sheaf axiom
+  (\cref{def:zariski_sheaf_over}), and \(S = \bigcup_i U_i\) an open cover
+  such that for every \(i\) the restriction of \(F\) to
+  \(\mathrm{Sch}/U_i\) (along \(T \mapsto (T \to U_i \hookrightarrow S)\))
+  is representable by a \(U_i\)-scheme \(Y_i\).  Then \(F\) is representable
+  by an \(S\)-scheme.
+\end{theorem}
+
+\begin{proof}
+  \uses{def:zariski_sheaf_over}
+  Over \(U_{ij} = U_i \cap U_j\) both \(Y_i|_{U_{ij}}\) and
+  \(Y_j|_{U_{ij}}\) represent the restriction of \(F\) to
+  \(\mathrm{Sch}/U_{ij}\): representability restricts along an open of the
+  base because the restriction of \(F\) is again the functor of points, and
+  morphisms into \(Y_i\) over \(U_{ij} \subseteq U_i\) are morphisms into
+  the open preimage \(Y_i|_{U_{ij}} = Y_i \times_{U_i} U_{ij}\).  Hence
+  there are canonical isomorphisms
+  \(\varphi_{ij} : Y_i|_{U_{ij}} \cong Y_j|_{U_{ij}}\) (uniqueness of
+  representing objects, through the Yoneda embedding), and over triple
+  overlaps \(\varphi_{jk} \circ \varphi_{ij} = \varphi_{ik}\) by the same
+  uniqueness.  Glue the \(Y_i\) along the \(\varphi_{ij}\) to a scheme
+  \(Y\); the structure morphisms \(Y_i \to U_i \subseteq S\) agree on
+  overlaps and glue to \(Y \to S\).
+
+  \(Y\) represents \(F\): for \(T \to S\), write \(T_i\) for the preimage
+  of \(U_i\) in \(T\), an open cover of \(T\).  A morphism
+  \(u : T \to Y\) over \(S\) restricts to morphisms
+  \(u_i : T_i \to Y_i\) over \(U_i\) (the preimage of \(Y_i \subseteq Y\)
+  under \(u\) contains \(T_i\)), giving sections
+  \(x_i \in F(T_i)\) via the representability of \(Y_i\); on overlaps the
+  restrictions agree, so by the sheaf axiom they glue to a unique
+  \(x \in F(T)\).  Conversely a section \(x \in F(T)\) restricts to
+  \(x_i \in F(T_i)\), whose classifying morphisms \(T_i \to Y_i \to Y\)
+  agree on \(T_i \cap T_j\) (both classify \(x|_{T_i \cap T_j}\) and
+  \(Y_i|_{U_{ij}} \to Y\) is a monomorphism onto an open), hence glue to
+  \(u : T \to Y\).  The two constructions are mutually inverse: morphism
+  equality into \(Y\) is local on \(T\), and section equality in \(F(T)\)
+  follows from the uniqueness half of the sheaf axiom.
+\end{proof}
+
+\begin{lemma}\leanok
+[The Grassmannian functor is a Zariski sheaf]
+  \label{lem:grassmannian_zariski_sheaf}
+  \lean{AlgebraicGeometry.Scheme.Grassmannian.isZariskiSheaf}
+  \uses{def:grassmannian_scheme, def:zariski_sheaf_over,
+    def:scheme_modules_glue}
+  % SOURCE: [Nitsure], \S 1 -- the locality is implicit in the chart-by-chart
+  % classification of quotients ("Construction of Grassmannian", the
+  % classifying morphism is assembled over an open cover of T), and in the
+  % general theory it is the standard descent of quasi-coherent quotients
+  % along Zariski covers.
+  Let \(S\) be locally noetherian, \(V\) an \(\mathcal{O}_S\)-module and
+  \(d \ge 0\).  The functor \(\mathrm{Grass}(V, d)\) of
+  \cref{def:grassmannian_scheme} satisfies the Zariski sheaf axiom
+  (\cref{def:zariski_sheaf_over}).
+\end{lemma}
+
+\begin{proof}
+  \uses{def:scheme_modules_glue, def:grassmannian_scheme}
+  Let \(T \to S\), let \(\{W_k\}\) be an open cover of \(T\), and let
+  \(\langle \mathcal{F}_k, q_k \rangle\) be rank-\(d\) locally free
+  quotients of \(V_{T|_{W_k}}\) agreeing on overlaps.  Agreement means:
+  there are isomorphisms
+  \(f_{kl} : \mathcal{F}_k|_{W_k \cap W_l} \cong \mathcal{F}_l|_{W_k \cap W_l}\)
+  commuting with the restricted quotient maps.  Such an isomorphism is
+  \emph{unique} when it exists (it is determined on the image of the
+  epimorphism \(q_k\)); consequently the \(f_{kl}\) automatically satisfy
+  the cocycle condition on triple overlaps, since both
+  \(f_{kl}|f_{lm}\)-composites and \(f_{km}\) commute with the quotient
+  maps.  Descent of sheaves of modules along the open cover
+  (\cref{def:scheme_modules_glue}) glues the \(\mathcal{F}_k\) to a sheaf
+  \(\mathcal{F}\) on \(T\), locally free of rank \(d\) because local
+  freeness is local; the quotient maps \(q_k\) agree on overlaps through
+  the gluing isomorphisms, so by the sheaf property of
+  \(\mathcal{H}om(V_T, \mathcal{F})\) they glue to
+  \(q : V_T \to \mathcal{F}\), an epimorphism because surjectivity of a
+  morphism of sheaves is local.  This produces the glued point of
+  \(\mathrm{Grass}(V,d)(T)\); it restricts to the given classes by
+  construction.  Uniqueness: if \(\langle \mathcal{F}, q \rangle\) and
+  \(\langle \mathcal{F}', q' \rangle\) both restrict to
+  \(\langle \mathcal{F}_k, q_k \rangle\) up to equivalence, the local
+  comparison isomorphisms commute with the quotient maps, hence are unique,
+  hence agree on overlaps and glue to a global isomorphism
+  \(\mathcal{F} \cong \mathcal{F}'\) commuting with \(q, q'\), so the two
+  glued points are equivalent.
+\end{proof}
+
 \begin{theorem}\leanok
 [Representability of the Grassmannian]
   \label{thm:grassmannian_representable}
   \lean{AlgebraicGeometry.Scheme.Grassmannian.representable}
-  \uses{def:grassmannian_scheme, thm:relative_spec_exists, thm:relative_spec_univ,
+  \uses{def:grassmannian_scheme, def:is_locally_free_of_rank,
+    lem:grassmannian_representable_free,
+    thm:representability_zariski_descent, lem:grassmannian_zariski_sheaf,
     lem:functor_is_representable_mathlib, def:gr_glued_scheme, lem:gr_separated,
     lem:gr_proper}
 
-  % NOTE (representability proof blocked): The proof sketch recovers the representing object
-  % through the RepresentableBy Yoneda form via \cref{thm:relative_spec_univ}. However,
-  % \cref{thm:relative_spec_univ} is currently established in Lean in a form weaker than a full
-  % \(\mathrm{Functor.RepresentableBy}\) witness. The proof is blocked on either (a)
-  % strengthening \cref{thm:relative_spec_univ} to deliver a RepresentableBy witness, or (b)
-  % finding a RepresentableBy-free argument via direct gluing of chart-wise classifying morphisms.
-  % This is a deferred open question.
-  % NOTE (run 0010 T12): the Lean statement
-  % \lean{AlgebraicGeometry.Scheme.Grassmannian.representable} is now stated against the REAL
-  % Grassmannian functor (def:grassmannian_scheme, QuotFunctorDef.lean), but it remains a
-  % bare-representability skeleton omitting smoothness, properness, relative dimension
-  % \(d(r-d)\), the tautological rank-\(d\) quotient, and the Pl\"ucker embedding; those
-  % refinements should be strengthened or split into separate labels when the proof lands.
-  % The merged chart construction (`AlgebraicGeometry.Grassmannian.represents`,
-  % GrassmannianQuot.lean, sorry-free) proves the absolute case over \(\mathbb{Z}\) with
-  % \(V\) free; the relative statement glues the absolute one over a trivialising affine
-  % cover of \((S, V)\).
+  % NOTE (run 0010 T12, second pass): the Lean statement
+  % \lean{AlgebraicGeometry.Scheme.Grassmannian.representable}
+  % (AlgebraicJacobian/Picard/GrassmannianRepresentability.lean) now carries
+  % the [Nitsure] hypotheses -- \(V\) locally free of rank \(r\)
+  % (def:is_locally_free_of_rank) and \(1 \le d \le r\) -- which the earlier
+  % skeleton omitted (over an arbitrary sheaf of modules \(V\) the bare
+  % statement is not the [Nitsure] theorem and is not known to be true).  It
+  % remains a bare-representability form omitting smoothness, properness,
+  % relative dimension \(d(r-d)\), the tautological rank-\(d\) quotient, and
+  % the Pl\"ucker embedding; those refinements should be strengthened or
+  % split into separate labels when needed.  The Lean proof is real:
+  % trivialised case (lem:grassmannian_representable_free, sorry-free) +
+  % restriction comparison (restrictIso, sorry-free) + Zariski descent; the
+  % two remaining typed-sorry leaves are
+  % thm:representability_zariski_descent and lem:grassmannian_zariski_sheaf.
+  % The former relative-Spec route (thm:relative_spec_univ) was abandoned:
+  % its Lean form is weaker than a RepresentableBy witness.
 
   % SOURCE: [Nitsure], \S 1, sub-section "Construction by gluing together
   % affine patches" through "Projective embedding"
@@ -4103,7 +4266,8 @@ linear algebra), we package the construction here.
 % verbatim text is ~150 lines; it is reproduced piecewise in the
 % SOURCE QUOTE comment of the theorem statement above.
 \begin{proof}
-  
+  \uses{lem:grassmannian_representable_free,
+    thm:representability_zariski_descent, lem:grassmannian_zariski_sheaf}
   Over \(S = \Spec \mathbb{Z}\) and \(V = \mathcal{O}_S^{\oplus r}\) the
   Grassmannian \(\mathrm{Gr}(r, d)\) is constructed by gluing
   \(\binom{r}{d}\) affine charts \(U^I = \Spec\mathbb{Z}[X^I]\) indexed by

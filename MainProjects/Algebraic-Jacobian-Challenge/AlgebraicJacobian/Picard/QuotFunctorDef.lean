@@ -815,16 +815,15 @@ noncomputable def Grassmannian (V : S.Modules) (d : ℕ) :
       simp only [CategoryTheory.Functor.map_comp, Category.assoc]
       rfl
 
-/-- **Representability of the Grassmannian** (`thm:grassmannian_representable`,
-[Nitsure] §1 "Construction of Grassmannian"): the functor `Grass(V, d)` is
-representable by an `S`-scheme.  The merged chart construction
-(`AlgebraicGeometry.Grassmannian.scheme` / `.represents`,
-`GrassmannianQuot.lean`) proves the absolute case over `ℤ` with `V` free;
-the relative statement glues the absolute one over a trivialising affine
-cover of `(S, V)` — the remaining representability endgame of `AJC.picrep`. -/
-theorem Grassmannian.representable (V : S.Modules) (d : ℕ) :
-    ∃ (Y : Over S), Nonempty ((Grassmannian V d).RepresentableBy Y) := by
-  sorry
+/- **Representability of the Grassmannian** (`thm:grassmannian_representable`)
+now lives in `AlgebraicJacobian/Picard/GrassmannianRepresentability.lean`
+(`AlgebraicGeometry.Scheme.Grassmannian.representable`), stated with the
+blueprint hypotheses (`V` locally free of rank `r`, `1 ≤ d ≤ r`) that the
+earlier skeleton here omitted — without them the bare statement quantifies
+over arbitrary sheaves of modules `V`, which is not the [Nitsure] §1 theorem
+and is not known to be true.  The proof consumes the merged absolute chart
+construction (`AlgebraicGeometry.Grassmannian.represents`,
+`GrassmannianQuot.lean`), which this file deliberately does not import. -/
 
 end Grassmannian
 
