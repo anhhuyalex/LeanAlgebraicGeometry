@@ -1843,6 +1843,78 @@ point, spread out again by local finite type). Morphisms out of the single schem
   \bigl((a \times_S b) \circ \mathrm{pr}_1\bigr) \circ s_Y = a \circ s_Y = s_X\).
 \end{proof}
 
+The two precompositions and their pairing are assembled into Milne's difference map by
+right-composing with the \emph{difference morphism} of the group object \(G\), the honest
+group law \((g,h) \mapsto g \cdot h^{-1}\).
+
+\begin{definition}\leanok
+  \label{def:grpObj_diff}
+  \lean{CategoryTheory.GrpObj.diff, AlgebraicGeometry.grpObjDiffLeft}
+  Let \(G\) be a group object in a cartesian-monoidal category. The \textbf{difference
+  morphism} \(\operatorname{diff}_G \colon G \otimes G \to G\) is
+  \(\operatorname{fst} / \operatorname{snd}\), the division in the group structure on the
+  hom-set \(\operatorname{Hom}(G \otimes G, G)\); pointwise it is
+  \((g,h) \mapsto g \cdot h^{-1}\), i.e.\ the group law composed with inversion on the second
+  factor. There is no ready-made such morphism in the ambient library (only conjugation and
+  the commutator are prebuilt), so it is built from the hom-set group structure. When \(G\)
+  lives over \(\operatorname{Spec}\bar k\), its underlying scheme morphism
+  \(\operatorname{diff}_G^{\,\mathrm{left}} \colon G \times_{\bar k} G \to G\) is Milne's
+  \(m \circ (\mathrm{id} \times \mathrm{inv})\).
+\end{definition}
+
+\begin{lemma}\leanok
+  \label{lem:grpObjDiffLeft_comp_hom}
+  \lean{AlgebraicGeometry.grpObjDiffLeft_comp_hom}
+  \uses{def:grpObj_diff}
+  The difference morphism is over the base: \(\operatorname{diff}_G^{\,\mathrm{left}} \circ
+  (G \to \operatorname{Spec}\bar k) = \mathrm{pr}_1 \circ (G \to \operatorname{Spec}\bar k)\).
+\end{lemma}
+\begin{proof}\leanok
+  This is the triangle identity \(\varphi_{\mathrm{left}} \circ g_{\mathrm{hom}} =
+  f_{\mathrm{hom}}\) of the over-category morphism \(\operatorname{diff}_G\), together with the
+  identification of the structure morphism of \(G \times_{\bar k} G\) as
+  \(\mathrm{pr}_1 \circ (G \to \operatorname{Spec}\bar k)\).
+\end{proof}
+
+\begin{definition}\leanok
+  \label{def:rationalMap_difference}
+  \lean{AlgebraicGeometry.Scheme.RationalMap.differenceRationalMap}
+  \uses{def:rationalMap_precomp, def:rationalMap_prod, def:grpObj_diff}
+  Let \(X\) be smooth over an algebraically closed field \(\bar k\) with \(X \times_{\bar k} X\)
+  integral, let \(G\) be a group variety over \(\bar k\), and let
+  \(f \colon X \dashrightarrow G\) be a rational map over \(\bar k\). Milne's
+  \textbf{difference rational map}
+  \[
+    \Phi \;=\; \bigl((f \circ \mathrm{pr}_1) \times_{\bar k} (f \circ \mathrm{pr}_2)\bigr)
+    \circ \operatorname{diff}_G^{\,\mathrm{left}}
+    \colon\; X \times_{\bar k} X \;\dashrightarrow\; G
+  \]
+  is \((x,y) \mapsto f(x) \cdot f(y)^{-1}\). The projections \(\mathrm{pr}_i\) are open (being
+  base changes of the smooth structure morphism), so the precompositions
+  \(f \circ \mathrm{pr}_i\) are defined; both are over \(\bar k\)
+  (\cref{lem:rationalMap_precomp_compHom}, \cref{lem:rationalMap_precomp_hom}) with common
+  structure composite \(\mathrm{pr}_1 \circ (X \to \operatorname{Spec}\bar k)\), since
+  \(\mathrm{pr}_1\) and \(\mathrm{pr}_2\) agree after \(X \to \operatorname{Spec}\bar k\).
+\end{definition}
+
+\begin{lemma}\leanok
+  \label{lem:rationalMap_difference_over}
+  \lean{AlgebraicGeometry.Scheme.RationalMap.differenceRationalMap_compHom_over}
+  \uses{def:rationalMap_difference, lem:rationalMap_prod_proj, lem:grpObjDiffLeft_comp_hom}
+  The difference map is a \(\bar k\)-rational map: \(\Phi \circ (G \to \operatorname{Spec}\bar k)
+  = \mathrm{pr}_1 \circ (X \to \operatorname{Spec}\bar k)\), the structure morphism of
+  \(X \times_{\bar k} X\).
+\end{lemma}
+\begin{proof}\leanok
+  By associativity of right-composition, \(\Phi \circ (G \to \operatorname{Spec}\bar k) =
+  \bigl((f \circ \mathrm{pr}_1) \times (f \circ \mathrm{pr}_2)\bigr) \circ
+  \bigl(\operatorname{diff}_G^{\,\mathrm{left}} \circ (G \to \operatorname{Spec}\bar k)\bigr)\);
+  by \cref{lem:grpObjDiffLeft_comp_hom} the inner composite is
+  \(\mathrm{pr}_1 \circ (G \to \operatorname{Spec}\bar k)\), and the over-\(S\) identity of the
+  pairing (\cref{lem:rationalMap_prod_proj}) evaluates the result to the structure morphism of
+  \(X \times_{\bar k} X\).
+\end{proof}
+
 The first input to Milne's Theorem~3.2 is the following: a rational map from a normal
 variety to a \emph{complete} variety automatically extends across every codim-\(1\)
 point.
@@ -2012,7 +2084,9 @@ this forces the locus to be empty.
 % \(x\) on which \(\varphi\) is not defined."
 \begin{proof}
   \uses{def:rationalMap_precomp, lem:rationalMap_precomp_compHom,
-        lem:rationalMap_precomp_hom, def:rationalMap_prod, lem:rationalMap_prod_proj}
+        lem:rationalMap_precomp_hom, def:rationalMap_prod, lem:rationalMap_prod_proj,
+        def:grpObj_diff, lem:grpObjDiffLeft_comp_hom, def:rationalMap_difference,
+        lem:rationalMap_difference_over}
   Following Milne's proof of Lemma~3.3. The argument has four sub-steps. Throughout we
   fix a representative \((U, \varphi_U)\) of \(f\).
 
@@ -2040,9 +2114,13 @@ this forces the locus to be empty.
   identify \((s_X \circ \mathrm{pr}_i)\) with the structure morphism of \(X \times X\));
   pairing them into \(X \times X \dashrightarrow
   G \times G\) (\cref{def:rationalMap_prod}, whose projection and over-\(\bar k\) properties
-  are \cref{lem:rationalMap_prod_proj}) and composing on the right with
-  \((\mathrm{id} \times \mathrm{inv})\) then \(m\) gives \(\Phi\). Its domain is at least
-  \(U \times U \subseteq X \times X\), which is dense because \(U\) is dense in \(X\).
+  are \cref{lem:rationalMap_prod_proj}) and composing on the right with the difference
+  morphism \(\operatorname{diff}_G^{\,\mathrm{left}} = m \circ (\mathrm{id} \times \mathrm{inv})\)
+  (\cref{def:grpObj_diff}) gives the named difference map \(\Phi\)
+  (\cref{def:rationalMap_difference}); it is again over \(\bar k\)
+  (\cref{lem:rationalMap_difference_over}, using \cref{lem:grpObjDiffLeft_comp_hom}). Its
+  domain is at least \(U \times U \subseteq X \times X\), which is dense because \(U\) is
+  dense in \(X\).
 
   \emph{Sub-step 2: \(\Phi\)-defined at \((x, x)\) \(\Leftrightarrow\) \(\varphi\)-defined at
   \(x\).} If \(\varphi\) is defined at \(x\), the explicit formula \(\Phi(x, x) = e\) (the

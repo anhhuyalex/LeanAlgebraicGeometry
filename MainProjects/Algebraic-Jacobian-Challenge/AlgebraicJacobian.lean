@@ -100,6 +100,7 @@ import AlgebraicJacobian.Albanese.AlbaneseUP
 import AlgebraicJacobian.Albanese.AuslanderBuchsbaum
 import AlgebraicJacobian.Albanese.CodimOneExtension
 import AlgebraicJacobian.Albanese.CoheightBridge
+import AlgebraicJacobian.Albanese.DifferenceMap
 import AlgebraicJacobian.Albanese.PolePurity
 import AlgebraicJacobian.Albanese.RationalMapFunctionField
 import AlgebraicJacobian.Albanese.RationalMapPrecomp
