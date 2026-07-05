@@ -54,31 +54,65 @@ noncomputable def stalkPullback [IsIntegral X] (f : X.RationalMap Y) :
   Scheme.stalkClosedPointTo f.fromFunctionField
 
 /-!
-## Dominant refinement (planned)
+## Dominant refinement
 
 When `f` is **dominant** and `Y` is irreducible, the base point
 `f.fromFunctionField (closedPoint K(X))` equals `genericPoint Y`, so `stalkPullback`
-becomes a field homomorphism `K(Y) ⟶ K(X)`:
-
-* `fromFunctionField_base_eq_genericPoint`: reduce to a representative `g` via
-  `RationalMap.exists_rep` (`hdom : IsDominant g.hom` from
-  `PartialMap.isDominant_toRationalMap_iff`); the composite
-  `g.fromFunctionField = g.domain.fromSpecStalkOfMem (genericPoint X) hx ≫ g.hom`
-  sends `closedPoint` to `genericPoint g.domain.toScheme` (identify the inner
-  point via `Opens.fromSpecStalkOfMem_ι` + `Scheme.fromSpecStalk_closedPoint`,
-  `g.domain.ι` injective; the domain's generic point via
-  `genericPoint_eq_of_isOpenImmersion g.domain.ι`); then
-  `(genericPoint_spec _).image g.hom.continuous` with `hdom.denseRange.closure_range`
-  and `IsGenericPoint.eq` (schemes are T0) give `= genericPoint Y`.
-* `functionFieldPullback := (Y.presheaf.stalkCongr (Inseparable.of_eq …)).hom ≫ f.stalkPullback`.
-
-Two support obligations block a one-shot close and are the concrete remaining
-work: `IrreducibleSpace g.domain.toScheme` (dense open of an integral scheme —
-does not auto-synthesise; prove `Nonempty` from `dense_domain` and
-`PreirreducibleSpace` from the ambient irreducibility) and the `↥g.domain` vs
-`↥↑g.domain` Opens-carrier coercion when feeding `⟨genericPoint X, hx⟩` to
-`g.hom`.
+becomes a field homomorphism `K(Y) ⟶ K(X)`.
 -/
+
+/-- **For a dominant rational map into an irreducible target, the function-field
+morphism sends the closed point of `Spec K(X)` to the generic point of `Y`.**
+
+Reducing to a representative partial map `g`, the morphism
+`g.fromFunctionField = g.domain.fromSpecStalkOfMem (η_X) ≫ g.hom` sends the closed
+point of `Spec 𝒪_{X, η_X} = Spec K(X)` to `g.hom (η_{g.domain})`. The inner point
+is the generic point of the domain (checked after applying the open immersion
+`g.domain.ι`, using `Opens.fromSpecStalkOfMem_ι` and `fromSpecStalk_closedPoint`),
+and a dominant morphism sends the generic point of its (irreducible) source to the
+generic point of `Y` (image of a generic point is generic on the dense range, and
+generic points are unique in the T₀ space `Y`). -/
+theorem fromFunctionField_base_eq_genericPoint [IsIntegral X] [IrreducibleSpace Y]
+    (f : X.RationalMap Y) [f.IsDominant] :
+    f.fromFunctionField (closedPoint X.functionField) = genericPoint Y := by
+  obtain ⟨g, rfl⟩ := f.exists_rep
+  haveI : IsDominant g.hom := (PartialMap.isDominant_toRationalMap_iff g).mp ‹_›
+  have hη : genericPoint X ∈ g.domain :=
+    (genericPoint_specializes _).mem_open g.domain.2 g.dense_domain.nonempty.choose_spec
+  haveI : Nonempty (g.domain : Type _) := ⟨⟨genericPoint X, hη⟩⟩
+  haveI : IsIntegral g.domain.toScheme := inferInstance
+  haveI : IrreducibleSpace g.domain.toScheme := inferInstance
+  -- reduce the rational-map `fromFunctionField` to the partial-map one, then to the
+  -- composite `g.domain.fromSpecStalkOfMem (η_X) hη ≫ g.hom`
+  rw [RationalMap.fromFunctionField_toRationalMap]
+  have hcomp : PartialMap.fromFunctionField g
+      = g.domain.fromSpecStalkOfMem (genericPoint X) hη ≫ g.hom := rfl
+  rw [hcomp, Scheme.Hom.comp_apply]
+  -- the inner point is the generic point of the domain
+  have hp : (g.domain.fromSpecStalkOfMem (genericPoint X) hη) (closedPoint X.functionField)
+      = genericPoint g.domain.toScheme := by
+    apply (Scheme.Opens.ι g.domain).isOpenEmbedding.injective
+    rw [genericPoint_eq_of_isOpenImmersion (Scheme.Opens.ι g.domain),
+      ← Scheme.Hom.comp_apply, Opens.fromSpecStalkOfMem_ι]
+    exact Scheme.fromSpecStalk_closedPoint
+  rw [hp]
+  -- a dominant morphism sends the generic point of an irreducible source to `genericPoint Y`
+  have himg := (genericPoint_spec g.domain.toScheme).image g.hom.continuous
+  rw [Set.image_univ, g.hom.denseRange.closure_range] at himg
+  exact himg.eq (genericPoint_spec Y)
+
+/-- **The induced field homomorphism `K(Y) ⟶ K(X)` of a dominant rational map.**
+
+Since `f.fromFunctionField (closedPoint K(X)) = genericPoint Y`
+(`fromFunctionField_base_eq_genericPoint`), the germ pullback `stalkPullback` has
+source `𝒪_{Y, η_Y} = K(Y)` up to the canonical stalk isomorphism, giving the
+function-field functoriality `K(Y) → K(X)` required by the rational-map extension
+leg of Milne's Albanese argument. -/
+noncomputable def functionFieldPullback [IsIntegral X] [IrreducibleSpace Y]
+    (f : X.RationalMap Y) [f.IsDominant] :
+    Y.functionField ⟶ X.functionField :=
+  (Y.presheaf.stalkCongr
+    (Inseparable.of_eq (fromFunctionField_base_eq_genericPoint f).symm)).hom ≫ f.stalkPullback
 
 end RationalMap
 
