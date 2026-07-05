@@ -559,6 +559,259 @@ lemma sect_res {V T : Scheme.{0}} (b : V ⟶ T) (p : GluedPoint F Y R T) :
     _ = classify R (restrictHom U b p.a i ≫ p.γ i) :=
         (classify_restrictHom b (p.γ i)).symm
 
+/-! ## §5. The glued functor is a Zariski sheaf
+
+Sections of `gluedFunctor` glue along open covers: the base morphisms glue by
+`Scheme.Cover.glueMorphisms`, and the `F`-components glue by the sheaf axiom
+of `F`.  Covers by arbitrary jointly surjective open immersions reduce to
+covers by opens of the target (the generated sieves agree). -/
+
+/-- Transport of a glued point's section along an equality of glued points. -/
+lemma sect_congr {T : Scheme.{0}} {p q : GluedPoint F Y R T} (h : p = q) :
+    p.sect hF hU = F.map (eqToHom (by rw [h])).op (q.sect hF hU) := by
+  subst h
+  exact (map_id_apply _).symm
+
+/-- Transport of `ofSect` along an equality of base morphisms. -/
+lemma ofSect_congr {T : Scheme.{0}} {c d : T ⟶ S} (h : c = d)
+    (x : F.obj (op (Over.mk d))) :
+    ofSect Y R c (F.map (eqToHom (by rw [h])).op x) = ofSect Y R d x := by
+  subst h
+  exact congrArg (ofSect Y R c) (map_id_apply x)
+
+/-- Glued points with equal base morphisms and equal (transported) sections
+are equal. -/
+lemma GluedPoint.eq_of_sect {T : Scheme.{0}} {p q : GluedPoint F Y R T}
+    (ha : p.a = q.a)
+    (hs : p.sect hF hU = F.map (eqToHom (by rw [ha])).op (q.sect hF hU)) :
+    p = q := by
+  rw [← ofSect_sect hF hU p, ← ofSect_sect hF hU q, hs]
+  exact ofSect_congr ha (q.sect hF hU)
+
+set_option backward.isDefEq.respectTransparency false in
+include hF hU in
+/-- Restriction of `ofSect` is `ofSect` of the restricted section. -/
+lemma res_ofSect {V T : Scheme.{0}} (b : V ⟶ T) (a : T ⟶ S)
+    (x : F.obj (op (Over.mk a))) :
+    GluedPoint.res R b (ofSect Y R a x)
+      = ofSect Y R (b ≫ a) (F.map (resSecHom b a).op x) := by
+  refine GluedPoint.eq_of_sect hF hU rfl ?_
+  rw [sect_res hF hU, sect_ofSect hF hU, sect_ofSect hF hU]
+  exact (map_id_apply _).symm
+
+set_option backward.isDefEq.respectTransparency false in
+include hF hU in
+/-- Restriction of any glued point along `b` in terms of `ofSect`. -/
+lemma res_eq_ofSect {V T : Scheme.{0}} (b : V ⟶ T) (p : GluedPoint F Y R T) :
+    GluedPoint.res R b p
+      = ofSect Y R (b ≫ p.a) (F.map (resSecHom b p.a).op (p.sect hF hU)) := by
+  conv_lhs => rw [← ofSect_sect hF hU p]
+  exact res_ofSect hF hU b p.a (p.sect hF hU)
+
+/-- Composition of transports along object equalities. -/
+lemma map_eqToHom_trans {A B C : Over S} (h : A = B) (h' : B = C)
+    (x : F.obj (op C)) :
+    F.map (eqToHom h).op (F.map (eqToHom h').op x)
+      = F.map (eqToHom (h.trans h')).op x := by
+  subst h
+  subst h'
+  exact map_id_apply _
+
+/-- Squares of `eqToHom`s in `Over S`: two morphisms with heterogeneously
+equal total-space components intertwine the object identifications. -/
+lemma homMk_eqToHom_square {A A' B B' : Over S} (hA : A = A') (hB : B = B')
+    (m : A ⟶ B) (m' : A' ⟶ B') (hm : HEq m.left m'.left) :
+    m ≫ eqToHom hB = eqToHom hA ≫ m' := by
+  subst hA
+  subst hB
+  simp only [eqToHom_refl, Category.comp_id, Category.id_comp]
+  apply CommaMorphism.ext
+  · exact eq_of_heq hm
+  · apply Subsingleton.elim
+
+set_option backward.isDefEq.respectTransparency false in
+set_option maxHeartbeats 1000000 in
+include hF hU in
+/-- Restriction (along an open inclusion of the total space) of the
+transported section of a glued point is the transported section of the
+restricted glued point. -/
+lemma sect_overResLE {T : Scheme.{0}} (a : T ⟶ S) {V' V'' : T.Opens}
+    (h : V' ≤ V'') (p : GluedPoint F Y R V''.toScheme)
+    (hOb : overRes (Over.mk a) V'' = Over.mk p.a)
+    (q : overRes (Over.mk a) V' = Over.mk (T.homOfLE h ≫ p.a)) :
+    F.map (overResLE (Over.mk a) h).op (F.map (eqToHom hOb).op (p.sect hF hU))
+      = F.map (eqToHom q).op
+          ((GluedPoint.res R (T.homOfLE h) p).sect hF hU) := by
+  have hm : (overResLE (Over.mk a) h).left
+      = (resSecHom (T.homOfLE h) p.a).left := by
+    simp only [overResLE, resSecHom, Over.homMk_left]
+    rfl
+  have hsq : overResLE (Over.mk a) h ≫ eqToHom hOb
+      = eqToHom q ≫ resSecHom (T.homOfLE h) p.a :=
+    homMk_eqToHom_square q hOb _ _ (heq_of_eq hm)
+  calc F.map (overResLE (Over.mk a) h).op
+        (F.map (eqToHom hOb).op (p.sect hF hU))
+      = F.map (overResLE (Over.mk a) h ≫ eqToHom hOb).op (p.sect hF hU) :=
+        map_map _ _ _
+    _ = F.map (eqToHom q ≫ resSecHom (T.homOfLE h) p.a).op (p.sect hF hU) :=
+        map_congr hsq _
+    _ = F.map (eqToHom q).op
+          (F.map (resSecHom (T.homOfLE h) p.a).op (p.sect hF hU)) :=
+        (map_map _ _ _).symm
+    _ = F.map (eqToHom q).op
+          ((GluedPoint.res R (T.homOfLE h) p).sect hF hU) :=
+        congrArg (fun z => F.map (eqToHom q).op z) (sect_res hF hU _ _).symm
+
+set_option backward.isDefEq.respectTransparency false in
+set_option maxHeartbeats 2000000 in
+include hF hU in
+/-- **The glued functor satisfies the sheaf condition at covers by opens.** -/
+lemma isSheafFor_opens (T : Scheme.{0}) {κ : Type} (W : κ → T.Opens)
+    (hW : ⨆ k, W k = ⊤) :
+    Presieve.IsSheafFor (gluedFunctor F Y R)
+      (Presieve.ofArrows (fun k => (W k).toScheme) (fun k => (W k).ι)) := by
+  rw [Presieve.isSheafFor_arrows_iff]
+  intro x hx
+  -- Glue the base morphisms.
+  have hcompat : ∀ k l : κ,
+      pullback.fst ((W k).ι) ((W l).ι) ≫ (x k).a
+        = pullback.snd ((W k).ι) ((W l).ι) ≫ (x l).a := fun k l =>
+    congrArg GluedPoint.a
+      (hx k l (pullback ((W k).ι) ((W l).ι)) (pullback.fst _ _)
+        (pullback.snd _ _) pullback.condition)
+  obtain ⟨a, ha⟩ : ∃ a : T ⟶ S, ∀ k, (W k).ι ≫ a = (x k).a :=
+    ⟨(opensCover T W hW).glueMorphisms (fun k => (x k).a) hcompat, fun k =>
+      (opensCover T W hW).ι_glueMorphisms (fun k => (x k).a) hcompat k⟩
+  have hOb : ∀ k, overRes (Over.mk a) (W k) = Over.mk ((x k).a) :=
+    fun k => congrArg Over.mk (ha k)
+  -- The compatibility of the family of restrictions on the overlaps.
+  have hres : ∀ k l, GluedPoint.res R (T.homOfLE
+        (inf_le_left : W k ⊓ W l ≤ W k)) (x k)
+      = GluedPoint.res R (T.homOfLE inf_le_right) (x l) := by
+    intro k l
+    refine hx k l ((W k ⊓ W l).toScheme) (T.homOfLE inf_le_left)
+      (T.homOfLE inf_le_right) ?_
+    rw [Scheme.homOfLE_ι, Scheme.homOfLE_ι]
+  have hq : ∀ (k l m : κ) (hm : W k ⊓ W l ≤ W m),
+      overRes (Over.mk a) (W k ⊓ W l) = Over.mk (T.homOfLE hm ≫ (x m).a) :=
+    fun k l m hm => congrArg Over.mk
+      (show (W k ⊓ W l).ι ≫ a = T.homOfLE hm ≫ (x m).a by
+        rw [← ha m, ← Category.assoc, Scheme.homOfLE_ι])
+  -- Glue the `F`-sections via the sheaf axiom of `F`.
+  have hsheaf := hF (Over.mk a) W (by show ⨆ k, W k = ⊤; exact hW)
+    (fun k => F.map (eqToHom (hOb k)).op ((x k).sect hF hU))
+    (by
+      intro k l
+      calc F.map (overResLE (Over.mk a)
+            (inf_le_left : W k ⊓ W l ≤ W k)).op
+              (F.map (eqToHom (hOb k)).op ((x k).sect hF hU))
+          = F.map (eqToHom (hq k l k inf_le_left)).op
+              ((GluedPoint.res R (T.homOfLE inf_le_left) (x k)).sect hF hU) :=
+            sect_overResLE hF hU a inf_le_left (x k) (hOb k) _
+        _ = F.map (eqToHom (hq k l k inf_le_left)).op
+              (F.map (eqToHom (congrArg (fun p => Over.mk p.a) (hres k l))).op
+                ((GluedPoint.res R (T.homOfLE inf_le_right) (x l)).sect hF hU)) :=
+            congrArg (fun z => F.map (eqToHom (hq k l k inf_le_left)).op z)
+              (sect_congr hF hU (hres k l))
+        _ = F.map (eqToHom ((hq k l k inf_le_left).trans
+              (congrArg (fun p => Over.mk p.a) (hres k l)))).op
+              ((GluedPoint.res R (T.homOfLE inf_le_right) (x l)).sect hF hU) :=
+            map_eqToHom_trans _ _ _
+        _ = F.map (eqToHom (hq k l l inf_le_right)).op
+              ((GluedPoint.res R (T.homOfLE inf_le_right) (x l)).sect hF hU) :=
+            rfl
+        _ = F.map (overResLE (Over.mk a)
+            (inf_le_right : W k ⊓ W l ≤ W l)).op
+              (F.map (eqToHom (hOb l)).op ((x l).sect hF hU)) :=
+            (sect_overResLE hF hU a inf_le_right (x l) (hOb l) _).symm)
+  obtain ⟨x₀, hx₀, hx₀uniq⟩ := hsheaf
+  refine ⟨ofSect Y R a x₀, fun k => ?_, fun t' ht' => ?_⟩
+  · -- The amalgamation restricts to the given family.
+    show GluedPoint.res R ((W k).ι) (ofSect Y R a x₀) = x k
+    rw [res_ofSect hF hU]
+    have : F.map (resSecHom ((W k).ι) a).op x₀
+        = F.map (eqToHom (by rw [ha k] :
+            Over.mk ((W k).ι ≫ a) = Over.mk ((x k).a))).op
+          ((x k).sect hF hU) := hx₀ k
+    rw [this]
+    exact (ofSect_congr (ha k) _).trans (ofSect_sect hF hU (x k))
+  · -- Uniqueness.
+    have haT : t'.a = a := by
+      refine (opensCover T W hW).hom_ext _ _ fun k => ?_
+      show (W k).ι ≫ t'.a = (W k).ι ≫ a
+      rw [ha k]
+      exact congrArg GluedPoint.a (ht' k)
+    have hz : F.map (eqToHom (congrArg Over.mk haT.symm :
+        Over.mk a = Over.mk t'.a)).op (t'.sect hF hU) = x₀ := by
+      refine hx₀uniq _ fun k => ?_
+      have hOb' : overRes (Over.mk a) (W k) = Over.mk ((W k).ι ≫ t'.a) :=
+        congrArg Over.mk (show (W k).ι ≫ a = (W k).ι ≫ t'.a by rw [haT])
+      calc F.map (overResHom (Over.mk a) (W k)).op
+            (F.map (eqToHom (congrArg Over.mk haT.symm :
+              Over.mk a = Over.mk t'.a)).op (t'.sect hF hU))
+          = F.map (eqToHom hOb').op
+              (F.map (resSecHom ((W k).ι) t'.a).op (t'.sect hF hU)) := by
+            rw [map_map, map_map]
+            refine map_congr (homMk_eqToHom_square hOb'
+              (congrArg Over.mk haT.symm) (overResHom (Over.mk a) (W k))
+              (resSecHom ((W k).ι) t'.a) (heq_of_eq ?_)) _
+            simp only [overResHom, resSecHom, Over.homMk_left]
+        _ = F.map (eqToHom hOb').op
+              ((GluedPoint.res R ((W k).ι) t').sect hF hU) :=
+            congrArg (fun z => F.map (eqToHom hOb').op z)
+              (sect_res hF hU _ _).symm
+        _ = F.map (eqToHom hOb').op
+              (F.map (eqToHom (congrArg (fun p => Over.mk p.a) (ht' k))).op
+                ((x k).sect hF hU)) :=
+            congrArg (fun z => F.map (eqToHom hOb').op z)
+              (sect_congr hF hU (ht' k))
+        _ = F.map (eqToHom (hOb k)).op ((x k).sect hF hU) :=
+            map_eqToHom_trans _ _ _
+    calc t' = ofSect Y R t'.a (t'.sect hF hU) := (ofSect_sect hF hU t').symm
+      _ = ofSect Y R a x₀ := by
+          rw [← hz]
+          exact (ofSect_congr haT.symm (t'.sect hF hU)).symm
+
+set_option backward.isDefEq.respectTransparency false in
+include hF hU in
+/-- **The glued functor is a sheaf for the big Zariski topology.** -/
+lemma isSheaf_gluedFunctor :
+    Presieve.IsSheaf Scheme.zariskiTopology (gluedFunctor F Y R) := by
+  rw [zariskiTopology_eq, Presieve.isSheaf_pretopology]
+  rintro T Rp hRp
+  obtain ⟨𝓤, rfl⟩ := exists_cover_of_mem_pretopology hRp
+  -- Reduce to the cover by the image opens: both presieves generate the
+  -- same sieve, since each factors through the other.
+  let κ : Type := {V : T.Opens // ∃ j, (𝓤.f j).opensRange = V}
+  let W : κ → T.Opens := Subtype.val
+  have hW : ⨆ k, W k = ⊤ := by
+    rw [eq_top_iff]
+    rintro t -
+    obtain ⟨j, y, hy⟩ := 𝓤.exists_eq t
+    exact TopologicalSpace.Opens.mem_iSup.mpr
+      ⟨⟨(𝓤.f j).opensRange, j, rfl⟩, ⟨y, hy⟩⟩
+  have hgen : Sieve.generate (Presieve.ofArrows 𝓤.X 𝓤.f)
+      = Sieve.generate
+          (Presieve.ofArrows (fun k => (W k).toScheme) (fun k => (W k).ι)) := by
+    apply le_antisymm
+    · rw [Sieve.generate_le_iff]
+      rintro Z g ⟨j⟩
+      refine ⟨((𝓤.f j).opensRange).toScheme,
+        IsOpenImmersion.lift ((𝓤.f j).opensRange).ι (𝓤.f j)
+          (by rw [Scheme.Opens.range_ι]; exact subset_rfl),
+        ((𝓤.f j).opensRange).ι,
+        Presieve.ofArrows.mk (⟨(𝓤.f j).opensRange, j, rfl⟩ : κ),
+        IsOpenImmersion.lift_fac _ _ _⟩
+    · rw [Sieve.generate_le_iff]
+      rintro Z g ⟨k⟩
+      obtain ⟨j, hj⟩ := k.2
+      refine ⟨𝓤.X j, IsOpenImmersion.lift (𝓤.f j) ((k.1).ι)
+        (by rw [Scheme.Opens.range_ι, ← hj]; exact subset_rfl), 𝓤.f j,
+        Presieve.ofArrows.mk j, IsOpenImmersion.lift_fac _ _ _⟩
+  rw [Presieve.isSheafFor_iff_generate, hgen,
+    ← Presieve.isSheafFor_iff_generate]
+  exact isSheafFor_opens hF hU T W hW
+
 end ZariskiDescent
 
 end Scheme
