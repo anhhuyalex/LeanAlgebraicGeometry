@@ -438,8 +438,12 @@ theorem Modules.HasProperSupport.of_isPullback
 along the residue extension `κ(t) → κ(t')` (`quotBaseSquare` pasting), and
 `H⁰` of the twists of a finitely presented module with proper support
 commutes with base field extension (flat base change over a field, Stacks
-02KH), so the `κ`-dimensions agree. -/
+02KH), so the `κ`-dimensions agree.  Quasi-coherence of the twisting module
+`L` is required for the flat-base-change step (for an arbitrary sheaf of
+modules the statement can fail), matching the line-bundle `L` of
+`def:quot_functor`. -/
 theorem hilbertFunction_quotBaseMap (π : X ⟶ S) (L : X.Modules)
+    [L.IsQuasicoherent]
     {T T' : Over S} (ψ : T' ⟶ T) (F : (Limits.pullback π T.hom).Modules)
     (hfp : F.IsFinitePresentation)
     (hps : Modules.HasProperSupport (pullback.snd π T.hom) F)
@@ -498,6 +502,11 @@ namespace QuotFamily
 
 variable {π : X ⟶ S} [LocallyOfFiniteType π] {L E : X.Modules} {Φ : Polynomial ℚ}
 
+/- The quasi-coherence of the twisting module `L` (part of the line-bundle
+hypothesis of `def:quot_functor`) enters only through the base-change
+invariance of the fibrewise Hilbert function
+(`Scheme.hilbertFunction_quotBaseMap`), i.e. through the pullback action. -/
+
 /-- Two families of quotients are **equivalent** when an isomorphism of the
 target sheaves commutes with the quotient maps — equivalently, when
 `ker q = ker q'` (`def:quot_functor`; same convention as the merged absolute
@@ -531,7 +540,7 @@ instance setoid (π : X ⟶ S) [LocallyOfFiniteType π] (L E : X.Modules)
 `quotBaseMap π ψ : X_{T'} ⟶ X_T`, matching the `E`-side through
 `pullbackTriangleIso (quotBaseMap_fst π ψ)`.  Well-definedness of the four
 conditions is the content of §2. -/
-noncomputable def pullbackAlong {T T' : Over S} (ψ : T' ⟶ T)
+noncomputable def pullbackAlong [L.IsQuasicoherent] {T T' : Over S} (ψ : T' ⟶ T)
     (x : QuotFamily π L E Φ T) : QuotFamily π L E Φ T' where
   F := (Scheme.Modules.pullback (quotBaseMap π ψ)).obj x.F
   isFinitePresentation :=
@@ -557,7 +566,7 @@ noncomputable def pullbackAlong {T T' : Over S} (ψ : T' ⟶ T)
         x.properSupport t' m).symm)⟩
 
 /-- The pullback action respects the equivalence relation. -/
-lemma pullbackAlong_rel {T T' : Over S} (ψ : T' ⟶ T)
+lemma pullbackAlong_rel [L.IsQuasicoherent] {T T' : Over S} (ψ : T' ⟶ T)
     {x y : QuotFamily π L E Φ T} (h : x.Rel y) :
     (pullbackAlong ψ x).Rel (pullbackAlong ψ y) := by
   obtain ⟨f, hf⟩ := h
@@ -589,7 +598,7 @@ pullback, packaged as `Scheme.Modules.pullback_id_app_coherence` and
 The Hilbert scheme is the special case `E = O_X`:
 `Hilb^{Φ,L}_{X/S} = Quot^{Φ,L}_{O_X/X/S}`. -/
 noncomputable def QuotFunctor (π : X ⟶ S) [LocallyOfFiniteType π] (L E : X.Modules)
-    (Φ : Polynomial ℚ) :
+    [L.IsQuasicoherent] (Φ : Polynomial ℚ) :
     (Over S)ᵒᵖ ⥤ Type (u + 1) where
   obj T := Quotient (QuotFamily.setoid π L E Φ T.unop)
   map {T T'} g := TypeCat.ofHom (Quotient.map (QuotFamily.pullbackAlong g.unop)
@@ -831,7 +840,7 @@ flattening stratification (`AlgebraicGeometry.flatteningStratification`),
 and the valuative criterion for the closed embedding. -/
 theorem QuotScheme {S X : Scheme.{u}} [IsLocallyNoetherian S]
     (π : X ⟶ S) [LocallyOfFiniteType π] [IsProper π]
-    (L E : X.Modules) (Φ : Polynomial ℚ) :
+    (L E : X.Modules) [L.IsQuasicoherent] (Φ : Polynomial ℚ) :
     ∃ (Q : Over S), Nonempty ((QuotFunctor π L E Φ).RepresentableBy Q) := by
   sorry
 

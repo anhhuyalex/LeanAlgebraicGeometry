@@ -1,47 +1,29 @@
-Base directory for this skill: /home/Axel/LeanAlgebraicGeometry-Horizon/.claude/skills/blueprint-conventions
+Review complete. All checks were read-only; no files were edited.
 
-Blueprints are a LaTeX subset (the `leanblueprint` dialect) parsed into the DAG.
-Write timeless mathematics — a standalone document, not a project journal.
+## Defects found
 
-## Environments
+**File for all items unless noted:** `/home/Axel/LeanAlgebraicGeometry-Horizon/MainProjects/Algebraic-Jacobian-Challenge/blueprint/src/chapters/Picard_QuotScheme.tex`
 
-Each declaration is an amsthm-style environment; the recognized ones are
-`theorem`, `lemma`, `proposition`, `corollary`, `definition`, `remark`,
-`example`, `notation`, `convention`, and `proof`. A statement environment plus
-its following `proof` environment form one node's content.
+1. **lem:hilbert_fibre_base_change — missing quasi-coherence hypothesis on `L` (substantive gap).** The statement allows `L` to be an arbitrary sheaf of `O_X`-modules (matching the Lean pin, which takes `L : X.Modules`), but the proof's key step — "global sections of a *quasi-coherent* module on a qcqs scheme commute with flat base change" — applies only if `F_t ⊗ L_t^{⊗m}` is quasi-coherent, i.e. only if `L` is. The same holds for the silent pushforward/base-change compatibility (item 2). Note `def:fiber_hilbert_function` (line 294) already requires `L` a *line bundle*, so the lemma is also internally inconsistent with the definition it transports. Fix: add "`L` quasi-coherent" (or "a line bundle") to the lemma, and flag to Horizon that the Lean sorry `hilbertFunction_quotBaseMap` at arbitrary `L : X.Modules` may be unprovable as stated.
 
-## Per-node macros
+2. **lem:hilbert_fibre_base_change — silent step in the proof.** Between "both sides are computed on the support" and the flat-base-change application, the proof uses without statement that the pullback of the pushforward from the support equals the pushforward of the pullback (base change along the affine/closed immersion of the support, again needing quasi-coherence). Fix: make this compatibility explicit, ideally as its own `\uses`-linked lemma per the split rule. (The routing of `Γ` through the proper — hence qcqs — support fibre `Z_t` is otherwise *correct* and does handle non-quasi-compact total fibres; the junk-value remark is mathematically right once `Γ' = Γ ⊗_{κ(t)} κ(t')` is established, since a `κ(t)`-basis stays a `κ(t')`-basis, but "junk value" is a Lean-ism in rendered proof text.)
 
-- `\label{id}` — a stable id (the DAG node key).
-- `\lean{Name}` — the Lean declaration this node formalizes. Keep it 1-to-1: one
-  blueprint node ↔ one Lean declaration, signatures matching.
-- `\uses{a,b}` — dependencies on other nodes' labels; these drive the DAG edges.
-  Add an edge instead of re-explaining a dependency in prose. Put `\uses` in the
-  statement for definitional deps and in the `proof` for deps used only in the
-  proof.
-- `\source{slug:page-0001}` — reference anchors for UI popups and audit trails.
-  Use page-level ids from `references/<slug>/tex/page-0001.tex` or an equivalent
-  manifest entry. Multiple anchors may be comma-separated.
-- `\leanok` — the Lean is written and checked. Honest only when its Lean is
-  actually checked *and* its dependencies are too. On a `proof`, it means the
-  proof is formalized; on a statement, the signature is formalized.
-- `\mathlibok` — the declaration is already available in mathlib (no
-  formalization needed; treat as a leaf).
+3. **lem:hilbert_fibre_base_change — wrong dependency target.** The statement/`\uses` cite `def:hilbert_polynomial`, but the object transported is the *graded Hilbert function*, i.e. `def:fiber_hilbert_function` (whose `\lean` pin is exactly `hilbertFunction`). Fix: point `\uses` and the "In particular" `\cref` at `def:fiber_hilbert_function`.
 
-## House style
+4. **lem:hilbert_fibre_base_change — signature mismatch with Lean.** Blueprint assumes "π : X → S locally of finite type"; the Lean `hilbertFunction_quotBaseMap` (QuotFunctorDef.lean:442) has no `LocallyOfFiniteType π` in scope (only `variable {S X : Scheme.{u}}` at line 251 applies). Fix: drop the hypothesis from the blueprint (it is unused — everything happens on the proper support) or add it to the Lean.
 
-- **Pure mathematics only.** No Lean tactics, typeclass/implementation notes, or
-  semi-Lean pseudocode. No project history ("since iter N", "our failed route")
-  and no conversational filler. If a Lean helper exists with no math counterpart,
-  write its LaTeX statement so the 1-to-1 correspondence holds.
-- **Complete proofs, not sketches.** A node's `proof` is a real, rigorous
-  mathematical proof a reader could check — not a hand-wave or a TODO. The way to
-  keep it short is to *split*, not to abbreviate: if a proof is long or a node
-  grows past a short paragraph, break out the hard step as its own `\uses`-linked
-  lemma (down to sentence-sized lemmas if needed) so each node stays small and
-  its proof stays complete.
-- **One declaration's worth per node.** Don't restate Lean source as prose.
-- **Cite by source link, not quote comments.** Add `\source{...}` to the
-  relevant node. Keep the retrieved/transcribed page text in `references/` (for
-  example `references/<slug>/tex/page-0042.tex`) and let the UI expose it; do not
-  paste verbatim source quotes into `% QUOTE` comments inside the blueprint.
+5. **lem:coherent_flat_base_change — proof mischaracterizes its `\uses` definition, and applies it out of scope.** The proof invokes "the affine-pair flatness predicate of def:coherent_sheaf_flat", but that def (Picard_FlatteningStratification.tex:50–69) has the *stalk* condition as its primary form, restricted to S noetherian, f finite type, F coherent — while the Lean `CoherentSheafFlat` (FlatteningStratification.lean:1416) is the unrestricted affine-pair predicate, and this lemma applies the predicate to merely quasi-coherent F in an arbitrary cartesian square. The 00HT-style claim itself ("M over B flat over A iff every M_q is flat over A_{q∩A}") *is* correctly stated, and the stalk computation/localization steps are all correct. Fix: restate `def:coherent_sheaf_flat` at the Lean's generality (affine-pair predicate, arbitrary morphism/module) and split the stalk-criterion equivalence for quasi-coherent modules into its own `\uses`-linked lemma consumed here.
+
+6. **lem:proper_support_base_change — missing proof-level `\uses`.** The proof is mathematically correct (the annihilator inclusion does give a closed immersion of the support-scheme of `g'^*F` into `V(Ann(F)·O_{X'}) = Z ×_X X' = Z ×_S S'`, and proper ∘ closed-immersion is proper), but it needs: (i) `g'^*F` finitely presented for `Ann(g'^*F)`/its schematic support to be well-defined per `def:modules_annihilator` — add `\uses{lem:pullback_finite_presentation}` in the proof; (ii) `lem:isProper_mathlib` for base-change stability and the composition fact. Also `def:modules_annihilator` (line 2551) is scoped "over a locally noetherian base" while this lemma runs on arbitrary schemes — relax the def's parenthetical to "quasi-coherent of finite type" or record the hypothesis here.
+
+7. **All four new lemmas — no `\source{}` anchors.** They carry only `% SOURCE:` quote comments plus `\textit{Source: ...}` prose; house rule is a structural `\source{...}` anchor and no `% QUOTE` blocks. Fix: add `\source{nitsure-hilbert-quot}` (slug already used by `def:hilbert_polynomial`, line 62) and drop the verbatim quote comments.
+
+8. **def:grassmannian_scheme — unproven assertion embedded in a definition.** The reworded final sentence claims "a flat finitely presented module whose fibre dimension is d at every point is locally free of rank d" (true) and identifies the functor with the Quot special case via a bare `\cref{def:quot_functor}` outside the DAG. Fix: move the agreement claim into a `\uses`-linked remark/lemma with proof, or mark it explicitly as forward-referenced future work in rendered text. Minor: the def says "S noetherian" while the Lean `Grassmannian` (and `QuotFunctor`) require only `[IsLocallyNoetherian S]` / `[LocallyOfFiniteType π]` — same strictness mismatch in `def:quot_functor`'s statement.
+
+## Verified fine
+
+- All six `\lean{}` pins resolve in `/home/Axel/LeanAlgebraicGeometry-Horizon/MainProjects/Algebraic-Jacobian-Challenge/AlgebraicJacobian/Picard/QuotFunctorDef.lean` (lines 387, 414, 427, 442, 591, 753).
+- All `\uses` labels exist: `def:coherent_sheaf_flat` (Picard_FlatteningStratification.tex:54), `def:has_proper_support` (3629), `def:modules_annihilator` (2555), `def:hilbert_polynomial` (59), plus the four new lemma labels; no dangling references.
+- `lem:pullback_finite_presentation`: proof is complete and correct (right-exactness of the left-adjoint pullback, preservation of finite frees, compatibility with restriction); empty `\uses` is acceptable since no blueprint node exists for finite presentation and the notion is defined inline.
+- `lem:coherent_flat_base_change`: the localization/stalk chain (stalk of pullback = `F_x ⊗ O_{X',x'}`; `O_{X',x'}` a localization of `O_{X,x} ⊗_{O_{S,s}} O_{S',s'}`; flatness preserved by base change and localization) is correct.
+- `lem:proper_support_base_change`: the annihilator-inclusion → closed-subscheme step questioned in the directive is sound — an ideal inclusion `I ⊆ J` gives `V(J) ↪ V(I)` as closed subschemes, and `V(Ann(F)·O_{X'}) = Z ×_X X' = Z ×_S S'` scheme-theoretically.
