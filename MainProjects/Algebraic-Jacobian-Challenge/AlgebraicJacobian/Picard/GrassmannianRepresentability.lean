@@ -7,6 +7,7 @@ import Mathlib
 import AlgebraicJacobian.Picard.QuotFunctorDef
 import AlgebraicJacobian.Picard.GrassmannianQuot
 import AlgebraicJacobian.Picard.ZariskiDescentRepresentability
+import AlgebraicJacobian.Picard.GrassmannianZariskiSheaf
 
 /-!
 # Representability of the relative Grassmannian (`thm:grassmannian_representable`)
@@ -570,17 +571,17 @@ theorem representable_restrict {V : S.Modules} {r : ℕ} (U : S.Opens)
 implicit locality behind the chart construction).  Families of rank-`d`
 locally free quotients glue along an open cover of the parameter scheme:
 the target sheaves glue by descent of sheaves of modules along the cover
-(the `Scheme.Modules.glue` engine of `GlueDescent.lean` at the glue data of
-the cover), the quotient maps glue by the sheaf property of `Hom`, local
-freeness and epi-ness are local, and the glued family is unique up to the
-equivalence `ker q = ker q'` because an isomorphism of quotients commuting
-with the epimorphisms is unique when it exists, so the local comparison isos
-agree on overlaps and glue.  [typed `sorry` — the single remaining leaf of
-`thm:grassmannian_representable`, now that the descent theorem
-`Scheme.representable_of_openCover` is proved.] -/
+(the `Scheme.Modules.glue` engine of `GlueDescent.lean` at the glue datum of
+the cover), the quotient maps glue through the descent-equalizer lift
+`Scheme.Modules.glueLift`, local freeness and epi-ness are local, and the
+glued family is unique up to the equivalence `ker q = ker q'` because an
+isomorphism of quotients commuting with the epimorphisms is unique when it
+exists, so the local comparison isos satisfy the descent cocycle for free.
+Proved in `GrassmannianZariskiSheaf.lean`
+(`Scheme.grassmannian_isZariskiSheafOver`). -/
 theorem isZariskiSheaf (V : S.Modules) (d : ℕ) :
-    IsZariskiSheafOver (Scheme.Grassmannian V d) := by
-  sorry
+    IsZariskiSheafOver (Scheme.Grassmannian V d) :=
+  Scheme.grassmannian_isZariskiSheafOver V d
 
 /-- **Representability of the Grassmannian** (`thm:grassmannian_representable`,
 [Nitsure] §1 "Construction of Grassmannian", Exercise (2)): for a locally

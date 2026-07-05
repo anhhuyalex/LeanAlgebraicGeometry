@@ -4165,7 +4165,8 @@ linear algebra), we package the construction here.
 \begin{lemma}\leanok
 [The Grassmannian functor is a Zariski sheaf]
   \label{lem:grassmannian_zariski_sheaf}
-  \lean{AlgebraicGeometry.Scheme.Grassmannian.isZariskiSheaf}
+  \lean{AlgebraicGeometry.Scheme.Grassmannian.isZariskiSheaf,
+    AlgebraicGeometry.Scheme.grassmannian_isZariskiSheafOver}
   \uses{def:grassmannian_scheme, def:zariski_sheaf_over,
     def:scheme_modules_glue}
   % SOURCE: [Nitsure], \S 1 -- the locality is implicit in the chart-by-chart
@@ -4173,14 +4174,22 @@ linear algebra), we package the construction here.
   % classifying morphism is assembled over an open cover of T), and in the
   % general theory it is the standard descent of quasi-coherent quotients
   % along Zariski covers.
+  % NOTE (run 0010 T12, fourth pass): PROVED, axiom-clean.  The Lean proof
+  % lives in AlgebraicJacobian/Picard/GrassmannianZariskiSheaf.lean
+  % (Scheme.grassmannian_isZariskiSheafOver, delegated by
+  % Grassmannian.isZariskiSheaf); the module gluing runs over the glue datum
+  % of the open cover ((opensCover ...).gluedCover) through the descent
+  % engine of GlueDescent.lean, with the glued family transported back to T
+  % along the canonical isomorphism fromGlued.
   Let \(S\) be locally noetherian, \(V\) an \(\mathcal{O}_S\)-module and
   \(d \ge 0\).  The functor \(\mathrm{Grass}(V, d)\) of
   \cref{def:grassmannian_scheme} satisfies the Zariski sheaf axiom
   (\cref{def:zariski_sheaf_over}).
 \end{lemma}
 
-\begin{proof}
-  \uses{def:scheme_modules_glue, def:grassmannian_scheme}
+\begin{proof}\leanok
+  \uses{def:scheme_modules_glue, def:grassmannian_scheme,
+    def:gr_modules_glueRestrictionIso, lem:gr_modules_glue_unique}
   Let \(T \to S\), let \(\{W_k\}\) be an open cover of \(T\), and let
   \(\langle \mathcal{F}_k, q_k \rangle\) be rank-\(d\) locally free
   quotients of \(V_{T|_{W_k}}\) agreeing on overlaps.  Agreement means:
@@ -4189,24 +4198,30 @@ linear algebra), we package the construction here.
   commuting with the restricted quotient maps.  Such an isomorphism is
   \emph{unique} when it exists (it is determined on the image of the
   epimorphism \(q_k\)); consequently the \(f_{kl}\) automatically satisfy
-  the cocycle condition on triple overlaps, since both
-  \(f_{kl}|f_{lm}\)-composites and \(f_{km}\) commute with the quotient
-  maps.  Descent of sheaves of modules along the open cover
+  the cocycle condition on triple overlaps -- pulled back to the
+  scheme-theoretic overlaps \(W_k \times_T W_l\) of the glue datum attached
+  to the cover, both composites of transition transports commute with the
+  restricted quotient maps, and gluing isomorphisms are unique.  Descent of
+  sheaves of modules along the glue datum of the cover
   (\cref{def:scheme_modules_glue}) glues the \(\mathcal{F}_k\) to a sheaf
-  \(\mathcal{F}\) on \(T\), locally free of rank \(d\) because local
-  freeness is local; the quotient maps \(q_k\) agree on overlaps through
-  the gluing isomorphisms, so by the sheaf property of
-  \(\mathcal{H}om(V_T, \mathcal{F})\) they glue to
-  \(q : V_T \to \mathcal{F}\), an epimorphism because surjectivity of a
-  morphism of sheaves is local.  This produces the glued point of
-  \(\mathrm{Grass}(V,d)(T)\); it restricts to the given classes by
-  construction.  Uniqueness: if \(\langle \mathcal{F}, q \rangle\) and
+  \(\mathcal{F}\) on the glued scheme, whose chart restrictions recover the
+  \(\mathcal{F}_k\) (\cref{def:gr_modules_glueRestrictionIso}); the
+  transposed quotient maps satisfy the descent-equalizer compatibility, so
+  they lift to \(q : V \to \mathcal{F}\) out of the pulled-back test module,
+  with chart restrictions the \(q_k\).  Epimorphy is detected on the chart
+  cover by joint faithfulness of the chart restrictions
+  (\cref{lem:gr_modules_glue_unique}), and rank-\(d\) local freeness is
+  local, so transporting along the canonical isomorphism between the glued
+  scheme and \(T\) produces the glued point of
+  \(\mathrm{Grass}(V,d)(T)\); it restricts to the given classes by the
+  chart recovery.  Uniqueness: if \(\langle \mathcal{F}, q \rangle\) and
   \(\langle \mathcal{F}', q' \rangle\) both restrict to
-  \(\langle \mathcal{F}_k, q_k \rangle\) up to equivalence, the local
-  comparison isomorphisms commute with the quotient maps, hence are unique,
-  hence agree on overlaps and glue to a global isomorphism
-  \(\mathcal{F} \cong \mathcal{F}'\) commuting with \(q, q'\), so the two
-  glued points are equivalent.
+  \(\langle \mathcal{F}_k, q_k \rangle\) up to equivalence, the two kernels
+  annihilate each other's quotient map locally on the cover, hence globally
+  (the sections of a sheaf are detected on a cover), and the two
+  epimorphism descents \(\mathcal{F} \to \mathcal{F}'\),
+  \(\mathcal{F}' \to \mathcal{F}\) are mutually inverse by
+  epi-cancellation, so the two glued points are equivalent.
 \end{proof}
 
 \begin{theorem}\leanok
@@ -4229,11 +4244,14 @@ linear algebra), we package the construction here.
   % remains a bare-representability form omitting smoothness, properness,
   % relative dimension \(d(r-d)\), the tautological rank-\(d\) quotient, and
   % the Pl\"ucker embedding; those refinements should be strengthened or
-  % split into separate labels when needed.  The Lean proof is real:
-  % trivialised case (lem:grassmannian_representable_free, sorry-free) +
-  % restriction comparison (restrictIso, sorry-free) + Zariski descent; the
-  % two remaining typed-sorry leaves are
-  % thm:representability_zariski_descent and lem:grassmannian_zariski_sheaf.
+  % split into separate labels when needed.
+  % NOTE (run 0010 T12, fourth pass): the Lean theorem is now FULLY PROVED,
+  % axiom-clean [propext, Classical.choice, Quot.sound]: trivialised case
+  % (lem:grassmannian_representable_free) + restriction comparison
+  % (restrictIso) + Zariski descent of representability
+  % (thm:representability_zariski_descent, proved third pass) + the sheaf
+  % axiom (lem:grassmannian_zariski_sheaf, proved fourth pass in
+  % GrassmannianZariskiSheaf.lean).
   % The former relative-Spec route (thm:relative_spec_univ) was abandoned:
   % its Lean form is weaker than a RepresentableBy witness.
 

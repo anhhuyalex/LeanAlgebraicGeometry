@@ -900,6 +900,163 @@ lemma gluedFamily_restrict (k : κ) :
 
 end CoverGlue
 
+/-! ## §4. The sheaf axiom
+
+The compatibility hypothesis of `IsZariskiSheafOver` — stated on the
+intersections `W k ⊓ W l` — transports to the scheme-theoretic overlaps of
+the cover glue datum through the canonical factorisation of the overlap
+projection, yielding the `GlueCompat` input of the gluing construction; the
+separation half is `Scheme.Modules.exists_iso_of_cover_iso`. -/
+
+section SheafAxiom
+
+variable {S : Scheme.{0}} [IsLocallyNoetherian S] {V : S.Modules} {d : ℕ} {T : Over S}
+variable {κ : Type} {W : κ → T.left.Opens}
+
+set_option backward.isDefEq.respectTransparency false in
+/-- **Separation**: two rank-`d` locally free quotient families on `T` whose
+restrictions to every member of an open cover of `T.left` are equivalent are
+equivalent. -/
+lemma LocallyFreeQuotient.rel_of_restrict_rel (hW : ⨆ k, W k = ⊤)
+    {z z' : Scheme.LocallyFreeQuotient V d T}
+    (h : ∀ k, (Scheme.LocallyFreeQuotient.pullbackAlong
+        (Scheme.overResHom T (W k)) z).Rel
+      (Scheme.LocallyFreeQuotient.pullbackAlong (Scheme.overResHom T (W k)) z')) :
+    z.Rel z' := by
+  haveI := z.epi
+  haveI := z'.epi
+  choose f hf using h
+  have he : ∀ k, (Scheme.Modules.pullback (W k).ι).map z.q ≫ (f k).hom
+      = (Scheme.Modules.pullback (W k).ι).map z'.q := by
+    intro k
+    have hk : ((pullbackTriangleIso (Over.w (Scheme.overResHom T (W k))) V).inv ≫
+        (Scheme.Modules.pullback (W k).ι).map z.q) ≫ (f k).hom
+        = (pullbackTriangleIso (Over.w (Scheme.overResHom T (W k))) V).inv ≫
+          (Scheme.Modules.pullback (W k).ι).map z'.q := hf k
+    rw [Category.assoc] at hk
+    exact (Iso.cancel_iso_inv_left _ _ _).mp hk
+  exact Scheme.Modules.exists_iso_of_cover_iso hW z.q z'.q (fun k => f k) he
+
+set_option backward.isDefEq.respectTransparency false in
+set_option maxHeartbeats 1600000 in
+/-- **Compatibility transport**: the sheaf-axiom compatibility of a family of
+classes over the intersections `W k ⊓ W l` yields the `GlueCompat` input of
+the gluing construction over the scheme-theoretic overlaps. -/
+lemma glueCompat_of_map_eq (hW : ⨆ k, W k = ⊤)
+    (x : ∀ k, (Scheme.Grassmannian V d).obj (Opposite.op (Scheme.overRes T (W k))))
+    (hx : ∀ k l, (Scheme.Grassmannian V d).map
+        (Scheme.overResLE T (inf_le_left : W k ⊓ W l ≤ W k)).op (x k)
+      = (Scheme.Grassmannian V d).map
+        (Scheme.overResLE T (inf_le_right : W k ⊓ W l ≤ W l)).op (x l)) :
+    GlueCompat W hW (fun k => (x k).out) := by
+  intro k l
+  -- the canonical factorisation of the overlap through the intersection
+  obtain ⟨c, hc⟩ : ∃ c : (covGD W hW).V (k, l) ⟶ ((W k ⊓ W l : T.left.Opens)).toScheme,
+      c ≫ (W k ⊓ W l).ι = (covGD W hW).f k l ≫ (W k).ι := by
+    have hrange : Set.range ⇑((covGD W hW).f k l ≫ (W k).ι)
+        ⊆ Set.range ⇑(W k ⊓ W l).ι := by
+      show Set.range ⇑(pullback.fst ((W k).ι) ((W l).ι) ≫ (W k).ι)
+        ⊆ Set.range ⇑(W k ⊓ W l).ι
+      rw [IsOpenImmersion.range_pullback_to_base_of_left, Scheme.Opens.range_ι,
+        Scheme.Opens.range_ι, Scheme.Opens.range_ι]
+      exact le_of_eq (TopologicalSpace.Opens.coe_inf _ _).symm
+    exact ⟨IsOpenImmersion.lift (W k ⊓ W l).ι _ hrange,
+      IsOpenImmersion.lift_fac (W k ⊓ W l).ι _ hrange⟩
+  -- the Over-morphism into the intersection chart
+  have hm : c ≫ (W k ⊓ W l).ι ≫ T.hom = ((covGD W hW).f k l ≫ (W k).ι) ≫ T.hom := by
+    rw [← Category.assoc, hc]
+  obtain ⟨m, hml⟩ : ∃ m' : (Over.mk (((covGD W hW).f k l ≫ (W k).ι) ≫ T.hom) :
+      Over S) ⟶ Scheme.overRes T (W k ⊓ W l), m'.left = c :=
+    ⟨Over.homMk c hm, rfl⟩
+  -- the two factorisations of the restricted charts
+  have hA : chartRes W k ((covGD W hW).f k l) rfl
+      = m ≫ Scheme.overResLE T (inf_le_left : W k ⊓ W l ≤ W k) := by
+    apply Over.OverMorphism.ext
+    simp only [chartRes, Scheme.overResLE, Over.comp_left, Over.homMk_left]
+    rw [hml, ← cancel_mono (W k).ι, Category.assoc c, Scheme.homOfLE_ι, hc]
+  have hB : chartRes W l ((covGD W hW).t k l ≫ (covGD W hW).f l k)
+        (glueSnd_ι W hW k l)
+      = m ≫ Scheme.overResLE T (inf_le_right : W k ⊓ W l ≤ W l) := by
+    apply Over.OverMorphism.ext
+    simp only [chartRes, Scheme.overResLE, Over.comp_left, Over.homMk_left]
+    rw [hml, ← cancel_mono (W l).ι, Category.assoc c, Scheme.homOfLE_ι, hc]
+    exact glueSnd_ι W hW k l
+  -- the class-level compatibility over the overlap
+  have hclass : (Scheme.Grassmannian V d).map
+        (chartRes W k ((covGD W hW).f k l) rfl).op (x k)
+      = (Scheme.Grassmannian V d).map
+        (chartRes W l ((covGD W hW).t k l ≫ (covGD W hW).f l k)
+          (glueSnd_ι W hW k l)).op (x l) := by
+    calc (Scheme.Grassmannian V d).map
+          (chartRes W k ((covGD W hW).f k l) rfl).op (x k)
+        = (Scheme.Grassmannian V d).map
+            (m ≫ Scheme.overResLE T inf_le_left).op (x k) :=
+          Scheme.ZariskiDescent.map_congr (F := Scheme.Grassmannian V d) hA (x k)
+      _ = (Scheme.Grassmannian V d).map m.op
+            ((Scheme.Grassmannian V d).map (Scheme.overResLE T inf_le_left).op
+              (x k)) :=
+          (Scheme.ZariskiDescent.map_map (F := Scheme.Grassmannian V d) m
+            (Scheme.overResLE T inf_le_left) (x k)).symm
+      _ = (Scheme.Grassmannian V d).map m.op
+            ((Scheme.Grassmannian V d).map (Scheme.overResLE T inf_le_right).op
+              (x l)) := by rw [hx k l]
+      _ = (Scheme.Grassmannian V d).map
+            (m ≫ Scheme.overResLE T inf_le_right).op (x l) :=
+          Scheme.ZariskiDescent.map_map (F := Scheme.Grassmannian V d) m
+            (Scheme.overResLE T inf_le_right) (x l)
+      _ = _ :=
+          (Scheme.ZariskiDescent.map_congr (F := Scheme.Grassmannian V d) hB (x l)).symm
+  -- convert the class equality into a gluing isomorphism
+  have h1 : (Scheme.Grassmannian V d).map
+        (chartRes W k ((covGD W hW).f k l) rfl).op (x k)
+      = Quotient.mk _ (Scheme.LocallyFreeQuotient.pullbackAlong
+          (chartRes W k ((covGD W hW).f k l) rfl) ((x k).out)) := by
+    conv_lhs => rw [← Quotient.out_eq (x k)]
+    rfl
+  have h2 : (Scheme.Grassmannian V d).map
+        (chartRes W l ((covGD W hW).t k l ≫ (covGD W hW).f l k)
+          (glueSnd_ι W hW k l)).op (x l)
+      = Quotient.mk _ (Scheme.LocallyFreeQuotient.pullbackAlong
+          (chartRes W l ((covGD W hW).t k l ≫ (covGD W hW).f l k)
+            (glueSnd_ι W hW k l)) ((x l).out)) := by
+    conv_lhs => rw [← Quotient.out_eq (x l)]
+    rfl
+  obtain ⟨α, hα⟩ := Quotient.exact ((h1.symm.trans hclass).trans h2)
+  exact ⟨α, hα⟩
+
+set_option backward.isDefEq.respectTransparency false in
+set_option maxHeartbeats 1600000 in
+/-- **The Grassmannian functor is a Zariski sheaf** ([Nitsure] §1; the
+locality behind the chart construction): families of rank-`d` locally free
+quotients of `V_T` glue uniquely along open covers of the parameter scheme.
+Existence is the module-descent gluing (`gluedFamily`), separation is
+`LocallyFreeQuotient.rel_of_restrict_rel`. -/
+theorem grassmannian_isZariskiSheafOver (V : S.Modules) (d : ℕ) :
+    Scheme.IsZariskiSheafOver (Scheme.Grassmannian V d) := by
+  intro T κ W hW x hx
+  refine ⟨Quotient.mk _ (gluedFamily (glueCompat_of_map_eq hW x hx)), fun k => ?_, ?_⟩
+  · -- the glued family restricts to the given classes
+    show Quotient.mk _ (Scheme.LocallyFreeQuotient.pullbackAlong
+        (Scheme.overResHom T (W k)) (gluedFamily (glueCompat_of_map_eq hW x hx)))
+      = x k
+    rw [← Quotient.out_eq (x k)]
+    exact Quotient.sound (gluedFamily_restrict (glueCompat_of_map_eq hW x hx) k)
+  · -- separation: any two glued classes agree
+    intro z hz
+    induction z using Quotient.ind with
+    | _ zz =>
+      refine Quotient.sound (LocallyFreeQuotient.rel_of_restrict_rel hW (fun k => ?_))
+      have hz2 : (Scheme.Grassmannian V d).map (Scheme.overResHom T (W k)).op
+          (Quotient.mk _ (gluedFamily (glueCompat_of_map_eq hW x hx))) = x k := by
+        show Quotient.mk _ (Scheme.LocallyFreeQuotient.pullbackAlong
+            (Scheme.overResHom T (W k)) (gluedFamily (glueCompat_of_map_eq hW x hx)))
+          = x k
+        rw [← Quotient.out_eq (x k)]
+        exact Quotient.sound (gluedFamily_restrict (glueCompat_of_map_eq hW x hx) k)
+      exact Quotient.exact ((hz k).trans hz2.symm)
+
+end SheafAxiom
+
 end Scheme
 
 end AlgebraicGeometry
