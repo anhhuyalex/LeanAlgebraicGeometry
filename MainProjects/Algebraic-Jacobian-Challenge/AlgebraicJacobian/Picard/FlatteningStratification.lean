@@ -262,13 +262,14 @@ module over the noetherian ring `B`, reducing to `M = B/𝔭`, via the splicing
 fact that generic freeness is stable under extensions), and a *domain core*
 (`M = B/𝔭`: Noether normalisation over `Frac A` + clearing denominators +
 the generic-rank exact sequence + induction on fibre dimension). This
-section proves the dévissage layer completely — the splicing lemma
+section proves both layers completely — the splicing lemma
 `genericallyFree_of_exact` (via `ModuleCat.free_shortExact` and the
 localization-transport lemma `free_localizedModule_powers_mul`), the torsion
-base case `genericallyFree_of_torsion` (Nitsure's `n = -1`), and the
-assembly `genericFlatnessAlgebraic` via
-`IsNoetherianRing.induction_on_isQuotientEquivQuotientPrime` — leaving the
-domain core `genericallyFree_quotient_prime` as the single typed `sorry`. -/
+base case `genericallyFree_of_torsion` (Nitsure's `n = -1`), the domain core
+`genericallyFree_quotient_prime` (Noether normalisation +
+`genericallyFree_quotient_prime_of_fibre_dim_le`), and the assembly
+`genericFlatnessAlgebraic` via
+`IsNoetherianRing.induction_on_isQuotientEquivQuotientPrime`. -/
 
 /-- The **generic-freeness property** of an `A`-module `M`: some localization
 `M_f` at a single non-zero `f ∈ A` is a free module over `A_f`. This is the
@@ -1365,9 +1366,8 @@ For a noetherian domain `A`, a finite-type `A`-algebra `B` and a finite
 `A`. The prime-filtration dévissage over the noetherian ring `B`
 (`IsNoetherianRing.induction_on_isQuotientEquivQuotientPrime`) is complete:
 the subsingleton case is `genericallyFree_of_subsingleton`, prime quotients
-are the domain core `genericallyFree_quotient_prime` (the one remaining
-`sorry` of this section), and stability under extensions is the splicing
-lemma `genericallyFree_of_exact`. -/
+are the domain core `genericallyFree_quotient_prime`, and stability under
+extensions is the splicing lemma `genericallyFree_of_exact`. -/
 theorem genericFlatnessAlgebraic (A B M : Type*) [CommRing A] [IsDomain A]
     [IsNoetherianRing A] [CommRing B] [Algebra A B] [Algebra.FiniteType A B]
     [AddCommGroup M] [Module B M] [Module.Finite B M] [Module A M]
