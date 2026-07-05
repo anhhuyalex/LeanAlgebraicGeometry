@@ -18,18 +18,19 @@ polynomial `Φ` on every fiber — together with the in-project sub-build for
 the Grassmannian *scheme* (Mathlib at the pinned commit carries only a
 linear-algebra Grassmannian).
 
-## Status (iter-176 Lane H file-skeleton — re-dispatch; §1 closed run 0011)
+## Status (run 0010 T12: §§2–4 functor layer moved out and made real)
 
-iter-175 Lane H died to the Anthropic session-limit reset window without
-ever calling `Write` (the file was never created). iter-176 re-dispatches
-the file-skeleton verbatim. Each blueprint-pinned declaration carries the
-*intended* substantive type signature (matching the `\lean{...}` pin in
-`blueprint/src/chapters/Picard_QuotScheme.tex`); declaration 1
-(`hilbertPolynomial`) is now a **real definition** imported from
-`AlgebraicJacobian.Picard.HilbertPolynomial` (run 0011), while the bodies
-of the remaining headline declarations are still typed `sorry`s — the
-substantive proofs are deep (Nitsure §5: boundedness ⟶ Grassmannian
-embedding ⟶ flattening stratification ⟶ valuative criterion).
+Declaration 1 (`hilbertPolynomial`) is a **real definition** imported from
+`AlgebraicJacobian.Picard.HilbertPolynomial` (run 0011).  Declarations 2–5
+(`QuotFunctor`, `Grassmannian`, `Grassmannian.representable`, `QuotScheme`)
+now live in `AlgebraicJacobian.Picard.QuotFunctorDef` (run 0010 T12): the
+two *definitions* are real (Setoid quotients of families of quotients with
+pullback functoriality; base-change well-definedness factored into named
+leaves), while the two *representability theorems* remain typed `sorry`s —
+the substantive proofs are deep (Nitsure §5: boundedness ⟶ Grassmannian
+embedding ⟶ flattening stratification ⟶ valuative criterion).  This file
+keeps declaration 6 (the base-change lane, §5) and the qcqs/tilde section
+engine and support/freeness predicates that the functor layer consumes.
 
 The 6 blueprint-pinned declarations are:
 
@@ -157,163 +158,22 @@ graded Hilbert–Serre engine of `AlgebraicJacobian.Picard.GradedHilbertSerre`).
 Blueprint reference: `def:hilbert_polynomial` (Nitsure §1; cf. Hartshorne
 III.5.2). -/
 
-/-! ## §2. The Quot functor
+/-! ## §2–§4. The Quot functor, the Grassmannian, and representability — moved
 
-The Quot functor `Quot^{Φ,L}_{E/X/S}` sends an `S`-scheme `T ⟶ S` to the
-set of equivalence classes `⟨F, q⟩` of pairs `(F, q)` where
-- `F` is a coherent sheaf on `X_T = X ×_S T` whose schematic support is
-  proper over `T` and which is `T`-flat,
-- `q : E_T ↠ F` is a surjective `O_{X_T}`-linear homomorphism,
-- the fiberwise Hilbert polynomial of `F|_{X_t}` with respect to `L|_{X_t}`
-  equals `Φ` at every `t ∈ T`.
-
-Two pairs `(F, q)` and `(F', q')` are equivalent iff `ker(q) = ker(q')`.
-
-The Hilbert scheme is the special case `E = O_X`:
-`Hilb^{Φ,L}_{X/S} = Quot^{Φ,L}_{O_X/X/S}`.
-
-Blueprint reference: `def:quot_functor` (Nitsure §1; FGA Explained Ch. 5). -/
-
-/-- The **Quot functor** `Quot^{Φ,L}_{E/X/S}` of coherent quotients of `E`
-on `X ×_S -` with Hilbert polynomial `Φ`.
-
-Encoded as a contravariant functor `(Over S)ᵒᵖ ⥤ Type u`, sending an
-`S`-scheme `T → S` (i.e. an object of `Over S`) to the set of
-equivalence classes `⟨F, q⟩` of pairs `(F, q)` of a `T`-flat coherent
-sheaf `F` on `X ×_S T` with proper support and a surjection
-`q : E_T ↠ F` whose fiberwise Hilbert polynomial is `Φ`, modulo
-`ker(q) = ker(q')`. Functoriality is pullback of the quotient along
-`X ×_S T' ⟶ X ×_S T`.
-
-iter-177+: the body packages the on-objects / on-morphisms data using the
-`Scheme.Modules.pullback` bifunctor on the relative product
-`X ×_S T`, with the equivalence relation `ker(q) = ker(q')` quotiented
-out via `Setoid` / `Quotient`. For the iter-176 file-skeleton the body
-is a typed `sorry`. -/
-noncomputable def QuotFunctor {S X : Scheme.{u}} [IsLocallyNoetherian S]
-    (_π : X ⟶ S) [LocallyOfFiniteType _π] (_L _E : X.Modules)
-    (_Φ : Polynomial ℚ) :
-    (Over S)ᵒᵖ ⥤ Type u :=
-  sorry
-
-end Scheme
-
-/-! ## §3. The Grassmannian scheme
-
-Since Mathlib carries no Grassmannian *scheme*, we encode it here as a
-contravariant functor on `Over S` together with a representability
-statement. The construction proceeds by gluing `binom(r, d)` affine
-charts `U^I ≅ A^{d(r-d)}_S` along the Plücker cocycle, yielding a smooth
-projective `S`-scheme `Gr_S(V, d)` of relative dimension `d(r-d)`,
-equipped with a tautological rank-`d` quotient
-`π* V ↠ U` and the Plücker closed embedding into `ℙ_S(⋀^d V)`.
-
-Blueprint references: `def:grassmannian_scheme`,
-`thm:grassmannian_representable` (Nitsure §1 Exercise (2),
-"Construction of Grassmannian"; FGA Explained Ch. 5). -/
-
-namespace Scheme
-
-/-- The **Grassmannian functor** `Grass(V, d) : (Sch/S)^op ⥤ Set` of
-rank-`d` quotients of a locally free `O_S`-module `V` of rank `r ≥ d`.
-
-Encoded as the functor sending an `S`-scheme `T → S` to the set of
-equivalence classes `⟨F, q⟩` of pairs `(F, q)` with
-`q : V_T ↠ F` a surjection of `O_T`-modules and `F` locally free of
-rank `d`, modulo `ker(q) = ker(q')`. Concretely
-`Grass(V, d) = Quot^{d, O_S}_{V/S/S}` (the Quot functor for `X = S`,
-`E = V`, constant Hilbert polynomial `d`).
-
-iter-177+: the body re-exports `QuotFunctor (𝟙 S) (?) V Φ_d`, where
-`Φ_d : Polynomial ℚ` is the constant polynomial `d`. For the iter-176
-file-skeleton the body is a typed `sorry`. -/
-noncomputable def Grassmannian {S : Scheme.{u}} [IsLocallyNoetherian S]
-    (_V : S.Modules) (_d : ℕ) :
-    (Over S)ᵒᵖ ⥤ Type u :=
-  sorry
-
-/-- **Representability of the Grassmannian.**
-
-For a noetherian scheme `S`, a locally free `O_S`-module `V` of rank `r`,
-and `1 ≤ d ≤ r`, the Grassmannian functor `Grass(V, d)` of
-`Grassmannian` is representable by a smooth projective `S`-scheme
-`Gr_S(V, d) ⟶ S` of relative dimension `d(r-d)`, equipped with a
-tautological rank-`d` quotient `π* V ↠ U`. The determinant line bundle
-`det(U)` is relatively very ample, giving a Plücker closed embedding
-`Gr_S(V, d) ↪ ℙ_S(⋀^d V)`.
-
-We package the conclusion as the existence of a representing
-`Y : Over S` together with a `Functor.RepresentableBy Y` witness for
-`Grassmannian V d`; the additional projective / smooth / Plücker
-structure is implicit in the construction and is iter-177+ refinement
-work (once the proof body lands).
-
-iter-177+: the body follows Nitsure §1 "Construction of Grassmannian":
-glue the `binom(r, d)` affine charts `U^I ≅ A^{d(r-d)}_S` along the
-Plücker cocycle, verify separatedness via the diagonal cut, verify
-properness by the DVR valuative criterion, build the tautological
-quotient `U`, exhibit the Plücker embedding via the determinant line
-bundle. For the iter-176 file-skeleton the body is a typed `sorry`. -/
-theorem Grassmannian.representable {S : Scheme.{u}} [IsLocallyNoetherian S]
-    (V : S.Modules) (d : ℕ) :
-    ∃ (Y : Over S), Nonempty ((Grassmannian V d).RepresentableBy Y) := by
-  sorry
-
-/-! ## §4. Representability of the Quot scheme
-
-Grothendieck–Altman–Kleiman: for a noetherian `S`, a projective
-`π : X ⟶ S`, a relatively very ample `L` on `X`, a coherent
-`E` on `X`, and `Φ ∈ ℚ[λ]`, the Quot functor `Quot^{Φ,L}_{E/X/S}` is
-representable by a *projective* `S`-scheme.
-
-The proof has four steps (Nitsure §5):
-1. **Boundedness** via Castelnuovo–Mumford `m`-regularity (uniform across
-   fibers of `π` and across coherent quotients of `E_s` with Hilbert
-   polynomial `Φ`).
-2. **Grassmannian embedding**
-   `α : Quot^{Φ,L}_{E/X/S} ↪ Grass(W ⊗_{O_S} Sym^r V, Φ(r))`
-   for `r ≥ m`, sending `⟨F, q⟩ ↦ ⟨(π_T)_* F(r), (π_T)_*(q(r))⟩`.
-3. **Locally closed in Grassmannian** via the flattening stratification
-   applied to the universal cokernel on the Grassmannian, producing the
-   stratum `T_0^Φ`.
-4. **Closed embedding** by the valuative criterion of properness for
-   DVRs.
-
-The reduction to the universal case `X = ℙ(V)`, `E = π*W` is recorded as
-`lem:quot_reduction_to_pi_star_W` in the blueprint chapter.
-
-Blueprint reference: `thm:quot_representable` (Nitsure §5; FGA Explained
-Ch. 5; Grothendieck, FGA TDTE-IV). -/
-
-/-- **Representability of the Quot scheme** (Grothendieck, Altman–Kleiman).
-
-Let `S` be a noetherian scheme, `π : X ⟶ S` a projective morphism (here
-encoded as a proper `LocallyOfFiniteType` morphism; the projectivity
-upgrades once `IsProjective` lands in Mathlib), `L` a line bundle on `X`
-(relatively very ample), `E` a coherent `O_X`-module, and
-`Φ ∈ ℚ[λ]`. Then the Quot functor `Quot^{Φ,L}_{E/X/S}` of `QuotFunctor`
-is representable by an `S`-scheme.
-
-We package the conclusion as the existence of `Q : Over S` together with
-a `Functor.RepresentableBy Q` witness for `QuotFunctor π L E Φ`; the
-*projectivity* of `Q ⟶ S` (and the universal quotient
-`q^univ : π^*_Q E ↠ F^univ` on `X ×_S Q^{Φ,L}`) is implicit in the
-construction (Plücker-embedded into a projective Grassmannian over `S`)
-and is iter-177+ refinement work.
-
-iter-177+: the body follows the four-step Nitsure §5 proof
-(boundedness ⟶ Grassmannian embedding ⟶ flattening stratification ⟶
-valuative-criterion closed embedding); the sub-lemmas live in
-`lem:quot_boundedness`, `lem:quot_alpha_injective`,
-`lem:quot_valuative_criterion`, and the existential reduction in
-`lem:quot_reduction_to_pi_star_W`. For the iter-176 file-skeleton the
-body is a typed `sorry`. -/
-theorem QuotScheme {S X : Scheme.{u}} [IsLocallyNoetherian S]
-    (π : X ⟶ S) [LocallyOfFiniteType π] [IsProper π]
-    (L E : X.Modules) (Φ : Polynomial ℚ) :
-    ∃ (Q : Over S), Nonempty ((QuotFunctor π L E Φ).RepresentableBy Q) := by
-  sorry
-
+The headline functor definitions `Scheme.QuotFunctor` (`def:quot_functor`)
+and `Scheme.Grassmannian` (`def:grassmannian_scheme`) are now **real
+definitions** — Setoid quotients of genuine families of quotients with
+pullback functoriality — and the representability statements
+`Scheme.Grassmannian.representable` (`thm:grassmannian_representable`) and
+`Scheme.QuotScheme` (`thm:quot_representable`) are stated against them, in
+`AlgebraicJacobian.Picard.QuotFunctorDef` (run 0010 T12).  The
+functor-of-points layer consumes the flattening-stratification flatness
+predicate (`Scheme.CoherentSheafFlat`), the support/freeness predicates
+built below in this file, and the Hilbert-function machinery of
+`AlgebraicJacobian.Picard.HilbertPolynomial`, so it lives above this file,
+`FlatteningStratification`, and `GlueDescent` in the import order.
+Blueprint `\lean{}` pointers are unchanged — they pin fully qualified
+declaration names, which are preserved. -/
 end Scheme
 
 /-! ## §5. Cohomology and base change

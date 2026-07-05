@@ -90,6 +90,7 @@ import AlgebraicJacobian.Picard.SectionGradedRing
 import AlgebraicJacobian.Picard.GrassmannianCells
 import AlgebraicJacobian.Picard.GlueDescent
 import AlgebraicJacobian.Picard.GrassmannianQuot
+import AlgebraicJacobian.Picard.QuotFunctorDef
 import AlgebraicJacobian.Picard.LineBundleCoherence
 import AlgebraicJacobian.RiemannRoch.WeilDivisor
 import AlgebraicJacobian.Albanese.AlbaneseUP
