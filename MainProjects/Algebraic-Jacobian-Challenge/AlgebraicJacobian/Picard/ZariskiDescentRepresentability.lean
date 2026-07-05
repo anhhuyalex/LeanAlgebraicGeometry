@@ -351,7 +351,7 @@ noncomputable def classifyInv {T : Scheme.{0}} (a : T ⟶ S) (i : ι) :
     (Over.map (U i).ι).obj (Over.mk (preRes U a i)) ⟶
       overRes (Over.mk a) (pre U a i) :=
   Over.homMk (𝟙 (pre U a i).toScheme)
-    (by simp only [overRes, Over.mk_hom, Over.map_obj_hom, Category.id_comp]
+    (by simp only [overRes, Over.mk_hom, Over.map_obj_hom]
         exact (Scheme.Hom.resLE_comp_ι _ _).symm)
 
 lemma classifyHom_comp_inv {T : Scheme.{0}} (a : T ⟶ S) (i : ι) :
@@ -631,6 +631,7 @@ lemma homMk_eqToHom_square {A A' B B' : Over S} (hA : A = A') (hB : B = B')
 
 set_option backward.isDefEq.respectTransparency false in
 set_option maxHeartbeats 1000000 in
+-- transport-heavy defeq checks through `Over.mk`/`overRes` identifications
 include hF hU in
 /-- Restriction (along an open inclusion of the total space) of the
 transported section of a glued point is the transported section of the
@@ -664,6 +665,7 @@ lemma sect_overResLE {T : Scheme.{0}} (a : T ⟶ S) {V' V'' : T.Opens}
 
 set_option backward.isDefEq.respectTransparency false in
 set_option maxHeartbeats 2000000 in
+-- transport-heavy defeq checks through `Over.mk`/`overRes` identifications
 include hF hU in
 /-- **The glued functor satisfies the sheaf condition at covers by opens.** -/
 lemma isSheafFor_opens (T : Scheme.{0}) {κ : Type} (W : κ → T.Opens)
@@ -698,7 +700,7 @@ lemma isSheafFor_opens (T : Scheme.{0}) {κ : Type} (W : κ → T.Opens)
       (show (W k ⊓ W l).ι ≫ a = T.homOfLE hm ≫ (x m).a by
         rw [← ha m, ← Category.assoc, Scheme.homOfLE_ι])
   -- Glue the `F`-sections via the sheaf axiom of `F`.
-  have hsheaf := hF (Over.mk a) W (by show ⨆ k, W k = ⊤; exact hW)
+  have hsheaf := hF (Over.mk a) W (by change ⨆ k, W k = ⊤; exact hW)
     (fun k => F.map (eqToHom (hOb k)).op ((x k).sect hF hU))
     (by
       intro k l
@@ -727,7 +729,7 @@ lemma isSheafFor_opens (T : Scheme.{0}) {κ : Type} (W : κ → T.Opens)
   obtain ⟨x₀, hx₀, hx₀uniq⟩ := hsheaf
   refine ⟨ofSect Y R a x₀, fun k => ?_, fun t' ht' => ?_⟩
   · -- The amalgamation restricts to the given family.
-    show GluedPoint.res R ((W k).ι) (ofSect Y R a x₀) = x k
+    change GluedPoint.res R ((W k).ι) (ofSect Y R a x₀) = x k
     rw [res_ofSect hF hU]
     have : F.map (resSecHom ((W k).ι) a).op x₀
         = F.map (eqToHom (by rw [ha k] :
@@ -738,7 +740,7 @@ lemma isSheafFor_opens (T : Scheme.{0}) {κ : Type} (W : κ → T.Opens)
   · -- Uniqueness.
     have haT : t'.a = a := by
       refine (opensCover T W hW).hom_ext _ _ fun k => ?_
-      show (W k).ι ≫ t'.a = (W k).ι ≫ a
+      change (W k).ι ≫ t'.a = (W k).ι ≫ a
       rw [ha k]
       exact congrArg GluedPoint.a (ht' k)
     have hz : F.map (eqToHom (congrArg Over.mk haT.symm :
@@ -944,7 +946,7 @@ lemma chartFun_comp {A V : Scheme.{0}} (p : GluedPoint F Y R A) (i : ι)
   have ha' : ((w ≫ (p.γ i).left) ≫ (Y i).hom) ≫ (U i).ι
       = (w ≫ (pre U p.a i).ι) ≫ p.a := by
     rw [htri]
-    show (w ≫ p.a.resLE (U i) (pre U p.a i) le_rfl) ≫ (U i).ι = _
+    change (w ≫ p.a.resLE (U i) (pre U p.a i) le_rfl) ≫ (U i).ι = _
     rw [Category.assoc, Scheme.Hom.resLE_comp_ι, ← Category.assoc,
       Category.assoc]
   have hOb : Over.mk (((w ≫ (p.γ i).left) ≫ (Y i).hom) ≫ (U i).ι)
@@ -973,7 +975,7 @@ lemma chartFun_comp {A V : Scheme.{0}} (p : GluedPoint F Y R A) (i : ι)
       (resSecHom (w ≫ (pre U p.a i).ι) p.a)
       (heq_of_eq (by
         simp only [Over.comp_left, Over.homMk_left, Over.map_map_left,
-          classifyInv, overResHom, resSecHom, Category.id_comp]
+          classifyInv, overResHom, resSecHom]
         exact congrArg (fun z => w ≫ z) (Category.id_comp _)))
     rwa [eqToHom_refl, Category.comp_id] at h
   calc chartFun Y R i (w ≫ (p.γ i).left)
@@ -1019,6 +1021,7 @@ lemma chartFun_comp {A V : Scheme.{0}} (p : GluedPoint F Y R A) (i : ι)
 
 set_option backward.isDefEq.respectTransparency false in
 set_option maxHeartbeats 1000000 in
+-- transport-heavy defeq checks through `Over.mk`/`overRes` identifications
 include hF hU in
 /-- **The chart pullback square**: the pullback of `chart i` against the
 point `p : yoneda.obj A ⟶ gluedFunctor` is the open subscheme
@@ -1056,7 +1059,7 @@ lemma chart_isPullback (i : ι) {A : Scheme.{0}} (p : GluedPoint F Y R A) :
       have hw : w ≫ (pre U p.a i).ι = v := IsOpenImmersion.lift_fac _ _ _
       have htri : w ≫ (Over.mk (preRes U p.a i)).hom = s ≫ (Y i).hom := by
         rw [← cancel_mono ((U i).ι)]
-        show w ≫ p.a.resLE (U i) (pre U p.a i) le_rfl ≫ (U i).ι = _
+        change w ≫ p.a.resLE (U i) (pre U p.a i) le_rfl ≫ (U i).ι = _
         rw [Scheme.Hom.resLE_comp_ι, ← Category.assoc, hw, ← ha',
           Category.assoc]
       have hOb : Over.mk ((s ≫ (Y i).hom) ≫ (U i).ι) = Over.mk (v ≫ p.a) :=
@@ -1151,11 +1154,11 @@ lemma isLocallySurjective_chart :
     intro i V g'
     refine ⟨yonedaEquiv (yoneda.map (g' ≫ (p.γ i).left) ≫
       Sigma.ι (fun j : ι => yoneda.obj (Y j).left) i), ?_⟩
-    show yonedaEquiv ((yoneda.map (g' ≫ (p.γ i).left) ≫
+    change yonedaEquiv ((yoneda.map (g' ≫ (p.γ i).left) ≫
       Sigma.ι (fun j : ι => yoneda.obj (Y j).left) i) ≫
         Sigma.desc fun j => chart F Y R hF hU j) = _
     rw [Category.assoc, Sigma.ι_desc, ← yonedaEquiv_naturality]
-    show GluedPoint.res R (g' ≫ (p.γ i).left)
+    change GluedPoint.res R (g' ≫ (p.γ i).left)
       (chartFun Y R i (𝟙 (Y i).left)) = _
     rw [← chartFun_natural hF hU, Category.comp_id]
     exact chartFun_comp hF hU p i g'
@@ -1168,7 +1171,201 @@ lemma isLocallySurjective_chart :
   intro g'
   exact hmem i V g'
 
+/-! ## §8. From absolute representability back to `Over S`
+
+Given a representation of the glued functor by an absolute scheme `Ŷ`
+(produced by mathlib's Stacks 01JJ), the tautological glued point of `Ŷ`
+yields the structure morphism `â : Ŷ ⟶ S`, and the section machinery
+identifies `Hom_{Over S}(T, (Ŷ, â))` with `F(T)`. -/
+
+set_option backward.isDefEq.respectTransparency false in
+include hF hU in
+/-- Composition of restrictions of glued points. -/
+lemma res_res {V' V T : Scheme.{0}} (b : V' ⟶ V) (c : V ⟶ T)
+    (p : GluedPoint F Y R T) :
+    GluedPoint.res R b (GluedPoint.res R c p) = GluedPoint.res R (b ≫ c) p := by
+  refine GluedPoint.eq_of_sect hF hU (Category.assoc b c p.a).symm ?_
+  have hsq : resSecHom b (c ≫ p.a) ≫ resSecHom c p.a
+      = eqToHom (congrArg Over.mk (Category.assoc b c p.a).symm) ≫
+        resSecHom (b ≫ c) p.a := by
+    have h := homMk_eqToHom_square
+      (congrArg Over.mk (Category.assoc b c p.a).symm) rfl
+      (resSecHom b (c ≫ p.a) ≫ resSecHom c p.a) (resSecHom (b ≫ c) p.a)
+      (heq_of_eq (by simp only [resSecHom, Over.comp_left, Over.homMk_left]))
+    rwa [eqToHom_refl, Category.comp_id] at h
+  calc (GluedPoint.res R b (GluedPoint.res R c p)).sect hF hU
+      = F.map (resSecHom b (c ≫ p.a)).op
+          ((GluedPoint.res R c p).sect hF hU) := sect_res hF hU b _
+    _ = F.map (resSecHom b (c ≫ p.a)).op
+          (F.map (resSecHom c p.a).op (p.sect hF hU)) :=
+        congrArg (fun z => F.map (resSecHom b (c ≫ p.a)).op z)
+          (sect_res hF hU c p)
+    _ = F.map (resSecHom b (c ≫ p.a) ≫ resSecHom c p.a).op (p.sect hF hU) :=
+        map_map _ _ _
+    _ = F.map (eqToHom (congrArg Over.mk (Category.assoc b c p.a).symm) ≫
+          resSecHom (b ≫ c) p.a).op (p.sect hF hU) := map_congr hsq _
+    _ = F.map (eqToHom (congrArg Over.mk (Category.assoc b c p.a).symm)).op
+          (F.map (resSecHom (b ≫ c) p.a).op (p.sect hF hU)) :=
+        (map_map _ _ _).symm
+    _ = F.map (eqToHom (congrArg Over.mk (Category.assoc b c p.a).symm)).op
+          ((GluedPoint.res R (b ≫ c) p).sect hF hU) :=
+        congrArg (fun z => F.map (eqToHom (congrArg Over.mk
+          (Category.assoc b c p.a).symm)).op z) (sect_res hF hU (b ≫ c) p).symm
+
+section Assemble
+
+variable {Ŷ : Scheme.{0}} (RepG : (gluedFunctor F Y R).RepresentableBy Ŷ)
+
+/-- The representation of the glued functor in restriction form. -/
+lemma repG_eq {V : Scheme.{0}} (t : V ⟶ Ŷ) :
+    RepG.homEquiv t = GluedPoint.res R t (RepG.homEquiv (𝟙 Ŷ)) := by
+  conv_lhs => rw [← Category.comp_id t]
+  exact RepG.homEquiv_comp t (𝟙 Ŷ)
+
+set_option backward.isDefEq.respectTransparency false in
+/-- The structure-morphism triangle for the inverse construction. -/
+lemma symm_ofSect_w {T : Over S} (x : F.obj (op T)) :
+    RepG.homEquiv.symm (ofSect Y R T.hom
+        (F.map (eqToHom (CostructuredArrow.eq_mk T).symm).op x)) ≫
+      (RepG.homEquiv (𝟙 Ŷ)).a = T.hom := by
+  have h2 := repG_eq RepG (RepG.homEquiv.symm (ofSect Y R T.hom
+    (F.map (eqToHom (CostructuredArrow.eq_mk T).symm).op x)))
+  rw [Equiv.apply_symm_apply] at h2
+  exact congrArg GluedPoint.a h2.symm
+
+set_option backward.isDefEq.respectTransparency false in
+/-- The object identification for the forward construction. -/
+lemma repG_obj_eq {T : Over S} (φ : T ⟶ Over.mk ((RepG.homEquiv (𝟙 Ŷ)).a)) :
+    T = Over.mk ((RepG.homEquiv φ.left).a) := by
+  have h1 : (RepG.homEquiv φ.left).a = T.hom := by
+    rw [repG_eq RepG φ.left]
+    exact Over.w φ
+  exact (CostructuredArrow.eq_mk T).trans (congrArg Over.mk h1.symm)
+
+set_option backward.isDefEq.respectTransparency false in
+set_option maxHeartbeats 1000000 in
+-- transport-heavy defeq checks through `Over.mk`/`overRes` identifications
+variable (F Y R) in
+include hF hU in
+/-- **The representing object over `S`**: transport of the absolute
+representation of the glued functor to a representation of `F` by the
+`S`-scheme `(Ŷ, â)`. -/
+noncomputable def overRepresentableBy :
+    F.RepresentableBy (Over.mk ((RepG.homEquiv (𝟙 Ŷ)).a)) where
+  homEquiv {T} :=
+    { toFun := fun φ => F.map (eqToHom (repG_obj_eq RepG φ)).op
+        ((RepG.homEquiv φ.left).sect hF hU)
+      invFun := fun x => Over.homMk
+        (RepG.homEquiv.symm (ofSect Y R T.hom
+          (F.map (eqToHom (CostructuredArrow.eq_mk T).symm).op x)))
+        (symm_ofSect_w RepG x)
+      left_inv := fun φ => by
+        apply CommaMorphism.ext
+        swap
+        · apply Subsingleton.elim
+        change RepG.homEquiv.symm (ofSect Y R T.hom _) = φ.left
+        apply RepG.homEquiv.injective
+        rw [Equiv.apply_symm_apply]
+        refine Eq.trans ?_ (ofSect_sect hF hU (RepG.homEquiv φ.left))
+        refine Eq.trans (congrArg (ofSect Y R T.hom)
+          (map_eqToHom_trans _ _ _)) ?_
+        refine Eq.trans ?_ (ofSect_congr (c := T.hom)
+          (d := (RepG.homEquiv φ.left).a) (by
+            rw [repG_eq RepG φ.left]
+            exact (Over.w φ).symm) ((RepG.homEquiv φ.left).sect hF hU))
+        rfl
+      right_inv := fun x => by
+        have hres := Equiv.apply_symm_apply RepG.homEquiv
+          (ofSect Y R T.hom
+            (F.map (eqToHom (CostructuredArrow.eq_mk T).symm).op x))
+        refine Eq.trans (congrArg
+          (fun z => F.map (eqToHom (repG_obj_eq RepG _)).op z)
+          ((sect_congr hF hU hres).trans
+            (congrArg (fun z => F.map (eqToHom (congrArg
+              (fun p => Over.mk p.a) hres)).op z)
+              (sect_ofSect hF hU T.hom _)))) ?_
+        refine Eq.trans (map_eqToHom_trans _ _ _) ?_
+        refine Eq.trans (map_eqToHom_trans _ _ _) ?_
+        exact map_id_apply x }
+  homEquiv_comp {T T'} f g := by
+    change F.map (eqToHom (repG_obj_eq RepG (f ≫ g))).op
+        ((RepG.homEquiv (f ≫ g).left).sect hF hU)
+      = F.map f.op (F.map (eqToHom (repG_obj_eq RepG g)).op
+        ((RepG.homEquiv g.left).sect hF hU))
+    have hcomp : RepG.homEquiv (f ≫ g).left
+        = GluedPoint.res R f.left (RepG.homEquiv g.left) := by
+      refine (repG_eq RepG (f ≫ g).left).trans ?_
+      refine Eq.trans ?_
+        (congrArg (GluedPoint.res R f.left) (repG_eq RepG g.left)).symm
+      exact (res_res hF hU f.left g.left (RepG.homEquiv (𝟙 Ŷ))).symm
+    have hOb₁ : T = Over.mk ((GluedPoint.res R f.left
+        (RepG.homEquiv g.left)).a) :=
+      (repG_obj_eq RepG (f ≫ g)).trans
+        (congrArg (fun p => Over.mk p.a) hcomp)
+    have hsq : f ≫ eqToHom (repG_obj_eq RepG g)
+        = eqToHom hOb₁ ≫ resSecHom f.left ((RepG.homEquiv g.left).a) :=
+      homMk_eqToHom_square hOb₁ (repG_obj_eq RepG g) f
+        (resSecHom f.left ((RepG.homEquiv g.left).a))
+        (heq_of_eq (by simp only [resSecHom, Over.homMk_left]))
+    calc F.map (eqToHom (repG_obj_eq RepG (f ≫ g))).op
+          ((RepG.homEquiv (f ≫ g).left).sect hF hU)
+        = F.map (eqToHom (repG_obj_eq RepG (f ≫ g))).op
+            (F.map (eqToHom (congrArg (fun p => Over.mk p.a) hcomp)).op
+              ((GluedPoint.res R f.left (RepG.homEquiv g.left)).sect hF hU)) :=
+          congrArg (fun z => F.map (eqToHom
+            (repG_obj_eq RepG (f ≫ g))).op z) (sect_congr hF hU hcomp)
+      _ = F.map (eqToHom hOb₁).op
+            ((GluedPoint.res R f.left (RepG.homEquiv g.left)).sect hF hU) :=
+          map_eqToHom_trans _ _ _
+      _ = F.map (eqToHom hOb₁).op
+            (F.map (resSecHom f.left ((RepG.homEquiv g.left).a)).op
+              ((RepG.homEquiv g.left).sect hF hU)) :=
+          congrArg (fun z => F.map (eqToHom hOb₁).op z)
+            (sect_res hF hU f.left (RepG.homEquiv g.left))
+      _ = F.map (eqToHom hOb₁ ≫
+            resSecHom f.left ((RepG.homEquiv g.left).a)).op
+            ((RepG.homEquiv g.left).sect hF hU) := map_map _ _ _
+      _ = F.map (f ≫ eqToHom (repG_obj_eq RepG g)).op
+            ((RepG.homEquiv g.left).sect hF hU) := (map_congr hsq _).symm
+      _ = F.map f.op (F.map (eqToHom (repG_obj_eq RepG g)).op
+            ((RepG.homEquiv g.left).sect hF hU)) := (map_map _ _ _).symm
+
+end Assemble
+
 end ZariskiDescent
+
+/-! ## §9. Zariski descent of representability -/
+
+set_option backward.isDefEq.respectTransparency false in
+/-- **Zariski descent of representability** (EGA 0_I 4.5.4; cf. Stacks 01JJ):
+a Zariski-local presheaf `F` on `Sch/S` that is representable over every
+member of an open cover of `S` is representable by an `S`-scheme.
+
+The proof glues the local representing objects through mathlib's
+`AlgebraicGeometry.Scheme.LocalRepresentability` (Stacks 01JJ), applied to
+the small total functor `ZariskiDescent.gluedFunctor` of `F`. -/
+theorem representable_of_openCover {S : Scheme.{0}} (F : (Over S)ᵒᵖ ⥤ Type 1)
+    (hF : IsZariskiSheafOver F) {ι : Type} (U : ι → S.Opens)
+    (hU : ⨆ i, U i = ⊤)
+    (hloc : ∀ i, ∃ Y : Over (U i).toScheme,
+      Nonempty (((Over.map (U i).ι).op ⋙ F).RepresentableBy Y)) :
+    ∃ Y : Over S, Nonempty (F.RepresentableBy Y) := by
+  choose Y hY using hloc
+  have R : ∀ i, ((Over.map (U i).ι).op ⋙ F).RepresentableBy (Y i) :=
+    fun i => (hY i).some
+  haveI := ZariskiDescent.isLocallySurjective_chart hF hU (Y := Y) (R := R)
+  have hf : ∀ i, IsOpenImmersion.presheaf
+      (ZariskiDescent.chart F Y R hF hU i) :=
+    ZariskiDescent.chart_presheaf hF hU
+  let Fsheaf : Sheaf Scheme.zariskiTopology (Type 0) :=
+    ⟨ZariskiDescent.gluedFunctor F Y R,
+      (isSheaf_iff_isSheaf_of_type _ _).mpr
+        (ZariskiDescent.isSheaf_gluedFunctor hF hU)⟩
+  have RepG : (ZariskiDescent.gluedFunctor F Y R).RepresentableBy
+      (Scheme.LocalRepresentability.glueData hf).glued :=
+    Scheme.LocalRepresentability.representableBy (F := Fsheaf) hf
+  exact ⟨Over.mk ((RepG.homEquiv (𝟙 _)).a),
+    ⟨ZariskiDescent.overRepresentableBy F Y R hF hU RepG⟩⟩
 
 end Scheme
 

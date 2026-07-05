@@ -6,6 +6,7 @@ Authors: Christian Merten
 import Mathlib
 import AlgebraicJacobian.Picard.QuotFunctorDef
 import AlgebraicJacobian.Picard.GrassmannianQuot
+import AlgebraicJacobian.Picard.ZariskiDescentRepresentability
 
 /-!
 # Representability of the relative Grassmannian (`thm:grassmannian_representable`)
@@ -44,7 +45,10 @@ The universe is pinned to `Scheme.{0}`: the merged absolute chart construction
   `Grass(V, d)` for globally trivialised `V ≅ O_S^r` (complete proof).
 * `Scheme.Grassmannian.representable` — the [Nitsure] statement, for `V`
   locally free of rank `r`: glue `representable_of_iso_free` over a
-  trivialising cover of `(S, V)`.
+  trivialising cover of `(S, V)` by Zariski descent of representability
+  (`Scheme.representable_of_openCover`, proved in
+  `ZariskiDescentRepresentability.lean`); the remaining leaf is the sheaf
+  axiom `Grassmannian.isZariskiSheaf`.
 
 ## References
 
@@ -382,73 +386,15 @@ theorem representable_of_iso_free {V : S.Modules} {r : ℕ}
 
 end Grassmannian
 
-/-! ## §5. Zariski-local presheaves on `Sch/S` and descent of representability
+/-! ## §5. Zariski descent of representability (moved)
 
-The remaining step from the trivialised case to a locally free `V` is
-*Zariski descent of representability* (EGA 0_I 4.5.4): a presheaf on `Sch/S`
-satisfying the Zariski sheaf axiom that is representable over every member of
-an open cover of `S` is representable.  We encode the sheaf axiom concretely:
-for every `T : Over S` and every open cover of the total space `T.left`,
-compatible local sections of `F` glue uniquely. -/
-
-/-- The restriction of `T : Over S` to an open `W ⊆ T.left`, as an object of
-`Over S`. -/
-noncomputable def overRes {S : Scheme.{0}} (T : Over S) (W : T.left.Opens) :
-    Over S :=
-  Over.mk (W.ι ≫ T.hom)
-
-/-- The restriction morphism `T|_W ⟶ T` in `Over S`. -/
-noncomputable def overResHom {S : Scheme.{0}} (T : Over S) (W : T.left.Opens) :
-    overRes T W ⟶ T :=
-  Over.homMk W.ι rfl
-
-/-- The inclusion `T|_{W'} ⟶ T|_W` in `Over S` attached to `W' ≤ W`. -/
-noncomputable def overResLE {S : Scheme.{0}} (T : Over S)
-    {W' W : T.left.Opens} (h : W' ≤ W) : overRes T W' ⟶ overRes T W :=
-  Over.homMk (T.left.homOfLE h)
-    ((Category.assoc _ _ _).symm.trans
-      (congrArg (· ≫ T.hom) (T.left.homOfLE_ι h)))
-
-/-- **The Zariski sheaf axiom for a presheaf on `Sch/S`**: for every
-`T : Over S` and every open cover `{W k}` of the total space `T.left`, a
-family of sections of `F` over the restrictions `T|_{W k}` that agree on the
-pairwise intersections glues to a unique section over `T`.  This is the sheaf
-condition for the (big) Zariski site of `S`, stated concretely against open
-covers of the total space; representable presheaves satisfy it, and it is the
-hypothesis under which local representability descends
-(`Scheme.representable_of_openCover`). -/
-def IsZariskiSheafOver {S : Scheme.{0}} (F : (Over S)ᵒᵖ ⥤ Type 1) : Prop :=
-  ∀ (T : Over S) {κ : Type} (W : κ → T.left.Opens), (⨆ k, W k = ⊤) →
-    ∀ x : ∀ k, F.obj (Opposite.op (overRes T (W k))),
-    (∀ k l : κ, F.map (overResLE T (inf_le_left : W k ⊓ W l ≤ W k)).op (x k)
-      = F.map (overResLE T (inf_le_right : W k ⊓ W l ≤ W l)).op (x l)) →
-    ∃! x₀ : F.obj (Opposite.op T), ∀ k, F.map (overResHom T (W k)).op x₀ = x k
-
-/-- **Zariski descent of representability** (EGA 0_I 4.5.4; cf. Stacks 01JJ):
-a Zariski-local presheaf `F` on `Sch/S` that is representable over every
-member of an open cover of `S` is representable by an `S`-scheme.
-
-Proof route (typed `sorry`, the remaining leaf of
-`thm:grassmannian_representable`): let `Y_i → U_i` represent the restrictions
-`F|_{Sch/U_i}`.  Over `U_i ∩ U_j` both `Y_i` and `Y_j` restrict to
-representing objects of `F|_{Sch/(U_i ∩ U_j)}`, so they are canonically
-isomorphic (uniqueness of representing objects), and the canonical isos
-satisfy the cocycle condition by uniqueness again; glue the `Y_i` along them
-(`Scheme.GlueData`) to a scheme `Y → S`.  For `T : Over S`, a morphism
-`T ⟶ Y` restricts over the preimages of the `U_i` to morphisms into the
-`Y_i`, i.e. to compatible local sections of `F`, which glue by the sheaf
-axiom; conversely a section of `F` over `T` restricts to local sections,
-whose classifying morphisms into the `Y_i` agree on overlaps and glue
-(`Scheme.OpenCover.glueMorphisms`) to `T ⟶ Y`.  The two constructions are
-mutually inverse by locality of morphism equality and the uniqueness half of
-the sheaf axiom. -/
-theorem representable_of_openCover {S : Scheme.{0}} (F : (Over S)ᵒᵖ ⥤ Type 1)
-    (hF : IsZariskiSheafOver F) {ι : Type} (U : ι → S.Opens)
-    (hU : ⨆ i, U i = ⊤)
-    (hloc : ∀ i, ∃ Y : Over (U i).toScheme,
-      Nonempty (((Over.map (U i).ι).op ⋙ F).RepresentableBy Y)) :
-    ∃ Y : Over S, Nonempty (F.RepresentableBy Y) := by
-  sorry
+The definitions `overRes` / `overResHom` / `overResLE` / `IsZariskiSheafOver`
+and the descent theorem `Scheme.representable_of_openCover`
+(EGA 0_I 4.5.4; Stacks 01JJ) now live in
+`AlgebraicJacobian/Picard/ZariskiDescentRepresentability.lean`, where the
+theorem is **proved** (via mathlib's
+`AlgebraicGeometry.Scheme.LocalRepresentability`, Stacks 01JJ, applied to the
+small total functor of `F`). -/
 
 /-! ## §6. Restriction of the Grassmannian to an open of the base
 
@@ -629,8 +575,9 @@ the cover), the quotient maps glue by the sheaf property of `Hom`, local
 freeness and epi-ness are local, and the glued family is unique up to the
 equivalence `ker q = ker q'` because an isomorphism of quotients commuting
 with the epimorphisms is unique when it exists, so the local comparison isos
-agree on overlaps and glue.  [typed `sorry` — the second remaining leaf of
-`thm:grassmannian_representable`.] -/
+agree on overlaps and glue.  [typed `sorry` — the single remaining leaf of
+`thm:grassmannian_representable`, now that the descent theorem
+`Scheme.representable_of_openCover` is proved.] -/
 theorem isZariskiSheaf (V : S.Modules) (d : ℕ) :
     IsZariskiSheafOver (Scheme.Grassmannian V d) := by
   sorry
