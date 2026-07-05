@@ -6,6 +6,8 @@ Authors: Christian Merten
 import Mathlib
 import AlgebraicJacobian.Picard.GenericFlatnessGeometric
 import AlgebraicJacobian.Picard.GlueDescent
+import AlgebraicJacobian.Picard.PullbackFinitePresentation
+import AlgebraicJacobian.Picard.QuotFlatBaseChange
 
 /-!
 # The Quot functor and the relative Grassmannian functor (real definitions)
@@ -76,9 +78,14 @@ base-change, and as tensor-product is right exact, the pull-back of
    `H⁰` of a module with proper support is invariant under base field
    extension — flat base change over a field).
 
-Items 3–5 are recorded as named typed `sorry` leaves (their statements are the
-honest Stacks/Nitsure facts; see the blueprint nodes for sources); items 1–2
-are proved here.  The functor identities reduce to the pseudofunctor
+Item 1 is proved inline; item 2 is proved in
+`Picard/PullbackFinitePresentation.lean` (per-layer `IsFinite` instances for
+the presentation transports); item 3 is proved in
+`Picard/QuotFlatBaseChange.lean` (assembly of the pullback-piece and
+affine-cover flatness engines of `GenericFlatnessGeometric.lean`); items 4–5
+are recorded as named typed `sorry` leaves (their statements are the honest
+Stacks/Nitsure facts; see the blueprint nodes for sources).  The functor
+identities reduce to the pseudofunctor
 coherence laws of `Scheme.Modules.pullback`
 (`pseudofunctor_right_unitality` / `pseudofunctor_associativity`), packaged
 once as the app-level lemmas `Scheme.Modules.pullback_id_app_coherence` and
@@ -314,109 +321,15 @@ noncomputable def pullbackTriangleIso {Z Y W : Scheme.{u}} {b : Z ⟶ Y} {g : Y 
 Nitsure §1: "as properness and flatness are preserved by base-change, and as
 tensor-product is right exact, the pull-back of `⟨F, q⟩` … is well-defined."
 The four preservation facts, in the forms consumed by the pullback action of
-the Quot functor.  The first is proved (right-exactness of the pullback and
-transport of finite presentations along the per-slice bridge); the remaining
-three are recorded as named typed `sorry` leaves with honest statements —
-see the blueprint nodes `lem:coherent_flat_base_change`,
+the Quot functor.  Finite presentation
+(`Scheme.Modules.pullback_isFinitePresentation`, together with the per-slice
+transport `Modules.pullbackSlicePresentation` and its finiteness) is proved in
+`Picard/PullbackFinitePresentation.lean`; flatness
+(`Scheme.CoherentSheafFlat.of_isPullback`) is proved in
+`Picard/QuotFlatBaseChange.lean`; both are re-exported here by the imports.
+The remaining two preservation facts are recorded below as named typed
+`sorry` leaves with honest statements — see the blueprint nodes
 `lem:proper_support_base_change`, `lem:hilbert_fibre_base_change`. -/
-
-set_option backward.isDefEq.respectTransparency false in
-set_option synthInstance.maxHeartbeats 1000000 in
-set_option maxHeartbeats 2000000 in
-/-- Term-mode variant of `presentationPullbackSliceOfOver`
-(`Cohomology/PullbackQuasicoherent.lean`) — the same per-slice transport of a
-presentation of `F.over A` to a presentation of `(g^* F).over (g ⁻¹ᵁ A)`,
-restated without tactic-`set` wrappers so that the finiteness of the
-presentation can be read off the transport chain by instance search
-(every step is `Presentation.map` or `Presentation.ofIsIso`). -/
-noncomputable def Modules.pullbackSlicePresentation {Y X : Scheme.{u}} (g : Y ⟶ X)
-    (F : X.Modules) (A : X.Opens) (P : (F.over A).Presentation) :
-    (((Scheme.Modules.pullback g).obj F).over (g ⁻¹ᵁ A)).Presentation :=
-  letI P1 : (F.restrict A.ι).Presentation := presentationRestrictOfOver A F A P le_rfl
-  letI gA : (g ⁻¹ᵁ A).toScheme ⟶ A.toScheme := g.resLE A (g ⁻¹ᵁ A) le_rfl
-  haveI hpc : Limits.PreservesColimitsOfSize.{u, u, u, u, u + 1, u + 1}
-      (Scheme.Modules.pullback gA) := inferInstance
-  letI P2 : ((Scheme.Modules.pullback gA).obj (F.restrict A.ι)).Presentation :=
-    @SheafOfModules.Presentation.map _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ P1
-      (Scheme.Modules.pullback gA) hpc (pullbackUnitIso gA).symm
-  letI e : (Scheme.Modules.pullback gA).obj (F.restrict A.ι) ≅
-      ((Scheme.Modules.pullback g).obj F).restrict (g ⁻¹ᵁ A).ι :=
-    (Scheme.Modules.pullback gA).mapIso
-        ((Scheme.Modules.restrictFunctorIsoPullback A.ι).app F) ≪≫
-      (Scheme.Modules.pullbackComp gA A.ι).app F ≪≫
-      (Scheme.Modules.pullbackCongr (Scheme.Hom.resLE_comp_ι g le_rfl)).app F ≪≫
-      ((Scheme.Modules.pullbackComp (g ⁻¹ᵁ A).ι g).app F).symm ≪≫
-      ((Scheme.Modules.restrictFunctorIsoPullback (g ⁻¹ᵁ A).ι).app
-        ((Scheme.Modules.pullback g).obj F)).symm
-  letI P5 : (((Scheme.Modules.pullback g).obj F).restrict (g ⁻¹ᵁ A).ι).Presentation :=
-    SheafOfModules.Presentation.ofIsIso.{u, u, u} e.hom P2
-  letI eV := modulesOverOpensEquivalence (X := Y) (g ⁻¹ᵁ A)
-  letI P6 : (eV.inverse.obj (((Scheme.Modules.pullback g).obj F).over (g ⁻¹ᵁ A))).Presentation :=
-    SheafOfModules.Presentation.ofIsIso.{u, u, u}
-      (overOpensIsoRestrict (g ⁻¹ᵁ A) ((Scheme.Modules.pullback g).obj F)).symm.hom P5
-  letI ηV : eV.functor.obj (SheafOfModules.unit (g ⁻¹ᵁ A).toScheme.ringCatSheaf) ≅
-      SheafOfModules.unit (Sheaf.over Y.ringCatSheaf (g ⁻¹ᵁ A)) :=
-    overOpensFunctorUnitIso (X := Y) (g ⁻¹ᵁ A)
-  letI P7 : (eV.functor.obj (eV.inverse.obj
-      (((Scheme.Modules.pullback g).obj F).over (g ⁻¹ᵁ A)))).Presentation :=
-    P6.map eV.functor ηV.symm
-  SheafOfModules.Presentation.ofIsIso.{u, u, u}
-    (eV.counitIso.app (((Scheme.Modules.pullback g).obj F).over (g ⁻¹ᵁ A))).hom P7
-
-/-- The per-slice pullback presentation transport preserves finiteness: every
-step of `Modules.pullbackSlicePresentation` (and of the underlying
-`presentationRestrictOfOver` / `presentationOverOpens` transports) is a
-`Presentation.map` or a `Presentation.ofIsIso`, both of which preserve the
-generator and relation index types (definitionally — `Presentation.map` via
-`presentationOfIsCokernelFree` keeps `generators.I`/`relations.I`, and
-`Presentation.ofIsIso` transports along `GeneratingSections.ofEpi`, which
-keeps the index).  The `whnf`-reduction certifying this definitional identity
-exceeds practical heartbeat budgets through the eight-layer transport chain,
-so the finiteness transfer is recorded as a typed `sorry` (a mechanical
-index-bookkeeping fact, no mathematical content). -/
-lemma Modules.pullbackSlicePresentation_isFinite {Y X : Scheme.{u}} (g : Y ⟶ X)
-    (F : X.Modules) (A : X.Opens) (P : (F.over A).Presentation) [P.IsFinite] :
-    (Modules.pullbackSlicePresentation g F A P).IsFinite := by
-  sorry
-
-/-- **Pullback preserves finite presentation** (Stacks 01BK-adjacent; the
-finite-presentation refinement of `pullback_isQuasicoherent_hom`).  The
-per-slice transport of `Cohomology/PullbackQuasicoherent.lean` preserves the
-index types of the presentations, so the pullback of a finitely presented
-sheaf of modules along an arbitrary scheme morphism is finitely presented. -/
-theorem Modules.pullback_isFinitePresentation {Y X : Scheme.{u}} (g : Y ⟶ X)
-    (F : X.Modules) (hF : F.IsFinitePresentation) :
-    ((Scheme.Modules.pullback g).obj F).IsFinitePresentation := by
-  obtain ⟨q, hq⟩ := hF.exists_quasicoherentData
-  have hcov : (Opens.grothendieckTopology Y).CoversTop (fun i => g ⁻¹ᵁ q.X i) := by
-    intro W x hx
-    obtain ⟨U', fU, hf, hU'⟩ := q.coversTop ⊤ (g.base x) (by trivial)
-    obtain ⟨i, ⟨gi⟩⟩ := hf
-    exact ⟨W ⊓ (g ⁻¹ᵁ q.X i), homOfLE inf_le_left, ⟨i, ⟨homOfLE inf_le_right⟩⟩,
-      ⟨hx, (leOfHom gi) hU'⟩⟩
-  let q' : ((Scheme.Modules.pullback g).obj F).QuasicoherentData :=
-    { I := q.I
-      X := fun i => g ⁻¹ᵁ q.X i
-      coversTop := hcov
-      presentation := fun i => Modules.pullbackSlicePresentation g F (q.X i) (q.presentation i) }
-  have hfin : q'.shrink.IsFinitePresentation := by
-    apply SheafOfModules.QuasicoherentData.IsFinitePresentation.mk
-    intro i
-    exact Modules.pullbackSlicePresentation_isFinite g F _ _
-  exact { exists_quasicoherentData := ⟨q'.shrink, hfin⟩ }
-
-/-- **Flatness over the base is stable under base change** (Stacks 01U9,
-lifted to the coherent-sheaf flatness predicate `Scheme.CoherentSheafFlat`
-along a cartesian square).  Affine-locally this is `Module.Flat.baseChange`
-threaded through the quasi-coherent section calculus: the stalk of `g'^* F`
-is the base change of the stalk of `F`, and the affine-pair predicate is
-stalk-local for quasi-coherent modules (Stacks 00HT). -/
-theorem CoherentSheafFlat.of_isPullback
-    {X S X' S' : Scheme.{u}} {f : X ⟶ S} {g : S' ⟶ S} {g' : X' ⟶ X} {f' : X' ⟶ S'}
-    (sq : IsPullback g' f' f g) (F : X.Modules) (hqc : F.IsQuasicoherent)
-    (hF : CoherentSheafFlat f F) :
-    CoherentSheafFlat f' ((Scheme.Modules.pullback g').obj F) := by
-  sorry
 
 /-- **Proper support is stable under base change** (Nitsure §1; Stacks 01W4 +
 056H).  For a finitely presented `F`, the annihilator of `g'^* F` contains
