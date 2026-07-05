@@ -75,6 +75,7 @@ noncomputable def precomp (f : X.PartialMap Y) (p : W ⟶ X) (hp : IsOpenMap p.b
   dense_domain := f.dense_domain.preimage hp
   hom := (p ∣_ f.domain) ≫ f.hom
 
+set_option backward.isDefEq.respectTransparency false in
 /-- Precomposition respects the equivalence of partial maps, hence descends to
 rational maps. -/
 lemma precomp_equiv {f g : X.PartialMap Y} (p : W ⟶ X) (hp : IsOpenMap p.base)
@@ -87,6 +88,21 @@ lemma precomp_equiv {f g : X.PartialMap Y} (p : W ⟶ X) (hp : IsOpenMap p.base)
   rw [← Category.assoc, ← Category.assoc,
     homOfLE_comp_morphismRestrict p hVl, homOfLE_comp_morphismRestrict p hVr,
     Category.assoc, Category.assoc, e]
+
+set_option backward.isDefEq.respectTransparency false in
+/-- Precomposition with an `S`-morphism preserves being an `S`-map: if `f` is an
+`S`-rational map and `p : W ⟶ X` is an `S`-morphism, then `f ∘ p` is an
+`S`-rational map. In Milne's setting all schemes live over `k̄`, so the difference
+map is automatically a `k̄`-map. -/
+instance precomp_isOver {S : Scheme.{u}} [W.Over S] [X.Over S] [Y.Over S]
+    (f : X.PartialMap Y) [f.IsOver S] (p : W ⟶ X) [p.IsOver S] (hp : IsOpenMap p.base) :
+    (f.precomp p hp).IsOver S := by
+  haveI hrestr : (p ∣_ f.domain).IsOver S := by
+    rw [Hom.isOver_iff]
+    change (p ∣_ f.domain) ≫ (f.domain.ι ≫ X ↘ S) = (p ⁻¹ᵁ f.domain).ι ≫ W ↘ S
+    rw [← Category.assoc, morphismRestrict_ι, Category.assoc, comp_over]
+  change ((p ∣_ f.domain) ≫ f.hom).IsOver S
+  infer_instance
 
 end PartialMap
 
@@ -103,6 +119,7 @@ lemma RationalMap.precomp_toRationalMap (f : X.PartialMap Y) (p : W ⟶ X)
     (hp : IsOpenMap p.base) :
     (f.precomp p hp).toRationalMap = f.toRationalMap.precomp p hp := rfl
 
+set_option backward.isDefEq.respectTransparency false in
 /-- Precomposition on the left commutes with right-composition by a morphism.
 This is what lets Milne's difference map be assembled as
 `(f.precomp prᵢ).compHom (m ∘ (id × inv))`. -/
@@ -110,9 +127,12 @@ lemma RationalMap.precomp_compHom (f : X ⤏ Y) (p : W ⟶ X) (hp : IsOpenMap p.
     (g : Y ⟶ Z) :
     (f.precomp p hp).compHom g = (f.compHom g).precomp p hp := by
   obtain ⟨f, rfl⟩ := f.exists_rep
+  simp only [← RationalMap.precomp_toRationalMap, ← RationalMap.compHom_toRationalMap]
   refine congrArg PartialMap.toRationalMap (PartialMap.ext _ _ rfl ?_)
-  simp only [PartialMap.compHom_hom, PartialMap.compHom_domain, PartialMap.precomp_hom,
-    Scheme.isoOfEq_rfl, Iso.refl_hom, Category.id_comp, Category.assoc]
+  rw [Scheme.isoOfEq_rfl, Iso.refl_hom, Category.id_comp,
+    PartialMap.compHom_hom, PartialMap.precomp_hom, PartialMap.precomp_hom,
+    PartialMap.compHom_hom, Category.assoc]
+  rfl
 
 end Scheme
 
