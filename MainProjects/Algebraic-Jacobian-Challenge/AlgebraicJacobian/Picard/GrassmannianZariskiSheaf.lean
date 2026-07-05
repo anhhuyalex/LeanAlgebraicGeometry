@@ -492,7 +492,7 @@ variable {S : Scheme.{0}} [IsLocallyNoetherian S] {V : S.Modules} {d : ℕ} {T :
 variable {κ : Type} (W : κ → T.left.Opens) (hW : ⨆ k, W k = ⊤)
 
 /-- The glue datum attached to the open cover `W` of the total space of `T`. -/
-noncomputable def covGD : Scheme.GlueData.{0} :=
+@[reducible] noncomputable def covGD : Scheme.GlueData.{0} :=
   (opensCover T.left W hW).gluedCover
 
 /-- The second projection of the cover overlap, composed with the inclusion of
@@ -511,6 +511,34 @@ lemma glueChart_w (k : κ) :
         ((opensCover T.left W hW).fromGlued ≫ T.hom)
       = (W k).ι ≫ T.hom :=
   gluedCover_ι_w (opensCover T.left W hW) k T.hom
+
+/-- The canonical isomorphism `fromGlued` of the cover glue datum is an
+isomorphism (named access to the mathlib instance). -/
+lemma fromGlued_isIso : IsIso ((opensCover T.left W hW).fromGlued) :=
+  inferInstance
+
+/-- The inverse of the canonical isomorphism `fromGlued` of the cover glue
+datum. -/
+noncomputable def fromGluedInv :=
+  @inv Scheme _ _ _ ((opensCover T.left W hW).fromGlued) (fromGlued_isIso W hW)
+
+@[reassoc]
+lemma fromGluedInv_fromGlued :
+    fromGluedInv W hW ≫ (opensCover T.left W hW).fromGlued = 𝟙 T.left :=
+  @IsIso.inv_hom_id _ _ _ _ _ (fromGlued_isIso W hW)
+
+/-- The `Over S`-morphism `T ⟶ (glued base)` induced by the inverse of
+`fromGlued`. -/
+noncomputable def fromGluedHom :
+    T ⟶ Over.mk ((opensCover T.left W hW).fromGlued ≫ T.hom) :=
+  Over.homMk (fromGluedInv W hW)
+    (by show fromGluedInv W hW ≫ (opensCover T.left W hW).fromGlued ≫ T.hom = T.hom
+        rw [← Category.assoc, fromGluedInv_fromGlued, Category.id_comp])
+
+/-- The `k`-th chart morphism `T|_{W k} ⟶ (glued base)` in `Over S`. -/
+noncomputable def glueChartHom (k : κ) :
+    Scheme.overRes T (W k) ⟶ Over.mk ((opensCover T.left W hW).fromGlued ≫ T.hom) :=
+  Over.homMk ((covGD W hW).ι k) (glueChart_w W hW k)
 
 variable (y : ∀ k, Scheme.LocallyFreeQuotient V d (Scheme.overRes T (W k)))
 
@@ -706,6 +734,169 @@ lemma glueQuot_overlap (k l : κ) :
   rw [Functor.map_comp]
   simp only [Category.assoc] at tcc ⊢
   rw [reassoc_of% tcc]
+
+/-! ### The glued module, quotient and family -/
+
+/-- The glued module over the glued scheme of the cover: the value of the
+module-descent engine on the chart sheaves and the transition isomorphisms. -/
+noncomputable def gluedModule : (covGD W hW).glued.Modules :=
+  Scheme.Modules.glue (covGD W hW) (fun k => (y k).F) (glueTransition hcpt)
+    (fun k => glueTransition_self hcpt k)
+    (fun i j k => glueTransition_cocycle hcpt i j k)
+
+/-- The glued quotient map out of the tautological source, assembled from the
+transposed chart components through the descent-equalizer lift. -/
+noncomputable def gluedQuot :
+    (Scheme.Modules.pullback ((opensCover T.left W hW).fromGlued ≫ T.hom)).obj V ⟶
+      gluedModule hcpt :=
+  Scheme.Modules.glueLift (covGD W hW) (fun k => (y k).F) (glueTransition hcpt)
+    (fun k => glueTransition_self hcpt k)
+    (fun i j k => glueTransition_cocycle hcpt i j k)
+    (fun k => glueLiftComponent W hW y k)
+    (fun p => (Scheme.Modules.glueLift_cond_iff (covGD W hW) (fun k => (y k).F)
+      (glueTransition hcpt) (fun k => glueChartQuot W hW y k) p.1 p.2).mpr
+      (glueQuot_overlap hcpt p.1 p.2))
+
+set_option backward.isDefEq.respectTransparency false in
+/-- **Chart recovery of the glued quotient**: restricting the glued quotient
+to the `k`-th chart and projecting through the descent restriction recovers
+the chart component. -/
+lemma gluedQuot_restrict (k : κ) :
+    (Scheme.Modules.pullback ((covGD W hW).ι k)).map (gluedQuot hcpt) ≫
+      Scheme.Modules.glueRestrictionHom (covGD W hW) (fun k => (y k).F)
+        (glueTransition hcpt) (fun k => glueTransition_self hcpt k)
+        (fun i j k => glueTransition_cocycle hcpt i j k) k
+    = glueChartQuot W hW y k := by
+  unfold gluedQuot
+  rw [Scheme.Modules.pullback_map_glueLift_glueRestrictionHom]
+  exact Equiv.symm_apply_apply _ _
+
+set_option backward.isDefEq.respectTransparency false in
+/-- The glued quotient map is an epimorphism: its chart restrictions are (up
+to the chart isomorphisms) the chart quotients, and epimorphy is detected on
+the chart cover by joint faithfulness. -/
+lemma gluedQuot_epi : Epi (gluedQuot hcpt) := by
+  have hchart : ∀ k, Epi ((Scheme.Modules.pullback ((covGD W hW).ι k)).map
+      (gluedQuot hcpt)) := by
+    intro k
+    haveI := (y k).epi
+    haveI hcq : Epi (glueChartQuot W hW y k) := by
+      unfold glueChartQuot
+      infer_instance
+    haveI := Scheme.Modules.isIso_glueRestrictionHom (covGD W hW) (fun k => (y k).F)
+      (glueTransition hcpt) (fun k => glueTransition_self hcpt k)
+      (fun i j k => glueTransition_cocycle hcpt i j k) k
+    have hmap : (Scheme.Modules.pullback ((covGD W hW).ι k)).map (gluedQuot hcpt)
+        = glueChartQuot W hW y k ≫ inv (Scheme.Modules.glueRestrictionHom (covGD W hW)
+            (fun k => (y k).F) (glueTransition hcpt)
+            (fun k => glueTransition_self hcpt k)
+            (fun i j k => glueTransition_cocycle hcpt i j k) k) := by
+      rw [← gluedQuot_restrict hcpt k, Category.assoc, IsIso.hom_inv_id,
+        Category.comp_id]
+    rw [hmap]
+    infer_instance
+  constructor
+  intro Z u v huv
+  apply Scheme.Modules.pullback_map_jointly_faithful (covGD W hW)
+  intro k
+  haveI := hchart k
+  rw [← cancel_epi ((Scheme.Modules.pullback ((covGD W hW).ι k)).map (gluedQuot hcpt)),
+    ← Functor.map_comp, ← Functor.map_comp, huv]
+
+set_option backward.isDefEq.respectTransparency false in
+/-- The glued module is locally free of rank `d`: its chart restrictions are
+the chart sheaves (by effective descent), and rank-`d` local freeness is
+local. -/
+lemma gluedModule_locFree :
+    SheafOfModules.IsLocallyFreeOfRank (gluedModule hcpt) d := by
+  refine Scheme.Modules.isLocallyFreeOfRank_of_cover (T := (covGD W hW).glued)
+    (V := fun k => ((covGD W hW).ι k).opensRange) ?_ ?_
+  · rw [eq_top_iff]
+    intro x _
+    obtain ⟨k, z, rfl⟩ := (covGD W hW).ι_jointly_surjective x
+    exact TopologicalSpace.Opens.mem_iSup.mpr ⟨k, z, rfl⟩
+  · intro k
+    haveI := Scheme.Modules.isIso_glueRestrictionHom (covGD W hW) (fun k => (y k).F)
+      (glueTransition hcpt) (fun k => glueTransition_self hcpt k)
+      (fun i j k => glueTransition_cocycle hcpt i j k) k
+    refine Scheme.Modules.isLocallyFreeOfRank_of_iso
+      ((((Scheme.Modules.pullbackCongr
+          (((covGD W hW).ι k).isoOpensRange_inv_comp)).app (gluedModule hcpt)).symm ≪≫
+        ((Scheme.Modules.pullbackComp ((covGD W hW).ι k).isoOpensRange.inv
+          ((covGD W hW).ι k)).app (gluedModule hcpt)).symm))
+      (Scheme.Modules.pullback_isLocallyFreeOfRank _
+        (Scheme.Modules.isLocallyFreeOfRank_of_iso
+          (asIso (Scheme.Modules.glueRestrictionHom (covGD W hW) (fun k => (y k).F)
+            (glueTransition hcpt) (fun k => glueTransition_self hcpt k)
+            (fun i j k => glueTransition_cocycle hcpt i j k) k))
+          (y k).locFree))
+
+/-- The glued family over the glued base object of `Over S`. -/
+noncomputable def gluedOverFamily :
+    Scheme.LocallyFreeQuotient V d
+      (Over.mk ((opensCover T.left W hW).fromGlued ≫ T.hom)) where
+  F := gluedModule hcpt
+  q := gluedQuot hcpt
+  epi := gluedQuot_epi hcpt
+  locFree := gluedModule_locFree hcpt
+
+/-- The **glued rank-`d` locally free quotient family on `T`**: transport of
+the glued family along the inverse of `fromGlued`. -/
+noncomputable def gluedFamily : Scheme.LocallyFreeQuotient V d T :=
+  Scheme.LocallyFreeQuotient.pullbackAlong (fromGluedHom W hW) (gluedOverFamily hcpt)
+
+set_option backward.isDefEq.respectTransparency false in
+/-- The structure morphism of `T|_{W k}` composed with the inverse of
+`fromGlued` is the `k`-th chart morphism of the glue datum. -/
+lemma overResHom_fromGluedHom (k : κ) :
+    Scheme.overResHom T (W k) ≫ fromGluedHom W hW = glueChartHom W hW k := by
+  apply Over.OverMorphism.ext
+  show (W k).ι ≫ inv (opensCover T.left W hW).fromGlued = (covGD W hW).ι k
+  rw [IsIso.comp_inv_eq]
+  exact (Scheme.Cover.ι_fromGlued (opensCover T.left W hW) k).symm
+
+set_option backward.isDefEq.respectTransparency false in
+set_option maxHeartbeats 1600000 in
+/-- **Restriction recovery**: the glued family restricts on each member of
+the cover to the given chart family, up to the equivalence of quotients. -/
+lemma gluedFamily_restrict (k : κ) :
+    (Scheme.LocallyFreeQuotient.pullbackAlong (Scheme.overResHom T (W k))
+      (gluedFamily hcpt)).Rel (y k) := by
+  refine Scheme.LocallyFreeQuotient.rel_trans ?_
+    (?_ : (Scheme.LocallyFreeQuotient.pullbackAlong (glueChartHom W hW k)
+      (gluedOverFamily hcpt)).Rel (y k))
+  · -- collapse the double restriction along the composite, then rewrite it
+    have hrel : (Scheme.LocallyFreeQuotient.pullbackAlong
+        (Scheme.overResHom T (W k) ≫ fromGluedHom W hW) (gluedOverFamily hcpt)).Rel
+        (Scheme.LocallyFreeQuotient.pullbackAlong (Scheme.overResHom T (W k))
+          (Scheme.LocallyFreeQuotient.pullbackAlong (fromGluedHom W hW)
+            (gluedOverFamily hcpt))) :=
+      ⟨(Scheme.Modules.pullbackCongr (Over.comp_left _ _ _ (Scheme.overResHom T (W k))
+          (fromGluedHom W hW))).app (gluedOverFamily hcpt).F ≪≫
+        ((Scheme.Modules.pullbackComp (Scheme.overResHom T (W k)).left
+          (fromGluedHom W hW).left).app (gluedOverFamily hcpt).F).symm,
+        pullbackAlong_comp_q (Scheme.overResHom T (W k)) (fromGluedHom W hW)
+          (gluedOverFamily hcpt)⟩
+    have hrel' := Scheme.LocallyFreeQuotient.rel_symm hrel
+    rw [overResHom_fromGluedHom] at hrel'
+    exact hrel'
+  · -- the chart restriction is the chart family, through the descent iso
+    haveI := Scheme.Modules.isIso_glueRestrictionHom (covGD W hW) (fun k => (y k).F)
+      (glueTransition hcpt) (fun k => glueTransition_self hcpt k)
+      (fun i j k => glueTransition_cocycle hcpt i j k) k
+    refine ⟨asIso (Scheme.Modules.glueRestrictionHom (covGD W hW) (fun k => (y k).F)
+      (glueTransition hcpt) (fun k => glueTransition_self hcpt k)
+      (fun i j k => glueTransition_cocycle hcpt i j k) k), ?_⟩
+    change ((pullbackTriangleIso (glueChart_w W hW k) V).inv ≫
+        (Scheme.Modules.pullback ((covGD W hW).ι k)).map (gluedQuot hcpt)) ≫
+        Scheme.Modules.glueRestrictionHom (covGD W hW) (fun k => (y k).F)
+          (glueTransition hcpt) (fun k => glueTransition_self hcpt k)
+          (fun i j k => glueTransition_cocycle hcpt i j k) k
+      = (y k).q
+    rw [Category.assoc, gluedQuot_restrict hcpt k]
+    change (pullbackTriangleIso (glueChart_w W hW k) V).inv ≫
+        ((pullbackTriangleIso (glueChart_w W hW k) V).hom ≫ (y k).q) = (y k).q
+    rw [Iso.inv_hom_id_assoc]
 
 end CoverGlue
 
