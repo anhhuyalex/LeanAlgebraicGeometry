@@ -211,11 +211,12 @@ and the extracted polynomial is unique by
   \label{def:sectionGradedRing}
   \lean{AlgebraicGeometry.sectionGradedRing}
   \uses{lem:sectionGradedRing_gcommSemiring}
-  % NOTE: Formalization is blocked on the absence of tensor products for sheaves of modules in
-  % Mathlib at the pinned commit. The degree-\(m\) component \(\Gamma(X_s, L_s^{\otimes m})\)
-  % requires a tensor power \(L_s^{\otimes m}\) of a line bundle; this infrastructure (tensor
-  % product of sheaves of modules with lax-monoidal global sections) is not yet available, making
-  % this definition a prerequisite sub-build.
+  % NOTE: The tensor-power infrastructure the degree-\(m\) component
+  % \(\Gamma(X_s, L_s^{\otimes m})\) needs (tensor product of sheaves of modules and the
+  % twist \(L_s^{\otimes m}\)) is provided in-project by chapter Picard_SectionGradedRing
+  % (def:sheafModuleTwist and its substrate, all formalized). What remains for this node is
+  % the assembly of the graded ring itself on top of it
+  % (lem:sectionGradedRing_gcommSemiring).
   % SOURCE: [Nitsure], "Construction of Hilbert and Quot Schemes", \S 1,
   % sub-section "Stratification by Hilbert Polynomials" (read from
   % references/nitsure-hilbert-quot-src/nitsure-hilbert-quot.tex, L453-L464).
@@ -804,10 +805,8 @@ the level of power series; Mathlib supplies only the converse extraction
   % hilbertPolynomial π L F s. Its core is the private helper
   % eq_of_eval_nat_eventually_eq (two rational polynomials agreeing at all
   % large naturals are equal, via Polynomial.eq_of_infinite_eval_eq), which is
-  % the statement below. The thin corollary
-  % Scheme.hilbertPolynomial_eval_eventually (the defining eventual-agreement
-  % property of hilbertPolynomial under the existence hypothesis) is
-  % formalized in the same file and carried by this node. All sorry-free in
+  % the statement below. The defining eventual-agreement property of the
+  % chosen polynomial is cor:hilbertPolynomial_eval_eventually. Sorry-free in
   % AlgebraicJacobian/Picard/HilbertPolynomial.lean.
   Let \(h_{\mathcal{F},s}\) be the graded Hilbert function of
   \cref{def:fiber_hilbert_function}. If \(\Phi, \Psi \in \mathbb{Q}[\lambda]\)
@@ -832,20 +831,17 @@ the level of power series; Mathlib supplies only the converse extraction
 [Hilbert polynomial from a rational Hilbert function]
   \label{lem:hilbertPoly_of_isRatHilb}
   \lean{AlgebraicGeometry.Scheme.existsUnique_hilbertPolynomial_of_isRatHilb}
-  \uses{def:fiber_hilbert_function, def:ratHilb}
+  \uses{def:fiber_hilbert_function, def:ratHilb,
+    lem:hilbertPoly_exists_mathlib, lem:hilbertPolynomial_unique}
   % ENCODING. Scheme.existsUnique_hilbertPolynomial_of_isRatHilb: from
   % IsRatHilb (fun m => (hilbertFunction π L F s m : ℚ)) d -- the output shape
   % of the graded Hilbert-Serre engine gradedModule_hilbertSeries_rational
   % (lem:gradedHilbertSerre_rational) -- an ∃! polynomial eventually agreeing
   % with the graded Hilbert function, with witness Polynomial.hilbertPoly p d
   % via Polynomial.coeff_mul_invOneSubPow_eq_hilbertPoly_eval
-  % (lem:hilbertPoly_exists_mathlib). The thin corollaries
-  % Scheme.hilbertPolynomial_eval_of_isRatHilb (under IsRatHilb,
-  % hilbertPolynomial itself eventually agrees with the graded Hilbert
-  % function) and Scheme.hilbertPolynomial_eq_hilbertPoly (under an explicit
-  % rational-series presentation, hilbertPolynomial π L F s =
-  % Polynomial.hilbertPoly p d) are formalized in the same file and carried by
-  % this node. All sorry-free in
+  % (lem:hilbertPoly_exists_mathlib). Its consequences for the chosen
+  % polynomial are cor:hilbertPolynomial_eval_of_isRatHilb and
+  % cor:hilbertPolynomial_eq_hilbertPoly. Sorry-free in
   % AlgebraicJacobian/Picard/HilbertPolynomial.lean.
   Let \(h_{\mathcal{F},s}\) be the graded Hilbert function of
   \cref{def:fiber_hilbert_function}, and suppose \(h_{\mathcal{F},s}\) is a
@@ -874,10 +870,94 @@ the level of power series; Mathlib supplies only the converse extraction
   \(h_{\mathcal{F},s}\) at all sufficiently large integers are equal.
 \end{proof}
 
+\begin{corollary}\leanok
+[Defining property of the Hilbert polynomial]
+  \label{cor:hilbertPolynomial_eval_eventually}
+  \lean{AlgebraicGeometry.Scheme.hilbertPolynomial_eval_eventually}
+  \uses{def:hilbert_polynomial, def:fiber_hilbert_function,
+    lem:hilbertPolynomial_unique}
+  % ENCODING. Scheme.hilbertPolynomial_eval_eventually. Sorry-free in
+  % AlgebraicJacobian/Picard/HilbertPolynomial.lean.
+  Let \(h_{\mathcal{F},s}\) be the graded Hilbert function of
+  \cref{def:fiber_hilbert_function}. If \emph{some} polynomial in
+  \(\mathbb{Q}[\lambda]\) agrees with \(h_{\mathcal{F},s}\) at all
+  sufficiently large integers, then the Hilbert polynomial
+  \(\Phi_{\mathcal{F},s}\) of \cref{def:hilbert_polynomial} does:
+  \(\Phi_{\mathcal{F},s}(m) = h_{\mathcal{F},s}(m)\) for all \(m \gg 0\).
+\end{corollary}
+
+\begin{proof}
+  \uses{def:hilbert_polynomial, lem:hilbertPolynomial_unique}
+  \leanok
+  Let \(\Psi \in \mathbb{Q}[\lambda]\) agree with \(h_{\mathcal{F},s}\) at all
+  \(m > N\). By \cref{def:hilbert_polynomial} the Hilbert polynomial
+  \(\Phi_{\mathcal{F},s}\) is a polynomial agreeing with
+  \(h_{\mathcal{F},s}\) for all \(m \gg 0\) whenever one exists, and by
+  \cref{lem:hilbertPolynomial_unique} any such polynomial is unique, so
+  \(\Phi_{\mathcal{F},s} = \Psi\); hence
+  \(\Phi_{\mathcal{F},s}(m) = h_{\mathcal{F},s}(m)\) for all \(m > N\).
+\end{proof}
+
+\begin{corollary}\leanok
+[The Hilbert polynomial under a rational Hilbert function]
+  \label{cor:hilbertPolynomial_eval_of_isRatHilb}
+  \lean{AlgebraicGeometry.Scheme.hilbertPolynomial_eval_of_isRatHilb}
+  \uses{def:hilbert_polynomial, def:ratHilb, lem:hilbertPoly_of_isRatHilb,
+    cor:hilbertPolynomial_eval_eventually}
+  % ENCODING. Scheme.hilbertPolynomial_eval_of_isRatHilb. Sorry-free in
+  % AlgebraicJacobian/Picard/HilbertPolynomial.lean.
+  If the graded Hilbert function \(h_{\mathcal{F},s}\) is a rational Hilbert
+  function of some order \(d\) (\cref{def:ratHilb}), then the Hilbert
+  polynomial \(\Phi_{\mathcal{F},s}\) of \cref{def:hilbert_polynomial}
+  satisfies \(\Phi_{\mathcal{F},s}(m) = h_{\mathcal{F},s}(m)\) for all
+  \(m \gg 0\).
+\end{corollary}
+
+\begin{proof}
+  \uses{lem:hilbertPoly_of_isRatHilb, cor:hilbertPolynomial_eval_eventually}
+  \leanok
+  By \cref{lem:hilbertPoly_of_isRatHilb} some polynomial agrees with
+  \(h_{\mathcal{F},s}\) at all sufficiently large integers; conclude by
+  \cref{cor:hilbertPolynomial_eval_eventually}.
+\end{proof}
+
+\begin{corollary}\leanok
+[The Hilbert polynomial computes as the extracted numerator polynomial]
+  \label{cor:hilbertPolynomial_eq_hilbertPoly}
+  \lean{AlgebraicGeometry.Scheme.hilbertPolynomial_eq_hilbertPoly}
+  \uses{def:hilbert_polynomial, def:ratHilb, lem:hilbertPoly_exists_mathlib,
+    lem:hilbertPolynomial_unique}
+  % ENCODING. Scheme.hilbertPolynomial_eq_hilbertPoly: under an explicit
+  % rational-series presentation of the graded Hilbert function,
+  % hilbertPolynomial π L F s = Polynomial.hilbertPoly p d. Sorry-free in
+  % AlgebraicJacobian/Picard/HilbertPolynomial.lean.
+  Suppose there are \(p \in \mathbb{Q}[X]\) and \(d, N \in \mathbb{N}\) with
+  \(h_{\mathcal{F},s}(m) = [X^m]\bigl(p \cdot (1-X)^{-d}\bigr)\) for all
+  \(m > N\) (\cref{def:ratHilb}). Then the Hilbert polynomial of
+  \cref{def:hilbert_polynomial} is the polynomial extracted from the pair
+  \((p, d)\) by \cref{lem:hilbertPoly_exists_mathlib}:
+  \(\Phi_{\mathcal{F},s} = \mathrm{hilbertPoly}\,p\,d\).
+\end{corollary}
+
+\begin{proof}
+  \uses{lem:hilbertPoly_exists_mathlib, lem:hilbertPolynomial_unique}
+  \leanok
+  By \cref{lem:hilbertPoly_exists_mathlib} there is an \(N'\) with
+  \((\mathrm{hilbertPoly}\,p\,d)(n) = [X^n](p\cdot(1-X)^{-d})\) for all
+  \(n > N'\), so \(\mathrm{hilbertPoly}\,p\,d\) agrees with
+  \(h_{\mathcal{F},s}\) at all \(m > \max(N, N')\). Both
+  \(\Phi_{\mathcal{F},s}\) and \(\mathrm{hilbertPoly}\,p\,d\) therefore agree
+  with \(h_{\mathcal{F},s}\) at all sufficiently large integers, and
+  \cref{lem:hilbertPolynomial_unique} gives
+  \(\Phi_{\mathcal{F},s} = \mathrm{hilbertPoly}\,p\,d\).
+\end{proof}
+
 \begin{theorem}[Hilbert polynomial from the section module]
   \label{thm:hilbertPoly_of_sectionModule}
   \lean{AlgebraicGeometry.Scheme.hilbertPolynomialOfSectionModule}
-  \uses{def:hilbert_polynomial, def:fiber_hilbert_function}
+  \uses{def:hilbert_polynomial, def:fiber_hilbert_function,
+    lem:sectionGradedModule_fg, lem:gradedHilbertSerre_rational,
+    lem:hilbertPoly_of_isRatHilb}
   \source{nitsure-hilbert-quot}
   % SOURCE: [Nitsure], \S 1, sub-section "Stratification by Hilbert
   % Polynomials" (read from

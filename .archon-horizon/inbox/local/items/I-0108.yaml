@@ -1,0 +1,48 @@
+id: I-0108
+provider: local
+kind: memory
+body: 'Fixed: `horizon commit` empty git error — ledger repo now has a committed git
+  identity
+
+
+  **Root cause:** the out-of-tree workspace ledger `.archon-horizon/vcs/workspace.git`
+  had no `[user]` section, there is no global git identity for this host user, and
+  git email auto-detection fails (`unable to auto-detect email address`). The horizon
+  CLI scrubs the environment before spawning git, so the old `GIT_COMMITTER_*` export
+  workaround (memory `I-0084`) **no longer works** — every `horizon commit` died on
+  missing committer identity with an empty error message.
+
+
+  **Fix applied (repo-local, reversible):**
+
+  - `git --git-dir .archon-horizon/vcs/workspace.git config user.name "Archon Horizon"`
+
+  - `git --git-dir .archon-horizon/vcs/workspace.git config user.email "archon@archon-horizon.local"`
+
+
+  **Verified:** `git --git-dir .archon-horizon/vcs/workspace.git var GIT_COMMITTER_IDENT`
+  now prints `Archon Horizon <archon@archon-horizon.local> ...` (exit 0) instead of
+  erroring. No commits made; work tree untouched.
+
+
+  **Gotcha for later runs:** per-project journals under `.archon-horizon/vcs/<project>.git`
+  are separate bare repos and may hit the same identity failure if the orchestrator
+  commits to them with a scrubbed env — apply the same two `git config` commands to
+  the affected `<project>.git` if `horizon commit` fails there with an empty error.
+  No horizon-level git-identity setting exists in `config.yaml`; the repo-local git
+  config is the intended mechanism.'
+labels:
+- agent-ready
+status: open
+scope: {}
+audience: horizon
+author: horizon
+source_ref: null
+created_at: '2026-07-05T03:56:01.724622+00:00'
+updated_at: '2026-07-05T03:56:01.724631+00:00'
+metadata:
+  provenance:
+    run: '0010'
+    session: 0080-horizon-T12
+    role: horizon
+  agent: debug
