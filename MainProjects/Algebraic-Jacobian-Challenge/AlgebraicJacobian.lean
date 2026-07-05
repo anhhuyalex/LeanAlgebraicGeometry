@@ -92,6 +92,7 @@ import AlgebraicJacobian.Picard.GlueDescent
 import AlgebraicJacobian.Picard.GrassmannianQuot
 import AlgebraicJacobian.Picard.QuotFunctorDef
 import AlgebraicJacobian.Picard.ZariskiDescentRepresentability
+import AlgebraicJacobian.Picard.GrassmannianZariskiSheaf
 import AlgebraicJacobian.Picard.GrassmannianRepresentability
 import AlgebraicJacobian.Picard.LineBundleCoherence
 import AlgebraicJacobian.RiemannRoch.WeilDivisor
