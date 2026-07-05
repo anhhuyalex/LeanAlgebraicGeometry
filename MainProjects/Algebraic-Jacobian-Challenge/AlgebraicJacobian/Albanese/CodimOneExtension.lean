@@ -1706,20 +1706,21 @@ theorem indeterminacy_pure_codim_one_into_grpScheme
         ∃ z ∈ indeterminacyLocus f,
           Order.coheight z = 1 ∧ x ∈ closure ({z} : Set X.left) := by
   -- Milne's 4-substep proof body — see informal/milne-lemma-3.3.md for the
-  -- detailed chain (TBD). Each substep is project-side buildable on top of
-  -- Mathlib's Weil-divisor apparatus and the group-object API; substep 4
-  -- (pole-divisor intersection with the diagonal is pure codim-1) is the
-  -- substantive Mathlib gap.
+  -- full transcribed proof, substep DAG, and current status. Each substep is
+  -- project-side buildable on top of Mathlib's Weil-divisor apparatus and the
+  -- group-object API; substep 4b (pole-divisor intersection with the diagonal
+  -- is pure codim-1) is the substantive Mathlib gap.
   --
   -- * Substep 1: construct the difference rational map
-  --   `Φ := (id × inv) ∘ (f × f) ∘ m : X × X ⇢ G`, dense on `U × U` for
-  --   any representative `(U, φ_U) ∈ f`. Needs the binary product on
-  --   `GrpObj`-objects and the right-monoidal-cat structure used in this
-  --   project (`MonoidalCategory.tensorObj`, `MonObj.mul`).
-  -- * Substep 2: `(x, x) ∈ Dom(Φ) ↔ x ∈ Dom(f)` via the formula
-  --   `f(x) = Φ(x, u) · f(u)` for any `u ∈ Dom(f)` in a chosen open
-  --   neighbourhood — direct from the group-law continuity + openness of
-  --   the domain of definition.
+  --   `Φ := (id × inv) ∘ (f × f) ∘ m : X × X ⇢ G`. **DONE**
+  --   (`Albanese/DifferenceMap.lean`, `differenceRationalMap`); its domain
+  --   contains `Dom(f) ×_{k̄} Dom(f)` (**DONE**, session 0042,
+  --   `le_domain_differenceRationalMap`), which is the easy direction of
+  --   substep 2 (`Φ` defined at `(x,x)` if `f` defined at `x`).
+  -- * Substep 2 (hard direction): `(x, x) ∈ Dom(Φ) ⟹ x ∈ Dom(f)` via the
+  --   formula `f(x) = Φ(x, u) · f(u)` for any `u ∈ Dom(f)` in a chosen open
+  --   neighbourhood — from the group-law + openness of `Dom(Φ)` and density
+  --   of `Dom(f)`. **OPEN.**
   -- * Substep 3: pullback of the local ring at the identity `e ∈ G`:
   --   `Φ` defined at `(x, x)` ⟺ `Φ^* (𝒪_{G,e}) ⊆ 𝒪_{X×X, (x,x)}`. Uses the
   --   `Scheme.RationalMap`-to-function-field machinery (the same gap that

@@ -116,6 +116,20 @@ theorem isOpenMap_pullback_snd_self (X : Over (Spec (.of kbar))) [Smooth X.hom] 
 
 namespace Scheme.RationalMap
 
+/-- **Right-composition with a morphism only enlarges the domain of definition.**
+For a rational map `F : X ⤏ Y` and a morphism `g : Y ⟶ Z`, every point at which
+`F` is defined is also a point at which `F.compHom g` is defined: a partial-map
+representative `F₀` of `F` yields the representative `F₀.compHom g` of
+`F.compHom g` with the *same* domain (post-composing with a total morphism never
+destroys definedness). This is Milne Lemma 3.3, Sub-step 1: the difference map
+`Φ = (prod ⋯).compHom (diff_G)` is defined wherever the pairing `prod ⋯` is. -/
+theorem le_domain_compHom {X Y Z : Scheme.{u}} (F : X.RationalMap Y) (g : Y ⟶ Z) :
+    F.domain ≤ (F.compHom g).domain := by
+  intro x hx
+  rw [RationalMap.mem_domain] at hx ⊢
+  obtain ⟨F₀, hxF₀, hF₀⟩ := hx
+  exact ⟨F₀.compHom g, hxF₀, by rw [RationalMap.compHom_toRationalMap, hF₀]⟩
+
 variable {X G : Over (Spec (.of kbar))}
   [Smooth X.hom]
   [GrpObj G] [LocallyOfFiniteType G.hom]
@@ -152,6 +166,126 @@ theorem differenceRationalMap_compHom_over
   simp only [differenceRationalMap]
   rw [RationalMap.compHom_compHom, grpObjDiffLeft_comp_hom]
   exact RationalMap.prod_compHom_over _ _ _ _ _ _ _
+
+/-- The explicit pairing partial map `U ×_{k̄} U → G ×_{k̄} G` of Milne's
+construction (`(x, y) ↦ (φ_U(x), φ_U(y))`), built from the maximal representative
+`φ_U = f.toPartialMap` of `f` over the common domain `Dom(f∘pr₁) ⊓ Dom(f∘pr₂)`. It
+is the partial-map witness that `prod` is defined on `Dom(f) ×_{k̄} Dom(f)`. -/
+noncomputable def precompDiffPairing
+    (f : X.left.RationalMap G.left) (hover : f.compHom G.hom = X.hom.toRationalMap)
+    [IsReduced X.left] [G.left.IsSeparated] :
+    (pullback X.hom X.hom).PartialMap (pullback G.hom G.hom) where
+  domain := (f.toPartialMap.precomp (pullback.fst X.hom X.hom)
+      (isOpenMap_pullback_fst_self X)).domain
+    ⊓ (f.toPartialMap.precomp (pullback.snd X.hom X.hom)
+      (isOpenMap_pullback_snd_self X)).domain
+  dense_domain := by
+    rw [TopologicalSpace.Opens.coe_inf]
+    exact (f.toPartialMap.precomp (pullback.fst X.hom X.hom)
+        (isOpenMap_pullback_fst_self X)).dense_domain.inter_of_isOpen_left
+      (f.toPartialMap.precomp (pullback.snd X.hom X.hom)
+        (isOpenMap_pullback_snd_self X)).dense_domain
+      (f.toPartialMap.precomp (pullback.fst X.hom X.hom)
+        (isOpenMap_pullback_fst_self X)).domain.isOpen
+  hom := pullback.lift
+    ((pullback X.hom X.hom).homOfLE inf_le_left
+      ≫ (f.toPartialMap.precomp (pullback.fst X.hom X.hom)
+        (isOpenMap_pullback_fst_self X)).hom)
+    ((pullback X.hom X.hom).homOfLE inf_le_right
+      ≫ (f.toPartialMap.precomp (pullback.snd X.hom X.hom)
+        (isOpenMap_pullback_snd_self X)).hom)
+    (by
+      -- Over-`Spec k̄` structure making *both* projections `S`-morphisms (they agree
+      -- after `X.hom` by `pullback.condition`), so the precomposed legs inherit
+      -- over-ness from `f.toPartialMap` without ever unfolding `precomp`.
+      letI : X.left.Over (Spec (.of kbar)) := ⟨X.hom⟩
+      letI : G.left.Over (Spec (.of kbar)) := ⟨G.hom⟩
+      letI : (pullback X.hom X.hom).Over (Spec (.of kbar)) :=
+        ⟨pullback.fst X.hom X.hom ≫ X.hom⟩
+      haveI : f.IsOver (Spec (.of kbar)) := RationalMap.isOver_iff.mpr hover
+      haveI : (pullback.fst X.hom X.hom).IsOver (Spec (.of kbar)) := ⟨rfl⟩
+      haveI : (pullback.snd X.hom X.hom).IsOver (Spec (.of kbar)) := ⟨pullback.condition.symm⟩
+      have e₁ : (f.toPartialMap.precomp (pullback.fst X.hom X.hom)
+            (isOpenMap_pullback_fst_self X)).hom ≫ G.hom
+          = (f.toPartialMap.precomp (pullback.fst X.hom X.hom)
+            (isOpenMap_pullback_fst_self X)).domain.ι ≫ (pullback.fst X.hom X.hom ≫ X.hom) :=
+        (PartialMap.isOver_iff (S := Spec (.of kbar))).mp inferInstance
+      have e₂ : (f.toPartialMap.precomp (pullback.snd X.hom X.hom)
+            (isOpenMap_pullback_snd_self X)).hom ≫ G.hom
+          = (f.toPartialMap.precomp (pullback.snd X.hom X.hom)
+            (isOpenMap_pullback_snd_self X)).domain.ι ≫ (pullback.fst X.hom X.hom ≫ X.hom) :=
+        (PartialMap.isOver_iff (S := Spec (.of kbar))).mp inferInstance
+      rw [Category.assoc, Category.assoc, e₁, e₂]
+      simp only [← Category.assoc, Scheme.homOfLE_ι])
+
+omit [GrpObj G] in
+/-- The explicit pairing partial map represents Milne's `prod (f∘pr₁, f∘pr₂)`. Both
+are `k̄`-rational maps out of the integral scheme `X ×_{k̄} X`, so it suffices to
+match their induced morphisms `Spec K(X × X) ⟶ G ×_{k̄} G`: on each `pullback`
+factor the pairing's generic-point morphism restricts to `(f ∘ prᵢ)`'s. -/
+theorem precompDiffPairing_toRationalMap
+    (f : X.left.RationalMap G.left)
+    (hover : f.compHom G.hom = X.hom.toRationalMap)
+    [IsIntegral (pullback X.hom X.hom)] [IsReduced X.left] [G.left.IsSeparated] :
+    (precompDiffPairing f hover).toRationalMap
+      = RationalMap.prod (pullback.fst X.hom X.hom ≫ X.hom) G.hom G.hom
+        (f.precomp (pullback.fst X.hom X.hom) (isOpenMap_pullback_fst_self X))
+        (f.precomp (pullback.snd X.hom X.hom) (isOpenMap_pullback_snd_self X))
+        (by rw [RationalMap.precomp_compHom, hover, RationalMap.precomp_hom_toRationalMap])
+        (by rw [RationalMap.precomp_compHom, hover, RationalMap.precomp_hom_toRationalMap,
+          pullback.condition]) := by
+  refine RationalMap.eq_of_fromFunctionField_eq _ _ ?_
+  rw [RationalMap.fromFunctionField_toRationalMap, prod_fromFunctionField]
+  apply pullback.hom_ext
+  · rw [pullback.lift_fst]
+    have hrhs : (f.precomp (pullback.fst X.hom X.hom)
+          (isOpenMap_pullback_fst_self X)).fromFunctionField
+        = (f.toPartialMap.precomp (pullback.fst X.hom X.hom)
+          (isOpenMap_pullback_fst_self X)).fromFunctionField := by
+      rw [← RationalMap.fromFunctionField_toRationalMap, RationalMap.precomp_toRationalMap,
+        f.toRationalMap_toPartialMap]
+    rw [hrhs, ← PartialMap.fromFunctionField_restrict
+      (f.toPartialMap.precomp (pullback.fst X.hom X.hom) (isOpenMap_pullback_fst_self X))
+      (precompDiffPairing f hover).dense_domain inf_le_left]
+    simp only [PartialMap.fromFunctionField, PartialMap.fromSpecStalkOfMem,
+      PartialMap.restrict_hom, Category.assoc]
+    congr 1
+    exact pullback.lift_fst _ _ _
+  · rw [pullback.lift_snd]
+    have hrhs : (f.precomp (pullback.snd X.hom X.hom)
+          (isOpenMap_pullback_snd_self X)).fromFunctionField
+        = (f.toPartialMap.precomp (pullback.snd X.hom X.hom)
+          (isOpenMap_pullback_snd_self X)).fromFunctionField := by
+      rw [← RationalMap.fromFunctionField_toRationalMap, RationalMap.precomp_toRationalMap,
+        f.toRationalMap_toPartialMap]
+    rw [hrhs, ← PartialMap.fromFunctionField_restrict
+      (f.toPartialMap.precomp (pullback.snd X.hom X.hom) (isOpenMap_pullback_snd_self X))
+      (precompDiffPairing f hover).dense_domain inf_le_right]
+    simp only [PartialMap.fromFunctionField, PartialMap.fromSpecStalkOfMem,
+      PartialMap.restrict_hom, Category.assoc]
+    congr 1
+    exact pullback.lift_snd _ _ _
+
+/-- **Milne Lemma 3.3, Sub-step 1 (domain lower bound / Sub-step 2 easy direction).**
+The difference rational map `Φ` is defined on `Dom(f) ×_{k̄} Dom(f)`: every point
+`p` of `X ×_{k̄} X` projecting into `Dom(f)` under both projections lies in
+`Dom(Φ)`. This is Milne's "clearly `Φ` is defined at `(x, x)` if `f` is defined at
+`x`" — indeed at every `(x, y)` with `x, y ∈ Dom(f)` — made precise: a maximal
+representative `(U, φ_U)` of `f` (`f.toPartialMap`) supplies the honest morphism
+`U ×_{k̄} U → G` of Milne's construction, which represents `Φ`. -/
+theorem le_domain_differenceRationalMap
+    (f : X.left.RationalMap G.left)
+    (hover : f.compHom G.hom = X.hom.toRationalMap)
+    [IsIntegral (pullback X.hom X.hom)] [IsReduced X.left] [G.left.IsSeparated] :
+    (pullback.fst X.hom X.hom ⁻¹ᵁ f.domain) ⊓ (pullback.snd X.hom X.hom ⁻¹ᵁ f.domain)
+      ≤ (differenceRationalMap f hover).domain := by
+  -- Right-composition with `diff_G` only enlarges the domain, reducing to `prod`;
+  -- the explicit pairing `precompDiffPairing` is a representative defined on all of
+  -- `Dom(f) ×_{k̄} Dom(f)`.
+  refine le_trans ?_ (le_domain_compHom _ (grpObjDiffLeft G))
+  intro p hp
+  rw [RationalMap.mem_domain]
+  exact ⟨precompDiffPairing f hover, hp, precompDiffPairing_toRationalMap f hover⟩
 
 end Scheme.RationalMap
 
