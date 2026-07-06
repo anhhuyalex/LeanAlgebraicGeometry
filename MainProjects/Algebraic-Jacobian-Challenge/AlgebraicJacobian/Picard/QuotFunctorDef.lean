@@ -9,6 +9,7 @@ import AlgebraicJacobian.Picard.GlueDescent
 import AlgebraicJacobian.Picard.PullbackFinitePresentation
 import AlgebraicJacobian.Picard.QuotFlatBaseChange
 import AlgebraicJacobian.Picard.QuotSupportBaseChange
+import AlgebraicJacobian.Picard.TensorObjSubstrate
 
 /-!
 # The Quot functor and the relative Grassmannian functor (real definitions)
@@ -84,12 +85,17 @@ Item 1 is proved inline; item 2 is proved in
 the presentation transports); item 3 is proved in
 `Picard/QuotFlatBaseChange.lean` (assembly of the pullback-piece and
 affine-cover flatness engines of `GenericFlatnessGeometric.lean`); item 4 is
-recorded as a named typed `sorry` leaf; item 5 is proved by the fibre-pasting
-assembly of §2 modulo two named typed `sorry` leaves — the tensor–pullback
-compatibility `Scheme.Modules.pullback_moduleTensorPow_iso` and the
-`Γ`-base-change core `Scheme.gammaFiber_finrank_baseChange_field` (the leaf
-statements are the honest Stacks/Nitsure facts; see the blueprint nodes for
-sources).  The functor
+proved in `Picard/QuotSupportBaseChange.lean`
+(`Scheme.Modules.HasProperSupport.of_isPullback`, re-exported by the import);
+item 5 is proved by the fibre-pasting assembly of §2 modulo two named typed
+`sorry` leaves — the tensor–pullback compatibility
+`Scheme.Modules.pullbackTensorMap_isIso` (invertibility of the canonical
+comparison, to which the twist statement
+`Scheme.Modules.pullback_moduleTensorPow_iso` is now reduced by the proved
+`m`-recursion assembly of §2) and the `Γ`-base-change core
+`Scheme.gammaFiber_finrank_baseChange_field` (the leaf statements are the
+honest Stacks/Nitsure facts; see the blueprint nodes for sources).  The
+functor
 identities reduce to the pseudofunctor
 coherence laws of `Scheme.Modules.pullback`
 (`pseudofunctor_right_unitality` / `pseudofunctor_associativity`), packaged
@@ -340,7 +346,9 @@ Hilbert-function invariance (item 5, blueprint node
 `lem:hilbert_fibre_base_change`) is proved below by pasting the fibre squares
 (`Scheme.fiberBaseChange`) and transporting dimensions across the comparison
 isomorphisms, modulo two named typed `sorry` leaves (blueprint nodes
-`lem:pullback_moduleTensorPow`, `lem:gamma_fiber_baseChange_field`). -/
+`lem:pullback_tensor_map_isiso` — the canonical-comparison invertibility to
+which `lem:pullback_moduleTensorPow` is reduced — and
+`lem:gamma_fiber_baseChange_field`). -/
 
 /- **Proper support is stable under base change** (Nitsure §1; Stacks 01W4 +
 056H; blueprint `lem:proper_support_base_change`) now lives in
@@ -358,8 +366,10 @@ the pasting of `Scheme.quotBaseSquare` with Mathlib's residue-field square).
 The two restrictions are matched across this identification by pseudofunctor
 coherence (`Scheme.pullbackSquareIso`); their twists by the congruence isos
 of the sheaf tensor product (`Scheme.Modules.moduleTensorPowCongr`) together
-with the tensor-compatibility leaf
-(`Scheme.Modules.pullback_moduleTensorPow_iso`); and the dimension count is
+with the tensor-compatibility statement
+(`Scheme.Modules.pullback_moduleTensorPow_iso`, proved by the `m`-recursion
+assembly modulo the canonical-comparison leaf
+`Scheme.Modules.pullbackTensorMap_isIso`); and the dimension count is
 transported along the assembled isomorphism
 (`Scheme.hilbertFunction_eq_finrank_of_iso`) and delegated to the
 `Γ`-base-change leaf (`Scheme.gammaFiber_finrank_baseChange_field`). -/
@@ -404,6 +414,87 @@ noncomputable def Modules.moduleTensorPowCongr {Z : Scheme.{u}} {F F' L L' : Z.M
     Modules.moduleTensorPow F L m ≅ Modules.moduleTensorPow F' L' m :=
   Modules.sheafTensorObjCongr eF (Modules.tensorPowCongr eL m)
 
+/-! #### Reduction of the tensor–pullback leaf to the canonical comparison
+
+The tensor–pullback compatibility `Scheme.Modules.pullback_moduleTensorPow_iso`
+below (Stacks 01CD for the twists `F ⊗ L^{⊗m}`) reduces, by induction on `m`,
+to the *binary* case — invertibility of the canonical sheaf-level
+pullback–tensor comparison `Scheme.Modules.pullbackTensorMap` built in
+`Picard/TensorObjSubstrate.lean` (the sheafified mate of the lax monoidal
+structure of the pushforward) — together with the unit case `f^*𝒪_Z ≅ 𝒪_Y`,
+which is the proved `Scheme.Modules.pullbackUnitIso` (the comparison functor
+on opens is always `Final`).  The substrate tensor `Scheme.Modules.tensorObj`
+is definitionally equal to the section-graded `Scheme.Modules.sheafTensorObj`
+(both sheafify the presheaf-level tensor of the underlying presheaves), so
+`asIso` of the canonical comparison re-types at `sheafTensorObj` directly.
+The single remaining wall is the named typed `sorry`
+`Scheme.Modules.pullbackTensorMap_isIso` just below
+(blueprint `lem:pullback_tensor_map_isiso`). -/
+
+set_option backward.isDefEq.respectTransparency false in
+/-- **The canonical pullback–tensor comparison is an isomorphism**
+([Stacks 01CD] = Modules, Lemma `tensor-product-pullback`, which is
+unconditional: the canonical comparison map is invertible for arbitrary
+sheaves of modules on ringed spaces; stalkwise it is the base-change
+isomorphism of tensor products, via [Stacks 01CB] + [Stacks 0098]): for a
+morphism of schemes `f : Y ⟶ Z` and `A B : Z.Modules`, the sheaf-level
+comparison `Scheme.Modules.pullbackTensorMap f A B :
+f^*(A ⊗ B) ⟶ f^*A ⊗ f^*B` of `Picard/TensorObjSubstrate.lean` is an
+isomorphism.
+
+This is the KNOWN-HARD general-`f` wall documented in
+`TensorObjSubstrate.lean` (§Phase 2): the Lean pullback functor is an
+*abstract* left adjoint with no sectionwise value, so invertibility cannot be
+checked on sections directly.  Candidate closure routes: (i) generalize the
+locally-trivial chart-chase (`Modules.pullbackTensorIsoOfLocallyTrivial`)
+from trivializing charts to affine charts with quasi-coherent section
+formulas — `Modules.pullback_app_isoTensor` (QuotScheme.lean) supplies the
+pullback side, and a `Γ(affine, tensorObj)` section formula for
+quasi-coherent factors is the missing brick — globalized by
+`isIso_of_isIso_restrict` through the restriction coherence
+`pullbackTensorMap_restrict` (itself a tracked `sorry` of the substrate);
+(ii) the concrete inverse-image model (`extendScalars ⋙ pullback₀` left Kan
+extension) route of `sec:tensorobj_pullback_monoidality` (multi-hundred-LOC);
+(iii) stalk machinery for `SheafOfModules` (Mathlib-absent; the presheaf-level
+comparison-map substrate exists in `TensorObjSubstrate/StalkTensor.lean`).
+Blueprint: `lem:pullback_tensor_map_isiso`. -/
+theorem Modules.pullbackTensorMap_isIso {Z Y : Scheme.{u}} (f : Y ⟶ Z) (A B : Z.Modules) :
+    IsIso (Modules.pullbackTensorMap f A B) := by
+  sorry
+
+set_option backward.isDefEq.respectTransparency false in
+/-- **Pullback commutes with the binary sheaf tensor product**: the
+`sheafTensorObj`-typed `Iso` packaging of `Modules.pullbackTensorMap_isIso`.
+The substrate tensor `Modules.tensorObj` and the section-graded
+`Modules.sheafTensorObj` are definitionally equal, so `asIso` of the canonical
+comparison `Modules.pullbackTensorMap` re-types at `sheafTensorObj` without a
+bridge.  (The `IsIso` witness is passed explicitly to `asIso` — the substrate's
+`pbu`-canon idiom — so no instance synthesis runs on the sorried leaf.) -/
+noncomputable def Modules.pullbackSheafTensorIso {Z Y : Scheme.{u}} (f : Y ⟶ Z)
+    (A B : Z.Modules) :
+    (Scheme.Modules.pullback f).obj (Modules.sheafTensorObj A B) ≅
+      Modules.sheafTensorObj ((Scheme.Modules.pullback f).obj A)
+        ((Scheme.Modules.pullback f).obj B) :=
+  @asIso _ _ _ _ (Modules.pullbackTensorMap f A B) (Modules.pullbackTensorMap_isIso f A B)
+
+set_option backward.isDefEq.respectTransparency false in
+/-- **Pullback commutes with tensor powers**: `f^*(L^{⊗m}) ≅ (f^*L)^{⊗m}`, by
+induction on `m` from the unit case (`Modules.pullbackUnitIso`, proved
+sorry-free in `TensorObjSubstrate.lean`) and the binary case
+(`Modules.pullbackSheafTensorIso`, resting on the
+`Modules.pullbackTensorMap_isIso` leaf), the isomorphisms being pushed through
+the recursion `L^{⊗(m+1)} = L^{⊗m} ⊗ L` by the tensor congruence
+`Modules.sheafTensorObjCongr`. -/
+noncomputable def Modules.pullbackTensorPowIso {Z Y : Scheme.{u}} (f : Y ⟶ Z)
+    (L : Z.Modules) :
+    (m : ℕ) → ((Scheme.Modules.pullback f).obj (Modules.tensorPow L m) ≅
+      Modules.tensorPow ((Scheme.Modules.pullback f).obj L) m)
+  | 0 => Modules.pullbackUnitIso f
+  | (m + 1) =>
+      Modules.pullbackSheafTensorIso f (Modules.tensorPow L m) L ≪≫
+        Modules.sheafTensorObjCongr (Modules.pullbackTensorPowIso f L m) (Iso.refl _)
+
+set_option backward.isDefEq.respectTransparency false in
 /-- **Pullback commutes with the sheaf tensor product and its twists**
 ([Stacks 01CD] = Modules, Lemma `tensor-product-pullback`; the stalkwise
 description is [Stacks 01CB] + [Stacks 0098]): for a morphism of schemes
@@ -413,13 +504,22 @@ the twist of the pullbacks.  The cited Stacks lemma is stronger — the
 canonical comparison map is an isomorphism for arbitrary sheaves of modules
 on ringed spaces — but the quasi-coherent `Nonempty`-of-isomorphism form
 recorded here is all the Hilbert-function base-change argument needs.
+
+PROVED (T12 wave 2) by the `m`-recursion assembly
+`Modules.pullbackSheafTensorIso` (binary case) +
+`Modules.pullbackTensorPowIso` (powers) + `Modules.sheafTensorObjCongr`
+(congruence), modulo the single narrower named typed `sorry`
+`Modules.pullbackTensorMap_isIso` above (invertibility of the canonical
+comparison; the quasi-coherence hypotheses are not consumed by this
+assembly — they are retained because the statement is pinned).
 Blueprint: `lem:pullback_moduleTensorPow`. -/
 theorem Modules.pullback_moduleTensorPow_iso {Z Y : Scheme.{u}} (f : Y ⟶ Z)
     (F L : Z.Modules) [F.IsQuasicoherent] [L.IsQuasicoherent] (m : ℕ) :
     Nonempty ((Scheme.Modules.pullback f).obj (Modules.moduleTensorPow F L m) ≅
       Modules.moduleTensorPow ((Scheme.Modules.pullback f).obj F)
-        ((Scheme.Modules.pullback f).obj L) m) := by
-  sorry
+        ((Scheme.Modules.pullback f).obj L) m) :=
+  ⟨Modules.pullbackSheafTensorIso f F (Modules.tensorPow L m) ≪≫
+    Modules.sheafTensorObjCongr (Iso.refl _) (Modules.pullbackTensorPowIso f L m)⟩
 
 /-- The canonical morphism from the fibre of `X_{T'} → T'` at `t'` to the
 fibre of `X_T → T` at `t := ψ(t')`, induced by `quotBaseMap π ψ` on total
@@ -574,7 +674,8 @@ theorem hilbertFunction_quotBaseMap (π : X ⟶ S) (L : X.Modules)
         (pullbackTriangleIso (rfl : (pullback.snd π T.hom).fiberι (ψ.left.base t')
             ≫ pullback.fst π T.hom = _) L).symm
   -- Step 3 (twist compatibility): pull the tensor operations through
-  -- `fiberBaseChange` (leaf `Modules.pullback_moduleTensorPow_iso`)
+  -- `fiberBaseChange` (`Modules.pullback_moduleTensorPow_iso`, proved modulo
+  -- the `Modules.pullbackTensorMap_isIso` leaf)
   obtain ⟨eT⟩ := Modules.pullback_moduleTensorPow_iso (fiberBaseChange π ψ t')
     ((pullback.snd π T.hom).fiberModule (ψ.left.base t') F)
     ((pullback.snd π T.hom).fiberModule (ψ.left.base t')
