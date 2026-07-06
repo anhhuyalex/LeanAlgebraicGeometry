@@ -116,6 +116,16 @@ lemma pullbackUnitIso_inv_congr {T' T : Scheme.{u}} {φ ψ : T' ⟶ T} (h : φ =
 
 end Scheme.Modules
 
+set_option backward.isDefEq.respectTransparency false in
+/-- `topIso` naturality under `homOfLE` / structure-sheaf restriction: on a scheme `X`,
+restriction of a global section from `V` to `U ⊆ V` commutes with the identifications
+`Γ(U, ⊤) ≅ Γ(X, U)`. -/
+lemma topIso_inv_homOfLE_appTop {X : Scheme.{u}} {U V : X.Opens} (e : U ≤ V) :
+    V.topIso.inv ≫ (X.homOfLE e).appTop
+      = X.presheaf.map (homOfLE e).op ≫ U.topIso.inv := by
+  simp only [Scheme.Opens.topIso_inv, Scheme.homOfLE_appTop, ← Functor.map_comp, ← op_comp]
+  exact congrArg _ (Subsingleton.elim _ _)
+
 namespace ProjTwist
 
 variable (n : Type u)
@@ -422,10 +432,211 @@ universe-monomorphic at `Scheme.GlueData.{0}` (see the NOTE at
 (`ℙ^m`).  The cover, units and transitions above stay universe-polymorphic
 for a future generalisation of the engine. -/
 
+/-! ## Substrate for the transported overlap cocycle
+
+The base cocycle `overlapUnit_cocycle_transport` (below) factors all three transition
+units through a common map `V(i,j,k) ⟶ D₊(XᵢXⱼXₖ)` and reduces to the fraction identity
+`(Xᵢ/Xⱼ)(Xⱼ/Xₖ) = Xᵢ/Xₖ` in `A⁰_{XᵢXⱼXₖ}`.  The pieces below build that common map
+(`commonHom`), the three chart-factorisations (`fact_ij/ik/jk`), the section-restriction
+transport (`section_restrict`) and the fraction identity (`awayMap_awayFraction_cocycle`). -/
+
+/-- The away-map fraction cocycle in `Away 𝒜 (XᵢXⱼXₖ)`:
+`(Xᵢ/Xⱼ)(Xⱼ/Xₖ) = Xᵢ/Xₖ` after mapping the three transition fractions into the common
+degree-zero localised ring over `XᵢXⱼXₖ`. -/
+lemma awayMap_awayFraction_cocycle (i j k : n) :
+    awayMap (homogeneousSubmodule n (ULift.{u} ℤ)) (X_mem_deg_one n k)
+        (show X i * X j * X k = (X i * X j) * X k from rfl) (awayFraction n i j) *
+      awayMap (homogeneousSubmodule n (ULift.{u} ℤ)) (X_mem_deg_one n i)
+        (show X i * X j * X k = (X j * X k) * X i from by rw [mul_assoc, mul_comm])
+        (awayFraction n j k)
+      = awayMap (homogeneousSubmodule n (ULift.{u} ℤ)) (X_mem_deg_one n j)
+        (show X i * X j * X k = (X i * X k) * X j from
+          by rw [mul_assoc, mul_comm (X j) (X k), ← mul_assoc]) (awayFraction n i k) := by
+  rw [awayFraction, awayFraction, awayFraction, awayMap_mk, awayMap_mk, awayMap_mk]
+  apply HomogeneousLocalization.val_injective
+  simp only [HomogeneousLocalization.val_mul, Away.val_mk, Localization.mk_mul]
+  rw [Localization.mk_eq_mk_iff, Localization.r_iff_exists]
+  refine ⟨1, ?_⟩
+  simp only [OneMemClass.coe_one, one_mul, Submonoid.coe_mul]
+  ring
+
+/-- The glue-datum overlap immersion `f_ij` unfolds to the first pullback projection. -/
+lemma gd_f (i j : n) :
+    (glueData n).f i j = pullback.fst ((basicOpenCover n).f i) ((basicOpenCover n).f j) := by
+  simp only [glueData, Scheme.Cover.gluedCover_f]
+
+/-- The glue-datum swap `t_ij` unfolds to the pullback symmetry. -/
+lemma gd_t (i j : n) :
+    (glueData n).t i j
+      = (pullbackSymmetry ((basicOpenCover n).f i) ((basicOpenCover n).f j)).hom := by
+  simp only [glueData, Scheme.Cover.gluedCover_t]
+
+set_option backward.isDefEq.respectTransparency false in
+/-- The cover glue condition `t_ij ≫ f_ji ≫ ι_j = f_ij ≫ ι_i` into `Proj`. -/
+lemma glue_cover_condition (i j : n) :
+    (glueData n).t i j ≫ (glueData n).f j i ≫ (basicOpenCover n).f j
+      = (glueData n).f i j ≫ (basicOpenCover n).f i := by
+  rw [gd_t, gd_f, gd_f, pullbackSymmetry_hom_comp_fst_assoc, pullback.condition]
+
+set_option backward.isDefEq.respectTransparency false in
+/-- `f_ij ≫ ι_i = p₂ ≫ ι_j` on the double overlap. -/
+lemma chart_overlap_swap (i j : n) :
+    (glueData n).f i j ≫ (basicOpenCover n).f i
+      = pullback.snd ((basicOpenCover n).f i) ((basicOpenCover n).f j) ≫ (basicOpenCover n).f j := by
+  rw [gd_f, pullback.condition]
+
+set_option backward.isDefEq.respectTransparency false in
+/-- The triple-overlap inclusion `T ⟶ Proj` lands in `D₊(XᵢXⱼXₖ)`. -/
+lemma triple_range_le (i j k : n) :
+    Set.range (pullback.fst ((glueData n).f i j) ((glueData n).f i k) ≫
+        (glueData n).f i j ≫ (basicOpenCover n).f i).base ⊆
+      Set.range ((Proj.basicOpen (homogeneousSubmodule n (ULift.{u} ℤ))
+        (X i * X j * X k)).ι).base := by
+  have fi : pullback.fst ((glueData n).f i j) ((glueData n).f i k) ≫
+        (glueData n).f i j ≫ (basicOpenCover n).f i
+      = (pullback.fst ((glueData n).f i j) ((glueData n).f i k) ≫ (glueData n).f i j) ≫
+          (basicOpenCover n).f i := by rw [Category.assoc]
+  have fj : pullback.fst ((glueData n).f i j) ((glueData n).f i k) ≫
+        (glueData n).f i j ≫ (basicOpenCover n).f i
+      = (pullback.fst ((glueData n).f i j) ((glueData n).f i k) ≫
+          pullback.snd ((basicOpenCover n).f i) ((basicOpenCover n).f j)) ≫
+          (basicOpenCover n).f j := by
+    rw [chart_overlap_swap n i j, ← Category.assoc]
+  have fk : pullback.fst ((glueData n).f i j) ((glueData n).f i k) ≫
+        (glueData n).f i j ≫ (basicOpenCover n).f i
+      = (pullback.snd ((glueData n).f i j) ((glueData n).f i k) ≫
+          pullback.snd ((basicOpenCover n).f i) ((basicOpenCover n).f k)) ≫
+          (basicOpenCover n).f k := by
+    rw [← Category.assoc, pullback.condition, Category.assoc, chart_overlap_swap n i k,
+      ← Category.assoc]
+  rw [Scheme.Opens.range_ι, Proj.basicOpen_mul, Proj.basicOpen_mul,
+    TopologicalSpace.Opens.coe_inf, TopologicalSpace.Opens.coe_inf]
+  refine Set.subset_inter (Set.subset_inter ?_ ?_) ?_
+  · rw [← Scheme.Opens.range_ι ((Proj.basicOpen _ (X i))), fi, Scheme.Hom.comp_base,
+      TopCat.coe_comp, Set.range_comp]
+    exact Set.image_subset_range _ _
+  · rw [← Scheme.Opens.range_ι ((Proj.basicOpen _ (X j))), fj, Scheme.Hom.comp_base,
+      TopCat.coe_comp, Set.range_comp]
+    exact Set.image_subset_range _ _
+  · rw [← Scheme.Opens.range_ι ((Proj.basicOpen _ (X k))), fk, Scheme.Hom.comp_base,
+      TopCat.coe_comp, Set.range_comp]
+    exact Set.image_subset_range _ _
+
+/-- The common map from the triple overlap `T` to the affine chart `D₊(XᵢXⱼXₖ)`. -/
+def commonHom (i j k : n) :
+    pullback ((glueData n).f i j) ((glueData n).f i k) ⟶
+      (Proj.basicOpen (homogeneousSubmodule n (ULift.{u} ℤ)) (X i * X j * X k)).toScheme :=
+  IsOpenImmersion.lift
+    (Proj.basicOpen (homogeneousSubmodule n (ULift.{u} ℤ)) (X i * X j * X k)).ι
+    (pullback.fst ((glueData n).f i j) ((glueData n).f i k) ≫
+      (glueData n).f i j ≫ (basicOpenCover n).f i)
+    (triple_range_le n i j k)
+
+lemma commonHom_ι (i j k : n) :
+    commonHom n i j k ≫ (Proj.basicOpen (homogeneousSubmodule n (ULift.{u} ℤ))
+        (X i * X j * X k)).ι
+      = pullback.fst ((glueData n).f i j) ((glueData n).f i k) ≫
+        (glueData n).f i j ≫ (basicOpenCover n).f i :=
+  IsOpenImmersion.lift_fac _ _ _
+
+lemma overlapHom_ι (i j : n) :
+    overlapHom n i j ≫ (Proj.basicOpen (homogeneousSubmodule n (ULift.{u} ℤ)) (X i * X j)).ι
+      = (glueData n).f i j ≫ (basicOpenCover n).f i := by
+  rw [gd_f]; exact IsOpenImmersion.lift_fac _ _ _
+
+/-- The `jk`-leg of the triple overlap includes into Proj the same way as the `ij`-leg
+(from `glueData_bridge_mid` and the cover glue condition). -/
+lemma jk_incl (i j k : n) :
+    (glueData n).t' i j k ≫ pullback.fst ((glueData n).f j k) ((glueData n).f j i) ≫
+        (glueData n).f j k ≫ (basicOpenCover n).f j
+      = pullback.fst ((glueData n).f i j) ((glueData n).f i k) ≫
+        (glueData n).f i j ≫ (basicOpenCover n).f i := by
+  have h1 := Scheme.Modules.glueData_bridge_mid (glueData n) i j k
+  have h2 := glue_cover_condition n i j
+  calc (glueData n).t' i j k ≫ pullback.fst ((glueData n).f j k) ((glueData n).f j i) ≫
+          (glueData n).f j k ≫ (basicOpenCover n).f j
+      = (((glueData n).t' i j k ≫ pullback.fst ((glueData n).f j k) ((glueData n).f j i)) ≫
+          (glueData n).f j k) ≫ (basicOpenCover n).f j := by
+        rw [Category.assoc, Category.assoc]
+    _ = (pullback.fst ((glueData n).f i j) ((glueData n).f i k) ≫
+          ((glueData n).t i j ≫ (glueData n).f j i)) ≫ (basicOpenCover n).f j := by rw [← h1]
+    _ = pullback.fst ((glueData n).f i j) ((glueData n).f i k) ≫
+          ((glueData n).t i j ≫ (glueData n).f j i ≫ (basicOpenCover n).f j) := by
+        rw [Category.assoc, Category.assoc]
+    _ = pullback.fst ((glueData n).f i j) ((glueData n).f i k) ≫
+          (glueData n).f i j ≫ (basicOpenCover n).f i := by rw [h2]
+
+set_option backward.isDefEq.respectTransparency false in
+lemma fact_ij (i j k : n)
+    (le : Proj.basicOpen (homogeneousSubmodule n (ULift.{u} ℤ)) (X i * X j * X k)
+      ≤ Proj.basicOpen (homogeneousSubmodule n (ULift.{u} ℤ)) (X i * X j)) :
+    pullback.fst ((glueData n).f i j) ((glueData n).f i k) ≫ overlapHom n i j
+      = commonHom n i j k ≫ (Proj (homogeneousSubmodule n (ULift.{u} ℤ))).homOfLE le := by
+  rw [← cancel_mono (Proj.basicOpen (homogeneousSubmodule n (ULift.{u} ℤ)) (X i * X j)).ι]
+  simp only [Category.assoc]
+  rw [overlapHom_ι, Scheme.homOfLE_ι, commonHom_ι]
+
+set_option backward.isDefEq.respectTransparency false in
+lemma fact_ik (i j k : n)
+    (le : Proj.basicOpen (homogeneousSubmodule n (ULift.{u} ℤ)) (X i * X j * X k)
+      ≤ Proj.basicOpen (homogeneousSubmodule n (ULift.{u} ℤ)) (X i * X k)) :
+    pullback.snd ((glueData n).f i j) ((glueData n).f i k) ≫ overlapHom n i k
+      = commonHom n i j k ≫ (Proj (homogeneousSubmodule n (ULift.{u} ℤ))).homOfLE le := by
+  rw [← cancel_mono (Proj.basicOpen (homogeneousSubmodule n (ULift.{u} ℤ)) (X i * X k)).ι]
+  simp only [Category.assoc]
+  rw [overlapHom_ι, Scheme.homOfLE_ι, commonHom_ι, ← Category.assoc, ← Category.assoc,
+    ← pullback.condition]
+
+set_option backward.isDefEq.respectTransparency false in
+lemma fact_jk (i j k : n)
+    (le : Proj.basicOpen (homogeneousSubmodule n (ULift.{u} ℤ)) (X i * X j * X k)
+      ≤ Proj.basicOpen (homogeneousSubmodule n (ULift.{u} ℤ)) (X j * X k)) :
+    ((glueData n).t' i j k ≫ pullback.fst ((glueData n).f j k) ((glueData n).f j i)) ≫
+        overlapHom n j k
+      = commonHom n i j k ≫ (Proj (homogeneousSubmodule n (ULift.{u} ℤ))).homOfLE le := by
+  rw [← cancel_mono (Proj.basicOpen (homogeneousSubmodule n (ULift.{u} ℤ)) (X j * X k)).ι]
+  simp only [Category.assoc]
+  rw [overlapHom_ι, Scheme.homOfLE_ι, commonHom_ι]
+  exact jk_incl n i j k
+
+set_option backward.isDefEq.respectTransparency false in
+/-- Restriction of an away-section from `D₊(xf)` to `D₊(xt)` (`xt = xf·xg`) transported
+through the `topIso`s is the away-map. -/
+lemma section_restrict {d : ℕ} (xf xg : MvPolynomial n (ULift.{u} ℤ))
+    (hg : xg ∈ homogeneousSubmodule n (ULift.{u} ℤ) d)
+    (xt : MvPolynomial n (ULift.{u} ℤ)) (hx : xt = xf * xg)
+    (le : Proj.basicOpen (homogeneousSubmodule n (ULift.{u} ℤ)) xt
+      ≤ Proj.basicOpen (homogeneousSubmodule n (ULift.{u} ℤ)) xf)
+    (a : HomogeneousLocalization.Away (homogeneousSubmodule n (ULift.{u} ℤ)) xf) :
+    ((Proj (homogeneousSubmodule n (ULift.{u} ℤ))).homOfLE le).appTop
+        ((Proj.basicOpen (homogeneousSubmodule n (ULift.{u} ℤ)) xf).topIso.inv
+          (Proj.awayToSection (homogeneousSubmodule n (ULift.{u} ℤ)) xf a))
+      = (Proj.basicOpen (homogeneousSubmodule n (ULift.{u} ℤ)) xt).topIso.inv
+          (Proj.awayToSection (homogeneousSubmodule n (ULift.{u} ℤ)) xt
+            (awayMap (homogeneousSubmodule n (ULift.{u} ℤ)) hg hx a)) := by
+  have hnat := congrArg (fun (φ : _ ⟶ _) =>
+      (CommRingCat.Hom.hom φ) (Proj.awayToSection (homogeneousSubmodule n (ULift.{u} ℤ)) xf a))
+    (topIso_inv_homOfLE_appTop (X := Proj (homogeneousSubmodule n (ULift.{u} ℤ))) le)
+  simp only [CommRingCat.comp_apply] at hnat
+  rw [hnat]
+  congr 1
+  exact (congrArg (fun (m : _ ⟶ _) => (ConcreteCategory.hom m) a)
+    (Proj.awayMap_awayToSection (𝒜 := homogeneousSubmodule n (ULift.{u} ℤ)) hg hx)).symm
+
+/-- The transition unit `Xᵢ/Xⱼ` as a section of the overlap, unfolded through the
+overlap immersion and the away-to-section identification. -/
+lemma overlapUnit_val_eq (i j : n) :
+    (overlapUnit n i j).val
+      = (overlapHom n i j).appTop
+          ((Proj.basicOpen (homogeneousSubmodule n (ULift.{u} ℤ)) (X i * X j)).topIso.inv
+            (Proj.awayToSection (homogeneousSubmodule n (ULift.{u} ℤ)) (X i * X j)
+              (awayFraction n i j))) := rfl
+
 section Universe0
 
 variable (n₀ : Type)
 
+set_option maxHeartbeats 800000 in
 /-- **Base cocycle of the transported overlap units** (`m = 1`): in
 `Γ(V(i,j,k), O)`, the images of the three transition units `Xᵢ/Xⱼ`, `Xⱼ/Xₖ`,
 `Xᵢ/Xₖ` under the base-change comorphisms to the common triple overlap satisfy
@@ -441,7 +652,92 @@ lemma overlapUnit_cocycle_transport (i j k : n₀) :
         (overlapUnit n₀ j k).val
     = (Scheme.Hom.appTop (pullback.snd ((glueData n₀).f i j) ((glueData n₀).f i k)))
         (overlapUnit n₀ i k).val := by
-  sorry
+  have le_ij : Proj.basicOpen (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i * X j * X k)
+      ≤ Proj.basicOpen (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i * X j) := by
+    rw [Proj.basicOpen_mul]; exact inf_le_left
+  have le_jk : Proj.basicOpen (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i * X j * X k)
+      ≤ Proj.basicOpen (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X j * X k) := by
+    rw [show (X i * X j * X k : MvPolynomial n₀ (ULift.{0} ℤ)) = (X j * X k) * X i from
+      by rw [mul_assoc, mul_comm], Proj.basicOpen_mul]; exact inf_le_left
+  have le_ik : Proj.basicOpen (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i * X j * X k)
+      ≤ Proj.basicOpen (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i * X k) := by
+    rw [show (X i * X j * X k : MvPolynomial n₀ (ULift.{0} ℤ)) = (X i * X k) * X j from
+      by rw [mul_assoc, mul_comm (X j) (X k), ← mul_assoc], Proj.basicOpen_mul]; exact inf_le_left
+  have hIJ : (Scheme.Hom.appTop (pullback.fst ((glueData n₀).f i j) ((glueData n₀).f i k)))
+        (overlapUnit n₀ i j).val
+      = (Scheme.Hom.appTop (commonHom n₀ i j k))
+          ((Proj.basicOpen (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i * X j * X k)).topIso.inv
+            (Proj.awayToSection (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i * X j * X k)
+              (awayMap (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X_mem_deg_one n₀ k)
+                (show X i * X j * X k = (X i * X j) * X k from rfl) (awayFraction n₀ i j)))) := by
+    rw [overlapUnit_val_eq]
+    have hmor : Scheme.Hom.appTop (overlapHom n₀ i j) ≫
+          Scheme.Hom.appTop (pullback.fst ((glueData n₀).f i j) ((glueData n₀).f i k))
+        = Scheme.Hom.appTop ((Proj (homogeneousSubmodule n₀ (ULift.{0} ℤ))).homOfLE le_ij) ≫
+          Scheme.Hom.appTop (commonHom n₀ i j k) := by
+      rw [← Scheme.Hom.comp_appTop, ← Scheme.Hom.comp_appTop]
+      exact congrArg Scheme.Hom.appTop (fact_ij n₀ i j k le_ij)
+    refine (congrArg (fun (m : _ ⟶ _) => (ConcreteCategory.hom m)
+        ((Proj.basicOpen (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i * X j)).topIso.inv
+          (Proj.awayToSection (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i * X j)
+            (awayFraction n₀ i j)))) hmor).trans ?_
+    simp only [ConcreteCategory.comp_apply]
+    exact congrArg (fun z => (ConcreteCategory.hom (Scheme.Hom.appTop (commonHom n₀ i j k))) z)
+      (section_restrict n₀ (X i * X j) (X k) (X_mem_deg_one n₀ k) (X i * X j * X k)
+        (show X i * X j * X k = (X i * X j) * X k from rfl) le_ij (awayFraction n₀ i j))
+  have hJK : (Scheme.Hom.appTop ((glueData n₀).t' i j k ≫
+          pullback.fst ((glueData n₀).f j k) ((glueData n₀).f j i)))
+        (overlapUnit n₀ j k).val
+      = (Scheme.Hom.appTop (commonHom n₀ i j k))
+          ((Proj.basicOpen (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i * X j * X k)).topIso.inv
+            (Proj.awayToSection (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i * X j * X k)
+              (awayMap (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X_mem_deg_one n₀ i)
+                (show X i * X j * X k = (X j * X k) * X i from by rw [mul_assoc, mul_comm])
+                (awayFraction n₀ j k)))) := by
+    rw [overlapUnit_val_eq]
+    have hmor : Scheme.Hom.appTop (overlapHom n₀ j k) ≫
+          Scheme.Hom.appTop ((glueData n₀).t' i j k ≫
+            pullback.fst ((glueData n₀).f j k) ((glueData n₀).f j i))
+        = Scheme.Hom.appTop ((Proj (homogeneousSubmodule n₀ (ULift.{0} ℤ))).homOfLE le_jk) ≫
+          Scheme.Hom.appTop (commonHom n₀ i j k) := by
+      rw [← Scheme.Hom.comp_appTop, ← Scheme.Hom.comp_appTop]
+      exact congrArg Scheme.Hom.appTop (fact_jk n₀ i j k le_jk)
+    refine (congrArg (fun (m : _ ⟶ _) => (ConcreteCategory.hom m)
+        ((Proj.basicOpen (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X j * X k)).topIso.inv
+          (Proj.awayToSection (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X j * X k)
+            (awayFraction n₀ j k)))) hmor).trans ?_
+    simp only [ConcreteCategory.comp_apply]
+    exact congrArg (fun z => (ConcreteCategory.hom (Scheme.Hom.appTop (commonHom n₀ i j k))) z)
+      (section_restrict n₀ (X j * X k) (X i) (X_mem_deg_one n₀ i) (X i * X j * X k)
+        (show X i * X j * X k = (X j * X k) * X i from by rw [mul_assoc, mul_comm]) le_jk
+        (awayFraction n₀ j k))
+  have hIK : (Scheme.Hom.appTop (pullback.snd ((glueData n₀).f i j) ((glueData n₀).f i k)))
+        (overlapUnit n₀ i k).val
+      = (Scheme.Hom.appTop (commonHom n₀ i j k))
+          ((Proj.basicOpen (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i * X j * X k)).topIso.inv
+            (Proj.awayToSection (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i * X j * X k)
+              (awayMap (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X_mem_deg_one n₀ j)
+                (show X i * X j * X k = (X i * X k) * X j from
+                  by rw [mul_assoc, mul_comm (X j) (X k), ← mul_assoc]) (awayFraction n₀ i k)))) := by
+    rw [overlapUnit_val_eq]
+    have hmor : Scheme.Hom.appTop (overlapHom n₀ i k) ≫
+          Scheme.Hom.appTop (pullback.snd ((glueData n₀).f i j) ((glueData n₀).f i k))
+        = Scheme.Hom.appTop ((Proj (homogeneousSubmodule n₀ (ULift.{0} ℤ))).homOfLE le_ik) ≫
+          Scheme.Hom.appTop (commonHom n₀ i j k) := by
+      rw [← Scheme.Hom.comp_appTop, ← Scheme.Hom.comp_appTop]
+      exact congrArg Scheme.Hom.appTop (fact_ik n₀ i j k le_ik)
+    refine (congrArg (fun (m : _ ⟶ _) => (ConcreteCategory.hom m)
+        ((Proj.basicOpen (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i * X k)).topIso.inv
+          (Proj.awayToSection (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i * X k)
+            (awayFraction n₀ i k)))) hmor).trans ?_
+    simp only [ConcreteCategory.comp_apply]
+    exact congrArg (fun z => (ConcreteCategory.hom (Scheme.Hom.appTop (commonHom n₀ i j k))) z)
+      (section_restrict n₀ (X i * X k) (X j) (X_mem_deg_one n₀ j) (X i * X j * X k)
+        (show X i * X j * X k = (X i * X k) * X j from
+          by rw [mul_assoc, mul_comm (X j) (X k), ← mul_assoc]) le_ik (awayFraction n₀ i k))
+  rw [hIJ, hJK, hIK, ← map_mul]
+  congr 1
+  rw [← map_mul, ← map_mul, awayMap_awayFraction_cocycle]
 
 set_option backward.isDefEq.respectTransparency false in
 /-- The `m`-th power form of the transported overlap cocycle, as consumed by
