@@ -1,0 +1,27 @@
+Both `LocallyOfFiniteType` and `QuasiCompact` on the ℙ(n;S) structural morphism infer cleanly (`goals: []`) — deliverable 1 is genuinely complete, not just docstring-asserted. Everything is verified and committed. Final report:
+
+## Summary
+T14's assigned foundation (ℙ(n;S), Serre twist O(m), `IsProjectiveWith` + stability, Serre-finiteness named leaf) is **complete and independently kernel-verified as axiom-clean**. I landed one clean, in-scope proved brick (`twistTransition_zero`, validating the O(1) sign convention / base atom of `O(0)≅𝒪`), and produced a precise multi-session decomposition of the deep remaining leaf `sectionGradedModule_fg`. The leaf is genuinely blocked on Serre cohomology of coherent sheaves on ℙⁿ, which is entirely absent from Mathlib v4.31, and is **not** on the T15 critical path.
+
+## Progress
+- SerreTwist.lean: added `ProjTwist.twistTransition_zero` (m=0 transition drops the twist to the bare structure-sheaf comparison); axiom-clean `[propext, Classical.choice, Quot.sound]`; build green (8572 jobs, exit 0); commit `7d0bf5280e`.
+- SerreFiniteness.lean: unchanged — `sectionGradedModule_fg` confirmed as the sole `sorryAx` carrier; kept whole (splitting now is net-negative).
+- ProjectiveMorphism.lean: unchanged — `IsProjectiveWith.baseChange` (and the referenced serreTwist/twistingSheaf/IsProjectiveWith cone) independently `lean_verify`'d axiom-clean.
+- ProjectiveSpace.lean: unchanged — confirmed `LocallyOfFiniteType` and `QuasiCompact` on `ℙ(n;S) ↘ S` infer from `IsProper` (deliverable 1 verified complete, not just asserted).
+- memory/serre-finiteness-leaf-decomposition.md + MEMORY.md: created — foundation-complete status + 4-ingredient reduction (R1 power-law/R2/R3 projection-formula/R4 pushforward-Γ) + ℙⁿ-cohomology core + planner cautions.
+- inbox I-0129: filed Ground-facing reconcile note (session outcome + decomposition pointer).
+
+## Issues
+- No bugs, broken proofs, or build failures. Working tree clean; no stray scratch files.
+- Deep leaf `sectionGradedModule_fg` remains `sorryAx` (unchanged, and honestly named — the task explicitly permits this). It requires four missing-infra ingredients plus the deep ℙⁿ coherent-cohomology apparatus; **none** of Proj sheaf cohomology, O(m)-cohomology, Serre vanishing, or "coherent = quotient of ⊕O(−a)" exists in Mathlib v4.31.
+- `quot_boundedness` deliberately blueprint-only (a faithful Castelnuovo–Mumford statement needs `Rⁱπ_*`-of-twists vocabulary that doesn't exist; stating it loosely would repeat the I-0118 trap).
+
+## Why I stopped
+Task complete (assigned scope): all four T14 deliverables are met and verified — ℙ(n;S) proper/separated/locallyOfFiniteType, O(m) axiom-clean, `IsProjectiveWith` + base-change/composition/isProper proved, and Serre finiteness honestly factored as a named leaf.
+- The one remaining leaf is Serre's theorem, which needs multi-session infra with no Mathlib cohomology substrate to build on — not closable in a one-shot session.
+- I took the plausible in-scope actions rather than stopping at a green check: verified the cone, landed `twistTransition_zero`, and de-risked the residual with a precise decomposition.
+- I respected the boundary "build only the foundation; do not attempt QuotScheme representability" — no QuotScheme/FGA edits.
+
+## Next
+- Eventually proving the leaf (a dedicated multi-session lane, in order): R1 serreTwist power-law `O(1)^{⊗m}≅O(m)` (start `serreTwistGlued n 0 ≅ unit`, then glue-of-tensor); R3 projection formula for closed immersions; R4 pushforward-Γ; then the deep ℙⁿ Serre-cohomology core. Full pointers in memory `serre-finiteness-leaf-decomposition`.
+- T15 (separate, not this task): the I-0118 QuotScheme restatement consuming `IsProjectiveWith` + coherent E — it can take `sectionGradedModule_fg` as a hypothesis/leaf and does **not** need R1–R4, so it is unblocked now.
