@@ -372,6 +372,35 @@ lemma twistTransition_self (m : ℕ) (i : n) :
         (show (glueData n).f i i = (glueData n).t i i ≫ (glueData n).f i i by
           rw [(glueData n).t_id i, Category.id_comp])
 
+/-- **The `m = 0` transition carries no twist.** The scalar automorphism
+`(Xᵢ/Xⱼ)^0 = 1` is the identity, so the transition of `O(0)` is the bare
+structure-sheaf comparison
+`pullbackUnitIso fᵢⱼ ≪≫ (pullbackUnitIso (tᵢⱼ ≫ fⱼᵢ)).symm` — exactly the
+descent datum of the structure sheaf `𝒪 = O(0)`.  This is the all-indices
+companion of `twistTransition_self` (which handles only the diagonal `i = j`)
+and the algebraic core of `O(0) ≅ 𝒪`, validating the O(1) sign convention:
+`m = 0` contributes no `Xᵢ/Xⱼ` factor. -/
+lemma twistTransition_zero (i j : n) :
+    twistTransition n 0 i j
+      = Scheme.Modules.pullbackUnitIso ((glueData n).f i j) ≪≫
+        (Scheme.Modules.pullbackUnitIso ((glueData n).t i j ≫ (glueData n).f j i)).symm := by
+  have hmid : unitScalarIso ((overlapUnit n i j) ^ 0) = Iso.refl _ := by
+    rw [pow_zero, unitScalarIso_one]
+  calc twistTransition n 0 i j
+      = Scheme.Modules.pullbackUnitIso ((glueData n).f i j) ≪≫
+          unitScalarIso ((overlapUnit n i j) ^ 0) ≪≫
+          (Scheme.Modules.pullbackUnitIso
+            ((glueData n).t i j ≫ (glueData n).f j i)).symm := rfl
+    _ = Scheme.Modules.pullbackUnitIso ((glueData n).f i j) ≪≫
+          (Scheme.Modules.pullbackUnitIso
+            ((glueData n).t i j ≫ (glueData n).f j i)).symm := by
+        refine (congrArg (fun e =>
+          Scheme.Modules.pullbackUnitIso ((glueData n).f i j) ≪≫ e ≪≫
+            (Scheme.Modules.pullbackUnitIso
+              ((glueData n).t i j ≫ (glueData n).f j i)).symm) hmid).trans ?_
+        exact congrArg (fun e =>
+          Scheme.Modules.pullbackUnitIso ((glueData n).f i j) ≪≫ e) (Iso.refl_trans _)
+
 /-- **Transport of a rank-one scalar automorphism through
 `pullbackBaseChangeTransport`** — the reusable abstract core of the Serre-twist
 cocycle, the rank-one analogue of `pullbackBaseChangeTransport_matrixToFreeIso`
