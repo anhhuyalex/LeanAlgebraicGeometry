@@ -92,6 +92,32 @@ theorem isProper (h : π.IsProjectiveWith L) : IsProper π := by
   rw [← hcomp]
   infer_instance
 
+/-- **Projective morphisms are locally of finite type**: immediate from
+`isProper`, since properness extends `LocallyOfFiniteType`.  This lets the
+Quot-scheme endgame and the Hilbert-polynomial existence theorem derive finite
+type from projectivity instead of carrying it as a separate hypothesis. -/
+theorem locallyOfFiniteType (h : π.IsProjectiveWith L) : LocallyOfFiniteType π :=
+  haveI := h.isProper; inferInstance
+
+/-- **Projective morphisms are separated** (properness extends `IsSeparated`). -/
+theorem isSeparated (h : π.IsProjectiveWith L) : IsSeparated π :=
+  haveI := h.isProper; inferInstance
+
+/-- **Projective morphisms are universally closed** (properness extends
+`UniversallyClosed`). -/
+theorem universallyClosed (h : π.IsProjectiveWith L) : UniversallyClosed π :=
+  haveI := h.isProper; inferInstance
+
+/-- **Transfer along an isomorphism of the carried bundle**: `IsProjectiveWith`
+depends on `L` only up to isomorphism (it records the comparison `L ≅ i^* O(1)`
+through `Nonempty`), so if `π` is projective carrying `L` and `L ≅ L'`, then `π`
+is projective carrying `L'`.  Useful for consumers that only have the bundle up
+to isomorphism. -/
+theorem of_iso (h : π.IsProjectiveWith L) {L' : X.Modules} (e : L ≅ L') :
+    π.IsProjectiveWith L' := by
+  obtain ⟨d, i, hi, hcomp, ⟨eL⟩⟩ := h
+  exact ⟨d, i, hi, hcomp, ⟨e.symm ≪≫ eL⟩⟩
+
 /-- **Composition with a closed immersion**: if `π` is projective carrying
 `L` and `j` is a closed immersion into `X`, then `j ≫ π` is projective
 carrying `j^* L`. -/
@@ -152,5 +178,19 @@ theorem baseChange (h : π.IsProjectiveWith L) {S' : Scheme.{0}} (g : S' ⟶ S) 
         (ProjectiveSpace.twistingSheafBaseChange (Fin (d + 1)) g 1)
 
 end Scheme.Hom.IsProjectiveWith
+
+namespace ProjectiveSpace
+
+/-- **The structural morphism of relative projective space is itself
+projective**, carrying the Serre twist `O(1)`: the canonical inhabitant of
+`IsProjectiveWith`, with the identity closed immersion.  This exhibits
+`ℙ(Fin (d+1); S) ↘ S` as the universal projective morphism and shows the
+predicate is non-vacuous. -/
+theorem isProjectiveWith_over (d : ℕ) (S : Scheme.{0}) :
+    (ℙ(Fin (d + 1); S) ↘ S).IsProjectiveWith (twistingSheaf (Fin (d + 1)) S 1) :=
+  ⟨d, 𝟙 _, inferInstance, Category.id_comp _,
+    ⟨((Scheme.Modules.pullbackId _).app _).symm⟩⟩
+
+end ProjectiveSpace
 
 end AlgebraicGeometry
