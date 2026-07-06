@@ -7,6 +7,7 @@ import Mathlib
 import AlgebraicJacobian.Picard.QuotScheme
 import AlgebraicJacobian.Cohomology.PullbackQuasicoherent
 import AlgebraicJacobian.Picard.PullbackFinitePresentation
+import AlgebraicJacobian.Picard.EntryIdealStratum
 
 /-!
 # Proper support is stable under base change
@@ -50,13 +51,14 @@ proper over `S`, the schematic support of `g'^* F` is proper over `S'`
    `ι' : Z' = supp (g'^* F) ⟶ X'`.  Pointwise on affines this is step 1 combined
    with the characterization `annihilator_ideal` (which consumes step 2) and
    `ker_subschemeι_app`, assembled by sheaf separation on `Z'`.
-4. **Assembly**: step 3 yields a morphism `l : Z' ⟶ Z = supp F` over `g'`
-   (`IdealSheafData.subschemeMap`).  With `W := Z ×_S S'`, the comparison
-   `m : W ⟶ X'` is a closed immersion (base change of `ι : Z ⟶ X` along `g'`,
-   by pasting `IsPullback.of_bot`), the induced `c : Z' ⟶ W` satisfies
-   `c ≫ m = ι'`, hence `c` is proper (`IsProper.of_comp`), and
-   `ι' ≫ f' = c ≫ pullback.snd (ι ≫ f) g` is proper because properness is
-   stable under base change and composition.
+4. **Assembly** (`HasProperSupport.of_isPullback`): step 3 yields a morphism
+   `l : Z' ⟶ Z = supp F` over `g'` (`IdealSheafData.subschemeMap`).  With
+   `W := Z ×_X X'`, vertically pasting the defining square of `W` with the
+   base-change square (`IsPullback.paste_vert`) exhibits `snd ≫ f' : W ⟶ S'`
+   as a base change of `ι ≫ f : Z ⟶ S`, hence proper; `snd : W ⟶ X'` is a
+   closed immersion (base change of `ι`), the induced `c : Z' ⟶ W` satisfies
+   `c ≫ snd = ι'`, hence `c` is proper (`IsProper.of_comp`), and
+   `ι' ≫ f' = c ≫ (snd ≫ f')` is proper by composition.
 
 ## References
 
@@ -112,6 +114,12 @@ private lemma res_self (M : X.Modules) {A : X.Opens} (h : A ≤ A) (x : Γ(M, A)
   rw [Subsingleton.elim (homOfLE h) (𝟙 A), op_id, CategoryTheory.Functor.map_id]
   rfl
 
+/-- The identity restriction acts as the identity on structure-sheaf sections. -/
+private lemma resRing_self {A : X.Opens} (h : A ≤ A) (w : Γ(X, A)) :
+    X.presheaf.map (homOfLE h).op w = w := by
+  rw [Subsingleton.elim (homOfLE h) (𝟙 A), op_id, CategoryTheory.Functor.map_id]
+  rfl
+
 /-- **Scalar multiplication by a global section**, as an endomorphism of a sheaf
 of modules: for `w : Γ(X, ⊤)` the components of `smulGlobal M w` are
 `t ↦ (w|_U) • t`.  Naturality is `map_comp_smul` (restriction is semilinear),
@@ -125,33 +133,29 @@ noncomputable def smulGlobal (M : X.Modules) (w : Γ(X, ⊤)) : M ⟶ M where
         have h := (Scheme.Modules.map_comp_smul (M := M) (i := i.unop)
           (r := X.presheaf.map (homOfLE (le_top : U.unop ≤ ⊤)).op w)).symm
         rw [resRing_res (le_top : U.unop ≤ ⊤) i.unop (le_top : V.unop ≤ ⊤) w] at h
-        simpa using h.symm }
+        exact h }
     (fun U r m => by
-      show X.presheaf.map (homOfLE (le_top : U.unop ≤ ⊤)).op w • (r • m)
-        = r • (X.presheaf.map (homOfLE (le_top : U.unop ≤ ⊤)).op w • m)
-      rw [smul_smul, smul_smul, mul_comm])
+      have h : ∀ (a b : Γ(X, U.unop)) (x : Γ(M, U.unop)), a • b • x = b • a • x :=
+        fun a b x => by rw [smul_smul, smul_smul, mul_comm]
+      exact h (X.presheaf.map (homOfLE (le_top : U.unop ≤ ⊤)).op w) r m)
 
 @[simp]
 lemma smulGlobal_app_apply (M : X.Modules) (w : Γ(X, ⊤)) (U : X.Opens) (t : Γ(M, U)) :
-    (smulGlobal M w).app U t = X.presheaf.map (homOfLE le_top).op w • t := rfl
-
-/-- The module structure on sections of the pushforward is restriction of scalars
-along `h♯`: for `a : Γ(Y, O)` and a section `y` of `(pushforward h).obj K` over
-`O` — which is definitionally a section of `K` over `h⁻¹ O` — the action of `a`
-is the action of `h.app O a`. -/
-lemma pushforward_smul_apply {X Y : Scheme.{u}} (h : X ⟶ Y) (K : X.Modules) (O : Y.Opens)
-    (a : Γ(Y, O)) (y : Γ((Scheme.Modules.pushforward h).obj K, O)) :
-    a • y = ((h.app O a • (y : Γ(K, h ⁻¹ᵁ O))) : Γ(K, h ⁻¹ᵁ O)) := rfl
+    (smulGlobal M w).app U t = X.presheaf.map (homOfLE (le_top : U ≤ ⊤)).op w • t := rfl
 
 /-- Compatibility of `app` with top-restriction: restricting a global section
-along `h` and then to `h⁻¹ O` agrees with applying `h.app O` to the restriction. -/
+along `h` and then to `h⁻¹ O` agrees with applying `h.app O` to the restriction.
+(The module structure of the pushforward is restriction of scalars along `h♯` —
+definitionally, `a • y = h.app O a • y` for sections `y` of `(pushforward h).obj K`
+over `O` — so this is the scalar comparison feeding `pullback_map_smulGlobal`.) -/
 private lemma app_res_top {X Y : Scheme.{u}} (h : X ⟶ Y) (O : Y.Opens) (w : Γ(Y, ⊤)) :
-    h.app O (Y.presheaf.map (homOfLE le_top).op w)
-      = X.presheaf.map (homOfLE le_top).op (h.appTop w) := by
+    h.app O (Y.presheaf.map (homOfLE (le_top : O ≤ ⊤)).op w)
+      = X.presheaf.map (homOfLE (le_top : h ⁻¹ᵁ O ≤ ⊤)).op (h.appTop w) := by
   have hnat := congr($(h.naturality ((homOfLE (le_top : O ≤ ⊤)).op)) w)
   rw [CommRingCat.comp_apply, CommRingCat.comp_apply] at hnat
   rw [hnat]
-  show X.presheaf.map ((Opens.map h.base).map (homOfLE le_top)).op (h.appTop w) = _
+  change X.presheaf.map ((TopologicalSpace.Opens.map h.base).map (homOfLE le_top)).op
+    (h.appTop w) = _
   exact congrArg (fun (k : h ⁻¹ᵁ O ⟶ (⊤ : X.Opens)) => X.presheaf.map k.op (h.appTop w))
     (Subsingleton.elim _ _)
 
@@ -160,8 +164,9 @@ private lemma app_res_top {X Y : Scheme.{u}} (h : X ⟶ Y) (O : Y.Opens) (w : Γ
 `pullbackPushforwardAdjunction`: both sides transpose to the same morphism
 `M ⟶ f_* f^* M` because the adjunction unit is a morphism of `𝒪_Y`-modules
 (`Hom.app_smul`) and the `𝒪_Y`-module structure of the pushforward is
-restriction of scalars along `f♯` (`pushforward_smul_apply`).  This is the
-categorical heart of annihilator base change — no affine dictionary is used. -/
+restriction of scalars along `f♯` (definitionally; the scalar comparison is
+`app_res_top`).  This is the categorical heart of annihilator base change — no
+affine dictionary is used. -/
 theorem pullback_map_smulGlobal {X Y : Scheme.{u}} (h : X ⟶ Y) (M : Y.Modules)
     (w : Γ(Y, ⊤)) :
     (Scheme.Modules.pullback h).map (smulGlobal M w)
@@ -171,18 +176,26 @@ theorem pullback_map_smulGlobal {X Y : Scheme.{u}} (h : X ⟶ Y) (M : Y.Modules)
   rw [Adjunction.homEquiv_unit, Adjunction.homEquiv_unit]
   have hnat := ((Scheme.Modules.pullbackPushforwardAdjunction h).unit.naturality
     (smulGlobal M w)).symm
-  simp only [Functor.id_obj, Functor.id_map, Functor.comp_obj, Functor.comp_map] at hnat
-  rw [hnat]
+  simp only [Functor.id_obj, Functor.id_map, Functor.comp_map] at hnat
+  refine hnat.trans ?_
   ext O t
-  show ((Scheme.Modules.pullbackPushforwardAdjunction h).unit.app M).app O
+  change ((Scheme.Modules.pullbackPushforwardAdjunction h).unit.app M).app O
       ((smulGlobal M w).app O t)
     = ((Scheme.Modules.pushforward h).map
         (smulGlobal ((Scheme.Modules.pullback h).obj M) (h.appTop w))).app O
       (((Scheme.Modules.pullbackPushforwardAdjunction h).unit.app M).app O t)
-  rw [smulGlobal_app_apply, Scheme.Modules.Hom.app_smul]
-  rw [pushforward_smul_apply h _ O]
-  rw [app_res_top]
-  rfl
+  -- the unit is `𝒪`-linear …
+  have happ := Scheme.Modules.Hom.app_smul
+    ((Scheme.Modules.pullbackPushforwardAdjunction h).unit.app M)
+    (Y.presheaf.map (homOfLE (le_top : O ≤ ⊤)).op w) t
+  refine happ.trans ?_
+  -- … and the pushforward action is restriction of scalars along `h♯` (definitionally),
+  -- so only the scalar comparison `app_res_top` remains.
+  exact congrArg
+    (fun a : Γ(X, h ⁻¹ᵁ O) =>
+      a • id (α := Γ((Scheme.Modules.pullback h).obj M, h ⁻¹ᵁ O))
+        (((Scheme.Modules.pullbackPushforwardAdjunction h).unit.app M).app O t))
+    (app_res_top h O w)
 
 /-- If `smulGlobal M w = 0` then `w` kills every section of `f^* M` after
 restriction along `f`. -/
@@ -202,7 +215,7 @@ separation over the basic-open basis. -/
 private lemma smul_res_basicOpen_eq_zero [IsAffine X] (M : X.Modules)
     [M.IsQuasicoherent] (w : Γ(X, ⊤)) (hw : ∀ t : Γ(M, ⊤), w • t = 0)
     (b : Γ(X, ⊤)) (y : Γ(M, X.basicOpen b)) :
-    X.presheaf.map (homOfLE le_top).op w • y = 0 := by
+    X.presheaf.map (homOfLE (le_top : X.basicOpen b ≤ ⊤)).op w • y = 0 := by
   haveI := (isAffineOpen_top X).isLocalization_basicOpen b
   letI : Module Γ(X, ⊤) Γ(M, X.basicOpen b) :=
     Module.compHom _ (algebraMap Γ(X, ⊤) Γ(X, X.basicOpen b))
@@ -211,16 +224,20 @@ private lemma smul_res_basicOpen_eq_zero [IsAffine X] (M : X.Modules)
   haveI := isLocalizedModule_basicOpen M (isAffineOpen_top X) b
   obtain ⟨⟨x, s⟩, hx⟩ :=
     IsLocalizedModule.surj (Submonoid.powers b) (restrictBasicOpenₗ M b) y
+  have hx' : (s : Γ(X, ⊤)) • y = restrictBasicOpenₗ M b x := hx
   -- multiplying the target by the denominator lands in the image of a global section
-  have hz : (s : Γ(X, ⊤)) • (X.presheaf.map (homOfLE le_top).op w • y) = 0 := by
-    have hcomm : (s : Γ(X, ⊤)) • (X.presheaf.map (homOfLE le_top).op w • y)
-        = X.presheaf.map (homOfLE le_top).op w • ((s : Γ(X, ⊤)) • y) := by
+  have hz : (s : Γ(X, ⊤))
+      • (X.presheaf.map (homOfLE (le_top : X.basicOpen b ≤ ⊤)).op w • y) = 0 := by
+    have hcomm : (s : Γ(X, ⊤))
+        • (X.presheaf.map (homOfLE (le_top : X.basicOpen b ≤ ⊤)).op w • y)
+        = X.presheaf.map (homOfLE (le_top : X.basicOpen b ≤ ⊤)).op w
+          • ((s : Γ(X, ⊤)) • y) := by
       rw [← algebraMap_smul Γ(X, X.basicOpen b) (s : Γ(X, ⊤))
-          (X.presheaf.map (homOfLE le_top).op w • y),
+          (X.presheaf.map (homOfLE (le_top : X.basicOpen b ≤ ⊤)).op w • y),
         ← algebraMap_smul Γ(X, X.basicOpen b) (s : Γ(X, ⊤)) y,
         smul_smul, smul_smul, mul_comm]
-    rw [hcomm, hx]
-    show X.presheaf.map (homOfLE le_top).op w
+    rw [hcomm, hx']
+    change X.presheaf.map (homOfLE (le_top : X.basicOpen b ≤ ⊤)).op w
         • M.presheaf.map (homOfLE (X.basicOpen_le b)).op x = 0
     rw [← Scheme.Modules.map_smul, hw x, map_zero]
   -- the denominator acts invertibly on the localized sections
@@ -239,17 +256,18 @@ underlying abelian sheaf over the basic-open basis. -/
 theorem smul_res_eq_zero_of_isAffine [IsAffine X] (M : X.Modules)
     [M.IsQuasicoherent] (w : Γ(X, ⊤)) (hw : ∀ t : Γ(M, ⊤), w • t = 0)
     (O : X.Opens) (t : Γ(M, O)) :
-    X.presheaf.map (homOfLE le_top).op w • t = 0 := by
+    X.presheaf.map (homOfLE (le_top : O ≤ ⊤)).op w • t = 0 := by
   let 𝒰 : {b : Γ(X, ⊤) // X.basicOpen b ≤ O} → X.Opens := fun i => X.basicOpen i.1
   have hcover : O ≤ iSup 𝒰 := by
     intro x hx
     obtain ⟨b, hble, hxb⟩ := (isAffineOpen_top X).exists_basicOpen_le
       (⟨x, hx⟩ : O) (by trivial)
-    exact Opens.mem_iSup.mpr ⟨⟨b, hble⟩, hxb⟩
+    exact TopologicalSpace.Opens.mem_iSup.mpr ⟨⟨b, hble⟩, hxb⟩
   let S : TopCat.Sheaf Ab X := ⟨M.presheaf, M.isSheaf⟩
   refine S.eq_of_locally_eq' 𝒰 O (fun i => homOfLE i.2) hcover
-    (X.presheaf.map (homOfLE le_top).op w • t) 0 (fun i => ?_)
-  show M.presheaf.map (homOfLE i.2).op (X.presheaf.map (homOfLE le_top).op w • t)
+    (X.presheaf.map (homOfLE (le_top : O ≤ ⊤)).op w • t) 0 (fun i => ?_)
+  change M.presheaf.map (homOfLE i.2).op
+      (X.presheaf.map (homOfLE (le_top : O ≤ ⊤)).op w • t)
     = M.presheaf.map (homOfLE i.2).op 0
   rw [map_zero, Scheme.Modules.map_smul,
     resRing_res (le_top : O ≤ ⊤) (homOfLE i.2) le_top w]
@@ -260,7 +278,6 @@ theorem smulGlobal_eq_zero_of_isAffine [IsAffine X] (M : X.Modules)
     [M.IsQuasicoherent] (w : Γ(X, ⊤)) (hw : ∀ t : Γ(M, ⊤), w • t = 0) :
     smulGlobal M w = 0 := by
   ext U t
-  rw [smulGlobal_app_apply, Scheme.Modules.Hom.zero_app]
   exact smul_res_eq_zero_of_isAffine M w hw U t
 
 /-! ## §3. Annihilators pull back -/
@@ -272,6 +289,14 @@ private lemma smul_res_eqToHom_eq_zero {Z : Scheme.{u}} (N : Z.Modules)
     Z.presheaf.map (eqToHom hAB).op a • m = 0 := by
   subst hAB
   simpa using ha m
+
+/-- Annihilation transports back across an equality of opens. -/
+private lemma smul_eq_zero_of_res_eqToHom {Z : Scheme.{u}} (N : Z.Modules)
+    {A B : Z.Opens} (hAB : A = B) (a : Γ(Z, B)) (m : Γ(N, B))
+    (h : Z.presheaf.map (eqToHom hAB).op a • N.presheaf.map (eqToHom hAB).op m = 0) :
+    a • m = 0 := by
+  subst hAB
+  simpa using h
 
 /-- `appLE` is invariant under an equality of morphisms. -/
 private lemma appLE_eq_appLE_of_eq {A B : Scheme.{u}} {f₁ f₂ : A ⟶ B} (hf : f₁ = f₂)
@@ -342,13 +367,219 @@ theorem map_app_mem_annihilator_pullback {X X' : Scheme.{u}} (g' : X' ⟶ X)
       have h0 := congrArg (fun (φ : (Scheme.Modules.pullback h).obj
           ((Scheme.Modules.pullback U.1.ι).obj F) ⟶ _) => φ.app ⊤ (e.inv.app ⊤ t)) hz'
       simp only [smulGlobal_app_apply, Scheme.Modules.Hom.zero_app] at h0
-      rw [res_self _ le_top (h.appTop r₀)] at h0
+      rw [resRing_self le_top (h.appTop r₀)] at h0
       simpa using h0
     have h2 : e.hom.app ⊤ (e.inv.app ⊤ t) = t := by
-      rw [← Scheme.Modules.Hom.comp_app_apply?]
-      sorry
-    sorry
-  sorry
+      have h0 := congrArg (fun (φ : (Scheme.Modules.pullback V'.ι).obj
+          ((Scheme.Modules.pullback g').obj F) ⟶ (Scheme.Modules.pullback V'.ι).obj
+          ((Scheme.Modules.pullback g').obj F)) => φ.app ⊤ t) e.inv_hom_id
+      exact h0
+    calc h.appTop r₀ • t
+        = h.appTop r₀ • e.hom.app ⊤ (e.inv.app ⊤ t) := by rw [h2]
+      _ = e.hom.app ⊤ (h.appTop r₀ • e.inv.app ⊤ t) :=
+          (Scheme.Modules.Hom.app_smul e.hom (h.appTop r₀) (e.inv.app ⊤ t)).symm
+      _ = 0 := by rw [h1, map_zero]
+  -- transport back along the open immersion `V'.ι`: fix a section and annihilate it
+  rw [Module.mem_annihilator]
+  intro s
+  -- the global-sections avatar of `s` over the image `V'.ι ''ᵁ ⊤`
+  have hyhom : (gammaPullbackImageIso V'.ι ((Scheme.Modules.pullback g').obj F) ⊤).hom
+      ((gammaPullbackImageIso V'.ι ((Scheme.Modules.pullback g').obj F) ⊤).inv
+        (((Scheme.Modules.pullback g').obj F).presheaf.map (eqToHom himgV).op s))
+      = ((Scheme.Modules.pullback g').obj F).presheaf.map (eqToHom himgV).op s :=
+    (gammaPullbackImageIso V'.ι ((Scheme.Modules.pullback g').obj F)
+      ⊤).addCommGroupIsoToAddEquiv.apply_symm_apply _
+  -- `hann` annihilates the avatar, and the transport is semilinear along
+  -- `gammaImageRingEquiv V'.ι ⊤`
+  have h3 : gammaImageRingEquiv V'.ι ⊤ (h.appTop r₀)
+      • (((Scheme.Modules.pullback g').obj F).presheaf.map (eqToHom himgV).op s) = 0 := by
+    rw [← hyhom, ← gammaPullbackImageIso_hom_semilinear, hann _, map_zero]
+  -- the transported scalar is the restriction of `g'♯ r`: the ring equivalences along
+  -- the open immersion `ι` of an open subscheme are identities (`ι_appIso`), and
+  -- `resLE_app_top` computes `h♯` as `g'.appLE` conjugated by the `topIso`s
+  have hσ : gammaImageRingEquiv V'.ι ⊤ (h.appTop r₀)
+      = X'.presheaf.map (eqToHom himgV).op
+          (X'.presheaf.map (homOfLE hle).op (g'.app U.1 r)) := by
+    have hout : gammaImageRingEquiv V'.ι ⊤ (h.appTop r₀) = h.appTop r₀ := by
+      change ((V'.ι.appIso ⊤).commRingCatIsoToRingEquiv.symm) (h.appTop r₀) = _
+      rw [Scheme.Opens.ι_appIso]
+      rfl
+    have hr₀' : r₀ = X.presheaf.map (eqToHom himgU).op r := by
+      rw [hr₀]
+      change ((U.1.ι.appIso ⊤).commRingCatIsoToRingEquiv.symm).symm
+        (X.presheaf.map (eqToHom himgU).op r) = _
+      rw [Scheme.Opens.ι_appIso]
+      rfl
+    -- both sides collapse to the single `appLE` of `g'` from `U` to `V'.ι ''ᵁ ⊤`
+    have hmor : X.presheaf.map (eqToHom himgU).op ≫ (g'.resLE U.1 V' hle).app ⊤
+        = g'.app U.1 ≫ X'.presheaf.map (homOfLE hle).op
+            ≫ X'.presheaf.map (eqToHom himgV).op := by
+      simp only [Scheme.Hom.app_eq_appLE, Scheme.Hom.appLE_map, Scheme.Hom.appLE_map_assoc,
+        Scheme.Hom.resLE_appLE, TopologicalSpace.Opens.map_top]
+      exact g'.map_appLE _ ((eqToHom himgU).op)
+    rw [hout, hr₀', hh]
+    exact congr($(hmor) r)
+  refine smul_eq_zero_of_res_eqToHom ((Scheme.Modules.pullback g').obj F) himgV
+    (X'.presheaf.map (homOfLE hle).op (g'.app U.1 r)) s ?_
+  rw [← hσ]
+  exact h3
+
+/-! ## §4. Finite sections at every affine open (Stacks 01PC) -/
+
+-- the `Γ(X, U)`-module structure on sections over a basic open (restriction of
+-- scalars along the restriction map), from
+-- `AlgebraicJacobian.Picard.EntryIdealStratum` (declared there as local instances)
+attribute [local instance] moduleSectionBasicOpen isScalarTowerSectionBasicOpen
+
+/-- **Finite sections at every affine open** (Stacks 01PC, finite-type half, all-affine
+form; step 2 of `lem:proper_support_base_change`).  For a finitely presented sheaf of
+modules `F` on a scheme `X` and *every* affine open `V`, the section module `Γ(F, V)`
+is a finite `Γ(X, V)`-module.  Around every point of `V` there is an affine chart
+`W ≤ V` with finite sections (`exists_affine_finite_sections_nhds`); a basic open
+`D(f) ≤ W` of `V` through the point inherits finiteness because its sections are a
+localization of `Γ(F, W)` (`isLocalizedModule_basicOpen` +
+`Module.Finite.of_isLocalizedModule`); the chosen `f`s span the unit ideal of `Γ(X, V)`
+(`IsAffineOpen.iSup_basicOpen_eq_self_iff`), so `Module.Finite.of_localizationSpan'`
+glues. -/
+theorem module_finite_sections_of_isFinitePresentation {X : Scheme.{u}} (F : X.Modules)
+    [F.IsFinitePresentation] (V : X.affineOpens) :
+    Module.Finite Γ(X, V.1) Γ(F, V.1) := by
+  classical
+  -- the spanning set: elements whose basic open lies in `V` and has finite sections
+  let t : Set Γ(X, V.1) := {f : Γ(X, V.1) |
+    X.basicOpen f ≤ V.1 ∧ Module.Finite Γ(X, X.basicOpen f) Γ(F, X.basicOpen f)}
+  -- the basic opens of `t` cover `V` …
+  have hcov : (⨆ f : t, X.basicOpen (f : Γ(X, V.1))) = V.1 := by
+    apply le_antisymm
+    · exact iSup_le fun f => f.2.1
+    · intro x hx
+      obtain ⟨W, hW, hxW, hWV, hfinW⟩ :=
+        exists_affine_finite_sections_nhds F x V.1 hx
+      obtain ⟨f, hfW, hxf⟩ := V.2.exists_basicOpen_le (⟨x, hxW⟩ : W) hx
+      have hmem : f ∈ t := by
+        refine ⟨hfW.trans hWV, ?_⟩
+        -- localize the chart `W` at (the restriction of) `f`
+        have heq : X.basicOpen f
+            = X.basicOpen (X.presheaf.map (homOfLE hWV).op f) := by
+          rw [Scheme.basicOpen_res]
+          exact (inf_eq_right.mpr hfW).symm
+        rw [heq]
+        haveI := hW.isLocalization_basicOpen (X.presheaf.map (homOfLE hWV).op f)
+        haveI := isLocalizedModule_basicOpen F hW (X.presheaf.map (homOfLE hWV).op f)
+        haveI := hfinW
+        exact Module.Finite.of_isLocalizedModule
+          (Submonoid.powers (X.presheaf.map (homOfLE hWV).op f))
+          (restrictBasicOpenₗ F (X.presheaf.map (homOfLE hWV).op f))
+      exact TopologicalSpace.Opens.mem_iSup.mpr ⟨⟨f, hmem⟩, hxf⟩
+  -- … so `t` spans the unit ideal
+  have hspan : Ideal.span t = ⊤ := V.2.iSup_basicOpen_eq_self_iff.mp hcov
+  -- glue the finiteness over the spanning family
+  haveI : ∀ g : t, IsLocalization.Away (g : Γ(X, V.1))
+      Γ(X, X.basicOpen (g : Γ(X, V.1))) :=
+    fun g => V.2.isLocalization_basicOpen g.1
+  haveI : ∀ g : t, IsLocalizedModule.Away (g : Γ(X, V.1))
+      (restrictBasicOpenₗ F (g : Γ(X, V.1))) :=
+    fun g => isLocalizedModule_basicOpen F V.2 g.1
+  exact Module.Finite.of_localizationSpan' t hspan
+    (fun g => restrictBasicOpenₗ F (g : Γ(X, V.1))) (fun g => g.2.2)
+
+/-! ## §5. The annihilator ideal sheaf pulls back (Stacks 056H) -/
+
+/-- **The annihilator ideal sheaf is stable under pullback** (Stacks 056H, ideal-sheaf
+form; step 3 of `lem:proper_support_base_change`).  For `g' : X' ⟶ X` and a finitely
+presented `F`, the annihilator of `F` is contained in the pushforward along `g'` of
+the annihilator of `g'^* F`; equivalently `𝒪_X ⟶ (ι' ≫ g')_* 𝒪_{Z'}` kills `Ann F`,
+where `ι' : Z' ⟶ X'` is the schematic-support immersion of `g'^* F`.  Pointwise on an
+affine `U ⊆ X` this is the section-level statement `map_app_mem_annihilator_pullback`
+combined with the characterization `annihilator_ideal` (which consumes the finiteness
+of sections of `g'^* F`, a finitely presented module by
+`pullback_isFinitePresentation`), assembled by separation of the structure sheaf of
+`Z'` over preimages of affine opens `V' ≤ g'⁻¹ U`. -/
+theorem annihilator_le_map_pullback {X X' : Scheme.{u}} (g' : X' ⟶ X) (F : X.Modules)
+    [F.IsFinitePresentation] :
+    annihilator F ≤ (annihilator ((Scheme.Modules.pullback g').obj F)).map g' := by
+  haveI hGfp : ((Scheme.Modules.pullback g').obj F).IsFinitePresentation :=
+    pullback_isFinitePresentation g' F ‹_›
+  refine IdealSheafData.le_ofIdeals_iff.mpr fun U r hr => ?_
+  -- `r` annihilates `Γ(F, U)` (the always-available `ofIdeals` direction)
+  have hr' : r ∈ Module.annihilator Γ(X, U.1) Γ(F, U.1) := annihilator_ideal_le F U hr
+  rw [RingHom.mem_ker]
+  -- separation over preimages of affine opens `V' ≤ g'⁻¹ U` in the support `Z'`
+  have hle𝒰 : ∀ i : {W : X'.affineOpens // W.1 ≤ g' ⁻¹ᵁ U.1},
+      (annihilator ((Scheme.Modules.pullback g').obj F)).subschemeι ⁻¹ᵁ i.1.1
+        ≤ ((annihilator ((Scheme.Modules.pullback g').obj F)).subschemeι ≫ g')
+            ⁻¹ᵁ U.1 :=
+    fun i z hz => i.2 hz
+  have hcover : ((annihilator ((Scheme.Modules.pullback g').obj F)).subschemeι ≫ g')
+      ⁻¹ᵁ U.1 ≤ iSup (fun i : {W : X'.affineOpens // W.1 ≤ g' ⁻¹ᵁ U.1} =>
+        (annihilator ((Scheme.Modules.pullback g').obj F)).subschemeι ⁻¹ᵁ i.1.1) := by
+    intro z hz
+    obtain ⟨_, ⟨W, hW, rfl⟩, hzW, hWle⟩ :=
+      X'.isBasis_affineOpens.exists_subset_of_mem_open
+        (show (annihilator ((Scheme.Modules.pullback g').obj F)).subschemeι.base z
+            ∈ (g' ⁻¹ᵁ U.1 : Set X') from hz)
+        (g' ⁻¹ᵁ U.1).2
+    exact TopologicalSpace.Opens.mem_iSup.mpr ⟨⟨⟨W, hW⟩, hWle⟩, hzW⟩
+  refine (annihilator
+      ((Scheme.Modules.pullback g').obj F)).subscheme.sheaf.eq_of_locally_eq'
+    _ _ (fun i => homOfLE (hle𝒰 i)) hcover _ 0 (fun i => ?_)
+  -- on each piece the section is `ι'.app V'` of an annihilator element (step 1)
+  have hmem : X'.presheaf.map (homOfLE i.2).op (g'.app U.1 r) ∈ RingHom.ker
+      ((annihilator
+        ((Scheme.Modules.pullback g').obj F)).subschemeι.app i.1.1).hom := by
+    rw [IdealSheafData.ker_subschemeι_app,
+      annihilator_ideal ((Scheme.Modules.pullback g').obj F)
+        (fun W => module_finite_sections_of_isFinitePresentation _ W) i.1]
+    exact map_app_mem_annihilator_pullback g' F U i.2 hr'
+  have hnat := congr($((annihilator
+      ((Scheme.Modules.pullback g').obj F)).subschemeι.naturality
+    ((homOfLE i.2).op)) (g'.app U.1 r))
+  exact (hnat.symm.trans (RingHom.mem_ker.mp hmem)).trans (map_zero _).symm
+
+/-! ## §6. Proper support is stable under base change: the main theorem -/
+
+/-- **Proper support is stable under base change** (Nitsure §1; Stacks 01W4 +
+056H; `lem:proper_support_base_change`).  For a finitely presented `F`, the
+annihilator of `g'^* F` contains the pullback of the annihilator of `F`
+(`annihilator_le_map_pullback`), so the schematic support of `g'^* F` factors
+through the base change of the schematic support of `F` by a morphism which is
+proper (a closed immersion into it composed with the projection is the
+schematic-support immersion of `g'^* F`); properness is stable under base change
+and composition, and satisfies cancellation along separated morphisms. -/
+theorem HasProperSupport.of_isPullback
+    {X S X' S' : Scheme.{u}} {f : X ⟶ S} {g : S' ⟶ S} {g' : X' ⟶ X} {f' : X' ⟶ S'}
+    (sq : IsPullback g' f' f g) (F : X.Modules) (hfp : F.IsFinitePresentation)
+    (hF : Modules.HasProperSupport f F) :
+    Modules.HasProperSupport f' ((Scheme.Modules.pullback g').obj F) := by
+  haveI := hfp
+  -- step 3: the annihilator inclusion, hence a morphism `l : Z' ⟶ Z` over `g'`
+  have hIle : annihilator F
+      ≤ (annihilator ((Scheme.Modules.pullback g').obj F)).map g' :=
+    annihilator_le_map_pullback g' F
+  have hl := IdealSheafData.subschemeMap_subschemeι _ _ g' hIle
+  -- `W := Z ×_X X'` is proper over `S'`: paste its defining square with `sq`
+  have big := (IsPullback.of_hasPullback (annihilator F).subschemeι g').paste_vert sq
+  haveI hWproper : IsProper (pullback.snd (annihilator F).subschemeι g' ≫ f') :=
+    MorphismProperty.of_isPullback (P := @IsProper) big hF
+  -- the comparison `c : Z' ⟶ W` satisfies `c ≫ snd = ι'`, so `c` is proper …
+  haveI : IsProper (pullback.lift (IdealSheafData.subschemeMap _ _ g' hIle)
+      ((annihilator ((Scheme.Modules.pullback g').obj F)).subschemeι) hl
+      ≫ pullback.snd (annihilator F).subschemeι g') := by
+    rw [pullback.lift_snd]
+    infer_instance
+  haveI : IsClosedImmersion (pullback.snd (annihilator F).subschemeι g') :=
+    MorphismProperty.pullback_snd _ _ inferInstance
+  haveI : IsProper (pullback.lift (IdealSheafData.subschemeMap _ _ g' hIle)
+      ((annihilator ((Scheme.Modules.pullback g').obj F)).subschemeι) hl) :=
+    IsProper.of_comp _ (pullback.snd (annihilator F).subschemeι g')
+  -- … and `ι' ≫ f' = c ≫ (snd ≫ f')` is proper by composition
+  change IsProper
+    ((annihilator ((Scheme.Modules.pullback g').obj F)).subschemeι ≫ f')
+  rw [← pullback.lift_snd (f := (annihilator F).subschemeι) (g := g')
+      (IdealSheafData.subschemeMap _ _ g' hIle)
+      ((annihilator ((Scheme.Modules.pullback g').obj F)).subschemeι) hl,
+    Category.assoc]
+  infer_instance
 
 end Modules
 

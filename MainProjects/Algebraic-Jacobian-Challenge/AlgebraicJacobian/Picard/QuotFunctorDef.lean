@@ -8,6 +8,7 @@ import AlgebraicJacobian.Picard.GenericFlatnessGeometric
 import AlgebraicJacobian.Picard.GlueDescent
 import AlgebraicJacobian.Picard.PullbackFinitePresentation
 import AlgebraicJacobian.Picard.QuotFlatBaseChange
+import AlgebraicJacobian.Picard.QuotSupportBaseChange
 
 /-!
 # The Quot functor and the relative Grassmannian functor (real definitions)
@@ -82,9 +83,13 @@ Item 1 is proved inline; item 2 is proved in
 `Picard/PullbackFinitePresentation.lean` (per-layer `IsFinite` instances for
 the presentation transports); item 3 is proved in
 `Picard/QuotFlatBaseChange.lean` (assembly of the pullback-piece and
-affine-cover flatness engines of `GenericFlatnessGeometric.lean`); items 4–5
-are recorded as named typed `sorry` leaves (their statements are the honest
-Stacks/Nitsure facts; see the blueprint nodes for sources).  The functor
+affine-cover flatness engines of `GenericFlatnessGeometric.lean`); item 4 is
+recorded as a named typed `sorry` leaf; item 5 is proved by the fibre-pasting
+assembly of §2 modulo two named typed `sorry` leaves — the tensor–pullback
+compatibility `Scheme.Modules.pullback_moduleTensorPow_iso` and the
+`Γ`-base-change core `Scheme.gammaFiber_finrank_baseChange_field` (the leaf
+statements are the honest Stacks/Nitsure facts; see the blueprint nodes for
+sources).  The functor
 identities reduce to the pseudofunctor
 coherence laws of `Scheme.Modules.pullback`
 (`pseudofunctor_right_unitality` / `pseudofunctor_associativity`), packaged
@@ -326,23 +331,201 @@ the Quot functor.  Finite presentation
 transport `Modules.pullbackSlicePresentation` and its finiteness) is proved in
 `Picard/PullbackFinitePresentation.lean`; flatness
 (`Scheme.CoherentSheafFlat.of_isPullback`) is proved in
-`Picard/QuotFlatBaseChange.lean`; both are re-exported here by the imports.
-The remaining two preservation facts are recorded below as named typed
-`sorry` leaves with honest statements — see the blueprint nodes
-`lem:proper_support_base_change`, `lem:hilbert_fibre_base_change`. -/
+`Picard/QuotFlatBaseChange.lean`; proper support
+(`Scheme.Modules.HasProperSupport.of_isPullback`) is proved in
+`Picard/QuotSupportBaseChange.lean` (blueprint node
+`lem:proper_support_base_change`); all three are re-exported here by the
+imports.  The
+Hilbert-function invariance (item 5, blueprint node
+`lem:hilbert_fibre_base_change`) is proved below by pasting the fibre squares
+(`Scheme.fiberBaseChange`) and transporting dimensions across the comparison
+isomorphisms, modulo two named typed `sorry` leaves (blueprint nodes
+`lem:pullback_moduleTensorPow`, `lem:gamma_fiber_baseChange_field`). -/
 
-/-- **Proper support is stable under base change** (Nitsure §1; Stacks 01W4 +
-056H).  For a finitely presented `F`, the annihilator of `g'^* F` contains
-the pullback of the annihilator of `F`, so the schematic support of `g'^* F`
-factors through the base change of the schematic support of `F` by a closed
-immersion; properness is stable under base change and under precomposition
-with closed immersions. -/
-theorem Modules.HasProperSupport.of_isPullback
-    {X S X' S' : Scheme.{u}} {f : X ⟶ S} {g : S' ⟶ S} {g' : X' ⟶ X} {f' : X' ⟶ S'}
-    (sq : IsPullback g' f' f g) (F : X.Modules) (hfp : F.IsFinitePresentation)
-    (hF : Modules.HasProperSupport f F) :
-    Modules.HasProperSupport f' ((Scheme.Modules.pullback g').obj F) := by
+/- **Proper support is stable under base change** (Nitsure §1; Stacks 01W4 +
+056H; blueprint `lem:proper_support_base_change`) now lives in
+`AlgebraicJacobian/Picard/QuotSupportBaseChange.lean`
+(`Scheme.Modules.HasProperSupport.of_isPullback`, proved sorry-free and
+axiom-clean) and is re-exported here by the import. -/
+
+/-! ### Base change of the fibrewise graded Hilbert function
+
+Substrate for `Scheme.hilbertFunction_quotBaseMap` below: the fibre of
+`X_{T'} → T'` at `t'` is the base change of the fibre of `X_T → T` at
+`t := ψ(t')` along the residue field extension `κ(t) → κ(t')`
+(`Scheme.fiberBaseChange`, cartesian by `Scheme.isPullback_fiberBaseChange` —
+the pasting of `Scheme.quotBaseSquare` with Mathlib's residue-field square).
+The two restrictions are matched across this identification by pseudofunctor
+coherence (`Scheme.pullbackSquareIso`); their twists by the congruence isos
+of the sheaf tensor product (`Scheme.Modules.moduleTensorPowCongr`) together
+with the tensor-compatibility leaf
+(`Scheme.Modules.pullback_moduleTensorPow_iso`); and the dimension count is
+transported along the assembled isomorphism
+(`Scheme.hilbertFunction_eq_finrank_of_iso`) and delegated to the
+`Γ`-base-change leaf (`Scheme.gammaFiber_finrank_baseChange_field`). -/
+
+section HilbertFunctionBaseChange
+
+/-- The comparison isomorphism `b^* g^* V ≅ b'^* g'^* V` attached to a
+commuting square `b ≫ g = b' ≫ g'` of schemes: two `pullbackTriangleIso`s
+through the common composite.  Pure pseudofunctor coherence, in the rw-free
+form consumed by the fibrewise base-change bookkeeping below. -/
+noncomputable def pullbackSquareIso {Z Y Y' W : Scheme.{u}} {b : Z ⟶ Y} {g : Y ⟶ W}
+    {b' : Z ⟶ Y'} {g' : Y' ⟶ W} (h : b ≫ g = b' ≫ g') (V : W.Modules) :
+    (Scheme.Modules.pullback b).obj ((Scheme.Modules.pullback g).obj V) ≅
+      (Scheme.Modules.pullback b').obj ((Scheme.Modules.pullback g').obj V) :=
+  pullbackTriangleIso (rfl : b ≫ g = b ≫ g) V ≪≫
+    (Scheme.Modules.pullbackCongr h).app V ≪≫
+    (pullbackTriangleIso (rfl : b' ≫ g' = b' ≫ g') V).symm
+
+set_option backward.isDefEq.respectTransparency false in
+/-- Congruence of the sheaf tensor product (`Scheme.Modules.sheafTensorObj`)
+along isomorphisms of the two factors: the image under sheafification of the
+presheaf-level tensor product of the isomorphisms. -/
+noncomputable def Modules.sheafTensorObjCongr {Z : Scheme.{u}} {A A' B B' : Z.Modules}
+    (e : A ≅ A') (f : B ≅ B') :
+    Modules.sheafTensorObj A B ≅ Modules.sheafTensorObj A' B' :=
+  Modules.sheafification.mapIso
+    (MonoidalCategory.tensorIso
+      (C := _root_.PresheafOfModules.{u} (Z.sheaf.obj ⋙ forget₂ CommRingCat RingCat))
+      ((Modules.toPresheafOfModules Z).mapIso e) ((Modules.toPresheafOfModules Z).mapIso f))
+
+/-- Congruence of the tensor powers (`Scheme.Modules.tensorPow`) along an
+isomorphism of the base module. -/
+noncomputable def Modules.tensorPowCongr {Z : Scheme.{u}} {L L' : Z.Modules} (e : L ≅ L') :
+    (m : ℕ) → (Modules.tensorPow L m ≅ Modules.tensorPow L' m)
+  | 0 => Iso.refl _
+  | (m + 1) => Modules.sheafTensorObjCongr (Modules.tensorPowCongr e m) e
+
+/-- Congruence of the twists `F ⊗ L^{⊗m}` (`Scheme.Modules.moduleTensorPow`)
+along isomorphisms of both modules. -/
+noncomputable def Modules.moduleTensorPowCongr {Z : Scheme.{u}} {F F' L L' : Z.Modules}
+    (eF : F ≅ F') (eL : L ≅ L') (m : ℕ) :
+    Modules.moduleTensorPow F L m ≅ Modules.moduleTensorPow F' L' m :=
+  Modules.sheafTensorObjCongr eF (Modules.tensorPowCongr eL m)
+
+/-- **Pullback commutes with the sheaf tensor product and its twists**
+([Stacks 01CD] = Modules, Lemma `tensor-product-pullback`; the stalkwise
+description is [Stacks 01CB] + [Stacks 0098]): for a morphism of schemes
+`f : Y ⟶ X` and quasi-coherent modules `F`, `L` on `X`, the pullback of the
+`m`-th twist `F ⊗ L^{⊗m}` (`Scheme.Modules.moduleTensorPow`) is isomorphic to
+the twist of the pullbacks.  The cited Stacks lemma is stronger — the
+canonical comparison map is an isomorphism for arbitrary sheaves of modules
+on ringed spaces — but the quasi-coherent `Nonempty`-of-isomorphism form
+recorded here is all the Hilbert-function base-change argument needs.
+Blueprint: `lem:pullback_moduleTensorPow`. -/
+theorem Modules.pullback_moduleTensorPow_iso {Z Y : Scheme.{u}} (f : Y ⟶ Z)
+    (F L : Z.Modules) [F.IsQuasicoherent] [L.IsQuasicoherent] (m : ℕ) :
+    Nonempty ((Scheme.Modules.pullback f).obj (Modules.moduleTensorPow F L m) ≅
+      Modules.moduleTensorPow ((Scheme.Modules.pullback f).obj F)
+        ((Scheme.Modules.pullback f).obj L) m) := by
   sorry
+
+/-- The canonical morphism from the fibre of `X_{T'} → T'` at `t'` to the
+fibre of `X_T → T` at `t := ψ(t')`, induced by `quotBaseMap π ψ` on total
+spaces and by the residue field extension `κ(t) ⟶ κ(t')` on the bases.  By
+`Scheme.isPullback_fiberBaseChange` it exhibits its source as the base change
+of its target along `Spec κ(t') ⟶ Spec κ(t)`. -/
+noncomputable def fiberBaseChange (π : X ⟶ S) {T T' : Over S} (ψ : T' ⟶ T)
+    (t' : (T'.left : Scheme.{u})) :
+    (pullback.snd π T'.hom).fiber t' ⟶ (pullback.snd π T.hom).fiber (ψ.left.base t') :=
+  pullback.map (pullback.snd π T'.hom) (T'.left.fromSpecResidueField t')
+    (pullback.snd π T.hom) (T.left.fromSpecResidueField (ψ.left.base t'))
+    (quotBaseMap π ψ) (Spec.map (ψ.left.residueFieldMap t')) ψ.left
+    (quotBaseSquare π ψ).w.symm (by simp)
+
+set_option backward.isDefEq.respectTransparency false in
+/-- **Fibre pasting**: the fibre of `X_{T'} → T'` at `t'` is the base change
+of the fibre of `X_T → T` at `t = ψ(t')` along the residue field extension
+`κ(t) → κ(t')`.  Pasting of the cartesian square `Scheme.quotBaseSquare` with
+Mathlib's residue-field square
+(`AlgebraicGeometry.isPullback_fiberToSpecResidueField_of_isPullback`). -/
+lemma isPullback_fiberBaseChange (π : X ⟶ S) {T T' : Over S} (ψ : T' ⟶ T)
+    (t' : (T'.left : Scheme.{u})) :
+    IsPullback (fiberBaseChange π ψ t')
+      ((pullback.snd π T'.hom).fiberToSpecResidueField t')
+      ((pullback.snd π T.hom).fiberToSpecResidueField (ψ.left.base t'))
+      (Spec.map (ψ.left.residueFieldMap t')) :=
+  isPullback_fiberToSpecResidueField_of_isPullback (quotBaseSquare π ψ) t'
+
+@[reassoc]
+lemma fiberBaseChange_fiberι (π : X ⟶ S) {T T' : Over S} (ψ : T' ⟶ T)
+    (t' : (T'.left : Scheme.{u})) :
+    fiberBaseChange π ψ t' ≫ (pullback.snd π T.hom).fiberι (ψ.left.base t')
+      = (pullback.snd π T'.hom).fiberι t' ≫ quotBaseMap π ψ :=
+  pullback.lift_fst _ _ _
+
+lemma fiberBaseChange_fiberι_fst (π : X ⟶ S) {T T' : Over S} (ψ : T' ⟶ T)
+    (t' : (T'.left : Scheme.{u})) :
+    (pullback.snd π T'.hom).fiberι t' ≫ pullback.fst π T'.hom
+      = fiberBaseChange π ψ t' ≫
+          ((pullback.snd π T.hom).fiberι (ψ.left.base t') ≫ pullback.fst π T.hom) := by
+  rw [← Category.assoc, fiberBaseChange_fiberι, Category.assoc, quotBaseMap_fst]
+
+set_option backward.isDefEq.respectTransparency false in
+/-- Transport of the graded Hilbert function along an isomorphism of the
+twisted fibre module: an isomorphism of sheaves of modules on the fibre
+induces a `κ(s)`-linear equivalence on global sections (evaluation at `⊤` is
+functorial, and the `κ(s)`-scalar action factors through
+`Scheme.Hom.fiberResidueMap`), so the `κ(s)`-dimensions agree. -/
+lemma hilbertFunction_eq_finrank_of_iso {W B : Scheme.{u}} (π₀ : W ⟶ B)
+    (L₀ F₀ : W.Modules) (s : B) (m : ℕ) {G : (π₀.fiber s).Modules}
+    (e : Scheme.Modules.moduleTensorPow (π₀.fiberModule s F₀) (π₀.fiberModule s L₀) m ≅ G) :
+    hilbertFunction π₀ L₀ F₀ s m
+      = (letI := π₀.fiberSectionsModule s G
+         Module.finrank (B.residueField s) Γ(G, ⊤)) := by
+  letI := π₀.fiberSectionsModule s
+    (Scheme.Modules.moduleTensorPow (π₀.fiberModule s F₀) (π₀.fiberModule s L₀) m)
+  letI := π₀.fiberSectionsModule s G
+  have γe := ((Modules.toPresheafOfModules (π₀.fiber s) ⋙
+    PresheafOfModules.evaluation (π₀.fiber s).ringCatSheaf.obj (Opposite.op ⊤)).mapIso
+      e).toLinearEquiv
+  exact LinearEquiv.finrank_eq
+    { toFun := γe
+      map_add' := γe.map_add
+      map_smul' := fun c x => γe.map_smul ((π₀.fiberResidueMap s).hom c) x
+      invFun := γe.symm
+      left_inv := γe.left_inv
+      right_inv := γe.right_inv }
+
+set_option backward.isDefEq.respectTransparency false in
+/-- **Flat base change of the global sections of the twisted fibre module over
+the residue field extension** ([Stacks 02KH], `i = 0`, via the schematic
+support reduction; [Nitsure] §1): in the setting of
+`Scheme.hilbertFunction_quotBaseMap`, with `t := ψ(t')`, the `κ(t')`-dimension
+of the global sections of the pullback of the twisted module
+`F_t ⊗ L_t^{⊗m}` along `Scheme.fiberBaseChange π ψ t'` equals the
+`κ(t)`-dimension of the global sections of the twisted module itself — the
+right-hand side being the graded Hilbert function of `F` at `t`.  Proper
+support of `F` over `T` makes the (schematic) support of the twisted module
+proper, in particular quasi-compact and separated, over the residue field, so
+that [Stacks 02KH] applies to it; quasi-coherence of `L` (hence of the twist)
+is likewise required.  In the infinite-dimensional case both sides carry the
+junk value `0` of `Module.finrank`, matching the equality of infinite
+dimensions.  Blueprint: `lem:gamma_fiber_baseChange_field`. -/
+theorem gammaFiber_finrank_baseChange_field (π : X ⟶ S) (L : X.Modules)
+    [L.IsQuasicoherent] {T T' : Over S} (ψ : T' ⟶ T)
+    (F : (Limits.pullback π T.hom).Modules) (hfp : F.IsFinitePresentation)
+    (hps : Modules.HasProperSupport (pullback.snd π T.hom) F)
+    (t' : (T'.left : Scheme.{u})) (m : ℕ) :
+    (letI := (pullback.snd π T'.hom).fiberSectionsModule t'
+        ((Scheme.Modules.pullback (fiberBaseChange π ψ t')).obj
+          (Scheme.Modules.moduleTensorPow
+            ((pullback.snd π T.hom).fiberModule (ψ.left.base t') F)
+            ((pullback.snd π T.hom).fiberModule (ψ.left.base t')
+              ((Scheme.Modules.pullback (pullback.fst π T.hom)).obj L)) m))
+     Module.finrank (T'.left.residueField t')
+        Γ((Scheme.Modules.pullback (fiberBaseChange π ψ t')).obj
+          (Scheme.Modules.moduleTensorPow
+            ((pullback.snd π T.hom).fiberModule (ψ.left.base t') F)
+            ((pullback.snd π T.hom).fiberModule (ψ.left.base t')
+              ((Scheme.Modules.pullback (pullback.fst π T.hom)).obj L)) m), ⊤))
+      = hilbertFunction (pullback.snd π T.hom)
+          ((Scheme.Modules.pullback (pullback.fst π T.hom)).obj L) F
+          (ψ.left.base t') m := by
+  sorry
+
+end HilbertFunctionBaseChange
 
 /-- **The fibrewise graded Hilbert function is invariant under base change**
 (Nitsure §1, the implicit invariance behind the decomposition
@@ -367,7 +550,43 @@ theorem hilbertFunction_quotBaseMap (π : X ⟶ S) (L : X.Modules)
       = hilbertFunction (pullback.snd π T.hom)
         ((Scheme.Modules.pullback (pullback.fst π T.hom)).obj L) F
         (ψ.left.base t') m := by
-  sorry
+  -- quasi-coherence of the two restrictions on the `T`-side fibre
+  haveI hFqc : F.IsQuasicoherent := letI := hfp; inferInstance
+  haveI : ((pullback.snd π T.hom).fiberModule (ψ.left.base t') F).IsQuasicoherent :=
+    pullback_isQuasicoherent_hom _ F hFqc
+  haveI : ((pullback.snd π T.hom).fiberModule (ψ.left.base t')
+      ((Scheme.Modules.pullback (pullback.fst π T.hom)).obj L)).IsQuasicoherent :=
+    pullback_isQuasicoherent_hom _ _ (pullback_isQuasicoherent_hom _ L inferInstance)
+  -- Steps 1–2 (fibre pasting + module bookkeeping): match the two restrictions
+  -- across the fibre comparison `fiberBaseChange` by pseudofunctor coherence
+  have eF : (pullback.snd π T'.hom).fiberModule t'
+        ((Scheme.Modules.pullback (quotBaseMap π ψ)).obj F)
+      ≅ (Scheme.Modules.pullback (fiberBaseChange π ψ t')).obj
+          ((pullback.snd π T.hom).fiberModule (ψ.left.base t') F) :=
+    pullbackSquareIso (fiberBaseChange_fiberι π ψ t').symm F
+  have eL : (pullback.snd π T'.hom).fiberModule t'
+        ((Scheme.Modules.pullback (pullback.fst π T'.hom)).obj L)
+      ≅ (Scheme.Modules.pullback (fiberBaseChange π ψ t')).obj
+          ((pullback.snd π T.hom).fiberModule (ψ.left.base t')
+            ((Scheme.Modules.pullback (pullback.fst π T.hom)).obj L)) :=
+    pullbackSquareIso (fiberBaseChange_fiberι_fst π ψ t') L ≪≫
+      (Scheme.Modules.pullback (fiberBaseChange π ψ t')).mapIso
+        (pullbackTriangleIso (rfl : (pullback.snd π T.hom).fiberι (ψ.left.base t')
+            ≫ pullback.fst π T.hom = _) L).symm
+  -- Step 3 (twist compatibility): pull the tensor operations through
+  -- `fiberBaseChange` (leaf `Modules.pullback_moduleTensorPow_iso`)
+  obtain ⟨eT⟩ := Modules.pullback_moduleTensorPow_iso (fiberBaseChange π ψ t')
+    ((pullback.snd π T.hom).fiberModule (ψ.left.base t') F)
+    ((pullback.snd π T.hom).fiberModule (ψ.left.base t')
+      ((Scheme.Modules.pullback (pullback.fst π T.hom)).obj L)) m
+  -- Step 4 (dimension transport along the assembled isomorphism), then
+  -- Step 5 (Γ-base change over the residue field extension, leaf
+  -- `gammaFiber_finrank_baseChange_field`)
+  exact (hilbertFunction_eq_finrank_of_iso (pullback.snd π T'.hom)
+      ((Scheme.Modules.pullback (pullback.fst π T'.hom)).obj L)
+      ((Scheme.Modules.pullback (quotBaseMap π ψ)).obj F) t' m
+      (Modules.moduleTensorPowCongr eF eL m ≪≫ eT.symm)).trans
+    (gammaFiber_finrank_baseChange_field π L ψ F hfp hps t' m)
 
 /-! ## §3. Families of quotients and the Quot functor -/
 
