@@ -5,6 +5,7 @@ Authors: Christian Merten
 -/
 import Mathlib
 import AlgebraicJacobian.Picard.RelPicFunctor
+import AlgebraicJacobian.Picard.DivFunctorDef
 
 /-!
 # FGA representability of the Picard scheme (A.2.c)
@@ -52,39 +53,55 @@ are all **bijective**. Hence, under a `k`-rational-point hypothesis
 itself representable, and the FGA statement can be made against it directly
 — no étale topology needed. Without a section the plain functor is NOT
 representable in general (it need not even be a Zariski sheaf), which is why
-every sorry-carrying instance below is **conditional on
+the representability sorry `instHasPicScheme` below is **conditional on
 `[HasRationalPoint C]`**: an unconditional instance would assert a false
 statement. (Run-0008 memory `I-0061`: the same trap ruled out wiring
 `picSharp` to the *absolute* functor `PicSharp.presheaf`.)
 
-## Sorry accounting after the rewire
+## Sorry accounting after the rewires (run 0008 `picSharp`, run 0010 fga-div)
 
-1. `picSharp` — REAL (sorry-free), the relative Picard functor.
-2. `instHasPicScheme` — the single genuine **FGA sorry**: existence of a
-   representing scheme for `picSharp C` given a rational point (Kleiman §4
-   Thm `th:main` + Cor `cor:algsch`, transported through §2 Thm 2.5).
-3. `instPicSharpRepresentable` — **PROVED** (`Exists.choose_spec`): the
-   scheme chosen by `PicScheme` represents `picSharp C` by construction.
-4. `groupSchemeStructure` — **PROVED** via `GrpObj.ofRepresentableBy`:
-   Yoneda transport of the abelian-group structure of `relPresheaf`.
-5. `divFunctor` / `abelMap` — still `⟨sorry⟩`-backed carriers awaiting the
-   Quot-scheme engine (A.2.b, `Picard/QuotScheme.lean`); their `Nonempty`
-   statements are true (the divisor functor exists; the zero natural
-   transformation witnesses `HasAbelMap`), but the carriers remain opaque
-   until the real Abel map lands.
-6. `smoothProperQuotient` — the Altman–Kleiman quotient lemma is kept as a
-   theorem extracting from an explicit **use-site hypothesis class**
-   `HasSmoothProperQuotient`. The former GLOBAL `⟨sorry⟩` instance was
-   **deleted in run 0008**: it asserted `P.IsRepresentable` for *every*
-   presheaf morphism `α : Z ⟶ P`, which is flagrantly false. Even the
-   theorem's hypothesis list is weaker than Kleiman §4 Lem `lm:qt` (it
-   omits quasi-projectivity of the representing scheme `Y`, not currently
-   expressible in Mathlib — no `QuasiProjective` vocabulary), and with the
-   étale-local lift hypothesis a Hironaka-type free ℤ/2-action on a smooth
-   proper 3-fold gives a smooth proper equivalence relation whose quotient
-   sheaf is an algebraic space that is NOT a scheme. The class must
-   therefore be supplied at the use site, where quasi-projectivity of the
-   Abel-map slice is available.
+The file has exactly **two** remaining sorry sites, both `⟨sorry⟩` instance
+constructors of `Prop`-valued classes:
+
+1. `instHasPicScheme` — the single genuine **FGA sorry**: existence of a
+   representing scheme for `picSharp C`, **locally of finite type over `k`**,
+   given a rational point (Kleiman §4 Thm `th:main`(1) + Cor `cor:algsch`,
+   transported through §2 Thm 2.5). Run 0010 strengthened the existential to
+   also carry local finiteness — part (1) of the same Kleiman theorem, one
+   existence package — absorbing the former separate
+   `instPicSchemeLocallyOfFiniteType` sorry.
+2. `instHasAbelMap` — the `Nonempty` statement is true (the pointwise-zero
+   natural transformation into the group-valued target witnesses it), but
+   the extracted carrier stays opaque until the substantive Abel map
+   `D ↦ [O_{C ×_k T}(D)]` lands.
+
+Everything else is REAL or PROVED:
+
+* `picSharp` — REAL (run 0008), the relative Picard functor.
+* `divFunctor` — REAL (run 0010): the relative-divisor functor
+  `Scheme.DivFunctor C.hom` of `Picard/DivFunctorDef.lean` (Kleiman §3
+  Def. `df:div`, invertible-kernel quotient encoding); consequently
+  `instHasDivFunctor` is **PROVED** (witness: `divFunctor C`).
+* `instPicSharpRepresentable` — **PROVED** (`Exists.choose_spec.1`): the
+  scheme chosen by `PicScheme` represents `picSharp C` by construction.
+* `instPicSchemeLocallyOfFiniteType` — **PROVED** (run 0010,
+  `Exists.choose_spec.2`): local finiteness is the second component of the
+  strengthened `HasPicScheme` existential.
+* `groupSchemeStructure` — **PROVED** via `GrpObj.ofRepresentableBy`:
+  Yoneda transport of the abelian-group structure of `relPresheaf`.
+* `smoothProperQuotient` — the Altman–Kleiman quotient lemma is kept as a
+  theorem extracting from an explicit **use-site hypothesis class**
+  `HasSmoothProperQuotient`. The former GLOBAL `⟨sorry⟩` instance was
+  **deleted in run 0008**: it asserted `P.IsRepresentable` for *every*
+  presheaf morphism `α : Z ⟶ P`, which is flagrantly false. Even the
+  theorem's hypothesis list is weaker than Kleiman §4 Lem `lm:qt` (it
+  omits quasi-projectivity of the representing scheme `Y`, not currently
+  expressible in Mathlib — no `QuasiProjective` vocabulary), and with the
+  étale-local lift hypothesis a Hironaka-type free ℤ/2-action on a smooth
+  proper 3-fold gives a smooth proper equivalence relation whose quotient
+  sheaf is an algebraic space that is NOT a scheme. The class must
+  therefore be supplied at the use site, where quasi-projectivity of the
+  Abel-map slice is available.
 
 ## References
 
@@ -130,8 +147,9 @@ set-valued functor; the group structure is transported back onto the
 representing scheme by `groupSchemeStructure` below).
 
 `divFunctor` (the relative-effective-divisor functor `Div_{C/k}`, Kleiman §3
-Thm `th:repDiv`) is still a `⟨sorry⟩`-backed carrier awaiting the Quot-scheme
-engine (A.2.b, sibling `Picard/QuotScheme.lean`). -/
+Def `df:div`) is, since run 0010, the REAL functor `Scheme.DivFunctor C.hom`
+of sibling `Picard/DivFunctorDef.lean` (A.2.b), replacing the former
+`⟨sorry⟩`-backed opaque carrier. -/
 
 /-- **The relative Picard functor** `Pic^♯_{C/k} : (Sch/k)^op ⥤ Type (u+1)`,
 `T ↦ Pic(C ×_k T)/π_T^* Pic(T)` — the set-valued shadow of the group-valued
@@ -155,34 +173,45 @@ noncomputable def picSharp {k : Type u} [Field k]
   PicSharp.relPresheaf C ⋙ CategoryTheory.forget AddCommGrpCat.{u+1}
 
 /-- Typeclass asserting existence of the relative-divisor functor `Div_{C/k}`.
-The single `⟨sorry⟩` instance below is the unique sorry-carrying site for
-this carrier. (The `Nonempty` statement is trivially true — any functor
-witnesses it — so this carrier pattern is sound; the real content arrives
-when `Picard/QuotScheme.lean` lands and the carrier becomes a re-export.) -/
+Run 0010: with the real functor `Scheme.DivFunctor` available
+(`Picard/DivFunctorDef.lean`), the instance `instHasDivFunctor` below is
+PROVED (witness: `divFunctor C = DivFunctor C.hom`), so this class carries no
+sorry any more; it survives only as the blueprint-pinned existence carrier
+(`def:has_div_functor`). -/
 class HasDivFunctor {k : Type u} [Field k] (C : Over (Spec (.of k))) : Prop where
   has_div_functor : Nonempty ((Over (Spec (.of k)))ᵒᵖ ⥤ Type (u+1))
 
-/-- **File-internal placeholder** for the relative-divisor functor
-`Div_{C/k} : (Sch/k)^op ⥤ Type (u+1)`, sending a `k`-scheme `T` to the set of
-relative effective Cartier divisors on `C ×_k T` flat over `T`.
+/-- **The relative-divisor functor** `Div_{C/k} : (Sch/k)^op ⥤ Type (u+1)`,
+sending a `k`-scheme `T` to the set of relative effective Cartier divisors on
+`C ×_k T` flat over `T` (Kleiman §3 Def. `df:div`).
 
-The blueprint chapter `Picard_QuotScheme.tex` pins the Quot/Hilbert engine
-under `AlgebraicGeometry.Scheme.QuotScheme`; the divisor functor here is the
-open sub-functor cut out by the effective-divisor criterion (Kleiman §3
-Thm. `th:repDiv`). Once `Picard/QuotScheme.lean` lands the present def
-collapses to a one-line re-export. Until then it is extracted from
-`HasDivFunctor.has_div_functor` via `Classical.choice` — an OPAQUE functor
-with no defining property; nothing downstream may rely on its values. -/
+Run-0010 rewire (following the run-0008 `picSharp` pattern): this is now
+**defined** as the honest relative-divisor functor
+
+```
+divFunctor C := Scheme.DivFunctor C.hom
+```
+
+of sibling `Picard/DivFunctorDef.lean` — `T`-flat invertible-kernel quotients
+of `O_{C ×_k T}` modulo `ker q = ker q'`, i.e. Kleiman's set of relative
+effective divisors — replacing the former OPAQUE
+`Classical.choice`-of-`⟨sorry⟩` extraction. Natural transformations out of it
+(the Abel map `abelMap` below) therefore have actual mathematical content.
+The former `[HasDivFunctor _C]` argument is dropped: the class survives above
+as the (now proved) blueprint-pinned existence carrier, but the definition no
+longer routes through it. -/
 noncomputable def divFunctor {k : Type u} [Field k]
-    (_C : Over (Spec (.of k))) [HasDivFunctor _C] :
+    (C : Over (Spec (.of k))) :
     (Over (Spec (.of k)))ᵒᵖ ⥤ Type (u+1) :=
-  Classical.choice (HasDivFunctor.has_div_functor (C := _C))
+  DivFunctor C.hom
 
-/-- Existence instance for `HasDivFunctor`. This is the single sorry-carrying
-site for `divFunctor`. -/
-noncomputable instance instHasDivFunctor {k : Type u} [Field k]
+/-- Existence instance for `HasDivFunctor` — **PROVED** (run 0010): the real
+relative-divisor functor `divFunctor C = Scheme.DivFunctor C.hom` witnesses
+the existential. Formerly the `⟨sorry⟩`-carrying site for the `divFunctor`
+carrier; the sorry is closed by the A.2.b engine. -/
+instance instHasDivFunctor {k : Type u} [Field k]
     (C : Over (Spec (.of k))) : HasDivFunctor C :=
-  ⟨sorry⟩
+  ⟨⟨divFunctor C⟩⟩
 
 end PicScheme
 
@@ -199,17 +228,25 @@ abelian-group-scheme structure is `groupSchemeStructure` below.
 Blueprint reference: `def:pic_scheme` (Kleiman §4 Def. `df:Psch`). -/
 
 /-- Typeclass asserting existence of a scheme over `Spec k` that represents
-the relative Picard functor `picSharp C`. The single sorry-carrying site for
-`PicScheme` is the `⟨sorry⟩` instance below, **conditional on
-`[HasRationalPoint C]`** — without a section the plain relative functor is
-not representable in general, so an unconditional instance would assert a
-false statement. Consumers that quantify over `[HasPicScheme C]` as a
-hypothesis remain kernel-clean. -/
+the relative Picard functor `picSharp C` **and is locally of finite type over
+`k`**. The single sorry-carrying site for `PicScheme` is the `⟨sorry⟩`
+instance below, **conditional on `[HasRationalPoint C]`** — without a section
+the plain relative functor is not representable in general, so an
+unconditional instance would assert a false statement. Consumers that
+quantify over `[HasPicScheme C]` as a hypothesis remain kernel-clean.
+
+Run 0010 strengthening: the existential also carries
+`LocallyOfFiniteType X.hom`. This is truth-preserving because Kleiman §4 Thm
+`th:main`(1) makes local finiteness part of the SAME existence package as
+representability (`Pic_{C/k}` is a disjoint union of open quasi-projective
+`k`-subschemes), so the strengthened statement is exactly as true as the old
+one; it lets the local-finiteness carrier `instPicSchemeLocallyOfFiniteType`
+be PROVED by extraction instead of carrying its own sorry. -/
 class HasPicScheme {k : Type u} [Field k] (C : Over (Spec (.of k)))
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
     [GeometricallyIntegral C.hom] : Prop where
   has_pic_scheme : ∃ (X : Over (Spec (.of k))),
-    Nonempty ((PicScheme.picSharp C).RepresentableBy X)
+    Nonempty ((PicScheme.picSharp C).RepresentableBy X) ∧ LocallyOfFiniteType X.hom
 
 /-- The **Picard scheme** `Pic_{C/k}` of a smooth proper geometrically
 integral curve `C/k`, encoded as an object of `Over (Spec (.of k))`.
@@ -234,6 +271,13 @@ locally of finite type), combined with Kleiman §2 Thm 2.5 (under the
 `k`-rational point of `[HasRationalPoint C]`, the plain relative functor
 `picSharp C` coincides with the étale-sheafified one, so the same scheme
 represents it).
+
+Run 0010: this sorry now also carries Kleiman §4 Thm `th:main`(1) — the
+representing scheme is **locally of finite type** over `k` (a disjoint union
+of open quasi-projective `k`-subschemes) — since the strengthened
+`HasPicScheme` existential packages local finiteness together with
+representability; the former separate `instPicSchemeLocallyOfFiniteType`
+sorry is absorbed into this one.
 
 The conditionality on `[HasRationalPoint C]` is essential for truth: without
 a section, `Pic(C ×_k T)/π_T^* Pic(T)` need not even be a Zariski sheaf. -/
@@ -270,11 +314,13 @@ class HasAbelMap {k : Type u} [Field k] (C : Over (Spec (.of k)))
 effective Cartier divisor `D ⊆ C ×_k T` over `T` to its associated invertible
 sheaf `[O_{C ×_k T}(D)] = [I_D⁻¹]`.
 
-Note the run-0008 rewire changed the TARGET to the real relative Picard
-functor; the source `divFunctor C` is still an opaque carrier (see
-`divFunctor`), so this natural transformation remains without defining
-property until the Quot-scheme engine lands. Extracted from
-`HasAbelMap.has_abel_map` via `Classical.choice`. -/
+The run-0008 rewire made the TARGET the real relative Picard functor, and the
+run-0010 rewire made the SOURCE the real relative-divisor functor
+(`divFunctor C = Scheme.DivFunctor C.hom`), so both endpoints now have
+mathematical content; the natural transformation ITSELF is still extracted
+from `HasAbelMap.has_abel_map` via `Classical.choice` and remains without
+defining property until the substantive Abel map
+`⟨F, q⟩ ↦ [(ker q)⁻¹]` is constructed. -/
 noncomputable def abelMap {k : Type u} [Field k]
     (C : Over (Spec (.of k)))
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
@@ -384,13 +430,16 @@ class PicSharpRepresentable {k : Type u} [Field k] (C : Over (Spec (.of k)))
 
 /-- Existence instance for `PicSharpRepresentable` — **proved** (run 0008):
 `PicScheme C` is `Classical.choose` of the `HasPicScheme` existential, and
-`Exists.choose_spec` says precisely that the chosen scheme represents
-`picSharp C`. The FGA content lives upstream in `instHasPicScheme`. -/
+the first component of `Exists.choose_spec` says precisely that the chosen
+scheme represents `picSharp C` (the second component, since the run-0010
+strengthening, is local finiteness — see
+`instPicSchemeLocallyOfFiniteType`). The FGA content lives upstream in
+`instHasPicScheme`. -/
 instance instPicSharpRepresentable {k : Type u} [Field k]
     (C : Over (Spec (.of k)))
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
     [GeometricallyIntegral C.hom] [HasPicScheme C] : PicSharpRepresentable C :=
-  ⟨(HasPicScheme.has_pic_scheme (C := C)).choose_spec⟩
+  ⟨(HasPicScheme.has_pic_scheme (C := C)).choose_spec.1⟩
 
 /-- **FGA representability of the Picard scheme.**
 
@@ -476,36 +525,41 @@ noncomputable instance groupSchemeStructure {k : Type u} [Field k]
 /-! ## §6. Local finiteness of the Picard scheme
 
 Kleiman §4 Thm `th:main`(1): the Picard scheme is separated and locally of
-finite type over the base. `HasPicScheme` packages only the representability
-existential (run-0005 T5 check, memory `I-0037`), so local finiteness needs
-its own carrier. It is what the identity-component substrate
+finite type over the base. Since the run-0010 strengthening, `HasPicScheme`
+packages local finiteness together with the representability existential
+(one existence package, as in Kleiman's theorem), so the carrier below is
+PROVED by extraction. It is what the identity-component substrate
 (`Picard/IdentityComponent.lean`, `GroupScheme.IdentityComponent`) consumes
 to specialise to `G = PicScheme C`. -/
 
 /-- Typeclass asserting that the structural morphism of the Picard scheme is
 locally of finite type (Kleiman §4 Thm `th:main`(1): `Pic_{C/k}` is a
 disjoint union of open quasi-projective `k`-subschemes, hence locally of
-finite type). The `⟨sorry⟩` instance below, conditional on
-`[HasRationalPoint C]`, is the unique sorry-carrying site; the statement is
-true because representing objects are unique up to isomorphism and
-`LocallyOfFiniteType` is invariant under isomorphism, so the property
-transfers from Kleiman's construction to the `Classical.choose` witness. -/
+finite type). Run 0010: the instance below is PROVED — the strengthened
+`HasPicScheme` existential carries local finiteness, so the property of the
+`Classical.choose` witness is its second `choose_spec` component; the class
+survives only to preserve the blueprint-pinned consumer signature. -/
 class PicSchemeLocallyOfFiniteType {k : Type u} [Field k]
     (C : Over (Spec (.of k)))
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
     [GeometricallyIntegral C.hom] [HasPicScheme C] : Prop where
   locallyOfFiniteType : LocallyOfFiniteType (PicScheme C).hom
 
-/-- Existence instance for `PicSchemeLocallyOfFiniteType`, conditional on the
-`k`-rational point (like `instHasPicScheme`, on which it depends). This is
-one of the sorry-carrying sites of the file; content: Kleiman §4 Thm
-`th:main`(1). -/
+/-- Existence instance for `PicSchemeLocallyOfFiniteType` — **PROVED** (run
+0010): Kleiman §4 Thm `th:main`(1) makes local finiteness part of the same
+existence package as representability, so the strengthened `HasPicScheme`
+existential carries it and the property of the chosen witness is the second
+component of its `choose_spec`. The instance hypothesis is now
+`[HasPicScheme C]` rather than `[HasRationalPoint C]`: the rational-point
+conditionality lives entirely in `instHasPicScheme` (which supplies
+`HasPicScheme C`), and any consumer able to name `PicScheme C` already
+quantifies over `[HasPicScheme C]`. -/
 instance instPicSchemeLocallyOfFiniteType {k : Type u} [Field k]
     (C : Over (Spec (.of k)))
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
-    [GeometricallyIntegral C.hom] [HasRationalPoint C] :
+    [GeometricallyIntegral C.hom] [HasPicScheme C] :
     PicSchemeLocallyOfFiniteType C :=
-  ⟨sorry⟩
+  ⟨(HasPicScheme.has_pic_scheme (C := C)).choose_spec.2⟩
 
 /-- Projection of `PicSchemeLocallyOfFiniteType` to the Mathlib morphism
 property, so that instance search finds `LocallyOfFiniteType (PicScheme
