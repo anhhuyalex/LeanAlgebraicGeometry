@@ -50,6 +50,72 @@ namespace AlgebraicGeometry
 
 universe u
 
+/-! ## Rank-one pullback coherences
+
+The Serre-twist cocycle transports rank-one transition isomorphisms of the shape
+`pullbackUnitIso a ≪≫ unitScalarIso v ≪≫ (pullbackUnitIso b).symm` to a triple
+overlap.  The next block is the rank-one mirror of the free-sheaf coherence stack
+of `GrassmannianQuot.lean` / `GlueDescent.lean` (`pullbackFreeIso_comp`,
+`matrixEnd_pullback`, the `pullbackCongr` endpoint absorptions): with
+`SheafOfModules.unit` in place of `SheafOfModules.free (Fin d)`, `scalarEnd` in
+place of `matrixEnd`, and `pullbackUnitIso` in place of `pullbackFreeIso`.  Each
+is immediate from an already-proven unit-level atom. -/
+
+namespace Scheme.Modules
+
+open AlgebraicGeometry.Grassmannian (scalarEnd scalarEnd_pullback)
+
+/-- Rank-one `map_comp` coherence (analogue of `pullbackFreeIso_comp`): the
+structure-sheaf pullback comparison at a composite `b ≫ a` factors through the
+pseudofunctor composition `pullbackComp`.  Immediate from the unit coherence
+`gr_pullbackObjUnitToUnit_comp` (`(pullbackUnitIso f).hom = pullbackObjUnitToUnit f`). -/
+lemma pullbackUnitIso_comp {Tx Ty Tz : Scheme.{u}} (a : Ty ⟶ Tx) (b : Tz ⟶ Ty) :
+    (pullbackComp b a).hom.app (SheafOfModules.unit Tx.ringCatSheaf) ≫
+        (pullbackUnitIso (b ≫ a)).hom
+      = (pullback b).map (pullbackUnitIso a).hom ≫ (pullbackUnitIso b).hom :=
+  gr_pullbackObjUnitToUnit_comp a b
+
+/-- Iso-conjugated form of the scalar-endomorphism pullback atom `scalarEnd_pullback`:
+`(pullback p).map (scalarEnd a) = Q.hom ≫ scalarEnd (p.appTop a) ≫ Q.inv`, with
+`Q = pullbackUnitIso p`.  The rank-one analogue of `matrixEnd_pullback`. -/
+lemma scalarEnd_pullback_iso {T S : Scheme.{0}} (p : T ⟶ S) (a : Γ(S, ⊤)) :
+    (pullback p).map (scalarEnd a)
+      = (pullbackUnitIso p).hom ≫ scalarEnd (p.appTop a) ≫ (pullbackUnitIso p).inv := by
+  have key : (pullback p).map (scalarEnd a) ≫ (pullbackUnitIso p).hom
+      = (pullbackUnitIso p).hom ≫ scalarEnd (p.appTop a) :=
+    scalarEnd_pullback p a
+  rw [← Category.assoc, ← key, Category.assoc, Iso.hom_inv_id, Category.comp_id]
+
+/-- Closed zig-zag: `Q_φ⁻¹ ≫ pullbackCongr(h).app ≫ Q_ψ = 𝟙` for equal base
+morphisms `φ = ψ`.  Rank-one mirror of `pullbackFreeIso_inv_congr_hom`. -/
+@[reassoc]
+lemma pullbackUnitIso_inv_congr_hom {T' T : Scheme.{u}} {φ ψ : T' ⟶ T} (h : φ = ψ) :
+    (pullbackUnitIso φ).inv ≫
+        ((pullbackCongr h).app (SheafOfModules.unit T.ringCatSheaf)).hom ≫
+        (pullbackUnitIso ψ).hom
+      = 𝟙 _ := by
+  subst h; simp [pullbackCongr]
+
+/-- Left absorption: `pullbackCongr(h).app ≫ Q_ψ = Q_φ` for equal base morphisms
+`φ = ψ`.  Rank-one mirror of `pullbackCongr_hom_app_free`. -/
+@[reassoc]
+lemma pullbackCongr_hom_app_unit {T' T : Scheme.{u}} {φ ψ : T' ⟶ T} (h : φ = ψ) :
+    ((pullbackCongr h).app (SheafOfModules.unit T.ringCatSheaf)).hom ≫
+        (pullbackUnitIso ψ).hom
+      = (pullbackUnitIso φ).hom := by
+  subst h; simp [pullbackCongr]
+
+/-- Right absorption: `Q_φ⁻¹ ≫ pullbackCongr(h).app = Q_ψ⁻¹` for equal base
+morphisms `φ = ψ`.  Rank-one mirror of `pullbackFreeIso_inv_congr`. -/
+@[reassoc]
+lemma pullbackUnitIso_inv_congr {T' T : Scheme.{u}} {φ ψ : T' ⟶ T} (h : φ = ψ) :
+    (pullbackUnitIso φ).inv ≫
+        ((pullbackCongr h).app (SheafOfModules.unit T.ringCatSheaf)).hom
+      = (pullbackUnitIso ψ).inv := by
+  subst h; simp [pullbackCongr]
+
+end Scheme.Modules
+
 namespace ProjTwist
 
 variable (n : Type u)
@@ -213,6 +279,10 @@ def unitScalarIso {Y : Scheme.{u}} (v : Γ(Y, ⊤)ˣ) :
   inv_hom_id := by rw [scalarEnd_comp, v.inv_val, scalarEnd_one]
 
 @[simp]
+lemma unitScalarIso_hom {Y : Scheme.{u}} (v : Γ(Y, ⊤)ˣ) :
+    (unitScalarIso v).hom = scalarEnd v.val := rfl
+
+@[simp]
 lemma unitScalarIso_one {Y : Scheme.{u}} :
     unitScalarIso (1 : Γ(Y, ⊤)ˣ) = Iso.refl _ :=
   Iso.ext (by rw [Iso.refl_hom]; exact (congrArg scalarEnd Units.val_one).trans scalarEnd_one)
@@ -292,34 +362,56 @@ lemma twistTransition_self (m : ℕ) (i : n) :
         (show (glueData n).f i i = (glueData n).t i i ≫ (glueData n).f i i by
           rw [(glueData n).t_id i, Category.id_comp])
 
-/-- **(C2)** The triple-overlap cocycle condition for the Serre-twist
-transitions, in the exact form consumed by `Scheme.Modules.glue`.  At the
-level of transition units this is the identity
-`(Xᵢ/Xⱼ)^m (Xⱼ/Xₖ)^m = (Xᵢ/Xₖ)^m` in `Γ(V(i,j,k), O)`; the remaining work is
-transporting the conjugated scalar isomorphisms to the triple overlap through
-the `pullbackUnitIso` coherences (the rank-one analogue of
-`bundleTransition_cocycle_transport`, `GrassmannianQuot.lean`). -/
-lemma twistTransition_cocycle (m : ℕ) (i j k : n) :
-    Scheme.Modules.pullbackBaseChangeTransport
-        (pullback.fst ((glueData n).f i j) ((glueData n).f i k)) ((glueData n).f i j)
-        ((glueData n).t i j ≫ (glueData n).f j i) (twistTransition n m i j) ≪≫
-      (Scheme.Modules.pullbackCongr
-        (Scheme.Modules.glueData_bridge_mid (glueData n) i j k)).app
-          (SheafOfModules.unit ((glueData n).U j).ringCatSheaf) ≪≫
-      Scheme.Modules.pullbackBaseChangeTransport
-        ((glueData n).t' i j k ≫ pullback.fst ((glueData n).f j k) ((glueData n).f j i))
-        ((glueData n).f j k) ((glueData n).t j k ≫ (glueData n).f k j)
-        (twistTransition n m j k) ≪≫
-      (Scheme.Modules.pullbackCongr
-        (Scheme.Modules.glueData_bridge_tgt (glueData n) i j k)).app
-          (SheafOfModules.unit ((glueData n).U k).ringCatSheaf)
-    = (Scheme.Modules.pullbackCongr
-        (Scheme.Modules.glueData_bridge_src (glueData n) i j k)).app
-          (SheafOfModules.unit ((glueData n).U i).ringCatSheaf) ≪≫
-      Scheme.Modules.pullbackBaseChangeTransport
-        (pullback.snd ((glueData n).f i j) ((glueData n).f i k)) ((glueData n).f i k)
-        ((glueData n).t i k ≫ (glueData n).f k i) (twistTransition n m i k) := by
-  sorry
+/-- **Transport of a rank-one scalar automorphism through
+`pullbackBaseChangeTransport`** — the reusable abstract core of the Serre-twist
+cocycle, the rank-one analogue of `pullbackBaseChangeTransport_matrixToFreeIso`
+(`GrassmannianQuot.lean`).  A transition isomorphism of the twist shape
+`pullbackUnitIso a ≪≫ unitScalarIso v ≪≫ (pullbackUnitIso b).symm` (multiplication
+by a unit `v` of `Γ(V, ⊤)`, conjugated to the overlap pullbacks) transports along
+`p : W ⟶ V` to the same shape over `p ≫ a` / `p ≫ b`, the scalar base-changed by
+the comorphism `p.appTop`.  Combines the scalar-naturality atom
+`scalarEnd_pullback_iso` with the pseudofunctor coherence `pullbackUnitIso_comp`. -/
+lemma pullbackBaseChangeTransport_unitScalarIso {W V : Scheme.{0}} (p : W ⟶ V)
+    {Yi Yj : Scheme.{0}} (a : V ⟶ Yi) (b : V ⟶ Yj) (v : Γ(V, ⊤)ˣ) :
+    (Scheme.Modules.pullbackBaseChangeTransport p a b
+        (Scheme.Modules.pullbackUnitIso a ≪≫ unitScalarIso v ≪≫
+          (Scheme.Modules.pullbackUnitIso b).symm)).hom
+      = (Scheme.Modules.pullbackUnitIso (p ≫ a)).hom ≫
+        scalarEnd (p.appTop v.val) ≫
+        (Scheme.Modules.pullbackUnitIso (p ≫ b)).inv := by
+  simp only [Scheme.Modules.pullbackBaseChangeTransport, Iso.trans_hom, Functor.mapIso_hom,
+    Iso.symm_hom, unitScalarIso_hom]
+  -- Front coherence: the `pullbackComp` cast + the `a`-leg comparison assemble into the
+  -- composite comparison `Q_{p≫a}` (pseudofunctoriality, `pullbackUnitIso_comp`).
+  have hfront : ((Scheme.Modules.pullbackComp p a).symm.app
+          (SheafOfModules.unit Yi.ringCatSheaf)).hom ≫
+        (Scheme.Modules.pullback p).map (Scheme.Modules.pullbackUnitIso a).hom ≫
+          (Scheme.Modules.pullbackUnitIso p).hom
+      = (Scheme.Modules.pullbackUnitIso (p ≫ a)).hom := by
+    erw [← Scheme.Modules.pullbackUnitIso_comp a p]
+    simp only [Iso.app_hom, Iso.symm_hom]
+    rw [Iso.inv_hom_id_app_assoc]
+  -- Back coherence: the inverse `b`-leg comparison + the `pullbackComp` cast assemble into
+  -- the inverse composite comparison `Q_{p≫b}⁻¹`.
+  have hback : (Scheme.Modules.pullbackUnitIso p).inv ≫
+        (Scheme.Modules.pullback p).map (Scheme.Modules.pullbackUnitIso b).inv ≫
+          ((Scheme.Modules.pullbackComp p b).app (SheafOfModules.unit Yj.ringCatSheaf)).hom
+      = (Scheme.Modules.pullbackUnitIso (p ≫ b)).inv := by
+    have hiso : (Scheme.Modules.pullbackComp p b).app (SheafOfModules.unit Yj.ringCatSheaf) ≪≫
+          Scheme.Modules.pullbackUnitIso (p ≫ b)
+        = (Scheme.Modules.pullback p).mapIso (Scheme.Modules.pullbackUnitIso b) ≪≫
+          Scheme.Modules.pullbackUnitIso p := by
+      apply Iso.ext
+      simpa using Scheme.Modules.pullbackUnitIso_comp b p
+    have hinv := congrArg Iso.inv hiso
+    simp only [Iso.trans_inv, Functor.mapIso_inv, Iso.app_inv] at hinv
+    rw [← Category.assoc, ← hinv, Iso.app_hom]
+    erw [Category.assoc, Iso.inv_hom_id_app]
+    rw [Category.comp_id]
+  -- Distribute `pullback p` over the conjugated scalar automorphism and apply the atom.
+  rw [Functor.map_comp, Functor.map_comp, Scheme.Modules.scalarEnd_pullback_iso]
+  rw [← hfront, ← hback]
+  rfl
 
 /-! ## The Serre twisting sheaf
 
@@ -333,6 +425,91 @@ for a future generalisation of the engine. -/
 section Universe0
 
 variable (n₀ : Type)
+
+/-- **Base cocycle of the transported overlap units** (`m = 1`): in
+`Γ(V(i,j,k), O)`, the images of the three transition units `Xᵢ/Xⱼ`, `Xⱼ/Xₖ`,
+`Xᵢ/Xₖ` under the base-change comorphisms to the common triple overlap satisfy
+`p_IJ^♯(Xᵢ/Xⱼ) · p_JK^♯(Xⱼ/Xₖ) = p_IK^♯(Xᵢ/Xₖ)`.  This is the geometric heart of
+the Serre-twist cocycle: it factors all three units through a common map
+`V(i,j,k) ⟶ D₊(XᵢXⱼXₖ)` and reduces to the fraction identity
+`(Xᵢ/Xⱼ)(Xⱼ/Xₖ) = Xᵢ/Xₖ` in `A⁰_{XᵢXⱼXₖ}` via `Proj.awayMap_awayToSection`. -/
+lemma overlapUnit_cocycle_transport (i j k : n₀) :
+    (Scheme.Hom.appTop (pullback.fst ((glueData n₀).f i j) ((glueData n₀).f i k)))
+        (overlapUnit n₀ i j).val *
+      (Scheme.Hom.appTop ((glueData n₀).t' i j k ≫
+          pullback.fst ((glueData n₀).f j k) ((glueData n₀).f j i)))
+        (overlapUnit n₀ j k).val
+    = (Scheme.Hom.appTop (pullback.snd ((glueData n₀).f i j) ((glueData n₀).f i k)))
+        (overlapUnit n₀ i k).val := by
+  sorry
+
+set_option backward.isDefEq.respectTransparency false in
+/-- The `m`-th power form of the transported overlap cocycle, as consumed by
+`twistTransition_cocycle`.  Immediate from `overlapUnit_cocycle_transport` since the
+comorphisms are ring homomorphisms and `Γ(V(i,j,k), O)` is commutative
+(`(Aᵐ)(Bᵐ) = (AB)ᵐ`).
+
+`set_option backward.isDefEq.respectTransparency false`: the transported units carry
+`pullback ((glueData n₀).f ..) ..` whose index `(glueData n₀).J` is `n₀` only up to
+reducible transparency, so `rw`/`simp` motive-building must relax the instance wall. -/
+lemma overlapUnit_cocycle_transport_pow (m : ℕ) (i j k : n₀) :
+    (Scheme.Hom.appTop (pullback.fst ((glueData n₀).f i j) ((glueData n₀).f i k)))
+        ((overlapUnit n₀ i j ^ m).val) *
+      (Scheme.Hom.appTop ((glueData n₀).t' i j k ≫
+          pullback.fst ((glueData n₀).f j k) ((glueData n₀).f j i)))
+        ((overlapUnit n₀ j k ^ m).val)
+    = (Scheme.Hom.appTop (pullback.snd ((glueData n₀).f i j) ((glueData n₀).f i k)))
+        ((overlapUnit n₀ i k ^ m).val) := by
+  simp only [Units.val_pow_eq_pow_val, map_pow, ← mul_pow, overlapUnit_cocycle_transport]
+
+set_option backward.isDefEq.respectTransparency false in
+/-- **(C2)** The triple-overlap cocycle condition for the Serre-twist
+transitions, in the exact form consumed by `Scheme.Modules.glue`.  At the
+level of transition units this is the identity
+`(Xᵢ/Xⱼ)^m (Xⱼ/Xₖ)^m = (Xᵢ/Xₖ)^m` in `Γ(V(i,j,k), O)`; the transport of the
+conjugated scalar isomorphisms to the triple overlap runs through the
+`pullbackUnitIso` coherences (the rank-one analogue of
+`bundleTransition_cocycle_transport`, `GrassmannianQuot.lean`).
+
+The engine `Scheme.Modules.glue` is universe-monomorphic at `Scheme.GlueData.{0}`,
+so the cocycle is proved here at `n₀ : Type` (the only regime that feeds the
+glued sheaf); the rank-one scalar-transport core
+`pullbackBaseChangeTransport_unitScalarIso` above stays generic. -/
+lemma twistTransition_cocycle (m : ℕ) (i j k : n₀) :
+    Scheme.Modules.pullbackBaseChangeTransport
+        (pullback.fst ((glueData n₀).f i j) ((glueData n₀).f i k)) ((glueData n₀).f i j)
+        ((glueData n₀).t i j ≫ (glueData n₀).f j i) (twistTransition n₀ m i j) ≪≫
+      (Scheme.Modules.pullbackCongr
+        (Scheme.Modules.glueData_bridge_mid (glueData n₀) i j k)).app
+          (SheafOfModules.unit ((glueData n₀).U j).ringCatSheaf) ≪≫
+      Scheme.Modules.pullbackBaseChangeTransport
+        ((glueData n₀).t' i j k ≫ pullback.fst ((glueData n₀).f j k) ((glueData n₀).f j i))
+        ((glueData n₀).f j k) ((glueData n₀).t j k ≫ (glueData n₀).f k j)
+        (twistTransition n₀ m j k) ≪≫
+      (Scheme.Modules.pullbackCongr
+        (Scheme.Modules.glueData_bridge_tgt (glueData n₀) i j k)).app
+          (SheafOfModules.unit ((glueData n₀).U k).ringCatSheaf)
+    = (Scheme.Modules.pullbackCongr
+        (Scheme.Modules.glueData_bridge_src (glueData n₀) i j k)).app
+          (SheafOfModules.unit ((glueData n₀).U i).ringCatSheaf) ≪≫
+      Scheme.Modules.pullbackBaseChangeTransport
+        (pullback.snd ((glueData n₀).f i j) ((glueData n₀).f i k)) ((glueData n₀).f i k)
+        ((glueData n₀).t i k ≫ (glueData n₀).f k i) (twistTransition n₀ m i k) := by
+  apply Iso.ext
+  simp only [Iso.trans_hom, twistTransition]
+  rw [pullbackBaseChangeTransport_unitScalarIso, pullbackBaseChangeTransport_unitScalarIso,
+    pullbackBaseChangeTransport_unitScalarIso]
+  simp only [Category.assoc]
+  rw [Scheme.Modules.pullbackUnitIso_inv_congr_hom_assoc
+      (Scheme.Modules.glueData_bridge_mid (glueData n₀) i j k),
+    Scheme.Modules.pullbackCongr_hom_app_unit_assoc
+      (Scheme.Modules.glueData_bridge_src (glueData n₀) i j k),
+    Scheme.Modules.pullbackUnitIso_inv_congr
+      (Scheme.Modules.glueData_bridge_tgt (glueData n₀) i j k)]
+  -- The endpoints (`Q_front`/`Q_back`) now match; fuse the two transported scalars via
+  -- `scalarEnd_comp` and close with the base cocycle `overlapUnit_cocycle_transport`.
+  rw [reassoc_of% scalarEnd_comp,
+    overlapUnit_cocycle_transport_pow n₀ m i j k]
 
 /-- The Serre twist `O(m)` on the glued total space of the basic-open cover. -/
 def serreTwistGlued (m : ℕ) : (glueData n₀).glued.Modules :=
