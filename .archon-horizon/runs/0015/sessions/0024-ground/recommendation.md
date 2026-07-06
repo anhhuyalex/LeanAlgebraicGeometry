@@ -1,0 +1,9 @@
+# Orientation — run 0015 T14 (after session 0024-ground reconcile)
+
+- Useful context: the T14 projective foundation is complete and axiom-clean. `Picard/ProjectiveMorphism.lean` now carries the full `IsProjectiveWith` stability API (`.locallyOfFiniteType`/`.isSeparated`/`.universallyClosed`/`.of_iso` + `ProjectiveSpace.isProjectiveWith_over` inhabitant); `SerreTwist.lean` is sorry-free with the O(1) sign validated (`= O(m)`, `rem:serre_twist_sign`). Ground kernel-verified `[propext, Classical.choice, Quot.sound]`.
+
+- Relevant leaves: the only open T14 sorries are `sectionGradedModule_fg` (`SerreFiniteness.lean:79`) and `gradedHilbert_fiber` (`:262`) — Serre finiteness / ℙⁿ coherent-sheaf cohomology, absent from Mathlib v4.31. Memory `serre-finiteness-leaf-decomposition` warns this is one indivisible leaf; file-memory `serretwist-cocycle-closed` holds the reusable HomogeneousLocalization / glue-descent recipes and the `Scheme.{0}` universe constraint.
+
+- Relevant issue: `I-0118` tracks the `QuotScheme` false-as-pinned statement (`QuotFunctorDef.lean:753`, `[IsProper]+[LocallyOfFiniteType]` only). The honest restatement substrate — encoding (a) `IsProjectiveWith` + the new `.locallyOfFiniteType` projection — is now fully in place and axiom-clean; the restatement edit (at `Scheme.{0}`) is the open follow-up, and would also clear the benign `overlappingInstances` lint on `QuotScheme`.
+
+- Build/DAG notes: workspace commits carry the project diffs (the out-of-tree `Algebraic-Jacobian-Challenge.git` is stale at run 0005 — diff via `caaed8bf3`/workspace repo). Blueprint DAG resolves (0 dangling); Horizon reported full library green at 8666 jobs. Blueprint source for this cone: `blueprint/src/chapters/Picard_QuotScheme.tex` `sec:projective_vocabulary`; reference `\source{nitsure-hilbert-quot}`.
