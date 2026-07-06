@@ -5,6 +5,7 @@ Authors: Christian Merten
 -/
 import Mathlib
 import AlgebraicJacobian.Picard.HilbertPolynomial
+import AlgebraicJacobian.Cohomology.FlatBaseChange
 
 /-!
 # The Quot scheme (A.2.b)
@@ -5015,6 +5016,369 @@ noncomputable def Scheme.Modules.pullback_app_isoTensor
   -- via the Tilde-isoTop route.
   exact (pullback_app_isoTensor_isBaseChange g N hU hV e).some
 
+/-! ### Lane F endgame (T12 fbc-leaves front, 2026-07-06)
+
+The three `canonicalBaseChangeMap_app_app_isIso_*` leaves close through ONE
+workhorse (`canonicalBaseChangeMap_app_app_isIso_of_le_preimage`): the
+section of the canonical mate is an iso at every affine `U ⊆ S'` compatible
+with an affine `V ⊆ S` (`U ≤ g ⁻¹ᵁ V`).  The workhorse compares two
+witnesses trivializing `Γ(g^* f_* F, U)` and `Γ(f'_* g'^* F, U)` as
+`Γ(S', U) ⊗_{Γ(S, V)} Γ(F, f ⁻¹ᵁ V)`:
+
+* the LHS witness is the (sorry-free) Tilde-route section formula
+  `pullback_app_isoTensor_baseMap_sectionLinearEquiv` applied to the
+  quasi-coherent pushforward `f_* F` (Stacks 01XJ);
+* the RHS witness is the **H⁰ flat-base-change heart** (Stacks 02KE), the
+  single remaining typed sorry
+  `pullback_baseMap_sectionLinearEquiv_of_quasiCompact`;
+* the canonical mate intertwines the two witnesses on the tensor
+  generators `1 ⊗ x` by the PROVED elementwise Beck-Chevalley
+  compatibility `canonicalBaseChangeMap_app_baseMap_compat` (KEY-BC),
+  hence everywhere by `Γ(S', U)`-linearity; being a two-sided composite
+  of bijections it is bijective.
+
+The affine-base leaf is the specialization `V := ⊤`; the general
+affine-open leaf follows because the compatible affine pairs form a basis
+of `S'` (no square-restriction/Mayer-Vietoris needed — the historically
+walled mate-restriction naturality is bypassed). -/
+
+set_option backward.isDefEq.respectTransparency false in
+/-- **`baseMap` at a reflexive inclusion is the raw adjunction unit** (the
+`homOfLE le_rfl = 𝟙` restriction collapses by `Functor.map_id`). Bridges the
+unit stage of the canonical mate to the `pullback_app_isoTensor_baseMap` form
+consumed by the (N1)/(N2)/(N3) coherence lemmas. Project-local. -/
+private lemma pullback_app_isoTensor_baseMap_le_refl
+    {X Y : Scheme.{u}} (g : Y ⟶ X) (N : X.Modules) (V : X.Opens) (x : Γ(N, V)) :
+    pullback_app_isoTensor_baseMap g N (le_refl (g ⁻¹ᵁ V)) x =
+      (Scheme.Modules.Hom.app
+        ((Scheme.Modules.pullbackPushforwardAdjunction g).unit.app N) V).hom x := by
+  show ((((Scheme.Modules.pullback g).obj N).presheaf.map
+      (homOfLE (le_refl (g ⁻¹ᵁ V))).op).hom)
+      ((Scheme.Modules.Hom.app
+        ((Scheme.Modules.pullbackPushforwardAdjunction g).unit.app N) V).hom x) = _
+  rw [show (homOfLE (le_refl (g ⁻¹ᵁ V))).op = 𝟙 (Opposite.op (g ⁻¹ᵁ V)) from rfl,
+    CategoryTheory.Functor.map_id]
+  rfl
+
+set_option backward.isDefEq.respectTransparency false in
+set_option maxHeartbeats 3200000 in
+/-- **KEY-BC: elementwise Beck-Chevalley compatibility of the canonical
+base-change mate with the adjunction-unit base maps** (T12 fbc-leaves front,
+PROVED 2026-07-06).
+
+For a cartesian square `sq : IsPullback g' f' f g` and opens `V ⊆ S`,
+`U ⊆ S'` with `U ≤ g ⁻¹ᵁ V`, the `U`-section of the canonical mate
+`canonicalBaseChangeMap sq` sends the canonical base-map image
+`baseMap_g(t) ∈ Γ(g^* f_* F, U)` of a section `t ∈ Γ(f_* F, V) = Γ(F, f ⁻¹ᵁ V)`
+to the canonical base-map image `baseMap_{g'}(t) ∈ Γ(g'^* F, f' ⁻¹ᵁ U) =
+Γ(f'_* g'^* F, U)` along the primed leg. **No flatness, quasi-compactness or
+affineness is needed** — this is pure unit/counit/pseudofunctor coherence of
+the mate (`CategoryTheory.mateEquiv`).
+
+Proof: the mate's component at `F` unfolds (definitionally, all `Cat`
+unitor/associator components being identities) to
+`unit_{f'} ≫ f'_*(pullbackComp/pullbackCongr chain at f_* F) ≫ f'_*(g'^*(counit_f))`.
+Evaluating elementwise on `baseMap_g(t)`: the unit stage is the reflexive base
+map (`pullback_app_isoTensor_baseMap_le_refl`); the `pullbackComp f' g` stage
+composes the iterated base maps to `baseMap_{f' ≫ g}(t)` ((N2)
+`pullback_app_isoTensor_baseMap_comp`); the `pullbackCongr sq.w.symm` stage
+transports to `baseMap_{g' ≫ f}(t)` ((N3) `..._congr`); the inverse
+`pullbackComp g' f` stage splits it as `baseMap_{g'}(baseMap_f(t))` ((N2) +
+hom-inv cancellation); naturality of the base map along the counit ((N1)
+`..._naturality`) and the right-triangle identity
+`unit_f ≫ f_*(counit_f) = 𝟙` collapse the inner layer to `t`.
+
+Source: Stacks Project 02KH (construction of the base-change map);
+the statement is the mate-vs-unit compatibility square of the
+Beck-Chevalley transform, cf. `CategoryTheory.unit_mateEquiv`. -/
+theorem canonicalBaseChangeMap_app_baseMap_compat
+    {X X' S S' : Scheme.{u}}
+    {f : X ⟶ S} {g : S' ⟶ S} {g' : X' ⟶ X} {f' : X' ⟶ S'}
+    (sq : IsPullback g' f' f g)
+    (F : X.Modules) {V : S.Opens} {U : S'.Opens}
+    (e : U ≤ g ⁻¹ᵁ V) (e'' : f' ⁻¹ᵁ U ≤ g' ⁻¹ᵁ (f ⁻¹ᵁ V))
+    (t : Γ((Scheme.Modules.pushforward f).obj F, V)) :
+    (((canonicalBaseChangeMap sq).app F).app U).hom
+        (pullback_app_isoTensor_baseMap g ((Scheme.Modules.pushforward f).obj F) e t) =
+      pullback_app_isoTensor_baseMap g' F e'' t := by
+  -- Preimage inclusions along the two legs of the square.
+  have e₂ : f' ⁻¹ᵁ U ≤ (f' ≫ g) ⁻¹ᵁ V := by
+    rw [Scheme.Hom.comp_preimage]
+    exact fun a ha => e ha
+  have e₃ : f' ⁻¹ᵁ U ≤ (g' ≫ f) ⁻¹ᵁ V := by
+    rw [sq.w, Scheme.Hom.comp_preimage]
+    exact fun a ha => e ha
+  -- Stage 1: the `f'`-unit stage is the reflexive-inclusion base map.
+  have h1 := pullback_app_isoTensor_baseMap_le_refl f'
+    ((Scheme.Modules.pullback g).obj ((Scheme.Modules.pushforward f).obj F)) U
+    (pullback_app_isoTensor_baseMap g ((Scheme.Modules.pushforward f).obj F) e t)
+  -- Stage 2 (N2): compose the iterated base maps through `pullbackComp f' g`.
+  have h2 := pullback_app_isoTensor_baseMap_comp f' g
+    ((Scheme.Modules.pushforward f).obj F) e (le_refl (f' ⁻¹ᵁ U)) e₂ t
+  -- Stage 3 (N3): transport along `pullbackCongr sq.w.symm`.
+  have h3 := pullback_app_isoTensor_baseMap_congr sq.w.symm
+    ((Scheme.Modules.pushforward f).obj F) e₂ e₃ t
+  -- Stage 4 (N2 inverted): split `baseMap (g' ≫ f)` through `pullbackComp g' f`.
+  have h4' := pullback_app_isoTensor_baseMap_comp g' f
+    ((Scheme.Modules.pushforward f).obj F) (le_refl (f ⁻¹ᵁ V)) e'' e₃ t
+  have hcancel : ∀ w : Γ((Scheme.Modules.pullback g').obj
+        ((Scheme.Modules.pullback f).obj ((Scheme.Modules.pushforward f).obj F)),
+        f' ⁻¹ᵁ U),
+      (Scheme.Modules.Hom.app ((Scheme.Modules.pullbackComp g' f).inv.app
+          ((Scheme.Modules.pushforward f).obj F)) (f' ⁻¹ᵁ U)).hom
+        ((Scheme.Modules.Hom.app ((Scheme.Modules.pullbackComp g' f).hom.app
+          ((Scheme.Modules.pushforward f).obj F)) (f' ⁻¹ᵁ U)).hom w) = w :=
+    fun w => congrArg
+      (fun (k : (Scheme.Modules.pullback f ⋙ Scheme.Modules.pullback g').obj
+          ((Scheme.Modules.pushforward f).obj F) ⟶
+          (Scheme.Modules.pullback f ⋙ Scheme.Modules.pullback g').obj
+          ((Scheme.Modules.pushforward f).obj F)) =>
+        (Scheme.Modules.Hom.app k (f' ⁻¹ᵁ U)).hom w)
+      (Iso.hom_inv_id_app (Scheme.Modules.pullbackComp g' f)
+        ((Scheme.Modules.pushforward f).obj F))
+  have h4 := (congrArg (fun w =>
+    (Scheme.Modules.Hom.app ((Scheme.Modules.pullbackComp g' f).inv.app
+      ((Scheme.Modules.pushforward f).obj F)) (f' ⁻¹ᵁ U)).hom w) h4'.symm).trans
+    (hcancel _)
+  -- Stage 5 (N1): naturality of the base map along the `f`-counit.
+  have h5 := pullback_app_isoTensor_baseMap_naturality g'
+    ((Scheme.Modules.pullbackPushforwardAdjunction f).counit.app F) e''
+    (pullback_app_isoTensor_baseMap f ((Scheme.Modules.pushforward f).obj F)
+      (le_refl (f ⁻¹ᵁ V)) t)
+  -- Stage 6: the right-triangle identity collapses counit ∘ unit to the identity.
+  have h6a := pullback_app_isoTensor_baseMap_le_refl f
+    ((Scheme.Modules.pushforward f).obj F) V t
+  have h6b := congrArg
+    (fun (k : (Scheme.Modules.pushforward f).obj F ⟶
+        (Scheme.Modules.pushforward f).obj F) =>
+      (Scheme.Modules.Hom.app k V).hom t)
+    ((Scheme.Modules.pullbackPushforwardAdjunction f).right_triangle_components F)
+  have h6 : (Scheme.Modules.Hom.app
+      ((Scheme.Modules.pullbackPushforwardAdjunction f).counit.app F) (f ⁻¹ᵁ V)).hom
+      (pullback_app_isoTensor_baseMap f ((Scheme.Modules.pushforward f).obj F)
+        (le_refl (f ⁻¹ᵁ V)) t) = t :=
+    (congrArg (fun w => (Scheme.Modules.Hom.app
+      ((Scheme.Modules.pullbackPushforwardAdjunction f).counit.app F)
+      (f ⁻¹ᵁ V)).hom w) h6a).trans h6b
+  -- Decompose the canonical mate elementwise (all unitor/associator components
+  -- are identities in `Cat`; compositions of section maps are definitional).
+  show (Scheme.Modules.Hom.app ((Scheme.Modules.pullback g').map
+        ((Scheme.Modules.pullbackPushforwardAdjunction f).counit.app F)) (f' ⁻¹ᵁ U)).hom
+      ((Scheme.Modules.Hom.app ((Scheme.Modules.pullbackComp g' f).inv.app
+          ((Scheme.Modules.pushforward f).obj F)) (f' ⁻¹ᵁ U)).hom
+        ((Scheme.Modules.Hom.app ((Scheme.Modules.pullbackCongr sq.w.symm).hom.app
+            ((Scheme.Modules.pushforward f).obj F)) (f' ⁻¹ᵁ U)).hom
+          ((Scheme.Modules.Hom.app ((Scheme.Modules.pullbackComp f' g).hom.app
+              ((Scheme.Modules.pushforward f).obj F)) (f' ⁻¹ᵁ U)).hom
+            ((Scheme.Modules.Hom.app
+                ((Scheme.Modules.pullbackPushforwardAdjunction f').unit.app
+                  ((Scheme.Modules.pullback g).obj
+                    ((Scheme.Modules.pushforward f).obj F))) U).hom
+              (pullback_app_isoTensor_baseMap g
+                ((Scheme.Modules.pushforward f).obj F) e t))))) =
+    pullback_app_isoTensor_baseMap g' F e'' t
+  -- Assemble the stages.
+  refine (congrArg (fun w =>
+    (Scheme.Modules.Hom.app ((Scheme.Modules.pullback g').map
+        ((Scheme.Modules.pullbackPushforwardAdjunction f).counit.app F)) (f' ⁻¹ᵁ U)).hom
+      ((Scheme.Modules.Hom.app ((Scheme.Modules.pullbackComp g' f).inv.app
+          ((Scheme.Modules.pushforward f).obj F)) (f' ⁻¹ᵁ U)).hom
+        ((Scheme.Modules.Hom.app ((Scheme.Modules.pullbackCongr sq.w.symm).hom.app
+            ((Scheme.Modules.pushforward f).obj F)) (f' ⁻¹ᵁ U)).hom
+          ((Scheme.Modules.Hom.app ((Scheme.Modules.pullbackComp f' g).hom.app
+              ((Scheme.Modules.pushforward f).obj F)) (f' ⁻¹ᵁ U)).hom w))))
+    h1.symm).trans ?_
+  refine (congrArg (fun w =>
+    (Scheme.Modules.Hom.app ((Scheme.Modules.pullback g').map
+        ((Scheme.Modules.pullbackPushforwardAdjunction f).counit.app F)) (f' ⁻¹ᵁ U)).hom
+      ((Scheme.Modules.Hom.app ((Scheme.Modules.pullbackComp g' f).inv.app
+          ((Scheme.Modules.pushforward f).obj F)) (f' ⁻¹ᵁ U)).hom
+        ((Scheme.Modules.Hom.app ((Scheme.Modules.pullbackCongr sq.w.symm).hom.app
+            ((Scheme.Modules.pushforward f).obj F)) (f' ⁻¹ᵁ U)).hom w)))
+    h2).trans ?_
+  refine (congrArg (fun w =>
+    (Scheme.Modules.Hom.app ((Scheme.Modules.pullback g').map
+        ((Scheme.Modules.pullbackPushforwardAdjunction f).counit.app F)) (f' ⁻¹ᵁ U)).hom
+      ((Scheme.Modules.Hom.app ((Scheme.Modules.pullbackComp g' f).inv.app
+          ((Scheme.Modules.pushforward f).obj F)) (f' ⁻¹ᵁ U)).hom w))
+    h3).trans ?_
+  refine (congrArg (fun w =>
+    (Scheme.Modules.Hom.app ((Scheme.Modules.pullback g').map
+        ((Scheme.Modules.pullbackPushforwardAdjunction f).counit.app F)) (f' ⁻¹ᵁ U)).hom w)
+    h4).trans ?_
+  exact h5.trans
+    (congrArg (fun w => pullback_app_isoTensor_baseMap g' F e'' w) h6)
+
+set_option backward.isDefEq.respectTransparency false in
+/-- **Cover pieces of the 02KE ladder are affine**: for a cartesian square and
+affine opens `V ⊆ S`, `U ⊆ S'`, `V' ⊆ X` with `U ≤ g ⁻¹ᵁ V` and
+`V' ≤ f ⁻¹ᵁ V`, the open `g' ⁻¹ᵁ V' ⊓ f' ⁻¹ᵁ U ⊆ X'` is affine (it is the
+fibre product `V' ×_V U` of affines over an affine, via the restricted
+cartesian square `Scheme.Hom.isPullback_resLE`). Brick for
+`pullback_baseMap_sectionLinearEquiv_of_quasiCompact` (Stacks 02KE). -/
+private lemma isAffineOpen_preimage_inf_preimage_of_isPullback
+    {X X' S S' : Scheme.{u}}
+    {f : X ⟶ S} {g : S' ⟶ S} {g' : X' ⟶ X} {f' : X' ⟶ S'}
+    (sq : IsPullback g' f' f g)
+    {V : S.Opens} {U : S'.Opens} {V' : X.Opens}
+    (hV : IsAffineOpen V) (hU : IsAffineOpen U) (hV' : IsAffineOpen V')
+    (e : U ≤ g ⁻¹ᵁ V) (hle : V' ≤ f ⁻¹ᵁ V) :
+    IsAffineOpen (g' ⁻¹ᵁ V' ⊓ f' ⁻¹ᵁ U) := by
+  have : IsAffine _ := hV
+  have : IsAffine _ := hU
+  have : IsAffine _ := hV'
+  exact .of_isIso (Scheme.Hom.isPullback_resLE sq e hle rfl).isoPullback.hom
+
+/-- **Flatness of the section algebra of a flat morphism at a compatible
+affine pair**: `Γ(S', U)` is a flat `Γ(S, V)`-algebra (affine-locality of
+flatness, `Scheme.Hom.flat_appLE`). Brick for
+`pullback_baseMap_sectionLinearEquiv_of_quasiCompact` (Stacks 02KE). -/
+private lemma flat_gamma_appLE_of_flat
+    {S S' : Scheme.{u}} (g : S' ⟶ S) [Flat g]
+    {V : S.Opens} {U : S'.Opens}
+    (hV : IsAffineOpen V) (hU : IsAffineOpen U) (e : U ≤ g ⁻¹ᵁ V) :
+    letI : Algebra Γ(S, V) Γ(S', U) := (g.appLE V U e).hom.toAlgebra
+    Module.Flat Γ(S, V) Γ(S', U) :=
+  g.flat_appLE hV hU e
+
+set_option backward.isDefEq.respectTransparency false in
+set_option maxHeartbeats 1600000 in
+/-- **H⁰ flat base change over a compatible affine pair** (Stacks tag 02KE,
+`i = 0` form; Σ-pair dialect). The single remaining Lane-F typed sorry.
+
+For a cartesian square `sq : IsPullback g' f' f g` with `f` quasi-compact
+quasi-separated, `g` flat, `F` quasi-coherent on `X`, and affine opens
+`V ⊆ S`, `U ⊆ S'` with `U ≤ g ⁻¹ᵁ V`, write `A := Γ(S, V)`,
+`B := Γ(S', U)` (a flat `A`-algebra via `g.appLE`, by affine-locality of
+flatness). The claim: there is a `B`-linear equivalence
+
+  `B ⊗_A Γ(F, f ⁻¹ᵁ V)  ≃ₗ[B]  Γ(g'^* F, f' ⁻¹ᵁ U)`
+
+sending `1 ⊗ x` to the canonical adjunction-unit base-map image
+`pullback_app_isoTensor_baseMap g' F e'' x` (which pins the equivalence on
+the `B`-generators, hence everywhere). Here `Γ(f_* F, V) = Γ(F, f ⁻¹ᵁ V)`
+and `Γ(f'_* g'^* F, U) = Γ(g'^* F, f' ⁻¹ᵁ U)` definitionally.
+
+This is the substantive algebraic heart of Stacks 02KH: `f' ⁻¹ᵁ U =
+(f ⁻¹ᵁ V) ×_V U` is qcqs but NOT affine (for non-affine `X`), so the
+affine section formula `pullback_app_isoTensor` cannot be applied to it
+directly. Reference proof (Stacks 02KE, transcribed to the eqLocus dialect):
+choose a finite affine cover `{V_i}` of `f ⁻¹ᵁ V` (quasi-compactness of `f`)
+with quasi-compact pairwise intersections (quasi-separatedness); the sheaf
+axiom presents `Γ(F, f ⁻¹ᵁ V)` as the finite equalizer (eqLocus) of
+`∏_i Γ(F, V_i) ⇉ ∏_{ij} Γ(F, V_i ⊓ V_j)`; tensoring with the flat
+`A`-algebra `B` preserves the finite equalizer
+(`LinearMap.tensorEqLocusEquiv` + `TensorProduct.piRight`); on the primed
+side `W_i := g' ⁻¹ᵁ V_i ⊓ f' ⁻¹ᵁ U` is AFFINE (`= V_i ×_V U`, pullback of
+affines over an affine base, via `Scheme.Hom.isPullback_resLE` +
+`isoPullback`), the `W_i` cover `f' ⁻¹ᵁ U`, and the sheaf axiom presents
+`Γ(g'^* F, f' ⁻¹ᵁ U)` as the analogous finite equalizer; the per-term
+comparisons `B ⊗_A Γ(F, V_i) ≃ Γ(g'^* F, W_i)` are
+`AlgebraicGeometry.isIso_pushoutSection_of_isAffineOpen` (affine fibre
+product = ring pushout) + `Scheme.Modules.pullback_app_isoTensor` +
+tensor cancellation; on pairwise overlaps only INJECTIVITY is needed (same
+argument one level down: finite affine cover, flat tensoring preserves
+injections, sheaf separatedness); an equalizer-ladder chase gives the middle
+equivalence, and evaluating on `1 ⊗ x` (unit naturality, (N1)/(N2)) shows it
+is induced by the canonical base map. Mathlib's
+`AlgebraicGeometry.isIso_pushoutSection_of_iSup_eq` /
+`mono_pushoutSection_of_iSup_eq` (Morphisms/Flat.lean) is the complete
+structure-sheaf template of this ladder.
+
+Source: Stacks Project, Tags 02KE and 02KH (ii), `i = 0`. -/
+theorem pullback_baseMap_sectionLinearEquiv_of_quasiCompact
+    {X X' S S' : Scheme.{u}}
+    {f : X ⟶ S} {g : S' ⟶ S} {g' : X' ⟶ X} {f' : X' ⟶ S'}
+    (sq : IsPullback g' f' f g)
+    [QuasiCompact f] [QuasiSeparated f] [Flat g]
+    (F : X.Modules) [F.IsQuasicoherent]
+    {V : S.Opens} {U : S'.Opens} (hV : IsAffineOpen V) (hU : IsAffineOpen U)
+    (e : U ≤ g ⁻¹ᵁ V) (e'' : f' ⁻¹ᵁ U ≤ g' ⁻¹ᵁ (f ⁻¹ᵁ V)) :
+    letI : Algebra Γ(S, V) Γ(S', U) := (g.appLE V U e).hom.toAlgebra
+    Nonempty {h : TensorProduct Γ(S, V) Γ(S', U)
+          Γ((Scheme.Modules.pushforward f).obj F, V) ≃ₗ[Γ(S', U)]
+          Γ((Scheme.Modules.pushforward f').obj ((Scheme.Modules.pullback g').obj F), U) //
+      ∀ t : Γ((Scheme.Modules.pushforward f).obj F, V),
+        h (1 ⊗ₜ[Γ(S, V)] t) = pullback_app_isoTensor_baseMap g' F e'' t} := by
+  sorry
+
+set_option backward.isDefEq.respectTransparency false in
+set_option maxHeartbeats 1600000 in
+/-- **Workhorse: the canonical base-change section map is an iso at every
+compatible affine pair** (Stacks 02KH(ii) at `i = 0`, affine-pair form;
+T12 fbc-leaves front, 2026-07-06).
+
+`Γ(g^* f_* F, U)` and `Γ(f'_* g'^* F, U)` are both trivialized as
+`Γ(S', U) ⊗_{Γ(S, V)} Γ(F, f ⁻¹ᵁ V)` — the former by the sorry-free Tilde
+route (`pullback_app_isoTensor_baseMap_sectionLinearEquiv` applied to the
+quasi-coherent `f_* F`, Stacks 01XJ), the latter by the 02KE heart
+(`pullback_baseMap_sectionLinearEquiv_of_quasiCompact`). The canonical mate
+is `Γ(S', U)`-linear on sections (`Hom.app_smul`) and matches the two
+witnesses on the generators `1 ⊗ t` by KEY-BC
+(`canonicalBaseChangeMap_app_baseMap_compat`), hence everywhere by linearity
+(`TensorProduct.induction_on`); it is therefore the composite bijection
+`eqR ∘ eqL⁻¹`. -/
+private theorem canonicalBaseChangeMap_app_app_isIso_of_le_preimage
+    {X X' S S' : Scheme.{u}}
+    {f : X ⟶ S} {g : S' ⟶ S} {g' : X' ⟶ X} {f' : X' ⟶ S'}
+    (sq : IsPullback g' f' f g)
+    [QuasiCompact f] [QuasiSeparated f] [Flat g]
+    (F : X.Modules) [F.IsQuasicoherent]
+    {V : S.Opens} {U : S'.Opens} (hV : IsAffineOpen V) (hU : IsAffineOpen U)
+    (e : U ≤ g ⁻¹ᵁ V) :
+    IsIso (((canonicalBaseChangeMap sq).app F).app U) := by
+  have e'' : f' ⁻¹ᵁ U ≤ g' ⁻¹ᵁ (f ⁻¹ᵁ V) := by
+    rw [← Scheme.Hom.comp_preimage, sq.w, Scheme.Hom.comp_preimage]
+    exact fun a ha => e ha
+  haveI : ((Scheme.Modules.pushforward f).obj F).IsQuasicoherent :=
+    Scheme.Modules.pushforward_isQuasicoherent f F
+  letI algInst : Algebra Γ(S, V) Γ(S', U) := (g.appLE V U e).hom.toAlgebra
+  letI modInst : Module Γ(S, V)
+      Γ((Scheme.Modules.pullback g).obj ((Scheme.Modules.pushforward f).obj F), U) :=
+    Module.compHom _ (g.appLE V U e).hom
+  obtain ⟨eqL, heqL⟩ := (pullback_app_isoTensor_baseMap_sectionLinearEquiv g
+    ((Scheme.Modules.pushforward f).obj F) hU hV e).some
+  obtain ⟨eqR, heqR⟩ :=
+    (pullback_baseMap_sectionLinearEquiv_of_quasiCompact sq F hV hU e e'').some
+  -- The canonical map as a `Γ(S', U)`-linear map on sections.
+  let χ : Γ((Scheme.Modules.pullback g).obj ((Scheme.Modules.pushforward f).obj F), U)
+      →ₗ[Γ(S', U)]
+      Γ((Scheme.Modules.pushforward f').obj ((Scheme.Modules.pullback g').obj F), U) :=
+    { toFun := (((canonicalBaseChangeMap sq).app F).app U).hom
+      map_add' := fun a b => map_add _ a b
+      map_smul' := fun r a =>
+        Scheme.Modules.Hom.app_smul ((canonicalBaseChangeMap sq).app F) r a }
+  -- χ intertwines the two Σ-pair witnesses on the generators `1 ⊗ t` (KEY-BC) …
+  have hgen : ∀ t, χ (eqL (1 ⊗ₜ[Γ(S, V)] t)) = eqR (1 ⊗ₜ[Γ(S, V)] t) := by
+    intro t
+    rw [heqL t, heqR t]
+    exact canonicalBaseChangeMap_app_baseMap_compat sq F e e'' t
+  -- … hence everywhere (`b ⊗ t = b • (1 ⊗ t)` and all three maps are `B`-linear).
+  have hall : ∀ z, χ (eqL z) = eqR z := by
+    intro z
+    induction z using TensorProduct.induction_on with
+    | zero => simp only [map_zero]
+    | tmul b t =>
+      have hb : (b ⊗ₜ[Γ(S, V)] t :
+          TensorProduct Γ(S, V) Γ(S', U)
+            Γ((Scheme.Modules.pushforward f).obj F, V)) =
+          b • ((1 : Γ(S', U)) ⊗ₜ[Γ(S, V)] t) := by
+        rw [TensorProduct.smul_tmul', smul_eq_mul, mul_one]
+      rw [hb, map_smul, map_smul, map_smul, hgen t]
+    | add z₁ z₂ h₁ h₂ => rw [map_add, map_add, map_add, h₁, h₂]
+  -- The canonical map is the bijection `eqR ∘ eqL.symm`.
+  have hbij : Function.Bijective
+      ⇑(((canonicalBaseChangeMap sq).app F).app U).hom := by
+    have hfun : ∀ p, (((canonicalBaseChangeMap sq).app F).app U).hom p =
+        eqR (eqL.symm p) := by
+      intro p
+      have h := hall (eqL.symm p)
+      rwa [LinearEquiv.apply_symm_apply] at h
+    rw [show ⇑(((canonicalBaseChangeMap sq).app F).app U).hom = ⇑eqR ∘ ⇑eqL.symm
+      from funext hfun]
+    exact eqR.bijective.comp eqL.symm.bijective
+  exact (ConcreteCategory.isIso_iff_bijective _).mpr hbij
+
 /-- **Affine-base case of flat base change at affine opens** (Stacks tag 02KH).
 
 Specialization of `canonicalBaseChangeMap_app_app_isIso_of_isAffineOpen` to
@@ -5041,10 +5405,14 @@ this is the standard Stacks 02KH hypothesis on the input sheaf `F`. Via
 01XJ), it propagates to `((pushforward f).obj F).IsQuasicoherent`, which
 is what `pullback_app_isoTensor` needs.
 
-The body's substantive content is now fully encapsulated in
-`pullback_app_isoTensor` (LHS) and in `pullback_tildeIso` (the genuine
-Mathlib gap). The Beck-Chevalley compatibility residual is iter-188+
-~30-50 LOC of route-stitching. -/
+CLOSED (T12 fbc-leaves front, 2026-07-06): specialization `V := ⊤` of the
+affine-pair workhorse `canonicalBaseChangeMap_app_app_isIso_of_le_preimage`
+(every `U` satisfies `U ≤ g ⁻¹ᵁ ⊤`). NOTE the earlier docstring plan
+("~30-50 LOC of Beck-Chevalley route-stitching" against
+`pullback_app_isoTensor` on `f' ⁻¹ᵁ U`) was NOT viable for non-affine `X`
+— `f' ⁻¹ᵁ U` is not affine, so the RHS trivialization is genuinely the
+qcqs finite-cover 02KE content, factored into the named typed sorry
+`pullback_baseMap_sectionLinearEquiv_of_quasiCompact`. -/
 private theorem canonicalBaseChangeMap_app_app_isIso_of_isAffineOpen_of_isAffineBase
     {X X' S S' : Scheme.{u}}
     {f : X ⟶ S} {g : S' ⟶ S} {g' : X' ⟶ X} {f' : X' ⟶ S'}
@@ -5053,57 +5421,28 @@ private theorem canonicalBaseChangeMap_app_app_isIso_of_isAffineOpen_of_isAffine
     [QuasiCompact f] [QuasiSeparated f] [Flat g]
     (F : X.Modules) [F.IsQuasicoherent]
     (U : S'.Opens) (_hU : IsAffineOpen U) :
-    IsIso (((canonicalBaseChangeMap sq).app F).app U) := by
-  -- Take `V := ⊤ : S.Opens`, affine via `[IsAffine S]`.
-  have hV : IsAffineOpen (⊤ : S.Opens) := isAffineOpen_top S
-  -- Every `U : S'.Opens` automatically satisfies `U ≤ g ⁻¹ᵁ ⊤`.
-  have e : U ≤ g ⁻¹ᵁ (⊤ : S.Opens) := le_top
-  -- Algebra structure on the affine ring map `Γ(S, ⊤) →+* Γ(S', U)`.
-  letI algInst : Algebra Γ(S, ⊤) Γ(S', U) := (g.appLE (⊤ : S.Opens) U e).hom.toAlgebra
-  -- Quasi-coherence propagates to the pushforward under qcqs `f` (Stacks
-  -- 01XJ), pinned in `pushforward_isQuasicoherent`.
-  haveI : ((Scheme.Modules.pushforward f).obj F).IsQuasicoherent :=
-    pushforward_isQuasicoherent f F
-  -- LHS: identify the section of the pullback as a tensor product via
-  -- the typed-sorry `pullback_app_isoTensor` applied to
-  -- `(N := (pushforward f).obj F)`. The output is
-  --   `Γ(S', U) ⊗_{Γ(S, ⊤)} Γ((pushforward f).obj F, ⊤)
-  --  = Γ(S', U) ⊗_{Γ(S, ⊤)} Γ(F, f ⁻¹ᵁ ⊤)`
-  -- (the last identification by `pushforward_obj_obj`).
-  let _isoLHS := Scheme.Modules.pullback_app_isoTensor g
-    ((Scheme.Modules.pushforward f).obj F) _hU hV e
-  -- RHS: the section formula iso from `pullback_app_isoTensor g' …`
-  -- applied to the *base-changed* sheaf, plus the Beck–Chevalley
-  -- compatibility check. The substantive Mathlib gap content is in
-  -- `pullback_tildeIso` (Stacks 01HQ).
-  sorry
+    IsIso (((canonicalBaseChangeMap sq).app F).app U) :=
+  -- `V := ⊤ : S.Opens` is affine via `[IsAffine S]`, and `U ≤ g ⁻¹ᵁ ⊤`.
+  canonicalBaseChangeMap_app_app_isIso_of_le_preimage sq F
+    (isAffineOpen_top S) _hU le_top
 
 /-- **Affine-open form of flat base change** (Stacks tag 00H8 / 02KE).
 
 Restriction of `canonicalBaseChangeMap_app_app_isIso` to the case where the
-open `U ⊆ S'` is affine. The general (non-affine base `S`) case factors into:
-(i) the affine-base specialization
-`canonicalBaseChangeMap_app_app_isIso_of_isAffineOpen_of_isAffineBase`, which
-captures the substantive Stacks 02KE algebraic content via
-`Module.Flat.isBaseChange`; and
-(ii) a base-side Mayer-Vietoris descent step (refining `U` along an affine
-cover `(V_α)_α` of `S` into pieces `U ∩ (Opens.map g.base).obj V_α`, applying
-(i) on each, and gluing via `QuasiSeparated f`).
+open `U ⊆ S'` is affine.
 
-iter-181 Lane F: helper-with-substantive-Mathlib-gap. The body is a typed
-`sorry` carrying the *intended* base-side Mayer-Vietoris reduction; the
-algebraic Stacks 02KE content is delegated to
-`canonicalBaseChangeMap_app_app_isIso_of_isAffineOpen_of_isAffineBase`.
-Concretely the body would:
-  1. Choose a finite affine cover `(V_α)_α` of `S` whose union covers
-     `g.base '' U.carrier` (using quasi-compactness of `U`).
-  2. Refine `U` into pieces `W_α := U ⊓ (Opens.map g.base).obj V_α`,
-     each affine when intersected with the affine open `(g)⁻¹ V_α`.
-  3. On each piece, restrict the morphism `g` to `g|_{(g)⁻¹ V_α} :
-     (g)⁻¹ V_α ⟶ V_α` (still flat) and apply the affine-base helper to
-     conclude iso at `W_α`.
-  4. Descend along the cover `(W_α)_α` of `U` via Mayer-Vietoris on the
-     quasi-separated `f` (the intersection `W_α ∩ W_β` is quasi-compact). -/
+CLOSED (T12 fbc-leaves front, 2026-07-06). Route: the affine opens
+`W ⊆ S'` *compatible with an affine `V ⊆ S`* (`W ≤ g ⁻¹ᵁ V`) form a basis
+of `S'` — given `x ∈ O`, pick an affine `V ∋ g(x)` in `S`, then an affine
+`W ≤ O ⊓ g ⁻¹ᵁ V` around `x`. On each such pair the affine-pair workhorse
+`canonicalBaseChangeMap_app_app_isIso_of_le_preimage` (Stacks 02KE) gives
+the section iso; the basis-locality engine
+`Modules.isIso_of_isIso_app_of_isBasis` upgrades this to an iso of sheaf
+morphisms, and Mathlib's `IsIso φ → IsIso (φ.app U)` instance evaluates it
+back at the given (indeed at ANY) `U`. No base-side Mayer-Vietoris and no
+square restriction is needed — the historically walled mate-restriction
+naturality is bypassed entirely. (The earlier docstring's steps 1-4
+base-side descent plan is superseded by this basis argument.) -/
 private theorem canonicalBaseChangeMap_app_app_isIso_of_isAffineOpen
     {X X' S S' : Scheme.{u}}
     {f : X ⟶ S} {g : S' ⟶ S} {g' : X' ⟶ X} {f' : X' ⟶ S'}
@@ -5112,40 +5451,47 @@ private theorem canonicalBaseChangeMap_app_app_isIso_of_isAffineOpen
     (F : X.Modules) [F.IsQuasicoherent]
     (U : S'.Opens) (_hU : IsAffineOpen U) :
     IsIso (((canonicalBaseChangeMap sq).app F).app U) := by
-  -- Stacks 02KE / 00H8, H⁰ form. The substantive algebraic content lives in
-  -- `canonicalBaseChangeMap_app_app_isIso_of_isAffineOpen_of_isAffineBase`
-  -- (the `[IsAffine S]` specialization), which delegates to
-  -- `Module.Flat.isBaseChange` on the flat ring map `Γ(S, ⊤) → Γ(S', U)`
-  -- modulo the section-vs-tensor-product identification (Mathlib gap).
-  --
-  -- The reduction from general `S` to `[IsAffine S]` (the base-side
-  -- Mayer-Vietoris on a finite affine cover of `S`) is the second
-  -- Mathlib-shaped step, sketched in this lemma's docstring (steps 1–4).
-  -- That descent is not yet built in this file; it would need a base-side
-  -- analogue of `canonicalBaseChangeMap_app_app_isIso_of_affineCover`
-  -- (which handles target-side `S'` descent), reframed for the base `S`.
-  -- Until that descent lemma is introduced (iter-182+), the body carries
-  -- a typed `sorry`; the algebraic Stacks 02KE step is properly factored
-  -- into the named affine-base helper above.
-  sorry
+  -- The compatible affine pairs form a basis of `S'`.
+  have hB : TopologicalSpace.Opens.IsBasis (Set.range
+      (fun i : {W : S'.Opens × S.Opens //
+        IsAffineOpen W.1 ∧ IsAffineOpen W.2 ∧ W.1 ≤ g ⁻¹ᵁ W.2} => i.1.1)) := by
+    rw [TopologicalSpace.Opens.isBasis_iff_nbhd]
+    intro O x hxO
+    obtain ⟨_, ⟨Vb, hVb, rfl⟩, hgxV, -⟩ :=
+      S.isBasis_affineOpens.exists_subset_of_mem_open
+        (Set.mem_univ (g.base x)) isOpen_univ
+    obtain ⟨_, ⟨W, hW, rfl⟩, hxW, hWle⟩ :=
+      S'.isBasis_affineOpens.exists_subset_of_mem_open
+        (show x ∈ ((O ⊓ g ⁻¹ᵁ Vb : S'.Opens) : Set S') from ⟨hxO, hgxV⟩)
+        (O ⊓ g ⁻¹ᵁ Vb).2
+    exact ⟨W, ⟨⟨(W, Vb), hW, hVb, le_trans hWle inf_le_right⟩, rfl⟩, hxW,
+      le_trans hWle inf_le_left⟩
+  -- Iso on the basis (via the affine-pair workhorse) ⟹ iso of sheaf morphisms
+  -- ⟹ iso at `U`.
+  haveI : IsIso ((canonicalBaseChangeMap sq).app F) :=
+    Modules.isIso_of_isIso_app_of_isBasis hB ((canonicalBaseChangeMap sq).app F)
+      (fun i => canonicalBaseChangeMap_app_app_isIso_of_le_preimage sq F
+        i.2.2.1 i.2.1 i.2.2.2)
+  infer_instance
 
 /-- **Open-cover gluing for the section-wise flat base change**
-(Mayer-Vietoris reduction, Stacks 02KH(ii) corollary).
+(basis-locality reduction, Stacks 02KH(ii) corollary).
 
 If the section of the canonical base-change map is an iso over *every*
 affine open `V ⊆ S'`, then it is an iso over every open `U ⊆ S'` as well.
-This is the standard Mayer-Vietoris descent argument for a morphism of
-quasi-coherent sheaves on the base: pick an affine cover of `U`, the
-morphism is an iso on each chart, hence iso on `U` by gluing along the
-intersections (which are quasi-compact thanks to `QuasiSeparated f`).
 
-iter-180 Lane F: helper-with-substantive-Mathlib-gap. The body is a typed
-`sorry` carrying the *intended* descent argument. Required ingredients
-(not yet in scope at the pinned Mathlib commit):
-* the basis property of affine opens (`Scheme.affineOpenCover`);
-* iso-on-basis ⟹ iso-on-open for sheaves of modules
-  (`Modules.isIso_iff_isIso_basis`, project-side helper);
-* a Mayer-Vietoris on pushforwards via `QuasiSeparated f`. -/
+PROVED (T12 session, 2026-07-06, Lane F fbc-leaves front). Route: the
+affine opens form a basis of `S'` (`Scheme.isBasis_affineOpens`); a
+morphism of sheaves of modules that is an iso on sections over every
+basic open is an iso of sheaves
+(`Modules.isIso_of_isIso_app_of_isBasis`, the sorry-free basis-locality
+engine from `AlgebraicJacobian.Cohomology.FlatBaseChange`, built on
+Mathlib's stalkwise criterion `isIso_of_stalkFunctor_map_iso` plus
+`stalkFunctor_map_injective_of_isBasis` / `exists_mem_germ_eq_of_isBasis`);
+and Mathlib's instance `IsIso φ → IsIso (φ.app U)` restores the
+section-wise claim at an arbitrary open `U`. No Mayer-Vietoris gluing and
+no `QuasiSeparated f` input is needed for this reduction step (the
+hypothesis is kept for signature stability with the consumer chain). -/
 private theorem canonicalBaseChangeMap_app_app_isIso_of_affineCover
     {X X' S S' : Scheme.{u}}
     {f : X ⟶ S} {g : S' ⟶ S} {g' : X' ⟶ X} {f' : X' ⟶ S'}
@@ -5156,28 +5502,14 @@ private theorem canonicalBaseChangeMap_app_app_isIso_of_affineCover
         IsIso (((canonicalBaseChangeMap sq).app F).app V))
     (U : S'.Opens) :
     IsIso (((canonicalBaseChangeMap sq).app F).app U) := by
-  -- Mayer-Vietoris descent. Substantive Mathlib gap. Intended body:
-  --   1. Pick an affine cover `(V_i)_{i ∈ I}` of `U` with each `V_i` affine
-  --      open (using `Scheme.affineOpenCover` restricted to `U`).
-  --   2. On each chart `V_i ⊆ U`, the iso `h_affine V_i hV_i` gives an
-  --      iso of sections.
-  --   3. Both `(pullback g).obj ((pushforward f).obj F)` and
-  --      `(pushforward f').obj ((pullback g').obj F)` are sheaves of
-  --      `O_{S'}`-modules; their sections over `U` are recovered as the
-  --      equaliser of the sections over the cover.
-  --   4. By compatibility of `(canonicalBaseChangeMap sq).app F` with
-  --      restriction (naturality of the natural transformation), the
-  --      affine-local isos assemble into an iso on `U` (using
-  --      `TopCat.Sheaf.hom_ext` / Mayer-Vietoris on quasi-separated `f`).
-  -- This is the "sheaves are determined by their sections on a basis"
-  -- principle, applied to a natural transformation. The required general
-  -- form (`Sheaf.Hom.isIso_iff_isIso_on_basis`) is not in scope at the
-  -- pinned Mathlib commit; it is the project-side sub-build owed by
-  -- `chap:Picard_QuotScheme` Section §5 alongside the affine-open piece.
-  -- (The dependence on `QuasiSeparated f` enters in step 3 above: it
-  -- ensures intersections of preimages are quasi-compact, so the affine
-  -- step applies to the cover refinements.)
-  sorry
+  -- Iso on the affine-opens basis ⟹ iso of sheaf morphisms ⟹ iso at `U`.
+  haveI : IsIso ((canonicalBaseChangeMap sq).app F) :=
+    Modules.isIso_of_isIso_app_of_isBasis
+      (B := (Subtype.val : S'.affineOpens → S'.Opens))
+      (by simpa [Subtype.range_val] using S'.isBasis_affineOpens)
+      ((canonicalBaseChangeMap sq).app F)
+      (fun V => h_affine V.1 V.2)
+  infer_instance
 
 /-- **Section-wise form of flat base change** (Stacks tag 02KH(ii)).
 
@@ -5186,26 +5518,26 @@ map `(pullback g).obj ((pushforward f).obj F) ⟶ (pushforward f').obj ((pullbac
 is an isomorphism.
 
 This is the substantive content of Stacks 02KH(ii) (the `i = 0` form), and
-splits cleanly into two named substantive Mathlib gaps:
-* `canonicalBaseChangeMap_app_app_isIso_of_isAffineOpen` — the affine case
-  via algebraic flat base change `Module.Flat.isBaseChange` (Stacks 00H8 /
-  02KE);
-* `canonicalBaseChangeMap_app_app_isIso_of_affineCover` — the descent from
-  affine opens to arbitrary opens via Mayer-Vietoris on the quasi-separated
-  morphism `f`.
+splits into two named helpers (both PROVED, T12 fbc-leaves front 2026-07-06):
+* `canonicalBaseChangeMap_app_app_isIso_of_isAffineOpen` — the affine case,
+  via the affine-pair workhorse
+  `canonicalBaseChangeMap_app_app_isIso_of_le_preimage` (Stacks 02KE
+  witnesses + KEY-BC intertwining) on the basis of compatible affine pairs;
+* `canonicalBaseChangeMap_app_app_isIso_of_affineCover` — the reduction from
+  affine opens to arbitrary opens via basis locality
+  (`Modules.isIso_of_isIso_app_of_isBasis`).
 
-The body of this theorem composes the two helpers cleanly; the substantive
-content has been factored into the helper bodies. -/
+The whole chain rests on the single named typed sorry
+`pullback_baseMap_sectionLinearEquiv_of_quasiCompact` (the 02KE H⁰ heart). -/
 theorem canonicalBaseChangeMap_app_app_isIso {X X' S S' : Scheme.{u}}
     {f : X ⟶ S} {g : S' ⟶ S} {g' : X' ⟶ X} {f' : X' ⟶ S'}
     (sq : IsPullback g' f' f g)
     [QuasiCompact f] [QuasiSeparated f] [Flat g]
     (F : X.Modules) [F.IsQuasicoherent] (U : S'.Opens) :
     IsIso (((canonicalBaseChangeMap sq).app F).app U) :=
-  -- Composition of the two named substantive helpers: the affine-open case
-  -- via `pullback_app_isoTensor` + `pullback_tildeIso`, then the
-  -- Mayer-Vietoris descent (iter-187 Lane F: corrected framing — the
-  -- prior `Module.Flat.isBaseChange` citation was a category mistake).
+  -- Composition of the two named helpers: the affine-open case via the
+  -- affine-pair workhorse on the compatible-pairs basis, then basis
+  -- locality from affine opens to all opens.
   canonicalBaseChangeMap_app_app_isIso_of_affineCover sq F
     (fun V hV => canonicalBaseChangeMap_app_app_isIso_of_isAffineOpen sq F V hV)
     U
@@ -5218,9 +5550,9 @@ is an isomorphism at every coherent sheaf `F` under the hypotheses
 
 The proof reduces section-wise via `Scheme.Modules.Hom.isIso_iff_isIso_app`
 to the section-form helper `canonicalBaseChangeMap_app_app_isIso`,
-which captures Stacks 02KH(ii) — the substantive algebraic content
-(`Module.Flat.isBaseChange` on each affine open + Mayer-Vietoris for
-quasi-separated `f`). -/
+which captures Stacks 02KH(ii) — the affine-pair workhorse (02KE witnesses
++ the KEY-BC intertwining) plus basis locality; the single remaining leaf
+is `pullback_baseMap_sectionLinearEquiv_of_quasiCompact`. -/
 theorem canonicalBaseChangeMap_isIso {X X' S S' : Scheme.{u}}
     {f : X ⟶ S} {g : S' ⟶ S} {g' : X' ⟶ X} {f' : X' ⟶ S'}
     (sq : IsPullback g' f' f g)

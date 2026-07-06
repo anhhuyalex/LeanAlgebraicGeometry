@@ -2558,13 +2558,8 @@ free of a fixed rank}. This section introduces both predicates.
   % `IdealSheafData.ofIdeals (fun U => Module.annihilator Γ(X,U) Γ(F,U))`, which is well-defined
   % unconditionally and does NOT depend on the localization bridges at definition time. The two
   % facts lem:annihilator_localization_eq_map and lem:qcoh_section_localization_basicOpen are needed
-  % only for the downstream CHARACTERIZATION (the reverse inclusion / equality on affine opens, the
-  % "annihilator forward direction"), which is not yet a blueprint block.
-  % NOTE: The definition itself is formalized and axiom-clean; the inclusion direction
-  % \(\mathrm{Ann}(\mathcal{F})(U) \subseteq \mathrm{Ann}_{\mathcal{O}_X(U)}(\mathcal{F}(U))\)
-  % (\cref{lem:modules_annihilator_ideal_le}) is closed. The reverse inclusion, which identifies
-  % the annihilator sheaf with the module-annihilator on affine opens, remains bridge-gated on
-  % \cref{lem:qcoh_section_localization_basicOpen}.
+  % only for the downstream CHARACTERIZATION (the reverse inclusion / equality on affine opens),
+  % which is \cref{lem:modules_annihilator_ideal}.
   % SOURCE: [Nitsure], \S 1, sub-section "Stratification by Hilbert
   % Polynomials" (read from
   % references/nitsure-hilbert-quot-src/nitsure-hilbert-quot.tex, L468-L471).
@@ -2631,11 +2626,50 @@ free of a fixed rank}. This section introduces both predicates.
     \;\subseteq\; \mathrm{Ann}_{\mathcal{O}_X(U)}\bigl(\mathcal{F}(U)\bigr).
   \]
   This is the inclusion direction available directly from the definition of
-  \(\mathrm{Ann}(\mathcal{F})\); the reverse inclusion is the basic-open coherence
-  statement gated on \cref{lem:qcoh_section_localization_basicOpen}. Proved directly
+  \(\mathrm{Ann}(\mathcal{F})\); the reverse inclusion, under finiteness of the
+  section modules, is \cref{lem:modules_annihilator_ideal}. Proved directly
   in Lean. It supports the well-definedness of the schematic support
   (\cref{def:schematic_support}).
 \end{lemma}
+
+\begin{lemma}\leanok
+[Annihilator ideal sheaf equals the module annihilator on affine opens]
+  \label{lem:modules_annihilator_ideal}
+  \lean{AlgebraicGeometry.Scheme.Modules.annihilator_ideal}
+  \uses{def:modules_annihilator}
+  \textit{Source: Stacks, Algebra, Lemma \texttt{annihilator-flat-base-change}
+  (localization instance);
+  Stacks~\href{https://stacks.math.columbia.edu/tag/01IB}{01IB}.}
+  Let \(X\) be a scheme and \(\mathcal{F}\) a quasi-coherent sheaf of
+  \(\mathcal{O}_X\)-modules such that \(\Gamma(\mathcal{F}, V)\) is a finitely
+  generated \(\Gamma(X, V)\)-module for every affine open \(V \subseteq X\).
+  Then for every affine open \(U \subseteq X\),
+  \[
+    \mathrm{Ann}(\mathcal{F})(U)
+    \;=\; \mathrm{Ann}_{\mathcal{O}_X(U)}\bigl(\mathcal{F}(U)\bigr).
+  \]
+\end{lemma}
+\begin{proof}\leanok
+  \uses{lem:modules_annihilator_ideal_le, lem:annihilator_localization_eq_map,
+    lem:qcoh_section_localization_basicOpen, lem:isLocalization_basicOpen_mathlib}
+  The family \(I(V) := \mathrm{Ann}_{\mathcal{O}_X(V)}(\mathcal{F}(V))\),
+  indexed by the affine opens of \(X\), satisfies the basic-open coherence
+  required of an ideal sheaf: for an affine open \(V\) and
+  \(f \in \mathcal{O}_X(V)\), the restriction
+  \(\mathcal{O}_X(V) \to \mathcal{O}_X(D(f))\) is the localization away from
+  \(f\) (\cref{lem:isLocalization_basicOpen_mathlib}), the section restriction
+  \(\mathcal{F}(V) \to \mathcal{F}(D(f))\) is the corresponding module
+  localization (\cref{lem:qcoh_section_localization_basicOpen}), and — because
+  \(\mathcal{F}(V)\) is finitely generated — the annihilator commutes with this
+  localization (\cref{lem:annihilator_localization_eq_map}):
+  \(I(D(f)) = I(V) \cdot \mathcal{O}_X(D(f))\).  Hence \(I\) is itself an
+  ideal sheaf.  Since \(\mathrm{Ann}(\mathcal{F})\) is by definition the
+  largest ideal sheaf whose affine-open values are contained in the family
+  \(I\) (\cref{def:modules_annihilator}), and \(I\) is such an ideal sheaf,
+  maximality gives \(I(U) \subseteq \mathrm{Ann}(\mathcal{F})(U)\) for every
+  affine \(U\); the reverse inclusion is
+  \cref{lem:modules_annihilator_ideal_le}.
+\end{proof}
 
 
 \begin{lemma}[Sections on a basic open localize the affine ring]
@@ -3619,7 +3653,10 @@ section localization]
   change: if \(f : X \to S\) is proper and \(g : T \to S\) is any morphism then
   the base change \(X \times_S T \to T\) is proper. Consequently the base-change
   clause that Nitsure invokes (``properness \ldots\ preserved by base-change'')
-  applies directly to the proper-support condition below.
+  applies directly to the proper-support condition below.  Moreover properness
+  is stable under composition; closed immersions are proper (they are finite
+  morphisms); and cancellation holds along separated morphisms: if a composite
+  \(g \circ f\) is proper and \(g\) is separated, then \(f\) is proper.
 \end{lemma}
 
 \begin{definition}
@@ -3879,6 +3916,195 @@ is cartesian over \(T' \to T\).
   flat over \(\Gamma(S', U_t)\), as required.
 \end{proof}
 
+\begin{lemma}[Module finiteness is local along a spanning family]
+  \label{lem:module_finite_of_localizationSpan_mathlib}
+  \lean{Module.Finite.of_localizationSpan'}
+  \mathlibok
+  \textit{Provided by Mathlib
+  (\texttt{Mathlib.RingTheory.Localization.Finiteness}).}
+  Let \(R\) be a commutative ring, \(M\) an \(R\)-module, and
+  \(t \subseteq R\) a subset generating the unit ideal.  If for every
+  \(g \in t\) the localized module \(M_g\) is a finite \(R_g\)-module, then
+  \(M\) is a finite \(R\)-module.
+\end{lemma}
+
+\begin{lemma}\leanok
+[Finitely presented modules have finite sections on every affine open]
+  \label{lem:finite_sections_affine_all}
+  \lean{AlgebraicGeometry.Scheme.Modules.module_finite_sections_of_isFinitePresentation}
+  \source{stacks-project}
+  \textit{Source: Stacks~\href{https://stacks.math.columbia.edu/tag/01PC}{01PC}
+  (finite-type half).}
+  Let \(\mathcal{F}\) be a finitely presented sheaf of
+  \(\mathcal{O}_X\)-modules on a scheme \(X\).  Then for \emph{every} affine
+  open \(V \subseteq X\) the section module \(\Gamma(\mathcal{F}, V)\) is a
+  finite \(\Gamma(X, V)\)-module.
+\end{lemma}
+\begin{proof}\leanok
+  \uses{lem:affine_finite_sections_nhds, lem:isLocalization_basicOpen_mathlib,
+    lem:qcoh_section_localization_basicOpen,
+    lem:module_finite_of_localizationSpan_mathlib}
+  Let \(t \subseteq \Gamma(X, V)\) be the set of all \(f\) such that
+  \(D(f) \subseteq V\) and \(\Gamma(\mathcal{F}, D(f))\) is a finite
+  \(\Gamma(X, D(f))\)-module.
+
+  \emph{The basic opens of \(t\) cover \(V\).}  Fix \(x \in V\).  By
+  \cref{lem:affine_finite_sections_nhds} there is an affine open chart \(W\)
+  with \(x \in W \subseteq V\) and \(\Gamma(\mathcal{F}, W)\) finite over
+  \(\Gamma(X, W)\).  Since the basic opens of the affine \(V\) form a basis of
+  its topology, there is \(f \in \Gamma(X, V)\) with
+  \(x \in D(f) \subseteq W\).  Writing \(f|_W\) for the restriction of \(f\)
+  to \(W\), one has \(D(f) = D(f|_W)\) as opens contained in \(W\); the
+  restriction \(\Gamma(X, W) \to \Gamma(X, D(f))\) is the localization away
+  from \(f|_W\) (\cref{lem:isLocalization_basicOpen_mathlib}), and
+  \(\Gamma(\mathcal{F}, W) \to \Gamma(\mathcal{F}, D(f))\) is the
+  corresponding module localization
+  (\cref{lem:qcoh_section_localization_basicOpen}, applicable because a
+  finitely presented module is quasi-coherent).  The images of a finite
+  generating set of \(\Gamma(\mathcal{F}, W)\) generate the localized module
+  over the localized ring, so \(\Gamma(\mathcal{F}, D(f))\) is finite over
+  \(\Gamma(X, D(f))\) and \(f \in t\), with \(x \in D(f)\).
+
+  \emph{Conclusion.}  The basic opens \(D(f)\), \(f \in t\), cover the affine
+  \(V\), so \(t\) generates the unit ideal of \(\Gamma(X, V)\).  For each
+  \(f \in t\) the restriction
+  \(\Gamma(\mathcal{F}, V) \to \Gamma(\mathcal{F}, D(f))\) is the localization
+  of \(\Gamma(\mathcal{F}, V)\) away from \(f\)
+  (\cref{lem:qcoh_section_localization_basicOpen}), with target a finite
+  \(\Gamma(X, D(f)) = \Gamma(X, V)_f\)-module by membership in \(t\);
+  \cref{lem:module_finite_of_localizationSpan_mathlib} glues these into
+  finiteness of \(\Gamma(\mathcal{F}, V)\) over \(\Gamma(X, V)\).
+\end{proof}
+
+\begin{lemma}\leanok
+[Annihilators are stable under pullback: section level]
+  \label{lem:annihilator_pullback_sections}
+  \lean{AlgebraicGeometry.Scheme.Modules.map_app_mem_annihilator_pullback}
+  \source{stacks-project, nitsure-hilbert-quot}
+  \textit{Source:
+  Stacks~\href{https://stacks.math.columbia.edu/tag/056H}{056H};
+  [Nitsure], \S 1.}
+  Let \(g' : X' \to X\) be a morphism of schemes, \(\mathcal{F}\) a
+  quasi-coherent sheaf of \(\mathcal{O}_X\)-modules, \(U \subseteq X\) an
+  affine open, and \(V' \subseteq g'^{-1}(U)\) any open of \(X'\).  If
+  \(r \in \mathcal{O}_X(U)\) annihilates \(\Gamma(\mathcal{F}, U)\), then its
+  image in \(\mathcal{O}_{X'}(V')\) under \(g'^\sharp\) and restriction
+  annihilates \(\Gamma(g'^* \mathcal{F}, V')\).
+\end{lemma}
+\begin{proof}\leanok
+  \uses{lem:modules_pullback_mathlib, lem:pullback_isQuasicoherent_hom,
+    lem:qcoh_section_localization_basicOpen}
+  For a sheaf of modules \(\mathcal{M}\) on a scheme \(Z\) and a global
+  section \(w \in \mathcal{O}_Z(Z)\), scalar multiplication by \(w\) is an
+  endomorphism \(w \cdot : \mathcal{M} \to \mathcal{M}\): the componentwise
+  multiplications by the restrictions of \(w\) are linear because the section
+  rings are commutative, and they commute with the restriction maps because
+  restriction is semilinear.  The proof transports the vanishing of this
+  endomorphism.
+
+  \emph{Pullback intertwines the multiplication endomorphisms.}  For a
+  morphism \(h : Z' \to Z\) one has \(h^*(w \cdot) = (h^\sharp w) \cdot\) as
+  endomorphisms of \(h^* \mathcal{M}\).  Indeed, under the adjunction between
+  \(h^*\) and \(h_*\) (\cref{lem:modules_pullback_mathlib}) both sides
+  transpose to morphisms \(\mathcal{M} \to h_* h^* \mathcal{M}\), and these
+  transposes agree: the adjunction unit
+  \(\eta : \mathcal{M} \to h_* h^* \mathcal{M}\) is a morphism of
+  \(\mathcal{O}_Z\)-modules, and the \(\mathcal{O}_Z\)-module structure of
+  \(h_* h^* \mathcal{M}\) is restriction of scalars along \(h^\sharp\), so
+  both transposes send a section \(m\) over \(O \subseteq Z\) to
+  \(\bigl(h^\sharp(w|_O)\bigr) \cdot \eta(m) = \bigl(w|_O\bigr) \cdot
+  \eta(m)\).
+
+  \emph{On an affine scheme, killing global sections kills all sections.}
+  Let \(Z\) be affine, \(\mathcal{M}\) quasi-coherent, and suppose
+  \(w \cdot \Gamma(\mathcal{M}, Z) = 0\).  On a basic open \(D(b)\) the
+  restriction \(\Gamma(\mathcal{M}, Z) \to \Gamma(\mathcal{M}, D(b))\) is the
+  localization away from \(b\)
+  (\cref{lem:qcoh_section_localization_basicOpen}); for
+  \(y \in \Gamma(\mathcal{M}, D(b))\) there are \(n\) and
+  \(m \in \Gamma(\mathcal{M}, Z)\) with \(b^n y = m|_{D(b)}\), whence
+  \(b^n (w y) = w|_{D(b)} \cdot m|_{D(b)} = (w \cdot m)|_{D(b)} = 0\); since
+  \(b\) acts invertibly on the localized sections, \(w y = 0\).  A general
+  open of \(Z\) is covered by basic opens and the abelian sheaf underlying
+  \(\mathcal{M}\) is separated, so multiplication by (the restriction of)
+  \(w\) kills all sections of \(\mathcal{M}\).
+
+  \emph{Conclusion.}  Restrict \(\mathcal{F}\) to the affine open subscheme
+  \(U\), i.e.\ form \(\iota_U^* \mathcal{F}\) for the open immersion
+  \(\iota_U : U \to X\); it is quasi-coherent
+  (\cref{lem:pullback_isQuasicoherent_hom}), and the global section
+  \(r_0 \in \mathcal{O}_U(U)\) corresponding to \(r\) kills
+  \(\Gamma(\iota_U^* \mathcal{F}, U) = \Gamma(\mathcal{F}, U)\).  By the
+  affine step, \(r_0 \cdot\) is the zero endomorphism of
+  \(\iota_U^* \mathcal{F}\).  Let \(h : V' \to U\) be the restriction of
+  \(g'\), defined since \(V' \subseteq g'^{-1}(U)\); by the intertwining step
+  \((h^\sharp r_0) \cdot\) is the zero endomorphism of
+  \(h^* \iota_U^* \mathcal{F}\), which is identified with
+  \(\iota_{V'}^* (g'^* \mathcal{F})\) by pseudofunctoriality of pullback
+  along \(\iota_U \circ h = g' \circ \iota_{V'}\)
+  (\cref{lem:modules_pullback_mathlib}).  Reading off global sections over
+  \(V'\) — the identification
+  \(\Gamma(\iota_{V'}^* g'^* \mathcal{F}, V') = \Gamma(g'^* \mathcal{F}, V')\)
+  is equivariant for the ring identification
+  \(\mathcal{O}_{V'}(V') = \mathcal{O}_{X'}(V')\), which carries
+  \(h^\sharp r_0\) to the image of \(r\) — the image of \(r\) annihilates
+  \(\Gamma(g'^* \mathcal{F}, V')\).
+\end{proof}
+
+\begin{lemma}\leanok
+[The annihilator ideal sheaf pulls back]
+  \label{lem:annihilator_le_map_pullback}
+  \lean{AlgebraicGeometry.Scheme.Modules.annihilator_le_map_pullback}
+  \uses{def:modules_annihilator, def:schematic_support_immersion}
+  \source{stacks-project}
+  \textit{Source:
+  Stacks~\href{https://stacks.math.columbia.edu/tag/056H}{056H}.}
+  Let \(g' : X' \to X\) be a morphism of schemes and \(\mathcal{F}\) a
+  finitely presented sheaf of \(\mathcal{O}_X\)-modules.  Write
+  \(\iota' : Z' \to X'\) for the schematic-support immersion of
+  \(g'^* \mathcal{F}\) (\cref{def:schematic_support_immersion}).  Then
+  \(\mathrm{Ann}(\mathcal{F})\) is contained in the kernel ideal sheaf of
+  \(\mathcal{O}_X \to (\iota' \circ g')_* \mathcal{O}_{Z'}\); equivalently,
+  \(g' \circ \iota'\) factors through the schematic support
+  \(Z \subseteq X\) of \(\mathcal{F}\) by a morphism \(l : Z' \to Z\) over
+  \(g'\).
+\end{lemma}
+\begin{proof}\leanok
+  \uses{lem:annihilator_pullback_sections, lem:modules_annihilator_ideal,
+    lem:finite_sections_affine_all, lem:pullback_finite_presentation,
+    lem:modules_annihilator_ideal_le}
+  The kernel ideal sheaf of \((\iota' \circ g')^\sharp\) is the largest ideal
+  sheaf whose value on each affine open \(U \subseteq X\) is contained in
+  \(\ker\bigl((\iota' \circ g')^\sharp_U\bigr)\), so it suffices to prove,
+  for each affine open \(U\) and each \(r \in \mathrm{Ann}(\mathcal{F})(U)\),
+  that \((\iota' \circ g')^\sharp_U(r) = 0\) in
+  \(\Gamma\bigl(Z', (\iota' \circ g')^{-1}(U)\bigr)\).  By
+  \cref{lem:modules_annihilator_ideal_le}, \(r\) annihilates
+  \(\Gamma(\mathcal{F}, U)\).
+
+  The open \((\iota')^{-1}(g'^{-1}(U))\) of \(Z'\) is covered by the
+  preimages \((\iota')^{-1}(V')\) of the affine opens
+  \(V' \subseteq g'^{-1}(U)\) of \(X'\), and the structure sheaf of \(Z'\) is
+  separated, so it suffices that the restriction of
+  \((\iota' \circ g')^\sharp_U(r)\) to each \((\iota')^{-1}(V')\) vanishes.
+  By naturality of \(\iota'^\sharp\), that restriction is
+  \(\iota'^\sharp_{V'}(\rho)\), where \(\rho \in \mathcal{O}_{X'}(V')\) is the
+  image of \(r\).  By \cref{lem:annihilator_pullback_sections}, \(\rho\)
+  annihilates \(\Gamma(g'^* \mathcal{F}, V')\).  The pullback
+  \(g'^* \mathcal{F}\) is finitely presented
+  (\cref{lem:pullback_finite_presentation}), hence quasi-coherent with finite
+  section modules on all affine opens
+  (\cref{lem:finite_sections_affine_all}); therefore
+  \(\mathrm{Ann}_{\mathcal{O}_{X'}(V')}\Gamma(g'^* \mathcal{F}, V')
+  = \mathrm{Ann}(g'^* \mathcal{F})(V')\)
+  (\cref{lem:modules_annihilator_ideal}), and on affine opens the subscheme
+  immersion of an ideal sheaf kills exactly that ideal, so
+  \(\iota'^\sharp_{V'}(\rho) = 0\), as required.  Finally, a morphism to
+  \(X\) under whose structure map the defining ideal sheaf of the closed
+  subscheme \(Z\) dies factors through \(Z\); this produces \(l : Z' \to Z\)
+  with \(\iota \circ l = g' \circ \iota'\).
+\end{proof}
+
 \begin{lemma}\leanok
 [Proper support is stable under base change]
   \label{lem:proper_support_base_change}
@@ -3892,19 +4118,192 @@ is cartesian over \(T' \to T\).
   (\cref{def:has_proper_support}).  Then the schematic support of
   \(g'^* \mathcal{F}\) is proper over \(S'\).
 \end{lemma}
-\begin{proof}
-  \uses{lem:pullback_finite_presentation, lem:isProper_mathlib}
-  A local section of \(\mathrm{Ann}(\mathcal{F})\) pulls back to a section
-  annihilating \(g'^* \mathcal{F}\), so the pullback ideal
-  \(\mathrm{Ann}(\mathcal{F}) \cdot \mathcal{O}_{X'}\) is contained in
-  \(\mathrm{Ann}(g'^*\mathcal{F})\) (\cref{def:modules_annihilator}).
-  Consequently the schematic support of \(g'^* \mathcal{F}\) is a closed
-  subscheme of the base change
-  \(Z' := Z \times_X X' = Z \times_S S'\) of the schematic support
-  \(Z\) of \(\mathcal{F}\).  Since \(Z \to S\) is proper and properness is
-  stable under base change, \(Z' \to S'\) is proper; a closed immersion
-  followed by a proper morphism is proper, so the schematic support of
+\begin{proof}\leanok
+  \uses{lem:annihilator_le_map_pullback, lem:isProper_mathlib,
+    def:schematic_support_immersion}
+  Write \(\iota : Z \to X\) and \(\iota' : Z' \to X'\) for the
+  schematic-support immersions (\cref{def:schematic_support_immersion}) of
+  \(\mathcal{F}\) and of \(g'^* \mathcal{F}\).  By
+  \cref{lem:annihilator_le_map_pullback} there is a morphism
+  \(l : Z' \to Z\) with \(\iota \circ l = g' \circ \iota'\).
+
+  Form the fibre product \(W := Z \times_X X'\) with projections
+  \(p : W \to Z\) and \(q : W \to X'\).  Pasting its defining cartesian
+  square vertically with the given cartesian square exhibits \(W\), together
+  with \(p\) and \(f' \circ q\), as the fibre product of
+  \(Z \xrightarrow{\,f \circ \iota\,} S \xleftarrow{\,g\,} S'\).  The
+  hypothesis says \(f \circ \iota\) is proper, and properness is stable under
+  base change (\cref{lem:isProper_mathlib}), so \(f' \circ q : W \to S'\) is
+  proper.
+
+  The pair \((l, \iota')\) induces \(c : Z' \to W\) with
+  \(q \circ c = \iota'\).  The immersion \(\iota'\) is a closed immersion,
+  hence proper; and \(q\) is a closed immersion (the base change of the
+  closed immersion \(\iota\) along \(g'\)), hence separated.  By cancellation
+  of properness along separated morphisms applied to \(q \circ c = \iota'\)
+  (\cref{lem:isProper_mathlib}), \(c\) is proper.  Finally
+  \[
+    f' \circ \iota' \;=\; (f' \circ q) \circ c
+  \]
+  is a composite of proper morphisms, hence proper
+  (\cref{lem:isProper_mathlib}); that is, the schematic support of
   \(g'^* \mathcal{F}\) is proper over \(S'\).
+\end{proof}
+
+\begin{lemma}\leanok
+[Pullback commutes with tensor product and twists]
+  \label{lem:pullback_moduleTensorPow}
+  \lean{AlgebraicGeometry.Scheme.Modules.pullback_moduleTensorPow_iso}
+  \uses{def:sheafTensorObj, def:sheafTensorPow, def:sheafModuleTwist,
+    lem:modules_pullback_mathlib}
+  \source{stacks-project}
+  \textit{Source: [Stacks Project], "Sheaves of Modules", Tag 01CD (pullback
+  and tensor products); the stalkwise description is Tags 01CB and 0098.}
+  Let \(f : Y \to X\) be a morphism of schemes and let \(\mathcal{F}\), \(L\)
+  be quasi-coherent sheaves of \(\mathcal{O}_X\)-modules.  For every
+  \(m \in \mathbb{N}\) there is an isomorphism of \(\mathcal{O}_Y\)-modules
+  \[
+    f^*\bigl(\mathcal{F} \otimes_{\mathcal{O}_X} L^{\otimes m}\bigr)
+    \;\cong\;
+    f^*\mathcal{F} \otimes_{\mathcal{O}_Y} \bigl(f^*L\bigr)^{\otimes m}.
+  \]
+  (The fact holds for arbitrary sheaves of modules on ringed spaces, with a
+  canonical comparison isomorphism; the quasi-coherent case stated here is
+  the one consumed by \cref{lem:hilbert_fibre_base_change}.)
+\end{lemma}
+\begin{proof}
+  The twist \(\mathcal{F} \otimes L^{\otimes m}\) is built from the binary
+  tensor product (\cref{def:sheafTensorObj}) and the unit
+  \(\mathcal{O}_X\) by the recursion \(L^{\otimes 0} = \mathcal{O}_X\),
+  \(L^{\otimes (m+1)} = L^{\otimes m} \otimes L\)
+  (\cref{def:sheafTensorPow}), so by induction on \(m\) it suffices that the
+  pullback functor carries \(\mathcal{O}_X\) to \(\mathcal{O}_Y\) — the
+  unitality of \cref{lem:modules_pullback_mathlib} — and commutes with the
+  binary tensor product up to natural isomorphism:
+  \(f^*(\mathcal{F} \otimes_{\mathcal{O}_X} \mathcal{G}) \cong
+  f^*\mathcal{F} \otimes_{\mathcal{O}_Y} f^*\mathcal{G}\) for all
+  \(\mathcal{O}_X\)-modules \(\mathcal{F}\), \(\mathcal{G}\).
+
+  For the latter, for every \(\mathcal{O}_Y\)-module \(\mathcal{H}\) there
+  are isomorphisms, natural in all three variables:
+  \begin{align*}
+    \operatorname{Hom}_{\mathcal{O}_Y}\!\bigl(f^*(\mathcal{F} \otimes
+      \mathcal{G}), \mathcal{H}\bigr)
+    &\cong \operatorname{Hom}_{\mathcal{O}_X}\!\bigl(\mathcal{F} \otimes
+      \mathcal{G}, f_*\mathcal{H}\bigr)
+    \cong \operatorname{Hom}_{\mathcal{O}_X}\!\bigl(\mathcal{F},
+      \mathcal{H}om_{\mathcal{O}_X}(\mathcal{G}, f_*\mathcal{H})\bigr) \\
+    &\cong \operatorname{Hom}_{\mathcal{O}_X}\!\bigl(\mathcal{F},
+      f_*\,\mathcal{H}om_{\mathcal{O}_Y}(f^*\mathcal{G}, \mathcal{H})\bigr)
+    \cong \operatorname{Hom}_{\mathcal{O}_Y}\!\bigl(f^*\mathcal{F},
+      \mathcal{H}om_{\mathcal{O}_Y}(f^*\mathcal{G}, \mathcal{H})\bigr) \\
+    &\cong \operatorname{Hom}_{\mathcal{O}_Y}\!\bigl(f^*\mathcal{F} \otimes
+      f^*\mathcal{G}, \mathcal{H}\bigr),
+  \end{align*}
+  by, in order: the pullback--pushforward adjunction; the tensor--hom
+  adjunction for \(\mathcal{O}_X\)-modules; the isomorphism
+  \(\mathcal{H}om_{\mathcal{O}_X}(\mathcal{G}, f_*\mathcal{H}) \cong
+  f_*\,\mathcal{H}om_{\mathcal{O}_Y}(f^*\mathcal{G}, \mathcal{H})\) — over
+  an open \(V \subseteq X\) both sides compute
+  \(\operatorname{Hom}_{\mathcal{O}_{f^{-1}V}}\bigl((f^*\mathcal{G})|_{f^{-1}V},
+  \mathcal{H}|_{f^{-1}V}\bigr)\) by the pullback--pushforward adjunction for
+  the restricted morphism \(f^{-1}V \to V\), since pullback commutes with
+  restriction to opens, and these identifications are compatible with
+  further restriction; the pullback--pushforward adjunction again; and the
+  tensor--hom adjunction for \(\mathcal{O}_Y\)-modules.  By the Yoneda lemma
+  the composite isomorphism of functors in \(\mathcal{H}\) is induced by a
+  unique isomorphism \(f^*(\mathcal{F} \otimes \mathcal{G}) \cong
+  f^*\mathcal{F} \otimes_{\mathcal{O}_Y} f^*\mathcal{G}\).
+\end{proof}
+
+\begin{lemma}\leanok
+[Sections of the twisted fibre module under residue field extension]
+  \label{lem:gamma_fiber_baseChange_field}
+  \lean{AlgebraicGeometry.Scheme.gammaFiber_finrank_baseChange_field}
+  \uses{def:fiber_hilbert_function, def:has_proper_support,
+    def:modules_annihilator}
+  \source{nitsure-hilbert-quot, stacks-project}
+  \textit{Source: [Nitsure], \S 1 (FGA Explained Ch.~5); [Stacks Project],
+  Tag 02KH (flat base change of cohomology), degree \(0\).}
+  Let \(\pi : X \to S\) be a morphism of schemes, \(L\) a quasi-coherent
+  sheaf of \(\mathcal{O}_X\)-modules, \(\psi : T' \to T\) a morphism of
+  \(S\)-schemes, and \(\mathcal{F}\) a finitely presented sheaf on \(X_T\)
+  whose schematic support is proper over \(T\)
+  (\cref{def:has_proper_support}).  Let \(t' \in T'\) with image
+  \(t \in T\), let
+  \[
+    u : (X_{T'})_{t'} \longrightarrow (X_T)_t
+  \]
+  be the morphism exhibiting the fibre of \(X_{T'} \to T'\) at \(t'\) as the
+  base change of the fibre of \(X_T \to T\) at \(t\) along the residue field
+  extension \(\kappa(t) \to \kappa(t')\), and let \(m \in \mathbb{N}\).
+  Then
+  \[
+    \dim_{\kappa(t')} \Gamma\bigl((X_{T'})_{t'},\,
+      u^*(\mathcal{F}_t \otimes L_t^{\otimes m})\bigr)
+    \;=\;
+    \dim_{\kappa(t)} \Gamma\bigl((X_T)_t,\,
+      \mathcal{F}_t \otimes L_t^{\otimes m}\bigr),
+  \]
+  where \(\mathcal{F}_t\) and \(L_t\) denote the restrictions of
+  \(\mathcal{F}\) and of the pullback of \(L\) to the fibre \((X_T)_t\), and
+  the right-hand side is the graded Hilbert function of
+  \cref{def:fiber_hilbert_function} at \((t, m)\).
+\end{lemma}
+\begin{proof}
+  \uses{lem:proper_support_base_change}
+  Write \(\mathcal{M} := \mathcal{F}_t \otimes L_t^{\otimes m}\); it is
+  quasi-coherent (\(\mathcal{F}_t\) is finitely presented and \(L_t\)
+  quasi-coherent, both being restrictions of such along the fibre
+  embedding), and its pullback \(u^*\mathcal{M}\) is quasi-coherent as well.
+  Write \(i : Z \hookrightarrow (X_T)_t\) for the schematic support of
+  \(\mathcal{M}\), the closed subscheme cut out by the annihilator ideal
+  \(\mathrm{Ann}(\mathcal{M})\) (\cref{def:modules_annihilator}).
+
+  \emph{The support \(Z\) is proper over \(\kappa(t)\).}  The fibre
+  \((X_T)_t = X_T \times_T \operatorname{Spec} \kappa(t)\) is a base change
+  of \(X_T\), so by \cref{lem:proper_support_base_change} the schematic
+  support of \(\mathcal{F}_t\) is proper over
+  \(\operatorname{Spec} \kappa(t)\).  A local section annihilating
+  \(\mathcal{F}_t\) annihilates \(\mathcal{M} = \mathcal{F}_t \otimes
+  L_t^{\otimes m}\) (it annihilates every elementary tensor of the tensor
+  product presheaf, hence the sheafification), so
+  \(\mathrm{Ann}(\mathcal{F}_t) \subseteq \mathrm{Ann}(\mathcal{M})\) and
+  \(Z\) is a closed subscheme of the schematic support of
+  \(\mathcal{F}_t\); a closed immersion followed by a proper morphism is
+  proper, so \(Z \to \operatorname{Spec} \kappa(t)\) is proper — in
+  particular \(Z\) is quasi-compact and separated.
+
+  \emph{Reduction to the support and flat base change.}  Since
+  \(\mathrm{Ann}(\mathcal{M})\) annihilates \(\mathcal{M}\), the module
+  \(\mathcal{M}\) is \(i_*\) of a quasi-coherent module \(\mathcal{N}\) on
+  \(Z\).  Let \(i' : Z' \hookrightarrow (X_{T'})_{t'}\) be the base change of
+  \(i\) along \(\operatorname{Spec} \kappa(t') \to
+  \operatorname{Spec} \kappa(t)\), where
+  \(Z' = Z \times_{\operatorname{Spec} \kappa(t)}
+  \operatorname{Spec} \kappa(t')\) with projection \(v : Z' \to Z\);
+  pushforward along a closed immersion commutes with flat base change of
+  quasi-coherent modules, so \(u^*\mathcal{M} = u^* i_* \mathcal{N} =
+  i'_* (v^* \mathcal{N})\).  Since \(\Gamma \circ i_* = \Gamma\) and
+  \(\Gamma \circ i'_* = \Gamma\), both displayed section spaces are global
+  sections over \(Z\), respectively over its base change \(Z'\).  The
+  extension \(\kappa(t) \to \kappa(t')\) of fields is flat and \(Z\) is
+  quasi-compact and separated over \(\kappa(t)\), so flat base change for
+  the cohomology of quasi-coherent modules ([Stacks Project], Tag 02KH, in
+  degree \(0\)) gives a \(\kappa(t')\)-linear isomorphism
+  \[
+    \Gamma(Z', v^*\mathcal{N})
+    \;\cong\;
+    \Gamma(Z, \mathcal{N}) \otimes_{\kappa(t)} \kappa(t').
+  \]
+
+  \emph{Dimension count.}  For any \(\kappa(t)\)-vector space \(V\), a
+  \(\kappa(t)\)-basis of \(V\) induces a \(\kappa(t')\)-basis of
+  \(V \otimes_{\kappa(t)} \kappa(t')\), so
+  \(\dim_{\kappa(t')}(V \otimes_{\kappa(t)} \kappa(t')) =
+  \dim_{\kappa(t)} V\) — in the infinite-dimensional case both sides are
+  infinite.  Applying this to \(V = \Gamma(Z, \mathcal{N}) =
+  \Gamma\bigl((X_T)_t, \mathcal{M}\bigr)\) yields the claim.
 \end{proof}
 
 \begin{lemma}\leanok
@@ -3935,34 +4334,244 @@ is cartesian over \(T' \to T\).
   of \cref{def:hilbert_polynomial}.
 \end{lemma}
 \begin{proof}
-  Since \(X_{T'} = X_T \times_T T'\), the fibre of \(X_{T'} \to T'\) at
-  \(t'\) is the base change \((X_T)_t \times_{\operatorname{Spec} \kappa(t)}
-  \operatorname{Spec} \kappa(t')\) of the fibre at \(t\) along the residue
-  field extension \(\kappa(t) \to \kappa(t')\), and under this identification
-  \((g'^*\mathcal{F})_{t'} \otimes L_{t'}^{\otimes m}\) is the pullback of
-  \(\mathcal{F}_t \otimes L_t^{\otimes m}\) (both twisted modules are
-  quasi-coherent, \(\mathcal{F}\) being finitely presented and \(L\)
-  quasi-coherent).  Write \(i : Z_t \hookrightarrow (X_T)_t\) for the
-  schematic support of the twisted module and
-  \(i' : Z'_{t'} \hookrightarrow (X_{T'})_{t'}\) for its base change along
-  \(\kappa(t) \to \kappa(t')\); the twisted module is \(i_*\) of a
-  quasi-coherent module on \(Z_t\), its pullback is \(i'_*\) of the
-  base-changed module (pushforward along a closed immersion commutes with
-  flat base change for quasi-coherent modules), and \(\Gamma \circ i_* =
-  \Gamma\), so both sides are global sections over \(Z_t\), resp.\ its
-  base change — schemes that are proper, in particular quasi-compact and
-  separated, over the respective residue fields.  Global sections of a
-  quasi-coherent module on a qcqs scheme commute with flat base change of
-  the (affine) base; a field extension \(\kappa(t) \to \kappa(t')\) is
-  flat, so \(\Gamma\) of the base-changed module is
-  \(\Gamma\bigl((X_T)_t, \mathcal{F}_t \otimes L_t^{\otimes m}\bigr)
-  \otimes_{\kappa(t)} \kappa(t')\).  Finally
-  \(\dim_{\kappa(t')} (V \otimes_{\kappa(t)} \kappa(t')) =
-  \dim_{\kappa(t)} V\) for any \(\kappa(t)\)-vector space \(V\): a
-  \(\kappa(t)\)-basis of \(V\) is a \(\kappa(t')\)-basis of the
-  extension, in the infinite-dimensional case both dimensions being
-  infinite.
+  \uses{lem:pullback_moduleTensorPow, lem:gamma_fiber_baseChange_field}
+  \emph{Fibre pasting.}  Since \(X_{T'} = X_T \times_T T'\), the fibre of
+  \(X_{T'} \to T'\) at \(t'\) is the base change of the fibre of
+  \(X_T \to T\) at \(t\) along the residue field extension
+  \(\kappa(t) \to \kappa(t')\):
+  \[
+    (X_{T'})_{t'}
+    = X_{T'} \times_{T'} \operatorname{Spec} \kappa(t')
+    = X_T \times_T \operatorname{Spec} \kappa(t')
+    = (X_T)_t \times_{\operatorname{Spec} \kappa(t)}
+      \operatorname{Spec} \kappa(t'),
+  \]
+  by pasting the cartesian square \(X_{T'} = X_T \times_T T'\) with the
+  squares defining the two fibres, using the factorisation
+  \(\operatorname{Spec}\kappa(t') \to \operatorname{Spec}\kappa(t) \to T\)
+  of \(\operatorname{Spec}\kappa(t') \to T' \to T\).  Write
+  \(u : (X_{T'})_{t'} \to (X_T)_t\) for the top morphism of the pasted
+  cartesian square.
+
+  \emph{Matching the twisted modules.}  Restriction to the fibre and
+  pullback along \(g'\) (resp.\ along the projections to \(X\)) are
+  pullbacks along two factorisations of one and the same composite
+  morphism, so \((g'^*\mathcal{F})_{t'} = u^* (\mathcal{F}_t)\) and
+  \(L_{t'} = u^* (L_t)\).  All modules in sight are quasi-coherent
+  (\(\mathcal{F}\) is finitely presented, \(L\) is quasi-coherent, and
+  quasi-coherence is preserved by module pullback), so by
+  \cref{lem:pullback_moduleTensorPow} applied to \(u\),
+  \[
+    (g'^*\mathcal{F})_{t'} \otimes L_{t'}^{\otimes m}
+    \;\cong\;
+    u^*(\mathcal{F}_t) \otimes \bigl(u^* (L_t)\bigr)^{\otimes m}
+    \;\cong\;
+    u^*\bigl(\mathcal{F}_t \otimes L_t^{\otimes m}\bigr).
+  \]
+  An isomorphism of sheaves of modules induces a \(\kappa(t')\)-linear
+  isomorphism on global sections (the \(\kappa(t')\)-action on either side
+  is restriction of the \(\Gamma((X_{T'})_{t'}, \mathcal{O})\)-action along
+  the structural map \(\kappa(t') \to \Gamma((X_{T'})_{t'}, \mathcal{O})\)),
+  so the left-hand side of the claim equals
+  \(\dim_{\kappa(t')} \Gamma\bigl((X_{T'})_{t'},
+  u^*(\mathcal{F}_t \otimes L_t^{\otimes m})\bigr)\).
+
+  \emph{Base change of sections.}  By
+  \cref{lem:gamma_fiber_baseChange_field},
+  \[
+    \dim_{\kappa(t')} \Gamma\bigl((X_{T'})_{t'},\,
+      u^*(\mathcal{F}_t \otimes L_t^{\otimes m})\bigr)
+    =
+    \dim_{\kappa(t)} \Gamma\bigl((X_T)_t,\,
+      \mathcal{F}_t \otimes L_t^{\otimes m}\bigr),
+  \]
+  which is the claim.
 \end{proof}
+
+\section{The relative-divisor functor}
+\label{sec:div_functor}
+
+Grothendieck constructed the Picard scheme by taking a suitable family of
+effective divisors and forming the quotient modulo linear equivalence.  This
+section defines the parameter functor of that family: the
+relative-effective-divisor functor \(\Div_{X/S}\), encoded inside the Hilbert
+functor \(\Hilb_{X/S} = \Quot_{\mathcal O_X/X/S}\) (before the
+Hilbert-polynomial decomposition) as the quotients of
+\(\mathcal O_{X_T}\) whose kernel ideal is invertible.
+
+\begin{definition}\leanok
+[Family of relative effective divisors]
+  \label{def:div_family}
+  \lean{AlgebraicGeometry.Scheme.DivFamily}
+  \uses{def:has_proper_support, def:coherent_sheaf_flat, def:IsLocallyTrivial}
+  \source{kleiman-picard}
+  \textit{Source: [Kleiman], \S 3, Defs.~df:red and df:div (FGA Explained
+  Ch.~9).}
+  Let \(\pi : X \to S\) be a morphism of schemes and \(T \to S\) an
+  \(S\)-scheme; write \(X_T := X \times_S T\).  A \emph{family of relative
+  effective divisors on \(X_T/T\)} is a pair \((\mathcal F, q)\) where
+  \begin{enumerate}
+    \item \(\mathcal F\) is a finitely presented sheaf of
+      \(\mathcal O_{X_T}\)-modules, flat over \(T\)
+      (\cref{def:coherent_sheaf_flat}) and with schematic support proper
+      over \(T\) (\cref{def:has_proper_support});
+    \item \(q : \mathcal O_{X_T} \twoheadrightarrow \mathcal F\) is a
+      surjective \(\mathcal O_{X_T}\)-linear homomorphism;
+    \item the kernel ideal \(\mathcal I := \ker q\) is invertible, i.e.\
+      locally trivial of rank one (\cref{def:IsLocallyTrivial}).
+  \end{enumerate}
+  Two families \((\mathcal F, q)\) and \((\mathcal F', q')\) are
+  \emph{equivalent} iff \(\ker q = \ker q'\), i.e.\ iff they cut out the same
+  closed subscheme.
+
+  Such a pair is precisely the structure-sheaf quotient
+  \(q : \mathcal O_{X_T} \to \mathcal O_D\) of a relative effective divisor
+  \(D \subseteq X_T\) in the sense of [Kleiman] df:red --- a closed
+  subscheme, flat over \(T\), whose ideal is invertible --- subject to two
+  conditions that are automatic in the regime of interest: finite
+  presentation of \(\mathcal O_D\) always holds (\(\mathcal O_D\) is the
+  cokernel of \(\mathcal I \hookrightarrow \mathcal O_{X_T}\) with
+  \(\mathcal I\) locally free of rank one), and properness of the support
+  \(D\) over \(T\) holds whenever \(\pi\) is proper (a closed subscheme of
+  the \(T\)-proper \(X_T\) is proper over \(T\)).
+\end{definition}
+
+\begin{lemma}\leanok
+[Invertibility is invariant under isomorphism]
+  \label{lem:locally_trivial_of_iso}
+  \lean{AlgebraicGeometry.Scheme.LineBundle.IsLocallyTrivial.of_iso}
+  \uses{def:IsLocallyTrivial}
+  Let \(M \cong N\) be isomorphic sheaves of \(\mathcal O_X\)-modules on a
+  scheme \(X\).  If \(M\) is locally trivial of rank one
+  (\cref{def:IsLocallyTrivial}), then so is \(N\).
+\end{lemma}
+\begin{proof}\leanok
+  Fix \(x \in X\) and choose an affine open \(U \ni x\) with an isomorphism
+  \(M|_U \cong \mathcal O_U\).  Restriction along the open immersion
+  \(U \subseteq X\) is functorial, so the given isomorphism \(M \cong N\)
+  restricts to \(N|_U \cong M|_U \cong \mathcal O_U\).
+\end{proof}
+
+\begin{lemma}\leanok
+[Base change of the ideal of a relative effective divisor]
+  \label{lem:relative_divisor_base_change}
+  \lean{AlgebraicGeometry.Scheme.Modules.pullback_kernel_isLocallyTrivial}
+  \uses{def:coherent_sheaf_flat, def:IsLocallyTrivial}
+  \source{kleiman-picard}
+  \textit{Source: [Kleiman], \S 3, the functoriality argument following
+  Def.~df:div.}
+  Let
+  \[
+    \begin{array}{ccc}
+      X' & \xrightarrow{\ g'\ } & X \\
+      \downarrow f' & & \downarrow f \\
+      S' & \xrightarrow{\ g\ } & S
+    \end{array}
+  \]
+  be a cartesian square of schemes, \(q : E \twoheadrightarrow F\) an
+  epimorphism of \(\mathcal O_X\)-modules with \(F\) finitely presented and
+  flat over \(S\) (\cref{def:coherent_sheaf_flat}), and suppose the kernel
+  \(\mathcal K := \ker q\) is locally trivial of rank one
+  (\cref{def:IsLocallyTrivial}).  Then \(\ker (g'^* q)\) is locally trivial
+  of rank one; in fact the natural map \(g'^* \mathcal K \to \ker(g'^* q)\)
+  is an isomorphism.
+\end{lemma}
+\begin{proof}
+  \uses{lem:IsLocallyTrivial_pullback, lem:locally_trivial_of_iso}
+  All three modules in the short exact sequence
+  \(0 \to \mathcal K \to E \to F \to 0\) (exact because \(q\) is an
+  epimorphism with kernel \(\mathcal K\)) are quasi-coherent: \(\mathcal K\)
+  is locally isomorphic to the structure sheaf, \(F\) is finitely presented,
+  and \(E\) is an extension of the quasi-coherent \(F\) by the
+  quasi-coherent \(\mathcal K\) --- quasi-coherent modules form a weak Serre
+  subcategory of all \(\mathcal O_X\)-modules, in particular one closed
+  under extensions (Stacks 01LA).
+
+  \emph{Charts.}  The claim is local on \(X'\).  Given \(x' \in X'\), choose
+  an affine open \(U \subseteq S\) containing the common image
+  \(f(g'(x')) = g(f'(x'))\), a trivialising chart of \(\mathcal K\) around
+  \(g'(x')\) and inside it an affine open \(V \subseteq f^{-1}(U)\) around
+  \(g'(x')\) (a basic open of the chart; \(\mathcal K|_V \cong \mathcal
+  O_V\) persists under shrinking), and an affine open
+  \(U_t \subseteq g^{-1}(U)\) around \(f'(x')\).  As in
+  \cref{lem:coherent_flat_base_change}, the piece
+  \(W := g'^{-1}(V) \cap f'^{-1}(U_t)\) is an affine open neighbourhood of
+  \(x'\), namely the fibre product \(V \times_U U_t\) of the restricted
+  cartesian square; writing \(R := \Gamma(S, U)\),
+  \(R' := \Gamma(S', U_t)\) and \(A := \Gamma(X, V)\), it satisfies
+  \(\Gamma(X', W) = A \otimes_R R'\), and for every quasi-coherent module
+  \(M\) on \(X\),
+  \(\Gamma(g'^* M, W) = \Gamma(M, V) \otimes_A \Gamma(X', W)
+    = \Gamma(M, V) \otimes_R R'\)
+  (the last identification by associativity of the tensor product).
+
+  \emph{Exactness after base change.}  Sections over the affine \(V\) are
+  exact on quasi-coherent modules (higher cohomology of a quasi-coherent
+  module on an affine scheme vanishes), so
+  \(0 \to \Gamma(\mathcal K, V) \to \Gamma(E, V) \to \Gamma(F, V) \to 0\)
+  is an exact sequence of \(A\)-modules.  Tensoring over \(R\) with \(R'\)
+  and splicing the long exact Tor sequence gives the exact sequence
+  \[
+    \operatorname{Tor}_1^R\bigl(\Gamma(F, V), R'\bigr)
+      \to \Gamma(\mathcal K, V) \otimes_R R'
+      \to \Gamma(E, V) \otimes_R R'
+      \to \Gamma(F, V) \otimes_R R'
+      \to 0,
+  \]
+  and the Tor term vanishes because \(\Gamma(F, V)\) is \(R\)-flat
+  (\cref{def:coherent_sheaf_flat} at the affine pair \((U, V)\)).  By the
+  chart identification, this says that
+  \(0 \to \Gamma(g'^* \mathcal K, W) \to \Gamma(g'^* E, W)
+    \to \Gamma(g'^* F, W) \to 0\)
+  is exact.
+
+  \emph{Kernel identification.}  The pullback functor \(g'^*\) is right
+  exact, so \(g'^* \mathcal K \to g'^* E \to g'^* F \to 0\) is exact, and
+  the induced map \(g'^* \mathcal K \to \ker(g'^* q)\) is an epimorphism.
+  On each chart \(W\) both sides are quasi-coherent modules on an affine
+  scheme, and on sections over \(W\) the map is the isomorphism
+  \(\Gamma(g'^* \mathcal K, W) \cong
+    \ker\bigl(\Gamma(g'^* E, W) \to \Gamma(g'^* F, W)\bigr)
+    = \Gamma(\ker (g'^* q), W)\)
+  from the previous paragraph (the second identification is left exactness
+  of sections).  A morphism of quasi-coherent modules that is an
+  isomorphism on sections over each member of an affine open cover is an
+  isomorphism, so \(g'^* \mathcal K \cong \ker(g'^* q)\).
+
+  Finally \(g'^* \mathcal K\) is locally trivial of rank one by
+  \cref{lem:IsLocallyTrivial_pullback}, hence so is \(\ker(g'^* q)\) by
+  \cref{lem:locally_trivial_of_iso}.
+\end{proof}
+
+\begin{definition}\leanok
+[Relative-divisor functor]
+  \label{def:div_functor}
+  \lean{AlgebraicGeometry.Scheme.DivFunctor}
+  \uses{def:div_family, lem:relative_divisor_base_change,
+    lem:pullback_finite_presentation, lem:coherent_flat_base_change,
+    lem:proper_support_base_change}
+  \source{kleiman-picard}
+  \textit{Source: [Kleiman], \S 3, Def.~df:div (FGA Explained Ch.~9).}
+  Let \(\pi : X \to S\) be a morphism of schemes.  The
+  \emph{relative-divisor functor}
+  \[
+    \Div_{X/S} : (\mathrm{Sch}/S)^{op} \longrightarrow \mathbf{Set}
+  \]
+  sends an \(S\)-scheme \(T \to S\) to the set of equivalence classes of
+  families of relative effective divisors on \(X_T/T\)
+  (\cref{def:div_family}) --- equivalently, the set of relative effective
+  divisors on \(X_T/T\) --- and an \(S\)-morphism \(T' \to T\) to the
+  pullback of families along the induced morphism
+  \(g' : X_{T'} \to X_T\).  The action is well defined: pullback of modules
+  preserves surjectivity (it is right exact), finite presentation
+  (\cref{lem:pullback_finite_presentation}), flatness over the base
+  (\cref{lem:coherent_flat_base_change}) and proper support
+  (\cref{lem:proper_support_base_change}), and it preserves the
+  invertibility of the kernel ideal because the pulled-back kernel is the
+  kernel of the pulled-back quotient
+  (\cref{lem:relative_divisor_base_change}).  Functoriality holds because
+  the pullback of modules is pseudofunctorial in the scheme morphism.
+\end{definition}
 
 \section{The Grassmannian scheme}
 \label{sec:grassmannian_scheme}
@@ -4863,12 +5472,14 @@ statement as a named theorem so the Lean encoding can cite it directly.
 
 The Lean encoding of \cref{thm:flat_base_change_cohomology} (and the
 Quot construction's iso between pushforward and tensor-pullback for the
-universal section pattern) relies on four project-side declarations
-introduced in \texttt{AlgebraicJacobian/Picard/QuotScheme.lean}. These
-are typed-sorry today: each carries a substantive Lean type that
-encodes the intended mathematical statement, with the body deferred to
-later iters (see \cref{sec:quot_lean_encoding} for the
-phase-by-phase plan).
+universal section pattern) relies on the project-side declarations
+introduced in \texttt{AlgebraicJacobian/Picard/QuotScheme.lean} below.
+The whole chain is proved except for one leaf: the \(H^0\)
+flat-base-change heart over a compatible affine pair
+(\cref{thm:quot_pullback_baseMap_sectionEquiv_qc}, Stacks tag 02KE),
+from which every isomorphism statement below follows by the affine-pair
+workhorse \cref{thm:quot_canonical_basechange_app_app_isIso_of_le_preimage}
+and basis locality.
 
 \begin{definition}\leanok
 [Canonical base-change map on sheaves of modules]
@@ -4888,83 +5499,378 @@ phase-by-phase plan).
 \end{definition}
 
 \begin{theorem}\leanok
-[Stalkwise base-change isomorphism on affines]
+[Section-wise base-change isomorphism]
   \label{thm:quot_canonical_basechange_app_app_isIso}
   \lean{AlgebraicGeometry.canonicalBaseChangeMap_app_app_isIso}
-  \uses{def:quot_canonical_basechange_map, thm:flat_base_change_cohomology, thm:quot_canonical_basechange_app_app_isIso_of_affineCover, thm:quot_canonical_basechange_app_app_isIso_of_isAffineOpen}
-  For every affine open \(V \subseteq S'\) and every affine open
-  \(U \subseteq X\) lying over \(V\), the local component
-  \((\text{canonicalBaseChangeMap}\ \square).\text{app}\ \mathcal{F}.\text{app}\ U\)
-  of \cref{def:quot_canonical_basechange_map} is an isomorphism. Proof
-  reduces (Stacks 02KH(2)) to the affine-base case: \(H^0\) commutes with
-  flat extension of scalars on a quasi-compact quasi-separated affine
-  morphism.
+  \uses{def:quot_canonical_basechange_map}
+  Let \(\square\) be a cartesian square as in
+  \cref{def:quot_canonical_basechange_map} with \(f\) quasi-compact and
+  quasi-separated, \(g\) flat, and \(\mathcal F\) quasi-coherent. For every
+  open \(U \subseteq S'\), the section over \(U\) of the canonical
+  base-change map
+  \(g^* f_* \mathcal F \to f'_* g'^* \mathcal F\)
+  is an isomorphism (Stacks 02KH(1) at \(i = 0\)).
 \end{theorem}
+\begin{proof}\leanok
+  \uses{thm:quot_canonical_basechange_app_app_isIso_of_affineCover,
+    thm:quot_canonical_basechange_app_app_isIso_of_isAffineOpen}
+  Combine \cref{thm:quot_canonical_basechange_app_app_isIso_of_isAffineOpen}
+  (the section map is an isomorphism over every affine open of \(S'\)) with
+  the basis-locality reduction
+  \cref{thm:quot_canonical_basechange_app_app_isIso_of_affineCover}.
+\end{proof}
+
+\begin{lemma}
+[Base map at a reflexive inclusion]
+  \label{lem:quot_baseMap_le_refl}
+  \lean{AlgebraicGeometry.pullback_app_isoTensor_baseMap_le_refl}
+  \leanok
+  \uses{def:quot_pullback_app_isoTensor_baseMap,
+    def:quot_pullback_app_isoTensor_unitAtV}
+  For a morphism \(g : Y \to X\), a sheaf of \(\mathcal O_X\)-modules
+  \(\mathcal N\), an open \(V \subseteq X\), and the reflexive inclusion
+  \(g^{-1}(V) \subseteq g^{-1}(V)\), the section-level base map
+  (\cref{def:quot_pullback_app_isoTensor_baseMap}) coincides with the
+  \(V\)-component of the adjunction unit
+  (\cref{def:quot_pullback_app_isoTensor_unitAtV}):
+  \(\mathrm{baseMap}_g(\mathcal N, g^{-1}V \le g^{-1}V)
+    = \Gamma\bigl(V, \eta_{\mathcal N}\bigr)\).
+\end{lemma}
+\begin{proof}\leanok
+  The base map is by construction the unit component followed by the
+  presheaf restriction along the inclusion \(g^{-1}(V) \subseteq g^{-1}(V)\);
+  that inclusion is the identity of \(g^{-1}(V)\), and a presheaf sends the
+  identity to the identity.
+\end{proof}
+
+\begin{theorem}
+[Elementwise Beck--Chevalley compatibility of the canonical mate]
+  \label{thm:quot_canonical_basechange_app_baseMap_compat}
+  \lean{AlgebraicGeometry.canonicalBaseChangeMap_app_baseMap_compat}
+  \leanok
+  \uses{def:quot_canonical_basechange_map,
+    def:quot_pullback_app_isoTensor_baseMap}
+  Let \(\square = (g', f', f, g)\) be a cartesian square as in
+  \cref{def:quot_canonical_basechange_map} (no flatness, compactness or
+  affineness hypotheses), \(\mathcal F\) a sheaf of
+  \(\mathcal O_X\)-modules, and \(V \subseteq S\), \(U \subseteq S'\) opens
+  with \(U \subseteq g^{-1}(V)\), so that
+  \(f'^{-1}(U) \subseteq g'^{-1}(f^{-1}(V))\). For every section
+  \(t \in \Gamma(f_* \mathcal F, V) = \Gamma(\mathcal F, f^{-1}V)\), the
+  \(U\)-section of the canonical base-change map sends the base-map image
+  of \(t\) along \(g\) to the base-map image of \(t\) along \(g'\)
+  (\cref{def:quot_pullback_app_isoTensor_baseMap}):
+  \[
+    \Gamma\bigl(U, (\mathrm{canonicalBaseChangeMap}\ \square)_{\mathcal F}\bigr)
+      \bigl(\mathrm{baseMap}_{g}(f_*\mathcal F)(t)\bigr)
+    \;=\;
+    \mathrm{baseMap}_{g'}(\mathcal F)(t)
+    \quad\text{in } \Gamma\bigl(g'^*\mathcal F,\ f'^{-1}(U)\bigr)
+      = \Gamma\bigl(f'_* g'^*\mathcal F,\ U\bigr).
+  \]
+\end{theorem}
+\begin{proof}\leanok
+  \uses{lem:quot_baseMap_le_refl, lem:baseMap_pullbackComp_apply,
+    lem:baseMap_pullback_comp_apply, lem:baseMap_pullbackCongr_apply}
+  The component at \(\mathcal F\) of the canonical base-change map is, by
+  definition of the mate of the pseudofunctor \(2\)-isomorphism
+  \(f'^* g^* \cong (f' g)^* = (g' f)^* \cong g'^* f^*\) under the two
+  adjunctions \(f^* \dashv f_*\) and \(f'^* \dashv f'_*\), the composite
+  \[
+    g^* f_* \mathcal F
+    \xrightarrow{\ \eta_{f'}\ }
+    f'_* f'^* g^* f_* \mathcal F
+    \xrightarrow{\ f'_*(\alpha_{f_*\mathcal F})\ }
+    f'_* g'^* f^* f_* \mathcal F
+    \xrightarrow{\ f'_* g'^*(\varepsilon_f)\ }
+    f'_* g'^* \mathcal F .
+  \]
+  Evaluate on the section \(\mathrm{baseMap}_g(f_*\mathcal F)(t)\) over
+  \(U\) and follow the stages. (1) The \(\eta_{f'}\)-stage produces the
+  base-map image along \(f'\) at the reflexive inclusion
+  (\cref{lem:quot_baseMap_le_refl}); (2) the
+  \(f'^* g^* \cong (f' g)^*\) stage composes the two nested base maps into
+  \(\mathrm{baseMap}_{f' g}(f_*\mathcal F)(t)\)
+  (\cref{lem:baseMap_pullback_comp_apply}); (3) the transport along
+  \(f' g = g' f\) turns it into
+  \(\mathrm{baseMap}_{g' f}(f_*\mathcal F)(t)\)
+  (\cref{lem:baseMap_pullbackCongr_apply}); (4) the inverse of the
+  \((g' f)^* \cong g'^* f^*\) stage splits it back as
+  \(\mathrm{baseMap}_{g'}\bigl(f^* f_* \mathcal F\bigr)
+    \bigl(\mathrm{baseMap}_{f}(f_*\mathcal F)(t)\bigr)\)
+  (\cref{lem:baseMap_pullback_comp_apply} again, cancelled against its
+  inverse); (5) naturality of the base map in the sheaf argument
+  (\cref{lem:baseMap_pullbackComp_apply}) moves the counit stage inside:
+  the result is
+  \(\mathrm{baseMap}_{g'}(\mathcal F)\bigl(
+     \Gamma(f^{-1}V, \varepsilon_f)(\mathrm{baseMap}_{f}(f_*\mathcal F)(t))
+   \bigr)\);
+  and (6) by \cref{lem:quot_baseMap_le_refl} and the right-triangle
+  identity \(f_*(\varepsilon_f) \circ \eta_{f}|_{f_*} = \mathrm{id}\) of the
+  adjunction \(f^* \dashv f_*\), the inner section is \(t\) itself.
+\end{proof}
+
+\begin{lemma}
+[Affineness of the fibre-product cover pieces]
+  \label{lem:quot_isAffineOpen_preimage_inf}
+  \lean{AlgebraicGeometry.isAffineOpen_preimage_inf_preimage_of_isPullback}
+  \leanok
+  \uses{def:quot_canonical_basechange_map}
+  Let \(\square = (g', f', f, g)\) be a cartesian square as in
+  \cref{def:quot_canonical_basechange_map} and let \(V \subseteq S\),
+  \(U \subseteq S'\), \(V' \subseteq X\) be affine opens with
+  \(U \subseteq g^{-1}(V)\) and \(V' \subseteq f^{-1}(V)\). Then the open
+  \(g'^{-1}(V') \cap f'^{-1}(U) \subseteq X'\) is affine.
+\end{lemma}
+\begin{proof}\leanok
+  Restricting the cartesian square to the opens \(V, U, V'\) and
+  \(g'^{-1}(V') \cap f'^{-1}(U)\) yields a cartesian square of schemes
+  exhibiting \(g'^{-1}(V') \cap f'^{-1}(U)\) as the fibre product
+  \(V' \times_V U\). A fibre product of affine schemes over an affine
+  scheme is affine, and affineness transports along the comparison
+  isomorphism with the categorical pullback.
+\end{proof}
+
+\begin{lemma}
+[Section algebras of a flat morphism are flat]
+  \label{lem:quot_flat_gamma_appLE}
+  \lean{AlgebraicGeometry.flat_gamma_appLE_of_flat}
+  \leanok
+  Let \(g : S' \to S\) be a flat morphism of schemes and \(V \subseteq S\),
+  \(U \subseteq S'\) affine opens with \(U \subseteq g^{-1}(V)\). Then
+  \(\Gamma(S', U)\) is a flat \(\Gamma(S, V)\)-algebra via the induced ring
+  map.
+\end{lemma}
+\begin{proof}\leanok
+  Flatness of a morphism of schemes is affine-local: it holds if and only
+  if for every pair of affine opens \(U \subseteq g^{-1}(V)\) the induced
+  ring map \(\Gamma(S, V) \to \Gamma(S', U)\) is flat.
+\end{proof}
+
+\begin{theorem}
+[\(H^0\) flat base change over a compatible affine pair]
+  \label{thm:quot_pullback_baseMap_sectionEquiv_qc}
+  \lean{AlgebraicGeometry.pullback_baseMap_sectionLinearEquiv_of_quasiCompact}
+  \leanok
+  \uses{def:quot_canonical_basechange_map,
+    def:quot_pullback_app_isoTensor_baseMap, lem:quot_flat_gamma_appLE}
+  % SOURCE: [Stacks Project], tag 02KE (lemma-flat-base-change-H0) and
+  % tag 02KH at i = 0.
+  \textit{Source: [Stacks Project], tags 02KE and 02KH.}
+  Let \(\square = (g', f', f, g)\) be a cartesian square as in
+  \cref{def:quot_canonical_basechange_map} with \(f\) quasi-compact and
+  quasi-separated, \(g\) flat, and \(\mathcal F\) quasi-coherent on \(X\).
+  Let \(V \subseteq S\) and \(U \subseteq S'\) be affine opens with
+  \(U \subseteq g^{-1}(V)\), and write \(A := \Gamma(S, V)\),
+  \(B := \Gamma(S', U)\), a flat \(A\)-algebra. Then there is a
+  \(B\)-linear equivalence
+  \[
+    B \otimes_A \Gamma\bigl(\mathcal F,\ f^{-1}(V)\bigr)
+    \;\xrightarrow{\ \sim\ }\;
+    \Gamma\bigl(g'^* \mathcal F,\ f'^{-1}(U)\bigr)
+  \]
+  sending \(1 \otimes x\) to the canonical base-map image
+  \(\mathrm{baseMap}_{g'}(\mathcal F)(x)\)
+  (\cref{def:quot_pullback_app_isoTensor_baseMap}); this condition
+  determines the equivalence on the \(B\)-module generators, hence
+  uniquely.
+\end{theorem}
+\begin{proof}
+  \uses{def:quot_pullback_app_isoTensor, lem:quot_baseMap_le_refl,
+    lem:baseMap_pullbackComp_apply, lem:baseMap_pullback_comp_apply,
+    lem:quot_isAffineOpen_preimage_inf, lem:quot_flat_gamma_appLE}
+  Since \(V\) is affine and \(f\) is quasi-compact, \(Y := f^{-1}(V)\) is a
+  quasi-compact open of \(X\); choose finitely many affine opens
+  \(V_1, \dots, V_n \subseteq X\) with \(Y = \bigcup_i V_i\). Because \(f\)
+  is quasi-separated, each intersection \(V_i \cap V_j\) is quasi-compact,
+  hence a finite union of affine opens \(V_{ijk}\). The sheaf axiom for
+  \(\mathcal F\) presents \(\Gamma(\mathcal F, Y)\) as the equalizer of the
+  two restriction maps
+  \(\prod_i \Gamma(\mathcal F, V_i) \rightrightarrows
+    \prod_{i,j,k} \Gamma(\mathcal F, V_{ijk})\),
+  an equalizer of \(A\)-modules with finitely many factors. Since \(B\) is
+  flat over \(A\) and the products are finite, applying
+  \(B \otimes_A (-)\) preserves this equalizer:
+  \(B \otimes_A \Gamma(\mathcal F, Y)\) is the equalizer of
+  \(\prod_i B \otimes_A \Gamma(\mathcal F, V_i) \rightrightarrows
+    \prod_{i,j,k} B \otimes_A \Gamma(\mathcal F, V_{ijk})\).
+
+  On the primed side set \(W_i := g'^{-1}(V_i) \cap f'^{-1}(U)\). Then
+  \(W_i\), as a scheme, is the fibre product \(V_i \times_V U\) of affine
+  schemes over the affine \(V\), hence is an affine open of \(X'\)
+  (\cref{lem:quot_isAffineOpen_preimage_inf}); the
+  \(W_i\) cover \(f'^{-1}(U)\) because the \(V_i\) cover \(f^{-1}(V)\) and
+  \(f'^{-1}(U) \subseteq g'^{-1}(f^{-1}(V))\). The sheaf axiom for
+  \(g'^* \mathcal F\) presents \(\Gamma(g'^*\mathcal F, f'^{-1}(U))\) as the
+  equalizer of
+  \(\prod_i \Gamma(g'^*\mathcal F, W_i) \rightrightarrows
+    \prod_{i,j,k} \Gamma(g'^*\mathcal F, W_{ijk})\)
+  with \(W_{ijk} := g'^{-1}(V_{ijk}) \cap f'^{-1}(U)\) (affine opens
+  covering \(W_i \cap W_j\)).
+
+  Per index \(i\): since \(W_i = V_i \times_V U\) is an affine fibre
+  product, \(\Gamma(X', W_i) = \Gamma(X, V_i) \otimes_A B\) (global sections
+  of an affine fibre product form the pushout of the section rings), and the
+  affine section formula for the module pullback
+  (\cref{def:quot_pullback_app_isoTensor}, applied to \(g'\) and the affine
+  pair \(W_i \subseteq g'^{-1}(V_i)\)) gives
+  \[
+    \Gamma(g'^*\mathcal F, W_i)
+    \cong \Gamma(X', W_i) \otimes_{\Gamma(X, V_i)} \Gamma(\mathcal F, V_i)
+    \cong \bigl(\Gamma(X, V_i) \otimes_A B\bigr)
+      \otimes_{\Gamma(X, V_i)} \Gamma(\mathcal F, V_i)
+    \cong B \otimes_A \Gamma(\mathcal F, V_i),
+  \]
+  the last step by tensor cancellation; the composite sends
+  \(b \otimes x \mapsto b \cdot \mathrm{baseMap}_{g'}(x|_{V_i})\), so it
+  commutes with the restriction maps on both sides (the base map is
+  natural in the open pair; \cref{lem:baseMap_pullbackComp_apply},
+  \cref{lem:quot_baseMap_le_refl}). The same computation applies verbatim
+  to each affine \(W_{ijk}\) over \(V_{ijk}\), giving on the overlap
+  columns \emph{injective} comparisons
+  \(B \otimes_A \Gamma(\mathcal F, V_i \cap V_j) \to
+    \Gamma(g'^*\mathcal F, W_i \cap W_j)\):
+  indeed \(\Gamma(\mathcal F, V_i \cap V_j)\) embeds by sheaf separatedness
+  into \(\prod_k \Gamma(\mathcal F, V_{ijk})\), flatness of \(B\) over \(A\)
+  preserves the injection, and on each \(V_{ijk}\)-factor the comparison is
+  the isomorphism above.
+
+  The two equalizer presentations are therefore connected by a commuting
+  ladder whose product-column rungs are isomorphisms and whose
+  discriminating-column rungs are injections; hence the induced map of
+  equalizers
+  \(B \otimes_A \Gamma(\mathcal F, Y) \to
+    \Gamma(g'^*\mathcal F, f'^{-1}(U))\)
+  is an isomorphism (an equalizer of two diagrams compared by isomorphisms
+  on the product column and injections on the target column is preserved:
+  surjectivity of the equalizer comparison uses injectivity of the overlap
+  rung to check the equalizing condition upstairs). Finally, chasing the
+  generator \(1 \otimes x\) through the ladder: its image in the \(i\)-th
+  factor is \(\mathrm{baseMap}_{g'}(x|_{V_i})\), which is the
+  \(W_i\)-restriction of \(\mathrm{baseMap}_{g'}(x)\) by compatibility of
+  the base map with restrictions; since the equalizer includes into the
+  product, the equivalence sends \(1 \otimes x\) to
+  \(\mathrm{baseMap}_{g'}(\mathcal F)(x)\), as claimed.
+\end{proof}
+
+\begin{theorem}
+[Affine-pair workhorse for the base-change isomorphism]
+  \label{thm:quot_canonical_basechange_app_app_isIso_of_le_preimage}
+  \lean{AlgebraicGeometry.canonicalBaseChangeMap_app_app_isIso_of_le_preimage}
+  \leanok
+  \uses{def:quot_canonical_basechange_map}
+  Let \(\square\) be a cartesian square as in
+  \cref{def:quot_canonical_basechange_map} with \(f\) quasi-compact and
+  quasi-separated, \(g\) flat, and \(\mathcal F\) quasi-coherent. For every
+  pair of affine opens \(V \subseteq S\), \(U \subseteq S'\) with
+  \(U \subseteq g^{-1}(V)\), the section over \(U\) of the canonical
+  base-change map \(g^* f_* \mathcal F \to f'_* g'^* \mathcal F\) is an
+  isomorphism.
+\end{theorem}
+\begin{proof}\leanok
+  \uses{def:pullback_app_isoTensor_sigma, lem:pushforward_isQuasicoherent,
+    thm:quot_pullback_baseMap_sectionEquiv_qc,
+    thm:quot_canonical_basechange_app_baseMap_compat}
+  Write \(A := \Gamma(S, V)\), \(B := \Gamma(S', U)\). The pushforward
+  \(f_* \mathcal F\) is quasi-coherent
+  (\cref{lem:pushforward_isQuasicoherent}), so the affine section formula
+  (\cref{def:pullback_app_isoTensor_sigma}, applied to \(g\) and
+  \(f_*\mathcal F\)) provides a \(B\)-linear equivalence
+  \(e_L : B \otimes_A \Gamma(\mathcal F, f^{-1}V) \cong
+    \Gamma(g^* f_* \mathcal F, U)\) with
+  \(e_L(1 \otimes t) = \mathrm{baseMap}_{g}(f_*\mathcal F)(t)\), and the
+  \(H^0\) flat-base-change equivalence
+  (\cref{thm:quot_pullback_baseMap_sectionEquiv_qc}) provides
+  \(e_R : B \otimes_A \Gamma(\mathcal F, f^{-1}V) \cong
+    \Gamma(f'_* g'^* \mathcal F, U)\) with
+  \(e_R(1 \otimes t) = \mathrm{baseMap}_{g'}(\mathcal F)(t)\).
+  The section over \(U\) of the canonical base-change map is
+  \(B\)-linear, and by
+  \cref{thm:quot_canonical_basechange_app_baseMap_compat} it carries
+  \(e_L(1 \otimes t)\) to \(e_R(1 \otimes t)\) for every \(t\); since the
+  elements \(1 \otimes t\) generate
+  \(B \otimes_A \Gamma(\mathcal F, f^{-1}V)\) as a \(B\)-module and all
+  three maps are \(B\)-linear, it equals the composite
+  \(e_R \circ e_L^{-1}\), hence is bijective.
+\end{proof}
 
 \begin{theorem}
 
 \leanok
-[Affine-base case of the stalkwise base-change isomorphism]
+[Affine-base case of the section-wise base-change isomorphism]
   \label{thm:quot_canonical_basechange_app_app_isIso_of_isAffineBase}
   \lean{AlgebraicGeometry.canonicalBaseChangeMap_app_app_isIso_of_isAffineOpen_of_isAffineBase}
-  \uses{def:quot_pullback_app_isoTensor, lem:pushforward_isQuasicoherent, lem:pullback_tildeIso}
+  \uses{def:quot_canonical_basechange_map}
   Assume in addition that the base \(S\) is affine, that \(f\) is
   quasi-compact and quasi-separated, that \(g\) is flat, and that
   \(\mathcal{F}\) is quasi-coherent. Then for every affine open
   \(U \subseteq S'\) the section of the canonical base-change map
   (\cref{def:quot_canonical_basechange_map}) over \(U\) is an isomorphism.
-  Taking \(V = S\) (affine) as the compatible base open, the statement
-  reduces to the algebraic flat base-change identity: the global sections
-  \(\Gamma(S', U)\) are flat over \(\Gamma(S, S)\), and the
-  tensor-presentation of the pulled-back sections
-  (\cref{def:quot_pullback_app_isoTensor}, applied to the pushforward
-  \((\pi_f)_* \mathcal{F}\), which stays quasi-coherent by
-  \cref{lem:pushforward_isQuasicoherent}) matches the base-change map under
-  the Stacks~01HQ identification of \cref{lem:pullback_tildeIso}.
 \end{theorem}
-\begin{proof} Proved directly in Lean. \end{proof}
+\begin{proof}\leanok
+  \uses{thm:quot_canonical_basechange_app_app_isIso_of_le_preimage}
+  Take \(V := S\), affine by hypothesis; every affine open
+  \(U \subseteq S'\) satisfies \(U \subseteq g^{-1}(S)\), so the affine-pair
+  workhorse
+  \cref{thm:quot_canonical_basechange_app_app_isIso_of_le_preimage}
+  applies to the pair \((V, U)\).
+\end{proof}
 
 \begin{theorem}
 
 \leanok
-[Affine-open case of the stalkwise base-change isomorphism]
+[Affine-open case of the section-wise base-change isomorphism]
   \label{thm:quot_canonical_basechange_app_app_isIso_of_isAffineOpen}
   \lean{AlgebraicGeometry.canonicalBaseChangeMap_app_app_isIso_of_isAffineOpen}
-  \uses{thm:quot_canonical_basechange_app_app_isIso_of_isAffineBase, lem:quot_pushforward_pullback_section_eq}
+  \uses{def:quot_canonical_basechange_map}
   With \(f\) quasi-compact and quasi-separated, \(g\) flat, and
   \(\mathcal{F}\) quasi-coherent (but \(S\) now arbitrary), the section of
   the canonical base-change map (\cref{def:quot_canonical_basechange_map})
-  over an affine open \(U \subseteq S'\) is an isomorphism. The substantive
-  algebraic content is the affine-base specialization
-  (\cref{thm:quot_canonical_basechange_app_app_isIso_of_isAffineBase}); the
-  passage from a general base \(S\) to the affine case is a base-side
-  Mayer-Vietoris descent along a finite affine cover of \(S\), using the
-  definitional section identity
-  \cref{lem:quot_pushforward_pullback_section_eq} on each piece.
+  over an affine open \(U \subseteq S'\) is an isomorphism.
 \end{theorem}
-\begin{proof} Proved directly in Lean. \end{proof}
+\begin{proof}\leanok
+  \uses{thm:quot_canonical_basechange_app_app_isIso_of_le_preimage,
+    lem:modules_isIso_of_isBasis}
+  The affine opens \(W \subseteq S'\) that are \emph{compatible} with some
+  affine open \(V \subseteq S\) (that is, \(W \subseteq g^{-1}(V)\)) form a
+  basis of the topology of \(S'\): given \(x \in O\) with \(O\) open, pick
+  an affine open \(V \ni g(x)\) of \(S\), then an affine open
+  \(W \subseteq O \cap g^{-1}(V)\) containing \(x\). On every such pair the
+  section of the canonical base-change map is an isomorphism by the
+  affine-pair workhorse
+  (\cref{thm:quot_canonical_basechange_app_app_isIso_of_le_preimage}); by
+  basis locality for morphisms of sheaves of modules
+  (\cref{lem:modules_isIso_of_isBasis}) the map
+  \(g^* f_* \mathcal F \to f'_* g'^* \mathcal F\) is then an isomorphism of
+  sheaves, and in particular its section over the given affine \(U\) (in
+  fact over every open) is an isomorphism.
+\end{proof}
 
 \begin{theorem}
 
 \leanok
-[Open-cover descent for the stalkwise base-change isomorphism]
+[Basis-locality reduction for the section-wise base-change isomorphism]
   \label{thm:quot_canonical_basechange_app_app_isIso_of_affineCover}
   \lean{AlgebraicGeometry.canonicalBaseChangeMap_app_app_isIso_of_affineCover}
   \uses{def:quot_canonical_basechange_map}
   Suppose the section of the canonical base-change map
   (\cref{def:quot_canonical_basechange_map}) is an isomorphism over
   \emph{every} affine open of \(S'\). Then it is an isomorphism over every
-  open \(U \subseteq S'\). This is the standard Mayer-Vietoris descent for a
-  morphism of quasi-coherent sheaves on the base: cover \(U\) by affine
-  opens, on each of which the section is an isomorphism by hypothesis, and
-  glue along the intersections (quasi-compact because \(f\) is
-  quasi-separated). It is the descent half of the stalkwise statement
-  \cref{thm:quot_canonical_basechange_app_app_isIso}, whose Lean proof feeds
-  the affine-open case
+  open \(U \subseteq S'\). It is the reduction half of the section-wise
+  statement \cref{thm:quot_canonical_basechange_app_app_isIso}, whose proof
+  feeds the affine-open case
   \cref{thm:quot_canonical_basechange_app_app_isIso_of_isAffineOpen} as the
   affine-open hypothesis.
 \end{theorem}
-\begin{proof} Proved directly in Lean. \end{proof}
+\begin{proof}\leanok
+  \uses{lem:modules_isIso_of_isBasis}
+  The affine opens form a basis of the topology of \(S'\). A morphism of
+  sheaves of \(\mathcal O_{S'}\)-modules whose section map is an
+  isomorphism over every member of a basis is an isomorphism of sheaves
+  (\cref{lem:modules_isIso_of_isBasis}, via stalks: injectivity and
+  surjectivity of each stalk map are checked on germs represented on basic
+  opens); its section over every open \(U\) is then an isomorphism.
+\end{proof}
 
 \begin{lemma}
 
@@ -4995,14 +5901,20 @@ phase-by-phase plan).
 [Canonical base-change map is a sheaf isomorphism]
   \label{thm:quot_canonical_basechange_isIso}
   \lean{AlgebraicGeometry.canonicalBaseChangeMap_isIso}
-  \uses{thm:quot_canonical_basechange_app_app_isIso}
-  Globalising the stalk-wise statement
-  \cref{thm:quot_canonical_basechange_app_app_isIso}: the natural
-  transformation \(g'^* f^* \mathcal{F} \to f'^* g^* \mathcal{F}\) of
-  \cref{def:quot_canonical_basechange_map} is an isomorphism of
-  quasi-coherent sheaves of modules. This is the sheaf-level form of
-  \cref{thm:flat_base_change_cohomology}(1).
+  \uses{def:quot_canonical_basechange_map}
+  With \(f\) quasi-compact and quasi-separated, \(g\) flat, and
+  \(\mathcal{F}\) quasi-coherent, the canonical base-change map
+  \(g^* f_* \mathcal{F} \to f'_* g'^* \mathcal{F}\) of
+  \cref{def:quot_canonical_basechange_map} is an isomorphism of sheaves of
+  modules. This is the sheaf-level form of
+  \cref{thm:flat_base_change_cohomology}(1) at \(i = 0\).
 \end{theorem}
+\begin{proof}\leanok
+  \uses{thm:quot_canonical_basechange_app_app_isIso}
+  A morphism of sheaves of modules is an isomorphism if and only if its
+  section map over every open is an isomorphism; apply
+  \cref{thm:quot_canonical_basechange_app_app_isIso}.
+\end{proof}
 
 \begin{definition}\leanok
 [Tensor-presentation of the pullback-of-sections functor]
@@ -6047,8 +6959,9 @@ and its open subscheme \(\mathrm{Div}_{C/k}\) of relative effective divisors.
 \label{sec:quot_out_of_scope}
 
 This chapter packages \emph{only} the Quot-foundations layer: the Hilbert
-polynomial, the Quot functor, and the Grassmannian scheme with its
-representability. The following are explicitly out of scope here:
+polynomial, the Quot functor, the relative-divisor functor, and the
+Grassmannian scheme with its representability. The following are explicitly
+out of scope here:
 \begin{itemize}
   \item \textbf{Representability of the Quot scheme} -- the
     Grothendieck--Altman--Kleiman existence theorem and its proof skeleton
