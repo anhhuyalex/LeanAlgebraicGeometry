@@ -1,6 +1,6 @@
 \chapter{The Quot scheme}
 \label{chap:Picard_QuotScheme}
-% archon:covers AlgebraicJacobian/Picard/QuotScheme.lean AlgebraicJacobian/Picard/GradedHilbertSerre.lean AlgebraicJacobian/Picard/HilbertPolynomial.lean
+% archon:covers AlgebraicJacobian/Picard/QuotScheme.lean AlgebraicJacobian/Picard/GradedHilbertSerre.lean AlgebraicJacobian/Picard/HilbertPolynomial.lean AlgebraicJacobian/Picard/ProjectiveSpace.lean AlgebraicJacobian/Picard/SerreTwist.lean AlgebraicJacobian/Picard/ProjectiveMorphism.lean AlgebraicJacobian/Picard/SerreFiniteness.lean
 
 % STRATEGY NOTE. This chapter packages the Quot-foundations layer of the
 % Grothendieck--Altman--Kleiman Quot-scheme construction
@@ -330,8 +330,9 @@ and the extracted polynomial is unique by
 \begin{lemma}
 [Finite generation of the section graded module]
   \label{lem:sectionGradedModule_fg}
+  \leanok
   \lean{AlgebraicGeometry.sectionGradedModule_fg}
-  \uses{def:sectionGradedModule, def:sectionGradedRing}
+  \uses{def:sectionGradedModule, def:sectionGradedRing, def:projective_with}
   % SOURCE: [Nitsure], \S 1, sub-section "Stratification by Hilbert
   % Polynomials" (read from
   % references/nitsure-hilbert-quot-src/nitsure-hilbert-quot.tex, L453-L464).
@@ -346,24 +347,34 @@ and the extracted polynomial is unique by
   %  coherence and properness conditions."
   \textit{Source: [Nitsure], \S 1 (FGA Explained Ch.~5); Serre's theorem on
   ample line bundles, [Hartshorne], I.7 / II.5.}
-  Let \(X_s\) be proper over the field \(\kappa(s)\), let \(L_s\) be an ample line
-  bundle on \(X_s\), and let \(\mathcal{F}_s\) be a coherent sheaf on \(X_s\).
+  Let \(X_s\) be projective over the field \(\kappa(s)\) carrying the very
+  ample line bundle \(L_s\) (\cref{def:projective_with}: a closed immersion
+  \(X_s \hookrightarrow \mathbb{P}^N_{\kappa(s)}\) with
+  \(L_s \cong \mathcal{O}(1)|_{X_s}\)), and let \(\mathcal{F}_s\) be a
+  coherent sheaf on \(X_s\).
   Then the section graded ring \(R(X_s, L_s)\) (\cref{def:sectionGradedRing}) is a
   Noetherian graded ring, and the section graded module
   \(M(X_s, \mathcal{F}_s, L_s)\) (\cref{def:sectionGradedModule}) is a finitely
   generated graded \(R(X_s, L_s)\)-module. In particular each component
   \(\Gamma(X_s, \mathcal{F}_s \otimes L_s^{\otimes m})\) is a finite-dimensional
   \(\kappa(s)\)-vector space.
+  (For an ample \(L_s\) the same conclusions follow by passing to a very
+  ample Veronese power; the very ample form stated here is the one consumed
+  by the Quot-scheme construction.)
 \end{lemma}
 
 \begin{proof}
   \uses{def:sectionGradedRing, def:sectionGradedModule}
-  Since \(L_s\) is ample and \(X_s\) is proper over \(\kappa(s)\), a Veronese
-  power \(L_s^{\otimes e}\) is very ample and gives a closed immersion
-  \(X_s \hookrightarrow \mathbb{P}^N_{\kappa(s)}\). By Serre's theorem the section
+  The closed immersion \(i : X_s \hookrightarrow \mathbb{P}^N_{\kappa(s)}\)
+  with \(L_s \cong i^* \mathcal{O}(1)\) reduces the claims to projective
+  space: pushing forward along \(i\) identifies
+  \(\Gamma(X_s, \mathcal{F}_s \otimes L_s^{\otimes m})\) with
+  \(\Gamma(\mathbb{P}^N, (i_* \mathcal{F}_s)(m))\), and \(i_* \mathcal{F}_s\)
+  is coherent. By Serre's theorem the section
   graded ring \(R(X_s, L_s)\) is a finitely generated graded
-  \(\kappa(s)\)-algebra, so it is Noetherian. For the coherent sheaf
-  \(\mathcal{F}_s\), the same ampleness yields, again by Serre, that
+  \(\kappa(s)\)-algebra (a quotient of the polynomial ring in \(N+1\)
+  variables in large degrees), so it is Noetherian. For the coherent sheaf
+  \(\mathcal{F}_s\), Serre's theorem yields that
   \(\bigoplus_{m \ge 0} \Gamma(X_s, \mathcal{F}_s \otimes L_s^{\otimes m})\) is a
   finitely generated graded module over \(R(X_s, L_s)\): the twists
   \(\mathcal{F}_s \otimes L_s^{\otimes m}\) are globally generated for
@@ -5029,6 +5040,299 @@ linear algebra), we package the construction here.
 %% Cohomology, pullback_app_isoTensor and their support lemmas). Kept alongside
 %% the subproject's graded/descent development above.
 %% ===========================================================================
+\section{Projective space, the Serre twist, and projective morphisms}
+\label{sec:projective_vocabulary}
+
+Representability of the Quot functor holds for a \emph{projective} structural
+morphism carrying a relatively very ample line bundle
+([Nitsure] \S 5); properness alone does not suffice.  This
+section builds the ambient vocabulary: relative projective space, the Serre
+twisting sheaf, and the projective-morphism predicate together with its
+stability properties.
+% ENCODING. Formalized in AlgebraicJacobian/Picard/ProjectiveSpace.lean,
+% SerreTwist.lean, ProjectiveMorphism.lean (T14; inbox I-0118 encoding (a)).
+% The Serre twist rests on the module descent engine Scheme.Modules.glue,
+% which is universe-monomorphic at Scheme.GlueData.{0}; the twist, the
+% predicate and its stability facts are therefore stated for Scheme.{0}.
+
+\begin{definition}
+[Relative projective space]
+  \label{def:projective_space}
+  \leanok
+  \lean{AlgebraicGeometry.ProjectiveSpace}
+  \source{nitsure-hilbert-quot}
+  Let \(S\) be a scheme and let \(n\) be an index set.  The \emph{relative
+  projective space} \(\mathbb{P}(n; S)\) is the fibre product
+  \[
+    \mathbb{P}(n; S) \;=\; S \times_{\operatorname{Spec} \mathbb{Z}}
+      \operatorname{Proj} \mathbb{Z}[X_i : i \in n],
+  \]
+  where the polynomial ring carries the total-degree grading.  Its
+  \emph{structural morphism} \(\mathbb{P}(n; S) \to S\) is the first
+  projection.  For \(n = \{0, \dots, d\}\) this is the usual projective
+  \(d\)-space \(\mathbb{P}^d_S\).
+\end{definition}
+
+\begin{lemma}
+[Degree-zero part of the homogeneous coordinate ring]
+  \label{lem:projective_space_gradeZero}
+  \leanok
+  \lean{AlgebraicGeometry.ProjectiveSpace.gradeZeroRingEquiv}
+  The degree-zero part of the total-degree grading on
+  \(\mathbb{Z}[X_i : i \in n]\) is the subring of constants: the structural
+  map \(\mathbb{Z} \to (\mathbb{Z}[X_i : i \in n])_0\) is a ring isomorphism.
+  Consequently \(\operatorname{Spec}\) of the degree-zero part is a terminal
+  scheme.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  A polynomial is homogeneous of degree \(0\) exactly when it is a constant,
+  so the degree-zero submodule is the image of \(\mathbb{Z}\) under the
+  (injective) constants map.
+\end{proof}
+
+\begin{lemma}
+[Properness of the integral model]
+  \label{lem:proj_toSpecZero_proper}
+  \mathlibok
+  \lean{AlgebraicGeometry.Proj.toSpecZero}
+  For a \(\mathbb{N}\)-graded ring \(A\) of finite type over its degree-zero
+  part \(A_0\), the structural morphism
+  \(\operatorname{Proj} A \to \operatorname{Spec} A_0\) is proper (separated,
+  universally closed, and of finite type).
+\end{lemma}
+
+\begin{lemma}
+[Properness of relative projective space]
+  \label{lem:projective_space_proper}
+  \leanok
+  \lean{AlgebraicGeometry.ProjectiveSpace.isProper_over}
+  \uses{def:projective_space, lem:projective_space_gradeZero,
+    lem:proj_toSpecZero_proper}
+  For a finite index set \(n\), the structural morphism
+  \(\mathbb{P}(n; S) \to S\) is proper (hence separated, universally closed,
+  quasi-compact, and locally of finite type).
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  \uses{lem:projective_space_gradeZero, lem:proj_toSpecZero_proper}
+  For finite \(n\), the polynomial ring \(\mathbb{Z}[X_i : i \in n]\) is of
+  finite type over its degree-zero part, which is \(\mathbb{Z}\) by
+  \Cref{lem:projective_space_gradeZero}; hence the integral model
+  \(\operatorname{Proj} \mathbb{Z}[X_i]\) is proper over
+  \(\operatorname{Spec} \mathbb{Z}\) by \Cref{lem:proj_toSpecZero_proper},
+  which is the terminal scheme.  Properness is stable under base change, and
+  the structural morphism of \(\mathbb{P}(n; S)\) is the base change of
+  \(\operatorname{Proj} \mathbb{Z}[X_i] \to \operatorname{Spec} \mathbb{Z}\)
+  along \(S \to \operatorname{Spec} \mathbb{Z}\).
+\end{proof}
+
+\begin{lemma}
+[Base change of relative projective space]
+  \label{lem:projective_space_base_change}
+  \leanok
+  \lean{AlgebraicGeometry.ProjectiveSpace.isPullback_map}
+  \uses{def:projective_space}
+  For every morphism \(g : S' \to S\) the canonical square
+  \[
+    \begin{array}{ccc}
+      \mathbb{P}(n; S') & \longrightarrow & \mathbb{P}(n; S) \\
+      \downarrow & & \downarrow \\
+      S' & \xrightarrow{\;g\;} & S
+    \end{array}
+  \]
+  is cartesian.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  Both \(\mathbb{P}(n; S')\) and \(\mathbb{P}(n; S) \times_S S'\) are fibre
+  products of \(S' \to \operatorname{Spec}\mathbb{Z} \leftarrow
+  \operatorname{Proj} \mathbb{Z}[X_i]\), by the pasting law for cartesian
+  squares applied to the defining square of \(\mathbb{P}(n; S)\) over the
+  terminal scheme.
+\end{proof}
+
+\begin{lemma}
+[The transition units of the Serre twist]
+  \label{lem:serre_twist_transition_unit}
+  \leanok
+  \lean{AlgebraicGeometry.ProjTwist.awayUnit}
+  In the degree-zero part of the localization
+  \(\mathbb{Z}[X_i : i \in n]_{X_i X_j}\), the fraction
+  \(X_i/X_j = X_i^2/(X_i X_j)\) is a unit, with inverse
+  \(X_j/X_i = X_j^2/(X_i X_j)\).
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  The product of the two fractions is
+  \(X_i^2 X_j^2 / (X_i X_j)^2 = 1\).
+\end{proof}
+
+\begin{lemma}
+[Cocycle property of the Serre-twist transitions]
+  \label{lem:serre_twist_cocycle}
+  \leanok
+  \lean{AlgebraicGeometry.ProjTwist.twistTransition_cocycle}
+  \uses{lem:serre_twist_transition_unit}
+  On \(\operatorname{Proj} \mathbb{Z}[X_i : i \in n]\), for each \(m \ge 0\)
+  the multiplication maps by \((X_i/X_j)^m\) on the trivial line bundles over
+  the basic opens \(D_+(X_i)\), transported to the pairwise scheme-theoretic
+  overlaps of the cover, satisfy the descent cocycle condition on triple
+  overlaps: over \(D_+(X_i) \cap D_+(X_j) \cap D_+(X_k)\),
+  \[
+    \left(\frac{X_j}{X_k}\right)^{m}
+    \left(\frac{X_i}{X_j}\right)^{m}
+    \;=\; \left(\frac{X_i}{X_k}\right)^{m},
+  \]
+  compatibly with the identifications of the restricted trivial bundles.
+\end{lemma}
+
+\begin{proof}
+  \uses{lem:serre_twist_transition_unit}
+  In the degree-zero part of the localization
+  \(\mathbb{Z}[X_i]_{X_i X_j X_k}\), the three fractions satisfy
+  \((X_i/X_j)(X_j/X_k) = X_i/X_k\) since
+  \(X_i^2 X_j^2 X_k^2 = (X_i X_j)(X_j X_k)(X_i X_k)\); raising to the
+  \(m\)-th power preserves the identity.  The multiplication maps by these
+  units on the trivial line bundles commute with restriction to smaller
+  opens, because multiplication by a section commutes with the restriction
+  maps of the structure sheaf; and the trivialization comparisons between
+  the restricted bundles compose transitively.  Hence the transported
+  transition isomorphisms compose as claimed.
+\end{proof}
+
+\begin{definition}
+[The Serre twisting sheaf on the integral model]
+  \label{def:serre_twist}
+  \leanok
+  \lean{AlgebraicGeometry.ProjTwist.serreTwist}
+  \uses{lem:serre_twist_transition_unit, lem:serre_twist_cocycle}
+  \source{nitsure-hilbert-quot}
+  % STATUS. The definition compiles; the sole unformalized ingredient of its
+  % cone is the proof of lem:serre_twist_cocycle
+  % (AlgebraicGeometry.ProjTwist.twistTransition_cocycle, a named `sorry` in
+  % SerreTwist.lean), so declarations mentioning the twist are not yet
+  % axiom-clean.  The glued object does not consume the cocycle proof
+  % mathematically — it enters only through the effective-descent
+  % (restriction) isomorphisms.
+  For \(m \ge 0\), the \emph{Serre twisting sheaf} \(\mathcal{O}(m)\) on
+  \(\operatorname{Proj} \mathbb{Z}[X_i : i \in n]\) is the sheaf of modules
+  glued from the trivial line bundles \(\mathcal{O}_{D_+(X_i)}\) on the
+  basic opens of the standard affine cover along the transition
+  isomorphisms ``multiplication by \((X_i/X_j)^m\)'' of
+  \Cref{lem:serre_twist_transition_unit}, which satisfy the descent cocycle
+  condition by \Cref{lem:serre_twist_cocycle}.
+\end{definition}
+
+\begin{definition}
+[The Serre twist on relative projective space]
+  \label{def:twisting_sheaf}
+  \leanok
+  \lean{AlgebraicGeometry.ProjectiveSpace.twistingSheaf}
+  \uses{def:projective_space, def:serre_twist}
+  The \emph{Serre twist} \(\mathcal{O}(m)\) on \(\mathbb{P}(n; S)\) is the
+  pullback of the twisting sheaf of \Cref{def:serre_twist} along the
+  projection \(\mathbb{P}(n; S) \to \operatorname{Proj} \mathbb{Z}[X_i]\).
+\end{definition}
+
+\begin{lemma}
+[Base change of the Serre twist]
+  \label{lem:twisting_sheaf_base_change}
+  \leanok
+  \lean{AlgebraicGeometry.ProjectiveSpace.twistingSheafBaseChange}
+  \uses{def:twisting_sheaf, lem:projective_space_base_change}
+  For \(g : S' \to S\), the pullback of \(\mathcal{O}(m)\) on
+  \(\mathbb{P}(n; S)\) along the base-change morphism
+  \(\mathbb{P}(n; S') \to \mathbb{P}(n; S)\) is canonically isomorphic to
+  \(\mathcal{O}(m)\) on \(\mathbb{P}(n; S')\).
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  Both sheaves are pullbacks of the twisting sheaf on the integral model,
+  along the two legs of the commuting triangle formed by the base-change
+  morphism and the two projections to
+  \(\operatorname{Proj} \mathbb{Z}[X_i]\).
+\end{proof}
+
+\begin{definition}
+[Projective morphism carrying a very ample line bundle]
+  \label{def:projective_with}
+  \leanok
+  \lean{AlgebraicGeometry.Scheme.Hom.IsProjectiveWith}
+  \uses{def:projective_space, def:twisting_sheaf}
+  \source{nitsure-hilbert-quot}
+  A morphism of schemes \(\pi : X \to S\) is \emph{projective carrying the
+  line bundle \(L\)} if there are \(d \ge 0\) and a closed immersion
+  \(i : X \hookrightarrow \mathbb{P}(\{0,\dots,d\}; S)\) over \(S\) with
+  \(L \cong i^* \mathcal{O}(1)\).  In this situation \(L\) is relatively
+  very ample and \(\pi\) is projective in the sense of [Nitsure] \S 5.
+\end{definition}
+
+\begin{lemma}
+[Projective morphisms are proper]
+  \label{lem:projective_with_proper}
+  \leanok
+  \lean{AlgebraicGeometry.Scheme.Hom.IsProjectiveWith.isProper}
+  \uses{def:projective_with, lem:projective_space_proper}
+  A projective morphism carrying a line bundle is proper.
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  \uses{lem:projective_space_proper}
+  A closed immersion is proper, the structural morphism of projective space
+  is proper (\Cref{lem:projective_space_proper}), and properness is stable
+  under composition.
+\end{proof}
+
+\begin{lemma}
+[Composition with closed immersions]
+  \label{lem:projective_with_closed_immersion}
+  \leanok
+  \lean{AlgebraicGeometry.Scheme.Hom.IsProjectiveWith.comp_isClosedImmersion}
+  \uses{def:projective_with}
+  If \(\pi : X \to S\) is projective carrying \(L\) and \(j : Y \to X\) is a
+  closed immersion, then \(\pi \circ j\) is projective carrying \(j^* L\).
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  Compose the given closed immersion \(i : X \hookrightarrow
+  \mathbb{P}(\{0,\dots,d\}; S)\) with \(j\): a composite of closed
+  immersions is a closed immersion, the triangle over \(S\) still commutes,
+  and \(j^* L \cong j^* i^* \mathcal{O}(1) \cong (i \circ j)^*
+  \mathcal{O}(1)\).
+\end{proof}
+
+\begin{lemma}
+[Base change of projective morphisms]
+  \label{lem:projective_with_base_change}
+  \leanok
+  \lean{AlgebraicGeometry.Scheme.Hom.IsProjectiveWith.baseChange}
+  \uses{def:projective_with, lem:projective_space_base_change,
+    lem:twisting_sheaf_base_change}
+  If \(\pi : X \to S\) is projective carrying \(L\) and \(g : S' \to S\) is
+  any morphism, then the base change \(X \times_S S' \to S'\) is projective
+  carrying the pullback of \(L\) along \(X \times_S S' \to X\).
+\end{lemma}
+
+\begin{proof}
+  \leanok
+  \uses{lem:projective_space_base_change, lem:twisting_sheaf_base_change}
+  Base-change the closed immersion \(i\) along
+  \(\mathbb{P}(\{0,\dots,d\}; S') \to \mathbb{P}(\{0,\dots,d\}; S)\)
+  (\Cref{lem:projective_space_base_change}): closed immersions are stable
+  under base change, the induced comparison morphism
+  \(X \times_S S' \to \mathbb{P}(\{0,\dots,d\}; S')\) lies over \(S'\), and
+  the pulled-back bundle is identified with \(\mathcal{O}(1)\) of the
+  base-changed projective space by \Cref{lem:twisting_sheaf_base_change}.
+\end{proof}
+
 \section{Representability of the Quot scheme}
 \label{sec:quot_representable}
 

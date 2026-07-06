@@ -91,6 +91,12 @@ import AlgebraicJacobian.Picard.GrassmannianCells
 import AlgebraicJacobian.Picard.GlueDescent
 import AlgebraicJacobian.Picard.GrassmannianQuot
 import AlgebraicJacobian.Picard.QuotFunctorDef
+-- T14 ampleness / projective-morphism / Serre-finiteness foundation:
+-- relative projective space, Serre twist O(m), projective-with-L predicate.
+import AlgebraicJacobian.Picard.ProjectiveSpace
+import AlgebraicJacobian.Picard.SerreTwist
+import AlgebraicJacobian.Picard.ProjectiveMorphism
+import AlgebraicJacobian.Picard.SerreFiniteness
 import AlgebraicJacobian.Picard.ZariskiDescentRepresentability
 import AlgebraicJacobian.Picard.GrassmannianZariskiSheaf
 import AlgebraicJacobian.Picard.GrassmannianRepresentability
