@@ -158,6 +158,92 @@ lemma prod_compHom_over (sX : X ⟶ S) (sY : Y ⟶ S) (sZ : Z ⟶ S)
     (prod sX sY sZ a b ha hb).compHom (pullback.fst sY sZ ≫ sY) = sX.toRationalMap := by
   rw [← compHom_compHom, prod_compHom_fst, ha]
 
+/-- **Explicit pairing partial map on the common domain.** The maximal representatives
+`a.toPartialMap`, `b.toPartialMap` (defined on `a.domain`, `b.domain`) are both
+`S`-morphisms, hence pair via `pullback.lift` into a partial map
+`X ⤏ pullback sY sZ` defined on all of `a.domain ⊓ b.domain`. This is the honest
+representative witnessing that `prod` is defined wherever *both* factors are. -/
+noncomputable def pairPartialMap (sX : X ⟶ S) (sY : Y ⟶ S) (sZ : Z ⟶ S)
+    [IsReduced X] [Y.IsSeparated] [Z.IsSeparated] [S.IsSeparated]
+    (a : X ⤏ Y) (b : X ⤏ Z)
+    (ha : a.compHom sY = sX.toRationalMap) (hb : b.compHom sZ = sX.toRationalMap) :
+    X.PartialMap (pullback sY sZ) where
+  domain := a.toPartialMap.domain ⊓ b.toPartialMap.domain
+  dense_domain := by
+    rw [TopologicalSpace.Opens.coe_inf]
+    exact a.toPartialMap.dense_domain.inter_of_isOpen_left b.toPartialMap.dense_domain
+      a.toPartialMap.domain.isOpen
+  hom := by
+    letI : X.Over S := ⟨sX⟩
+    letI : Y.Over S := ⟨sY⟩
+    letI : Z.Over S := ⟨sZ⟩
+    haveI : a.IsOver S := RationalMap.isOver_iff.mpr ha
+    haveI : b.IsOver S := RationalMap.isOver_iff.mpr hb
+    have ea : a.toPartialMap.hom ≫ sY = a.toPartialMap.domain.ι ≫ sX :=
+      (PartialMap.isOver_iff (S := S)).mp inferInstance
+    have eb : b.toPartialMap.hom ≫ sZ = b.toPartialMap.domain.ι ≫ sX :=
+      (PartialMap.isOver_iff (S := S)).mp inferInstance
+    exact pullback.lift
+      (X.homOfLE inf_le_left ≫ a.toPartialMap.hom)
+      (X.homOfLE inf_le_right ≫ b.toPartialMap.hom)
+      (by
+        rw [Category.assoc, Category.assoc, ea, eb, ← Category.assoc, ← Category.assoc,
+          Scheme.homOfLE_ι, Scheme.homOfLE_ι])
+
+/-- The explicit pairing partial map represents `prod`. Both are `S`-rational maps out
+of the integral `X`, so it suffices to match their function-field morphisms
+`Spec K(X) ⟶ pullback sY sZ`: on each `pullback` factor the pairing's generic-point
+morphism restricts to `a.fromFunctionField`, resp. `b.fromFunctionField`. -/
+lemma pairPartialMap_toRationalMap (sX : X ⟶ S) (sY : Y ⟶ S) (sZ : Z ⟶ S)
+    [IsIntegral X] [LocallyOfFiniteType sY] [LocallyOfFiniteType sZ]
+    [IsReduced X] [Y.IsSeparated] [Z.IsSeparated] [S.IsSeparated]
+    (a : X ⤏ Y) (b : X ⤏ Z)
+    (ha : a.compHom sY = sX.toRationalMap) (hb : b.compHom sZ = sX.toRationalMap) :
+    (pairPartialMap sX sY sZ a b ha hb).toRationalMap = prod sX sY sZ a b ha hb := by
+  refine eq_of_fromFunctionField_eq _ _ ?_
+  rw [fromFunctionField_toRationalMap, prod_fromFunctionField]
+  apply pullback.hom_ext
+  · rw [pullback.lift_fst]
+    have hfst : (pairPartialMap sX sY sZ a b ha hb).fromFunctionField ≫ pullback.fst sY sZ
+        = a.fromFunctionField := by
+      rw [show a.fromFunctionField
+          = (a.toPartialMap.restrict _ (pairPartialMap sX sY sZ a b ha hb).dense_domain
+              inf_le_left).fromFunctionField from ?_]
+      · simp only [pairPartialMap, PartialMap.fromFunctionField, PartialMap.fromSpecStalkOfMem,
+          PartialMap.restrict_hom, Category.assoc]
+        congr 1
+        exact pullback.lift_fst _ _ _
+      · rw [PartialMap.fromFunctionField_restrict,
+          ← RationalMap.fromFunctionField_toRationalMap, a.toRationalMap_toPartialMap]
+    exact hfst
+  · rw [pullback.lift_snd]
+    have hsnd : (pairPartialMap sX sY sZ a b ha hb).fromFunctionField ≫ pullback.snd sY sZ
+        = b.fromFunctionField := by
+      rw [show b.fromFunctionField
+          = (b.toPartialMap.restrict _ (pairPartialMap sX sY sZ a b ha hb).dense_domain
+              inf_le_right).fromFunctionField from ?_]
+      · simp only [pairPartialMap, PartialMap.fromFunctionField, PartialMap.fromSpecStalkOfMem,
+          PartialMap.restrict_hom, Category.assoc]
+        congr 1
+        exact pullback.lift_snd _ _ _
+      · rw [PartialMap.fromFunctionField_restrict,
+          ← RationalMap.fromFunctionField_toRationalMap, b.toRationalMap_toPartialMap]
+    exact hsnd
+
+/-- **`prod` is defined wherever both factors are.** The pairing `a.prod b` of two
+`S`-rational maps out of an integral, reduced source is defined on the intersection
+`a.domain ⊓ b.domain` of the two domains of definition. This is the domain lower
+bound that Milne Lemma 3.3 needs for the pairing step (it feeds the reconstruction
+`f ∘ pr₁ = m ∘ ⟨Φ, f ∘ pr₂⟩`). -/
+theorem le_domain_prod (sX : X ⟶ S) (sY : Y ⟶ S) (sZ : Z ⟶ S)
+    [IsIntegral X] [LocallyOfFiniteType sY] [LocallyOfFiniteType sZ]
+    [IsReduced X] [Y.IsSeparated] [Z.IsSeparated] [S.IsSeparated]
+    (a : X ⤏ Y) (b : X ⤏ Z)
+    (ha : a.compHom sY = sX.toRationalMap) (hb : b.compHom sZ = sX.toRationalMap) :
+    a.domain ⊓ b.domain ≤ (prod sX sY sZ a b ha hb).domain := by
+  rw [← pairPartialMap_toRationalMap sX sY sZ a b ha hb]
+  exact (pairPartialMap sX sY sZ a b ha hb).le_domain_toRationalMap
+
 end RationalMap
 
 end Scheme

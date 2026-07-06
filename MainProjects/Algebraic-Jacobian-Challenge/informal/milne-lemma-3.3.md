@@ -57,10 +57,30 @@ Let `X = V` (smooth integral over `k̄`), `G` a smooth group variety, `f : X ⇢
   `le_domain_compHom` (compHom domain monotonicity — a Mathlib gap), `precompDiffPairing` (the
   explicit `U×U → G×G` morphism), `precompDiffPairing_toRationalMap` (it represents `prod`).
   Blueprint: `lem:difference_map_domain_lower_bound`, `lem:compHom_domain_monotone`.
-- **Sub-step 2 hard direction — `Φ` defined at `(x,x)` ⟹ `φ` defined at `x`.** OPEN. Milne's
-  group-law slice: pick `a ∈ Dom(f)` with `(x, a) ∈ Dom(Φ)` (openness of `Dom(Φ)` ∋ `(x,x)` +
-  density of `Dom(f)`), then `φ(·) = Φ(·, a)·φ(a)` is regular at `x`. Needs: the slice map
-  `Φ(·, a)`, right-translation by the fixed element `φ(a)`, and the rational-map identity.
+- **Sub-step 2 hard direction — `Φ` defined at `(x,x)` ⟹ `φ` defined at `x`.**
+  **ALGEBRAIC CONTENT DONE** (session 0047, `DifferenceMap.lean`, all axiom-clean):
+  - `GrpObj.lift_diff_lift_mul` — abstract group identity `(a·b⁻¹)·b = a` for `T`-points
+    (`lift ⟨lift a b ≫ diff, b⟩ ≫ μ = a`), via `GrpObj.comp_div` + `div_mul_cancel`.
+  - `grpObjMulLeft` + `pullback_lift_diff_lift_mul` — scheme transport: apply `(-).left`
+    (`Over.forget`, functorial; `Over.lift_left`/`fst_left` are `rfl`) to the abstract lemma,
+    lifting `A,B : Spec K ⟶ G` to over-`k̄` morphisms via `Over.homMk`.
+  - `reconstruct_precomp_fst` — `f ∘ pr₁ = mᴸ ∘ ⟨Φ, f ∘ pr₂⟩` as rational maps, matched on
+    function fields by `eq_of_fromFunctionField_eq` + `prod_fromFunctionField`.
+  - `le_domain_precomp_fst_of_difference` — Milne's `f(x)=Φ(x,u)·f(u)` domain content:
+    `Dom(Φ) ⊓ pr₂⁻¹(Dom f) ≤ Dom(f∘pr₁)`. Uses `reconstruct` + `le_domain_prod` (S2) +
+    `le_domain_precomp` (S1) + `le_domain_compHom`.
+  **TOPOLOGICAL REMAINDER OPEN** (the two genuine gaps for closing sub-step 2):
+  (a) **existence of `u`**: find `u` with `(x,u) ∈ Dom(Φ)` and `u ∈ Dom(f)` — openness of
+      `Dom(Φ) ∋ (x,x)` + irreducibility of the fibre `X_{κ(x)}` (this is WHY the theorem
+      carries `GeometricallyIrreducible`: `X ×_k κ(x)` is irreducible, so two nonempty opens
+      in it meet) + surjectivity of `pr₂|fibre` onto `Dom f`.
+  (b) **smooth-descent reflection** `Dom(f∘pr₁) ⊆ pr₁⁻¹(Dom f)` — the REVERSE of the easy
+      `le_domain_precomp` (S1), needs faithfully-flat descent of definedness along the smooth
+      surjective `pr₁` (a general theorem, likely a from-scratch fppf-descent build; NOT a
+      one-session item). Only then does `(x,u) ∈ Dom(f∘pr₁)` give `x ∈ Dom(f)`.
+  Supporting Mathlib-gap bricks landed this session, both reusable/general:
+  `RationalMap.le_domain_precomp` (`RationalMapPrecomp.lean`, S1) and `pairPartialMap` +
+  `le_domain_prod` (`RationalMapProd.lean`, S2, generalizes `precompDiffPairing`).
 - **Sub-step 3 — definedness ⟺ `Φ*(𝒪_{G,e}) ⊆ 𝒪_{X×X,(x,x)}`.** OPEN. Anchors the pullback at
   `e ∈ G` (Φ maps the diagonal to `e`, giving an affine chart around `e`). `functionFieldPullback`
   (`RationalMapFunctionField.lean`, K(G) → K(X×X) for dominant Φ) and `stalkPullback` exist, but

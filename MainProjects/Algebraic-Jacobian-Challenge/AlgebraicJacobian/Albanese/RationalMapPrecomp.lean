@@ -152,6 +152,25 @@ lemma RationalMap.precomp_hom_toRationalMap (g : X ⟶ Y) (p : W ⟶ X)
     morphismRestrict_ι p _
   rw [← Category.assoc, key, Category.assoc]
 
+/-- **Precomposition enlarges the domain by (at least) the preimage.** For a rational
+map `f : X ⤏ Y` and an open morphism `p : W ⟶ X`, every point of `W` mapping into
+the domain of definition `f.domain` lies in the domain of `f.precomp p`: pull any
+representative `F₀` of `f` defined at `p w` back along `p` to a representative
+`F₀.precomp p` of `f.precomp p` defined at `w`.
+
+This is the domain half of the reflection `Dom(f ∘ p) = p⁻¹(Dom f)` (the reverse
+inclusion is genuine descent and needs flatness of `p`); the easy inclusion here is
+what feeds Milne Lemma 3.3 Sub-step 2, where `p = prᵢ` and `f ∘ prᵢ` must be defined
+wherever `f` is defined on the `i`-th factor. -/
+theorem RationalMap.le_domain_precomp (f : X ⤏ Y) (p : W ⟶ X) (hp : IsOpenMap p.base) :
+    p ⁻¹ᵁ f.domain ≤ (f.precomp p hp).domain := by
+  intro w hw
+  have hw' : p.base w ∈ f.domain := hw
+  rw [RationalMap.mem_domain] at hw'
+  obtain ⟨F₀, hwF₀, hF₀⟩ := hw'
+  rw [RationalMap.mem_domain]
+  exact ⟨F₀.precomp p hp, hwF₀, by rw [RationalMap.precomp_toRationalMap, hF₀]⟩
+
 end Scheme
 
 end AlgebraicGeometry

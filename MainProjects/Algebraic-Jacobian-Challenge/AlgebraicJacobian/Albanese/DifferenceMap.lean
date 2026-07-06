@@ -81,6 +81,17 @@ the hom-set group structure `CategoryTheory.MonObj.Hom.group`. -/
 noncomputable def diff (G : C) [GrpObj G] : G ⊗ G ⟶ G :=
   fst G G / snd G G
 
+/-- **Reconstruction identity `(a · b⁻¹) · b = a` for `T`-points of a group object.**
+Pairing `a` and `b` into `G ⊗ G`, applying the difference `diff G = fst / snd`
+(which sends `(a, b) ↦ a · b⁻¹`), pairing the result again with `b`, and multiplying
+recovers `a`. This is the group-theoretic heart of Milne Lemma 3.3 Sub-step 2, the
+formula `f(x) = Φ(x, u) · f(u)`: with `a = f(x)`, `b = f(u)`, the difference map value
+`Φ = a · b⁻¹` recombines with `b` to give `a`. -/
+lemma lift_diff_lift_mul {T : C} (G : C) [GrpObj G] (a b : T ⟶ G) :
+    lift (lift a b ≫ diff G) b ≫ μ = a := by
+  rw [diff, GrpObj.comp_div, lift_fst, lift_snd]
+  exact div_mul_cancel a b
+
 end CategoryTheory.GrpObj
 
 namespace AlgebraicGeometry
@@ -102,6 +113,32 @@ morphism of `X ×_{k̄} X`; it is `Over.w` of `GrpObj.diff G`. -/
 lemma grpObjDiffLeft_comp_hom (G : Over (Spec (.of kbar))) [GrpObj G] :
     grpObjDiffLeft G ≫ G.hom = pullback.fst G.hom G.hom ≫ G.hom :=
   Over.w (GrpObj.diff G)
+
+/-- The underlying scheme morphism `μ.left : G ×_{k̄} G ⟶ G` of the group law of `G`,
+typed against `pullback G.hom G.hom` (definitionally `(G ⊗ G).left`), mirroring
+`grpObjDiffLeft`. -/
+noncomputable def grpObjMulLeft (G : Over (Spec (.of kbar))) [GrpObj G] :
+    pullback G.hom G.hom ⟶ G.left :=
+  (μ : G ⊗ G ⟶ G).left
+
+/-- **Scheme-level reconstruction identity.** For two `k̄`-morphisms `A, B : T ⟶ G`
+sharing the structure map `t` (`A ≫ G.hom = B ≫ G.hom = t`), pairing them, applying
+the group difference `A · B⁻¹`, re-pairing with `B` and multiplying recovers `A`:
+`m ∘ ⟨(A · B⁻¹), B⟩ = A`. This is `CategoryTheory.GrpObj.lift_diff_lift_mul`
+transported through `Over.forget` (`(-).left` is a functor sending
+`CartesianMonoidalCategory.lift`/`fst` to `pullback.lift`/`pullback.fst`); it is the
+scheme incarnation of Milne's `f(x) = Φ(x, u) · f(u)`. -/
+lemma pullback_lift_diff_lift_mul (G : Over (Spec (.of kbar))) [GrpObj G]
+    {T : Scheme.{u}} (t : T ⟶ Spec (.of kbar)) (A B : T ⟶ G.left)
+    (hA : A ≫ G.hom = t) (hB : B ≫ G.hom = t) :
+    pullback.lift (pullback.lift A B (hA.trans hB.symm) ≫ grpObjDiffLeft G) B
+        (by rw [Category.assoc, grpObjDiffLeft_comp_hom, ← Category.assoc,
+          pullback.lift_fst, hA, hB]) ≫ grpObjMulLeft G
+      = A := by
+  have key := congrArg (fun m : Over.mk t ⟶ G => m.left)
+    (GrpObj.lift_diff_lift_mul G (Over.homMk A hA) (Over.homMk B hB))
+  simp only [Over.comp_left, Over.lift_left, Over.homMk_left] at key
+  exact key
 
 /-- The first projection `X ×_{k̄} X ⟶ X` is an open map (it is smooth, being a
 base change of the smooth structure morphism, hence universally open). -/
@@ -286,6 +323,56 @@ theorem le_domain_differenceRationalMap
   intro p hp
   rw [RationalMap.mem_domain]
   exact ⟨precompDiffPairing f hover, hp, precompDiffPairing_toRationalMap f hover⟩
+
+/-- **Milne Lemma 3.3, Sub-step 2 reconstruction identity.** `f ∘ pr₁ = m ∘ ⟨Φ, f ∘ pr₂⟩`:
+the difference map `Φ = f(x)·f(y)⁻¹` recombined with the second factor `f ∘ pr₂` via the
+group law `m` recovers the first factor `f ∘ pr₁`. This is Milne's formula
+`f(x) = Φ(x, u) · f(u)`, made a rational-map identity on `X ×_{k̄} X` via the
+function-field group law (`pullback_lift_diff_lift_mul`). -/
+theorem reconstruct_precomp_fst
+    (f : X.left.RationalMap G.left)
+    (hover : f.compHom G.hom = X.hom.toRationalMap)
+    [IsIntegral (pullback X.hom X.hom)] :
+    (RationalMap.prod (pullback.fst X.hom X.hom ≫ X.hom) G.hom G.hom
+        (differenceRationalMap f hover)
+        (f.precomp (pullback.snd X.hom X.hom) (isOpenMap_pullback_snd_self X))
+        (differenceRationalMap_compHom_over f hover)
+        (by rw [RationalMap.precomp_compHom, hover, RationalMap.precomp_hom_toRationalMap,
+          pullback.condition])).compHom (grpObjMulLeft G)
+      = f.precomp (pullback.fst X.hom X.hom) (isOpenMap_pullback_fst_self X) := by
+  refine RationalMap.eq_of_fromFunctionField_eq _ _ ?_
+  rw [RationalMap.fromFunctionField_compHom, RationalMap.prod_fromFunctionField]
+  simp only [differenceRationalMap, RationalMap.fromFunctionField_compHom,
+    RationalMap.prod_fromFunctionField]
+  exact pullback_lift_diff_lift_mul G _
+    ((f.precomp (pullback.fst X.hom X.hom) (isOpenMap_pullback_fst_self X)).fromFunctionField)
+    ((f.precomp (pullback.snd X.hom X.hom) (isOpenMap_pullback_snd_self X)).fromFunctionField)
+    (RationalMap.fromFunctionField_comp_structure _ (pullback.fst X.hom X.hom ≫ X.hom) G.hom
+      (by rw [RationalMap.precomp_compHom, hover, RationalMap.precomp_hom_toRationalMap]))
+    (RationalMap.fromFunctionField_comp_structure _ (pullback.fst X.hom X.hom ≫ X.hom) G.hom
+      (by rw [RationalMap.precomp_compHom, hover, RationalMap.precomp_hom_toRationalMap,
+        pullback.condition]))
+
+/-- **Milne Lemma 3.3, Sub-step 2 (hard direction, algebraic content).** `f ∘ pr₁` is
+defined wherever `Φ` is defined *and* `f ∘ pr₂` is defined: at a point `p` with
+`Φ` defined and `pr₂ p ∈ Dom(f)`, the reconstruction `f(x) = Φ(x, u) · f(u)` exhibits
+`f ∘ pr₁` as regular. Concretely `Dom(Φ) ⊓ pr₂⁻¹(Dom f) ≤ Dom(f ∘ pr₁)`.
+
+This is the group-theoretic half of Milne's converse (`(x, x) ∈ Dom Φ ⟹ x ∈ Dom f`);
+it remains to combine it with the topological input — openness of `Dom(Φ)` and
+irreducibility of the fibre `X_{κ(x)}` (geometric irreducibility) to produce a suitable
+`u`, plus the smooth-descent reflection `Dom(f ∘ pr₁) ⊆ pr₁⁻¹(Dom f)`. -/
+theorem le_domain_precomp_fst_of_difference
+    (f : X.left.RationalMap G.left)
+    (hover : f.compHom G.hom = X.hom.toRationalMap)
+    [IsIntegral (pullback X.hom X.hom)] [IsReduced X.left] [G.left.IsSeparated] :
+    (differenceRationalMap f hover).domain ⊓ (pullback.snd X.hom X.hom ⁻¹ᵁ f.domain)
+      ≤ (f.precomp (pullback.fst X.hom X.hom) (isOpenMap_pullback_fst_self X)).domain := by
+  rw [← reconstruct_precomp_fst f hover]
+  refine le_trans ?_ (le_domain_compHom _ (grpObjMulLeft G))
+  refine le_trans (inf_le_inf_left _ (RationalMap.le_domain_precomp f
+    (pullback.snd X.hom X.hom) (isOpenMap_pullback_snd_self X))) ?_
+  exact RationalMap.le_domain_prod _ _ _ _ _ _ _
 
 end Scheme.RationalMap
 
