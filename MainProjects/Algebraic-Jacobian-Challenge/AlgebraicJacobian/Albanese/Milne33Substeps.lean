@@ -35,7 +35,7 @@ witness `u = pr₂ p` of Milne's argument.
 
 Main result: `AlgebraicGeometry.exists_snd_mem_of_fst_eq_of_mem`
 (and its difference-map corollary
-`AlgebraicGeometry.Scheme.RationalMap.exists_mem_domain_snd_mem_of_differenceRationalMap`).
+`AlgebraicGeometry.Scheme.RationalMap.exists_mem_domain_precomp_fst_of_differenceRationalMap`).
 
 ## Substep 4b, Krull-Hauptidealsatz transport (`[4b]`)
 
