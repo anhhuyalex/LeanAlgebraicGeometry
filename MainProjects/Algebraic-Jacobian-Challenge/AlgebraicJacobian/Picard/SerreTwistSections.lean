@@ -1188,6 +1188,79 @@ lemma formFamily_mem (m : ℕ) (F : homogeneousSubmodule n₀ (ULift.{0} ℤ) m)
   rw [appTop_f_chartSectionsIso, appTop_tf_chartSectionsIso, overlapUnit_pow_inv, ← map_mul]
   exact congrArg (overlapRingHom n₀ i j) (formChart_compat m i j F)
 
+/-! ## The degree-`m` forms as global sections (P0.2 (C), forward embedding) -/
+
+/-- `formChart` is additive in the form. -/
+lemma formChart_add (m : ℕ) (i : n₀) (F F' : homogeneousSubmodule n₀ (ULift.{0} ℤ) m) :
+    formChart m i (F + F') = formChart m i F + formChart m i F' := by
+  apply HomogeneousLocalization.val_injective
+  rw [HomogeneousLocalization.val_add, formChart, formChart, formChart, Away.val_mk,
+    Away.val_mk, Away.val_mk, Localization.add_mk_self, AddMemClass.coe_add]
+
+/-- `formChart` sends the zero form to zero. -/
+lemma formChart_zero (m : ℕ) (i : n₀) :
+    formChart m i (0 : homogeneousSubmodule n₀ (ULift.{0} ℤ) m) = 0 := by
+  apply HomogeneousLocalization.val_injective
+  rw [HomogeneousLocalization.val_zero, formChart, Away.val_mk]
+  exact Localization.mk_zero _
+
+set_option backward.isDefEq.respectTransparency false in
+/-- The chart family of a form, packaged as an additive homomorphism into the
+compatible-family submodule. -/
+def formFamilyAddHom (m : ℕ) :
+    homogeneousSubmodule n₀ (ULift.{0} ℤ) m →+
+      Scheme.Modules.glueGammaCompatible (glueData n₀)
+        (fun i => SheafOfModules.unit ((glueData n₀).U i).ringCatSheaf)
+        (fun i j => twistTransition n₀ m i j) where
+  toFun F := ⟨formFamily m F, formFamily_mem m F⟩
+  map_zero' := Subtype.ext (funext fun i => by
+    change (chartSectionsIso n₀ i).hom (formChart m i 0) = 0
+    rw [formChart_zero]; exact map_zero _)
+  map_add' F F' := Subtype.ext (funext fun i => by
+    change (chartSectionsIso n₀ i).hom (formChart m i (F + F'))
+      = (chartSectionsIso n₀ i).hom (formChart m i F)
+        + (chartSectionsIso n₀ i).hom (formChart m i F')
+    rw [formChart_add]; exact map_add _ _ _)
+
+/-- **The degree-`m` forms as global sections of `O(m)`** (forward embedding of
+P0.2 (C)): a degree-`m` homogeneous form gives a global section of the Serre twist,
+additively. -/
+def formSectionHom (m : ℕ) :
+    homogeneousSubmodule n₀ (ULift.{0} ℤ) m →+ Γ(serreTwist n₀ m, ⊤) :=
+  (serreTwistSectionsCompatible n₀ m).symm.toAddMonoidHom.comp (formFamilyAddHom m)
+
+/-! ## Coordinate global sections of `O(1)` (P0.3) -/
+
+/-- The coordinate global section `x_j ∈ Γ(serreTwistGlued n₀ 1, ⊤)` on the glued
+model: the unique glued section whose `i`-chart value is `Xⱼ/Xᵢ`. -/
+def coordSectionGlued (j : n₀) : Γ(serreTwistGlued n₀ 1, ⊤) :=
+  (serreTwistGluedSectionsEquiv n₀ 1).symm
+    ⟨formFamily 1 ⟨X j, X_mem_deg_one n₀ j⟩, formFamily_mem 1 ⟨X j, X_mem_deg_one n₀ j⟩⟩
+
+/-- **The coordinate global section** `x_j ∈ Γ(Proj ℤ[Xᵢ], O(1))`: the section given
+on each chart `D₊(Xᵢ)` by `Xⱼ/Xᵢ`, the image of the degree-one form `Xⱼ` under the
+compatible-family identification `serreTwistSectionsCompatible`. -/
+def coordSection (j : n₀) : Γ(serreTwist n₀ 1, ⊤) :=
+  (serreTwistSectionsCompatible n₀ 1).symm
+    ⟨formFamily 1 ⟨X j, X_mem_deg_one n₀ j⟩, formFamily_mem 1 ⟨X j, X_mem_deg_one n₀ j⟩⟩
+
+set_option backward.isDefEq.respectTransparency false in
+/-- **Restriction identity for the coordinate section.**  On the `i`-th chart the
+glued coordinate section `x_j` restricts to `Xⱼ/Xᵢ = chartSectionsIso i (Xⱼ/Xᵢ)`. -/
+lemma glueProj_coordSectionGlued (i j : n₀) :
+    (Scheme.Modules.glueProj (glueData n₀)
+        (fun i => SheafOfModules.unit ((glueData n₀).U i).ringCatSheaf)
+        (fun i j => twistTransition n₀ 1 i j)
+        (fun i => twistTransition_self n₀ 1 i)
+        (fun i j k => twistTransition_cocycle n₀ 1 i j k) i).app ⊤ (coordSectionGlued j)
+      = (chartSectionsIso n₀ i).hom (formChart 1 i ⟨X j, X_mem_deg_one n₀ j⟩) :=
+  Scheme.Modules.glueProj_app_glueSectionsEquiv_symm (glueData n₀)
+    (fun i => SheafOfModules.unit ((glueData n₀).U i).ringCatSheaf)
+    (fun i j => twistTransition n₀ 1 i j)
+    (fun i => twistTransition_self n₀ 1 i)
+    (fun i j k => twistTransition_cocycle n₀ 1 i j k)
+    ⟨formFamily 1 ⟨X j, X_mem_deg_one n₀ j⟩, formFamily_mem 1 ⟨X j, X_mem_deg_one n₀ j⟩⟩ i
+
 end Bridge
 
 end AlgebraicGeometry.ProjTwist
