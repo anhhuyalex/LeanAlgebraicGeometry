@@ -1027,4 +1027,167 @@ def serreTwistSectionsCompatible (m : ℕ) :
   (serreTwistSectionsToGlued n₀ m).trans
     (serreTwistGluedSectionsEquiv n₀ m).toAddEquiv
 
+/-! ## The away-fraction bridge (P0.2 (A))
+
+Precomposed with the chart identification `chartSectionsIso`, the two descent legs
+of the Serre twist are the `HomogeneousLocalization.awayMap`s into the common
+degree-zero ring `Away(XᵢXⱼ)`, followed by `overlapRingHom`.  This turns the
+abstract compatible-family condition `serreTwist_mem_glueGammaCompatible_iff` into a
+condition between degree-zero fractions. -/
+
+section Bridge
+
+open MvPolynomial HomogeneousLocalization
+
+variable {n₀}
+
+/-- `overlapRingHom` re-expressed through the overlap immersion at global sections
+(definitional unfolding, matching `overlapUnit_val_eq`). -/
+lemma overlapRingHom_apply (i j : n₀)
+    (a : Away (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i * X j)) :
+    overlapRingHom n₀ i j a
+      = Scheme.Hom.appTop (overlapHom n₀ i j)
+          ((Proj.basicOpen (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i * X j)).topIso.inv
+            (Proj.awayToSection (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i * X j) a)) :=
+  rfl
+
+/-- The chart identification unfolds to `awayToSection` transported by `topIso`. -/
+lemma chartSectionsIso_hom_apply (i : n₀)
+    (a : Away (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i)) :
+    (chartSectionsIso n₀ i).hom a
+      = (Proj.basicOpen (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i)).topIso.inv
+          (Proj.awayToSection (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i) a) :=
+  rfl
+
+/-- Element-level composite of the `⊤`-section maps of two composable morphisms. -/
+lemma appTop_comp_apply {X Y Z : Scheme.{0}} (f : X ⟶ Y) (g : Y ⟶ Z) (y : Γ(Z, ⊤)) :
+    Scheme.Hom.appTop f (Scheme.Hom.appTop g y) = Scheme.Hom.appTop (f ≫ g) y := by
+  rw [Scheme.Hom.comp_appTop]; rfl
+
+set_option backward.isDefEq.respectTransparency false in
+/-- The `a`-leg immersion `f_ij : V(i,j) ⟶ D₊(Xᵢ)` factors as the common overlap map
+`overlapHom` followed by the inclusion `D₊(XᵢXⱼ) ⊆ D₊(Xᵢ)`. -/
+lemma overlapHom_comp_homOfLE_left (i j : n₀)
+    (le : Proj.basicOpen (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i * X j)
+      ≤ Proj.basicOpen (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i)) :
+    overlapHom n₀ i j ≫ (Proj (homogeneousSubmodule n₀ (ULift.{0} ℤ))).homOfLE le
+      = (glueData n₀).f i j := by
+  rw [← cancel_mono (Proj.basicOpen (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i)).ι,
+    Category.assoc, Scheme.homOfLE_ι, overlapHom_ι]
+  rfl
+
+set_option backward.isDefEq.respectTransparency false in
+/-- The `b`-leg immersion `t_ij ≫ f_ji : V(i,j) ⟶ D₊(Xⱼ)` factors as `overlapHom`
+followed by the inclusion `D₊(XᵢXⱼ) ⊆ D₊(Xⱼ)`. -/
+lemma overlapHom_comp_homOfLE_right (i j : n₀)
+    (le : Proj.basicOpen (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i * X j)
+      ≤ Proj.basicOpen (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X j)) :
+    overlapHom n₀ i j ≫ (Proj (homogeneousSubmodule n₀ (ULift.{0} ℤ))).homOfLE le
+      = (glueData n₀).t i j ≫ (glueData n₀).f j i := by
+  rw [← cancel_mono (Proj.basicOpen (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X j)).ι,
+    Category.assoc, Scheme.homOfLE_ι, overlapHom_ι, Category.assoc]
+  exact (glue_cover_condition n₀ i j).symm
+
+set_option backward.isDefEq.respectTransparency false in
+/-- **(A) a-leg bridge.** The first descent leg on the `i`-chart section
+`chartSectionsIso i a` is `overlapRingHom` applied to the `awayMap` of `a` into
+`Away(XᵢXⱼ)` along the degree-one factor `Xⱼ`. -/
+lemma appTop_f_chartSectionsIso (i j : n₀)
+    (a : Away (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i)) :
+    Scheme.Hom.appTop ((glueData n₀).f i j) ((chartSectionsIso n₀ i).hom a)
+      = overlapRingHom n₀ i j
+          (awayMap (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X_mem_deg_one n₀ j)
+            (show (X i * X j : MvPolynomial n₀ (ULift.{0} ℤ)) = X i * X j from rfl) a) := by
+  have le : Proj.basicOpen (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i * X j)
+      ≤ Proj.basicOpen (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i) := by
+    rw [Proj.basicOpen_mul]; exact inf_le_left
+  rw [chartSectionsIso_hom_apply, overlapRingHom_apply,
+    ← section_restrict n₀ (X i) (X j) (X_mem_deg_one n₀ j) (X i * X j) rfl le a,
+    appTop_comp_apply]
+  exact congrArg (fun m => Scheme.Hom.appTop m
+      ((Proj.basicOpen (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i)).topIso.inv
+        (Proj.awayToSection (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i) a)))
+    (overlapHom_comp_homOfLE_left i j le).symm
+
+set_option backward.isDefEq.respectTransparency false in
+/-- **(A) b-leg bridge.** The second descent leg on the `j`-chart section
+`chartSectionsIso j a` is `overlapRingHom` applied to the `awayMap` of `a` into
+`Away(XᵢXⱼ)` along the degree-one factor `Xᵢ`. -/
+lemma appTop_tf_chartSectionsIso (i j : n₀)
+    (a : Away (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X j)) :
+    Scheme.Hom.appTop ((glueData n₀).t i j ≫ (glueData n₀).f j i) ((chartSectionsIso n₀ j).hom a)
+      = overlapRingHom n₀ i j
+          (awayMap (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X_mem_deg_one n₀ i)
+            (mul_comm (X i) (X j)) a) := by
+  have le : Proj.basicOpen (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i * X j)
+      ≤ Proj.basicOpen (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X j) := by
+    rw [mul_comm (X i) (X j), Proj.basicOpen_mul]; exact inf_le_left
+  rw [chartSectionsIso_hom_apply, overlapRingHom_apply,
+    ← section_restrict n₀ (X j) (X i) (X_mem_deg_one n₀ i) (X i * X j)
+      (mul_comm (X i) (X j)) le a,
+    appTop_comp_apply]
+  exact congrArg (fun m => Scheme.Hom.appTop m
+      ((Proj.basicOpen (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X j)).topIso.inv
+        (Proj.awayToSection (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X j) a)))
+    (overlapHom_comp_homOfLE_right i j le).symm
+
+/-! ## Graded separation, forward map (P0.2 (B)) -/
+
+/-- The `⊤`-section-inverse of the `m`-th power of the transition unit
+`overlapUnit i j = Xᵢ/Xⱼ` is `overlapRingHom` of `(Xⱼ/Xᵢ)^m`. -/
+lemma overlapUnit_pow_inv (m : ℕ) (i j : n₀) :
+    (overlapUnit n₀ i j ^ m).inv = overlapRingHom n₀ i j (awayFractionInv n₀ i j ^ m) := by
+  have hval : (overlapUnit n₀ i j).val = overlapRingHom n₀ i j (awayFraction n₀ i j) := by
+    rw [overlapUnit, Units.coe_map]; rfl
+  have key : (overlapUnit n₀ i j ^ m).val
+      * overlapRingHom n₀ i j (awayFractionInv n₀ i j ^ m) = 1 := by
+    rw [Units.val_pow_eq_pow_val, hval, ← map_pow, ← map_mul, ← mul_pow,
+      awayFraction_mul_inv, one_pow, map_one]
+  exact Units.inv_eq_of_mul_eq_one_right key
+
+/-- The chart fraction `F/Xᵢ^m ∈ Away(Xᵢ)` of a degree-`m` form `F`. -/
+def formChart (m : ℕ) (i : n₀) (F : homogeneousSubmodule n₀ (ULift.{0} ℤ) m) :
+    Away (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i) :=
+  Away.mk _ (X_mem_deg_one n₀ i) m F.val (by rw [smul_eq_mul, mul_one]; exact F.property)
+
+/-- **Fraction identity of the chart forms.**  In `Away(XᵢXⱼ)`, the two `awayMap`
+images of `F/Xᵢ^m` and `F/Xⱼ^m` differ by `(Xⱼ/Xᵢ)^m`: this is the concrete
+Serre-twist compatible-family condition satisfied by a single degree-`m` form. -/
+lemma formChart_compat (m : ℕ) (i j : n₀) (F : homogeneousSubmodule n₀ (ULift.{0} ℤ) m) :
+    awayMap (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X_mem_deg_one n₀ j)
+        (rfl : (X i * X j : MvPolynomial n₀ (ULift.{0} ℤ)) = X i * X j) (formChart m i F)
+      = awayMap (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X_mem_deg_one n₀ i)
+          (mul_comm (X i) (X j)) (formChart m j F)
+        * awayFractionInv n₀ i j ^ m := by
+  apply HomogeneousLocalization.val_injective
+  rw [formChart, formChart, awayMap_mk, awayMap_mk, awayFractionInv,
+    HomogeneousLocalization.val_mul, HomogeneousLocalization.val_pow,
+    Away.val_mk, Away.val_mk, Away.val_mk, Localization.mk_pow, Localization.mk_mul,
+    Localization.mk_eq_mk_iff, Localization.r_iff_exists]
+  refine ⟨1, ?_⟩
+  simp only [OneMemClass.coe_one, one_mul, Submonoid.coe_mul, SubmonoidClass.coe_pow]
+  ring
+
+/-- The compatible family of chart sections attached to a degree-`m` form `F`:
+`i ↦ chartSectionsIso i (F/Xᵢ^m)`. -/
+def formFamily (m : ℕ) (F : homogeneousSubmodule n₀ (ULift.{0} ℤ) m) :
+    ∀ i, Γ((Scheme.Modules.pushforward ((glueData n₀).ι i)).obj
+      (SheafOfModules.unit ((glueData n₀).U i).ringCatSheaf), ⊤) :=
+  fun i => (chartSectionsIso n₀ i).hom (formChart m i F)
+
+set_option backward.isDefEq.respectTransparency false in
+/-- **Forward direction of the graded separation (P0.2 (B)).**  The chart family of a
+degree-`m` form is a compatible family for the Serre-twist descent datum. -/
+lemma formFamily_mem (m : ℕ) (F : homogeneousSubmodule n₀ (ULift.{0} ℤ) m) :
+    formFamily m F ∈ Scheme.Modules.glueGammaCompatible (glueData n₀)
+      (fun i => SheafOfModules.unit ((glueData n₀).U i).ringCatSheaf)
+      (fun i j => twistTransition n₀ m i j) := by
+  rw [serreTwist_mem_glueGammaCompatible_iff]
+  intro i j
+  simp only [formFamily, id_eq]
+  rw [appTop_f_chartSectionsIso, appTop_tf_chartSectionsIso, overlapUnit_pow_inv, ← map_mul]
+  exact congrArg (overlapRingHom n₀ i j) (formChart_compat m i j F)
+
+end Bridge
+
 end AlgebraicGeometry.ProjTwist
