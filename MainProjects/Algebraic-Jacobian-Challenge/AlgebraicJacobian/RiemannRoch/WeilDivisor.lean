@@ -224,10 +224,10 @@ Iter-201 Lane WD-A4a Sub-build 2 (HARD BAR + extras). Naturality of
 isomorphism `e : R ≃+* S` between commutative rings, lifted to a compatible
 fraction-field isomorphism `e_K : Frac R ≃+* Frac S`.
 
-This is the algebraic substrate consumed by iter-202+ Sub-build 3
-(scheme-level `Scheme.RationalMap.order` naturality across the iter-200
-`Scheme.PrimeDivisor.stalkIso` open-immersion bridge), which in turn closes
-the non-zero branch of `rationalMap_order_finite_support` (the L535 sorry).
+This is the algebraic substrate for the scheme-level
+`Scheme.RationalMap.order` naturality across the
+`Scheme.PrimeDivisor.stalkIso` open-immersion bridge (used by the
+function-field-iso naturality `order_eq_order_restrict`).
 
 References: Stacks 02RV (Hartshorne II.6.1), Stacks 02ME (DVR-of-stalk
 characterisation at codim-1 points), Stacks 02IZ (stalk under open
@@ -1114,11 +1114,10 @@ On a smooth proper curve `C` over `k̄`, this specialises to
 Blueprint reference: `def:principal_divisor` (Hartshorne II §6 Lemma 6.1 +
 following definition, p. 131).
 
-iter-177 body: the construction uses `Finsupp.ofSupportFinite` with the
-finite-support witness `rationalMap_order_finite_support`. The latter is a
-private theorem packaging Hartshorne 6.1; its body is a Mathlib-pending gap
-(see chapter `RiemannRoch_WeilDivisor.tex` §5 sub-build note) and is left as
-a `sorry` for an iter-178+ Mathlib-upstream PR. -/
+The construction uses `Finsupp.ofSupportFinite` with the finite-support
+witness `rationalMap_order_finite_support` (Hartshorne 6.1 / Stacks 02RV),
+which is proved under `[IsNoetherian X]` via a finite affine cover and the
+height-one/minimal-primes bound on each chart. -/
 noncomputable def principal [IsIntegral X] [IsNoetherian X]
     [Scheme.IsRegularInCodimensionOne X] (f : X.functionField)
     (_hf : f ≠ 0) : X.WeilDivisor :=
