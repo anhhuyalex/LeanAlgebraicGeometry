@@ -100,6 +100,9 @@ import AlgebraicJacobian.Picard.SerreFiniteness
 import AlgebraicJacobian.Picard.ZariskiDescentRepresentability
 import AlgebraicJacobian.Picard.GrassmannianZariskiSheaf
 import AlgebraicJacobian.Picard.GrassmannianRepresentability
+-- I-0118 honest restatement of thm:quot_representable (projective π with
+-- very ample L via IsProjectiveWith, coherent E), split out of QuotFunctorDef.
+import AlgebraicJacobian.Picard.QuotRepresentability
 import AlgebraicJacobian.Picard.LineBundleCoherence
 import AlgebraicJacobian.RiemannRoch.WeilDivisor
 import AlgebraicJacobian.Albanese.AlbaneseUP

@@ -1062,19 +1062,20 @@ end Grassmannian
 
 /-! ## §5. Representability of the Quot scheme -/
 
-/-- **Representability of the Quot scheme** (Grothendieck, Altman–Kleiman;
-`thm:quot_representable`, [Nitsure] §5): for a noetherian `S`, a projective
-`π` (encoded: proper and locally of finite type), a line bundle `L`, a
-coherent `E` and `Φ ∈ ℚ[λ]`, the Quot functor is representable by an
-`S`-scheme.  Proof route (Nitsure §5): boundedness by Castelnuovo–Mumford
-regularity, embedding into a Grassmannian by pushing forward twists,
-flattening stratification (`AlgebraicGeometry.flatteningStratification`),
-and the valuative criterion for the closed embedding. -/
-theorem QuotScheme {S X : Scheme.{u}} [IsLocallyNoetherian S]
-    (π : X ⟶ S) [LocallyOfFiniteType π] [IsProper π]
-    (L E : X.Modules) [L.IsQuasicoherent] (Φ : Polynomial ℚ) :
-    ∃ (Q : Over S), Nonempty ((QuotFunctor π L E Φ).RepresentableBy Q) := by
-  sorry
+/- **Representability of the Quot scheme** (`thm:quot_representable`) now
+lives in `AlgebraicJacobian/Picard/QuotRepresentability.lean`
+(`AlgebraicGeometry.Scheme.QuotScheme`), restated with the faithful
+[Nitsure] §5 hypotheses: `π` projective carrying the relatively very ample
+line bundle `L` (`Scheme.Hom.IsProjectiveWith`,
+`Picard/ProjectiveMorphism.lean` — that file imports this one, which forces
+the statement out of this file) and `E` coherent, at `Scheme.{0}`.  The
+earlier pin here hypothesized only `[IsProper π] [LocallyOfFiniteType π]`
+over arbitrary quasi-coherent `L` and arbitrary `E` — a strictly weaker,
+false-or-open signature (for merely proper `π` the Quot functor is in
+general only an algebraic space; Hironaka's smooth proper non-projective
+3-fold is the standard counterexample family), recorded and repaired in
+inbox `I-0118`.  This is the same split as `Grassmannian.representable`
+above. -/
 
 end Scheme
 
