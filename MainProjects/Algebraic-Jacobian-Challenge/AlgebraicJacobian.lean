@@ -118,6 +118,7 @@ import AlgebraicJacobian.RiemannRoch.WeilDivisor
 import AlgebraicJacobian.RiemannRoch.Adelic.Substrate
 import AlgebraicJacobian.RiemannRoch.Adelic.Cokernel
 import AlgebraicJacobian.RiemannRoch.Adelic.P1BaseCase
+import AlgebraicJacobian.RiemannRoch.Adelic.FinitenessP1
 import AlgebraicJacobian.Albanese.AlbaneseUP
 import AlgebraicJacobian.Albanese.AuslanderBuchsbaum
 import AlgebraicJacobian.Albanese.CodimOneExtension
