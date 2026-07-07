@@ -968,6 +968,22 @@ lemma serreTwist_mem_glueGammaCompatible_iff (m : ℕ)
     exact (Scheme.Modules.glueLegAComponent_unit_app (glueData n₀) (i, j) (s (i, j).1)).trans
       ((h i j).trans (glueLegBComponent_twist_app n₀ m i j (s (i, j).2)).symm)
 
+/-- **The chart sections of the integral model are the degree-zero localization.**
+The structure-sheaf sections `Γ(D₊(Xᵢ), 𝒪)` of the `i`-th chart of `Proj ℤ[X]` are the
+degree-zero part `(ℤ[X]_{Xᵢ})₀ = Away Xᵢ` of the localization at `Xᵢ`.  This is mathlib's
+`Proj.basicOpenIsoAway` (valid since `Xᵢ` is homogeneous of positive degree `1`),
+transported to the chart's global sections through the open-subscheme identification
+`Scheme.Opens.topIso`.  It is the atom identifying each factor of a compatible family with
+an away-fraction `Fᵢ/Xᵢ^{kᵢ}`. -/
+noncomputable def chartSectionsIso (i : n₀) :
+    CommRingCat.of (HomogeneousLocalization.Away
+        (MvPolynomial.homogeneousSubmodule n₀ (ULift.{0} ℤ)) (MvPolynomial.X i))
+      ≅ Γ((glueData n₀).U i, ⊤) :=
+  Proj.basicOpenIsoAway (MvPolynomial.homogeneousSubmodule n₀ (ULift.{0} ℤ)) (MvPolynomial.X i)
+      (X_mem_deg_one n₀ i) one_pos ≪≫
+    (Proj.basicOpen (MvPolynomial.homogeneousSubmodule n₀ (ULift.{0} ℤ))
+      (MvPolynomial.X i)).topIso.symm
+
 /-- **Global sections of the glued Serre twist are the compatible families**
 of chart sections of the trivialising cover: the instantiation of
 `Scheme.Modules.glueSectionsEquiv` at the descent datum of `O(m)`. -/
