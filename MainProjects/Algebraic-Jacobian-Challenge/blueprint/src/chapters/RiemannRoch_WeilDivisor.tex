@@ -583,9 +583,9 @@ lemma for this family.
   to the canonical function-field iso of integral schemes.
 \end{definition}
 
-\paragraph{End-to-end map: Sub-builds 1--3 \(\Rightarrow\) closure of
-\(\texttt{rationalMap\_order\_finite\_support}\) (\ref{lem:rationalMap_order_finite_support}, non-zero branch L535).}
-The L535 closure target is: for an integral, locally-Noetherian scheme
+\paragraph{End-to-end map: closure of
+\(\texttt{rationalMap\_order\_finite\_support}\) (\ref{lem:rationalMap_order_finite_support}).}
+The closure target is: for an integral, \emph{Noetherian} scheme
 \(X\) satisfying \(\texttt{IsRegularInCodimensionOne}\) and a non-zero
 \(f \in X.\texttt{functionField}\),
 \((\texttt{Function.support}\,(Y \mapsto \texttt{order}\,Y\,f)).\texttt{Finite}\).
@@ -649,22 +649,21 @@ project-local Sub-builds plus a terminal closure step:
     with \(f'\) the image of \(f\) under
     \(X.\texttt{functionField} \simeq U.\texttt{toScheme}.\texttt{functionField}\).
     Direct consumer of Sub-build 2.
-  \item \textbf{Terminal closure (iter-203 target, \(\sim 40\)--\(80\) LOC).}
+  \item \textbf{Terminal closure (CLOSED).}
     Given a non-zero \(f \in X.\texttt{functionField}\):
-    (a) reduce to a finite affine cover \(X = \bigcup_{i = 1}^N U_i\)
-    (Hartshorne II.6 hypothesis; project-side
-    \texttt{[IsLocallyNoetherian X] + [CompactSpace X]} or just
-    \texttt{[IsNoetherian X]}); (b) by Sub-build 3, every
-    \(Y \in \texttt{support}\) lies in some \(U_i\) and has
-    \(\texttt{order}\,Y\,f = \texttt{order}\,(\texttt{restrictToOpen}\,
-     U_i\,Y\,h)\,f_i\) for \(f_i\) the corresponding fraction-field
-    element on \(U_i\); (c) each \(U_i\) is affine Noetherian, so the
-    height-1 prime decomposition of \(\mathrm{div}(f_i)\) in
-    \(\Gamma(U_i, \mathcal O)\) is finite by Mathlib's
-    \(\texttt{Ideal.finite\_minimalPrimes\_of\_isNoetherianRing}\)
-    applied to the principal ideal \((f_i)\); (d) bound
-    \(|\texttt{support}|\) by the sum of the finitely many
-    \(|\texttt{support of div}(f_i)|\) terms; (e) conclude finiteness.
+    (a) global Noetherianness (\texttt{[IsNoetherian X]}, i.e.\ quasi-compact
+    plus locally Noetherian) yields a finite affine cover
+    \(X = \bigcup_{i=1}^N U_i\); (b) every \(Y \in \texttt{support}\) has its
+    generic point in some \(U_i\); (c) on a chart
+    \(U = \operatorname{Spec} R\) the point of \(Y\) corresponds to a
+    height-one prime \(\mathfrak p_Y\) of the Noetherian domain
+    \(R = \Gamma(U, \mathcal O)\), and writing \(f = a/b\) the condition
+    \(\ord_Y(f) \ne 0\) forces \(a \in \mathfrak p_Y\) or
+    \(b \in \mathfrak p_Y\), so \(\mathfrak p_Y\) is a minimal prime of
+    \((a)\) or \((b)\); (d) these are finite by Mathlib's
+    \(\texttt{Ideal.finite\_minimalPrimes\_of\_isNoetherianRing}\); (e)
+    summing over the finite cover concludes. See
+    \ref{lem:rationalMap_order_finite_support}.
 \end{itemize}
 
 The two declarations that realise Sub-build 3 (both
@@ -1244,14 +1243,6 @@ following identities feed the principal-divisor homomorphism
 [Finite support of the order function — Hartshorne 6.1 / Stacks 02RV]
   \label{lem:rationalMap_order_finite_support}
   \lean{AlgebraicGeometry.rationalMap_order_finite_support}
-  % \lean{...} corrected iter-199 review: the iter-199 plan-phase
-  % pin used the wrong namespace (".Scheme.") and the Lean theorem at
-  % WeilDivisor.lean:357 sits in `namespace AlgebraicGeometry` only
-  % (Scheme.RationalMap closed at L159). The theorem is also declared
-  % `private` — sync_leanok may not resolve private decls cleanly. The
-  % chapter pin is retained as documentation for the future-closed
-  % version; the iter-199 plan agent's directive to consume this via
-  % the `[IsNoetherian X]` strengthening remains the closure path.
   \uses{def:order_at_point, def:prime_divisor}
   % SOURCE: [Hartshorne], II.6, Lemma~6.1, p.~131 (read from
   % references/hartshorne-algebraic-geometry.pdf, PDF page 148).
@@ -1273,40 +1264,51 @@ following identities feed the principal-divisor homomorphism
 % subset of \(X\), so it can contain only finitely many prime divisors of
 % \(X\) [\dots]"
 \begin{proof}
-  \uses{def:order_at_point}
-  Following Hartshorne II.6.1 / Stacks 02RV:
-  \begin{enumerate}
-  \item Pick a nonempty affine open \(U = \operatorname{Spec} R \subset X\) on
-    which \(f\) is regular. Then \(R\) is a Noetherian integral domain.
-  \item For each prime divisor \(Y\) meeting \(U\), the corresponding
-    prime \(\mathfrak p_Y\) is a height-1 prime of \(R\); the height-1 primes
-    containing \(f \cdot 1\) are precisely the minimal primes of
-    \((f)\), which by Krull's Hauptidealsatz form a finite set (Stacks tag
-    00KZ / Atiyah--Macdonald 11.16). Of those, \(\ord_Y(f) \ne 0\) holds
-    only at the finitely many minimal primes of \((f)\) over \(R\).
-  \item The remaining prime divisors \(Y\) lie in the closed complement
-    \(X \setminus U\), which is a proper closed subset of \(X\); the
-    Noetherian topological structure of \(X\) (Stacks 04ZE) bounds the
-    irreducible components of \(X \setminus U\) of codimension one in
-    \(X\) by a finite number. For each such component, the stalk
-    \(\mathcal O_{X, Y}\) is a DVR (regularity in codim 1) and \(f\) has
-    finite valuation; together these contribute only finitely many
-    nonzero values to the order function.
-  \item Combining (2) and (3) gives the finiteness of the support.
-  \end{enumerate}
-  \emph{Hypothesis health.} The argument in (3) uses that \(X\) is
-  Noetherian as a topological space (so \(X \setminus U\) has finitely
-  many irreducible components). For \([X]\) only locally Noetherian +
-  integral (without quasi-compactness), one can produce
-  counter-examples with infinitely many disjoint codim-1 prime
-  divisors outside \(U\). The Lean signature thus takes
-  \texttt{[IsNoetherian X]} (or equivalently
-  \texttt{[IsLocallyNoetherian X] + [CompactSpace X]}). The hybrid
-  WeilDivisor file pins the public-facing declaration under the
-  weaker \texttt{[IsLocallyNoetherian X]} hypothesis and exposes the
-  \texttt{[CompactSpace X]} (or full Noetherian) strengthening
-  as the substantive sub-claim that this lemma resolves.
+  \leanok
+  \uses{def:order_at_point, def:prime_divisor}
+  The zero function has empty support, so assume \(f \ne 0\). Since \(X\) is
+  Noetherian it is quasi-compact, hence admits a \emph{finite} affine open cover
+  \(X = \bigcup_{i=1}^{N} U_i\). Every prime divisor has its generic point in some
+  \(U_i\), so it suffices to prove that for each chart \(U = \operatorname{Spec} R\)
+  the set of prime divisors \(Y\) meeting \(U\) with \(\ord_Y(f) \ne 0\) is finite.
+
+  Here \(R = \Gamma(U, \mathcal O_X)\) is a Noetherian integral domain with fraction
+  field \(K(X)\); write \(f = a/b\) with \(a, b \in R \setminus \{0\}\). A prime
+  divisor \(Y\) meeting \(U\) has generic point corresponding to a prime
+  \(\mathfrak p_Y \subset R\); its codimension-one condition (coheight one) is
+  \(\operatorname{ht}\mathfrak p_Y = 1\), because the stalk
+  \(\mathcal O_{X, Y} = R_{\mathfrak p_Y}\) has Krull dimension equal to the
+  coheight of the point (equivalently, to \(\operatorname{ht}\mathfrak p_Y\)). If
+  both \(a \notin \mathfrak p_Y\) and \(b \notin \mathfrak p_Y\), then \(a, b\) are
+  units in the localization \(R_{\mathfrak p_Y}\), so
+  \(\ord_Y(a) = \ord_Y(b) = 0\) and hence
+  \(\ord_Y(f) = \ord_Y(a) - \ord_Y(b) = 0\). Thus \(\ord_Y(f) \ne 0\) forces
+  \(a \in \mathfrak p_Y\) or \(b \in \mathfrak p_Y\).
+
+  A height-one prime \(\mathfrak p\) containing a nonzero element \(a\) is a minimal
+  prime of the principal ideal \((a)\): choosing a minimal prime \(\mathfrak q\) of
+  \((a)\) with \(\mathfrak q \subseteq \mathfrak p\), one has
+  \(\mathfrak q \ne 0\) (as \(a \ne 0\)), so \(0 < \operatorname{ht}\mathfrak q\);
+  the chain bound then forces \(\mathfrak q = \mathfrak p\). Since \(R\) is
+  Noetherian, \((a)\) and \((b)\) each have only finitely many minimal primes
+  (Stacks 00KZ). As \(Y \mapsto \mathfrak p_Y\) is injective on the prime divisors
+  meeting \(U\), only finitely many of them satisfy \(\ord_Y(f) \ne 0\). Summing
+  over the finite cover yields the finiteness of the whole support.
 \end{proof}
+
+\begin{remark}
+  \label{rem:finite_support_needs_noetherian}
+  \uses{lem:rationalMap_order_finite_support}
+  The global Noetherian hypothesis (equivalently, quasi-compactness) is
+  essential: it cannot be weakened to merely locally Noetherian. Take the
+  affine line with infinitely many doubled origins, obtained by gluing
+  countably many copies of \(\mathbb A^1_k\) along the complement of the origin.
+  It is integral, locally Noetherian and regular in codimension one, yet the
+  coordinate function \(t\) has order one at each of its infinitely many origin
+  points, so \(\{Y \mid \ord_Y(t) \ne 0\}\) is infinite. This scheme is not
+  quasi-compact; ruling it out is exactly what the Noetherian hypothesis of
+  Stacks 02RV achieves.
+\end{remark}
 
 \begin{definition}
 \leanok
