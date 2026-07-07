@@ -8,6 +8,7 @@ import AlgebraicJacobian.Picard.GlueDescent
 import AlgebraicJacobian.Picard.SerreTwist
 import AlgebraicJacobian.Picard.LineBundleCoherence
 import AlgebraicJacobian.Picard.ProjectiveMorphism
+import AlgebraicJacobian.Picard.QuotScheme
 
 /-!
 # Global sections of a glued sheaf of modules
@@ -1684,5 +1685,59 @@ example (S : Scheme.{0}) (m : ℕ) :
     (ProjectiveSpace.twistingSheaf n₀ S m).IsQuasicoherent := inferInstance
 
 end LocallyTrivial
+
+/-! ## Base change of `O(m)`-sections over a flat affine base (P0.2κ)
+
+Over a **flat affine** base `S → Spec ℤ`, the global sections of the relative
+Serre twist base-change: `Γ(S) ⊗_ℤ Γ(Proj ℤ[X], O(m)) ≅ Γ(ℙ(n₀; S), O(m))`.
+This is the H⁰ flat base change (Stacks 02KE), applied to the cartesian square
+
+```
+ℙ(n₀; S) --toProjInt--> Proj ℤ[X]
+   | ↘S                   | (to Spec ℤ = ⊤)
+   S ---------------->  ⊤_ Scheme
+```
+
+at `V = U = ⊤`.  The bottom map `Proj → ⊤` is proper hence quasi-compact and
+quasi-separated (P0.4 makes `O(m)` quasi-coherent — the last hypothesis of the
+02KE theorem); the right base is flat by assumption.  Composed with
+`formSectionEquiv` (`Γ(Proj ℤ[X], O(m)) ≅ ℤ[X]_m`) this identifies
+`Γ(ℙ(n₀; Spec κ), O(m))` with `κ ⊗_ℤ ℤ[X]_m ≅ κ[X]_m` for a flat coefficient
+ring `κ` (e.g. a field of characteristic zero, or any flat `ℤ`-algebra). -/
+
+section BaseChange
+
+/-- **H⁰ base change of the Serre twist over a flat affine base** (P0.2κ).  For a
+flat affine base scheme `S` (`Flat (S → ⊤_ Scheme)`), there is a `Γ(S)`-linear
+equivalence
+`Γ(S, ⊤) ⊗_{Γ(⊤_Scheme, ⊤)} Γ(serreTwist n₀ m, ⊤) ≃ₗ Γ(twistingSheaf n₀ S m, ⊤)`,
+sending `1 ⊗ t` to the canonical base-change image of the global section `t`.
+Instantiation of the qcqs H⁰ flat base change `02KE`
+(`pullback_baseMap_sectionLinearEquiv_of_quasiCompact`) at the defining pullback
+square of `ℙ(n₀; S)` with `V = U = ⊤`, using the quasi-coherence of `serreTwist`
+(P0.4) and the properness of `Proj ℤ[X] → ⊤_ Scheme`. -/
+theorem serreTwistSectionsBaseChange [Finite n₀] (S : Scheme.{0}) [IsAffine S]
+    [Flat (terminal.from S)] (m : ℕ) :
+    letI : Algebra Γ(⊤_ Scheme.{0}, ⊤) Γ(S, ⊤) :=
+      ((terminal.from S).appLE ⊤ ⊤ le_top).hom.toAlgebra
+    Nonempty (TensorProduct Γ(⊤_ Scheme.{0}, ⊤) Γ(S, ⊤)
+          Γ((Scheme.Modules.pushforward
+              (terminal.from (Proj (MvPolynomial.homogeneousSubmodule n₀ (ULift.{0} ℤ))))).obj
+            (serreTwist n₀ m), ⊤)
+        ≃ₗ[Γ(S, ⊤)]
+        Γ((Scheme.Modules.pushforward (ℙ(n₀; S) ↘ S)).obj
+          ((Scheme.Modules.pullback (ProjectiveSpace.toProjInt n₀ S)).obj (serreTwist n₀ m)),
+          ⊤)) := by
+  haveI := ProjectiveSpace.isProper_terminalFrom_proj n₀
+  have sq : IsPullback (ProjectiveSpace.toProjInt n₀ S) (ℙ(n₀; S) ↘ S)
+      (terminal.from (Proj (MvPolynomial.homogeneousSubmodule n₀ (ULift.{0} ℤ))))
+      (terminal.from S) :=
+    (IsPullback.of_hasPullback (terminal.from S)
+      (terminal.from (Proj (MvPolynomial.homogeneousSubmodule n₀ (ULift.{0} ℤ))))).flip
+  obtain ⟨⟨h, _⟩⟩ := pullback_baseMap_sectionLinearEquiv_of_quasiCompact sq
+    (serreTwist n₀ m) (isAffineOpen_top _) (isAffineOpen_top _) le_top le_top
+  exact ⟨h⟩
+
+end BaseChange
 
 end AlgebraicGeometry.ProjTwist
