@@ -167,6 +167,27 @@ theorem Module.Flat.rTensor_injective_of_exact
     ((Finsupp.linearCombination R (_root_.id : N → N)).exact_subtype_ker_map)
     (Finsupp.linearCombination_id_surjective R N)
 
+/-- **Stacks 00HL, left-tensor form**: if `f : A → B` is injective, `g : B → C` is
+surjective, `(f, g)` is exact and `C` is flat, then `𝟙_N ⊗ f : N ⊗ A → N ⊗ B` is
+injective for every `N`.  Conjugate of `Module.Flat.rTensor_injective_of_exact` by the
+tensor commutativity isomorphism (`LinearMap.comm_comp_rTensor_comp_comm_eq`): the
+left-tensored map factors as `comm ∘ (f.rTensor N) ∘ comm`, a composite of the injective
+`f.rTensor N` with the two commutativity equivalences. -/
+theorem Module.Flat.lTensor_injective_of_exact
+    {R : Type*} [CommRing R] {A B C : Type*}
+    [AddCommGroup A] [AddCommGroup B] [AddCommGroup C]
+    [Module R A] [Module R B] [Module R C]
+    {f : A →ₗ[R] B} {g : B →ₗ[R] C}
+    (hf : Function.Injective f) (hfg : Function.Exact f g)
+    (hg : Function.Surjective g) (hC : Module.Flat R C)
+    (N : Type*) [AddCommGroup N] [Module R N] :
+    Function.Injective (f.lTensor N) := by
+  have hr : Function.Injective (f.rTensor N) :=
+    Module.Flat.rTensor_injective_of_exact hf hfg hg hC N
+  rw [← LinearMap.comm_comp_rTensor_comp_comm_eq f, LinearMap.coe_comp, LinearMap.coe_comp]
+  exact (TensorProduct.comm R B N).injective.comp
+    (hr.comp (TensorProduct.comm R N A).injective)
+
 namespace AlgebraicGeometry
 
 namespace Scheme
@@ -225,6 +246,33 @@ lemma Modules.epi_pullbackKernelComparison
   have hSG := (CategoryTheory.ShortComplex.exact_kernel q).map_of_epi_of_preservesCokernel
     (Scheme.Modules.pullback g') ‹Epi q› inferInstance
   exact hSG.epi_kernelLift
+
+/-- **Basis-local criterion for monomorphisms of `𝒪_X`-modules.**  If `B` is a basis of
+opens of `X` and `φ : M ⟶ N` is injective on sections over every basic open `B i`, then
+`φ` is a monomorphism.  Companion of the basis-local iso criterion
+`Modules.isIso_of_isIso_app_of_isBasis` (`AlgebraicJacobian.Cohomology.FlatBaseChange`):
+basis injectivity gives stalkwise injectivity
+(`TopCat.Presheaf.stalkFunctor_map_injective_of_isBasis`), hence the underlying morphism of
+sheaves of abelian groups is a monomorphism (`TopCat.Presheaf.mono_of_stalk_mono`), and the
+faithful forgetful functor `Scheme.Modules.toPresheaf` reflects it. -/
+theorem Modules.mono_of_injective_app_of_isBasis {X : Scheme.{u}} {M N : X.Modules}
+    {ι : Type*} {B : ι → X.Opens} (hB : TopologicalSpace.Opens.IsBasis (Set.range B))
+    (φ : M ⟶ N) (h : ∀ i, Function.Injective (φ.app (B i))) : Mono φ := by
+  have happ : ∀ U ∈ Set.range B,
+      Function.Injective (((Scheme.Modules.toPresheaf X).map φ).app (Opposite.op U)) := by
+    rintro U ⟨i, rfl⟩; exact h i
+  have hstalk : ∀ x : X, Function.Injective
+      ((TopCat.Presheaf.stalkFunctor Ab.{u} x).map ((Scheme.Modules.toPresheaf X).map φ)) :=
+    fun x => TopCat.Presheaf.stalkFunctor_map_injective_of_isBasis hB happ x
+  let MS : TopCat.Sheaf Ab.{u} X := ⟨M.presheaf, M.isSheaf⟩
+  let NS : TopCat.Sheaf Ab.{u} X := ⟨N.presheaf, N.isSheaf⟩
+  let fS : MS ⟶ NS := ⟨(Scheme.Modules.toPresheaf X).map φ⟩
+  haveI : ∀ x, Mono ((TopCat.Presheaf.stalkFunctor Ab.{u} x).map fS.1) := fun x =>
+    (AddCommGrpCat.mono_iff_injective _).mpr (hstalk x)
+  haveI hmS : Mono fS := TopCat.Presheaf.mono_of_stalk_mono fS
+  haveI : Mono ((Scheme.Modules.toPresheaf X).map φ) :=
+    (CategoryTheory.Sheaf.Hom.mono_iff_presheaf_mono _ _ fS).mp hmS
+  exact (Scheme.Modules.toPresheaf X).mono_of_mono_map ‹_›
 
 /-- **The kernel–pullback comparison is an isomorphism as soon as `g'^*` keeps
 the kernel inclusion `ker q ↪ E` monic.**  Combining the always-available
