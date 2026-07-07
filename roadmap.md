@@ -19,7 +19,7 @@ closed — the AJC in-tree copies (T8, commit `eed5383`), the `GR-Quot-Closure` 
 
 | Project | Stage | Open `sorry` |
 | --- | --- | --- |
-| Algebraic-Jacobian-Challenge | prover | 101 ✨ |
+| Algebraic-Jacobian-Challenge | prover | 25 ✨ *(2026-07-07 fleet session: 30→25 — closed `isFiniteTypeGeometricallyIrreducible`, Stacks 02KE, `Pic0.bundle`, `rationalMap_order_finite_support` (after an honest `[IsNoetherian]` re-pin), `pullback_kernel_isLocallyTrivial`; I-0118 QuotScheme restated faithfully; NEW adelic Riemann–Roch lane (`RiemannRoch/Adelic/*`) with the H¹-finiteness keystone `LaurentChartData.module_finite_H1Cok` proved — see the `RiemannRoch_Adelic` blueprint chapter and inbox I-0134)* |
 | Cech-Cohomology | ✅ complete · merged → AJC | 0 — standalone green, v4.31-clean ✨ |
 | Line-Bundle-Comparison-Iso | prover | 3 ✨ |
 | Albanese | prover | 17 |
@@ -50,7 +50,7 @@ so this scope roadmap stays focused on the Jacobian-challenge critical path.
 
 ---
 
-## Algebraic-Jacobian-Challenge  *(core engine — prover stage, 101 open `sorry`)* ✨
+## Algebraic-Jacobian-Challenge  *(core engine — prover stage, 25 open `sorry` as of 2026-07-07)* ✨
 
 **Goal:** the Jacobian of a smooth proper geometrically-irreducible curve — smooth of
 relative dimension = genus, proper, geometrically irreducible, and the Albanese variety
