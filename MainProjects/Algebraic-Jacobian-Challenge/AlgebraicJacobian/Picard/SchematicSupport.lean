@@ -178,4 +178,45 @@ theorem annihilator_quotientAnnihilator_eq_bot
   intro m
   exact hq m
 
+/-- **Finite presentation of the descended module (affine heart, Noetherian
+base)**: over a Noetherian ring `R`, the module `M`, viewed over the quotient
+`R ⧸ Ann_R M` by its annihilator (`Module.quotientAnnihilator`), is *finitely
+presented*.
+
+This upgrades `module_finite_quotientAnnihilator` (finite generation) to finite
+presentation: `R ⧸ Ann_R M` is again Noetherian
+(`Ideal.Quotient.isNoetherianRing`), so a finitely generated module over it is
+finitely presented (`Module.finitePresentation_of_finite`).  It is the affine,
+sections-level content of step (3) of the support-descent brick `F ≅ i_* N` —
+"`N` is finitely presented on `Z = V(Ann F)`".  In the Quot consumer the fibre
+`X_t` is a scheme of finite type over the residue field `κ(t)`, hence locally
+Noetherian, so the schematic support `Z` is Noetherian and the finitely
+generated descended module `N` is automatically finitely presented there. -/
+theorem finitePresentation_quotientAnnihilator
+    {R : Type*} [CommRing R] [IsNoetherianRing R]
+    {M : Type*} [AddCommGroup M] [Module R M] [Module.Finite R M] :
+    letI := Module.quotientAnnihilator (R := R) (M := M)
+    Module.FinitePresentation (R ⧸ Module.annihilator R M) M := by
+  letI := Module.quotientAnnihilator (R := R) (M := M)
+  haveI : IsScalarTower R (R ⧸ Module.annihilator R M) M :=
+    Module.IsTorsionBySet.isScalarTower (Module.isTorsionBySet_annihilator R M)
+  haveI : Module.Finite (R ⧸ Module.annihilator R M) M :=
+    module_finite_quotientAnnihilator
+  exact Module.finitePresentation_of_finite _ _
+
+/-- **Faithfulness of the descended module (affine heart), instance form**: over
+the quotient `R ⧸ Ann_R M` by its own annihilator the module `M` is *faithful*.
+
+This is `annihilator_quotientAnnihilator_eq_bot` transported through
+`Module.annihilator_eq_bot`, packaging the sharpness of the schematic support
+(no embedded thickening: `V(Ann_R M)` is the honest scheme-theoretic support)
+as the `FaithfulSMul` scalar-action fact directly consumable by downstream
+closed-immersion bookkeeping in the brick `F ≅ i_* N`. -/
+theorem faithfulSMul_quotientAnnihilator
+    {R : Type*} [CommRing R] {M : Type*} [AddCommGroup M] [Module R M] :
+    letI := Module.quotientAnnihilator (R := R) (M := M)
+    FaithfulSMul (R ⧸ Module.annihilator R M) M :=
+  letI := Module.quotientAnnihilator (R := R) (M := M)
+  Module.annihilator_eq_bot.mp annihilator_quotientAnnihilator_eq_bot
+
 end AlgebraicGeometry
