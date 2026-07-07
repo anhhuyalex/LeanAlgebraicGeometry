@@ -703,6 +703,28 @@ theorem Modules.pullback_kernel_isLocallyTrivial
     (Modules.isIso_pullbackKernelComparison_of_mono g' q
       (Modules.mono_pullback_map_kernel_ι sq q hq hE hfp hflat hker)) hker
 
+/-- **The kernel–pullback comparison is an isomorphism** (blueprint
+`lem:relative_divisor_base_change`; the Abel-map feeder).  For a cartesian square and an
+epimorphism `q` of quasi-coherent modules with `F` finitely presented and flat over the
+base and `ker q` locally trivial, the comparison
+`Scheme.Modules.pullbackKernelComparison g' q : g'^*(ker q) ⟶ ker (g'^* q)` is an
+isomorphism: it is always an epimorphism (`epi_pullbackKernelComparison`, `q` epi and
+`g'^*` right exact) and, by the flat-base-change monomorphism
+`mono_pullback_map_kernel_ι`, the pullback of the kernel inclusion stays monic, so
+`isIso_pullbackKernelComparison_of_mono` (`X'.Modules` is abelian, hence balanced) upgrades
+it to an isomorphism.  This is the isomorphism form that `DivFamily.pullbackAlong` /
+the Abel map consume via `pullback_kernel_isLocallyTrivial_of_isIso_kernelComparison`. -/
+theorem Modules.isIso_pullbackKernelComparison
+    {X S X' S' : Scheme.{u}} {f : X ⟶ S} {g : S' ⟶ S} {g' : X' ⟶ X} {f' : X' ⟶ S'}
+    (sq : IsPullback g' f' f g) {E F : X.Modules} (q : E ⟶ F) (hq : Epi q)
+    (hE : E.IsQuasicoherent)
+    (hfp : F.IsFinitePresentation) (hflat : CoherentSheafFlat f F)
+    (hker : LineBundle.IsLocallyTrivial (Limits.kernel q)) :
+    IsIso (Modules.pullbackKernelComparison g' q) := by
+  haveI := hq
+  exact Modules.isIso_pullbackKernelComparison_of_mono g' q
+    (Modules.mono_pullback_map_kernel_ι sq q hq hE hfp hflat hker)
+
 /-! ## §2. Families of relative effective divisors -/
 
 variable {S X : Scheme.{u}}
