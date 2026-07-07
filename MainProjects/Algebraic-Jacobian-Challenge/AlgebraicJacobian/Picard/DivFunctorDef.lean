@@ -537,12 +537,123 @@ private theorem app_injective_on_piece
       (g' ⁻¹ᵁ V ⊓ f' ⁻¹ᵁ Ut)).hom (fK b')
   exact hab
 
+set_option maxHeartbeats 800000 in
+set_option maxSynthPendingDepth 3 in
+-- Heartbeat/instance headroom: the per-basic-open localization instances
+-- (`isLocalizedModule_basicOpen`) and the localized-map universal property are
+-- provisioned under binders, as in the affine section engines of `QuotScheme`.
+/-- **Descent of section injectivity to a basic open** (globalisation glue).  For a
+morphism `φ` of quasi-coherent modules and an affine open `W`, injectivity of the
+`W`-section map descends to injectivity of the section map over any basic open
+`X.basicOpen f` (`f : Γ(X, W)`): both section modules are localisations of the
+`W`-sections at `powers f` (`Scheme.Modules.isLocalizedModule_basicOpen`), and the
+localisation of an injective linear map stays injective
+(`IsLocalizedModule.map_injective`, identified with the basic-open section map by the
+universal property `IsLocalizedModule.linearMap_ext` + presheaf naturality of `φ`). -/
+private theorem app_injective_basicOpen {X : Scheme.{u}} {M N : X.Modules}
+    [M.IsQuasicoherent] [N.IsQuasicoherent] (φ : M ⟶ N) {W : X.Opens} (hW : IsAffineOpen W)
+    (hinj : Function.Injective ((Scheme.Modules.Hom.app φ W).hom)) (f : Γ(X, W)) :
+    Function.Injective ((Scheme.Modules.Hom.app φ (X.basicOpen f)).hom) := by
+  letI : Module Γ(X, W) Γ(M, X.basicOpen f) :=
+    Module.compHom _ (algebraMap Γ(X, W) Γ(X, X.basicOpen f))
+  haveI : IsScalarTower Γ(X, W) Γ(X, X.basicOpen f) Γ(M, X.basicOpen f) :=
+    IsScalarTower.of_algebraMap_smul fun _ _ => rfl
+  letI : Module Γ(X, W) Γ(N, X.basicOpen f) :=
+    Module.compHom _ (algebraMap Γ(X, W) Γ(X, X.basicOpen f))
+  haveI : IsScalarTower Γ(X, W) Γ(X, X.basicOpen f) Γ(N, X.basicOpen f) :=
+    IsScalarTower.of_algebraMap_smul fun _ _ => rfl
+  haveI hlocM : IsLocalizedModule (Submonoid.powers f)
+      (Scheme.Modules.restrictBasicOpenₗ M f) :=
+    Scheme.Modules.isLocalizedModule_basicOpen M hW f
+  haveI hlocN : IsLocalizedModule (Submonoid.powers f)
+      (Scheme.Modules.restrictBasicOpenₗ N f) :=
+    Scheme.Modules.isLocalizedModule_basicOpen N hW f
+  have hmapinj : Function.Injective (IsLocalizedModule.map (Submonoid.powers f)
+      (Scheme.Modules.restrictBasicOpenₗ M f) (Scheme.Modules.restrictBasicOpenₗ N f)
+      (Modules.appₗ φ W)) :=
+    IsLocalizedModule.map_injective (Submonoid.powers f)
+      (Scheme.Modules.restrictBasicOpenₗ M f) (Scheme.Modules.restrictBasicOpenₗ N f)
+      (Modules.appₗ φ W) hinj
+  have hid : IsLocalizedModule.map (Submonoid.powers f)
+        (Scheme.Modules.restrictBasicOpenₗ M f) (Scheme.Modules.restrictBasicOpenₗ N f)
+        (Modules.appₗ φ W)
+      = (Modules.appₗ φ (X.basicOpen f)).restrictScalars Γ(X, W) := by
+    refine IsLocalizedModule.linearMap_ext (Submonoid.powers f)
+      (Scheme.Modules.restrictBasicOpenₗ M f) (Scheme.Modules.restrictBasicOpenₗ N f) ?_
+    rw [IsLocalizedModule.map_comp]
+    ext x
+    exact (congr($(φ.mapPresheaf.naturality (homOfLE (X.basicOpen_le f)).op) x)).symm
+  intro a b hab
+  apply hmapinj
+  rw [hid]
+  exact hab
+
 /-! ## §1. Base change of the ideal of a relative effective divisor
 
 The one NEW base-change fact the divisor functor needs beyond the Quot-family
 lemmas of `QuotFunctorDef.lean` §2: the invertible kernel ideal of a `T`-flat
 quotient of `O` pulls back to the (again invertible) kernel ideal of the
 pulled-back quotient.  Blueprint node: `lem:relative_divisor_base_change`. -/
+
+/-- **`g'^*` preserves the kernel inclusion `ker q ↪ E` as a monomorphism** — the
+flat-base-change monomorphism at the heart of `lem:relative_divisor_base_change`
+(Stacks 00HL).  For a cartesian square and an epimorphism `q` of quasi-coherent modules
+with `F` finitely presented and flat over the base and `ker q` locally trivial, the
+pullback `g'^*(ker q ↪ E)` stays monic.  Route: per-piece injectivity
+`app_injective_on_piece` (the affine-local `Module.Flat.rTensor_injective_of_exact`
+content) holds on every affine piece `W = g'⁻¹V ⊓ f'⁻¹Ut` of the fibre-product square;
+the pieces are affine and cover `X'` but are NOT a topological basis (the scheme fibre
+product carries a topology finer than `|X| ×_{|S|} |S'|`), so the injectivity is descended
+to the basic opens of the pieces (`app_injective_basicOpen`, flat localisation
+`isLocalizedModule_basicOpen`), which DO form a basis of `X'`, and the basis-local
+monomorphism criterion `Modules.mono_of_injective_app_of_isBasis` concludes. -/
+theorem Modules.mono_pullback_map_kernel_ι
+    {X S X' S' : Scheme.{u}} {f : X ⟶ S} {g : S' ⟶ S} {g' : X' ⟶ X} {f' : X' ⟶ S'}
+    (sq : IsPullback g' f' f g) {E F : X.Modules} (q : E ⟶ F) (hq : Epi q)
+    (hE : E.IsQuasicoherent)
+    (hfp : F.IsFinitePresentation) (hflat : CoherentSheafFlat f F)
+    (hker : LineBundle.IsLocallyTrivial (Limits.kernel q)) :
+    Mono ((Scheme.Modules.pullback g').map (Limits.kernel.ι q)) := by
+  haveI := hq
+  -- Provision the quasi-coherence instances the per-piece engine consumes: `E` (`hE`),
+  -- `F` (finitely presented, `hfp`), `ker q` (locally trivial ⟹ finitely presented,
+  -- `hker`), and their pullbacks (`pullback_isQuasicoherent_hom`).
+  haveI := hE
+  haveI := hfp
+  haveI := hker.isFinitePresentation
+  haveI hMqc : ((Scheme.Modules.pullback g').obj (Limits.kernel q)).IsQuasicoherent :=
+    pullback_isQuasicoherent_hom g' (Limits.kernel q) inferInstance
+  haveI hNqc : ((Scheme.Modules.pullback g').obj E).IsQuasicoherent :=
+    pullback_isQuasicoherent_hom g' E inferInstance
+  set φ := (Scheme.Modules.pullback g').map (Limits.kernel.ι q) with hφ
+  -- per-point: an affine piece through the point, on which `φ` is section-injective
+  have H : ∀ x : X', ∃ W : X'.Opens, IsAffineOpen W ∧ x ∈ W ∧
+      Function.Injective ((Scheme.Modules.Hom.app φ W).hom) := by
+    intro x
+    have hbase : f.base (g'.base x) = g.base (f'.base x) := by
+      have h := congrArg (fun ψ : X' ⟶ S => ψ.base x) sq.w
+      simpa using h
+    obtain ⟨U, hU, hsU, -⟩ := exists_isAffineOpen_mem_and_subset
+      (TopologicalSpace.Opens.mem_top (f.base (g'.base x)))
+    obtain ⟨V, hV, hxV, hVsub⟩ := exists_isAffineOpen_mem_and_subset
+      (show g'.base x ∈ f ⁻¹ᵁ U from hsU)
+    obtain ⟨Ut, hUt, hxUt, hUtsub⟩ := exists_isAffineOpen_mem_and_subset
+      (show f'.base x ∈ g ⁻¹ᵁ U by
+        change g.base (f'.base x) ∈ U
+        rw [← hbase]; exact hsU)
+    exact ⟨g' ⁻¹ᵁ V ⊓ f' ⁻¹ᵁ Ut,
+      isAffineOpen_pullback_piece sq hUtsub hVsub hU hUt hV, ⟨hxV, hxUt⟩,
+      app_injective_on_piece sq q hflat hU hV hUt hVsub hUtsub⟩
+  choose W hWaff hxW hinjW using H
+  -- the basic opens of the covering pieces form a basis of `X'`; `φ` is injective on each
+  refine Modules.mono_of_injective_app_of_isBasis
+    (B := fun p : Σ x : X', Γ(X', W x) => X'.basicOpen p.2) ?_ φ ?_
+  · rw [TopologicalSpace.Opens.isBasis_iff_nbhd]
+    intro O pt hptO
+    obtain ⟨fb, hfle, hxf⟩ := (hWaff pt).exists_basicOpen_le (⟨pt, hptO⟩ : O) (hxW pt)
+    exact ⟨X'.basicOpen fb, ⟨⟨pt, fb⟩, rfl⟩, hxf, hfle⟩
+  · rintro ⟨x, fb⟩
+    exact app_injective_basicOpen φ (hWaff x) (hinjW x) fb
 
 /-- **The invertible kernel of a base-flat quotient stays invertible under
 base change** (Kleiman §3, the functoriality of `Div_{X/S}` — the note after
@@ -581,29 +692,16 @@ theorem Modules.pullback_kernel_isLocallyTrivial
     LineBundle.IsLocallyTrivial
       (Limits.kernel ((Scheme.Modules.pullback g').map q)) := by
   -- The comparison `κ = pullbackKernelComparison g' q : g'^*(ker q) ⟶ ker (g'^* q)`
-  -- is always epi (`q` epi, `g'^*` right exact: `epi_pullbackKernelComparison`).
-  -- Once `κ` is shown to be an isomorphism, the read-off lemma
-  -- `pullback_kernel_isLocallyTrivial_of_isIso_kernelComparison` (§0) transports the
-  -- rank-one local triviality of `ker q` across it.  By
-  -- `isIso_pullbackKernelComparison_of_mono` (`FlatKernelBase.lean`) `κ` is an iso as
-  -- soon as `g'^*` keeps the kernel inclusion `ker q ↪ E` monic, so the ENTIRE
-  -- remaining content is the single flat-base-change monomorphism below.
+  -- is always epi (`q` epi, `g'^*` right exact: `epi_pullbackKernelComparison`).  It is
+  -- an isomorphism as soon as `g'^*` keeps the kernel inclusion `ker q ↪ E` monic
+  -- (`isIso_pullbackKernelComparison_of_mono`, `FlatKernelBase.lean`) — the
+  -- flat-base-change monomorphism `mono_pullback_map_kernel_ι` — and then the read-off
+  -- lemma `pullback_kernel_isLocallyTrivial_of_isIso_kernelComparison` (§0) transports the
+  -- rank-one local triviality of `ker q` across it.
   haveI := hq
-  refine Modules.pullback_kernel_isLocallyTrivial_of_isIso_kernelComparison g' q
-    (Modules.isIso_pullbackKernelComparison_of_mono g' q ?_) hker
-  -- **REMAINING (Stacks 00HL, blueprint `lem:relative_divisor_base_change`):**
-  -- `g'^*` preserves the kernel inclusion `ker q ↪ E` as a monomorphism, because the
-  -- cokernel `F` is `S`-flat.  Affine-locally on a piece `W = g'⁻¹V ⊓ f'⁻¹Ut` over a
-  -- trivialising affine `V` this is `Module.Flat.rTensor_injective_of_exact`
-  -- (`FlatKernelBase.lean`) applied to the section SES
-  -- `0 → Γ(ker q, V) → Γ(E, V) → Γ(F, V) → 0` tensored with `Γ(S', Ut)` over
-  -- `Γ(S, U)` (`Γ(F, V)` flat, so `Tor₁` vanishes and the left map stays injective);
-  -- section-surjectivity of `Γ(E,V) → Γ(F,V)` over the trivialising affine is the
-  -- `H¹(V, ker q) = 0` content, and the section base-change identifications are the
-  -- `pullback_app_isoTensor` calculus.  Globalisation is stalk-/basis-local
-  -- (`Modules.isIso_of_isIso_app_of_isBasis`), using `exists_affine_trivializing_le`
-  -- to shrink `V` into each piece.  Hypotheses `sq`, `hE`, `hfp`, `hflat` feed this step.
-  sorry
+  exact Modules.pullback_kernel_isLocallyTrivial_of_isIso_kernelComparison g' q
+    (Modules.isIso_pullbackKernelComparison_of_mono g' q
+      (Modules.mono_pullback_map_kernel_ι sq q hq hE hfp hflat hker)) hker
 
 /-! ## §2. Families of relative effective divisors -/
 
