@@ -6,6 +6,8 @@ Authors: Christian Merten
 import Mathlib
 import AlgebraicJacobian.Picard.GlueDescent
 import AlgebraicJacobian.Picard.SerreTwist
+import AlgebraicJacobian.Picard.LineBundleCoherence
+import AlgebraicJacobian.Picard.ProjectiveMorphism
 
 /-!
 # Global sections of a glued sheaf of modules
@@ -1580,5 +1582,107 @@ def serreTwistZeroEquivInt [Nonempty n₀] : Γ(serreTwist n₀ 0, ⊤) ≃+ ℤ
       (ULift.ringEquiv (R := ℤ)).toAddEquiv)
 
 end Bridge
+
+/-! ## Local triviality, finite presentation and quasi-coherence of `O(m)` (P0.4)
+
+The glued Serre twist, the twist on the integral model `Proj ℤ[X]`, and the
+relative twisting sheaf on `ℙ(n₀; S)` are all **locally trivial line bundles**:
+rank-one free on the trivialising basic-open charts.  On the affine chart
+`opensRange (ι_i)` the chart restriction of the glued twist is the unit module
+(`glueRestrictionIso`), so `serreTwistGlued` is locally trivial; local triviality
+is stable under pullback (`IsLocallyTrivial.pullback`), so it descends along the
+cover isomorphism to `serreTwist`, and along `toProjInt` to `twistingSheaf`.
+Locally trivial line bundles are finitely presented
+(`IsLocallyTrivial.isFinitePresentation`), hence quasi-coherent. -/
+
+section LocallyTrivial
+
+open AlgebraicGeometry.Scheme.LineBundle
+
+/-- Each basic-open chart `D₊(Xᵢ)` of the integral model (a member of the
+trivialising cover) is an affine scheme (`Proj.isAffineOpen_basicOpen`, as `Xᵢ`
+is homogeneous of positive degree). -/
+instance chartIsAffine (i : n₀) : IsAffine ((glueData n₀).U i) :=
+  Proj.isAffineOpen_basicOpen (MvPolynomial.homogeneousSubmodule n₀ (ULift.{0} ℤ))
+    (MvPolynomial.X i) (X_mem_deg_one n₀ i) one_pos
+
+/-- **Chart trivialisation of the glued Serre twist.** On the affine chart
+`opensRange (ι_i)` of the glued total space, the restriction of `serreTwistGlued`
+is the structure sheaf.  The chart restriction `ι_i^* (serreTwistGlued)` is the
+unit module (`glueRestrictionIso`); transporting through `restrictFunctorIsoPullback`,
+`pullbackComp`/`pullbackCongr` (to reindex `ι_i` through the open-immersion
+factorisation `isoOpensRange.inv ≫ ι_i = (opensRange ι_i).ι`) and `pullbackUnitIso`
+identifies it with `𝒪` on the chart. -/
+noncomputable def serreTwistGluedChartIso (m : ℕ) (i : n₀) :
+    (serreTwistGlued n₀ m).restrict ((glueData n₀).ι i).opensRange.ι ≅
+      SheafOfModules.unit (((glueData n₀).ι i).opensRange : Scheme).ringCatSheaf :=
+  (Scheme.Modules.restrictFunctorIsoPullback ((glueData n₀).ι i).opensRange.ι).app
+      (serreTwistGlued n₀ m) ≪≫
+    ((Scheme.Modules.pullbackCongr ((glueData n₀).ι i).isoOpensRange_inv_comp).app
+      (serreTwistGlued n₀ m)).symm ≪≫
+    ((Scheme.Modules.pullbackComp ((glueData n₀).ι i).isoOpensRange.inv
+        ((glueData n₀).ι i)).app (serreTwistGlued n₀ m)).symm ≪≫
+    (Scheme.Modules.pullback ((glueData n₀).ι i).isoOpensRange.inv).mapIso
+      (Scheme.Modules.glueRestrictionIso (glueData n₀)
+        (fun i => SheafOfModules.unit ((glueData n₀).U i).ringCatSheaf)
+        (fun i j => twistTransition n₀ m i j)
+        (fun i => twistTransition_self n₀ m i)
+        (fun i j k => twistTransition_cocycle n₀ m i j k) i) ≪≫
+    Scheme.Modules.pullbackUnitIso ((glueData n₀).ι i).isoOpensRange.inv
+
+/-- **The glued Serre twist is a locally trivial line bundle.**  Every point of
+the glued total space lies in the range of some chart `ι_i`, an affine open
+(`chartIsAffine` + `isAffineOpen_opensRange`), on which `serreTwistGluedChartIso`
+trivialises. -/
+lemma serreTwistGlued_isLocallyTrivial (m : ℕ) :
+    IsLocallyTrivial (serreTwistGlued n₀ m) := by
+  intro x
+  obtain ⟨i, z, rfl⟩ := (glueData n₀).ι_jointly_surjective x
+  exact ⟨((glueData n₀).ι i).opensRange, ⟨z, rfl⟩,
+    isAffineOpen_opensRange ((glueData n₀).ι i), ⟨serreTwistGluedChartIso n₀ m i⟩⟩
+
+/-- **The Serre twist `O(m)` on the integral model is locally trivial** (pullback
+of the glued twist along the inverse cover isomorphism). -/
+lemma serreTwist_isLocallyTrivial (m : ℕ) :
+    IsLocallyTrivial (serreTwist n₀ m) :=
+  (serreTwistGlued_isLocallyTrivial n₀ m).pullback (inv (basicOpenCover n₀).fromGlued)
+
+/-- **The relative twisting sheaf `O(m)` on `ℙ(n₀; S)` is locally trivial**
+(pullback of `serreTwist` along `toProjInt`). -/
+lemma twistingSheaf_isLocallyTrivial (S : Scheme.{0}) (m : ℕ) :
+    IsLocallyTrivial (ProjectiveSpace.twistingSheaf n₀ S m) :=
+  (serreTwist_isLocallyTrivial n₀ m).pullback (ProjectiveSpace.toProjInt n₀ S)
+
+set_option synthInstance.maxHeartbeats 400000 in
+-- the slice-site `sheafToPresheaf.IsRightAdjoint` synthesis is slow (as in `LineBundleCoherence`)
+/-- **The glued Serre twist is finitely presented.** -/
+instance serreTwistGlued_isFinitePresentation (m : ℕ) :
+    (serreTwistGlued n₀ m).IsFinitePresentation :=
+  (serreTwistGlued_isLocallyTrivial n₀ m).isFinitePresentation
+
+set_option synthInstance.maxHeartbeats 400000 in
+/-- **`O(m)` on the integral model is finitely presented** (P0.4). -/
+instance serreTwist_isFinitePresentation (m : ℕ) :
+    (serreTwist n₀ m).IsFinitePresentation :=
+  (serreTwist_isLocallyTrivial n₀ m).isFinitePresentation
+
+set_option synthInstance.maxHeartbeats 400000 in
+/-- **The relative twisting sheaf `O(m)` on `ℙ(n₀; S)` is finitely presented**
+(P0.4). -/
+instance twistingSheaf_isFinitePresentation (S : Scheme.{0}) (m : ℕ) :
+    (ProjectiveSpace.twistingSheaf n₀ S m).IsFinitePresentation :=
+  (twistingSheaf_isLocallyTrivial n₀ S m).isFinitePresentation
+
+set_option synthInstance.maxHeartbeats 400000 in
+/-- **`O(m)` on the integral model is quasi-coherent** (P0.4), automatic from
+finite presentation. -/
+example (m : ℕ) : (serreTwist n₀ m).IsQuasicoherent := inferInstance
+
+set_option synthInstance.maxHeartbeats 400000 in
+/-- **The relative twisting sheaf `O(m)` on `ℙ(n₀; S)` is quasi-coherent** (P0.4). -/
+example (S : Scheme.{0}) (m : ℕ) :
+    (ProjectiveSpace.twistingSheaf n₀ S m).IsQuasicoherent := inferInstance
+
+end LocallyTrivial
 
 end AlgebraicGeometry.ProjTwist
