@@ -261,4 +261,107 @@ lemma AffineCoverMVSquare.mem_sectionGlue (S : X.AffineCoverMVSquare)
 
 end ConcreteCokernel
 
+/-! ## Node N5 — concrete component formulas for the unnormalized Čech differential
+
+The in-tree `cechCohomology C F 𝒰 n = (cechCochain C F 𝒰).homology n` is the homology of
+Mathlib's unnormalized `cechComplexFunctor`, routed through
+`FormalCoproduct.cochainComplexFunctor = cosimplicialObjectFunctor ⋙ alternatingCofaceMapComplex`.
+There is no cosimplicial dual of `alternatingFaceMapComplex_obj_d` in Mathlib, so the concrete
+`Pi.π`-component formulas for the differential are derived here directly by unfolding the
+alternating coface sum.  These are the reusable foundation the degree-`1` identification
+(`cechCohomology C F S.coverFamily 1 ≃ₗ[k] H1Cok S F`) is built on:
+
+* `cechCosimplicial_δ_π` — the single-coface component
+  `Yδᵢ ≫ πⱼ = π_{j∘δᵢ} ≫ (reindex restriction)`;
+* `prodOpens_eq_iInf` — the abstract Čech product object `∏ᶜ (𝒰∘j)` is the concrete infimum
+  `⨅ₐ 𝒰(j a)` of opens (equality in the poset `Opens X`), the bridge to `Γ(⨅ₐ Uₐ)`;
+* `alternatingCofaceMapComplex_objD` — the differential is the alternating coface sum (the
+  missing Mathlib dual);
+* `cechCochain_d01_π` / `cechCochain_d12_π` — the degree-`0`/degree-`1` differentials,
+  componentwise.
+-/
+
+section CechDifferential
+
+open AlgebraicTopology CategoryTheory CategoryTheory.Limits
+
+variable {k : Type u} [Field k] {C : Over (Spec (CommRingCat.of k))}
+  {ι : Type u} (𝒰 : ι → TopologicalSpace.Opens C.left.toTopCat)
+  (F : Sheaf (Opens.grothendieckTopology C.left.toTopCat) (ModuleCat.{u} k))
+
+/-- **The alternating coface differential (Mathlib dual, project-local).** The degree-`n`
+differential of `alternatingCofaceMapComplex` is the alternating sum of coface maps
+`objD Y n = ∑ᵢ (-1)ⁱ • Yδᵢ`.  Mathlib has `alternatingFaceMapComplex_obj_d` but no cosimplicial
+dual; this recreates it (the same one-line `CochainComplex.of` unfolding). -/
+theorem alternatingCofaceMapComplex_objD {D : Type*} [Category D] [Preadditive D]
+    (Y : CosimplicialObject D) (n : ℕ) :
+    ((alternatingCofaceMapComplex D).obj Y).d n (n + 1)
+      = AlternatingCofaceMapComplex.objD Y n := by
+  simp only [alternatingCofaceMapComplex, AlternatingCofaceMapComplex.obj, CochainComplex.of_d]
+
+/-- The cosimplicial object underlying the Čech complex `cechCochain C F 𝒰`: it sends `⦋n⦌` to
+`∏_{i : Fin (n+1) → ι} Γ(⨅ₐ 𝒰(i a), F)`.  `cechCochain C F 𝒰` is by definition
+`alternatingCofaceMapComplex.obj (cechCosimplicial 𝒰 F)`. -/
+noncomputable def cechCosimplicial : CosimplicialObject (ModuleCat.{u} k) :=
+  (FormalCoproduct.cosimplicialObjectFunctor (FormalCoproduct.mk _ 𝒰).cech).obj
+    ((sheafToPresheaf _ _).obj F)
+
+lemma cechCochain_eq :
+    AlgebraicGeometry.Scheme.cechCochain C F 𝒰
+      = (alternatingCofaceMapComplex (ModuleCat.{u} k)).obj (cechCosimplicial 𝒰 F) :=
+  rfl
+
+/-- **Single-coface component of the Čech cosimplicial object.** The `i₀`-th coface map
+`Yδ_{i₀} : Č^n ⟶ Č^{n+1}`, projected to the factor indexed by `j : Fin (n+2) → ι`, is the factor
+`j ∘ δ_{i₀}` of the source followed by the reindexing restriction
+`Γ(⨅ₐ 𝒰(j(δ_{i₀} a))) ⟶ Γ(⨅ₐ 𝒰(j a))`.  Derived by unfolding
+`cosimplicialObjectFunctor` (`evalOp` of the Čech nerve) and `Pi.lift ≫ Pi.π`. -/
+theorem cechCosimplicial_δ_π (n : ℕ) (i₀ : Fin (n + 2)) (j : Fin (n + 2) → ι) :
+    (cechCosimplicial 𝒰 F).δ i₀ ≫ Pi.π _ j
+      = Pi.π _ (j ∘ (Fin.succAboveOrderEmb i₀)) ≫
+          ((sheafToPresheaf _ _).obj F).map
+            (Pi.lift (fun a => Pi.π ((FormalCoproduct.mk _ 𝒰).obj ∘ j)
+              ((Fin.succAboveOrderEmb i₀) a))).op := by
+  simp only [cechCosimplicial, CosimplicialObject.δ,
+    FormalCoproduct.cosimplicialObjectFunctor_obj_map]
+  erw [Limits.Pi.lift_π]
+  rfl
+
+/-- **The abstract Čech product is the concrete infimum of opens.** In the poset `Opens X` the
+categorical product `∏ᶜ (𝒰∘j)` of the family `a ↦ 𝒰 (j a)` equals its infimum `⨅ₐ 𝒰 (j a)`.
+This is the bridge identifying the Čech section groups `Γ(∏ᶜ 𝒰∘j, F)` with the concrete
+`Γ(⨅ₐ 𝒰(j a), F)` (and, for the 2-cover, with `Γ(U₁ ⊓ U₂)`). -/
+theorem prodOpens_eq_iInf {m : ℕ} (j : Fin m → ι) :
+    (∏ᶜ ((FormalCoproduct.mk _ 𝒰).obj ∘ j) : TopologicalSpace.Opens C.left.toTopCat)
+      = ⨅ a, 𝒰 (j a) :=
+  le_antisymm (le_iInf fun a => (Limits.Pi.π ((FormalCoproduct.mk _ 𝒰).obj ∘ j) a).le)
+    (Limits.Pi.lift (fun a => homOfLE (iInf_le (fun a => 𝒰 (j a)) a))).le
+
+/-- **Degree-`0` differential `d⁰` of the Čech complex as an alternating coface difference.**
+`d⁰ = Yδ₀ − Yδ₁` (the two cofaces `Fin 1 → Fin 2` of the alternating sum). -/
+theorem cechCochain_d01_eq :
+    (AlgebraicGeometry.Scheme.cechCochain C F 𝒰).d 0 1
+      = (cechCosimplicial 𝒰 F).δ 0 - (cechCosimplicial 𝒰 F).δ 1 := by
+  have h : (AlgebraicGeometry.Scheme.cechCochain C F 𝒰).d 0 1
+      = AlternatingCofaceMapComplex.objD (cechCosimplicial 𝒰 F) 0 :=
+    alternatingCofaceMapComplex_objD (cechCosimplicial 𝒰 F) 0
+  rw [h, AlternatingCofaceMapComplex.objD, Fin.sum_univ_two]
+  simp only [Fin.val_zero, Fin.val_one, pow_zero, pow_one, one_zsmul, neg_one_zsmul]
+  abel
+
+/-- **Degree-`1` differential `d¹` of the Čech complex as an alternating coface sum.**
+`d¹ = Yδ₀ − Yδ₁ + Yδ₂` (the three cofaces `Fin 2 → Fin 3` of the alternating sum). -/
+theorem cechCochain_d12_eq :
+    (AlgebraicGeometry.Scheme.cechCochain C F 𝒰).d 1 2
+      = (cechCosimplicial 𝒰 F).δ 0 - (cechCosimplicial 𝒰 F).δ 1 + (cechCosimplicial 𝒰 F).δ 2 := by
+  have h : (AlgebraicGeometry.Scheme.cechCochain C F 𝒰).d 1 2
+      = AlternatingCofaceMapComplex.objD (cechCosimplicial 𝒰 F) 1 :=
+    alternatingCofaceMapComplex_objD (cechCosimplicial 𝒰 F) 1
+  rw [h, AlternatingCofaceMapComplex.objD, Fin.sum_univ_three]
+  simp only [Fin.val_zero, Fin.val_one, Fin.val_two, pow_zero, pow_one, one_zsmul, neg_one_zsmul,
+    Even.neg_pow, even_two]
+  abel
+
+end CechDifferential
+
 end AlgebraicGeometry.Scheme
