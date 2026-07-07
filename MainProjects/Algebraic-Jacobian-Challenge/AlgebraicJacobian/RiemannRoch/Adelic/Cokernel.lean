@@ -48,10 +48,52 @@ is the concrete `Ȟ¹`, and its kernel `AffineCoverMVSquare.sectionGlue` is the
 
 Because `F` is an arbitrary sheaf of `k`-modules, `H1Cok S F` is *already* the
 divisor-twisted `Ȟ¹(D)`: specialising `F := 𝒪_C(D)` once N3's `sectionOfDivisor`
-lands recovers the `H¹(D)` of the χ-ledger.  The identification
-`H1Cok S F ≃ₗ[k] cechCohomology C F S.cover 1` (node N5 proper) is left to the next
-wave; the pieces here (the concrete cokernel and the genus bridge) are what its two
-sides need.
+lands recovers the `H¹(D)` of the χ-ledger.
+
+## The concrete 2-cover family and the N6 bridge on it (this wave)
+
+`AffineCoverMVSquare.coverFamily : ULift (Fin 2) → Opens X` packages `U₁, U₂` as the
+`Type u`-indexed family that `Scheme.cechCohomology` / the N6 bridge consume, with
+`iSup_coverFamily : ⨆ i, S.coverFamily i = ⊤` the family-form of the cover totality.
+`hModuleOne_linearEquiv_cechCohomology_coverFamily` then lands the N6 bridge on this
+concrete family: `HModule k F n ≃ₗ[k] cechCohomology C F S.coverFamily n` (gated on
+`HasCechToHModuleIso F S.coverFamily`).  Chaining node N5 (below) into this at `n = 1`
+gives the lane's consumable corollary `HModule k F 1 ≃ₗ[k] H1Cok S F`.
+
+## The N5 identification `cechCohomology C F S.coverFamily 1 ≃ₗ[k] H1Cok S F` (roadmap)
+
+The in-tree `cechCohomology` is the homology of Mathlib's **unnormalized**
+`cechComplexFunctor` (`FormalCoproduct.cochainComplexFunctor` of the Čech nerve): in
+degree `n` the product runs over **all** `Fin (n+1) → ι` (not just increasing
+multi-indices), and the differential `dⁿ = ∑_{i} (-1)^i δⁱ` is the alternating sum of
+the cosimplicial cofaces `δⁱ = evalOp(P)(mapPower δ_i)` (a `Pi.lift` of projections to
+`x ∘ δ_i` followed by the restriction `P(⨅ U∘(x∘δ_i)) → P(⨅ U∘x)`).  For the 2-element
+cover (`ι = ULift (Fin 2)`) this is
+```
+  M⁰ = Γ(U₀) × Γ(U₁)                         (indices Fin 1 → ι)
+  M¹ = Γ(U₀) × Γ(U₀₁) × Γ(U₀₁) × Γ(U₁)       (indices (0,0),(0,1),(1,0),(1,1))
+  M² = ∏ over the 8 indices Fin 3 → ι         (incl. the degenerate diagonals)
+```
+where `Γ(U₀₁) = Γ(U₀ ⊓ U₁)`, and the two diagonal factors of `M¹` are the degenerate
+cofaces `U_i ⊓ U_i = U_i`.  Writing a degree-1 cochain as `(p, q, r, s)`:
+
+* `d⁰(a, b) = (0, b|₀₁ − a|₀₁, a|₀₁ − b|₀₁, 0)`, so
+  `im d⁰ = { (0, w, −w, 0) : w ∈ range (S.sectionDiff F) }` (note `w = b|₀₁ − a|₀₁` and
+  `sectionDiff (a,b) = a|₀₁ − b|₀₁ = −w`, whence the images coincide as subgroups);
+* `(d¹ n)_{(x₀,x₁,x₂)} = n_{(x₁,x₂)}| − n_{(x₀,x₂)}| + n_{(x₀,x₁)}|`.  The eight
+  components force, after restriction (each triple intersection collapses to `U₀`, `U₁`
+  or `U₀ ⊓ U₁`): the diagonals `p = s = 0` (from `x = (0,0,0)` and `(1,1,1)`) and
+  `r = −q` (from `x = (0,1,0)` / `(1,0,1)`), the remaining four being automatic.  Hence
+  `ker d¹ = { (0, q, −q, 0) : q ∈ Γ(U₀₁) } ≅ Γ(U₀₁)` via `q`.
+
+Therefore `H¹ = ker d¹ / im d⁰ ≅ Γ(U₀ ⊓ U₁) / range (S.sectionDiff F) = H1Cok S F`, the
+iso being `[(0, q, −q, 0)] ↦ [q]`.  The identification is **unconditional** (no
+acyclicity hypothesis — it is a pure homological-algebra fact about this specific
+2-cover complex); the only obstruction to formalising it is the grind of unfolding the
+`FormalCoproduct`-based `cechComplexFunctor` down to the concrete `Pi.π`-components and
+carrying out the 8-index kernel case-analysis with the `ULift (Fin 2)` bookkeeping.
+This is queued for the next wave; the `coverFamily` / N6-bridge pieces here are the
+scaffolding both sides of the equiv need.
 -/
 
 set_option autoImplicit false
@@ -107,6 +149,56 @@ noncomputable def hModuleOne_linearEquiv_cechCohomology_curve
     HModule k (Scheme.toModuleKSheaf C) n
       ≃ₗ[k] cechCohomology C (Scheme.toModuleKSheaf C) 𝒰 n :=
   hModuleOne_linearEquiv_cechCohomology (Scheme.toModuleKSheaf C) 𝒰 h n
+
+/-! ## Node N5 — the concrete 2-element cover family of an `AffineCoverMVSquare` -/
+
+/-- **The 2-element open cover family `𝒰 : ULift (Fin 2) → Opens X` of an
+`AffineCoverMVSquare`.** Indexed by `ULift.{u} (Fin 2)` (the `Type u` two-element
+index that `Scheme.cechCohomology`/`hModuleOne_linearEquiv_cechCohomology` consume),
+it sends the first index to `U₁` and the second to `U₂`.  This is the family whose
+Čech cohomology `cechCohomology C F S.coverFamily 1` is identified with the concrete
+cokernel `H1Cok S F` (node N5 proper) and fed into the N6 bridge. -/
+noncomputable def AffineCoverMVSquare.coverFamily {X : Scheme.{u}} (S : X.AffineCoverMVSquare) :
+    ULift.{u} (Fin 2) → TopologicalSpace.Opens X.toTopCat :=
+  fun i => if i.down = 0 then S.U₁ else S.U₂
+
+@[simp] lemma AffineCoverMVSquare.coverFamily_zero {X : Scheme.{u}} (S : X.AffineCoverMVSquare) :
+    S.coverFamily ⟨0⟩ = S.U₁ := rfl
+
+@[simp] lemma AffineCoverMVSquare.coverFamily_one {X : Scheme.{u}} (S : X.AffineCoverMVSquare) :
+    S.coverFamily ⟨1⟩ = S.U₂ := rfl
+
+/-- **Cover totality of `coverFamily`.** The 2-element family covers `X`:
+`⨆ i, S.coverFamily i = ⊤`.  This is the `ι → Opens`-family incarnation of the
+`AffineCoverMVSquare.cover` field `U₁ ⊔ U₂ = ⊤`, and is the hypothesis
+`hModuleOne_linearEquiv_cechCohomology` requires to land the N6 bridge on the whole
+curve. -/
+lemma AffineCoverMVSquare.iSup_coverFamily {X : Scheme.{u}} (S : X.AffineCoverMVSquare) :
+    ⨆ i, S.coverFamily i = ⊤ := by
+  refine le_antisymm le_top ?_
+  have h : S.U₁ ⊔ S.U₂ ≤ ⨆ i, S.coverFamily i :=
+    sup_le (le_iSup_of_le ⟨0⟩ (le_of_eq S.coverFamily_zero.symm))
+      (le_iSup_of_le ⟨1⟩ (le_of_eq S.coverFamily_one.symm))
+  exact S.cover ▸ h
+
+/-- **Node N6 bridge on the concrete 2-cover family.** The specialisation of
+`hModuleOne_linearEquiv_cechCohomology` to `S.coverFamily`, discharging the totality
+hypothesis with `iSup_coverFamily`: for a sheaf `F` of `k`-modules on the curve `C`
+satisfying the Čech-to-derived comparison gate on the 2-affine cover, the
+genus-degree cohomology `HModule k F n` is `k`-linearly identified with the Čech
+cohomology `cechCohomology C F S.coverFamily n` of the concrete 2-element cover.
+Chaining node N5's `cechCohomology C F S.coverFamily 1 ≃ₗ[k] H1Cok S F` into this (at
+`n = 1`) delivers the lane's consumable `HModule k F 1 ≃ₗ[k] H1Cok S F`. -/
+noncomputable def AffineCoverMVSquare.hModuleOne_linearEquiv_cechCohomology_coverFamily
+    {k : Type u} [Field k] {C : Over (Spec (CommRingCat.of k))}
+    (S : C.left.AffineCoverMVSquare)
+    (F : Sheaf (Opens.grothendieckTopology C.left.toTopCat) (ModuleCat.{u} k))
+    [HasExt.{u} (Sheaf (Opens.grothendieckTopology C.left.toTopCat) (ModuleCat.{u} k))]
+    [HasExt.{u + 1} (Sheaf (Opens.grothendieckTopology C.left.toTopCat) (ModuleCat.{u} k))]
+    [HasCechToHModuleIso F S.coverFamily]
+    (n : ℕ) :
+    HModule k F n ≃ₗ[k] cechCohomology C F S.coverFamily n :=
+  hModuleOne_linearEquiv_cechCohomology F S.coverFamily S.iSup_coverFamily n
 
 /-! ## Node N5 target — the concrete section-level difference map and cokernel -/
 
