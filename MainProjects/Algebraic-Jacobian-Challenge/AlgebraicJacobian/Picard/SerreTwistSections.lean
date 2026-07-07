@@ -532,6 +532,125 @@ lemma glueProj_app_glueSectionsEquiv_symm (s : glueGammaCompatible D M g) (i : D
 
 end GlueSections
 
+/-! ## The first descent leg on unit modules -/
+
+section UnitLeg
+
+variable (D : Scheme.GlueData.{0})
+
+set_option backward.isDefEq.respectTransparency false in
+/-- **The first descent leg of a rank-one (unit) descent datum is restriction
+along the overlap immersion**: composing `glueLegAComponent` with the
+pushforward of the structure-sheaf trivialization `pullbackUnitIso` yields the
+pushforward of the canonical comorphism `unitToPushforwardObjUnit` of `f_ij`
+(whose action on sections is the ring restriction map of `f_ij`).  This is the
+`a`-side atom for computing the compatible-family condition of the Serre twist
+concretely. -/
+lemma glueLegAComponent_unit (p : D.J × D.J) :
+    glueLegAComponent D (fun i => SheafOfModules.unit ((D.U i).ringCatSheaf)) p ≫
+        (Scheme.Modules.pushforward (D.f p.1 p.2 ≫ D.ι p.1)).map
+          (Scheme.Modules.pullbackUnitIso (D.f p.1 p.2)).hom
+      = (Scheme.Modules.pushforward (D.ι p.1)).map
+          (SheafOfModules.unitToPushforwardObjUnit (D.f p.1 p.2).toRingCatSheafHom) ≫
+        (Scheme.Modules.pushforwardComp (D.f p.1 p.2) (D.ι p.1)).hom.app
+          (SheafOfModules.unit ((D.V (p.1, p.2)).ringCatSheaf)) := by
+  -- naturality of the pushforward-composition comparison at the trivialization
+  have hnat : (Scheme.Modules.pushforwardComp (D.f p.1 p.2) (D.ι p.1)).hom.app
+        ((Scheme.Modules.pullback (D.f p.1 p.2)).obj
+          (SheafOfModules.unit ((D.U p.1).ringCatSheaf))) ≫
+        (Scheme.Modules.pushforward (D.f p.1 p.2 ≫ D.ι p.1)).map
+          (Scheme.Modules.pullbackUnitIso (D.f p.1 p.2)).hom
+      = (Scheme.Modules.pushforward (D.ι p.1)).map
+          ((Scheme.Modules.pushforward (D.f p.1 p.2)).map
+            (Scheme.Modules.pullbackUnitIso (D.f p.1 p.2)).hom) ≫
+        (Scheme.Modules.pushforwardComp (D.f p.1 p.2) (D.ι p.1)).hom.app
+          (SheafOfModules.unit ((D.V (p.1, p.2)).ringCatSheaf)) :=
+    ((Scheme.Modules.pushforwardComp (D.f p.1 p.2) (D.ι p.1)).hom.naturality
+      (Scheme.Modules.pullbackUnitIso (D.f p.1 p.2)).hom).symm
+  -- the adjunction unit against the trivialization is the canonical comorphism
+  have hunit : (Scheme.Modules.pullbackPushforwardAdjunction (D.f p.1 p.2)).unit.app
+        (SheafOfModules.unit ((D.U p.1).ringCatSheaf)) ≫
+        (Scheme.Modules.pushforward (D.f p.1 p.2)).map
+          (Scheme.Modules.pullbackUnitIso (D.f p.1 p.2)).hom
+      = SheafOfModules.unitToPushforwardObjUnit (D.f p.1 p.2).toRingCatSheafHom :=
+    (Adjunction.homEquiv_unit
+        (Scheme.Modules.pullbackPushforwardAdjunction (D.f p.1 p.2)) _ _
+        (SheafOfModules.pullbackObjUnitToUnit (D.f p.1 p.2).toRingCatSheafHom)).symm.trans
+      (SheafOfModules.pullbackPushforwardAdjunction_homEquiv_pullbackObjUnitToUnit
+        (D.f p.1 p.2).toRingCatSheafHom)
+  calc glueLegAComponent D (fun i => SheafOfModules.unit ((D.U i).ringCatSheaf)) p ≫
+        (Scheme.Modules.pushforward (D.f p.1 p.2 ≫ D.ι p.1)).map
+          (Scheme.Modules.pullbackUnitIso (D.f p.1 p.2)).hom
+      = (Scheme.Modules.pushforward (D.ι p.1)).map
+          ((Scheme.Modules.pullbackPushforwardAdjunction (D.f p.1 p.2)).unit.app
+            (SheafOfModules.unit ((D.U p.1).ringCatSheaf))) ≫
+          ((Scheme.Modules.pushforwardComp (D.f p.1 p.2) (D.ι p.1)).hom.app
+            ((Scheme.Modules.pullback (D.f p.1 p.2)).obj
+              (SheafOfModules.unit ((D.U p.1).ringCatSheaf))) ≫
+            (Scheme.Modules.pushforward (D.f p.1 p.2 ≫ D.ι p.1)).map
+              (Scheme.Modules.pullbackUnitIso (D.f p.1 p.2)).hom) := by
+        simp only [glueLegAComponent, Category.assoc]
+    _ = (Scheme.Modules.pushforward (D.ι p.1)).map
+          ((Scheme.Modules.pullbackPushforwardAdjunction (D.f p.1 p.2)).unit.app
+            (SheafOfModules.unit ((D.U p.1).ringCatSheaf))) ≫
+          ((Scheme.Modules.pushforward (D.ι p.1)).map
+            ((Scheme.Modules.pushforward (D.f p.1 p.2)).map
+              (Scheme.Modules.pullbackUnitIso (D.f p.1 p.2)).hom) ≫
+            (Scheme.Modules.pushforwardComp (D.f p.1 p.2) (D.ι p.1)).hom.app
+              (SheafOfModules.unit ((D.V (p.1, p.2)).ringCatSheaf))) :=
+        congrArg ((Scheme.Modules.pushforward (D.ι p.1)).map
+          ((Scheme.Modules.pullbackPushforwardAdjunction (D.f p.1 p.2)).unit.app
+            (SheafOfModules.unit ((D.U p.1).ringCatSheaf))) ≫ ·) hnat
+    _ = ((Scheme.Modules.pushforward (D.ι p.1)).map
+          ((Scheme.Modules.pullbackPushforwardAdjunction (D.f p.1 p.2)).unit.app
+            (SheafOfModules.unit ((D.U p.1).ringCatSheaf))) ≫
+          (Scheme.Modules.pushforward (D.ι p.1)).map
+            ((Scheme.Modules.pushforward (D.f p.1 p.2)).map
+              (Scheme.Modules.pullbackUnitIso (D.f p.1 p.2)).hom)) ≫
+          (Scheme.Modules.pushforwardComp (D.f p.1 p.2) (D.ι p.1)).hom.app
+            (SheafOfModules.unit ((D.V (p.1, p.2)).ringCatSheaf)) :=
+        (Category.assoc _ _ _).symm
+    _ = (Scheme.Modules.pushforward (D.ι p.1)).map
+          ((Scheme.Modules.pullbackPushforwardAdjunction (D.f p.1 p.2)).unit.app
+            (SheafOfModules.unit ((D.U p.1).ringCatSheaf)) ≫
+            (Scheme.Modules.pushforward (D.f p.1 p.2)).map
+              (Scheme.Modules.pullbackUnitIso (D.f p.1 p.2)).hom) ≫
+          (Scheme.Modules.pushforwardComp (D.f p.1 p.2) (D.ι p.1)).hom.app
+            (SheafOfModules.unit ((D.V (p.1, p.2)).ringCatSheaf)) :=
+        congrArg (· ≫ (Scheme.Modules.pushforwardComp (D.f p.1 p.2) (D.ι p.1)).hom.app
+            (SheafOfModules.unit ((D.V (p.1, p.2)).ringCatSheaf)))
+          ((Scheme.Modules.pushforward (D.ι p.1)).map_comp _ _).symm
+    _ = (Scheme.Modules.pushforward (D.ι p.1)).map
+          (SheafOfModules.unitToPushforwardObjUnit (D.f p.1 p.2).toRingCatSheafHom) ≫
+        (Scheme.Modules.pushforwardComp (D.f p.1 p.2) (D.ι p.1)).hom.app
+          (SheafOfModules.unit ((D.V (p.1, p.2)).ringCatSheaf)) :=
+        congrArg (fun z => (Scheme.Modules.pushforward (D.ι p.1)).map z ≫
+          (Scheme.Modules.pushforwardComp (D.f p.1 p.2) (D.ι p.1)).hom.app
+            (SheafOfModules.unit ((D.V (p.1, p.2)).ringCatSheaf))) hunit
+
+set_option maxHeartbeats 800000 in
+-- the final `unitToPushforwardObjUnit_val_app_apply` bridge is a heavy defeq check
+-- (it unfolds the pushforward site comparison); default heartbeats do not suffice
+set_option backward.isDefEq.respectTransparency false in
+/-- Section-level form of `glueLegAComponent_unit`: through the structure-sheaf
+trivialization of the overlap, the first descent leg acts on a chart section as
+the ring restriction along the overlap immersion `f_ij`. -/
+lemma glueLegAComponent_unit_app (p : D.J × D.J) (x : Γ(D.U p.1, ⊤)) :
+    ((Scheme.Modules.pushforward (D.f p.1 p.2 ≫ D.ι p.1)).map
+        (Scheme.Modules.pullbackUnitIso (D.f p.1 p.2)).hom).app ⊤
+      ((glueLegAComponent D
+          (fun i => SheafOfModules.unit ((D.U i).ringCatSheaf)) p).app ⊤ x)
+      = Scheme.Hom.appTop (D.f p.1 p.2) x :=
+  ((comp_app_top_apply
+      (glueLegAComponent D (fun i => SheafOfModules.unit ((D.U i).ringCatSheaf)) p)
+      ((Scheme.Modules.pushforward (D.f p.1 p.2 ≫ D.ι p.1)).map
+        (Scheme.Modules.pullbackUnitIso (D.f p.1 p.2)).hom) x).symm.trans
+    (app_top_congr (glueLegAComponent_unit D p) x)).trans
+    (SheafOfModules.unitToPushforwardObjUnit_val_app_apply
+      (D.f p.1 p.2).toRingCatSheafHom x)
+
+end UnitLeg
+
 /-! ## Pullback along an isomorphism is pushforward of the inverse -/
 
 /-- For an isomorphism of schemes `φ`, the two pushforwards of sheaves of
