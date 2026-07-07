@@ -7,6 +7,7 @@ import Mathlib
 import AlgebraicJacobian.Picard.QuotFunctorDef
 import AlgebraicJacobian.Picard.LineBundlePullback
 import AlgebraicJacobian.Picard.FlatKernelBase
+import AlgebraicJacobian.Cohomology.AffineSerreVanishing
 
 /-!
 # The relative-divisor functor `Div_{X/S}` (real definition)
@@ -112,6 +113,8 @@ universe u
 
 open CategoryTheory Limits
 
+open scoped TensorProduct
+
 namespace AlgebraicGeometry
 
 namespace Scheme
@@ -149,6 +152,390 @@ lemma Modules.pullback_kernel_isLocallyTrivial_of_isIso_kernelComparison
   LineBundle.IsLocallyTrivial.of_iso
     (asIso (Modules.pullbackKernelComparison g' q))
     (hker.pullback g')
+
+set_option backward.isDefEq.respectTransparency false in
+/-- **Naturality of the `fromSpec`/pullback base map.**  Reconstruction of the private `pullback_app_isoTensor_baseMap_naturality`
+using only the public `pullback_app_isoTensor_baseMap` + adjunction unit naturality
+(with `pullback_app_isoTensor_unitAtV` inlined). -/
+private lemma Modules.baseMap_naturality
+    {X Y : Scheme.{u}} (g : Y ⟶ X) {N N' : X.Modules}
+    (h : N ⟶ N') {U : Y.Opens} {V : X.Opens} (e : U ≤ g ⁻¹ᵁ V) (x : Γ(N, V)) :
+    (Scheme.Modules.Hom.app ((Scheme.Modules.pullback g).map h) U).hom
+        (pullback_app_isoTensor_baseMap g N e x) =
+      pullback_app_isoTensor_baseMap g N' e ((Scheme.Modules.Hom.app h V).hom x) := by
+  have hb := congrArg
+    (fun (k : N ⟶ (Scheme.Modules.pushforward g).obj
+        ((Scheme.Modules.pullback g).obj N')) =>
+      (Scheme.Modules.Hom.app k V).hom x)
+    ((Scheme.Modules.pullbackPushforwardAdjunction g).unit.naturality h)
+  have ha := congrArg
+    (fun (k : Γ((Scheme.Modules.pullback g).obj N, g ⁻¹ᵁ V) ⟶
+        Γ((Scheme.Modules.pullback g).obj N', U)) =>
+      (AddCommGrpCat.Hom.hom k)
+        ((((Scheme.Modules.pullbackPushforwardAdjunction g).unit.app N).val.app
+          (Opposite.op V)).hom x))
+    ((Scheme.Modules.Hom.mapPresheaf ((Scheme.Modules.pullback g).map h)).naturality
+      (homOfLE e).op)
+  exact ha.trans (congrArg
+    (fun w => ((((Scheme.Modules.pullback g).obj N').presheaf.map (homOfLE e).op).hom) w)
+    hb.symm)
+
+set_option backward.isDefEq.respectTransparency false in
+/-- **Bijectivity of the `fromSpec` base map.**  The canonical base map along `hV.fromSpec` is bijective for any module `N`
+(no quasi-coherence needed): it is the section-level realization of "restriction to an
+affine open, sections over `⊤` = sections over `V`".  Reconstructed from the
+`tildeIso_of_isQuasicoherent_isAffineOpen` model with `unitAtV` inlined. -/
+private lemma baseMap_fromSpec_bijective {X : Scheme.{u}} (N : X.Modules)
+    {V : X.Opens} (hV : IsAffineOpen V) :
+    Function.Bijective (pullback_app_isoTensor_baseMap hV.fromSpec N
+      (le_of_eq hV.fromSpec_preimage_self.symm)) := by
+  have him : hV.fromSpec ''ᵁ (hV.fromSpec ⁻¹ᵁ V) = V := by
+    rw [hV.fromSpec_preimage_self, Scheme.Hom.image_top_eq_opensRange,
+      hV.opensRange_fromSpec]
+  have hrestr : Function.Bijective
+      ((((Scheme.Modules.pullback hV.fromSpec).obj N).presheaf.map
+        (homOfLE (le_of_eq hV.fromSpec_preimage_self.symm)).op).hom) := by
+    rw [Subsingleton.elim
+      (homOfLE (le_of_eq hV.fromSpec_preimage_self.symm))
+      (eqToHom hV.fromSpec_preimage_self.symm),
+      eqToHom_op, eqToHom_map]
+    exact (ConcreteCategory.isIso_iff_bijective _).mp inferInstance
+  have h1 : Function.Bijective ((Scheme.Modules.Hom.app
+      ((Scheme.Modules.restrictAdjunction hV.fromSpec).unit.app N) V).hom) := by
+    rw [Scheme.Modules.restrictAdjunction_unit_app_app]
+    refine Function.bijective_iff_has_inverse.mpr
+      ⟨(N.presheaf.map (eqToHom him.symm).op).hom, fun y => ?_, fun y => ?_⟩
+    · change (AddCommGrpCat.Hom.hom (N.presheaf.map (eqToHom him.symm).op))
+          ((AddCommGrpCat.Hom.hom
+            (N.presheaf.map (homOfLE (hV.fromSpec.image_preimage_le V)).op)) y) = y
+      have hcomp1 : N.presheaf.map (homOfLE (hV.fromSpec.image_preimage_le V)).op ≫
+          N.presheaf.map (eqToHom him.symm).op = 𝟙 _ := by
+        rw [← Functor.map_comp, ← op_comp,
+          Subsingleton.elim
+            (eqToHom him.symm ≫ homOfLE (hV.fromSpec.image_preimage_le V)) (𝟙 V),
+          op_id, CategoryTheory.Functor.map_id]
+      exact congrArg (fun φ => (AddCommGrpCat.Hom.hom φ) y) hcomp1
+    · change (AddCommGrpCat.Hom.hom
+            (N.presheaf.map (homOfLE (hV.fromSpec.image_preimage_le V)).op))
+          ((AddCommGrpCat.Hom.hom (N.presheaf.map (eqToHom him.symm).op)) y) = y
+      have hcomp2 : N.presheaf.map (eqToHom him.symm).op ≫
+          N.presheaf.map (homOfLE (hV.fromSpec.image_preimage_le V)).op = 𝟙 _ := by
+        rw [← Functor.map_comp, ← op_comp,
+          Subsingleton.elim
+            (homOfLE (hV.fromSpec.image_preimage_le V) ≫ eqToHom him.symm)
+            (𝟙 (hV.fromSpec ''ᵁ (hV.fromSpec ⁻¹ᵁ V))),
+          op_id, CategoryTheory.Functor.map_id]
+      exact congrArg (fun φ => (AddCommGrpCat.Hom.hom φ) y) hcomp2
+  have h2 : Function.Bijective ((Scheme.Modules.Hom.app
+      ((Scheme.Modules.restrictFunctorIsoPullback hV.fromSpec).hom.app N)
+      (hV.fromSpec ⁻¹ᵁ V)).hom) := by
+    refine Function.bijective_iff_has_inverse.mpr
+      ⟨((Scheme.Modules.Hom.app
+        ((Scheme.Modules.restrictFunctorIsoPullback hV.fromSpec).inv.app N)
+        (hV.fromSpec ⁻¹ᵁ V)).hom), fun y => ?_, fun y => ?_⟩
+    · simp only [← AddCommGrpCat.comp_apply, ← Scheme.Modules.Hom.comp_app,
+        Iso.hom_inv_id_app, Scheme.Modules.Hom.id_app, AddCommGrpCat.hom_id,
+        AddMonoidHom.id_apply]
+    · simp only [← AddCommGrpCat.comp_apply, ← Scheme.Modules.Hom.comp_app,
+        Iso.inv_hom_id_app, Scheme.Modules.Hom.id_app, AddCommGrpCat.hom_id,
+        AddMonoidHom.id_apply]
+  have hcomp : (Scheme.Modules.restrictAdjunction hV.fromSpec).unit.app N ≫
+      (Scheme.Modules.pushforward hV.fromSpec).map
+        ((Scheme.Modules.restrictFunctorIsoPullback hV.fromSpec).hom.app N) =
+      (Scheme.Modules.pullbackPushforwardAdjunction hV.fromSpec).unit.app N :=
+    Adjunction.unit_leftAdjointUniq_hom_app _ _ N
+  have hunit : Function.Bijective
+      (fun x : Γ(N, V) =>
+        (((((Scheme.Modules.pullbackPushforwardAdjunction hV.fromSpec).unit.app N).val).app
+          (Opposite.op V)).hom) x) := by
+    have hfun : ∀ x : Γ(N, V),
+        (((((Scheme.Modules.pullbackPushforwardAdjunction hV.fromSpec).unit.app N).val).app
+          (Opposite.op V)).hom) x =
+        (Scheme.Modules.Hom.app
+          ((Scheme.Modules.restrictFunctorIsoPullback hV.fromSpec).hom.app N)
+          (hV.fromSpec ⁻¹ᵁ V)).hom
+        ((Scheme.Modules.Hom.app
+          ((Scheme.Modules.restrictAdjunction hV.fromSpec).unit.app N) V).hom x) :=
+      fun x => (congrArg (fun φ => (Scheme.Modules.Hom.app φ V).hom x) hcomp.symm)
+    have hrw : (fun x : Γ(N, V) =>
+          (((((Scheme.Modules.pullbackPushforwardAdjunction hV.fromSpec).unit.app N).val).app
+            (Opposite.op V)).hom) x) =
+        (fun y => (Scheme.Modules.Hom.app
+          ((Scheme.Modules.restrictFunctorIsoPullback hV.fromSpec).hom.app N)
+          (hV.fromSpec ⁻¹ᵁ V)).hom y) ∘
+        (fun x => (Scheme.Modules.Hom.app
+          ((Scheme.Modules.restrictAdjunction hV.fromSpec).unit.app N) V).hom x) :=
+      funext hfun
+    rw [hrw]
+    exact h2.comp h1
+  have hcompose : ⇑(pullback_app_isoTensor_baseMap hV.fromSpec N
+        (le_of_eq hV.fromSpec_preimage_self.symm)) =
+      (fun y => (((Scheme.Modules.pullback hV.fromSpec).obj N).presheaf.map
+        (homOfLE (le_of_eq hV.fromSpec_preimage_self.symm)).op).hom y) ∘
+      (fun x : Γ(N, V) =>
+        (((((Scheme.Modules.pullbackPushforwardAdjunction hV.fromSpec).unit.app N).val).app
+          (Opposite.op V)).hom) x) := rfl
+  rw [hcompose]
+  exact hrestr.comp hunit
+
+set_option maxHeartbeats 1600000 in
+-- Heartbeat headroom: the Čech-vanishing transport and short-exact base change under
+-- binders provision many instances, as in the affine-locality engines of `QuotScheme`.
+/-- **Section surjectivity of an epimorphism of quasi-coherent sheaves over an affine open** (brick 1).  For an epimorphism `q : E ⟶ F` of quasi-coherent modules with
+quasi-coherent kernel, and an affine open `V`, the section map `Γ(q, V) : Γ(E,V) → Γ(F,V)`
+is surjective (the `H¹(V, ker q) = 0` content).  Transport the short exact sequence
+`0 → ker q → E → F → 0` along the exact `hV.fromSpec`-pullback to `Spec Γ(X,V)`, apply
+the Čech section-surjectivity `affine_surj_of_vanishing_affine`, then transport back through
+the (bijective, `q`-natural) `fromSpec` base map. -/
+private theorem section_surjective_of_epi_qcoh
+    {X : Scheme.{u}} {E F : X.Modules} (q : E ⟶ F) [Epi q]
+    [E.IsQuasicoherent] [F.IsQuasicoherent] [(Limits.kernel q).IsQuasicoherent]
+    {V : X.Opens} (hV : IsAffineOpen V) :
+    Function.Surjective ((Scheme.Modules.Hom.app q V).hom) := by
+  haveI hoi : IsOpenImmersion hV.fromSpec := hV.isOpenImmersion_fromSpec
+  haveI : PreservesFiniteColimits (Scheme.Modules.pullback hV.fromSpec) := by
+    haveI := (Scheme.Modules.pullbackPushforwardAdjunction
+      hV.fromSpec).leftAdjoint_preservesColimits
+    infer_instance
+  haveI : PreservesFiniteLimits (Scheme.Modules.pullback hV.fromSpec) := inferInstance
+  set SC : ShortComplex X.Modules :=
+    ShortComplex.mk (Limits.kernel.ι q) q (Limits.kernel.condition q) with hSC
+  have hSCse : SC.ShortExact := ShortComplex.ShortExact.mk (ShortComplex.exact_kernel q)
+  set S : ShortComplex (Spec Γ(X, V)).Modules :=
+    SC.map (Scheme.Modules.pullback hV.fromSpec) with hSdef
+  have hS : S.ShortExact := hSCse.map_of_exact (Scheme.Modules.pullback hV.fromSpec)
+  haveI : (S.X₁).IsQuasicoherent :=
+    pullback_isQuasicoherent_hom hV.fromSpec (Limits.kernel q) inferInstance
+  have hvanish : ∀ (n : ℕ) (g : Fin n → Γ(X, V)),
+      IsAffineOpen (X := Spec Γ(X, V))
+          (⨆ i : ULift.{u} (Fin n), PrimeSpectrum.basicOpen (g i.down)) →
+      ∀ (qq : ℕ), 0 < qq →
+        IsZero (cechCohomology
+          (fun i : ULift.{u} (Fin n) => PrimeSpectrum.basicOpen (g i.down))
+          ((Scheme.Modules.toPresheafOfModules (Spec Γ(X, V))).obj S.X₁) qq) := by
+    intro n g haff qq hqq
+    refine cechCohomology_isZero_of_iso _
+      ((Scheme.Modules.toPresheafOfModules (Spec Γ(X, V))).mapIso
+        (qcoh_iso_tilde_sections S.X₁).symm) qq ?_
+    exact sectionCech_homology_exact_of_affineOpen (moduleSpecΓFunctor.obj S.X₁)
+      (fun i : ULift.{u} (Fin n) => g i.down) haff qq hqq
+  have hsurj := affine_surj_of_vanishing_affine S hS hvanish ⊤ (isAffineOpen_top _)
+  intro y
+  have e : (⊤ : (Spec Γ(X, V)).Opens) ≤ hV.fromSpec ⁻¹ᵁ V :=
+    le_of_eq hV.fromSpec_preimage_self.symm
+  obtain ⟨z, hz⟩ := hsurj (pullback_app_isoTensor_baseMap hV.fromSpec F e y)
+  obtain ⟨x', hx'⟩ := (baseMap_fromSpec_bijective E hV).surjective z
+  refine ⟨x', (baseMap_fromSpec_bijective F hV).injective ?_⟩
+  rw [← Modules.baseMap_naturality hV.fromSpec q e x', hx']
+  exact hz
+
+/-- The canonical base-change addition map `B ⊗[A] M → D ⊗[C] M`,
+`b ⊗ m ↦ (algebraMap B D b) ⊗ m`, for a pushout square `A → B, A → C, C → D, B → D`
+and a `C`-module `M`. -/
+private noncomputable def pushoutTmulAddHom
+    {A B C D : Type u} [CommRing A] [CommRing B] [CommRing C] [CommRing D]
+    [Algebra A B] [Algebra A C] [Algebra C D] [Algebra B D] [Algebra A D]
+    [IsScalarTower A C D] [IsScalarTower A B D]
+    (M : Type u) [AddCommGroup M] [Module A M] [Module C M] [IsScalarTower A C M] :
+    (B ⊗[A] M) →+ (D ⊗[C] M) :=
+  (TensorProduct.lift
+    ({ toFun := fun b => (TensorProduct.mk C D M (algebraMap B D b)).restrictScalars A
+       map_add' := fun b b' => by
+         ext m
+         simp only [map_add, LinearMap.restrictScalars_apply, TensorProduct.mk_apply,
+           LinearMap.add_apply]
+       map_smul' := fun a b => by
+         ext m
+         simp only [RingHom.id_apply, LinearMap.restrictScalars_apply, TensorProduct.mk_apply,
+           LinearMap.smul_apply]
+         rw [Algebra.smul_def, map_mul, ← IsScalarTower.algebraMap_apply A B D,
+           TensorProduct.smul_tmul', Algebra.smul_def, IsScalarTower.algebraMap_apply A C D] } :
+      B →ₗ[A] M →ₗ[A] (D ⊗[C] M))).toAddMonoidHom
+
+private lemma pushoutTmulAddHom_apply
+    {A B C D : Type u} [CommRing A] [CommRing B] [CommRing C] [CommRing D]
+    [Algebra A B] [Algebra A C] [Algebra C D] [Algebra B D] [Algebra A D]
+    [IsScalarTower A C D] [IsScalarTower A B D]
+    {M : Type u} [AddCommGroup M] [Module A M] [Module C M] [IsScalarTower A C M]
+    (b : B) (m : M) :
+    pushoutTmulAddHom (A := A) (C := C) M (b ⊗ₜ[A] m) = algebraMap B D b ⊗ₜ[C] m := rfl
+
+/-- **Base-change injectivity across a pushout of rings.**  For a pushout square
+`A → B, A → C, C → D` (`D = B ⊗[A] C`) and a `C`-linear map `φ : MK → ME`, if the
+`A`-base change `B ⊗[A] φ` is injective, then the `C`-base change `D ⊗[C] φ` is
+injective.  The two are conjugate by the pushout scalar-extension iso
+`bijective_addHom_of_isPushout`. -/
+private lemma lTensor_injective_of_pushout
+    {A B C D : Type u} [CommRing A] [CommRing B] [CommRing C] [CommRing D]
+    [Algebra A B] [Algebra A C] [Algebra C D] [Algebra B D] [Algebra A D]
+    [IsScalarTower A C D] [IsScalarTower A B D] [Algebra.IsPushout A C B D]
+    {MK ME : Type u} [AddCommGroup MK] [Module A MK] [Module C MK] [IsScalarTower A C MK]
+    [AddCommGroup ME] [Module A ME] [Module C ME] [IsScalarTower A C ME]
+    (φ : MK →ₗ[C] ME)
+    (hinj : Function.Injective (LinearMap.lTensor B (φ.restrictScalars A))) :
+    Function.Injective (TensorProduct.AlgebraTensorModule.lTensor D D φ) := by
+  have hbijK : Function.Bijective (pushoutTmulAddHom (A := A) (B := B) (C := C) (D := D) MK) :=
+    SectionBaseChange.bijective_addHom_of_isPushout _ (fun b m => rfl)
+  have hbijE : Function.Bijective (pushoutTmulAddHom (A := A) (B := B) (C := C) (D := D) ME) :=
+    SectionBaseChange.bijective_addHom_of_isPushout _ (fun b m => rfl)
+  -- the reconciliation square: `σ_E ∘ (B ⊗ φ) = (D ⊗ φ) ∘ σ_K`
+  have hsq : ∀ z : B ⊗[A] MK,
+      pushoutTmulAddHom (A := A) (B := B) (C := C) (D := D) ME
+          (LinearMap.lTensor B (φ.restrictScalars A) z) =
+        TensorProduct.AlgebraTensorModule.lTensor D D φ
+          (pushoutTmulAddHom (A := A) (B := B) (C := C) (D := D) MK z) := by
+    intro z
+    induction z using TensorProduct.induction_on with
+    | zero => simp
+    | tmul b m => rfl
+    | add z₁ z₂ h₁ h₂ => rw [map_add, map_add, map_add, map_add, h₁, h₂]
+  -- conclude: `D ⊗ φ = σ_E ∘ (B ⊗ φ) ∘ σ_K⁻¹`, injective
+  intro a₁ a₂ ha
+  obtain ⟨w₁, rfl⟩ := hbijK.surjective a₁
+  obtain ⟨w₂, rfl⟩ := hbijK.surjective a₂
+  rw [← hsq, ← hsq] at ha
+  have := hinj (hbijE.injective ha)
+  rw [this]
+
+/-- The `V`-section map of a morphism of sheaves of modules, bundled as a
+`Γ(X, V)`-linear map (the underlying additive map is `(Hom.app φ V).hom`;
+`Γ(X, V)`-linearity is `Hom.app_smul`). -/
+private noncomputable def Modules.appₗ {X : Scheme.{u}} {M N : X.Modules} (φ : M ⟶ N)
+    (V : X.Opens) :
+    Γ(M, V) →ₗ[Γ(X, V)] Γ(N, V) where
+  toFun := (Scheme.Modules.Hom.app φ V).hom
+  map_add' := map_add _
+  map_smul' := fun r x => Scheme.Modules.Hom.app_smul φ r x
+
+set_option maxHeartbeats 1600000 in
+set_option maxSynthPendingDepth 3 in
+-- Heartbeat/instance headroom: the per-piece instance provisioning mirrors
+-- `flat_section_pullback_piece` (`GenericFlatnessGeometric`), plus the section-equiv
+-- conjugation and pushout reconciliation.
+/-- **Per-piece injectivity of the pulled-back kernel inclusion** (steps 2–3).  On an affine piece `W = g'⁻¹V ⊓ f'⁻¹Ut` of the fibre-product
+square (over an affine base `U`, with `V` affine `⊆ f⁻¹U` and `Ut` affine `⊆ g⁻¹U`),
+the pulled-back kernel inclusion `g'^*(ker q ↪ E)` is injective on `W`-sections.  Route:
+the section-equiv `pullback_app_isoTensor_baseMap_sectionLinearEquiv` conjugates the
+`W`-section map into `Γ(X',W) ⊗_{Γ(X,V)} Γ(ker q,V) → Γ(X',W) ⊗_{Γ(X,V)} Γ(E,V)`; the
+pushout `Γ(X',W) = Γ(X,V) ⊗_{Γ(S,U)} Γ(S',Ut)` rebases this to `Γ(S',Ut) ⊗_{Γ(S,U)} ·`
+(`lTensor_injective_of_pushout`), where flatness of `Γ(F,V)` over `Γ(S,U)` and the section
+SES (`section_surjective_of_epi_qcoh` + left-exactness of `Γ(-,V)`) give injectivity
+(`Module.Flat.lTensor_injective_of_exact`). -/
+private theorem app_injective_on_piece
+    {X S X' S' : Scheme.{u}} {f : X ⟶ S} {g : S' ⟶ S} {g' : X' ⟶ X} {f' : X' ⟶ S'}
+    (sq : IsPullback g' f' f g) {E F : X.Modules} (q : E ⟶ F) [Epi q]
+    [E.IsQuasicoherent] [F.IsQuasicoherent] [(Limits.kernel q).IsQuasicoherent]
+    (hflat : CoherentSheafFlat f F)
+    {U : S.Opens} {V : X.Opens} {Ut : S'.Opens}
+    (hU : IsAffineOpen U) (hV : IsAffineOpen V) (hUt : IsAffineOpen Ut)
+    (hUSX : V ≤ f ⁻¹ᵁ U) (hUST : Ut ≤ g ⁻¹ᵁ U) :
+    Function.Injective ((Scheme.Modules.Hom.app
+      ((Scheme.Modules.pullback g').map (Limits.kernel.ι q))
+      (g' ⁻¹ᵁ V ⊓ f' ⁻¹ᵁ Ut)).hom) := by
+  have hW : IsAffineOpen (g' ⁻¹ᵁ V ⊓ f' ⁻¹ᵁ Ut) :=
+    isAffineOpen_pullback_piece sq hUST hUSX hU hUt hV
+  -- ring/algebra structures on the four corners (as in `flat_section_pullback_piece`)
+  letI : Algebra Γ(S, U) Γ(X, V) := (f.appLE U V hUSX).hom.toAlgebra
+  letI : Algebra Γ(S, U) Γ(S', Ut) := (g.appLE U Ut hUST).hom.toAlgebra
+  letI : Algebra Γ(X, V) Γ(X', g' ⁻¹ᵁ V ⊓ f' ⁻¹ᵁ Ut) :=
+    (g'.appLE V (g' ⁻¹ᵁ V ⊓ f' ⁻¹ᵁ Ut) inf_le_left).hom.toAlgebra
+  letI : Algebra Γ(S', Ut) Γ(X', g' ⁻¹ᵁ V ⊓ f' ⁻¹ᵁ Ut) :=
+    (f'.appLE Ut (g' ⁻¹ᵁ V ⊓ f' ⁻¹ᵁ Ut) inf_le_right).hom.toAlgebra
+  letI : Algebra Γ(S, U) Γ(X', g' ⁻¹ᵁ V ⊓ f' ⁻¹ᵁ Ut) :=
+    ((g'.appLE V (g' ⁻¹ᵁ V ⊓ f' ⁻¹ᵁ Ut) inf_le_left).hom.comp
+      (f.appLE U V hUSX).hom).toAlgebra
+  haveI : IsScalarTower Γ(S, U) Γ(X, V) Γ(X', g' ⁻¹ᵁ V ⊓ f' ⁻¹ᵁ Ut) :=
+    IsScalarTower.of_algebraMap_eq' rfl
+  haveI : IsScalarTower Γ(S, U) Γ(S', Ut) Γ(X', g' ⁻¹ᵁ V ⊓ f' ⁻¹ᵁ Ut) :=
+    IsScalarTower.of_algebraMap_eq' (by
+      show ((g'.appLE V _ inf_le_left).hom.comp (f.appLE U V hUSX).hom) =
+        (f'.appLE Ut _ inf_le_right).hom.comp (g.appLE U Ut hUST).hom
+      have h1 : f.appLE U V hUSX ≫ g'.appLE V (g' ⁻¹ᵁ V ⊓ f' ⁻¹ᵁ Ut) inf_le_left =
+          g.appLE U Ut hUST ≫ f'.appLE Ut (g' ⁻¹ᵁ V ⊓ f' ⁻¹ᵁ Ut) inf_le_right := by
+        rw [Scheme.Hom.appLE_comp_appLE, Scheme.Hom.appLE_comp_appLE]
+        have key : ∀ (φ : X' ⟶ S) (_ : f' ≫ g = φ)
+            (w₁ : (g' ⁻¹ᵁ V ⊓ f' ⁻¹ᵁ Ut) ≤ φ ⁻¹ᵁ U)
+            (w₂ : (g' ⁻¹ᵁ V ⊓ f' ⁻¹ᵁ Ut) ≤ (f' ≫ g) ⁻¹ᵁ U),
+            φ.appLE U (g' ⁻¹ᵁ V ⊓ f' ⁻¹ᵁ Ut) w₁ =
+              (f' ≫ g).appLE U (g' ⁻¹ᵁ V ⊓ f' ⁻¹ᵁ Ut) w₂ := by
+          rintro φ rfl w₁ w₂; rfl
+        exact key (g' ≫ f) sq.w.symm _ _
+      exact congrArg CommRingCat.Hom.hom h1)
+  haveI hpo : Algebra.IsPushout Γ(S, U) Γ(X, V) Γ(S', Ut)
+      Γ(X', g' ⁻¹ᵁ V ⊓ f' ⁻¹ᵁ Ut) :=
+    CommRingCat.isPushout_iff_isPushout.mp
+      (isPushout_appLE_pullback_piece sq hUST hUSX hU hUt hV)
+  -- module structures on `Γ(ker q, V)`, `Γ(E, V)` over `Γ(S, U)`
+  letI : Module Γ(S, U) Γ(Limits.kernel q, V) := Module.compHom _ (f.appLE U V hUSX).hom
+  haveI : IsScalarTower Γ(S, U) Γ(X, V) Γ(Limits.kernel q, V) :=
+    IsScalarTower.of_algebraMap_smul fun _ _ => rfl
+  letI : Module Γ(S, U) Γ(E, V) := Module.compHom _ (f.appLE U V hUSX).hom
+  haveI : IsScalarTower Γ(S, U) Γ(X, V) Γ(E, V) :=
+    IsScalarTower.of_algebraMap_smul fun _ _ => rfl
+  letI : Module Γ(S, U) Γ(F, V) := Module.compHom _ (f.appLE U V hUSX).hom
+  haveI : IsScalarTower Γ(S, U) Γ(X, V) Γ(F, V) :=
+    IsScalarTower.of_algebraMap_smul fun _ _ => rfl
+  -- the two section maps as `Γ(X, V)`-linear maps
+  set φ := Modules.appₗ (Limits.kernel.ι q) V with hφ
+  set ψ := Modules.appₗ q V with hψ
+  -- the section-level SES data
+  set SC : ShortComplex X.Modules :=
+    ShortComplex.mk (Limits.kernel.ι q) q (Limits.kernel.condition q) with hSC
+  have hSCse : SC.ShortExact := ShortComplex.ShortExact.mk (ShortComplex.exact_kernel q)
+  haveI hpfl : PreservesFiniteLimits (sectionsFunctor V) := by
+    unfold sectionsFunctor; infer_instance
+  haveI hpzm : (sectionsFunctor V).PreservesZeroMorphisms := by
+    unfold sectionsFunctor; infer_instance
+  have hφinj : Function.Injective φ := by
+    have hm : Mono ((sectionsFunctor V).map SC.f) :=
+      inferInstanceAs (Mono ((sectionsFunctor V).map SC.f))
+    rw [AddCommGrpCat.mono_iff_injective] at hm
+    exact hm
+  have hexact : Function.Exact φ ψ := by
+    have hex : (SC.map (sectionsFunctor V)).Exact :=
+      ShortComplex.Exact.map_of_mono_of_preservesKernel hSCse.exact
+        (sectionsFunctor V) hSCse.mono_f inferInstance
+    rw [ShortComplex.ab_exact_iff_function_exact] at hex
+    exact hex
+  have hψsurj : Function.Surjective ψ := section_surjective_of_epi_qcoh q hV
+  have hFflat : Module.Flat Γ(S, U) Γ(F, V) := hflat hU hV hUSX
+  -- injectivity of the rebased tensor map
+  have hLinj : Function.Injective
+      (TensorProduct.AlgebraTensorModule.lTensor Γ(X', g' ⁻¹ᵁ V ⊓ f' ⁻¹ᵁ Ut)
+        Γ(X', g' ⁻¹ᵁ V ⊓ f' ⁻¹ᵁ Ut) φ) := by
+    refine lTensor_injective_of_pushout (A := Γ(S, U)) (B := Γ(S', Ut))
+      (D := Γ(X', g' ⁻¹ᵁ V ⊓ f' ⁻¹ᵁ Ut)) φ ?_
+    exact Module.Flat.lTensor_injective_of_exact (f := φ.restrictScalars Γ(S, U))
+      (g := ψ.restrictScalars Γ(S, U)) hφinj hexact hψsurj hFflat Γ(S', Ut)
+  -- section equivs for `ker q` and `E`
+  obtain ⟨⟨fK, hfK⟩⟩ :=
+    pullback_app_isoTensor_baseMap_sectionLinearEquiv g' (Limits.kernel q) hW hV inf_le_left
+  obtain ⟨⟨fE, hfE⟩⟩ :=
+    pullback_app_isoTensor_baseMap_sectionLinearEquiv g' E hW hV inf_le_left
+  -- conjugation: the `W`-section map, precomposed with `fK`, is `fE ∘ (Γ(X',W) ⊗ φ)`
+  set T := Modules.appₗ ((Scheme.Modules.pullback g').map (Limits.kernel.ι q))
+    (g' ⁻¹ᵁ V ⊓ f' ⁻¹ᵁ Ut) with hT
+  have hcong : T.comp fK.toLinearMap =
+      fE.toLinearMap.comp (TensorProduct.AlgebraTensorModule.lTensor
+        Γ(X', g' ⁻¹ᵁ V ⊓ f' ⁻¹ᵁ Ut) Γ(X', g' ⁻¹ᵁ V ⊓ f' ⁻¹ᵁ Ut) φ) := by
+    refine SectionBaseChange.linearMap_ext_one_tmul (fun x => ?_)
+    simp only [LinearMap.comp_apply, LinearEquiv.coe_coe,
+      TensorProduct.AlgebraTensorModule.lTensor_tmul]
+    rw [hfK x, hfE (φ x)]
+    exact Modules.baseMap_naturality g' (Limits.kernel.ι q) inf_le_left x
+  -- conclude injectivity of `T`
+  have hTfK : Function.Injective (T.comp fK.toLinearMap) := by
+    rw [hcong]
+    exact fE.injective.comp hLinj
+  intro a b hab
+  obtain ⟨a', rfl⟩ := fK.surjective a
+  obtain ⟨b', rfl⟩ := fK.surjective b
+  refine congrArg (⇑fK) (hTfK ?_)
+  show (Scheme.Modules.Hom.app ((Scheme.Modules.pullback g').map (Limits.kernel.ι q))
+      (g' ⁻¹ᵁ V ⊓ f' ⁻¹ᵁ Ut)).hom (fK a')
+    = (Scheme.Modules.Hom.app ((Scheme.Modules.pullback g').map (Limits.kernel.ι q))
+      (g' ⁻¹ᵁ V ⊓ f' ⁻¹ᵁ Ut)).hom (fK b')
+  exact hab
 
 /-! ## §1. Base change of the ideal of a relative effective divisor
 
