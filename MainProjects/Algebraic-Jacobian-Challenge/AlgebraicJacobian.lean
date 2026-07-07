@@ -95,6 +95,9 @@ import AlgebraicJacobian.Picard.QuotFunctorDef
 -- relative projective space, Serre twist O(m), projective-with-L predicate.
 import AlgebraicJacobian.Picard.ProjectiveSpace
 import AlgebraicJacobian.Picard.SerreTwist
+-- Option-B Phase 0 (Serre-finiteness lane): the glued-sheaf Γ-section API —
+-- Γ(glue D M g, ⊤) ≅ compatible families, instantiated at O(m).
+import AlgebraicJacobian.Picard.SerreTwistSections
 import AlgebraicJacobian.Picard.ProjectiveMorphism
 import AlgebraicJacobian.Picard.SerreFiniteness
 import AlgebraicJacobian.Picard.ZariskiDescentRepresentability

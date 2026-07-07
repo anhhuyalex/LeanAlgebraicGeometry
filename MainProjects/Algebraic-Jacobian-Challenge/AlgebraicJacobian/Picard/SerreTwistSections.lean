@@ -82,6 +82,13 @@ of the original sheaf of modules, definitionally. -/
 lemma gamma_pushforward_top {X Y : Scheme.{0}} (f : X ⟶ Y) (M : X.Modules) :
     Γ((Scheme.Modules.pushforward f).obj M, ⊤) = Γ(M, ⊤) := rfl
 
+/-- Global sections of the unit sheaf of modules are the structure-sheaf
+sections, definitionally.  This identifies the chart-section spaces of the
+compatible families of a rank-one descent datum (such as the Serre twist)
+with the structure-sheaf sections of the charts. -/
+lemma gamma_unit_top (X : Scheme.{0}) :
+    (Γ(SheafOfModules.unit X.ringCatSheaf, ⊤) : Type) = (Γ(X, ⊤) : Type) := rfl
+
 /-- Equal morphisms of sheaves of modules act equally on global sections. -/
 lemma app_top_congr {X : Scheme.{0}} {A B : X.Modules} {φ ψ : A ⟶ B} (h : φ = ψ)
     (x : Γ(A, ⊤)) : φ.app ⊤ x = ψ.app ⊤ x := by rw [h]
@@ -158,7 +165,7 @@ private lemma moduleCat_equalizer_element_lift {R : RingCat.{0}} {A B : ModuleCa
       = ModuleCat.ofHom (LinearMap.toSpanSingleton R A x) ≫ g := by
     ext : 1
     apply LinearMap.ext_ring
-    show f (LinearMap.toSpanSingleton (R : Type) (A : Type) x (1 : R))
+    change f (LinearMap.toSpanSingleton (R : Type) (A : Type) x (1 : R))
       = g (LinearMap.toSpanSingleton (R : Type) (A : Type) x (1 : R))
     have h1 : LinearMap.toSpanSingleton (R : Type) (A : Type) x (1 : R) = x :=
       one_smul _ x
@@ -525,4 +532,101 @@ lemma glueProj_app_glueSectionsEquiv_symm (s : glueGammaCompatible D M g) (i : D
 
 end GlueSections
 
+/-! ## Pullback along an isomorphism is pushforward of the inverse -/
+
+/-- For an isomorphism of schemes `φ`, the two pushforwards of sheaves of
+modules form an (adjoint) equivalence, via the pushforward pseudofunctor
+coherences. -/
+def pushforwardEquivalenceOfIso {X Y : Scheme.{0}} (φ : X ⟶ Y) [IsIso φ] :
+    Y.Modules ≌ X.Modules :=
+  CategoryTheory.Equivalence.mk (Scheme.Modules.pushforward (inv φ))
+    (Scheme.Modules.pushforward φ)
+    ((Scheme.Modules.pushforwardId Y).symm ≪≫
+      Scheme.Modules.pushforwardCongr (IsIso.inv_hom_id φ).symm ≪≫
+      (Scheme.Modules.pushforwardComp (inv φ) φ).symm)
+    (Scheme.Modules.pushforwardComp φ (inv φ) ≪≫
+      Scheme.Modules.pushforwardCongr (IsIso.hom_inv_id φ) ≪≫
+      Scheme.Modules.pushforwardId X)
+
+/-- **Pullback along an isomorphism of schemes is pushforward of the inverse**:
+both are left adjoint to the pushforward along the isomorphism.  This converts
+the pullback transport of a glued sheaf along `fromGlued` into a pushforward,
+whose global sections are definitionally those of the original sheaf. -/
+def pullbackIsoPushforwardInv {X Y : Scheme.{0}} (φ : X ⟶ Y) [IsIso φ] :
+    Scheme.Modules.pullback φ ≅ Scheme.Modules.pushforward (inv φ) :=
+  Adjunction.leftAdjointUniq (Scheme.Modules.pullbackPushforwardAdjunction φ)
+    (pushforwardEquivalenceOfIso φ).toAdjunction
+
+/-- The `Γ(-, ⊤)` additive equivalence induced by an isomorphism of sheaves of
+modules. -/
+def gammaAddEquivOfIso {X : Scheme.{0}} {A B : X.Modules} (e : A ≅ B) :
+    Γ(A, ⊤) ≃+ Γ(B, ⊤) where
+  toFun := e.hom.app ⊤
+  invFun := e.inv.app ⊤
+  left_inv x :=
+    (comp_app_top_apply e.hom e.inv x).symm.trans (app_top_congr e.hom_inv_id x)
+  right_inv y :=
+    (comp_app_top_apply e.inv e.hom y).symm.trans (app_top_congr e.inv_hom_id y)
+  map_add' x y := map_add _ x y
+
 end AlgebraicGeometry.Scheme.Modules
+
+/-! ## Global sections of the Serre twist over the basic-open cover
+
+Instantiation of the glued-section API at the Serre twisting sheaf `O(m)` on the
+integral model: sections of the glued twist are the compatible families of
+chart sections (`(Xᵢ/Xⱼ)^m`-twisted agreement on overlaps), and the twist on
+`Proj` itself has the same global sections through the `fromGlued`
+identification.  This is the scaffold consumed by the computation
+`Γ(Proj ℤ[X], O(m)) ≅ (ℤ[X])_m` (degree-`m` forms). -/
+
+namespace AlgebraicGeometry.ProjTwist
+
+open AlgebraicGeometry.Scheme
+
+variable (n₀ : Type)
+
+/-- **Global sections of the glued Serre twist are the compatible families**
+of chart sections of the trivialising cover: the instantiation of
+`Scheme.Modules.glueSectionsEquiv` at the descent datum of `O(m)`. -/
+def serreTwistGluedSectionsEquiv (m : ℕ) :
+    Γ(serreTwistGlued n₀ m, ⊤) ≃ₗ[Γ((glueData n₀).glued, ⊤)]
+      Scheme.Modules.glueGammaCompatible (glueData n₀)
+        (fun i => SheafOfModules.unit ((glueData n₀).U i).ringCatSheaf)
+        (fun i j => twistTransition n₀ m i j) :=
+  Scheme.Modules.glueSectionsEquiv (glueData n₀)
+    (fun i => SheafOfModules.unit ((glueData n₀).U i).ringCatSheaf)
+    (fun i j => twistTransition n₀ m i j)
+    (fun i => twistTransition_self n₀ m i)
+    (fun i j k => twistTransition_cocycle n₀ m i j k)
+
+/-- The Serre twist on `Proj` is the pushforward of the glued twist along
+`fromGlued`: the pullback along the inverse cover isomorphism is converted by
+`pullbackIsoPushforwardInv`. -/
+def serreTwistIsoPushforwardGlued (m : ℕ) :
+    serreTwist n₀ m ≅
+      (Scheme.Modules.pushforward (basicOpenCover n₀).fromGlued).obj
+        (serreTwistGlued n₀ m) :=
+  (Scheme.Modules.pullbackIsoPushforwardInv
+      (inv (basicOpenCover n₀).fromGlued)).app (serreTwistGlued n₀ m) ≪≫
+    (Scheme.Modules.pushforwardCongr
+      (IsIso.inv_inv (f := (basicOpenCover n₀).fromGlued))).app (serreTwistGlued n₀ m)
+
+/-- Global sections of the Serre twist on `Proj` agree with those of the glued
+model (`Γ` of a pushforward at `⊤` is definitional). -/
+def serreTwistSectionsToGlued (m : ℕ) :
+    Γ(serreTwist n₀ m, ⊤) ≃+ Γ(serreTwistGlued n₀ m, ⊤) :=
+  Scheme.Modules.gammaAddEquivOfIso (serreTwistIsoPushforwardGlued n₀ m)
+
+/-- **Global sections of `O(m)` on the integral model are the compatible
+families over the basic-open cover** — the concrete equalizer description of
+`Γ(Proj ℤ[Xᵢ], O(m))` feeding the degree-`m`-forms computation. -/
+def serreTwistSectionsCompatible (m : ℕ) :
+    Γ(serreTwist n₀ m, ⊤) ≃+
+      Scheme.Modules.glueGammaCompatible (glueData n₀)
+        (fun i => SheafOfModules.unit ((glueData n₀).U i).ringCatSheaf)
+        (fun i j => twistTransition n₀ m i j) :=
+  (serreTwistSectionsToGlued n₀ m).trans
+    (serreTwistGluedSectionsEquiv n₀ m).toAddEquiv
+
+end AlgebraicGeometry.ProjTwist
