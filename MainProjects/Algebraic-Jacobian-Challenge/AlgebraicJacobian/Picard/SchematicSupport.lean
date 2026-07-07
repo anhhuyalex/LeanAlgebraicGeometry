@@ -101,4 +101,81 @@ theorem finrank_eq_of_baseChange_linearEquiv
     Module.finrank k' W = Module.finrank k V := by
   rw [← e.finrank_eq, Module.finrank_baseChange]
 
+/-! ## The affine-local heart of the support descent
+
+On an affine open `U` of the fibre `X_t`, the section module `M = Γ(F, U)` over
+the coordinate ring `R = Γ(X, U)` carries the *annihilator ideal*
+`I = Ann_R M`.  By construction `I` kills `M`, so `M` is a module over the
+quotient `R ⧸ I` (`Module.quotientAnnihilator`), and this is precisely the
+statement that `F|_U` descends to the closed subscheme `V(I) = Spec (R ⧸ I)`
+cut out by the annihilator — the schematic support.  The two algebraic facts
+the descent needs at this affine level are packaged below:
+
+* `module_finite_quotientAnnihilator` — the *coherence descent*: the descended
+  module `M`, viewed over `R ⧸ I`, is still finitely generated.  This is the
+  affine content of "`N` is finitely presented on `Z`" in the brick
+  `F ≅ i_* N` (over the residue field `κ(t)` the fibre is Noetherian, so finite
+  generation is finite presentation).  Assembled from
+  `Module.quotientAnnihilator` (the `R ⧸ I`-action), the induced scalar tower
+  `R → R ⧸ I → M` (`Module.IsTorsionBySet.isScalarTower`), and
+  `Module.Finite.of_restrictScalars_finite` (a finite generating set over `R` is
+  a finite generating set over the quotient, along which the action factors).
+
+* `annihilator_quotientAnnihilator_eq_bot` — the *sharpness* of the schematic
+  support: over `R ⧸ I` the module `M` is faithful, `Ann_{R⧸I} M = ⊥`.  Any
+  `q = mk r` killing `M` has `r • m = mk r • m = 0` for all `m`, so `r ∈ I` and
+  `q = 0`.  Equivalently (`Module.annihilator_eq_bot`) `FaithfulSMul (R ⧸ I) M`:
+  the closed subscheme `V(I)` is the *smallest* on which `F|_U` lives, i.e.
+  `V(Ann_R M)` is the honest schematic support and carries no embedded
+  thickening.
+
+Both are universe-monomorphic pure algebra and axiom-clean. -/
+
+/-- **Coherence descent to the schematic support (affine heart)**: a finitely
+generated `R`-module `M` remains finitely generated over the quotient
+`R ⧸ Ann_R M` by its annihilator (with the canonical `Module.quotientAnnihilator`
+action).  This is the affine, sections-level content of "the descended module
+`N` on the schematic support `Z = V(Ann F)` is coherent" in the support-descent
+brick `F ≅ i_* N`.
+
+The `R ⧸ Ann_R M`-action is `Module.quotientAnnihilator`; the scalar tower
+`R → R ⧸ Ann_R M → M` is `Module.IsTorsionBySet.isScalarTower` at `S := R`
+(both `R → R` towers being canonical), and
+`Module.Finite.of_restrictScalars_finite` transports finite generation upward
+along the tower (a finite `R`-spanning set spans over the quotient, since the
+`R`-action factors through it). -/
+theorem module_finite_quotientAnnihilator
+    {R : Type*} [CommRing R] {M : Type*} [AddCommGroup M] [Module R M]
+    [Module.Finite R M] :
+    letI := Module.quotientAnnihilator (R := R) (M := M)
+    Module.Finite (R ⧸ Module.annihilator R M) M := by
+  letI := Module.quotientAnnihilator (R := R) (M := M)
+  haveI : IsScalarTower R (R ⧸ Module.annihilator R M) M :=
+    Module.IsTorsionBySet.isScalarTower (Module.isTorsionBySet_annihilator R M)
+  exact Module.Finite.of_restrictScalars_finite R (R ⧸ Module.annihilator R M) M
+
+/-- **Sharpness of the schematic support (affine heart)**: over the quotient
+`R ⧸ Ann_R M` by its own annihilator, the module `M` is *faithful* — its
+annihilator is trivial.  Any residue class `q = mk r` annihilating `M` has
+`r • m = q • m = 0` for every `m` (the `Module.quotientAnnihilator` action is
+`mk r • m = r • m` definitionally), so `r ∈ Ann_R M`, i.e. `q = 0`.
+
+Equivalently `FaithfulSMul (R ⧸ Ann_R M) M` (`Module.annihilator_eq_bot`): the
+closed subscheme `V(Ann_R M)` is the honest schematic support of `F|_U`, carrying
+no embedded component — exactly what makes the closed immersion `i : Z ↪ X_t` of
+the brick `F ≅ i_* N` the scheme-theoretic support rather than an arbitrary
+thickening. -/
+theorem annihilator_quotientAnnihilator_eq_bot
+    {R : Type*} [CommRing R] {M : Type*} [AddCommGroup M] [Module R M] :
+    letI := Module.quotientAnnihilator (R := R) (M := M)
+    Module.annihilator (R ⧸ Module.annihilator R M) M = ⊥ := by
+  letI := Module.quotientAnnihilator (R := R) (M := M)
+  rw [eq_bot_iff]
+  intro q hq
+  rw [Module.mem_annihilator] at hq
+  obtain ⟨r, rfl⟩ := Ideal.Quotient.mk_surjective q
+  rw [Submodule.mem_bot, Ideal.Quotient.eq_zero_iff_mem, Module.mem_annihilator]
+  intro m
+  exact hq m
+
 end AlgebraicGeometry
