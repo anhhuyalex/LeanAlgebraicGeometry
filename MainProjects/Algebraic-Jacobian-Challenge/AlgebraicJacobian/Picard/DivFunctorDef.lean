@@ -6,6 +6,7 @@ Authors: Christian Merten
 import Mathlib
 import AlgebraicJacobian.Picard.QuotFunctorDef
 import AlgebraicJacobian.Picard.LineBundlePullback
+import AlgebraicJacobian.Picard.FlatKernelBase
 
 /-!
 # The relative-divisor functor `Div_{X/S}` (real definition)
@@ -133,19 +134,31 @@ ideal of `D_{T'}`.  But, since `\mathcal I` is invertible, so is
 `p_{X_T}^* \mathcal I`").
 
 For a cartesian square `sq : X' = X ×_S S'` and an epimorphism `q : E ⟶ F` of
-`O_X`-modules with `F` finitely presented and flat over `S`
-(`Scheme.CoherentSheafFlat`), if `ker q` is locally trivial of rank one then
-so is `ker (g'^* q)`.  Mathematical content: the short exact sequence
-`0 → ker q → E → F → 0` stays exact after applying the right-exact `g'^*`,
-because affine-locally the failure of left exactness is
-`Tor_1^{Γ(S,U)}(Γ(F,V), Γ(S',U_t))`, which vanishes by base-flatness of `F`;
+`O_X`-modules with `E` quasi-coherent and `F` finitely presented and flat
+over `S` (`Scheme.CoherentSheafFlat`), if `ker q` is locally trivial of rank
+one then so is `ker (g'^* q)`.  Mathematical content: the short exact
+sequence `0 → ker q → E → F → 0` stays exact after applying the right-exact
+`g'^*`, because affine-locally the failure of left exactness is
+`Tor_1^{Γ(S,U)}(Γ(F,V), Γ(S',U_t))`, which vanishes by base-flatness of `F`
+(Stacks 00HL, `Module.Flat.rTensor_injective_of_exact`);
 hence `ker (g'^* q) ≅ g'^* (ker q)`, and pullback preserves local triviality
 of rank one (`Scheme.LineBundle.IsLocallyTrivial.pullback`, Stacks 01HH).
 See the blueprint node `lem:relative_divisor_base_change` for the complete
-proof. -/
+proof.
+
+The hypothesis `hE : E.IsQuasicoherent` is needed by the affine-local section
+calculus (`pullback_app_isoTensor`); the statement is true without it —
+`E` is an extension of the quasi-coherent `F` by the locally trivial (hence
+quasi-coherent, `LineBundle.IsLocallyTrivial.isFinitePresentation`) `ker q`,
+and an extension of quasi-coherents is quasi-coherent (Stacks 01LA) — but
+extension-closure of `IsQuasicoherent` is not yet available, and the sole
+consumer (`DivFamily.pullbackAlong`) instantiates `E` at a pullback of the
+unit module, quasi-coherent by `pullback_isQuasicoherent_hom` +
+`Modules.unit_isQuasicoherent`. -/
 theorem Modules.pullback_kernel_isLocallyTrivial
     {X S X' S' : Scheme.{u}} {f : X ⟶ S} {g : S' ⟶ S} {g' : X' ⟶ X} {f' : X' ⟶ S'}
     (sq : IsPullback g' f' f g) {E F : X.Modules} (q : E ⟶ F) (hq : Epi q)
+    (hE : E.IsQuasicoherent)
     (hfp : F.IsFinitePresentation) (hflat : CoherentSheafFlat f F)
     (hker : LineBundle.IsLocallyTrivial (Limits.kernel q)) :
     LineBundle.IsLocallyTrivial
@@ -260,6 +273,8 @@ noncomputable def pullbackAlong {T T' : Over S} (ψ : T' ⟶ T)
           (SheafOfModules.unit X.ringCatSheaf)).inv
         ((Scheme.Modules.pullback (quotBaseMap π ψ)).map x.q)).symm
       (Modules.pullback_kernel_isLocallyTrivial (quotBaseSquare π ψ) x.q x.epi
+        (pullback_isQuasicoherent_hom (pullback.fst π T.hom)
+          (SheafOfModules.unit X.ringCatSheaf) inferInstance)
         x.isFinitePresentation x.flat x.kerLocallyTrivial)
 
 /-- The pullback action respects the equivalence relation. -/
