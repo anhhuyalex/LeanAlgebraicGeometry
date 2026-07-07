@@ -753,7 +753,7 @@ def pushforwardEquivalenceOfIso {X Y : Scheme.{0}} (φ : X ⟶ Y) [IsIso φ] :
 both are left adjoint to the pushforward along the isomorphism.  This converts
 the pullback transport of a glued sheaf along `fromGlued` into a pushforward,
 whose global sections are definitionally those of the original sheaf. -/
-def pullbackIsoPushforwardInv {X Y : Scheme.{0}} (φ : X ⟶ Y) [IsIso φ] :
+def pullbackIsoPushforwardInvOfIsIso {X Y : Scheme.{0}} (φ : X ⟶ Y) [IsIso φ] :
     Scheme.Modules.pullback φ ≅ Scheme.Modules.pushforward (inv φ) :=
   Adjunction.leftAdjointUniq (Scheme.Modules.pullbackPushforwardAdjunction φ)
     (pushforwardEquivalenceOfIso φ).toAdjunction
@@ -1000,12 +1000,12 @@ def serreTwistGluedSectionsEquiv (m : ℕ) :
 
 /-- The Serre twist on `Proj` is the pushforward of the glued twist along
 `fromGlued`: the pullback along the inverse cover isomorphism is converted by
-`pullbackIsoPushforwardInv`. -/
+`pullbackIsoPushforwardInvOfIsIso`. -/
 def serreTwistIsoPushforwardGlued (m : ℕ) :
     serreTwist n₀ m ≅
       (Scheme.Modules.pushforward (basicOpenCover n₀).fromGlued).obj
         (serreTwistGlued n₀ m) :=
-  (Scheme.Modules.pullbackIsoPushforwardInv
+  (Scheme.Modules.pullbackIsoPushforwardInvOfIsIso
       (inv (basicOpenCover n₀).fromGlued)).app (serreTwistGlued n₀ m) ≪≫
     (Scheme.Modules.pushforwardCongr
       (IsIso.inv_inv (f := (basicOpenCover n₀).fromGlued))).app (serreTwistGlued n₀ m)

@@ -106,6 +106,10 @@ import AlgebraicJacobian.Picard.GrassmannianRepresentability
 -- I-0118 honest restatement of thm:quot_representable (projective π with
 -- very ample L via IsProjectiveWith, coherent E), split out of QuotFunctorDef.
 import AlgebraicJacobian.Picard.QuotRepresentability
+-- Wave-2 leaf bricks (2026-07-07): schematic-support / annihilator lane for
+-- gammaFiber, and the tensor section-comparison lane for pullbackTensorMap_isIso.
+import AlgebraicJacobian.Picard.SchematicSupport
+import AlgebraicJacobian.Picard.TensorSectionFormula
 import AlgebraicJacobian.Picard.LineBundleCoherence
 import AlgebraicJacobian.RiemannRoch.WeilDivisor
 import AlgebraicJacobian.Albanese.AlbaneseUP
@@ -114,6 +118,7 @@ import AlgebraicJacobian.Albanese.CodimOneExtension
 import AlgebraicJacobian.Albanese.CoheightBridge
 import AlgebraicJacobian.Albanese.DifferenceMap
 import AlgebraicJacobian.Albanese.PolePurity
+import AlgebraicJacobian.Albanese.Milne33Substeps
 import AlgebraicJacobian.Albanese.RationalMapFunctionField
 import AlgebraicJacobian.Albanese.RationalMapPrecomp
 import AlgebraicJacobian.Albanese.RationalMapProd
