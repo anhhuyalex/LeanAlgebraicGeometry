@@ -80,7 +80,17 @@ is the pullback of the kernel — because `0 → I → O → O_D → 0` stays ex
 after base change, `Tor_1` against the `T`-flat `O_D` vanishing (Kleiman §3,
 functoriality note after `df:div`: "Since `D` is `T`-flat, `p_{X_T}^* I`
 equals the ideal of `D_{T'}`") — and pullback preserves invertibility
-(`IsLocallyTrivial.pullback`, Stacks 01HH).
+(`IsLocallyTrivial.pullback`, Stacks 01HH).  The leaf carries a
+quasi-coherence hypothesis on the source of the quotient (removable once
+extension-closure of quasi-coherence, Stacks 01LA, is available; see the
+declaration docstring), discharged here by `pullback_isQuasicoherent_hom` +
+`Modules.unit_isQuasicoherent` since the source is the pulled-back unit.
+The supporting bricks — the Stacks 00HL algebra heart
+`Module.Flat.rTensor_injective_of_exact`, the comparison map
+`Modules.pullbackKernelComparison`, and the chart-shrinking lemmas — live in
+`Picard/FlatKernelBase.lean`; the derivation of the pinned statement from
+the isomorphism form of the comparison is
+`Modules.pullback_kernel_isLocallyTrivial_of_isIso_kernelComparison` (§0).
 
 The functor laws are verbatim the pseudofunctor-coherence argument of
 `Scheme.QuotFunctor` (`Modules.pullback_id_app_coherence`,
@@ -119,6 +129,26 @@ lemma LineBundle.IsLocallyTrivial.of_iso {X : Scheme.{u}} {M N : X.Modules}
   intro x
   obtain ⟨U, hxU, hUaff, ⟨t⟩⟩ := hM x
   exact ⟨U, hxU, hUaff, ⟨(Scheme.Modules.restrictFunctor U.ι).mapIso e.symm ≪≫ t⟩⟩
+
+/-- **Read-off along the kernel–pullback comparison**: if the comparison map
+`Scheme.Modules.pullbackKernelComparison g' q : g'^*(ker q) ⟶ ker (g'^* q)`
+(`Picard/FlatKernelBase.lean`) is an isomorphism, then local triviality of
+`ker q` transports to `ker (g'^* q)`: pullback preserves local triviality
+(`IsLocallyTrivial.pullback`, Stacks 01HH) and local triviality is invariant
+under isomorphism (`IsLocallyTrivial.of_iso`).  This derives the pinned
+base-change statement `Modules.pullback_kernel_isLocallyTrivial` from the
+isomorphism form of the comparison (the route of blueprint
+`lem:relative_divisor_base_change`). -/
+lemma Modules.pullback_kernel_isLocallyTrivial_of_isIso_kernelComparison
+    {X' X : Scheme.{u}} (g' : X' ⟶ X) {E F : X.Modules} (q : E ⟶ F)
+    (hcomp : IsIso (Modules.pullbackKernelComparison g' q))
+    (hker : LineBundle.IsLocallyTrivial (Limits.kernel q)) :
+    LineBundle.IsLocallyTrivial
+      (Limits.kernel ((Scheme.Modules.pullback g').map q)) :=
+  haveI := hcomp
+  LineBundle.IsLocallyTrivial.of_iso
+    (asIso (Modules.pullbackKernelComparison g' q))
+    (hker.pullback g')
 
 /-! ## §1. Base change of the ideal of a relative effective divisor
 
