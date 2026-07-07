@@ -1302,6 +1302,283 @@ lemma glueProj_coordSectionGlued (i j : n₀) :
     (fun i j k => twistTransition_cocycle n₀ 1 i j k)
     ⟨formFamily 1 ⟨X j, X_mem_deg_one n₀ j⟩, formFamily_mem 1 ⟨X j, X_mem_deg_one n₀ j⟩⟩ i
 
+/-! ## Surjectivity of the graded-separation map (headline (C))
+
+The two sub-lemmas scoped by wave 3: (1) `overlapRingHom` is injective (via `overlapHom`
+being an isomorphism onto `D₊(XᵢXⱼ)`), so the abstract compatible-family condition descends
+to an equation of away-fractions; (2) graded separation — a compatible away-fraction family
+comes from a single degree-`m` form.  Together with `formSectionHom_injective` this packages
+`Γ(Proj ℤ[X], O(m)) ≅ (ℤ[X])_m` as `formSectionEquiv`. -/
+
+set_option backward.isDefEq.respectTransparency false in
+/-- **`overlapHom` is an isomorphism onto `D₊(XᵢXⱼ)`.** Its range is `D₊(Xᵢ) ⊓ D₊(Xⱼ) =
+D₊(XᵢXⱼ)`, and the inverse is the pullback lift of the two `homOfLE` inclusions
+`D₊(XᵢXⱼ) ⟶ D₊(Xᵢ)`, `D₊(XᵢXⱼ) ⟶ D₊(Xⱼ)`. -/
+lemma overlapHom_isIso (i j : n₀) : IsIso (overlapHom n₀ i j) := by
+  have le_i : Proj.basicOpen (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i * X j)
+      ≤ Proj.basicOpen (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i) := by
+    rw [Proj.basicOpen_mul]; exact inf_le_left
+  have le_j : Proj.basicOpen (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i * X j)
+      ≤ Proj.basicOpen (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X j) := by
+    rw [Proj.basicOpen_mul]; exact inf_le_right
+  have hcomp_i : (Proj (homogeneousSubmodule n₀ (ULift.{0} ℤ))).homOfLE le_i ≫
+      (basicOpenCover n₀).f i
+      = (Proj.basicOpen (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i * X j)).ι :=
+    Scheme.homOfLE_ι _ le_i
+  have hcomp_j : (Proj (homogeneousSubmodule n₀ (ULift.{0} ℤ))).homOfLE le_j ≫
+      (basicOpenCover n₀).f j
+      = (Proj.basicOpen (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i * X j)).ι :=
+    Scheme.homOfLE_ι _ le_j
+  have hfac : overlapHom n₀ i j ≫
+        (Proj.basicOpen (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i * X j)).ι
+      = pullback.fst ((basicOpenCover n₀).f i) ((basicOpenCover n₀).f j)
+        ≫ (basicOpenCover n₀).f i :=
+    IsOpenImmersion.lift_fac _ _ _
+  have hpq : (Proj (homogeneousSubmodule n₀ (ULift.{0} ℤ))).homOfLE le_i ≫ (basicOpenCover n₀).f i
+      = (Proj (homogeneousSubmodule n₀ (ULift.{0} ℤ))).homOfLE le_j ≫ (basicOpenCover n₀).f j :=
+    hcomp_i.trans hcomp_j.symm
+  refine ⟨pullback.lift ((Proj (homogeneousSubmodule n₀ (ULift.{0} ℤ))).homOfLE le_i)
+      ((Proj (homogeneousSubmodule n₀ (ULift.{0} ℤ))).homOfLE le_j) hpq, ?_, ?_⟩
+  · apply pullback.hom_ext
+    · rw [Category.id_comp, Category.assoc, pullback.lift_fst,
+        ← cancel_mono ((basicOpenCover n₀).f i), Category.assoc, hcomp_i, hfac]
+    · rw [Category.id_comp, Category.assoc, pullback.lift_snd,
+        ← cancel_mono ((basicOpenCover n₀).f j), Category.assoc, hcomp_j, hfac,
+        pullback.condition]
+  · rw [← cancel_mono (Proj.basicOpen (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i * X j)).ι,
+      Category.id_comp, Category.assoc, hfac, ← Category.assoc, pullback.lift_fst, hcomp_i]
+
+/-- **`overlapRingHom` is injective**: it is `overlapHom.appTop ∘ topIso⁻¹ ∘ awayToSection`,
+a composite of isomorphisms of rings (`awayToSection` via `basicOpenIsoAway`, `overlapHom`
+an isomorphism by `overlapHom_isIso`). -/
+lemma overlapRingHom_injective (i j : n₀) :
+    Function.Injective ⇑(overlapRingHom n₀ i j) := by
+  haveI := overlapHom_isIso (n₀ := n₀) i j
+  haveI : IsIso (Proj.awayToSection (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i * X j)) :=
+    inferInstanceAs (IsIso (Proj.basicOpenIsoAway (homogeneousSubmodule n₀ (ULift.{0} ℤ))
+      (X i * X j) (X_mul_X_mem_deg_two n₀ i j) (by norm_num)).hom)
+  haveI : IsIso (Proj.basicOpen (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i * X j)).topIso.inv :=
+    inferInstance
+  haveI : IsIso ((overlapHom n₀ i j).appTop) :=
+    inferInstanceAs (IsIso ((overlapHom n₀ i j).app ⊤))
+  let φ := Proj.awayToSection (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i * X j) ≫
+    (Proj.basicOpen (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i * X j)).topIso.inv ≫
+    (overlapHom n₀ i j).appTop
+  haveI : IsIso φ := inferInstanceAs (IsIso (_ ≫ _ ≫ _))
+  exact (ConcreteCategory.bijective_of_isIso φ).injective
+
+set_option maxHeartbeats 800000 in
+-- heavy defeq: the `appTop` bridges through the glueData pullback-index diamond exceed the
+-- default heartbeat budget
+set_option backward.isDefEq.respectTransparency false in
+/-- Extraction of the away-fraction compatibility from a compatible family: the
+chart fractions `aᵢ = chartSectionsIso⁻¹ (s i)` satisfy
+`awayMap_{Xⱼ} aᵢ = awayMap_{Xᵢ} aⱼ · (Xⱼ/Xᵢ)^m` in `Away(XᵢXⱼ)`. -/
+lemma away_compatible_of_mem (m : ℕ)
+    (s : ∀ i, Γ((Scheme.Modules.pushforward ((glueData n₀).ι i)).obj
+      (SheafOfModules.unit ((glueData n₀).U i).ringCatSheaf), ⊤))
+    (hs : s ∈ Scheme.Modules.glueGammaCompatible (glueData n₀)
+      (fun i => SheafOfModules.unit ((glueData n₀).U i).ringCatSheaf)
+      (fun i j => twistTransition n₀ m i j)) (i j : n₀) :
+    awayMap (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X_mem_deg_one n₀ j)
+        (rfl : (X i * X j : MvPolynomial n₀ (ULift.{0} ℤ)) = X i * X j)
+        ((chartSectionsIso n₀ i).inv (s i))
+      = awayMap (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X_mem_deg_one n₀ i)
+          (mul_comm (X i) (X j)) ((chartSectionsIso n₀ j).inv (s j))
+        * awayFractionInv n₀ i j ^ m := by
+  rw [serreTwist_mem_glueGammaCompatible_iff] at hs
+  have h := hs i j
+  rw [← (chartSectionsIso n₀ i).inv_hom_id_apply (s i),
+    ← (chartSectionsIso n₀ j).inv_hom_id_apply (s j), appTop_f_chartSectionsIso,
+    appTop_tf_chartSectionsIso, overlapUnit_pow_inv, id_eq, ← map_mul] at h
+  exact overlapRingHom_injective i j h
+
+set_option maxHeartbeats 800000 in
+-- the `Localization`/`awayMap` `val`-level rewriting plus the `ring`-normalised cross
+-- multiplication with symbolic exponents exceed the default heartbeat budget
+/-- Cross-multiplication of the away-fraction compatibility, cleared of
+denominators in the polynomial domain: `Nᵢ Xᵢ^m Xⱼ^{kⱼ} = Nⱼ Xᵢ^{kᵢ} Xⱼ^m`. -/
+lemma away_cross_eq (m : ℕ) (i j : n₀)
+    (kᵢ : ℕ) (Nᵢ : MvPolynomial n₀ (ULift.{0} ℤ))
+    (hNᵢ : Nᵢ ∈ homogeneousSubmodule n₀ (ULift.{0} ℤ) (kᵢ • 1))
+    (kⱼ : ℕ) (Nⱼ : MvPolynomial n₀ (ULift.{0} ℤ))
+    (hNⱼ : Nⱼ ∈ homogeneousSubmodule n₀ (ULift.{0} ℤ) (kⱼ • 1))
+    (hcompat : awayMap (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X_mem_deg_one n₀ j) rfl
+        (Away.mk (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X_mem_deg_one n₀ i) kᵢ Nᵢ hNᵢ)
+      = awayMap (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X_mem_deg_one n₀ i) (mul_comm (X i) (X j))
+          (Away.mk (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X_mem_deg_one n₀ j) kⱼ Nⱼ hNⱼ)
+        * awayFractionInv n₀ i j ^ m) :
+    Nᵢ * X i ^ m * X j ^ kⱼ = Nⱼ * X i ^ kᵢ * X j ^ m := by
+  haveI : IsDomain (ULift.{0} ℤ) := MulEquiv.isDomain ℤ (ULift.ringEquiv (R := ℤ)).toMulEquiv
+  have hXi : (X i : MvPolynomial n₀ (ULift.{0} ℤ)) ≠ 0 := X_ne_zero i
+  have hXj : (X j : MvPolynomial n₀ (ULift.{0} ℤ)) ≠ 0 := X_ne_zero j
+  have hval := congrArg HomogeneousLocalization.val hcompat
+  rw [awayMap_mk, awayMap_mk, HomogeneousLocalization.val_mul, HomogeneousLocalization.val_pow,
+    Away.val_mk, Away.val_mk, awayFractionInv, Away.val_mk, Localization.mk_pow,
+    Localization.mk_mul, Localization.mk_eq_mk_iff, Localization.r_iff_exists] at hval
+  obtain ⟨c, hc⟩ := hval
+  obtain ⟨e, he⟩ := c.property
+  have hc0 : (c : MvPolynomial n₀ (ULift.{0} ℤ)) ≠ 0 := by
+    rw [← he]; exact pow_ne_zero _ (mul_ne_zero hXi hXj)
+  simp only [Submonoid.coe_mul, SubmonoidClass.coe_pow] at hc
+  have hprime := mul_left_cancel₀ hc0 hc
+  have hc₀ : (X i ^ kⱼ * X j ^ (kᵢ + m) : MvPolynomial n₀ (ULift.{0} ℤ)) ≠ 0 :=
+    mul_ne_zero (pow_ne_zero _ hXi) (pow_ne_zero _ hXj)
+  refine mul_right_cancel₀ hc₀ ?_
+  linear_combination hprime
+
+/-- In a subsingleton set of variables, a homogeneous polynomial of degree `d` is
+divisible by `Xᵢ₀^d` (it is a scalar multiple of `Xᵢ₀^d`). -/
+lemma X_pow_dvd_of_homogeneous_subsingleton [Subsingleton n₀] (i₀ : n₀) (d : ℕ)
+    (p : MvPolynomial n₀ (ULift.{0} ℤ)) (hp : p ∈ homogeneousSubmodule n₀ (ULift.{0} ℤ) d) :
+    (X i₀ ^ d : MvPolynomial n₀ (ULift.{0} ℤ)) ∣ p := by
+  rw [mem_homogeneousSubmodule] at hp
+  conv_rhs => rw [p.as_sum]
+  refine Finset.dvd_sum fun μ hμ => ?_
+  have hdeg : μ.degree = d := by
+    by_contra hne
+    exact (MvPolynomial.mem_support_iff.mp hμ) (hp.coeff_eq_zero hne)
+  have hμeq : μ = Finsupp.single i₀ (μ i₀) :=
+    Finsupp.ext fun a => by
+      rw [Finsupp.single_apply, if_pos (Subsingleton.elim i₀ a), Subsingleton.elim a i₀]
+  have hμi : μ i₀ = d := by
+    rw [hμeq, Finsupp.degree_single] at hdeg; exact hdeg
+  rw [hμeq, hμi, X_pow_eq_monomial]
+  exact (MvPolynomial.monomial_dvd_monomial.mpr ⟨Or.inr le_rfl, one_dvd _⟩)
+
+/-- If `Xᵢ₀^k · F` is homogeneous of degree `k + d`, then `F` is homogeneous of
+degree `d` (cancelling the homogeneous nonzerodivisor `Xᵢ₀^k`). -/
+lemma homogeneous_of_X_pow_mul (i₀ : n₀) (k d : ℕ) (F g : MvPolynomial n₀ (ULift.{0} ℤ))
+    (hg : g ∈ homogeneousSubmodule n₀ (ULift.{0} ℤ) (k + d))
+    (heq : g = X i₀ ^ k * F) :
+    F ∈ homogeneousSubmodule n₀ (ULift.{0} ℤ) d := by
+  rw [mem_homogeneousSubmodule] at hg ⊢
+  intro μ hμ
+  have hne : MvPolynomial.coeff (Finsupp.single i₀ k + μ) g ≠ 0 := by
+    rw [heq, X_pow_eq_monomial, MvPolynomial.coeff_monomial_mul, one_mul]; exact hμ
+  have hdeg : (Finsupp.single i₀ k + μ).degree = k + d := by
+    by_contra hcon; exact hne (hg.coeff_eq_zero hcon)
+  rw [map_add, Finsupp.degree_single] at hdeg
+  have h1 : Finsupp.degree μ = d := add_left_cancel hdeg
+  rw [Finsupp.degree_eq_weight_one] at h1
+  exact h1
+
+set_option maxHeartbeats 800000 in
+-- the away-fraction decompositions, prime-power divisibility and `val`-level fraction
+-- equalities exceed the default heartbeat budget
+/-- **Graded separation.** A compatible away-fraction family `(aᵢ)` (satisfying the
+Serre-twist condition `awayMap_{Xⱼ} aᵢ = awayMap_{Xᵢ} aⱼ · (Xⱼ/Xᵢ)^m`) comes from a
+single degree-`m` form `F`, with `formChart m i F = aᵢ` on every chart.  The single
+"no poles" divisibility `Xᵢ₀^{k₀} ∣ Xᵢ₀^m·N₀` at a base chart uses primality of `Xᵢ₀`
+against a second variable (or the subsingleton structure); the remaining charts follow
+from the cross-multiplication `away_cross_eq` and domain cancellation. -/
+lemma exists_form_of_awayCompatible [Nonempty n₀] (m : ℕ)
+    (a : ∀ i, Away (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X i))
+    (hcompat : ∀ i j,
+      awayMap (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X_mem_deg_one n₀ j) rfl (a i)
+      = awayMap (homogeneousSubmodule n₀ (ULift.{0} ℤ)) (X_mem_deg_one n₀ i) (mul_comm (X i) (X j))
+          (a j) * awayFractionInv n₀ i j ^ m) :
+    ∃ F : homogeneousSubmodule n₀ (ULift.{0} ℤ) m, ∀ i, formChart m i F = a i := by
+  haveI : IsDomain (ULift.{0} ℤ) := MulEquiv.isDomain ℤ (ULift.ringEquiv (R := ℤ)).toMulEquiv
+  obtain ⟨i₀⟩ := ‹Nonempty n₀›
+  have hXi₀ : (X i₀ : MvPolynomial n₀ (ULift.{0} ℤ)) ≠ 0 := X_ne_zero i₀
+  obtain ⟨k₀, N₀, hN₀, hmk₀⟩ := Away.mk_surjective (homogeneousSubmodule n₀ (ULift.{0} ℤ))
+    (X_mem_deg_one n₀ i₀) (a i₀)
+  -- KEY divisibility `Xᵢ₀^{k₀} ∣ Xᵢ₀^m · N₀`
+  have hdvd : (X i₀ ^ k₀ : MvPolynomial n₀ (ULift.{0} ℤ)) ∣ X i₀ ^ m * N₀ := by
+    by_cases hex : ∃ j : n₀, j ≠ i₀
+    · obtain ⟨j, hj⟩ := hex
+      obtain ⟨kⱼ, Nⱼ, hNⱼ, hmkⱼ⟩ := Away.mk_surjective (homogeneousSubmodule n₀ (ULift.{0} ℤ))
+        (X_mem_deg_one n₀ j) (a j)
+      have hstar := away_cross_eq m i₀ j k₀ N₀ hN₀ kⱼ Nⱼ hNⱼ
+        (by rw [hmk₀, hmkⱼ]; exact hcompat i₀ j)
+      have hnd : ¬ (X i₀ : MvPolynomial n₀ (ULift.{0} ℤ)) ∣ X j ^ kⱼ := fun hd =>
+        hj (((MvPolynomial.X_dvd_X).mp
+          ((MvPolynomial.X_prime : Prime (X i₀ : MvPolynomial n₀ (ULift.{0} ℤ))).dvd_of_dvd_pow
+            hd)).symm)
+      have h' : (X i₀ ^ k₀ : MvPolynomial n₀ (ULift.{0} ℤ)) ∣ (X i₀ ^ m * N₀) * X j ^ kⱼ :=
+        ⟨Nⱼ * X j ^ m, by linear_combination hstar⟩
+      exact (MvPolynomial.X_prime :
+          Prime (X i₀ : MvPolynomial n₀ (ULift.{0} ℤ))).pow_dvd_of_dvd_mul_right k₀ hnd h'
+    · simp only [not_exists, not_ne_iff] at hex
+      haveI : Subsingleton n₀ := ⟨fun x y => (hex x).trans (hex y).symm⟩
+      exact (X_pow_dvd_of_homogeneous_subsingleton i₀ k₀ N₀ (by simpa using hN₀)).mul_left _
+  obtain ⟨F₀, hF₀⟩ := hdvd
+  have hgdeg : X i₀ ^ m * N₀ ∈ homogeneousSubmodule n₀ (ULift.{0} ℤ) (k₀ + m) := by
+    rw [add_comm]
+    exact SetLike.mul_mem_graded (by simpa using SetLike.pow_mem_graded m (X_mem_deg_one n₀ i₀))
+      (by simpa using hN₀)
+  have hF₀deg : F₀ ∈ homogeneousSubmodule n₀ (ULift.{0} ℤ) m :=
+    homogeneous_of_X_pow_mul i₀ k₀ m F₀ _ hgdeg hF₀
+  refine ⟨⟨F₀, hF₀deg⟩, fun i => ?_⟩
+  obtain ⟨kᵢ, Nᵢ, hNᵢ, hmkᵢ⟩ := Away.mk_surjective (homogeneousSubmodule n₀ (ULift.{0} ℤ))
+    (X_mem_deg_one n₀ i) (a i)
+  have hstar := away_cross_eq m i₀ i k₀ N₀ hN₀ kᵢ Nᵢ hNᵢ (by rw [hmk₀, hmkᵢ]; exact hcompat i₀ i)
+  have hbi : F₀ * X i ^ kᵢ = Nᵢ * X i ^ m := by
+    have hcancel : (X i₀ ^ k₀ : MvPolynomial n₀ (ULift.{0} ℤ)) * (F₀ * X i ^ kᵢ)
+        = X i₀ ^ k₀ * (Nᵢ * X i ^ m) := by
+      linear_combination (-(X i ^ kᵢ)) * hF₀ + hstar
+    exact mul_left_cancel₀ (pow_ne_zero k₀ hXi₀) hcancel
+  rw [← hmkᵢ]
+  apply HomogeneousLocalization.val_injective
+  rw [formChart, Away.val_mk, Away.val_mk, Localization.mk_eq_mk_iff, Localization.r_iff_exists]
+  exact ⟨1, by simp only [OneMemClass.coe_one, one_mul]; linear_combination hbi⟩
+
+set_option backward.isDefEq.respectTransparency false in
+/-- **Surjectivity of the chart-family map**: every compatible family of chart
+sections comes from a degree-`m` form. -/
+lemma formFamilyAddHom_surjective [Nonempty n₀] (m : ℕ) :
+    Function.Surjective (formFamilyAddHom (n₀ := n₀) m) := by
+  intro t
+  obtain ⟨F, hF⟩ := exists_form_of_awayCompatible m
+    (fun i => (chartSectionsIso n₀ i).inv (t.val i))
+    (fun i j => away_compatible_of_mem m t.val t.property i j)
+  refine ⟨F, Subtype.ext (funext fun i => ?_)⟩
+  change (chartSectionsIso n₀ i).hom (formChart m i F) = t.val i
+  exact (congrArg (fun x => (chartSectionsIso n₀ i).hom x) (hF i)).trans
+    ((chartSectionsIso n₀ i).inv_hom_id_apply (t.val i))
+
+/-- **Surjectivity of the degree-`m`-form section map**: every global section of `O(m)`
+is a degree-`m` form. -/
+lemma formSectionHom_surjective [Nonempty n₀] (m : ℕ) :
+    Function.Surjective (formSectionHom (n₀ := n₀) m) :=
+  (serreTwistSectionsCompatible n₀ m).symm.surjective.comp (formFamilyAddHom_surjective m)
+
+/-- **The degree-`m` forms are exactly the global sections of `O(m)`** (headline (C)):
+`Γ(Proj ℤ[Xᵢ], O(m)) ≅ (ℤ[X])_m`, the degree-`m` homogeneous forms, as an additive
+equivalence.  Forward map `formSectionHom` (bijective by `formSectionHom_injective` and
+`formSectionHom_surjective`). -/
+def formSectionEquiv [Nonempty n₀] (m : ℕ) :
+    homogeneousSubmodule n₀ (ULift.{0} ℤ) m ≃+ Γ(serreTwist n₀ m, ⊤) :=
+  AddEquiv.ofBijective (formSectionHom m)
+    ⟨formSectionHom_injective m, formSectionHom_surjective m⟩
+
+@[simp]
+lemma formSectionEquiv_apply [Nonempty n₀] (m : ℕ)
+    (F : homogeneousSubmodule n₀ (ULift.{0} ℤ) m) :
+    formSectionEquiv m F = formSectionHom m F := rfl
+
+/-- **The coordinate sections are the images of the coordinate forms** under the
+degree-`1` identification: `formSectionEquiv 1 (Xⱼ) = x_j`. -/
+@[simp]
+lemma formSectionEquiv_coordForm [Nonempty n₀] (j : n₀) :
+    formSectionEquiv 1 ⟨X j, X_mem_deg_one n₀ j⟩ = coordSection j := rfl
+
+/-- **`Γ(Proj ℤ[Xᵢ], O(0)) ≅ ℤ`**: the degree-zero global sections of the Serre twist
+are the constants (degree-zero forms `= ℤ`, via `homogeneousSubmodule … 0 = 1` and
+`C : ℤ ↪ ℤ[X]`). -/
+def serreTwistZeroEquivInt [Nonempty n₀] : Γ(serreTwist n₀ 0, ⊤) ≃+ ℤ := by
+  have hinj : Function.Injective
+      (Algebra.linearMap (ULift.{0} ℤ) (MvPolynomial n₀ (ULift.{0} ℤ))) := fun a b h =>
+    MvPolynomial.C_injective n₀ (ULift.{0} ℤ)
+      (by simpa [Algebra.linearMap_apply, MvPolynomial.algebraMap_eq] using h)
+  exact (formSectionEquiv 0).symm.trans
+    (((LinearEquiv.ofEq _ _
+          (MvPolynomial.homogeneousSubmodule_zero (σ := n₀) (R := ULift.{0} ℤ))).trans
+        ((LinearEquiv.ofEq _ _ Submodule.one_eq_range).trans
+          (LinearEquiv.ofInjective _ hinj).symm)).toAddEquiv.trans
+      (ULift.ringEquiv (R := ℤ)).toAddEquiv)
+
 end Bridge
 
 end AlgebraicGeometry.ProjTwist
