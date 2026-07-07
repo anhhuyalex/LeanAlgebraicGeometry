@@ -4252,6 +4252,200 @@ is cartesian over \(T' \to T\).
   to the canonical comparison map.
 \end{proof}
 
+The following bricks are algebraic building blocks for
+\cref{lem:gamma_fiber_baseChange_field} below (its proof consumes them only
+through the two general facts already cited there,
+\cref{lem:proper_support_base_change} and flat base change for cohomology;
+the bricks below are project infrastructure for a from-scratch Lean
+reduction of that same statement along a different route, factoring through
+the schematic support of the twisted fibre module and its sections, rather
+than through the pole-divisor style argument summarised there). Both are
+pure module algebra, universe-monomorphic and axiom-clean.
+
+\begin{lemma}\leanok
+[Annihilator monotonicity under tensoring]
+  \label{lem:annihilator_le_annihilator_tensorProduct}
+  \lean{AlgebraicGeometry.annihilator_le_annihilator_tensorProduct,
+    AlgebraicGeometry.annihilator_le_annihilator_tensorProduct_right}
+  Let \(R\) be a commutative ring and \(M, N\) two \(R\)-modules. Then
+  \[
+    \mathrm{Ann}_R(M) \;\subseteq\; \mathrm{Ann}_R(M \otimes_R N),
+    \qquad
+    \mathrm{Ann}_R(N) \;\subseteq\; \mathrm{Ann}_R(M \otimes_R N).
+  \]
+\end{lemma}
+\begin{proof}\leanok
+  A scalar \(a \in \mathrm{Ann}_R(M)\) kills every elementary tensor via
+  \(a \cdot (m \otimes n) = (a \cdot m) \otimes n = 0\), hence the whole tensor
+  product by additivity; symmetrically for \(N\).
+\end{proof}
+
+\begin{remark}
+  \label{rem:annihilator_tensorProduct_support}
+  \uses{lem:annihilator_le_annihilator_tensorProduct, def:modules_annihilator}
+  On an affine open, the section module of a twist \(\mathcal F \otimes
+  L^{\otimes m}\) of quasi-coherent sheaves is the tensor product of the
+  section modules, so \cref{lem:annihilator_le_annihilator_tensorProduct}
+  is the sections-level algebraic content behind the monotonicity
+  \(\mathrm{Ann}(\mathcal F) \subseteq \mathrm{Ann}(\mathcal F \otimes
+  L^{\otimes m})\) of the annihilator ideal sheaves
+  (\cref{def:modules_annihilator}) --- and hence, via
+  \(\mathrm{IdealSheafData.ofIdeals\_mono}\), the containment of schematic
+  supports \(\mathrm{Supp}(\mathcal F \otimes L^{\otimes m}) \subseteq
+  \mathrm{Supp}(\mathcal F)\) that would give properness of the twisted
+  fibre's support from properness of the support of \(\mathcal F\). Lifting
+  this pure-algebra monotonicity to the sheaf-level inclusion needs an
+  affine \emph{tensor-section comparison}
+  \(\Gamma(\mathcal F \otimes \mathcal G, U) \cong \Gamma(\mathcal F, U)
+  \otimes_{\Gamma(X, U)} \Gamma(\mathcal G, U)\) for quasi-coherent
+  \(\mathcal F, \mathcal G\) on an affine open \(U\) (Stacks 01CC); this
+  comparison is the subject of the tensor-section bricks below, and its
+  affine-open case (the genuinely open step) is recorded in
+  \cref{rem:tensor_section_formula_gap}.
+\end{remark}
+
+\begin{lemma}\leanok
+[Dimension transport across a base-change linear equivalence]
+  \label{lem:finrank_eq_of_baseChange_linearEquiv}
+  \lean{AlgebraicGeometry.finrank_eq_of_baseChange_linearEquiv}
+  Let \(\kappa \to \kappa'\) be a field extension, \(V\) a \(\kappa\)-vector
+  space, and \(W\) a \(\kappa'\)-vector space. Every \(\kappa'\)-linear
+  equivalence \(\kappa' \otimes_\kappa V \simeq_{\kappa'} W\) forces
+  \(\dim_{\kappa'} W = \dim_\kappa V\).
+\end{lemma}
+\begin{proof}\leanok
+  Over fields the base-change identity
+  \(\dim_{\kappa'}(\kappa' \otimes_\kappa V) = \dim_\kappa V\) holds
+  unconditionally (with the junk value \(0\) shared correctly in the
+  infinite-dimensional case), and a linear equivalence transports dimension.
+\end{proof}
+
+\begin{remark}
+  \label{rem:finrank_baseChange_linearEquiv_role}
+  \uses{lem:finrank_eq_of_baseChange_linearEquiv}
+  This is the terminal dimension-count packaging of
+  \cref{lem:gamma_fiber_baseChange_field}'s alternative route: flat base
+  change over the residue field extension \(\kappa(t) \to \kappa(t')\)
+  supplies a \(\kappa(t')\)-linear equivalence between
+  \(\kappa(t') \otimes_{\kappa(t)} \Gamma(Z, \mathcal N)\) and
+  \(\Gamma(Z', v^*\mathcal N)\) for the schematic support \(Z\) of the
+  twisted fibre module and its base change \(Z'\), and
+  \cref{lem:finrank_eq_of_baseChange_linearEquiv} converts this directly into
+  the dimension equality, without any finiteness case split.
+\end{remark}
+
+\subsection{The affine tensor-section comparison}
+\label{subsec:tensor_section_formula}
+
+The map-half of the affine tensor-section comparison flagged in
+\cref{rem:annihilator_tensorProduct_support} is recorded here: for sheaves
+of \(\mathcal O_X\)-modules \(A, B\), the sheafification unit of the
+presheaf-of-modules tensor product supplies, on every open \(V\), a
+canonical \(\Gamma(X,V)\)-linear comparison map into the sections of the
+substrate tensor \(\mathrm{tensorObj}(A,B)\) (\cref{def:scheme_modules_tensorobj}).
+
+\begin{definition}\leanok
+[The presheaf-of-modules tensor and its section comparison]
+  \label{def:tensor_section_hom}
+  \lean{AlgebraicGeometry.Scheme.Modules.tensorPresheaf,
+    AlgebraicGeometry.Scheme.Modules.tensorSectionHom,
+    AlgebraicGeometry.Scheme.Modules.tensorPresheaf_obj}
+  \uses{def:scheme_modules_tensorobj}
+  Let \(A, B\) be sheaves of \(\mathcal O_X\)-modules. Write \(A \otimes^p B\)
+  for the presheaf-of-modules tensor product of the underlying presheaves of
+  \(A\) and \(B\); objectwise, \((A \otimes^p B)(V) = \Gamma(A,V)
+  \otimes_{\Gamma(X,V)} \Gamma(B,V)\) for every open \(V\). The
+  \emph{section comparison} at \(V\) is the \(\Gamma(X,V)\)-linear map
+  \[
+    \tau_{A,B,V} \;:\; \Gamma(A,V) \otimes_{\Gamma(X,V)} \Gamma(B,V)
+    \;\longrightarrow\; \Gamma(\mathrm{tensorObj}(A,B), V)
+  \]
+  given by the \(V\)-component of the sheafification-adjunction unit at
+  \(A \otimes^p B\) (\(\mathrm{tensorObj}(A,B)\) being, by definition, the
+  sheafification of \(A \otimes^p B\)).
+\end{definition}
+\begin{proof}\leanok
+  \uses{def:scheme_modules_tensorobj}
+  The presheaf-of-modules tensor product and its objectwise formula are
+  Mathlib's monoidal structure on presheaves of modules; the section
+  comparison is the sheafification-adjunction unit, restricted to the open
+  \(V\).
+\end{proof}
+
+\begin{lemma}\leanok
+[Naturality and normalisation of the section comparison]
+  \label{lem:tensor_section_hom_naturality}
+  \lean{AlgebraicGeometry.Scheme.Modules.tensorSectionHom_naturality_apply,
+    AlgebraicGeometry.Scheme.Modules.tensorSectionHom_top_eq_sectionsMul}
+  \uses{def:tensor_section_hom, def:sectionMul}
+  The section comparison \(\tau_{A,B,-}\) of \cref{def:tensor_section_hom}
+  is natural in restriction: for opens \(V \subseteq W\) it commutes with
+  the restriction maps of \(A \otimes^p B\) and of \(\mathrm{tensorObj}(A,B)\).
+  Over the total space, \(\tau_{A,B,\top}\) is the section multiplication
+  \(\mathrm{sectionsMul}\) of \cref{def:sectionMul}.
+\end{lemma}
+\begin{proof}\leanok
+  \uses{def:sectionMul}
+  Naturality is naturality of the sheafification-adjunction unit as a
+  morphism of presheaves. At \(V = \top\) the section comparison is by
+  definition the global-sections component of that same unit evaluated at
+  \(A \otimes^p B\), which is exactly how \(\mathrm{sectionsMul}\) is
+  constructed in \cref{def:sectionMul}.
+\end{proof}
+
+\begin{lemma}\leanok
+[The substrate tensor and the section-graded tensor coincide]
+  \label{lem:tensorObj_iso_sheafTensorObj}
+  \lean{AlgebraicGeometry.Scheme.Modules.tensorObjIsoSheafTensorObj}
+  \uses{def:scheme_modules_tensorobj, def:sheafTensorObj}
+  The substrate tensor \(\mathrm{tensorObj}(A,B)\)
+  (\cref{def:scheme_modules_tensorobj}) and the section-graded tensor
+  \(\mathcal F \otimes_{\mathcal O_X} \mathcal G\) of \cref{def:sheafTensorObj}
+  are the same object: both are the sheafification of the presheaf-of-modules
+  tensor of the underlying presheaves.
+\end{lemma}
+\begin{proof}\leanok
+  Definitional: both constructions sheafify \(A \otimes^p B\).
+\end{proof}
+
+\begin{lemma}\leanok
+[Sheafifying the tensor comparison unit is an isomorphism]
+  \label{lem:isIso_sheafification_tensorSectionUnit}
+  \lean{AlgebraicGeometry.Scheme.Modules.isIso_sheafification_tensorSectionUnit}
+  \uses{def:tensor_section_hom}
+  The sheafification of the presheaf comparison unit
+  \(A \otimes^p B \to \mathrm{tensorObj}(A,B)\) is an isomorphism of sheaves
+  of modules.
+\end{lemma}
+\begin{proof}\leanok
+  The sheafification functor is a reflective localization, so it inverts the
+  localization unit of any presheaf --- here, of \(A \otimes^p B\).
+\end{proof}
+
+\begin{remark}
+[The remaining affine step, and a narrowing recommendation]
+  \label{rem:tensor_section_formula_gap}
+  \uses{def:tensor_section_hom, lem:isIso_sheafification_tensorSectionUnit,
+    lem:pullback_tensor_map_isiso}
+  What is \emph{not} yet established is that \(\tau_{A,B,V}\)
+  (\cref{def:tensor_section_hom}) is an isomorphism for \(A, B\)
+  quasi-coherent and \(V\) affine --- the Stacks 01CC affine tensor-section
+  formula flagged in \cref{rem:annihilator_tensorProduct_support}. The route
+  is: identify \(\Gamma(A,V)_f \otimes_{\Gamma(X,V)_f} \Gamma(B,V)_f\) with
+  \((\Gamma(A,V) \otimes_{\Gamma(X,V)} \Gamma(B,V))_f\) on a basic open
+  \(D(f) \subseteq V\) (a localization-tensor identity), transport this
+  through the tilde-comparison engine for quasi-coherent sheaves, and
+  globalize over an affine cover; \cref{lem:isIso_sheafification_tensorSectionUnit}
+  is the categorical fact that makes the sheafification step in this route
+  exact rather than merely a comparison map. This affine case is also all
+  that is needed by the sole consumer of the general pullback--tensor
+  comparison \cref{lem:pullback_tensor_map_isiso}
+  (\cref{lem:pullback_moduleTensorPow}, stated for quasi-coherent sheaves),
+  so narrowing \cref{lem:pullback_tensor_map_isiso} to the quasi-coherent
+  case would let this affine formula suffice in place of the general
+  ringed-space stalk argument sketched there.
+\end{remark}
+
 \begin{lemma}\leanok
 [Sections of the twisted fibre module under residue field extension]
   \label{lem:gamma_fiber_baseChange_field}
@@ -4570,6 +4764,26 @@ Hilbert-polynomial decomposition) as the quotients of
 \end{proof}
 
 \begin{lemma}\leanok
+[Flat cokernel keeps a tensored kernel inclusion injective, left-tensor form]
+  \label{lem:flat_cokernel_lTensor_injective}
+  \lean{Module.Flat.lTensor_injective_of_exact}
+  \uses{lem:flat_cokernel_rTensor_injective}
+  \source{stacks-project}
+  \textit{Source: Stacks~\href{https://stacks.math.columbia.edu/tag/00HL}{00HL}.}
+  In the situation of \cref{lem:flat_cokernel_rTensor_injective}, the
+  left-tensored map \(\mathrm{id}_N \otimes f : N \otimes_R A \to N \otimes_R
+  B\) is injective for every \(R\)-module \(N\).
+\end{lemma}
+\begin{proof}\leanok
+  \uses{lem:flat_cokernel_rTensor_injective}
+  The left-tensored map is conjugate to the right-tensored map
+  \(f \otimes \mathrm{id}_N\) of \cref{lem:flat_cokernel_rTensor_injective} by
+  the two tensor-commutativity isomorphisms \(N \otimes A \cong A \otimes N\)
+  and \(N \otimes B \cong B \otimes N\), hence injective as a composite of
+  injective maps.
+\end{proof}
+
+\begin{lemma}\leanok
 [Base change of the ideal of a relative effective divisor]
   \label{lem:relative_divisor_base_change}
   \lean{AlgebraicGeometry.Scheme.Modules.pullback_kernel_isLocallyTrivial}
@@ -4713,23 +4927,95 @@ Hilbert-polynomial decomposition) as the quotients of
   \(\ker(g'^{*} q)\).
 \end{proof}
 
+\begin{lemma}\leanok
+[Basis-local criterion for a monomorphism of sheaves of modules]
+  \label{lem:modules_mono_of_injective_app_of_isBasis}
+  \lean{AlgebraicGeometry.Scheme.Modules.mono_of_injective_app_of_isBasis}
+  Let \(B\) be a basis of opens of a scheme \(X\) and let
+  \(\varphi : M \to N\) be a morphism of sheaves of \(\mathcal O_X\)-modules
+  such that \(\varphi\) is injective on sections over every member of \(B\).
+  Then \(\varphi\) is a monomorphism.
+\end{lemma}
+\begin{proof}\leanok
+  Injectivity on a basis of opens gives injectivity of \(\varphi\) on
+  stalks, hence the underlying morphism of sheaves of abelian groups is a
+  monomorphism; the faithful forgetful functor from sheaves of modules to
+  sheaves of abelian groups reflects monomorphisms.
+\end{proof}
+
+\begin{lemma}\leanok
+[The kernel--pullback comparison is an epimorphism when \(q\) is]
+  \label{lem:pullback_kernel_comparison_epi}
+  \lean{AlgebraicGeometry.Scheme.Modules.epi_pullbackKernelComparison}
+  \uses{def:pullback_kernel_comparison}
+  Let \(g' : X' \to X\) and \(q : E \twoheadrightarrow F\) be as in
+  \cref{def:pullback_kernel_comparison}, with \(q\) an epimorphism. Then the
+  comparison map \(\kappa_{g',q} : g'^{*}(\ker q) \to \ker(g'^{*} q)\) is an
+  epimorphism.
+\end{lemma}
+\begin{proof}\leanok
+  \(q\) epi identifies \(F\) with the cokernel of the kernel inclusion
+  \(\ker q \hookrightarrow E\); the pullback functor \(g'^{*}\) is a left
+  adjoint (\cref{lem:modules_pullback_mathlib}), hence preserves cokernels,
+  so \(g'^{*}(\ker q) \to g'^{*}E \to g'^{*}F \to 0\) stays exact. Exactness
+  at \(g'^{*}E\) says exactly that the induced kernel-comparison lift
+  \(\kappa_{g',q}\) is an epimorphism.
+\end{proof}
+
+\begin{lemma}\leanok
+[The kernel--pullback comparison is an isomorphism once it is monic]
+  \label{lem:pullback_kernel_comparison_iso_of_mono}
+  \lean{AlgebraicGeometry.Scheme.Modules.isIso_pullbackKernelComparison_of_mono}
+  \uses{def:pullback_kernel_comparison, lem:pullback_kernel_comparison_epi}
+  Let \(g' : X' \to X\) and \(q : E \twoheadrightarrow F\) be as in
+  \cref{def:pullback_kernel_comparison}, with \(q\) an epimorphism, and
+  suppose the pullback \(g'^{*}(\iota_q) : g'^{*}(\ker q) \to g'^{*}E\) of
+  the kernel inclusion is a monomorphism. Then the comparison map
+  \(\kappa_{g',q}\) is an isomorphism.
+\end{lemma}
+\begin{proof}\leanok
+  \uses{lem:pullback_kernel_comparison_epi}
+  The comparison satisfies \(\kappa_{g',q} \circ \iota_{g'^{*}q} =
+  g'^{*}(\iota_q)\) (\cref{def:pullback_kernel_comparison}); since the
+  right-hand side is monic by hypothesis and \(\iota_{g'^{*}q}\) is (as a
+  kernel inclusion) automatically monic, \(\kappa_{g',q}\) is monic.
+  Combined with the epimorphism half of
+  \cref{lem:pullback_kernel_comparison_epi}, monic \(+\) epic \(=\) iso in
+  the abelian category of \(\mathcal O_{X'}\)-modules.
+\end{proof}
+
 \begin{remark}
   \label{rem:relative_divisor_base_change_kernel_comparison}
   \uses{def:pullback_kernel_comparison,
     lem:pullback_kernel_isLocallyTrivial_of_isIso_kernelComparison,
-    lem:flat_cokernel_rTensor_injective}
+    lem:flat_cokernel_rTensor_injective, lem:flat_cokernel_lTensor_injective,
+    lem:modules_mono_of_injective_app_of_isBasis,
+    lem:pullback_kernel_comparison_epi,
+    lem:pullback_kernel_comparison_iso_of_mono}
   The conclusion of \cref{lem:relative_divisor_base_change} factors through
   the comparison map of \cref{def:pullback_kernel_comparison}: local
   triviality of \(\ker(g'^{*} q)\) follows from
   \cref{lem:pullback_kernel_isLocallyTrivial_of_isIso_kernelComparison} as
-  soon as \(\kappa_{g',q}\) is known to be an isomorphism.  Since
-  \(\kappa_{g',q}\) is automatically an epimorphism whenever \(q\) is (right
-  exactness of \(g'^{*}\)), this reduces to the single monomorphism fact
-  that \(g'^{*}\) keeps the kernel inclusion \(\ker q \hookrightarrow E\)
+  soon as \(\kappa_{g',q}\) is known to be an isomorphism, and this
+  factoring is now itself proved rather than merely anticipated:
+  \(\kappa_{g',q}\) is automatically an epimorphism whenever \(q\) is
+  (\cref{lem:pullback_kernel_comparison_epi}, right exactness of
+  \(g'^{*}\)), so by \cref{lem:pullback_kernel_comparison_iso_of_mono} the
+  entire remaining obligation is the single monomorphism fact that
+  \(g'^{*}\) keeps the kernel inclusion \(\ker q \hookrightarrow E\)
   injective --- exactly the Tor-vanishing content isolated in the
   ``Exactness after base change'' paragraph of the proof of
   \cref{lem:relative_divisor_base_change}
-  (\cref{lem:flat_cokernel_rTensor_injective}).
+  (\cref{lem:flat_cokernel_rTensor_injective,lem:flat_cokernel_lTensor_injective}).
+  Establishing that monomorphism fact scheme-theoretically (rather than only
+  on the affine charts of that proof) is expected to go through the
+  basis-local criterion \cref{lem:modules_mono_of_injective_app_of_isBasis},
+  reducing it to injectivity on sections over a trivialising affine cover;
+  this reduction is not yet assembled into a closed proof of
+  \cref{lem:relative_divisor_base_change} along this route, since the
+  needed section-surjectivity input --- vanishing of the first cohomology of
+  the kernel module over a trivialising affine open of an \emph{arbitrary}
+  (not necessarily affine) ambient scheme --- is not yet available.
 \end{remark}
 
 \begin{lemma}\leanok
@@ -5891,6 +6177,235 @@ immersion]
   of a pushforward at the ambient open agree definitionally with those of
   the original sheaf. Composing this identification of global sections with
   \Cref{lem:serre_twist_glued_sections} gives the stated isomorphism.
+\end{proof}
+
+\subsection{The compatible-family condition, concretely}
+\label{subsec:serre_twist_compatible_condition}
+
+\Cref{lem:serre_twist_sections_compatible} identifies global sections of
+\(\mathcal O(m)\) with the abstract compatible-family submodule
+\(\mathrm{Compat}(D, \mathcal O, ((X_i/X_j)^m))\)
+(\Cref{def:glue_gamma_compatible}) of the descent datum instantiated at the
+transition isomorphisms ``multiplication by \((X_i/X_j)^m\)''. The next
+lemmas make this compatibility condition concrete: through the chart
+identification with the degree-zero localisation \(\mathrm{Away}(X_i)\), a
+compatible family becomes a family of away-fractions related on overlaps by
+the transition unit, and a single degree-\(m\) form gives such a family.
+
+\begin{lemma}\leanok
+[The second descent leg of the Serre-twist datum, concretely]
+  \label{lem:serre_twist_b_leg}
+  \lean{AlgebraicGeometry.ProjTwist.glueLegBComponent_twist,
+    AlgebraicGeometry.ProjTwist.glueLegBComponent_twist_app,
+    AlgebraicGeometry.Scheme.Modules.pushforward_unitLeg_trivialize,
+    AlgebraicGeometry.ProjTwist.twistTransition_inv_trivialize,
+    AlgebraicGeometry.ProjTwist.pushforward_map_scalarEnd_appTop,
+    AlgebraicGeometry.ProjTwist.pushforwardCongr_hom_app_appTop}
+  \uses{lem:glue_legA_unit_restriction, def:scheme_modules_glue, def:serre_twist}
+  Instantiate the chart family of \Cref{def:scheme_modules_glue} at the unit
+  modules and the descent transition of \Cref{def:serre_twist}. Through the
+  \(i\)-chart trivialisation, the second (``\(b\)'') descent leg sends a
+  \(j\)-chart section \(y \in \Gamma(U_j, \mathcal O)\) to its restriction
+  along the overlap immersion \(t_{ij} \circ f_{ji} : V_{ij} \to U_j\), scaled
+  by the inverse transition unit \((X_j/X_i)^m\):
+  \[
+    b_{ij}(y) = y|_{V_{ij}} \cdot (X_j/X_i)^m \in \Gamma(V_{ij}, \mathcal O).
+  \]
+  This is the ``\(b\)-side'' companion of the \(a\)-side restriction formula
+  of \Cref{lem:glue_legA_unit_restriction}.
+\end{lemma}
+\begin{proof}\leanok
+  \uses{lem:glue_legA_unit_restriction}
+  The second descent leg is, before trivialisation, the pushforward of the
+  canonical comorphism of \(t_{ij} \circ f_{ji}\) followed by the scalar
+  automorphism ``multiplication by \((X_j/X_i)^m\)'' and a reindexing along
+  the glue-datum's cocycle identity; composing with the \(i\)-chart
+  trivialisation and cancelling it via the shared abstract unit-leg
+  trivialisation identity (used identically for the \(a\)-leg in
+  \Cref{lem:glue_legA_unit_restriction}) leaves exactly the comorphism of
+  \(t_{ij} \circ f_{ji}\) composed with the scalar action. On global
+  sections the pushforward of a comorphism acts by ring restriction and the
+  pushforward of a scalar automorphism acts by multiplication (both
+  through the definitional identification \(\Gamma(\rho_* \mathcal O, \top) =
+  \Gamma(\mathcal O, \top)\)), and the reindexing comparison acts as the
+  identity on sections; composing these gives the stated formula.
+\end{proof}
+
+\begin{lemma}\leanok
+[The concrete Serre-twist compatible-family condition]
+  \label{lem:serre_twist_compatible_condition}
+  \lean{AlgebraicGeometry.ProjTwist.trivialize_appTop_injective,
+    AlgebraicGeometry.ProjTwist.serreTwist_mem_glueGammaCompatible_iff}
+  \uses{lem:glue_legA_unit_restriction, lem:serre_twist_b_leg,
+    def:glue_gamma_compatible}
+  A chart-section family \((s_i)_i\), \(s_i \in \Gamma(D_+(X_i), \mathcal O)\),
+  is a compatible family for the descent datum of \(\mathcal O(m)\)
+  (\Cref{def:glue_gamma_compatible}) if and only if, on every overlap
+  \(D_+(X_i) \cap D_+(X_j)\),
+  \[
+    s_i|_{V_{ij}} = s_j|_{V_{ij}} \cdot (X_j/X_i)^m .
+  \]
+  This is the section-level realisation of the sign convention of
+  \Cref{rem:serre_twist_sign}: the compatible-family condition scales by
+  \((X_j/X_i)^m\), not \((X_i/X_j)^m\).
+\end{lemma}
+\begin{proof}\leanok
+  \uses{lem:glue_legA_unit_restriction, lem:serre_twist_b_leg}
+  Unfold membership in \(\mathrm{Compat}\) (\Cref{def:glue_gamma_compatible})
+  and transport the \(a\)-leg and \(b\)-leg conditions through the
+  \(i\)-chart trivialisation via \Cref{lem:glue_legA_unit_restriction} and
+  \Cref{lem:serre_twist_b_leg} respectively; the trivialisation is injective
+  on sections (being the global-section evaluation of an isomorphism of
+  sheaves of modules), so the transported condition is equivalent to the
+  original one.
+\end{proof}
+
+\begin{definition}\leanok
+[Chart sections as the degree-zero localisation]
+  \label{def:chart_sections_away}
+  \lean{AlgebraicGeometry.ProjTwist.chartSectionsIso}
+  \uses{def:serre_twist}
+  The structure-sheaf sections \(\Gamma(D_+(X_i), \mathcal O)\) of the
+  \(i\)-th chart of \(\operatorname{Proj} \mathbb Z[X_i : i \in n]\) are
+  identified with the degree-zero part of the localisation at \(X_i\),
+  \(\mathrm{Away}(X_i) := \bigl(\mathbb Z[X_i]_{X_i}\bigr)_0\), via Mathlib's
+  chart isomorphism for \(\operatorname{Proj}\) (valid since \(X_i\) is
+  homogeneous of positive degree \(1\)), transported to the chart's global
+  sections through the open-subscheme identification of the chart with its
+  own affine spectrum.
+\end{definition}
+\begin{proof}\leanok
+  Composite of Mathlib's \(\operatorname{Proj}\) basic-open-versus-away
+  isomorphism with the canonical global-sections identification of an open
+  subscheme with its \(\top\)-sections.
+\end{proof}
+
+\subsection{The away-fraction bridge and the degree-\(m\) forms}
+\label{subsec:serre_twist_away_bridge}
+
+Through the chart identification \Cref{def:chart_sections_away}, the two
+descent legs of \Cref{lem:serre_twist_compatible_condition} become explicit
+maps between localisation rings; this section records that comparison
+(the ``away-fraction bridge''), the resulting compatibility condition on a
+single homogeneous form, its consequence that the degree-\(m\) forms embed
+into \(\Gamma(\mathcal O(m))\), and the coordinate sections of
+\(\mathcal O(1)\).
+
+\begin{lemma}\leanok
+[The away-fraction bridge]
+  \label{lem:serre_twist_away_bridge}
+  \lean{AlgebraicGeometry.ProjTwist.appTop_f_chartSectionsIso,
+    AlgebraicGeometry.ProjTwist.appTop_tf_chartSectionsIso}
+  \uses{lem:serre_twist_compatible_condition, def:chart_sections_away}
+  Through the chart identification of \Cref{def:chart_sections_away}, the
+  two descent legs restricting to the overlap \(D_+(X_i X_j)\) are the
+  localisation-algebra maps \(\mathrm{Away}(X_i) \to \mathrm{Away}(X_i X_j)\)
+  and \(\mathrm{Away}(X_j) \to \mathrm{Away}(X_i X_j)\) sending a fraction to
+  its image under the further localisation at the other variable, followed
+  by the canonical identification of \(\mathrm{Away}(X_i X_j)\) with itself
+  along the two orderings of the product.
+\end{lemma}
+\begin{proof}\leanok
+  \uses{lem:serre_twist_compatible_condition}
+  On global sections, restriction of a chart section along the overlap
+  immersion into \(D_+(X_i X_j) \subseteq D_+(X_i)\) (resp.\ \(D_+(X_j)\)) is,
+  after the chart identification, exactly the further-localisation
+  (away-map) comparison of homogeneous localisations at the common
+  degree-zero ring \(\mathrm{Away}(X_i X_j)\).
+\end{proof}
+
+\begin{lemma}\leanok
+[A single form gives a compatible family]
+  \label{lem:serre_twist_form_compatible}
+  \lean{AlgebraicGeometry.ProjTwist.formChart_compat,
+    AlgebraicGeometry.ProjTwist.formFamily_mem}
+  \uses{lem:serre_twist_away_bridge, lem:serre_twist_compatible_condition}
+  For a degree-\(m\) homogeneous form \(F\), the chart family
+  \(\bigl(F/X_i^m\bigr)_i\) --- the away-fraction of \(F\) at each chart,
+  through \Cref{def:chart_sections_away} --- is a compatible family for the
+  Serre-twist descent datum (\Cref{lem:serre_twist_compatible_condition}).
+\end{lemma}
+\begin{proof}\leanok
+  \uses{lem:serre_twist_away_bridge}
+  In \(\mathrm{Away}(X_i X_j)\), the two away-map images of \(F/X_i^m\) and
+  \(F/X_j^m\) differ by exactly \((X_j/X_i)^m\) (a direct fraction identity:
+  both sides equal \(F/(X_i X_j)^m\) up to the appropriate unit power).
+  Transporting through the away-fraction bridge
+  (\Cref{lem:serre_twist_away_bridge}) turns this into the compatibility
+  condition of \Cref{lem:serre_twist_compatible_condition}.
+\end{proof}
+
+\begin{lemma}\leanok
+[The degree-\(m\) forms embed as global sections of \(\mathcal O(m)\)]
+  \label{lem:serre_twist_forms_embed}
+  \lean{AlgebraicGeometry.ProjTwist.formSectionHom,
+    AlgebraicGeometry.ProjTwist.formSectionHom_injective}
+  \uses{lem:serre_twist_form_compatible, lem:serre_twist_sections_compatible}
+  There is an additive homomorphism from the degree-\(m\) homogeneous forms
+  of \(\mathbb Z[X_i : i \in n]\) to \(\Gamma\bigl(\operatorname{Proj}
+  \mathbb Z[X_i], \mathcal O(m)\bigr)\), sending \(F\) to the global section
+  corresponding, under \Cref{lem:serre_twist_sections_compatible}, to the
+  compatible chart family of \Cref{lem:serre_twist_form_compatible}. When the
+  index set \(n\) is nonempty, this homomorphism is injective: a global
+  section is determined by any one of its chart fractions, and the
+  \(i\)-chart fraction of the image of \(F\) recovers \(F\) since \(X_i\) is
+  a nonzerodivisor of the domain \(\mathbb Z[X_i]\).
+\end{lemma}
+\begin{proof}\leanok
+  \uses{lem:serre_twist_form_compatible}
+  Compose \Cref{lem:serre_twist_form_compatible} (additively in \(F\), since
+  the chart away-fraction \(F \mapsto F/X_i^m\) and the chart identification
+  are additive) with the inverse of the compatible-family isomorphism of
+  \Cref{lem:serre_twist_sections_compatible}. For injectivity, fix an index
+  \(i\) (using nonemptiness of \(n\)): if two forms have equal images, their
+  \(i\)-chart fractions agree by naturality of the isomorphisms involved,
+  and equality of away-fractions \(F/X_i^m = F'/X_i^m\) in a domain forces
+  \(F = F'\) after clearing the nonzerodivisor \(X_i^m\).
+\end{proof}
+
+\begin{definition}\leanok
+[Coordinate global sections of \(\mathcal O(1)\)]
+  \label{def:coordinate_section}
+  \lean{AlgebraicGeometry.ProjTwist.coordSection,
+    AlgebraicGeometry.ProjTwist.glueProj_coordSectionGlued}
+  \uses{lem:serre_twist_forms_embed}
+  The \emph{coordinate global section} \(x_j \in \Gamma\bigl(
+  \operatorname{Proj} \mathbb Z[X_i], \mathcal O(1)\bigr)\) is the image of
+  the degree-one form \(X_j\) under the embedding of
+  \Cref{lem:serre_twist_forms_embed}. On the \(i\)-th chart it restricts to
+  the away-fraction \(X_j/X_i\).
+\end{definition}
+\begin{proof}\leanok
+  \uses{lem:serre_twist_forms_embed}
+  Direct instantiation of \Cref{lem:serre_twist_forms_embed} at
+  \(m = 1\), \(F = X_j\); the chart restriction identity is the \(i\)-chart
+  value of \Cref{lem:serre_twist_form_compatible} applied to that same form.
+\end{proof}
+
+\begin{lemma}
+[Global sections of \(\mathcal O(m)\) are the degree-\(m\) forms]
+  \label{lem:serre_twist_sections}
+  \notready
+  \uses{lem:serre_twist_forms_embed}
+  For \(n\) nonempty, the embedding of \Cref{lem:serre_twist_forms_embed} of
+  the degree-\(m\) homogeneous forms of \(\mathbb Z[X_i : i \in n]\) into
+  \(\Gamma\bigl(\operatorname{Proj}\mathbb Z[X_i], \mathcal O(m)\bigr)\) is
+  onto: every global section of \(\mathcal O(m)\) arises from a (unique)
+  degree-\(m\) form.
+\end{lemma}
+\begin{proof}
+  \uses{lem:serre_twist_forms_embed, lem:serre_twist_away_bridge}
+  Injectivity is \Cref{lem:serre_twist_forms_embed}; the open surjectivity
+  direction (``graded separation'') is: given a compatible away-fraction
+  family \((s_i)_i\) satisfying the condition of
+  \Cref{lem:serre_twist_away_bridge}, each \(s_i = G_i/X_i^{k_i}\) for some
+  homogeneous \(G_i\) of degree \(k_i + m\), and the transition condition
+  forces \(k_i \leq m\) for every \(i\) (no pole along any chart boundary)
+  and the forms \(G_i \cdot X_i^{m - k_i}\) to agree pairwise as elements of
+  the fraction field of \(\mathbb Z[X_i : i \in n]\), hence to be a single
+  homogeneous form \(F\) of degree \(m\) with \(F/X_i^m = s_i\) for every
+  \(i\). This is the classical computation \(\Gamma(\mathbb P^n,
+  \mathcal O(m)) = (\mathbb Z[X_i])_m\); it is not yet formalised.
 \end{proof}
 
 \subsection{The graded Hilbert--Serre bridge}
