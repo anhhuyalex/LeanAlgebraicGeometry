@@ -112,6 +112,12 @@ import AlgebraicJacobian.Picard.SchematicSupport
 import AlgebraicJacobian.Picard.TensorSectionFormula
 import AlgebraicJacobian.Picard.LineBundleCoherence
 import AlgebraicJacobian.RiemannRoch.WeilDivisor
+-- Adelic Riemann-Roch lane (2026-07-07): Weil repartitions as the concrete
+-- 2-affine-cover cokernel; keystone = H^1(C, O_C) finiteness via a finite map
+-- to P^1 (design: RiemannRoch_Adelic blueprint chapter).
+import AlgebraicJacobian.RiemannRoch.Adelic.Substrate
+import AlgebraicJacobian.RiemannRoch.Adelic.Cokernel
+import AlgebraicJacobian.RiemannRoch.Adelic.P1BaseCase
 import AlgebraicJacobian.Albanese.AlbaneseUP
 import AlgebraicJacobian.Albanese.AuslanderBuchsbaum
 import AlgebraicJacobian.Albanese.CodimOneExtension
