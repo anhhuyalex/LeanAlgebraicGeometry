@@ -539,6 +539,88 @@ section UnitLeg
 variable (D : Scheme.GlueData.{0})
 
 set_option backward.isDefEq.respectTransparency false in
+/-- **Abstract unit-leg trivialisation.** For composable `φ : W ⟶ V`, `ρ : V ⟶ Z`,
+the adjunction-unit + pushforward-composition leg on the structure sheaf, post-composed
+with the structure-sheaf trivialisation `pullbackUnitIso φ`, is the pushforward of the
+canonical comorphism `unitToPushforwardObjUnit φ`.  This is the map-level content shared
+by the `a`-leg (`φ = f_ij`, `ρ = ι_i`) and the front of the `b`-leg (`φ = t_ij ≫ f_ji`,
+`ρ = ι_j`) on unit descent data. -/
+lemma pushforward_unitLeg_trivialize {W V Z : Scheme.{0}} (φ : W ⟶ V) (ρ : V ⟶ Z) :
+    (Scheme.Modules.pushforward ρ).map
+        ((Scheme.Modules.pullbackPushforwardAdjunction φ).unit.app
+          (SheafOfModules.unit V.ringCatSheaf)) ≫
+      ((Scheme.Modules.pushforwardComp φ ρ).hom.app
+          ((Scheme.Modules.pullback φ).obj (SheafOfModules.unit V.ringCatSheaf)) ≫
+        (Scheme.Modules.pushforward (φ ≫ ρ)).map
+          (Scheme.Modules.pullbackUnitIso φ).hom)
+      = (Scheme.Modules.pushforward ρ).map
+          (SheafOfModules.unitToPushforwardObjUnit φ.toRingCatSheafHom) ≫
+        (Scheme.Modules.pushforwardComp φ ρ).hom.app (SheafOfModules.unit W.ringCatSheaf) := by
+  have hnat : (Scheme.Modules.pushforwardComp φ ρ).hom.app
+        ((Scheme.Modules.pullback φ).obj (SheafOfModules.unit V.ringCatSheaf)) ≫
+        (Scheme.Modules.pushforward (φ ≫ ρ)).map
+          (Scheme.Modules.pullbackUnitIso φ).hom
+      = (Scheme.Modules.pushforward ρ).map
+          ((Scheme.Modules.pushforward φ).map
+            (Scheme.Modules.pullbackUnitIso φ).hom) ≫
+        (Scheme.Modules.pushforwardComp φ ρ).hom.app (SheafOfModules.unit W.ringCatSheaf) :=
+    ((Scheme.Modules.pushforwardComp φ ρ).hom.naturality
+      (Scheme.Modules.pullbackUnitIso φ).hom).symm
+  have hunit : (Scheme.Modules.pullbackPushforwardAdjunction φ).unit.app
+        (SheafOfModules.unit V.ringCatSheaf) ≫
+        (Scheme.Modules.pushforward φ).map
+          (Scheme.Modules.pullbackUnitIso φ).hom
+      = SheafOfModules.unitToPushforwardObjUnit φ.toRingCatSheafHom :=
+    (Adjunction.homEquiv_unit
+        (Scheme.Modules.pullbackPushforwardAdjunction φ) _ _
+        (SheafOfModules.pullbackObjUnitToUnit φ.toRingCatSheafHom)).symm.trans
+      (SheafOfModules.pullbackPushforwardAdjunction_homEquiv_pullbackObjUnitToUnit
+        φ.toRingCatSheafHom)
+  calc (Scheme.Modules.pushforward ρ).map
+          ((Scheme.Modules.pullbackPushforwardAdjunction φ).unit.app
+            (SheafOfModules.unit V.ringCatSheaf)) ≫
+        ((Scheme.Modules.pushforwardComp φ ρ).hom.app
+            ((Scheme.Modules.pullback φ).obj (SheafOfModules.unit V.ringCatSheaf)) ≫
+          (Scheme.Modules.pushforward (φ ≫ ρ)).map
+            (Scheme.Modules.pullbackUnitIso φ).hom)
+      = (Scheme.Modules.pushforward ρ).map
+          ((Scheme.Modules.pullbackPushforwardAdjunction φ).unit.app
+            (SheafOfModules.unit V.ringCatSheaf)) ≫
+          ((Scheme.Modules.pushforward ρ).map
+            ((Scheme.Modules.pushforward φ).map
+              (Scheme.Modules.pullbackUnitIso φ).hom) ≫
+            (Scheme.Modules.pushforwardComp φ ρ).hom.app
+              (SheafOfModules.unit W.ringCatSheaf)) :=
+        congrArg ((Scheme.Modules.pushforward ρ).map
+          ((Scheme.Modules.pullbackPushforwardAdjunction φ).unit.app
+            (SheafOfModules.unit V.ringCatSheaf)) ≫ ·) hnat
+    _ = ((Scheme.Modules.pushforward ρ).map
+          ((Scheme.Modules.pullbackPushforwardAdjunction φ).unit.app
+            (SheafOfModules.unit V.ringCatSheaf)) ≫
+          (Scheme.Modules.pushforward ρ).map
+            ((Scheme.Modules.pushforward φ).map
+              (Scheme.Modules.pullbackUnitIso φ).hom)) ≫
+          (Scheme.Modules.pushforwardComp φ ρ).hom.app
+            (SheafOfModules.unit W.ringCatSheaf) :=
+        (Category.assoc _ _ _).symm
+    _ = (Scheme.Modules.pushforward ρ).map
+          ((Scheme.Modules.pullbackPushforwardAdjunction φ).unit.app
+            (SheafOfModules.unit V.ringCatSheaf) ≫
+            (Scheme.Modules.pushforward φ).map
+              (Scheme.Modules.pullbackUnitIso φ).hom) ≫
+          (Scheme.Modules.pushforwardComp φ ρ).hom.app
+            (SheafOfModules.unit W.ringCatSheaf) :=
+        congrArg (· ≫ (Scheme.Modules.pushforwardComp φ ρ).hom.app
+            (SheafOfModules.unit W.ringCatSheaf))
+          ((Scheme.Modules.pushforward ρ).map_comp _ _).symm
+    _ = (Scheme.Modules.pushforward ρ).map
+          (SheafOfModules.unitToPushforwardObjUnit φ.toRingCatSheafHom) ≫
+        (Scheme.Modules.pushforwardComp φ ρ).hom.app (SheafOfModules.unit W.ringCatSheaf) :=
+        congrArg (fun z => (Scheme.Modules.pushforward ρ).map z ≫
+          (Scheme.Modules.pushforwardComp φ ρ).hom.app
+            (SheafOfModules.unit W.ringCatSheaf)) hunit
+
+set_option backward.isDefEq.respectTransparency false in
 /-- **The first descent leg of a rank-one (unit) descent datum is restriction
 along the overlap immersion**: composing `glueLegAComponent` with the
 pushforward of the structure-sheaf trivialization `pullbackUnitIso` yields the
@@ -702,8 +784,189 @@ identification.  This is the scaffold consumed by the computation
 namespace AlgebraicGeometry.ProjTwist
 
 open AlgebraicGeometry.Scheme
+open AlgebraicGeometry.Grassmannian (scalarEnd scalarEnd_comp scalarEnd_val_app)
 
 variable (n₀ : Type)
+
+set_option backward.isDefEq.respectTransparency false in
+/-- **Iso-algebra core of the `b`-leg.** The inverse of the Serre-twist transition,
+trivialised on the `i`-chart side, is multiplication by the inverse transition unit
+`(Xⱼ/Xᵢ)^m` over the trivialisation on the `j`-chart side.  The `pullbackUnitIso f_ij`
+cancellation strips the `i`-chart comparison, leaving the scalar automorphism and the
+`(t_ij ≫ f_ji)`-chart comparison. -/
+lemma twistTransition_inv_trivialize (m : ℕ) (i j : n₀) :
+    (twistTransition n₀ m i j).inv ≫
+        (Scheme.Modules.pullbackUnitIso ((glueData n₀).f i j)).hom
+      = (Scheme.Modules.pullbackUnitIso ((glueData n₀).t i j ≫ (glueData n₀).f j i)).hom ≫
+        scalarEnd (X := pullback ((basicOpenCover n₀).f i) ((basicOpenCover n₀).f j))
+          ((overlapUnit n₀ i j ^ m).inv) := by
+  rw [twistTransition]
+  simp only [Iso.trans_inv, Iso.symm_inv, Category.assoc, Iso.inv_hom_id, Category.comp_id]
+  rfl
+
+set_option maxHeartbeats 800000 in
+-- heavy defeq: matching the abstract unit-leg trivialisation through the glueData
+-- pullback-index diamond exceeds the default heartbeat budget
+set_option backward.isDefEq.respectTransparency false in
+/-- **The second descent leg of the Serre-twist datum, trivialised.** Composing
+`glueLegBComponent` (for the transition `twistTransition n₀ m`) with the structure-sheaf
+trivialisation `pullbackUnitIso f_ij`, the `b`-leg factors as: the canonical comorphism
+of the `j`-chart overlap immersion `t_ij ≫ f_ji`, the pushforward-composition comparison,
+the scalar automorphism by the inverse transition unit `(Xⱼ/Xᵢ)^m`, and the reindexing
+`pushforwardCongr`. -/
+lemma glueLegBComponent_twist (m : ℕ) (i j : n₀) :
+    Scheme.Modules.glueLegBComponent (glueData n₀)
+        (fun i => SheafOfModules.unit ((glueData n₀).U i).ringCatSheaf)
+        (fun i j => twistTransition n₀ m i j) (i, j) ≫
+      (Scheme.Modules.pushforward ((glueData n₀).f i j ≫ (glueData n₀).ι i)).map
+        (Scheme.Modules.pullbackUnitIso ((glueData n₀).f i j)).hom
+    = (Scheme.Modules.pushforward ((glueData n₀).ι j)).map
+        (SheafOfModules.unitToPushforwardObjUnit
+          ((glueData n₀).t i j ≫ (glueData n₀).f j i).toRingCatSheafHom) ≫
+      (Scheme.Modules.pushforwardComp ((glueData n₀).t i j ≫ (glueData n₀).f j i)
+          ((glueData n₀).ι j)).hom.app
+        (SheafOfModules.unit ((glueData n₀).V (i, j)).ringCatSheaf) ≫
+      (Scheme.Modules.pushforward
+          (((glueData n₀).t i j ≫ (glueData n₀).f j i) ≫ (glueData n₀).ι j)).map
+        (scalarEnd (X := pullback ((basicOpenCover n₀).f i) ((basicOpenCover n₀).f j))
+          (overlapUnit n₀ i j ^ m).inv) ≫
+      (Scheme.Modules.pushforwardCongr
+        (show ((glueData n₀).t i j ≫ (glueData n₀).f j i) ≫ (glueData n₀).ι j
+            = (glueData n₀).f i j ≫ (glueData n₀).ι i by
+          rw [Category.assoc]; exact (glueData n₀).glue_condition i j)).hom.app
+        (SheafOfModules.unit ((glueData n₀).V (i, j)).ringCatSheaf) := by
+  simp only [Scheme.Modules.glueLegBComponent, Category.assoc]
+  rw [← NatTrans.naturality,
+    ← Category.assoc ((Scheme.Modules.pushforward
+      (((glueData n₀).t i j ≫ (glueData n₀).f j i) ≫ (glueData n₀).ι j)).map
+      (twistTransition n₀ m i j).inv),
+    ← Functor.map_comp, twistTransition_inv_trivialize, Functor.map_comp]
+  rw [Category.assoc ((Scheme.Modules.pushforward
+        (((glueData n₀).t i j ≫ (glueData n₀).f j i) ≫ (glueData n₀).ι j)).map
+        (Scheme.Modules.pullbackUnitIso ((glueData n₀).t i j ≫ (glueData n₀).f j i)).hom),
+    ← Category.assoc ((Scheme.Modules.pushforwardComp
+        ((glueData n₀).t i j ≫ (glueData n₀).f j i) ((glueData n₀).ι j)).hom.app
+        ((Scheme.Modules.pullback ((glueData n₀).t i j ≫ (glueData n₀).f j i)).obj
+          (SheafOfModules.unit ((glueData n₀).U j).ringCatSheaf))),
+    ← Category.assoc ((Scheme.Modules.pushforward ((glueData n₀).ι j)).map
+        ((Scheme.Modules.pullbackPushforwardAdjunction
+          ((glueData n₀).t i j ≫ (glueData n₀).f j i)).unit.app
+          (SheafOfModules.unit ((glueData n₀).U j).ringCatSheaf)))]
+  rw [Scheme.Modules.pushforward_unitLeg_trivialize
+      ((glueData n₀).t i j ≫ (glueData n₀).f j i) ((glueData n₀).ι j), Category.assoc]
+
+/-- The pushforward of a scalar automorphism `scalarEnd a` acts on global sections
+(through the definitional `Γ(E_* 𝒪, ⊤) = Γ(𝒪, ⊤)`) as multiplication by `a`. -/
+lemma pushforward_map_scalarEnd_appTop {W V : Scheme.{0}} (E : W ⟶ V) (a w : Γ(W, ⊤)) :
+    ((Scheme.Modules.pushforward E).map (scalarEnd a)).app ⊤ w = w * a := by
+  rw [Scheme.Modules.pushforward_map_app]
+  change (scalarEnd a).val.app (Opposite.op (E ⁻¹ᵁ ⊤)) w = _
+  rw [scalarEnd_val_app]
+  congr 1
+  rw [show (homOfLE (le_top : (E ⁻¹ᵁ ⊤) ≤ ⊤)).op = 𝟙 (Opposite.op (⊤ : W.Opens)) from
+      Subsingleton.elim _ _]
+  exact ConcreteCategory.congr_hom (W.ringCatSheaf.obj.map_id _) a
+
+/-- The reindexing comparison `pushforwardCongr` of two equal base morphisms acts as the
+identity on global sections (the reindexing is a restriction between preimages of `⊤`,
+which both equal `⊤`). -/
+lemma pushforwardCongr_hom_app_appTop {X Y : Scheme.{0}} {e e' : X ⟶ Y} (h : e = e')
+    (M : X.Modules) (w : Γ((Scheme.Modules.pushforward e).obj M, ⊤)) :
+    ((Scheme.Modules.pushforwardCongr h).hom.app M).app ⊤ w = w := by
+  subst h
+  rw [Scheme.Modules.pushforwardCongr_hom_app_app]
+  exact ConcreteCategory.congr_hom (M.presheaf.map_id _) w
+
+set_option backward.isDefEq.respectTransparency false in
+/-- **Section-level `b`-leg of the Serre twist.** Through the `i`-chart
+trivialisation, the second descent leg sends the `j`-chart section `y` to its
+restriction along the `j`-side overlap immersion `t_ij ≫ f_ji`, scaled by the
+inverse transition unit `(Xⱼ/Xᵢ)^m`.  Paired with `glueLegAComponent_unit_app`
+(the `a`-leg, restriction along `f_ij`), this is the concrete two-sided form of
+the Serre-twist compatible-family condition. -/
+lemma glueLegBComponent_twist_app (m : ℕ) (i j : n₀) (y : Γ((glueData n₀).U j, ⊤)) :
+    ((Scheme.Modules.pushforward ((glueData n₀).f i j ≫ (glueData n₀).ι i)).map
+        (Scheme.Modules.pullbackUnitIso ((glueData n₀).f i j)).hom).app ⊤
+      ((Scheme.Modules.glueLegBComponent (glueData n₀)
+          (fun i => SheafOfModules.unit ((glueData n₀).U i).ringCatSheaf)
+          (fun i j => twistTransition n₀ m i j) (i, j)).app ⊤ y)
+    = @id (↑Γ(pullback ((basicOpenCover n₀).f i) ((basicOpenCover n₀).f j), ⊤))
+          (Scheme.Hom.appTop ((glueData n₀).t i j ≫ (glueData n₀).f j i) y)
+        * (overlapUnit n₀ i j ^ m).inv := by
+  have hfront : ((Scheme.Modules.pushforwardComp
+          ((glueData n₀).t i j ≫ (glueData n₀).f j i) ((glueData n₀).ι j)).hom.app
+        (SheafOfModules.unit ((glueData n₀).V (i, j)).ringCatSheaf)).app ⊤
+      (((Scheme.Modules.pushforward ((glueData n₀).ι j)).map
+          (SheafOfModules.unitToPushforwardObjUnit
+            ((glueData n₀).t i j ≫ (glueData n₀).f j i).toRingCatSheafHom)).app ⊤ y)
+      = Scheme.Hom.appTop ((glueData n₀).t i j ≫ (glueData n₀).f j i) y :=
+    (Scheme.Modules.comp_app_top_apply
+        ((Scheme.Modules.pushforward ((glueData n₀).ι j)).map
+          (SheafOfModules.unitToPushforwardObjUnit
+            ((glueData n₀).t i j ≫ (glueData n₀).f j i).toRingCatSheafHom))
+        ((Scheme.Modules.pushforwardComp
+          ((glueData n₀).t i j ≫ (glueData n₀).f j i) ((glueData n₀).ι j)).hom.app
+          (SheafOfModules.unit ((glueData n₀).V (i, j)).ringCatSheaf)) y).symm.trans
+      (SheafOfModules.unitToPushforwardObjUnit_val_app_apply
+        ((glueData n₀).t i j ≫ (glueData n₀).f j i).toRingCatSheafHom y)
+  rw [← Scheme.Modules.comp_app_top_apply
+      (Scheme.Modules.glueLegBComponent (glueData n₀)
+        (fun i => SheafOfModules.unit ((glueData n₀).U i).ringCatSheaf)
+        (fun i j => twistTransition n₀ m i j) (i, j))
+      ((Scheme.Modules.pushforward ((glueData n₀).f i j ≫ (glueData n₀).ι i)).map
+        (Scheme.Modules.pullbackUnitIso ((glueData n₀).f i j)).hom) y,
+    Scheme.Modules.app_top_congr (glueLegBComponent_twist n₀ m i j),
+    Scheme.Modules.comp_app_top_apply
+      ((Scheme.Modules.pushforward ((glueData n₀).ι j)).map
+        (SheafOfModules.unitToPushforwardObjUnit
+          ((glueData n₀).t i j ≫ (glueData n₀).f j i).toRingCatSheafHom)) _ y,
+    Scheme.Modules.comp_app_top_apply]
+  refine Eq.trans (congrArg _ hfront) ?_
+  refine Eq.trans (Scheme.Modules.comp_app_top_apply _ _ _) ?_
+  refine Eq.trans (congrArg _ (pushforward_map_scalarEnd_appTop _ _ _)) ?_
+  exact pushforwardCongr_hom_app_appTop _ _ _
+
+/-- The `i`-chart trivialisation `f_ij^* O` at global sections is injective (it is the
+`⊤`-evaluation of an isomorphism of sheaves of modules). -/
+lemma trivialize_appTop_injective (i j : n₀) :
+    Function.Injective
+      (((Scheme.Modules.pushforward ((glueData n₀).f i j ≫ (glueData n₀).ι i)).map
+        (Scheme.Modules.pullbackUnitIso ((glueData n₀).f i j)).hom).app ⊤) := by
+  refine Function.LeftInverse.injective
+    (g := ((Scheme.Modules.pushforward ((glueData n₀).f i j ≫ (glueData n₀).ι i)).map
+      (Scheme.Modules.pullbackUnitIso ((glueData n₀).f i j)).inv).app ⊤) ?_
+  intro x
+  rw [← Scheme.Modules.comp_app_top_apply, ← Functor.map_comp, Iso.hom_inv_id,
+    CategoryTheory.Functor.map_id, Scheme.Modules.Hom.id_app]
+  rfl
+
+/-- **The concrete Serre-twist compatible-family condition.**  A family of chart sections
+`(sᵢ)ᵢ` (`sᵢ ∈ Γ(D₊(Xᵢ), 𝒪)`) is a compatible family for the descent datum of `O(m)` iff,
+on every double overlap `V(i,j)`, the `i`-restriction times `(Xᵢ/Xⱼ)^m` equals the
+`j`-restriction — equivalently `sᵢ|_V = (Xⱼ/Xᵢ)^m · sⱼ|_V`, the frame-`Xᵢ^m` orientation of
+`O(m)` (blueprint `rem:serre_twist_sign`).  Obtained by transporting the abstract descent
+condition through the `i`-chart trivialisation (`glueLegAComponent_unit_app` on the `a`-leg,
+`glueLegBComponent_twist_app` on the `b`-leg). -/
+lemma serreTwist_mem_glueGammaCompatible_iff (m : ℕ)
+    (s : ∀ i, Γ((Scheme.Modules.pushforward ((glueData n₀).ι i)).obj
+      (SheafOfModules.unit ((glueData n₀).U i).ringCatSheaf), ⊤)) :
+    s ∈ Scheme.Modules.glueGammaCompatible (glueData n₀)
+        (fun i => SheafOfModules.unit ((glueData n₀).U i).ringCatSheaf)
+        (fun i j => twistTransition n₀ m i j)
+      ↔ ∀ i j, Scheme.Hom.appTop ((glueData n₀).f i j) (s i)
+          = @id (↑Γ(pullback ((basicOpenCover n₀).f i) ((basicOpenCover n₀).f j), ⊤))
+              (Scheme.Hom.appTop ((glueData n₀).t i j ≫ (glueData n₀).f j i) (s j))
+            * (overlapUnit n₀ i j ^ m).inv := by
+  rw [Scheme.Modules.mem_glueGammaCompatible_iff]
+  constructor
+  · intro h i j
+    exact (Scheme.Modules.glueLegAComponent_unit_app (glueData n₀) (i, j) (s (i, j).1)).symm.trans
+      ((congrArg _ (h (i, j))).trans (glueLegBComponent_twist_app n₀ m i j (s (i, j).2)))
+  · intro h p
+    obtain ⟨i, j⟩ := p
+    refine trivialize_appTop_injective n₀ i j ?_
+    exact (Scheme.Modules.glueLegAComponent_unit_app (glueData n₀) (i, j) (s (i, j).1)).trans
+      ((h i j).trans (glueLegBComponent_twist_app n₀ m i j (s (i, j).2)).symm)
 
 /-- **Global sections of the glued Serre twist are the compatible families**
 of chart sections of the trivialising cover: the instantiation of
