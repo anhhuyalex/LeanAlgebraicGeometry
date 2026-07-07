@@ -1229,6 +1229,47 @@ def formSectionHom (m : ℕ) :
     homogeneousSubmodule n₀ (ULift.{0} ℤ) m →+ Γ(serreTwist n₀ m, ⊤) :=
   (serreTwistSectionsCompatible n₀ m).symm.toAddMonoidHom.comp (formFamilyAddHom m)
 
+/-- The form is recoverable from its `i`-chart fraction: `formChart m i` is injective
+(`Xᵢ` is a nonzerodivisor of the domain `ℤ[X]`). -/
+lemma formChart_injective (m : ℕ) (i : n₀) :
+    Function.Injective (formChart m i) := by
+  haveI : IsDomain (ULift.{0} ℤ) := MulEquiv.isDomain ℤ (ULift.ringEquiv (R := ℤ)).toMulEquiv
+  intro F F' h
+  apply Subtype.ext
+  have hval := congrArg HomogeneousLocalization.val h
+  rw [formChart, formChart, Away.val_mk, Away.val_mk, Localization.mk_eq_mk_iff,
+    Localization.r_iff_exists] at hval
+  obtain ⟨c, hc⟩ := hval
+  obtain ⟨k, hk⟩ := c.property
+  have hXi : (X i : MvPolynomial n₀ (ULift.{0} ℤ)) ≠ 0 := X_ne_zero i
+  have hc0 : (c : MvPolynomial n₀ (ULift.{0} ℤ)) ≠ 0 := hk ▸ pow_ne_zero _ hXi
+  have hpow : (X i ^ m : MvPolynomial n₀ (ULift.{0} ℤ)) ≠ 0 := pow_ne_zero _ hXi
+  have key : (c : MvPolynomial n₀ (ULift.{0} ℤ)) * X i ^ m * (F.val - F'.val) = 0 := by
+    simp only at hc
+    linear_combination hc
+  rcases mul_eq_zero.mp key with h1 | h2
+  · exact absurd h1 (mul_ne_zero hc0 hpow)
+  · exact sub_eq_zero.mp h2
+
+/-- **The degree-`m` forms embed as global sections of `O(m)`.**  When there is at
+least one variable, `formSectionHom` is injective: a global section is determined by
+its chart fractions, and the `i`-chart fraction of `formSectionHom F` recovers `F`. -/
+lemma formSectionHom_injective [Nonempty n₀] (m : ℕ) :
+    Function.Injective (formSectionHom (n₀ := n₀) m) := by
+  obtain ⟨i⟩ := ‹Nonempty n₀›
+  intro F F' h
+  have h1 : formFamilyAddHom m F = formFamilyAddHom m F' := by
+    apply (serreTwistSectionsCompatible n₀ m).symm.injective
+    exact h
+  have h3 : formFamily m F i = formFamily m F' i :=
+    congrFun (congrArg Subtype.val h1) i
+  refine formChart_injective m i ?_
+  have e1 : formChart m i F = (chartSectionsIso n₀ i).inv (formFamily m F i) :=
+    (CategoryTheory.Iso.hom_inv_id_apply (chartSectionsIso n₀ i) (formChart m i F)).symm
+  have e2 : formChart m i F' = (chartSectionsIso n₀ i).inv (formFamily m F' i) :=
+    (CategoryTheory.Iso.hom_inv_id_apply (chartSectionsIso n₀ i) (formChart m i F')).symm
+  rw [e1, e2, h3]
+
 /-! ## Coordinate global sections of `O(1)` (P0.3) -/
 
 /-- The coordinate global section `x_j ∈ Γ(serreTwistGlued n₀ 1, ⊤)` on the glued
