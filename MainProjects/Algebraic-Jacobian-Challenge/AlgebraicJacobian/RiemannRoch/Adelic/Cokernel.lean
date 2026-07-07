@@ -337,6 +337,29 @@ theorem prodOpens_eq_iInf {m : ℕ} (j : Fin m → ι) :
   le_antisymm (le_iInf fun a => (Limits.Pi.π ((FormalCoproduct.mk _ 𝒰).obj ∘ j) a).le)
     (Limits.Pi.lift (fun a => homOfLE (iInf_le (fun a => 𝒰 (j a)) a))).le
 
+/-- The Čech face inclusion: the full intersection `∏ᶜ (𝒰∘j) = ⨅_{Fin (n+2)} 𝒰(j b)` is contained
+in the face intersection `∏ᶜ (𝒰∘(j∘δ_{i₀})) = ⨅_{Fin (n+1)} 𝒰(j(δ_{i₀} a))` (dropping one index),
+the `≤` of opens underlying the restriction that the coface map applies. -/
+theorem prodOpens_δ_le {n : ℕ} (i₀ : Fin (n + 2)) (j : Fin (n + 2) → ι) :
+    (∏ᶜ ((FormalCoproduct.mk _ 𝒰).obj ∘ j) : TopologicalSpace.Opens C.left.toTopCat)
+      ≤ ∏ᶜ ((FormalCoproduct.mk _ 𝒰).obj ∘ (j ∘ Fin.succAboveOrderEmb i₀)) := by
+  rw [prodOpens_eq_iInf, prodOpens_eq_iInf]
+  exact le_iInf fun a => iInf_le (fun b => 𝒰 (j b)) (Fin.succAboveOrderEmb i₀ a)
+
+/-- **Single-coface component of the Čech differential, as a genuine restriction map.** Because
+`Opens X` is a poset (all parallel maps are equal), the abstract reindexing morphism of
+`cechCosimplicial_δ_π` is *the* restriction `F.obj.map (homOfLE …)ᵒᵖ` of the face inclusion
+`prodOpens_δ_le`.  This is the differential `Yδ_{i₀}`, projected to `j`, in the honest
+"restrict the `(j∘δ_{i₀})`-factor along `∏ᶜ 𝒰∘j ≤ ∏ᶜ 𝒰∘(j∘δ_{i₀})`" form used by the
+degree-`1` kernel/cokernel analysis. -/
+theorem cechCosimplicial_δ_π_restrict (n : ℕ) (i₀ : Fin (n + 2)) (j : Fin (n + 2) → ι) :
+    (cechCosimplicial 𝒰 F).δ i₀ ≫ Pi.π _ j
+      = Pi.π _ (j ∘ Fin.succAboveOrderEmb i₀) ≫
+          F.obj.map (homOfLE (prodOpens_δ_le 𝒰 i₀ j)).op := by
+  rw [cechCosimplicial_δ_π]
+  refine congrArg _ (congrArg _ ?_)
+  exact congrArg Opposite.op (Subsingleton.elim _ _)
+
 /-- **Degree-`0` differential `d⁰` of the Čech complex as an alternating coface difference.**
 `d⁰ = Yδ₀ − Yδ₁` (the two cofaces `Fin 1 → Fin 2` of the alternating sum). -/
 theorem cechCochain_d01_eq :
