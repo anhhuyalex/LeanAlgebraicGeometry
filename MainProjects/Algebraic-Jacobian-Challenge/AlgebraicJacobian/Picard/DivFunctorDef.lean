@@ -193,6 +193,29 @@ theorem Modules.pullback_kernel_isLocallyTrivial
     (hker : LineBundle.IsLocallyTrivial (Limits.kernel q)) :
     LineBundle.IsLocallyTrivial
       (Limits.kernel ((Scheme.Modules.pullback g').map q)) := by
+  -- The comparison `κ = pullbackKernelComparison g' q : g'^*(ker q) ⟶ ker (g'^* q)`
+  -- is always epi (`q` epi, `g'^*` right exact: `epi_pullbackKernelComparison`).
+  -- Once `κ` is shown to be an isomorphism, the read-off lemma
+  -- `pullback_kernel_isLocallyTrivial_of_isIso_kernelComparison` (§0) transports the
+  -- rank-one local triviality of `ker q` across it.  By
+  -- `isIso_pullbackKernelComparison_of_mono` (`FlatKernelBase.lean`) `κ` is an iso as
+  -- soon as `g'^*` keeps the kernel inclusion `ker q ↪ E` monic, so the ENTIRE
+  -- remaining content is the single flat-base-change monomorphism below.
+  haveI := hq
+  refine Modules.pullback_kernel_isLocallyTrivial_of_isIso_kernelComparison g' q
+    (Modules.isIso_pullbackKernelComparison_of_mono g' q ?_) hker
+  -- **REMAINING (Stacks 00HL, blueprint `lem:relative_divisor_base_change`):**
+  -- `g'^*` preserves the kernel inclusion `ker q ↪ E` as a monomorphism, because the
+  -- cokernel `F` is `S`-flat.  Affine-locally on a piece `W = g'⁻¹V ⊓ f'⁻¹Ut` over a
+  -- trivialising affine `V` this is `Module.Flat.rTensor_injective_of_exact`
+  -- (`FlatKernelBase.lean`) applied to the section SES
+  -- `0 → Γ(ker q, V) → Γ(E, V) → Γ(F, V) → 0` tensored with `Γ(S', Ut)` over
+  -- `Γ(S, U)` (`Γ(F, V)` flat, so `Tor₁` vanishes and the left map stays injective);
+  -- section-surjectivity of `Γ(E,V) → Γ(F,V)` over the trivialising affine is the
+  -- `H¹(V, ker q) = 0` content, and the section base-change identifications are the
+  -- `pullback_app_isoTensor` calculus.  Globalisation is stalk-/basis-local
+  -- (`Modules.isIso_of_isIso_app_of_isBasis`), using `exists_affine_trivializing_le`
+  -- to shrink `V` into each piece.  Hypotheses `sq`, `hE`, `hfp`, `hflat` feed this step.
   sorry
 
 /-! ## §2. Families of relative effective divisors -/
