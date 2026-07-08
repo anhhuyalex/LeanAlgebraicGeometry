@@ -200,7 +200,8 @@ class HasPicScheme {k : Type u} [Field k] (C : Over (Spec (.of k)))
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
     [GeometricallyIntegral C.hom] : Prop where
   has_pic_scheme : ∃ (X : Over (Spec (.of k))),
-    Nonempty ((PicScheme.picSharp C).RepresentableBy X)
+    Nonempty ((PicScheme.picSharp C).RepresentableBy X) ∧
+      LocallyOfFiniteType X.hom ∧ IsSeparated X.hom
 
 /-- The **Picard scheme** `Pic_{C/k}` of a smooth proper geometrically
 integral curve `C/k`.
@@ -236,6 +237,42 @@ noncomputable instance instHasPicScheme {k : Type u} [Field k]
   ⟨sorry⟩
 
 namespace PicScheme
+
+/-- **`Pic_{C/k}` is locally of finite type over `k`.**
+
+Kleiman §4 Thm. `th:main` delivers `Pic_{C/k}` as a scheme separated and
+*locally of finite type* over `k` (a disjoint union of open quasi-projective
+`k`-subschemes). Consumed by `GroupScheme.IdentityComponent (PicScheme C)`
+(needed for the identity-component construction to elaborate) and by the
+sibling `Picard/Pic0AbelianVariety.lean`.
+
+Isolated sorry site (project axiom-isolation pattern): the substantive
+content — local-finite-typeness as part of the FGA representability
+package — is not in Mathlib at the pinned revision. It is bundled directly
+into the `HasPicScheme.has_pic_scheme` existential (alongside
+representability and separatedness, matching Kleiman §4–§5) and extracted by
+`Classical.choose_spec`; kept here as a single named instance so the
+strengthening does not perturb existing `HasPicScheme` consumers. -/
+instance locallyOfFiniteType {k : Type u} [Field k]
+    (C : Over (Spec (.of k)))
+    [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
+    [GeometricallyIntegral C.hom] [HasPicScheme C] :
+    LocallyOfFiniteType (PicScheme C).hom :=
+  (HasPicScheme.has_pic_scheme (C := C)).choose_spec.2.1
+
+/-- **`Pic_{C/k}` is separated over `k`.**
+
+Kleiman §4–§5 packages separatedness together with representability and
+local finite type for `Pic_{C/k}`. As with `PicScheme.locallyOfFiniteType`,
+we extract this property from the strengthened `HasPicScheme.has_pic_scheme`
+existential so downstream files can consume it as a normal instance without
+opening the axiom layer. -/
+instance isSeparated {k : Type u} [Field k]
+    (C : Over (Spec (.of k)))
+    [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
+    [GeometricallyIntegral C.hom] [HasPicScheme C] :
+    IsSeparated (PicScheme C).hom :=
+  (HasPicScheme.has_pic_scheme (C := C)).choose_spec.2.2
 
 /-! ## §2. The Abel map — line-bundle / Quot correspondence
 

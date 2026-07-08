@@ -424,7 +424,10 @@ private lemma identityComponentSection_range_subset
   -- `connectedComponent (identitySectionPoint G)`.
   exact mem_connectedComponent
 
-private noncomputable def identityComponentSection
+-- (iter-current) de-privatised: consumed by `Scheme.Pic0.identitySection`
+-- in the sibling `Picard/Pic0AbelianVariety.lean` (the `e`-witness of the
+-- `tangentSpaceIso` Σ'-bundle).
+noncomputable def identityComponentSection
     {k : Type u} [Field k]
     (G : Over (Spec (.of k)))
     [GrpObj G] [LocallyOfFiniteType G.hom] :
@@ -441,7 +444,7 @@ Composing `identityComponentSection G` with `(IdentityComponent G).hom`
 returns the identity on `Spec k`, by `IsOpenImmersion.lift_fac` plus the
 over-compatibility `MonObj.one.left ≫ G.hom = 𝟙` (the terminal of
 `Over (Spec k)` has `.hom = 𝟙 (Spec k)` definitionally). -/
-private lemma identityComponentSection_isSection
+lemma identityComponentSection_isSection
     {k : Type u} [Field k]
     (G : Over (Spec (.of k)))
     [GrpObj G] [LocallyOfFiniteType G.hom] :
@@ -990,7 +993,17 @@ noncomputable def Pic0Scheme {k : Type u} [Field k]
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
     [GeometricallyIntegral C.hom] :
     Over (Spec (.of k)) :=
-  sorry
+  -- (iter-current) closed: the long-promised value. `HasPicScheme C` is
+  -- pinned as a local instance *before* `PicScheme C` is elaborated so the
+  -- nested `LocallyOfFiniteType (PicScheme C).hom` search (needed by
+  -- `IdentityComponent`) can index on a concrete `PicScheme C`; the
+  -- `GrpObj (PicScheme C)` / `LocallyOfFiniteType (PicScheme C).hom`
+  -- instances then resolve via `PicScheme.groupSchemeStructure` /
+  -- `PicScheme.locallyOfFiniteType`. `HasPicScheme` being `Prop`-valued,
+  -- proof irrelevance makes this defeq to the same expression elaborated at
+  -- any other site (the `rfl` of `Pic0.eq_identityComponent`).
+  haveI : HasPicScheme C := instHasPicScheme C
+  GroupScheme.IdentityComponent (PicScheme C)
 
 /-! ## §3. The degree map
 
