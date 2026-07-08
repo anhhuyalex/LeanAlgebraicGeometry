@@ -101,11 +101,22 @@ representing a class in \(\Pic^\sharp_{C/k}(T)\).
 \begin{lemma}\leanok
 [Line bundle / Quot correspondence via the Abel map]
   \label{lem:line_bundle_quot_correspondence}
-  \lean{AlgebraicGeometry.Scheme.PicScheme.abelMap}
-  \uses{thm:quot_representable, thm:relative_pic_quotient_well_defined,
-        def:rel_pic_sharp, def:has_abel_map,
-        def:inst_has_abel_map,
+  \lean{AlgebraicGeometry.Scheme.PicScheme.abelMapWitness,
+    AlgebraicGeometry.Scheme.PicScheme.abelMap_app_mk}
+  \uses{def:has_abel_map, def:inst_has_abel_map,
         def:div_functor_carrier, def:pic_sharp_carrier}
+  % HONESTY NOTE (record of the wave-7 substantive discharge of Sorry C,
+  % run 0011): this node's Lean content is the NATURAL-TRANSFORMATION
+  % half of the Abel map only. It does NOT claim, and is not used to
+  % derive, representability of the source Div_{C/k} by an open
+  % subscheme of the Hilbert scheme (Kleiman th:repDiv), nor
+  % representability of the Abel map itself by a morphism of k-schemes;
+  % Div_{C/k} remains the Type-valued carrier presheaf of
+  % def:div_functor_carrier throughout (see subsec:sorry_has_div_functor).
+  % The scheme-representability content of the surrounding narrative
+  % (Div is representable, hence so is the Abel map) is recorded as
+  % context/history below the proof, kept separate and NOT covered by
+  % \leanok.
   % SOURCE: [Kleiman], ``The Picard scheme'', \S 3, Def.~dfn:Abel (the Abel
   % map), and Thm.~th:repDiv (representability of relative effective
   % divisors by an open subscheme of \(\IHilb_{X/S}\)); arXiv:math/0504020,
@@ -127,68 +138,93 @@ representing a class in \(\Pic^\sharp_{C/k}(T)\).
   \textit{Source: [Kleiman], ``The Picard scheme'', \S 3,
   Thm.~3.7 + Def.~4.6 (cf.\ [Nitsure], ``Construction of Hilbert
   and Quot Schemes'', \S 1, where \(\Hilb_{X/S} = \Quot_{\mathcal{O}_X/X/S}\)).}
-  Let \(C/k\) be a smooth proper geometrically integral curve, and let
-  \(T\) be a \(k\)-scheme. There is a natural map of presheaves on \((\Sch/k)^{op}\)
+  Let \(C/k\) be a smooth proper geometrically integral curve. There is a
+  natural transformation of presheaves on \((\Sch/k)^{op}\)
   \[
-    A_{C/k} \;\colon\; \mathrm{Div}_{C/k} \;\longrightarrow\; \Pic^\sharp_{C/k},
-    \qquad D \;\longmapsto\; [\mathcal{O}_{C \times_k T}(D)],
+    A_{C/k} = \mathrm{abelMap} \;\colon\; \mathrm{Div}_{C/k}
+      \;\longrightarrow\; \Pic^\sharp_{C/k}
   \]
-  where \(\mathrm{Div}_{C/k}(T)\) is the set of relative effective Cartier divisors
-  on \(C \times_k T\) flat over \(T\), and the target is the relative Picard
-  functor of \cref{def:rel_pic_sharp} (per Kleiman \S 3, Def.~dfn:Abel, ``the
-  target \(\Pic_{X/S}\) may be replaced by any of its associated sheaves'';
-  under the chapter's standing rational-point hypothesis the plain relative
-  functor already coincides with its \'etale sheafification, see
-  \cref{sec:fga_pic_setup}). The functor \(\mathrm{Div}_{C/k}\) is representable
-  by an open subscheme \(\mathrm{Div}_{C/k} \subseteq \Hilb_{C/k}\) of the Hilbert scheme
-  of \cref{chap:Picard_QuotScheme} (with \(\Hilb_{C/k}\) the special case
-  \(\Quot_{\mathcal{O}_C/C/k}\) of the Quot functor). The Abel map is therefore
-  representable by a morphism of \(k\)-schemes \(A_{C/k} : \mathrm{Div}_{C/k} \to
-  \Pic^\sharp_{C/k}\).
+  (\(\mathrm{Div}_{C/k}\) the relative-divisor functor of
+  \cref{def:div_functor_carrier}, \(\Pic^\sharp_{C/k}\) the relative
+  Picard functor of \cref{def:pic_sharp_carrier}), with the following
+  \emph{defining property}: at a \(T\)-point represented by a family
+  \(\langle \mathcal F, q\rangle\) (\cref{def:div_family}: a locally free
+  rank-\(1\) quotient \(q \colon \mathcal F \twoheadrightarrow
+  \mathcal L\) on \(C \times_k T\) with \(D := \ker q\) an invertible
+  ideal sheaf, cutting out the relative effective divisor \(D \subseteq C
+  \times_k T\)),
+  \[
+    A_{C/k}(T)\bigl(\langle \mathcal F, q\rangle\bigr)
+      \;=\; -[\ker q] \;=\; [(\ker q)^{-1}]
+      \;=\; \bigl[\mathcal{O}_{C \times_k T}(D)\bigr]
+      \;\in\; \Pic^\sharp_{C/k}(T),
+  \]
+  the class of the associated invertible sheaf \(\mathcal{O}_{C \times_k
+  T}(D)\), i.e.\ the additive inverse of the class of the ideal sheaf
+  \(\ker q\) (Kleiman \S 3, Def.~dfn:Abel). This is the data carried by
+  \(\mathrm{HasAbelMap}(C)\) (\cref{def:has_abel_map}), populated by the
+  substantive witness \(\mathrm{abelMapWitness}(C)\) of
+  \cref{def:inst_has_abel_map}.
 \end{lemma}
 
-% SOURCE QUOTE PROOF: (from references/kleiman-picard-src/kleiman-picard.tex,
-% L1843-L1866, proof of th:repDiv)
-% "Set \(H:=\IHilb_{X/S}\), and let \(W\subset X\x H\) be the universal
-% (closed) subscheme, and \(q\:W\to H\) the projection.  Let \(V\) denote the
-% set of points \(w\in W\) at which \(W\) is an effective divisor. Plainly \(V\)
-% is open in \(W\).  Set \(Z:=q(W-V)\).  Then \(Z\) is closed because \(q\) is
-% proper.  Set \(U:=H-Z\).  Then \(U\) is open, and \(q^{-1}U\) is an effective
-% divisor in \(X\x U\).  In fact, since \(q\) is flat, \(q^{-1}U\) is a relative
-% effective divisor in \(X\x U/U\).
-% [\dots]"
 \begin{proof}
-  
-  By \cref{chap:Picard_QuotScheme}, the Hilbert functor \(\Hilb_{C/k} =
-  \Quot_{\mathcal{O}_C/C/k}\) is representable by a \(k\)-scheme; this uses
-  \(C/k\) projective and flat (the smooth proper curve hypothesis is
-  stronger). Let \(W \subseteq C \times_k \Hilb_{C/k}\) be the universal
-  closed subscheme and \(q : W \to \Hilb_{C/k}\) the projection. The locus
-  \(V \subseteq W\) where \(W\) is locally an effective Cartier divisor (i.e.\
-  cut out by one regular element) is open. The complement \(W \setminus V\)
-  is closed in \(W\), and the image \(Z := q(W \setminus V) \subseteq
-  \Hilb_{C/k}\) is closed because \(q\) is proper. Hence \(\mathrm{Div}_{C/k} :=
-  \Hilb_{C/k} \setminus Z\) is open in \(\Hilb_{C/k}\) and represents the
-  subfunctor of relative effective divisors: on \(\mathrm{Div}_{C/k}\) the
-  restriction of \(W\) is flat and cut out by one regular element fiberwise,
-  so by the standard relative-divisor criterion (Kleiman~\S 3,
-  Lem.~3.4) it is a relative effective divisor on \(C \times_k
-  \mathrm{Div}_{C/k} / \mathrm{Div}_{C/k}\).
-
-  The Abel map sends a relative effective divisor \(D \subseteq C \times_k T\)
-  to the invertible sheaf \(\mathcal{O}_{C \times_k T}(D) := \mathcal{I}_D^{-1}\)
-  (the dual of the ideal sheaf, which is invertible by the divisor
-  hypothesis). The assignment is functorial in \(T\): pullback of an ideal
-  sheaf along \(\mathrm{id}_C \times_k g : C \times_k T' \to C \times_k T\)
-  takes the ideal of \(D\) to the ideal of \(D_{T'}\) (since \(D\) is flat over
-  \(T\), the schematic inverse image \(D_{T'}\) is a relative effective
-  divisor on \(C \times_k T'/T'\), again by Kleiman~\S 3, Lem.~3.4), hence
-  takes \(\mathcal{O}_{C \times_k T}(D)\) to \(\mathcal{O}_{C \times_k T'}(D_{T'})\).
-  Composing with the canonical projection
-  \(\Pic(C \times_k T) \to \Pic^\sharp_{C/k}(T)\) of
-  \cref{thm:relative_pic_quotient_well_defined} yields the
-  natural map \(A_{C/k}(T) : \mathrm{Div}_{C/k}(T) \to \Pic^\sharp_{C/k}(T)\).
+  Write \(\mathrm{abelMapWitness}(C) = \mathrm{abelKernelNatTrans}(C)
+  \mathbin{;} \mathrm{picNeg}(C)\), the composite of two natural
+  transformations. The first, \(\mathrm{abelKernelNatTrans}(C) \colon
+  \mathrm{Div}_{C/k} \to \Pic^\sharp_{C/k}\), sends
+  \(\langle \mathcal F, q\rangle \mapsto [\ker q]\): it is well defined
+  on the defining equivalence relation of \(\mathrm{Div}_{C/k}(T)\)
+  (two families with proportional kernels have isomorphic kernels), and
+  natural in \(T\) because kernel formation commutes with the flat base
+  change \(g^* \colon C \times_k T \to C \times_k T'\) --- the comparison
+  map \(g^*\ker q \to \ker(g^*q)\) is an isomorphism, since \(g^*q\) is
+  again a surjection of locally free sheaves onto a locally free rank-1
+  quotient. The second, \(\mathrm{picNeg}(C)\), is the (natural) additive
+  inversion on the group-valued presheaf \(\Pic^\sharp_{C/k}\).
+  Composing gives the natural transformation
+  \(\mathrm{abelMapWitness}(C) \colon \langle \mathcal F, q\rangle
+  \mapsto -[\ker q]\), and unfolding the two composites at a point gives
+  the defining-property formula.
+  \paragraph{Scope.} This proof establishes only the natural
+  transformation \(A_{C/k}\) between the presheaves
+  \(\mathrm{Div}_{C/k}\) and \(\Pic^\sharp_{C/k}\) of
+  \cref{def:div_functor_carrier,def:pic_sharp_carrier}. It does
+  \emph{not} establish, and does not use, representability of
+  \(\mathrm{Div}_{C/k}\) by an open subscheme of the Hilbert scheme
+  (Kleiman~\S 3, Thm.~th:repDiv, sketched in the remark below) or
+  representability of \(A_{C/k}\) itself by a morphism of \(k\)-schemes;
+  that scheme-level content is separate future work
+  (\cref{subsec:sorry_has_div_functor}), consumed only by the
+  (still-gated) Step~3 of \cref{thm:fga_pic_representability}.
 \end{proof}
+
+\begin{remark}
+[Representability of \(\mathrm{Div}_{C/k}\) --- not yet formalised]
+  \label{rem:div_functor_representability}
+  % SOURCE QUOTE PROOF: (from references/kleiman-picard-src/kleiman-picard.tex,
+  % L1843-L1866, proof of th:repDiv)
+  % "Set \(H:=\IHilb_{X/S}\), and let \(W\subset X\x H\) be the universal
+  % (closed) subscheme, and \(q\:W\to H\) the projection.  Let \(V\) denote the
+  % set of points \(w\in W\) at which \(W\) is an effective divisor. Plainly \(V\)
+  % is open in \(W\).  Set \(Z:=q(W-V)\).  Then \(Z\) is closed because \(q\) is
+  % proper.  Set \(U:=H-Z\).  Then \(U\) is open, and \(q^{-1}U\) is an effective
+  % divisor in \(X\x U\).  In fact, since \(q\) is flat, \(q^{-1}U\) is a relative
+  % effective divisor in \(X\x U/U\).
+  % [\dots]"
+  Kleiman~\S 3, Thm.~th:repDiv, shows that \(\mathrm{Div}_{C/k}\) is
+  representable by an open subscheme \(\mathrm{Div}_{C/k} \subseteq
+  \Hilb_{C/k}\) of the Hilbert scheme (\(\Hilb_{C/k} =
+  \Quot_{\mathcal{O}_C/C/k}\), \cref{chap:Picard_QuotScheme}): letting
+  \(W \subseteq C \times_k \Hilb_{C/k}\) be the universal closed
+  subscheme and \(q \colon W \to \Hilb_{C/k}\) the projection, the locus
+  \(V \subseteq W\) where \(W\) is locally an effective Cartier divisor
+  is open, so \(Z := q(W \setminus V)\) is closed (\(q\) proper) and
+  \(\mathrm{Div}_{C/k} := \Hilb_{C/k} \setminus Z\) is the open
+  subscheme representing relative effective divisors. This is
+  \textbf{not} formalised: \(\mathrm{Div}_{C/k}\) remains the
+  Type-valued carrier presheaf of \cref{def:div_functor_carrier}
+  throughout the present chapter (\cref{subsec:sorry_has_div_functor}).
+\end{remark}
 
 \section{The FGA representability theorem}
 \label{sec:fga_pic_representability}
@@ -642,13 +678,17 @@ this chapter correspond to Lean targets as follows.
   \item \texttt{AlgebraicGeometry.Scheme.PicScheme.abelMap}
     (\cref{lem:line_bundle_quot_correspondence}) is the natural
     transformation \(\mathrm{Div}_{C/k} \to \Pic^\sharp_{C/k}\) sending a
-    relative effective divisor to its associated invertible sheaf.
-    The construction uses the Hilbert / Quot scheme produced by
-    \cref{chap:Picard_QuotScheme}, restricts to the open subscheme of
-    relative effective divisors via the Kleiman~\S 3 effective-divisor
-    open criterion, and composes with the quotient map to
-    \(\Pic^\sharp_{C/k}\). (Still carrier-backed: the source
-    \(\mathrm{Div}_{C/k}\) awaits the A.2.b engine.)
+    relative divisor family \(\langle \mathcal F, q\rangle\) to
+    \(-[\ker q]\), the class of its associated invertible sheaf
+    (run 0011: \texttt{HasAbelMap} is now data-carrying and
+    \texttt{abelMap} is this substantive natural transformation, with
+    defining property \texttt{abelMap\_app\_mk}; PROVED, no sorry). This
+    is delivered at the level of the Type-valued carrier presheaves of
+    \cref{def:div_functor_carrier,def:pic_sharp_carrier}: representability
+    of the source \(\mathrm{Div}_{C/k}\) by an open subscheme of the
+    Hilbert scheme (Kleiman~\S 3, Thm.~th:repDiv,
+    \cref{rem:div_functor_representability}) is separate future work,
+    not needed for \texttt{abelMap} itself.
   \item \texttt{AlgebraicGeometry.Scheme.PicScheme.smoothProperQuotient}
     (\cref{lem:smooth_proper_quotient}) is the Altman--Kleiman
     descent of a flat-and-proper equivalence relation \(R \subseteq Z
@@ -804,15 +844,21 @@ mathematical content is the obligation analysed in
 \label{subsec:fga_pic_abel_map_carrier}
 
 \begin{definition}\leanok
-[Existence carrier for the Abel map]
+[Data carrier for the Abel map]
   \label{def:has_abel_map}
-  \lean{AlgebraicGeometry.Scheme.PicScheme.HasAbelMap}
+  \lean{AlgebraicGeometry.Scheme.PicScheme.HasAbelMap,
+    AlgebraicGeometry.Scheme.PicScheme.abelMap}
   \uses{def:div_functor_carrier, def:pic_sharp_carrier}
-  The predicate \(\mathrm{HasAbelMap}(C)\) asserts the existence of a natural
-  transformation of presheaves \(\mathrm{Div}_{C/k} \to \Pic^\sharp_{C/k}\),
-  i.e.\ a candidate Abel map from the (run-0010: now real) relative-divisor
-  functor of \cref{def:div_functor_carrier} to the (run-0008: now real)
-  relative Picard functor of \cref{def:pic_sharp_carrier}.
+  The class \(\mathrm{HasAbelMap}(C)\) carries, as \emph{data}, a natural
+  transformation of presheaves \(\mathrm{abel} \colon \mathrm{Div}_{C/k}
+  \to \Pic^\sharp_{C/k}\) between the relative-divisor functor of
+  \cref{def:div_functor_carrier} and the relative Picard functor of
+  \cref{def:pic_sharp_carrier}; \(\mathrm{abelMap} :=
+  \mathrm{HasAbelMap.abel}\) extracts it. (Repinned, run 0011, from a
+  \(\mathrm{Prop}\)-valued \(\mathrm{Nonempty}\) existence gate --- whose
+  \(\mathtt{Classical.choice}\) extraction carried no defining property
+  --- to this data-carrying class, so that \(\mathrm{abelMap}\) now has
+  the genuine defining property \Cref{lem:line_bundle_quot_correspondence}.)
 \end{definition}
 
 \begin{proof}
@@ -820,21 +866,25 @@ mathematical content is the obligation analysed in
 \end{proof}
 
 \begin{definition}\leanok
-[Existence witness for the Abel map]
+[Substantive witness for the Abel map (Sorry~C, CLOSED)]
   \label{def:inst_has_abel_map}
   \lean{AlgebraicGeometry.Scheme.PicScheme.instHasAbelMap}
   \uses{def:has_abel_map}
-  The canonical instance recording that \cref{def:has_abel_map} holds for every
-  such curve \(C/k\); the extracted natural transformation is the Abel map of
-  \cref{lem:line_bundle_quot_correspondence}. Its substantive discharge is
-  analysed as Sorry~3 in \cref{subsec:sorry_has_abel_map}.
+  The instance recording that \cref{def:has_abel_map} holds for every such
+  curve \(C/k\), populated with the \emph{substantive} witness
+  \(\mathrm{abelMapWitness}(C)\) of
+  \cref{lem:line_bundle_quot_correspondence} --- no longer an opaque
+  choice. (The former Sorry~C of \cref{subsec:sorry_has_abel_map} is
+  closed.)
 \end{definition}
 
 \begin{proof}
-
 \leanok
-  Proved directly in Lean; the semantic discharge is the obligation of
-  \cref{subsec:sorry_has_abel_map}.
+  \uses{lem:line_bundle_quot_correspondence}
+  \(\mathrm{abelMapWitness}(C)\) is a term of the required type
+  \(\mathrm{Div}_{C/k} \to \Pic^\sharp_{C/k}\)
+  (\Cref{lem:line_bundle_quot_correspondence}), witnessing the instance
+  directly.
 \end{proof}
 
 \subsection{Carrier for the smooth-proper quotient}
@@ -1025,19 +1075,21 @@ mathematical content is the obligation analysed in
 
 The Lean target file
 \texttt{AlgebraicJacobian/Picard/FGAPicRepresentability.lean} carries,
-after the run-0008 and run-0010 rewires, \textbf{two} open sorries, each
-isolated in a single \(\langle\)sorry\(\rangle\) instance constructor of a
-\texttt{Prop}-valued typeclass, so every extracted definition and theorem
-body is itself axiom-clean, and consumers that quantify over the
-typeclasses are kernel-clean. The two: \texttt{instHasPicScheme}
-(Sorry~A --- which, since the run-0010 strengthening of
-\cref{def:has_pic_scheme}, also carries Kleiman th:main(1) local
-finiteness) and \texttt{instHasAbelMap} (Sorry~C). The closed items of the
-former accounting: the relative Picard functor carrier is REAL
-(\cref{def:pic_sharp_carrier}), the relative-divisor functor carrier is
-REAL and its existence witness PROVED (run 0010,
-\cref{def:div_functor_carrier}, \cref{def:inst_has_div_functor} --- the
-former Sorry~B), the representability identification is PROVED
+after the run-0008, run-0010, and run-0011 rewires, \textbf{one} open
+sorry, isolated in a single \(\langle\)sorry\(\rangle\) instance
+constructor of a \texttt{Prop}-valued typeclass, so every extracted
+definition and theorem body is itself axiom-clean, and consumers that
+quantify over the typeclass are kernel-clean. The one:
+\texttt{instHasPicScheme} (Sorry~A --- which, since the run-0010
+strengthening of \cref{def:has_pic_scheme}, also carries Kleiman
+th:main(1) local finiteness). The closed items of the former accounting:
+the relative Picard functor carrier is REAL (\cref{def:pic_sharp_carrier}),
+the relative-divisor functor carrier is REAL and its existence witness
+PROVED (run 0010, \cref{def:div_functor_carrier},
+\cref{def:inst_has_div_functor} --- the former Sorry~B), the substantive
+Abel map is REAL and PROVED (run 0011,
+\cref{lem:line_bundle_quot_correspondence}, \cref{def:inst_has_abel_map}
+--- the former Sorry~C), the representability identification is PROVED
 (\cref{def:inst_pic_sharp_representable}), local finiteness of the Picard
 scheme is PROVED by extraction (run 0010,
 \cref{def:inst_pic_scheme_lft}), the group-scheme structure is
@@ -1068,9 +1120,11 @@ part of this obligation).
 
 \paragraph{Blockers.} (i) the A.2.b Quot/Hilbert engine
 (\cref{chap:Picard_QuotScheme}) --- the divisor functor
-\(\mathrm{Div}_{C/k}\) landed in run 0010 (former Sorry~B, closed), the
-Abel map (Sorry~C) and the representability theorem Kleiman th:repDiv
-remain; (ii) the Route~C Riemann--Roch substrate
+\(\mathrm{Div}_{C/k}\) landed in run 0010 (former Sorry~B, closed) and
+the Abel map landed in run 0011 (former Sorry~C, closed;
+\cref{lem:line_bundle_quot_correspondence}), but the representability
+theorem Kleiman th:repDiv (\cref{rem:div_functor_representability})
+remains; (ii) the Route~C Riemann--Roch substrate
 (\(m\)-regularity / Serre vanishing / cohomology and base change for the
 stratification, cf.\ \cref{cor:flattening_stratification_curve} and
 \cref{lem:cech_flat_base_change}); (iii) Altman--Kleiman descent and
@@ -1108,36 +1162,43 @@ base-change well-definedness of the divisor condition remains a typed leaf
 \(\Div_{C/k}\) by an open subscheme of the Hilbert scheme (Kleiman \S 3,
 Thm.~th:repDiv) is future work, not consumed by this chapter.
 
-\subsection{Sorry C --- \texttt{instHasAbelMap}}
+\subsection{Sorry C --- \texttt{instHasAbelMap} (CLOSED, run 0011)}
 \label{subsec:sorry_has_abel_map}
 
 \paragraph{Location.} Instance
 \texttt{AlgebraicGeometry.Scheme.PicScheme.instHasAbelMap}
 (\cref{def:inst_has_abel_map}).
 
-\paragraph{Mathematical content.} The asserted \texttt{Nonempty} statement
-is true (even constructively: the pointwise-zero natural transformation
-into the group-valued target is natural), but the intended witness is the
-substantive Abel map \(D \mapsto [\mathcal O_{C \times_k T}(D)]\) of
-\cref{lem:line_bundle_quot_correspondence}. Both endpoints are now real
-(run-0008 fixed the TARGET to the relative Picard functor; run-0010 fixed
-the SOURCE to the relative-divisor functor
-\cref{def:div_functor_carrier}), so the remaining obligation is the
-natural transformation itself:
-\(\langle \mathcal F, q\rangle \mapsto [(\ker q)^{-1}]\), naturality
-following from \cref{lem:relative_divisor_base_change}.
+\paragraph{Status.} CLOSED (run 0011): \texttt{HasAbelMap} is repinned
+from a \texttt{Prop}-valued \texttt{Nonempty} existence gate (whose
+\texttt{Classical.choice} extraction carried no defining property) to a
+\emph{data-carrying} class with field \texttt{abel}
+(\cref{def:has_abel_map}). The field is populated by the substantive
+witness \(\mathrm{abelMapWitness}(C) = \langle \mathcal F, q\rangle
+\mapsto -[\ker q]\) of \cref{lem:line_bundle_quot_correspondence}: the
+composite of the kernel-class natural transformation
+\(\mathrm{abelKernelNatTrans}(C)\) (naturality via the kernel--flat-base-change
+comparison isomorphism) with the group-presheaf negation
+\(\mathrm{picNeg}(C)\). Consequently \(\mathrm{abelMap} :=
+\mathrm{HasAbelMap.abel}\) has the genuine defining property
+\texttt{abelMap\_app\_mk} (proved by \texttt{rfl}), rather than being an
+opaque \texttt{Classical.choice} of a \texttt{Nonempty}. As in Sorry~B,
+representability of \(\mathrm{Div}_{C/k}\) by an open subscheme of the
+Hilbert scheme (Kleiman th:repDiv) is \emph{not} needed or claimed here
+(\cref{rem:div_functor_representability}); the Abel map is delivered at
+the level of the Type-valued carrier presheaves.
 
 \subsection{Closure order}
 \label{subsec:fga_pic_closure_order_summary}
 
 Dispatch order: \(B \to C \to A\), with \(B\) CLOSED in run 0010 (the
-A.2.b divisor functor landed). Sorry~C is gated on the substantive Abel
-map \(\langle \mathcal F, q\rangle \mapsto [(\ker q)^{-1}]\); Sorry~A
-additionally needs the Route~C Riemann--Roch substrate and the
-Altman--Kleiman/EGA descent inputs, and consumes C (and, since run 0010,
-also discharges Kleiman th:main(1) local finiteness). Downstream
-Route~A consumers proceed under typeclass quantification
-(\texttt{[HasPicScheme C]}) and stay kernel-clean; the
+A.2.b divisor functor landed) and \(C\) CLOSED in run 0011 (the
+substantive Abel map \(\langle \mathcal F, q\rangle \mapsto
+-[\ker q]\)). Sorry~A additionally needs the Route~C Riemann--Roch
+substrate and the Altman--Kleiman/EGA descent inputs, and consumes both
+\(B\) and \(C\) (and, since run 0010, also discharges Kleiman th:main(1)
+local finiteness). Downstream Route~A consumers proceed under typeclass
+quantification (\texttt{[HasPicScheme C]}) and stay kernel-clean; the
 \texttt{[HasRationalPoint C]} hypothesis is supplied by the pointing
 \(P : \mathbf 1 \to C\) already present in the Jacobian statements.
 

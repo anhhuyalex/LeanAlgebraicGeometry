@@ -1,3 +1,7 @@
+% archon:covers AlgebraicJacobian/Picard/SectionGradedRing.lean
+% archon:covers AlgebraicJacobian/Picard/InvertibleGrBridge.lean
+% archon:covers AlgebraicJacobian/Picard/SerreTwistSections.lean
+% archon:covers AlgebraicJacobian/Picard/GradedPiecesFinite.lean
 \chapter{Section graded ring infrastructure: tensor powers and graded sections}
 \label{chap:Picard_SectionGradedRing}
 
@@ -3183,3 +3187,149 @@ landing in the index-sum component, not submodules of a pre-existing ring.
   \cref{lem:directSum_gmodule_mathlib} this produces the module structure of
   \(M(X_s,\mathcal{F}_s,L_s)\) over \(R(X_s,L_s)\).
 \end{proof}
+
+\section{P0.5: the bridge from local triviality to invertible-graded sheaves}
+\label{sec:sgr_invertibleGr_bridge}
+
+\Cref{def:isInvertible} defines invertibility of a sheaf of modules through
+a \emph{trivializing basis}; the line bundles that occur in practice (the
+Serre twists \(\mathcal{O}(m)\) of \Cref{chap:Picard_QuotScheme}) are given
+instead as \emph{locally trivial} sheaves in the geometric sense of
+\(\mathrm{IsLocallyTrivial}\) (\Cref{def:IsLocallyTrivial}: every point has
+an affine neighbourhood on which the sheaf restricts to the structure
+sheaf). This section supplies the missing bridge between the two notions,
+unlocking the graded-commutative section ring
+\Cref{lem:sectionGradedRing_gcommSemiring} for every locally trivial line
+bundle.
+
+\begin{lemma}
+[Section-level invertibility from a chart trivialisation]
+  \label{lem:isInvertible_of_restrict_iso}
+  \leanok
+  \lean{AlgebraicGeometry.Scheme.LineBundle.isInvertible_of_restrict_iso}
+  \uses{def:IsLocallyTrivial}
+  Let \(M\) be a sheaf of \(\mathcal{O}_X\)-modules and \(V \subseteq X\)
+  an open with a trivialisation \(M|_V \cong \mathcal{O}_V\). Then
+  \(\Gamma(M, V)\) is an invertible \(\Gamma(X, V)\)-module.
+\end{lemma}
+\begin{proof}
+  \leanok
+  Evaluating the trivialisation at the top open of \(V\) gives a
+  \(\Gamma(X,V)\)-linear isomorphism \(\Gamma(M, V) \cong \Gamma(X, V)\)
+  (using \(\Gamma(\mathcal{O}_V, \top) = \Gamma(X, V)\)), exhibiting
+  \(\Gamma(M,V)\) as a free rank-one, hence invertible, \(\Gamma(X,V)\)-module.
+\end{proof}
+
+\begin{theorem}
+[P0.5: local triviality implies invertible-graded]
+  \label{thm:isLocallyTrivial_isInvertibleGr}
+  \leanok
+  \lean{AlgebraicGeometry.Scheme.LineBundle.IsLocallyTrivial.isInvertibleGr}
+  \uses{def:IsLocallyTrivial, def:isInvertible, lem:isInvertible_of_restrict_iso,
+    cor:IsLocallyTrivial_exists_affine_trivializing_le}
+  \source{stacks-modules}
+  If \(M\) is locally trivial (\Cref{def:IsLocallyTrivial}), then \(M\)
+  is invertible in the sense of \Cref{def:isInvertible}.
+\end{theorem}
+\begin{proof}
+  \leanok
+  The trivialising opens \(\{V : M|_V \cong \mathcal{O}_V\}\) form a
+  basis of the topology of \(X\): every neighbourhood of every point
+  contains an affine trivialising chart
+  (\Cref{cor:IsLocallyTrivial_exists_affine_trivializing_le}). On each
+  such \(V\), \(\Gamma(M,V)\) is an invertible \(\Gamma(X,V)\)-module by
+  \Cref{lem:isInvertible_of_restrict_iso}. Together these are exactly
+  the trivializing-basis data required by \Cref{def:isInvertible}.
+\end{proof}
+
+\begin{corollary}
+[The Serre twist family is invertible-graded]
+  \label{cor:serreTwist_isInvertibleGr}
+  \leanok
+  \lean{AlgebraicGeometry.ProjTwist.serreTwistGlued_isInvertibleGr,
+    AlgebraicGeometry.ProjTwist.serreTwist_isInvertibleGr,
+    AlgebraicGeometry.ProjTwist.twistingSheaf_isInvertibleGr}
+  \uses{thm:isLocallyTrivial_isInvertibleGr, lem:serreTwist_isLocallyTrivial}
+  Every member of the Serre twist family --- the twist on the glued
+  model, on the integral model \(\operatorname{Proj}\mathbb{Z}[X_i]\),
+  and on the relative projective space \(\mathbb{P}(n; S)\)
+  (\Cref{lem:serreTwist_isLocallyTrivial}: each is locally trivial) ---
+  is invertible in the sense of \Cref{def:isInvertible}. Consequently
+  \Cref{lem:sectionGradedRing_gcommSemiring} applies unconditionally to
+  each: its section ring \(\bigoplus_{m \ge 0} \Gamma(-, \mathcal{O}(m))\)
+  is graded-commutative.
+\end{corollary}
+\begin{proof}
+  \leanok
+  Immediate instances of \Cref{thm:isLocallyTrivial_isInvertibleGr}
+  applied to \Cref{lem:serreTwist_isLocallyTrivial}.
+\end{proof}
+
+\section{D5: finite-dimensional graded pieces from finite generation}
+\label{sec:sgr_graded_pieces_finite}
+
+The Hilbert-series rationality induction \(\Cref{lem:graded_subquotient_isRatHilb}\)
+(Stacks Tag 00K1) assumes each graded piece \(\mathcal{M}_n\) of the ambient
+graded module is finite-dimensional over the base field \(\kappa\). This
+section discharges that hypothesis from finite generation alone, for a
+module graded by a finite family of commuting degree-raising endomorphisms
+(\Cref{def:graded_raisesDegree}) --- the abstraction, used throughout
+\Cref{chap:Picard_QuotScheme}, of the degree-one generators \(X_1,
+\dots, X_r\) of a polynomial grading ring acting on \(M\).
+
+\begin{theorem}
+[D5: finite generation forces finite-dimensional graded pieces]
+  \label{thm:graded_finiteDimensional_of_polyModule_finite}
+  \leanok
+  \lean{AlgebraicGeometry.GradedModule.finiteDimensional_of_polyModule_finite}
+  \uses{def:graded_polyModule, def:graded_raisesDegree}
+  % SOURCE: [Stacks Project], "Commutative Algebra", Tag 00K1;
+  % Atiyah--Macdonald, Introduction to Commutative Algebra, Ch. 11.
+  \source{hilbert-serre-algebra}
+  Let \(M = \bigoplus_n \mathcal{M}_n\) be an \(\mathbb{N}\)-graded
+  \(\kappa\)-vector space and \(t \colon \mathrm{Fin}\,r \to
+  \mathrm{End}_\kappa(M)\) a finite family of pairwise commuting
+  endomorphisms, each raising degree by one
+  (\Cref{def:graded_raisesDegree}), making \(M\) a module over
+  \(\kappa[X_1, \dots, X_r]\) with \(X_i\) acting as \(t_i\)
+  (\Cref{def:graded_polyModule}). If \(M\) is finitely generated over
+  this polynomial ring, then every graded piece \(\mathcal{M}_n\) is
+  finite-dimensional over \(\kappa\).
+\end{theorem}
+\begin{proof}
+  \leanok
+  A monomial \(X^\alpha\) of total degree \(|\alpha|\) shifts a vector
+  of \(\mathcal{M}_d\) into \(\mathcal{M}_{d+|\alpha|}\) (induction on
+  \(|\alpha|\) via the degree-raising hypothesis on each \(t_i\)); by
+  linearity, a homogeneous polynomial of degree \(e\) shifts
+  \(\mathcal{M}_d\) into \(\mathcal{M}_{d+e}\). Fix a finite generating
+  set of \(M\) over \(\kappa[X_1,\dots,X_r]\) and replace each generator
+  by its (finitely many) homogeneous components \(h \in \mathcal{M}_{d}\);
+  these homogeneous pieces still generate \(M\). For \(p \in
+  \kappa[X_1,\dots,X_r]\) and a homogeneous generator \(h \in
+  \mathcal{M}_d\), decomposing \(p\) into its homogeneous components
+  shows that the degree-\(n\) part of \(p \cdot h\) is
+  \((\mathrm{hc}_{n-d}\,p) \cdot h\), the action of the degree-\((n-d)\)
+  homogeneous component of \(p\); since a homogeneous polynomial of
+  degree \(\le n\) ranges over a \emph{finite-dimensional} space of
+  coefficients (in the finitely many variables \(X_1,\dots,X_r\) of
+  degree \(\le n\)), the degree-\(n\) part of \(p \cdot h\) lies in the
+  image of a fixed finite-dimensional space under \(\kappa\)-linear
+  action of \(h\). Every \(x \in \mathcal{M}_n\) is (via the finite
+  generating set and the graded-piece projection) a finite sum of such
+  contributions, one for each of the finitely many homogeneous
+  generators; hence \(\mathcal{M}_n\) is contained in a finite sum of
+  finite-dimensional subspaces, so is itself finite-dimensional.
+\end{proof}
+
+\begin{remark}
+[Feeding the Hilbert-series induction]
+  \label{rem:graded_pieces_finite_consumer}
+  \uses{thm:graded_finiteDimensional_of_polyModule_finite, lem:graded_subquotient_isRatHilb}
+  Registering \(\Cref{thm:graded_finiteDimensional_of_polyModule_finite}\)'s
+  conclusion as the instance \([\forall n,
+  \mathrm{FiniteDimensional}\,\kappa\,(\mathcal{M}_n)]\) discharges the
+  finiteness hypothesis of the Hilbert-series rationality induction
+  \(\Cref{lem:graded_subquotient_isRatHilb}\) from finite generation
+  alone, with no further geometric input.
+\end{remark}
