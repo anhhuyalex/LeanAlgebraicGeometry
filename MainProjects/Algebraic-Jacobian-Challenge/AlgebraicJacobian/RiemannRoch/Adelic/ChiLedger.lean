@@ -421,6 +421,28 @@ theorem exists_stalk_lift_of_order_nonneg {P : X.PrimeDivisor}
     exact (WithZero.log_le_log hpv one_ne_zero).mp this
   exact IsDiscreteValuationRing.exists_lift_of_le_one hle1
 
+/-- **Order surjectivity: every integer is realised as an order at `P`.**  The DVR
+stalk `𝒪_P` has a uniformizer `π` with `ord_P π = 1` — the maximal-ideal
+height-one place, whose adic valuation is `exp (-1)` (mathlib's
+`IsDedekindDomain.HeightOneSpectrum.valuation_exists_uniformizer`) — and its integer
+powers `π^j` realise every order `j : ℤ`.  This is the surjectivity of
+`ord_P : K(X) → ℤ`; only the intrinsic order value of the DVR uniformizer is used,
+never a distinguished *global* uniformizer (a fixed rational function). -/
+theorem exists_order_eq (P : X.PrimeDivisor) (j : ℤ) :
+    ∃ t : X.functionField, t ≠ 0 ∧ Scheme.RationalMap.order P t = j := by
+  obtain ⟨π, hπ⟩ :=
+    (IsDiscreteValuationRing.maximalIdeal
+      (X.presheaf.stalk P.point)).valuation_exists_uniformizer X.functionField
+  have hval : pointValuation P π = WithZero.exp (-1 : ℤ) := hπ
+  have hπ0 : π ≠ 0 := by
+    rintro rfl
+    rw [map_zero] at hval
+    exact WithZero.exp_ne_zero hval.symm
+  refine ⟨π ^ j, zpow_ne_zero j hπ0, ?_⟩
+  rw [order_eq_neg_log_pointValuation, map_zpow₀, hval, WithZero.log_zpow,
+    WithZero.log_exp, smul_eq_mul]
+  ring
+
 end LocalDegree
 
 /-! ## §N14c/N15/N16. The `k`-linear χ-ledger over a field of constants
@@ -597,6 +619,108 @@ theorem localStep_finrank_le_residueEmbedding {U : X.Opens} {P : X.PrimeDivisor}
     (localStepMapₖ_injective k hPU hstep hle hoff)).trans ?_
   exact LinearMap.finrank_le_finrank_of_injective hι
 
+/-! ### N14b — the residue field `κ(P)` and the residue-degree bound
+
+`localStepTgt k P 1 = orderGe P 0 ⧸ orderGe P 1` is the DVR residue field
+`κ(P) = 𝒪_P/𝔪_P`, realised as a `k`-subquotient of `K(X)`; its `k`-dimension is the
+residue degree `deg P = [κ(P) : k]`.  For any `m`, multiplication by a rational
+function `t` with `ord_P t = 1 - m` (which exists by `exists_order_eq` — the
+intrinsic uniformizer-power order, *no* distinguished global uniformizer) carries
+`orderGe P (m-1)` into `orderGe P 0` and `orderGe P m` into `orderGe P 1`, hence
+descends to the `k`-linear embedding `localStepTgt k P m ↪ κ(P)`.  Feeding it to
+`localStep_finrank_le_residueEmbedding` completes node N14:
+`dim_k (Γ(U,𝒪(D')) / Γ(U,𝒪(D))) ≤ deg P`. -/
+
+/-- **The residue degree `deg P := [κ(P) : k] = dim_k κ(P)`**, with the residue
+field `κ(P) = 𝒪_P/𝔪_P` realised as the single-uniformizer-step valuation quotient
+`localStepTgt k P 1 = orderGe P 0 ⧸ orderGe P 1`. -/
+noncomputable def residueDeg (P : X.PrimeDivisor) : ℕ :=
+  Module.finrank k (localStepTgt k P 1)
+
+/-- **The residue embedding `ι`** completing node N14.  Multiplication by a
+rational function `t` of order `1 - m` at `P` carries `orderGe P (m-1)` into
+`orderGe P 0` and `orderGe P m` into `orderGe P 1`, hence descends to the
+`k`-linear map `localStepTgt k P m → κ(P) = localStepTgt k P 1` between single-point
+valuation quotients — the uniformizer-power shift of the fractional-ideal
+filtration.  `k`-linearity is automatic: multiplication by a fixed element of
+`K(X)` commutes with the `k`-action. -/
+noncomputable def residueShift {P : X.PrimeDivisor} {m : ℤ}
+    (t : X.functionField) (ht : t ≠ 0)
+    (hc : Scheme.RationalMap.order P t = 1 - m) :
+    localStepTgt k P m →ₗ[k] localStepTgt k P 1 :=
+  Submodule.mapQ _ _
+    (LinearMap.restrict (LinearMap.mulLeft k t)
+      (p := orderGeSub k P (m - 1)) (q := orderGeSub k P (1 - 1))
+      (fun x hx => by
+        rw [mem_orderGeSub] at hx
+        rw [LinearMap.mulLeft_apply, mem_orderGeSub]
+        rcases eq_or_ne x 0 with hx0 | hx0
+        · exact Or.inl (by rw [hx0, mul_zero])
+        · exact Or.inr (by
+            rw [Scheme.RationalMap.order_mul_of_ne_zero P ht hx0, hc]
+            have := (mem_orderGe_of_ne_zero hx0).mp hx
+            linarith)))
+    (by
+      intro x hx
+      rw [Submodule.mem_comap, Submodule.subtype_apply, mem_orderGeSub] at hx
+      rw [Submodule.mem_comap, Submodule.mem_comap, Submodule.subtype_apply,
+        LinearMap.coe_restrict_apply, LinearMap.mulLeft_apply, mem_orderGeSub]
+      rcases eq_or_ne (x : X.functionField) 0 with hx0 | hx0
+      · exact Or.inl (by rw [hx0, mul_zero])
+      · exact Or.inr (by
+          rw [Scheme.RationalMap.order_mul_of_ne_zero P ht hx0, hc]
+          have := (mem_orderGe_of_ne_zero hx0).mp hx
+          linarith))
+
+/-- **The residue embedding is injective** (node N14, `k`-linear residue form).
+If `t · f` lands in `orderGe P 1` then `ord_P(t·f) = (1-m) + ord_P f ≥ 1`, hence
+`ord_P f ≥ m` and `f ∈ orderGe P m`: the kernel of the shift is exactly the tighter
+single-point subgroup, so the induced map on the local step quotient is injective. -/
+theorem residueShift_injective {P : X.PrimeDivisor} {m : ℤ}
+    (t : X.functionField) (ht : t ≠ 0)
+    (hc : Scheme.RationalMap.order P t = 1 - m) :
+    Function.Injective (residueShift k t ht hc) := by
+  rw [injective_iff_map_eq_zero]
+  intro q
+  obtain ⟨g, rfl⟩ := Submodule.Quotient.mk_surjective _ q
+  intro hq
+  rw [residueShift, Submodule.mapQ_apply, Submodule.Quotient.mk_eq_zero,
+    Submodule.mem_comap, Submodule.subtype_apply, LinearMap.coe_restrict_apply,
+    LinearMap.mulLeft_apply, mem_orderGeSub] at hq
+  rw [Submodule.Quotient.mk_eq_zero, Submodule.mem_comap, Submodule.subtype_apply,
+    mem_orderGeSub]
+  rcases eq_or_ne (g : X.functionField) 0 with hg0 | hg0
+  · rw [hg0]; exact (orderGe P m).zero_mem
+  · refine Or.inr ?_
+    rcases hq with h0 | h0
+    · exact absurd ((mul_eq_zero.mp h0).resolve_left ht) hg0
+    · rw [Scheme.RationalMap.order_mul_of_ne_zero P ht hg0, hc] at h0
+      linarith
+
+/-- **N14 — the local step dimension is at most the residue degree.**  For the
+one-point twist `D' = D + P` (with `P ∈ U`, `D'(P) = D(P) + 1`, `D = D'` off `P`)
+the local step space `Γ(U, 𝒪(D')) / Γ(U, 𝒪(D))` has `k`-dimension at most the
+residue degree `deg P = [κ(P) : k]`.  This is the honest conclusion of N14: the
+composite of the elementary kernel injection (`localStepMapₖ_injective`) with the
+uniformizer-power residue embedding (`residueShift_injective`).  The finiteness of
+`κ(P)` over `k` — `[κ(P):k] < ∞`, the residue field of a closed point of a
+finite-type `k`-curve — is the gated keystone input `[Module.Finite k κ(P)]`, not
+re-proved here. -/
+theorem localStep_finrank_le {U : X.Opens} {P : X.PrimeDivisor}
+    (hPU : P.point ∈ U) {D D' : X.WeilDivisor}
+    (hstep : (show X.PrimeDivisor →₀ ℤ from D') P =
+      (show X.PrimeDivisor →₀ ℤ from D) P + 1)
+    (hle : ∀ Q : X.PrimeDivisor, (show X.PrimeDivisor →₀ ℤ from D) Q ≤
+      (show X.PrimeDivisor →₀ ℤ from D') Q)
+    (hoff : ∀ Q : X.PrimeDivisor, Q ≠ P →
+      (show X.PrimeDivisor →₀ ℤ from D) Q = (show X.PrimeDivisor →₀ ℤ from D') Q)
+    [Module.Finite k (localStepTgt k P 1)] :
+    Module.finrank k (localStepDom k U D D') ≤ residueDeg k P := by
+  obtain ⟨t, ht, htord⟩ :=
+    exists_order_eq P (1 - (-(show X.PrimeDivisor →₀ ℤ from D) P))
+  exact localStep_finrank_le_residueEmbedding k hPU hstep hle hoff
+    (residueShift k t ht htord) (residueShift_injective k t ht htord)
+
 end BaseField
 
 /-! ## §N15 backbone. The 4-term exact-sequence alternating dimension identity
@@ -767,6 +891,43 @@ theorem chi_add {D D' : X.WeilDivisor}
   have halt := ledger_alternating k U₀ U₁ window connect twist hwin hexactB hexactC htwist
   simp only [chi, ell, h1dim] at *
   omega
+
+/-- **N15 — the one-step χ-ledger bound `χ(D + P) ≤ χ(D) + deg P`.**  Combining the
+gated ledger exact sequence (χ-additivity `chi_add`, giving
+`χ(D') = χ(D) + dim_k(𝒜(D')/𝒜(D))`) with node N14 (`localStep_finrank_le`, giving
+`dim_k(𝒜(D')/𝒜(D)) ≤ deg P`) for a one-point twist `D' = D + P` with `P` in the
+overlap `V = U₀ ⊓ U₁`, the Euler characteristic increases by at most the residue
+degree.  This is the honest one-step form of the χ-ledger.
+
+(The reverse bound `deg P ≤ dim_k(𝒜(D')/𝒜(D))` — equality `χ(D+P) = χ(D) + deg P` —
+is the *surjectivity* of the local residue map `𝒜(D')/𝒜(D) ↠ κ(P)`, the
+strong-approximation input, deferred with the ledger's connecting/surjectivity
+data.) -/
+theorem chi_add_le_residueDeg {D D' : X.WeilDivisor} {P : X.PrimeDivisor}
+    (hPV : P.point ∈ (U₀ ⊓ U₁ : X.Opens))
+    (hstep : (show X.PrimeDivisor →₀ ℤ from D') P =
+      (show X.PrimeDivisor →₀ ℤ from D) P + 1)
+    (hle : ∀ Q : X.PrimeDivisor, (show X.PrimeDivisor →₀ ℤ from D) Q ≤
+      (show X.PrimeDivisor →₀ ℤ from D') Q)
+    (hoff : ∀ Q : X.PrimeDivisor, Q ≠ P →
+      (show X.PrimeDivisor →₀ ℤ from D) Q = (show X.PrimeDivisor →₀ ℤ from D') Q)
+    (window : localStepDom k ⊤ D D' →ₗ[k] localStepDom k (U₀ ⊓ U₁) D D')
+    (connect : localStepDom k (U₀ ⊓ U₁) D D' →ₗ[k] H1Mod k U₀ U₁ D)
+    (twist : H1Mod k U₀ U₁ D →ₗ[k] H1Mod k U₀ U₁ D')
+    (hwin : Function.Injective window)
+    (hexactB : LinearMap.range window = LinearMap.ker connect)
+    (hexactC : LinearMap.range connect = LinearMap.ker twist)
+    (htwist : Function.Surjective twist)
+    [Module.Finite k (sectionSub k ⊤ D')]
+    [Module.Finite k (localStepDom k (U₀ ⊓ U₁) D D')]
+    [Module.Finite k (H1Mod k U₀ U₁ D)] [Module.Finite k (H1Mod k U₀ U₁ D')]
+    [Module.Finite k (localStepTgt k P 1)] :
+    chi k U₀ U₁ D' ≤ chi k U₀ U₁ D + residueDeg k P := by
+  have hbump := chi_add k U₀ U₁ hle window connect twist hwin hexactB hexactC htwist
+  have hN14 := localStep_finrank_le k hPV hstep hle hoff
+  have hcast : (Module.finrank k (localStepDom k (U₀ ⊓ U₁) D D') : ℤ)
+      ≤ (residueDeg k P : ℤ) := by exact_mod_cast hN14
+  rw [hbump]; linarith
 
 /-- **N16 — nonnegativity of the index of speciality: `χ(D) ≤ ℓ(D)`.** Immediate
 from `χ(D) = ℓ(D) − h¹(D)` and `h¹(D) = i(D) ≥ 0`.  This is the `i(D) ≥ 0` half of
