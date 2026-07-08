@@ -301,4 +301,56 @@ theorem span_p1CoordAway_pow_top :
 
 end SpanCore
 
+/-! ## Transporting the span core through a ring hom (route step 2, algebraic heart)
+
+The char-free "push the `ℤ`-span through `k ⊗_ℤ (−)`".  For **any** ring hom `ρ`
+from the degree-zero away ring `(ℤ[X₀,X₁]_{X₀})₀` into a `k`-algebra `B`, the image
+`ρ a` of every away element lies in the `k`-span of the powers of `ρ (X₁/X₀)`.  The
+`(𝒜 0) = ℤ`-scalars of the span core (`span_p1CoordAway_pow_top`) become `k`-scalars
+because a ring hom sends integer constants of `𝒜 0` to integers of `B`, which are
+`k`-multiples of `1`.  Applied to the pullback ring map `Away 𝒜 X₀ → Γ(V₀)` (whose
+value at `X₁/X₀` is the chart coordinate `x`), this is exactly the transport of the
+span through the tensor identification `Γ(V₀) = k ⊗_ℤ (ℤ[X₁/X₀])`. -/
+
+section SpanTransport
+
+variable {k : Type u} [Field k]
+
+/-- Every element of the degree-zero part `𝒜 0` (the copy of `ℤ` given by the
+constants) is an integer constant. -/
+private lemma exists_intCast_eq_gradeZero
+    (c : (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ) 0)) :
+    ∃ m : ℤ, (m : (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ) 0)) = c := by
+  obtain ⟨z, hz⟩ :=
+    (ProjectiveSpace.bijective_algebraMap_gradeZero (ULift.{u} (Fin 2))).surjective c
+  refine ⟨z.down, ?_⟩
+  rw [← hz, ← map_intCast (algebraMap (ULift.{u} ℤ)
+    (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ) 0)) z.down]
+  rfl
+
+/-- **Route step 2, algebraic core: transport of the span through a ring hom.**
+For any ring hom `ρ` from the degree-zero away ring `(ℤ[X₀,X₁]_{X₀})₀` into a
+`k`-algebra `B`, the image `ρ a` of every away element lies in the `k`-span of the
+powers of `ρ (X₁/X₀)`. -/
+lemma awayRingHom_mem_span_pow {B : Type u} [CommRing B] [Algebra k B]
+    (ρ : Away (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) (X ⟨0⟩) →+* B)
+    (a : Away (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) (X ⟨0⟩)) :
+    ρ a ∈ Submodule.span k
+      (Set.range fun m : ℕ => ρ (p1CoordAway (ULift.{u} (Fin 2)) ⟨0⟩ ⟨1⟩) ^ m) := by
+  have hmem : a ∈ Submodule.span (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ) 0)
+      (Set.range fun m : ℕ => p1CoordAway (ULift.{u} (Fin 2)) ⟨0⟩ ⟨1⟩ ^ m) :=
+    span_p1CoordAway_pow_top (Submodule.mem_top)
+  induction hmem using Submodule.span_induction with
+  | mem z hz =>
+      obtain ⟨m, rfl⟩ := hz
+      exact Submodule.subset_span ⟨m, by rw [map_pow]⟩
+  | zero => rw [map_zero]; exact Submodule.zero_mem _
+  | add u v _ _ hu hv => rw [map_add]; exact Submodule.add_mem _ hu hv
+  | smul c u _ hu =>
+      obtain ⟨m, rfl⟩ := exists_intCast_eq_gradeZero c
+      rw [Int.cast_smul_eq_zsmul, map_zsmul, ← Int.cast_smul_eq_zsmul k]
+      exact Submodule.smul_mem _ _ hu
+
+end SpanTransport
+
 end AlgebraicGeometry.Adelic
