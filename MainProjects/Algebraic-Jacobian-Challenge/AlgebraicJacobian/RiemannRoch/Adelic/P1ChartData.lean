@@ -38,11 +38,23 @@ discharge the gate `Adelic.P1HasLaurentChartData`.
   two-variable monomial expansion `monomial_eq_C_mul_pow`) rewrites each summand as a
   constant `𝒜 0`-scalar times `(X₁/X₀)^{d₁}`, landing the whole fraction in the span.
 
-**Not yet landed (see the route map below):** the `k ⊗_ℤ (−)` tensor identification
-transporting the `ℤ`-span core to the `ℙ¹(k)` chart ring `Γ(V₀) = k[x]` (route step 2,
-the pullback-of-affines description — the char-free blocker), the overlap identities
-`V₀ ⊓ V₁ = D(x) = D(y)` and `x·y = 1` (step 3), and the final
-`LaurentChartData`/`P1HasLaurentChartData` assembly (step 4).
+**Landed (route step 2, the char-free base change — `span_pow_p1XSection_scaffold`):**
+`Γ(V₀) = k[x]`.  The chart open `V₀ = p1Chart ⟨0⟩ = toProjInt ⁻¹ᵁ D₊(X₀)` is the pullback
+of the affine `D₊(X₀) ⊆ Proj ℤ[X₀,X₁]` over the terminal scheme, hence (Route B, no
+flatness) its section ring is the ring pushout of the affine fibre product
+(`isIso_pushoutSection_of_isAffineOpen`), whose two structural maps ring-generate it
+(`closure_range_union_range_eq_top_of_isPushout`); the `Proj`-side generators are carried
+into the `k`-span of the powers of `x` by the `ℤ`-span core (`span_p1CoordAway_pow_top`,
+transported by an inlined `span_induction`), the `Spec k`-side generators are `k`-multiples
+of `1`.  **Elaboration note:** the composite ring hom is given an *explicit source type with
+an ascribed `X`-index* — otherwise `RingHom.comp` defers the index and unifies the `D₊(X₀)`
+basic-open predicates through the concrete `ℙ¹` pullback into `MvPolynomial`, which is
+astronomically slow.
+
+**Not yet landed (see the route map below):** the symmetric `y`-chart span
+`Γ(V₁) = k[y]` (mirror of step 2 for `D₊(X₁)`, needs the `⟨1⟩`-analogue of
+`span_p1CoordAway_pow_top`), the overlap identities `V₀ ⊓ V₁ = D(x) = D(y)` and `x·y = 1`
+(step 3), and the final `LaurentChartData`/`P1HasLaurentChartData` assembly (step 4).
 
 ## The reduction (route map for a future wave)
 
