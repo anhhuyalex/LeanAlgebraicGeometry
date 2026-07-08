@@ -446,6 +446,12 @@ lemma isIso_restrict_map {U V : TopologicalSpace.Opens X.toTopCat} (h : U ≤ V)
   rw [h0, F.obj.map_id]
   infer_instance
 
+/-- The restriction map of `F` along `U ≤ U` is the identity. -/
+lemma restrict_map_self {U : TopologicalSpace.Opens X.toTopCat} (h : U ≤ U) :
+    F.obj.map (homOfLE h).op = 𝟙 _ := by
+  have h0 : (homOfLE h).op = 𝟙 (Opposite.op U) := Subsingleton.elim _ _
+  rw [h0, F.obj.map_id]
+
 end SectionRestrictCalculus
 
 /-! ## Node N5 — the small-index Čech products as concrete infima -/
@@ -734,6 +740,230 @@ lemma AffineCoverMVSquare.overlapCocycle_comp_d :
       S.overlapCocycleComponent_comp_ne F (by decide) (by decide),
       S.overlapCocycleComponent_comp_ne F (by decide) (by decide)]
     abel
+
+/-! ### The kernel identification `Γ(U₁ ⊓ U₂, F) ≃ₗ[k] ker d¹` (node N5, kernel half) -/
+
+/-- The `(0,1)`-component of the overlap cocycle, uncomposed form. -/
+lemma AffineCoverMVSquare.overlapCocycleComponent_zero_one :
+    S.overlapCocycleComponent F ![⟨0⟩, ⟨1⟩]
+      = F.obj.map (homOfLE (le_of_eq S.prodOpens_zero_one)).op := by
+  unfold overlapCocycleComponent
+  rw [dif_pos rfl]
+
+/-- The `(1,0)`-component of the overlap cocycle, uncomposed form. -/
+lemma AffineCoverMVSquare.overlapCocycleComponent_one_zero :
+    S.overlapCocycleComponent F ![⟨1⟩, ⟨0⟩]
+      = -F.obj.map (homOfLE (le_of_eq S.prodOpens_one_zero)).op := by
+  unfold overlapCocycleComponent
+  rw [dif_neg (by decide), dif_pos rfl]
+
+/-- The diagonal components of the overlap cocycle vanish (uncomposed form). -/
+lemma AffineCoverMVSquare.overlapCocycleComponent_eq_zero
+    {j : Fin 2 → ULift.{u} (Fin 2)} (h1 : j ≠ ![⟨0⟩, ⟨1⟩]) (h2 : j ≠ ![⟨1⟩, ⟨0⟩]) :
+    S.overlapCocycleComponent F j = 0 := by
+  unfold overlapCocycleComponent
+  rw [dif_neg h1, dif_neg h2]
+
+/-- The kernel inclusion of `d¹` composes to zero with `d¹` (morphism form of the
+cocycle condition for an arbitrary kernel element). -/
+lemma AffineCoverMVSquare.kerSubtype_comp_cechD12 :
+    ModuleCat.ofHom (LinearMap.ker (cechD12 S.coverFamily F).hom).subtype
+      ≫ cechD12 S.coverFamily F = 0 :=
+  ModuleCat.hom_ext (LinearMap.ext fun n => LinearMap.mem_ker.mp n.2)
+
+/-- **Cocycles have vanishing `(0,0)`-component.**  The `x = (0,0,0)` component of the
+cocycle condition reads `p| − p| + p| = p| = 0` on `U₁`, and the restriction
+`Γ(𝒰₀ ⊓ 𝒰₀) → Γ(𝒰₀ ⊓ 𝒰₀ ⊓ 𝒰₀)` is an isomorphism. -/
+lemma AffineCoverMVSquare.ker_cechD12_π_diag_zero₀ :
+    ModuleCat.ofHom (LinearMap.ker (cechD12 S.coverFamily F).hom).subtype
+      ≫ Pi.π (cechTerm S.coverFamily F 2) ![⟨0⟩, ⟨0⟩] = 0 := by
+  have hcan : (∏ᶜ ((FormalCoproduct.mk _ S.coverFamily).obj ∘ ![⟨0⟩, ⟨0⟩, ⟨0⟩])
+        : TopologicalSpace.Opens C.left.toTopCat)
+      ≤ ∏ᶜ ((FormalCoproduct.mk _ S.coverFamily).obj ∘ ![⟨0⟩, ⟨0⟩]) :=
+    prodOpens_le_of_forall_exists (j := ![⟨0⟩, ⟨0⟩]) (x := ![⟨0⟩, ⟨0⟩, ⟨0⟩])
+      S.coverFamily (by decide)
+  have hrev : (∏ᶜ ((FormalCoproduct.mk _ S.coverFamily).obj ∘ ![⟨0⟩, ⟨0⟩])
+        : TopologicalSpace.Opens C.left.toTopCat)
+      ≤ ∏ᶜ ((FormalCoproduct.mk _ S.coverFamily).obj ∘ ![⟨0⟩, ⟨0⟩, ⟨0⟩]) :=
+    prodOpens_le_of_forall_exists (j := ![⟨0⟩, ⟨0⟩, ⟨0⟩]) (x := ![⟨0⟩, ⟨0⟩])
+      S.coverFamily (by decide)
+  have h := congrArg (· ≫ Pi.π (cechTerm S.coverFamily F 3) ![⟨0⟩, ⟨0⟩, ⟨0⟩])
+    (S.kerSubtype_comp_cechD12 F)
+  simp only [Category.assoc, cechD12_π, zero_comp, Preadditive.comp_add,
+    Preadditive.comp_sub] at h
+  rw [pi_π_restrict_congr S.coverFamily F
+      (show (![⟨0⟩, ⟨0⟩, ⟨0⟩] ∘ ⇑(Fin.succAboveOrderEmb 0) : Fin 2 → ULift.{u} (Fin 2))
+          = ![⟨0⟩, ⟨0⟩] from by funext i; fin_cases i <;> rfl) _ hcan,
+    pi_π_restrict_congr S.coverFamily F
+      (show (![⟨0⟩, ⟨0⟩, ⟨0⟩] ∘ ⇑(Fin.succAboveOrderEmb 1) : Fin 2 → ULift.{u} (Fin 2))
+          = ![⟨0⟩, ⟨0⟩] from by funext i; fin_cases i <;> rfl) _ hcan,
+    pi_π_restrict_congr S.coverFamily F
+      (show (![⟨0⟩, ⟨0⟩, ⟨0⟩] ∘ ⇑(Fin.succAboveOrderEmb 2) : Fin 2 → ULift.{u} (Fin 2))
+          = ![⟨0⟩, ⟨0⟩] from by funext i; fin_cases i <;> rfl) _ hcan,
+    sub_self, zero_add, ← Category.assoc] at h
+  haveI := isIso_restrict_map F hcan hrev
+  rwa [← cancel_mono (F.obj.map (homOfLE hcan).op), zero_comp]
+
+/-- **Cocycles have vanishing `(1,1)`-component** (the `x = (1,1,1)` component of the
+cocycle condition). -/
+lemma AffineCoverMVSquare.ker_cechD12_π_diag_zero₁ :
+    ModuleCat.ofHom (LinearMap.ker (cechD12 S.coverFamily F).hom).subtype
+      ≫ Pi.π (cechTerm S.coverFamily F 2) ![⟨1⟩, ⟨1⟩] = 0 := by
+  have hcan : (∏ᶜ ((FormalCoproduct.mk _ S.coverFamily).obj ∘ ![⟨1⟩, ⟨1⟩, ⟨1⟩])
+        : TopologicalSpace.Opens C.left.toTopCat)
+      ≤ ∏ᶜ ((FormalCoproduct.mk _ S.coverFamily).obj ∘ ![⟨1⟩, ⟨1⟩]) :=
+    prodOpens_le_of_forall_exists (j := ![⟨1⟩, ⟨1⟩]) (x := ![⟨1⟩, ⟨1⟩, ⟨1⟩])
+      S.coverFamily (by decide)
+  have hrev : (∏ᶜ ((FormalCoproduct.mk _ S.coverFamily).obj ∘ ![⟨1⟩, ⟨1⟩])
+        : TopologicalSpace.Opens C.left.toTopCat)
+      ≤ ∏ᶜ ((FormalCoproduct.mk _ S.coverFamily).obj ∘ ![⟨1⟩, ⟨1⟩, ⟨1⟩]) :=
+    prodOpens_le_of_forall_exists (j := ![⟨1⟩, ⟨1⟩, ⟨1⟩]) (x := ![⟨1⟩, ⟨1⟩])
+      S.coverFamily (by decide)
+  have h := congrArg (· ≫ Pi.π (cechTerm S.coverFamily F 3) ![⟨1⟩, ⟨1⟩, ⟨1⟩])
+    (S.kerSubtype_comp_cechD12 F)
+  simp only [Category.assoc, cechD12_π, zero_comp, Preadditive.comp_add,
+    Preadditive.comp_sub] at h
+  rw [pi_π_restrict_congr S.coverFamily F
+      (show (![⟨1⟩, ⟨1⟩, ⟨1⟩] ∘ ⇑(Fin.succAboveOrderEmb 0) : Fin 2 → ULift.{u} (Fin 2))
+          = ![⟨1⟩, ⟨1⟩] from by funext i; fin_cases i <;> rfl) _ hcan,
+    pi_π_restrict_congr S.coverFamily F
+      (show (![⟨1⟩, ⟨1⟩, ⟨1⟩] ∘ ⇑(Fin.succAboveOrderEmb 1) : Fin 2 → ULift.{u} (Fin 2))
+          = ![⟨1⟩, ⟨1⟩] from by funext i; fin_cases i <;> rfl) _ hcan,
+    pi_π_restrict_congr S.coverFamily F
+      (show (![⟨1⟩, ⟨1⟩, ⟨1⟩] ∘ ⇑(Fin.succAboveOrderEmb 2) : Fin 2 → ULift.{u} (Fin 2))
+          = ![⟨1⟩, ⟨1⟩] from by funext i; fin_cases i <;> rfl) _ hcan,
+    sub_self, zero_add, ← Category.assoc] at h
+  haveI := isIso_restrict_map F hcan hrev
+  rwa [← cancel_mono (F.obj.map (homOfLE hcan).op), zero_comp]
+
+/-- **Cocycles satisfy `r = −q`** (the `x = (0,1,0)` component of the cocycle
+condition, after canonicalising the three coface restrictions and using the vanishing
+of the `(0,0)`-component). -/
+lemma AffineCoverMVSquare.ker_cechD12_π_off_diag
+    (h10 : (∏ᶜ ((FormalCoproduct.mk _ S.coverFamily).obj ∘ ![⟨0⟩, ⟨1⟩, ⟨0⟩])
+        : TopologicalSpace.Opens C.left.toTopCat)
+      ≤ ∏ᶜ ((FormalCoproduct.mk _ S.coverFamily).obj ∘ ![⟨1⟩, ⟨0⟩]))
+    (h01 : (∏ᶜ ((FormalCoproduct.mk _ S.coverFamily).obj ∘ ![⟨0⟩, ⟨1⟩, ⟨0⟩])
+        : TopologicalSpace.Opens C.left.toTopCat)
+      ≤ ∏ᶜ ((FormalCoproduct.mk _ S.coverFamily).obj ∘ ![⟨0⟩, ⟨1⟩])) :
+    ModuleCat.ofHom (LinearMap.ker (cechD12 S.coverFamily F).hom).subtype
+        ≫ Pi.π (cechTerm S.coverFamily F 2) ![⟨1⟩, ⟨0⟩] ≫ F.obj.map (homOfLE h10).op
+      = -(ModuleCat.ofHom (LinearMap.ker (cechD12 S.coverFamily F).hom).subtype
+        ≫ Pi.π (cechTerm S.coverFamily F 2) ![⟨0⟩, ⟨1⟩] ≫ F.obj.map (homOfLE h01).op) := by
+  have hcan00 : (∏ᶜ ((FormalCoproduct.mk _ S.coverFamily).obj ∘ ![⟨0⟩, ⟨1⟩, ⟨0⟩])
+        : TopologicalSpace.Opens C.left.toTopCat)
+      ≤ ∏ᶜ ((FormalCoproduct.mk _ S.coverFamily).obj ∘ ![⟨0⟩, ⟨0⟩]) :=
+    prodOpens_le_of_forall_exists (j := ![⟨0⟩, ⟨0⟩]) (x := ![⟨0⟩, ⟨1⟩, ⟨0⟩])
+      S.coverFamily (by decide)
+  have h := congrArg (· ≫ Pi.π (cechTerm S.coverFamily F 3) ![⟨0⟩, ⟨1⟩, ⟨0⟩])
+    (S.kerSubtype_comp_cechD12 F)
+  simp only [Category.assoc, cechD12_π, zero_comp, Preadditive.comp_add,
+    Preadditive.comp_sub] at h
+  rw [pi_π_restrict_congr S.coverFamily F
+      (show (![⟨0⟩, ⟨1⟩, ⟨0⟩] ∘ ⇑(Fin.succAboveOrderEmb 0) : Fin 2 → ULift.{u} (Fin 2))
+          = ![⟨1⟩, ⟨0⟩] from by funext i; fin_cases i <;> rfl) _ h10,
+    pi_π_restrict_congr S.coverFamily F
+      (show (![⟨0⟩, ⟨1⟩, ⟨0⟩] ∘ ⇑(Fin.succAboveOrderEmb 1) : Fin 2 → ULift.{u} (Fin 2))
+          = ![⟨0⟩, ⟨0⟩] from by funext i; fin_cases i <;> rfl) _ hcan00,
+    pi_π_restrict_congr S.coverFamily F
+      (show (![⟨0⟩, ⟨1⟩, ⟨0⟩] ∘ ⇑(Fin.succAboveOrderEmb 2) : Fin 2 → ULift.{u} (Fin 2))
+          = ![⟨0⟩, ⟨1⟩] from by funext i; fin_cases i <;> rfl) _ h01] at h
+  have hz : ModuleCat.ofHom (LinearMap.ker (cechD12 S.coverFamily F).hom).subtype
+      ≫ Pi.π (cechTerm S.coverFamily F 2) ![⟨0⟩, ⟨0⟩] ≫ F.obj.map (homOfLE hcan00).op
+      = 0 := by
+    rw [← Category.assoc, S.ker_cechD12_π_diag_zero₀ F, zero_comp]
+  rw [hz, sub_zero] at h
+  exact eq_neg_of_add_eq_zero_left h
+
+/-- The projection of a 1-cocycle to its `(0,1)`-component, transported to the
+overlap sections.  This is the inverse direction of the kernel identification. -/
+noncomputable def AffineCoverMVSquare.cechKerProj :
+    LinearMap.ker (cechD12 S.coverFamily F).hom →ₗ[k] F.obj.obj (op S.overlapOpen) :=
+  (sectionRestrict F S.prodOpens_zero_one.ge) ∘ₗ
+    (Pi.π (cechTerm S.coverFamily F 2) ![⟨0⟩, ⟨1⟩]).hom ∘ₗ
+      (LinearMap.ker (cechD12 S.coverFamily F).hom).subtype
+
+/-- `cechKerProj`, as a composite of `ModuleCat` morphisms. -/
+lemma AffineCoverMVSquare.ofHom_cechKerProj :
+    ModuleCat.ofHom (S.cechKerProj F)
+      = ModuleCat.ofHom (LinearMap.ker (cechD12 S.coverFamily F).hom).subtype
+          ≫ Pi.π (cechTerm S.coverFamily F 2) ![⟨0⟩, ⟨1⟩]
+          ≫ F.obj.map (homOfLE S.prodOpens_zero_one.ge).op :=
+  rfl
+
+/-- **The overlap cocycle inverts the `(0,1)`-projection on the kernel**: composing
+the projection with the overlap cocycle recovers an arbitrary 1-cocycle.  The four
+components are exactly the concrete kernel description `ker d¹ = {(0, q, −q, 0)}`:
+the diagonal components vanish (`ker_cechD12_π_diag_zero₀`/`₁`), the `(0,1)`-component
+round-trips, and the `(1,0)`-component is the negative of the `(0,1)`-component
+(`ker_cechD12_π_off_diag`). -/
+lemma AffineCoverMVSquare.cechKerProj_comp_overlapCocycle :
+    ModuleCat.ofHom (S.cechKerProj F) ≫ S.overlapCocycle F
+      = ModuleCat.ofHom (LinearMap.ker (cechD12 S.coverFamily F).hom).subtype := by
+  refine Pi.hom_ext _ _ fun j => ?_
+  obtain ⟨a, b, rfl⟩ : ∃ a b : Fin 2, j = ![⟨a⟩, ⟨b⟩] :=
+    ⟨(j 0).down, (j 1).down, by funext i; fin_cases i <;> rfl⟩
+  rw [Category.assoc, overlapCocycle_π, S.ofHom_cechKerProj F]
+  have htwo : ∀ i : Fin 2, i = 0 ∨ i = 1 := by decide
+  rcases htwo a with rfl | rfl <;> rcases htwo b with rfl | rfl
+  · -- component (0,0): both sides vanish
+    rw [S.overlapCocycleComponent_eq_zero F (by decide) (by decide), comp_zero,
+      S.ker_cechD12_π_diag_zero₀ F]
+  · -- component (0,1): the round-trip restriction is the identity
+    rw [S.overlapCocycleComponent_zero_one F]
+    simp only [Category.assoc, restrict_map_comp, restrict_map_self, Category.comp_id]
+  · -- component (1,0): the off-diagonal kernel relation
+    have h10 : (∏ᶜ ((FormalCoproduct.mk _ S.coverFamily).obj ∘ ![⟨0⟩, ⟨1⟩, ⟨0⟩])
+          : TopologicalSpace.Opens C.left.toTopCat)
+        ≤ ∏ᶜ ((FormalCoproduct.mk _ S.coverFamily).obj ∘ ![⟨1⟩, ⟨0⟩]) :=
+      prodOpens_le_of_forall_exists (j := ![⟨1⟩, ⟨0⟩]) (x := ![⟨0⟩, ⟨1⟩, ⟨0⟩])
+        S.coverFamily (by decide)
+    have hrev : (∏ᶜ ((FormalCoproduct.mk _ S.coverFamily).obj ∘ ![⟨1⟩, ⟨0⟩])
+          : TopologicalSpace.Opens C.left.toTopCat)
+        ≤ ∏ᶜ ((FormalCoproduct.mk _ S.coverFamily).obj ∘ ![⟨0⟩, ⟨1⟩, ⟨0⟩]) :=
+      prodOpens_le_of_forall_exists (j := ![⟨0⟩, ⟨1⟩, ⟨0⟩]) (x := ![⟨1⟩, ⟨0⟩])
+        S.coverFamily (by decide)
+    have h01 : (∏ᶜ ((FormalCoproduct.mk _ S.coverFamily).obj ∘ ![⟨0⟩, ⟨1⟩, ⟨0⟩])
+          : TopologicalSpace.Opens C.left.toTopCat)
+        ≤ ∏ᶜ ((FormalCoproduct.mk _ S.coverFamily).obj ∘ ![⟨0⟩, ⟨1⟩]) :=
+      prodOpens_le_of_forall_exists (j := ![⟨0⟩, ⟨1⟩]) (x := ![⟨0⟩, ⟨1⟩, ⟨0⟩])
+        S.coverFamily (by decide)
+    rw [S.overlapCocycleComponent_one_zero F]
+    haveI := isIso_restrict_map F h10 hrev
+    rw [← cancel_mono (F.obj.map (homOfLE h10).op)]
+    simp only [Category.assoc]
+    rw [S.ker_cechD12_π_off_diag F h10 h01]
+    simp only [Preadditive.comp_neg, Preadditive.neg_comp, restrict_map_comp]
+  · -- component (1,1): both sides vanish
+    rw [S.overlapCocycleComponent_eq_zero F (by decide) (by decide), comp_zero,
+      S.ker_cechD12_π_diag_zero₁ F]
+
+/-- **Node N5, kernel half: the overlap sections are the degree-`1` Čech cocycles.**
+The `k`-linear equivalence `Γ(U₁ ⊓ U₂, F) ≃ₗ[k] ker d¹`, sending `q` to the cocycle
+`(0, q, −q, 0)`, with inverse the `(0,1)`-component projection. -/
+noncomputable def AffineCoverMVSquare.overlapKerEquiv :
+    F.obj.obj (op S.overlapOpen) ≃ₗ[k] LinearMap.ker (cechD12 S.coverFamily F).hom :=
+  LinearEquiv.ofLinear
+    ((S.overlapCocycle F).hom.codRestrict (LinearMap.ker (cechD12 S.coverFamily F).hom)
+      fun q => LinearMap.mem_ker.mpr (by
+        have h := congrArg (fun t => t.hom q) (S.overlapCocycle_comp_d F)
+        simpa using h))
+    (S.cechKerProj F)
+    (by
+      refine LinearMap.ext fun n => Subtype.ext ?_
+      have h := congrArg (fun t => t.hom n) (S.cechKerProj_comp_overlapCocycle F)
+      simpa using h)
+    (by
+      refine LinearMap.ext fun q => ?_
+      have h := congrArg (fun t => t.hom q) (S.overlapCocycle_π F ![⟨0⟩, ⟨1⟩])
+      rw [S.overlapCocycleComponent_zero_one F] at h
+      simp only [ModuleCat.hom_comp, LinearMap.comp_apply] at h
+      change sectionRestrict F S.prodOpens_zero_one.ge
+        ((Pi.π (cechTerm S.coverFamily F 2) ![⟨0⟩, ⟨1⟩]).hom
+          ((S.overlapCocycle F).hom q)) = q
+      rw [h]
+      change sectionRestrict F _ (sectionRestrict F _ q) = q
+      rw [sectionRestrict_trans, sectionRestrict_self])
 
 end OverlapCocycle
 
