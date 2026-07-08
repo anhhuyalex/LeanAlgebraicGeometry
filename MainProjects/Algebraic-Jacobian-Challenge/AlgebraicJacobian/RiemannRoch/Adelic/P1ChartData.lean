@@ -23,6 +23,19 @@ projective line `ℙ¹ = ℙ(ULift (Fin 2); Spec k)` (the `Proj`-pullback model 
 `Adelic.LaurentChartData.module_finite_H1Cok` (`FinitenessP1.lean`), and thereby to
 discharge the gate `Adelic.P1HasLaurentChartData`.
 
+**Landed so far (LSP-verified, clean axioms):**
+* `p1CoordAway i j` — the coordinate fraction `Xⱼ/Xᵢ ∈ Away 𝒫 Xᵢ`;
+* `p1XSection`, `p1YSection` — the chart coordinates `x = X₁/X₀ ∈ Γ(V₀)`,
+  `y = X₀/X₁ ∈ Γ(V₁)`, pulled back along `toProjInt`;
+* `p1Monomial a b` and `p1Monomial_eq_coordPow` — **the per-monomial span heart**:
+  the degree-`(a+b)` monomial fraction `X₀^a X₁^b / X₀^(a+b)` equals `(X₁/X₀)^b`.
+
+**Not yet landed (see the route map below):** the full chart-ring spanning
+`Γ(V₀) = k[x]` (needs `Away.mk` additivity/`𝒜 0`-linearity + the homogeneous-monomial
+decomposition of `𝒜 N`, then the `k ⊗_ℤ (−)` tensor identification of `Γ(V₀)`), the
+overlap identities `V₀ ⊓ V₁ = D(x) = D(y)` and `x·y = 1`, and the final
+`LaurentChartData`/`P1HasLaurentChartData` assembly.
+
 ## The reduction (route map for a future wave)
 
 The geometric substrate — the two affine charts `Vᵢ = D₊(Xᵢ)` (pulled back to the
