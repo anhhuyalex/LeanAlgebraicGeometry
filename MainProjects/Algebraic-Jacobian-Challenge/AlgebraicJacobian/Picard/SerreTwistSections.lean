@@ -9,6 +9,7 @@ import AlgebraicJacobian.Picard.SerreTwist
 import AlgebraicJacobian.Picard.LineBundleCoherence
 import AlgebraicJacobian.Picard.ProjectiveMorphism
 import AlgebraicJacobian.Picard.QuotScheme
+import AlgebraicJacobian.Picard.InvertibleGrBridge
 
 /-!
 # Global sections of a glued sheaf of modules
@@ -1683,6 +1684,37 @@ set_option synthInstance.maxHeartbeats 400000 in
 /-- **The relative twisting sheaf `O(m)` on `ℙ(n₀; S)` is quasi-coherent** (P0.4). -/
 example (S : Scheme.{0}) (m : ℕ) :
     (ProjectiveSpace.twistingSheaf n₀ S m).IsQuasicoherent := inferInstance
+
+/-! ## Invertibility-graded structure of `O(m)` (P0.5)
+
+A locally trivial line bundle is invertible-graded (`IsLocallyTrivial.isInvertibleGr`,
+the P0.5 bridge of `Picard/InvertibleGrBridge.lean`): the trivialising affine charts
+form the required basis and each carries an invertible section module.  This upgrades
+the Serre-twist family from `IsLocallyTrivial` to `Scheme.Modules.IsInvertibleGr`,
+unlocking the graded-commutative section ring `Γ_*(X, O(m))`
+(`sectionGradedRing_gcommSemiring`). -/
+
+/-- **The glued Serre twist is invertible-graded** (P0.5). -/
+instance serreTwistGlued_isInvertibleGr (m : ℕ) :
+    Scheme.Modules.IsInvertibleGr (serreTwistGlued n₀ m) :=
+  (serreTwistGlued_isLocallyTrivial n₀ m).isInvertibleGr
+
+/-- **`O(m)` on the integral model `Proj ℤ[X]` is invertible-graded** (P0.5). -/
+instance serreTwist_isInvertibleGr (m : ℕ) :
+    Scheme.Modules.IsInvertibleGr (serreTwist n₀ m) :=
+  (serreTwist_isLocallyTrivial n₀ m).isInvertibleGr
+
+/-- **The relative twisting sheaf `O(m)` on `ℙ(n₀; S)` is invertible-graded** (P0.5). -/
+instance twistingSheaf_isInvertibleGr (S : Scheme.{0}) (m : ℕ) :
+    Scheme.Modules.IsInvertibleGr (ProjectiveSpace.twistingSheaf n₀ S m) :=
+  (twistingSheaf_isLocallyTrivial n₀ S m).isInvertibleGr
+
+/-- **The section graded ring `Γ_*(Proj ℤ[X], O(m))` is graded-commutative** (P0.5):
+the payoff of `IsInvertibleGr`, assembling a genuine `CommSemiring` on
+`⊕_k Γ(Proj ℤ[X], O(m)^{⊗k})`. -/
+example (m : ℕ) :
+    Nonempty (CommSemiring (DirectSum ℕ (Scheme.Modules.sectionDeg (serreTwist n₀ m)))) :=
+  Scheme.Modules.sectionGradedRing_commSemiring_nonempty (serreTwist n₀ m)
 
 end LocallyTrivial
 
