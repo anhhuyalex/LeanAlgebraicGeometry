@@ -9,6 +9,7 @@ import AlgebraicJacobian.Picard.GlueDescent
 import AlgebraicJacobian.Picard.PullbackFinitePresentation
 import AlgebraicJacobian.Picard.QuotFlatBaseChange
 import AlgebraicJacobian.Picard.QuotSupportBaseChange
+import AlgebraicJacobian.Picard.SchematicSupport
 import AlgebraicJacobian.Picard.TensorObjSubstrate
 
 /-!
@@ -589,6 +590,83 @@ lemma hilbertFunction_eq_finrank_of_iso {W B : Scheme.{u}} (π₀ : W ⟶ B)
       right_inv := γe.right_inv }
 
 set_option backward.isDefEq.respectTransparency false in
+set_option maxHeartbeats 1600000 in
+-- fibre-square properness transfer + defeq instantiation of the Γ-fibre core
+/-- **Flat base change of the global sections of the twisted fibre module,
+conditional on quasi-coherence of the twist** — the full scheme-level
+reduction of `lem:gamma_fiber_baseChange_field`.  All geometric content of
+`Scheme.gammaFiber_finrank_baseChange_field` is discharged here:
+
+* proper support transfers from `F/T` to the fibre restriction `F_t/κ(t)`
+  (`Modules.HasProperSupport.of_isPullback` on Mathlib's fibre square) and on
+  to the twist `F_t ⊗ L_t^{⊗m}` (`hasProperSupport_moduleTensorPow`, the
+  annihilator monotonicity brick);
+* the Γ-fibre flat base-change core
+  (`Scheme.finrank_gammaTop_baseChange_of_hasProperSupport` — support descent
+  `G ≅ i_* i^* G`, the 02KH exchange across the closed-immersion square, the
+  CLOSED 02KE heart at `⊤` on the pasted proper-support square, and the
+  `ΓSpecIso` dimension bookkeeping) applies to Mathlib's cartesian fibre
+  square `Scheme.isPullback_fiberBaseChange`, whose corners instantiate
+  `K := κ(t)`, `K' := κ(t')`, `φ := ψ.residueFieldMap`; the
+  `fiberSectionsModule`/`fiberResidueMap` scalar actions are *definitionally*
+  the `ΓSpecIso⁻¹ ≫ appTop` composites of the core statement.
+
+The sole remaining input is quasi-coherence of the twisted fibre module
+(`hGqc`) — the affine tensor-section formula for `sheafTensorObj` of
+quasi-coherent modules (the deferred wiring pass of
+`Picard/TensorSectionFormula.lean`, shared with
+`lem:pullback_tensor_map_isiso`), which will discharge it from
+`[L.IsQuasicoherent]` + finite presentation of `F`. -/
+theorem gammaFiber_finrank_baseChange_field_of_quasicoherent (π : X ⟶ S)
+    (L : X.Modules) {T T' : Over S} (ψ : T' ⟶ T)
+    (F : (Limits.pullback π T.hom).Modules) (hfp : F.IsFinitePresentation)
+    (hps : Modules.HasProperSupport (pullback.snd π T.hom) F)
+    (t' : (T'.left : Scheme.{u})) (m : ℕ)
+    (hGqc : (Scheme.Modules.moduleTensorPow
+        ((pullback.snd π T.hom).fiberModule (ψ.left.base t') F)
+        ((pullback.snd π T.hom).fiberModule (ψ.left.base t')
+          ((Scheme.Modules.pullback (pullback.fst π T.hom)).obj L))
+        m).IsQuasicoherent) :
+    (letI := (pullback.snd π T'.hom).fiberSectionsModule t'
+        ((Scheme.Modules.pullback (fiberBaseChange π ψ t')).obj
+          (Scheme.Modules.moduleTensorPow
+            ((pullback.snd π T.hom).fiberModule (ψ.left.base t') F)
+            ((pullback.snd π T.hom).fiberModule (ψ.left.base t')
+              ((Scheme.Modules.pullback (pullback.fst π T.hom)).obj L)) m))
+     Module.finrank (T'.left.residueField t')
+        Γ((Scheme.Modules.pullback (fiberBaseChange π ψ t')).obj
+          (Scheme.Modules.moduleTensorPow
+            ((pullback.snd π T.hom).fiberModule (ψ.left.base t') F)
+            ((pullback.snd π T.hom).fiberModule (ψ.left.base t')
+              ((Scheme.Modules.pullback (pullback.fst π T.hom)).obj L)) m), ⊤))
+      = hilbertFunction (pullback.snd π T.hom)
+          ((Scheme.Modules.pullback (pullback.fst π T.hom)).obj L) F
+          (ψ.left.base t') m := by
+  haveI := hGqc
+  -- proper support of the fibre restriction `F_t` over `κ(t)` (fibre square
+  -- base change), then of the twist (annihilator monotonicity)
+  have hpsFt : Modules.HasProperSupport
+      ((pullback.snd π T.hom).fiberToSpecResidueField (ψ.left.base t'))
+      ((pullback.snd π T.hom).fiberModule (ψ.left.base t') F) :=
+    Modules.HasProperSupport.of_isPullback
+      (IsPullback.of_hasPullback (pullback.snd π T.hom)
+        (T.left.fromSpecResidueField (ψ.left.base t'))) F hfp hps
+  have hpsG : Modules.HasProperSupport
+      ((pullback.snd π T.hom).fiberToSpecResidueField (ψ.left.base t'))
+      (Scheme.Modules.moduleTensorPow
+        ((pullback.snd π T.hom).fiberModule (ψ.left.base t') F)
+        ((pullback.snd π T.hom).fiberModule (ψ.left.base t')
+          ((Scheme.Modules.pullback (pullback.fst π T.hom)).obj L)) m) :=
+    Scheme.Modules.hasProperSupport_moduleTensorPow _ _ m hpsFt
+  -- the Γ-fibre flat base-change core on the cartesian fibre square; the
+  -- `fiberSectionsModule`/`hilbertFunction` scalar actions are definitionally
+  -- the `ΓSpecIso⁻¹ ≫ appTop` composites of the core statement
+  exact Scheme.finrank_gammaTop_baseChange_of_hasProperSupport
+    (Field.toIsField (T.left.residueField (ψ.left.base t')))
+    (Field.toIsField (T'.left.residueField t'))
+    (isPullback_fiberBaseChange π ψ t') _ hpsG
+
+set_option backward.isDefEq.respectTransparency false in
 /-- **Flat base change of the global sections of the twisted fibre module over
 the residue field extension** ([Stacks 02KH], `i = 0`, via the schematic
 support reduction; [Nitsure] §1): in the setting of
@@ -602,7 +680,17 @@ proper, in particular quasi-compact and separated, over the residue field, so
 that [Stacks 02KH] applies to it; quasi-coherence of `L` (hence of the twist)
 is likewise required.  In the infinite-dimensional case both sides carry the
 junk value `0` of `Module.finrank`, matching the equality of infinite
-dimensions.  Blueprint: `lem:gamma_fiber_baseChange_field`. -/
+dimensions.  Blueprint: `lem:gamma_fiber_baseChange_field`.
+
+REDUCED (wave 8): the entire scheme-level content is now the PROVED
+`Scheme.gammaFiber_finrank_baseChange_field_of_quasicoherent` above (fibre
+properness transfer + twist-support monotonicity + the Γ-fibre flat
+base-change core `finrank_gammaTop_baseChange_of_hasProperSupport` of
+`Picard/SchematicSupport.lean`).  The SOLE remaining leaf is quasi-coherence
+of the sheafified tensor `moduleTensorPow F_t L_t^{⊗m}` of quasi-coherent
+modules — the affine tensor-section formula wiring pass deferred in
+`Picard/TensorSectionFormula.lean` (Stacks 01CB; shared wall with
+`lem:pullback_tensor_map_isiso`). -/
 theorem gammaFiber_finrank_baseChange_field (π : X ⟶ S) (L : X.Modules)
     [L.IsQuasicoherent] {T T' : Over S} (ψ : T' ⟶ T)
     (F : (Limits.pullback π T.hom).Modules) (hfp : F.IsFinitePresentation)
@@ -623,6 +711,11 @@ theorem gammaFiber_finrank_baseChange_field (π : X ⟶ S) (L : X.Modules)
       = hilbertFunction (pullback.snd π T.hom)
           ((Scheme.Modules.pullback (pullback.fst π T.hom)).obj L) F
           (ψ.left.base t') m := by
+  refine gammaFiber_finrank_baseChange_field_of_quasicoherent π L ψ F hfp hps t' m ?_
+  -- SOLE remaining leaf (`lem:gamma_fiber_baseChange_field`): quasi-coherence
+  -- of the sheafified tensor of quasi-coherent modules (Stacks 01CB), i.e. the
+  -- affine tensor-section formula for `sheafTensorObj` — the deferred wiring
+  -- pass of `Picard/TensorSectionFormula.lean`.
   sorry
 
 end HilbertFunctionBaseChange
