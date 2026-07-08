@@ -60,7 +60,7 @@ concrete family: `HModule k F n ≃ₗ[k] cechCohomology C F S.coverFamily n` (g
 `HasCechToHModuleIso F S.coverFamily`).  Chaining node N5 (below) into this at `n = 1`
 gives the lane's consumable corollary `HModule k F 1 ≃ₗ[k] H1Cok S F`.
 
-## The N5 identification `cechCohomology C F S.coverFamily 1 ≃ₗ[k] H1Cok S F` (roadmap)
+## The N5 identification `cechCohomology C F S.coverFamily 1 ≃ₗ[k] H1Cok S F` (PROVED)
 
 The in-tree `cechCohomology` is the homology of Mathlib's **unnormalized**
 `cechComplexFunctor` (`FormalCoproduct.cochainComplexFunctor` of the Čech nerve): in
@@ -89,11 +89,23 @@ cofaces `U_i ⊓ U_i = U_i`.  Writing a degree-1 cochain as `(p, q, r, s)`:
 Therefore `H¹ = ker d¹ / im d⁰ ≅ Γ(U₀ ⊓ U₁) / range (S.sectionDiff F) = H1Cok S F`, the
 iso being `[(0, q, −q, 0)] ↦ [q]`.  The identification is **unconditional** (no
 acyclicity hypothesis — it is a pure homological-algebra fact about this specific
-2-cover complex); the only obstruction to formalising it is the grind of unfolding the
-`FormalCoproduct`-based `cechComplexFunctor` down to the concrete `Pi.π`-components and
-carrying out the 8-index kernel case-analysis with the `ULift (Fin 2)` bookkeeping.
-This is queued for the next wave; the `coverFamily` / N6-bridge pieces here are the
-scaffolding both sides of the equiv need.
+2-cover complex), and it is carried out in full in this file:
+
+* `sectionRestrict_trans`/`sectionRestrict_self`/`restrict_map_comp`/
+  `restrict_map_self`/`isIso_restrict_map` — the poset restriction calculus every
+  cancellation step reduces to;
+* `cechD01`/`cechD12` with `cechD01_π`/`cechD12_π` — the low-degree differentials in
+  product-typed, componentwise form;
+* `overlapCocycle` with `overlapCocycle_comp_d` — the cocycle `q ↦ (0, q, −q, 0)`
+  and the 8-index cancellation;
+* `ker_cechD12_π_diag_zero₀`/`₁`, `ker_cechD12_π_off_diag`, `overlapKerEquiv` — the
+  kernel description `ker d¹ = {(0, q, −q, 0)} ≃ₗ Γ(U₀ ⊓ U₁)`;
+* `pairLift`/`pairProj`/`pairLift_comp_cechD01`/`map_range_pairDiff` — the image
+  identification `im d⁰ = κ(im sectionDiff)`;
+* `cechCohomologyOneEquivH1Cok` — node N5 proper, assembled through
+  `isoSc' 0 1 2` and `ShortComplex.moduleCatHomologyIso`;
+* `hModuleOneEquivH1Cok` — the N5+N6 consumable
+  `HModule k F 1 ≃ₗ[k] H1Cok S F` under the `HasCechToHModuleIso` gate.
 -/
 
 set_option autoImplicit false
