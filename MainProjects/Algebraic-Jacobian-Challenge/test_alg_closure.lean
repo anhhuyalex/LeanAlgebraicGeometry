@@ -1,2 +1,0 @@
-import Mathlib.FieldTheory.IsAlgClosed.AlgebraicClosure
-#check AlgebraicClosure
