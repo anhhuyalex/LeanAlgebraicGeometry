@@ -245,12 +245,21 @@ Run 0010 strengthening: the existential also carries
 representability (`Pic_{C/k}` is a disjoint union of open quasi-projective
 `k`-subschemes), so the strengthened statement is exactly as true as the old
 one; it lets the local-finiteness carrier `instPicSchemeLocallyOfFiniteType`
-be PROVED by extraction instead of carrying its own sorry. -/
+be PROVED by extraction instead of carrying its own sorry.
+
+Iter-current strengthening: the existential additionally carries
+`IsSeparated X.hom`. Kleiman §4 Thm `th:main` delivers `Pic_{C/k}` as a
+*separated* scheme locally of finite type over `k`, so separatedness sits in
+the very same existence package; bundling it here (as the third conjunct)
+lets the global `PicScheme.isSeparated` instance — and the sibling `Pic0`
+`picScheme_isSeparated` — be PROVED by extraction, exactly as with local
+finiteness, rather than carrying a fresh sorry. -/
 class HasPicScheme {k : Type u} [Field k] (C : Over (Spec (.of k)))
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
     [GeometricallyIntegral C.hom] : Prop where
   has_pic_scheme : ∃ (X : Over (Spec (.of k))),
-    Nonempty ((PicScheme.picSharp C).RepresentableBy X) ∧ LocallyOfFiniteType X.hom
+    Nonempty ((PicScheme.picSharp C).RepresentableBy X) ∧
+      LocallyOfFiniteType X.hom ∧ IsSeparated X.hom
 
 /-- The **Picard scheme** `Pic_{C/k}` of a smooth proper geometrically
 integral curve `C/k`, encoded as an object of `Over (Spec (.of k))`.
@@ -282,6 +291,14 @@ of open quasi-projective `k`-subschemes) — since the strengthened
 `HasPicScheme` existential packages local finiteness together with
 representability; the former separate `instPicSchemeLocallyOfFiniteType`
 sorry is absorbed into this one.
+
+Iter-current: this sorry now further carries **separatedness** of the
+representing scheme — Kleiman §4 Thm `th:main` delivers `Pic_{C/k}` as a
+*separated* `k`-scheme locally of finite type — since the strengthened
+existential bundles `IsSeparated X.hom` as its third conjunct. The global
+`PicScheme.isSeparated` instance (and the sibling `Pic0` `picScheme_isSeparated`)
+are PROVED by extracting this conjunct, so no separate separatedness sorry
+is needed.
 
 The conditionality on `[HasRationalPoint C]` is essential for truth: without
 a section, `Pic(C ×_k T)/π_T^* Pic(T)` need not even be a Zariski sheaf. -/
@@ -708,7 +725,7 @@ instance instPicSchemeLocallyOfFiniteType {k : Type u} [Field k]
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
     [GeometricallyIntegral C.hom] [HasPicScheme C] :
     PicSchemeLocallyOfFiniteType C :=
-  ⟨(HasPicScheme.has_pic_scheme (C := C)).choose_spec.2⟩
+  ⟨(HasPicScheme.has_pic_scheme (C := C)).choose_spec.2.1⟩
 
 /-- Projection of `PicSchemeLocallyOfFiniteType` to the Mathlib morphism
 property, so that instance search finds `LocallyOfFiniteType (PicScheme
@@ -720,6 +737,26 @@ instance {k : Type u} [Field k] (C : Over (Spec (.of k)))
     [PicSchemeLocallyOfFiniteType C] :
     LocallyOfFiniteType (PicScheme C).hom :=
   PicSchemeLocallyOfFiniteType.locallyOfFiniteType
+
+/-- **`Pic_{C/k}` is separated over `k`.**
+
+Kleiman §4 Thm `th:main` packages separatedness together with representability
+and local finite type for `Pic_{C/k}` ("Then `Pic_{X/k}` is separated, ..."):
+one existence package, as in the theorem. As with
+`instPicSchemeLocallyOfFiniteType`, we extract this property from the
+strengthened `HasPicScheme.has_pic_scheme` existential — its third
+component — so downstream files (`Picard/Pic0AbelianVariety.lean`) can consume
+`IsSeparated (PicScheme C).hom` as a normal instance without opening the axiom
+layer. The conditionality on `[HasRationalPoint C]` lives entirely upstream in
+`instHasPicScheme` (which supplies `HasPicScheme C`); this extraction only
+names `[HasPicScheme C]`, as every consumer able to name `PicScheme C`
+already does. -/
+instance isSeparated {k : Type u} [Field k]
+    (C : Over (Spec (.of k)))
+    [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
+    [GeometricallyIntegral C.hom] [HasPicScheme C] :
+    IsSeparated (PicScheme C).hom :=
+  (HasPicScheme.has_pic_scheme (C := C)).choose_spec.2.2
 
 end PicScheme
 

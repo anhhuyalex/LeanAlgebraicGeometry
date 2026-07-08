@@ -148,6 +148,213 @@ theorem grpObj {k : Type u} [Field k]
     Nonempty (GrpObj (Pic0Scheme C)) :=
   GroupScheme.IdentityComponent.isSubgroupHomomorphism (PicScheme C)
 
+/-! ### §1b. Harvested helper lemmas (from GitHub PR #1, Alex Nguyen)
+
+Sorry-free scheme-general and `Pic⁰_{C/k}`-specific helpers adapted from the
+PR: the `k`-rationality residue-field identification, finite-dimensionality of
+the cotangent space over a field, the pointed dual-number tangent-space API,
+the separatedness / local-finite-type / quasi-compactness transports of the
+identity-component substrate, and the fpqc-descent reduction of universal
+closedness. Each `Pic⁰`-specific helper carries the file's standard instance
+hypotheses `[HasPicScheme C] [PicScheme.PicSchemeLocallyOfFiniteType C]` (rather
+than the PR's `haveI := instHasPicScheme C` pattern, which needs the absent
+`[HasRationalPoint C]`), exactly as every other pinned declaration here. -/
+
+/-- **Sorry-free, scheme-general.** A section `e : Spec k ⟶ X` of a scheme over
+`Spec k` is a `k`-rational point, so the residue field at `e` is canonically
+`k`. The section `e` and structure map `π` induce residue-field maps
+`sbar : κ(e) → κ(pt)` and `pbar : κ(pt') → κ(e)` with
+`pbar ≫ sbar = (e ≫ π).residueFieldMap default`, an iso because `e ≫ π = 𝟙`
+is an open immersion; hence `sbar` is a split epi, and being a field
+homomorphism it is a mono, so `sbar` is an isomorphism
+(`isIso_of_mono_of_isSplitEpi`). The base residue-field identification is
+discharged by composing `Scheme.Spec.residueFieldIso` with
+`Ideal.algEquivResidueFieldOfField`. -/
+theorem residueFieldIso_of_section_over_field {k : Type u} [Field k]
+    (X : Over (Spec (.of k))) (e : Spec (.of k) ⟶ X.left)
+    (hsec : e ≫ X.hom = 𝟙 (Spec (.of k))) :
+    Nonempty (X.left.residueField (e.base default) ≅ CommRingCat.of k) := by
+  set sbar := e.residueFieldMap default with hsbar
+  set pbar := X.hom.residueFieldMap (e.base default) with hpbar
+  have hc : (e ≫ X.hom).residueFieldMap default = pbar ≫ sbar :=
+    residueFieldMap_comp e X.hom default
+  haveI : IsOpenImmersion (e ≫ X.hom) := by rw [hsec]; infer_instance
+  haveI : IsIso (pbar ≫ sbar) :=
+    hc ▸ (inferInstance : IsIso ((e ≫ X.hom).residueFieldMap default))
+  haveI : IsSplitEpi sbar :=
+    ⟨⟨inv (pbar ≫ sbar) ≫ pbar, by rw [Category.assoc, IsIso.inv_hom_id]⟩⟩
+  haveI : Mono sbar :=
+    ConcreteCategory.mono_of_injective sbar sbar.hom.injective
+  haveI : IsIso sbar := isIso_of_mono_of_isSplitEpi sbar
+  obtain ⟨hbase⟩ : Nonempty ((Spec (.of k)).residueField default ≅ CommRingCat.of k) := by
+    let x : Spec (.of k) := default
+    refine ⟨Scheme.Spec.residueFieldIso (.of k) default ≪≫ ?_⟩
+    exact
+      ((Ideal.algEquivResidueFieldOfField (k := k) x.asIdeal).toRingEquiv.toCommRingCatIso).symm
+  exact ⟨asIso sbar ≪≫ hbase⟩
+
+/-- **Sorry-free, scheme-general.** For a scheme locally of finite type over a
+field, the cotangent space at any point is finite-dimensional over the residue
+field — the local-Noetherianity input dimension arguments need. -/
+theorem finiteDimensional_cotangentSpace_of_locallyOfFiniteType {k : Type u} [Field k]
+    (X : Over (Spec (.of k))) [LocallyOfFiniteType X.hom] (x : X.left) :
+    FiniteDimensional (IsLocalRing.ResidueField (X.left.presheaf.stalk x))
+      (IsLocalRing.CotangentSpace (X.left.presheaf.stalk x)) := by
+  letI : IsLocallyNoetherian X.left := LocallyOfFiniteType.isLocallyNoetherian X.hom
+  infer_instance
+
+/-- **Pointed dual-number points of `X` at `e`, over `Spec k`.** The
+`k[ε]`-valued points of `X` lying over the closed point of `Spec k[ε]` and
+landing at `e`; the functor-of-points model of the Zariski tangent space at
+`e`. A named restatement of the anonymous subtype
+`overDualNumberSectionEquivCotangentSpaceDual` targets, kept for readability
+at the call sites below. -/
+def pointedDualNumberPoints {k : Type u} [Field k] (X : Over (Spec (.of k)))
+    (e : Spec (.of k) ⟶ X.left) :=
+  {g : Spec (CommRingCat.of (DualNumber k)) ⟶ X.left //
+      g ≫ X.hom = Spec.map (CommRingCat.ofHom (algebraMap k (DualNumber k)))
+        ∧ g.base (IsLocalRing.closedPoint (DualNumber k)) = e.base default}
+
+/-- **Axiom-clean.** The `k`-rational identity-section point of `Pic⁰_{C/k}`:
+the lift of the Picard scheme's identity section `MonObj.one` through the open
+immersion `Pic⁰_{C/k} ↪ Pic_{C/k}`, i.e. the sibling's
+`GroupScheme.identityComponentSection` specialised to `G = PicScheme C`
+(transported along the definitional identification
+`Pic0Scheme C = GroupScheme.IdentityComponent (PicScheme C)`). This is the
+`e`-witness of the Σ'-bundle in `tangentSpaceIso`. -/
+noncomputable def identitySection {k : Type u} [Field k]
+    (C : Over (Spec (.of k)))
+    [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
+    [GeometricallyIntegral C.hom] [HasPicScheme C]
+    [PicScheme.PicSchemeLocallyOfFiniteType C] :
+    Spec (.of k) ⟶ (Pic0Scheme C).left :=
+  GroupScheme.identityComponentSection (PicScheme C)
+
+/-- **Axiom-clean.** The identity-section point is a genuine section of the
+structural morphism: `identitySection C ≫ (Pic0Scheme C).hom = 𝟙 (Spec k)`.
+Transport of the sibling's `identityComponentSection_isSection`. -/
+theorem identitySection_isSection {k : Type u} [Field k]
+    (C : Over (Spec (.of k)))
+    [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
+    [GeometricallyIntegral C.hom] [HasPicScheme C]
+    [PicScheme.PicSchemeLocallyOfFiniteType C] :
+    identitySection C ≫ (Pic0Scheme C).hom = 𝟙 (Spec (.of k)) :=
+  GroupScheme.identityComponentSection_isSection (PicScheme C)
+
+/-- **Axiom-clean.** The Stacks 0B28 dictionary at the identity point: pointed
+dual-number points of `Pic⁰_{C/k}` at `e` biject with `κ(e)`-linear functionals
+on the cotangent space `m_e/m_e²`. Direct specialisation of
+`overDualNumberSectionEquivCotangentSpaceDual`
+(`Picard/TangentSpaceIdentitySection.lean`) to `e = identitySection C`; the two
+points `(identitySection C).base default` and
+`(identitySection C).base (IsLocalRing.closedPoint k)` are bridged by
+`Subsingleton (Spec k)`, the same idiom `tangentSpaceCotangentDual` uses. -/
+theorem pointedDualNumberPoints_equiv_cotangentSpaceDual {k : Type u} [Field k]
+    (C : Over (Spec (.of k)))
+    [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
+    [GeometricallyIntegral C.hom] [HasPicScheme C]
+    [PicScheme.PicSchemeLocallyOfFiniteType C] :
+    Nonempty (pointedDualNumberPoints (Pic0Scheme C) (identitySection C) ≃
+      Module.Dual
+        (IsLocalRing.ResidueField
+          ((Pic0Scheme C).left.presheaf.stalk ((identitySection C).base default)))
+        (IsLocalRing.CotangentSpace
+          ((Pic0Scheme C).left.presheaf.stalk ((identitySection C).base default)))) := by
+  haveI : Subsingleton ↥(Spec (CommRingCat.of k)) :=
+    inferInstanceAs (Subsingleton (PrimeSpectrum k))
+  exact ⟨overDualNumberSectionEquivCotangentSpaceDual (Pic0Scheme C)
+    (identitySection_isSection C) (congrArg _ (Subsingleton.elim _ _))⟩
+
+/-- **Sorry-free source (carries the FGA existential's `sorryAx`).** The Picard
+scheme `Pic_{C/k}` is separated over `k`. Kleiman delivers this as part of the
+§4 representability package ("Then `Pic_{X/k}` is separated, ..."); its home is
+the strengthened `HasPicScheme` existential in `FGAPicRepresentability.lean`,
+which now bundles `IsSeparated X.hom` as its third conjunct; this helper is the
+direct `Classical.choose_spec` extraction (same content as the global
+`PicScheme.isSeparated` instance) consumed by the `isSeparated` assembly. -/
+theorem picScheme_isSeparated {k : Type u} [Field k]
+    (C : Over (Spec (.of k)))
+    [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
+    [GeometricallyIntegral C.hom] [HasPicScheme C] :
+    IsSeparated (PicScheme C).hom :=
+  (HasPicScheme.has_pic_scheme (C := C)).choose_spec.2.2
+
+/-- **Axiom-clean.** Separatedness of `Pic⁰_{C/k}` over `k`: the structural
+morphism factors as the clopen inclusion `Pic⁰_{C/k} ↪ Pic_{C/k}` (an open
+immersion by the sibling's axiom-clean
+`IdentityComponent.isOpenSubgroupScheme`, hence a monomorphism, hence
+separated) followed by the separated `(PicScheme C).hom`
+(`picScheme_isSeparated`); separatedness is stable under composition. This is
+the `IsSeparated` conjunct of the pinned `proper`. -/
+theorem isSeparated {k : Type u} [Field k]
+    (C : Over (Spec (.of k)))
+    [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
+    [GeometricallyIntegral C.hom] [HasPicScheme C]
+    [PicScheme.PicSchemeLocallyOfFiniteType C] :
+    IsSeparated (Pic0Scheme C).hom := by
+  haveI : IsSeparated (PicScheme C).hom := picScheme_isSeparated C
+  obtain ⟨⟨f, hopen, -⟩⟩ :=
+    GroupScheme.IdentityComponent.isOpenSubgroupScheme (PicScheme C)
+  haveI := hopen
+  change IsSeparated (GroupScheme.IdentityComponent (PicScheme C)).hom
+  rw [← Over.w f]
+  infer_instance
+
+/-- **Axiom-clean.** `Pic⁰_{C/k}` is locally of finite type over `k`: the first
+(sorry-free) conjunct of the sibling's
+`IdentityComponent.isFiniteTypeGeometricallyIrreducible`, transported along the
+definitional identification. The `LocallyOfFiniteType` conjunct of the pinned
+`proper`. -/
+theorem locallyOfFiniteType {k : Type u} [Field k]
+    (C : Over (Spec (.of k)))
+    [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
+    [GeometricallyIntegral C.hom] [HasPicScheme C]
+    [PicScheme.PicSchemeLocallyOfFiniteType C] :
+    LocallyOfFiniteType (Pic0Scheme C).hom :=
+  (GroupScheme.IdentityComponent.isFiniteTypeGeometricallyIrreducible
+    (PicScheme C)).1
+
+/-- **Closed at this file's level (residual content in the sibling's typed
+sorry).** `Pic⁰_{C/k}` is quasi-compact over `k`: the second conjunct of the
+sibling's `IdentityComponent.isFiniteTypeGeometricallyIrreducible` (Kleiman §5
+Lem.~`lem:agps`~(3): `α(U × U) = G⁰` is the image of the affine, hence
+quasi-compact, `U × U`). Not needed for the `proper` assembly (Mathlib's
+`IsProper` derives quasi-compactness from universal closedness) but recorded
+for the blueprint's finite-type chain. -/
+theorem quasiCompact {k : Type u} [Field k]
+    (C : Over (Spec (.of k)))
+    [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
+    [GeometricallyIntegral C.hom] [HasPicScheme C]
+    [PicScheme.PicSchemeLocallyOfFiniteType C] :
+    QuasiCompact (Pic0Scheme C).hom :=
+  (GroupScheme.IdentityComponent.isFiniteTypeGeometricallyIrreducible
+    (PicScheme C)).2.1
+
+/-- **Sorry-free.** Universal closedness of `Pic⁰_{C/k}` descends from its base
+change to the algebraic closure `Spec k̄ → Spec k`. That base-change map is
+faithfully flat and quasi-compact (a field extension `k → k̄` is injective and
+flat, so `Spec.map` of it is surjective and flat; being a map of affines it is
+quasi-compact), and `UniversallyClosed` is fpqc-local on the base (Stacks 02KS;
+EGA IV₂ 2.6.4). The pinned Mathlib packages exactly this descent as the
+`@[stacks 02KS]` instance
+`descendsAlong_universallyClosed_surjective_inf_flat_inf_quasicompact`
+(`Mathlib/AlgebraicGeometry/Morphisms/FlatDescent.lean`), so the closure is a
+one-line `of_pullback_snd_of_descendsAlong` application — the same
+`MorphismProperty` descent pattern `smooth_of_grpObj` uses, with the three
+`Surjective`/`Flat`/`QuasiCompact` facts about `Spec.map (algebraMap k k̄)`
+supplied by `inferInstance`. -/
+theorem universallyClosed_of_baseChange {k : Type u} [Field k]
+    (C : Over (Spec (.of k)))
+    [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
+    [GeometricallyIntegral C.hom] [HasPicScheme C]
+    [PicScheme.PicSchemeLocallyOfFiniteType C]
+    (h : UniversallyClosed (pullback.snd (Pic0Scheme C).hom
+      (Spec.map (CommRingCat.ofHom (algebraMap k (AlgebraicClosure k)))))) :
+    UniversallyClosed (Pic0Scheme C).hom := by
+  exact MorphismProperty.of_pullback_snd_of_descendsAlong
+    (Q := @Surjective ⊓ @Flat ⊓ @QuasiCompact)
+    ⟨⟨inferInstance, inferInstance⟩, inferInstance⟩ h
+
 /-- **Dual-number points of `Pic⁰_{C/k}` at the identity are the cotangent
 dual** (Kleiman §5 Thm.~`thm:tgtsp`, LHS). Given the `k`-group-scheme
 structure on `Pic0Scheme C` (supplied by `Pic0.grpObj`), the identity section

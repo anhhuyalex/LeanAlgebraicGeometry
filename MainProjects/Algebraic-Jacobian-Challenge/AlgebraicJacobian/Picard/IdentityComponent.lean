@@ -430,7 +430,10 @@ private lemma identityComponentSection_range_subset
   -- `connectedComponent (identitySectionPoint G)`.
   exact mem_connectedComponent
 
-private noncomputable def identityComponentSection
+-- (iter-current) de-privatised: consumed by `Scheme.Pic0.identitySection`
+-- in the sibling `Picard/Pic0AbelianVariety.lean` (the `e`-witness of the
+-- `tangentSpaceIso` Σ'-bundle).
+noncomputable def identityComponentSection
     {k : Type u} [Field k]
     (G : Over (Spec (.of k)))
     [GrpObj G] [LocallyOfFiniteType G.hom] :
@@ -447,7 +450,7 @@ Composing `identityComponentSection G` with `(IdentityComponent G).hom`
 returns the identity on `Spec k`, by `IsOpenImmersion.lift_fac` plus the
 over-compatibility `MonObj.one.left ≫ G.hom = 𝟙` (the terminal of
 `Over (Spec k)` has `.hom = 𝟙 (Spec k)` definitionally). -/
-private lemma identityComponentSection_isSection
+lemma identityComponentSection_isSection
     {k : Type u} [Field k]
     (G : Over (Spec (.of k)))
     [GrpObj G] [LocallyOfFiniteType G.hom] :
