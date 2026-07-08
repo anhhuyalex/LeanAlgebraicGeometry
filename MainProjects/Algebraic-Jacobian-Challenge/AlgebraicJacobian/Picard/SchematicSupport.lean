@@ -219,4 +219,97 @@ theorem faithfulSMul_quotientAnnihilator
   letI := Module.quotientAnnihilator (R := R) (M := M)
   Module.annihilator_eq_bot.mp annihilator_quotientAnnihilator_eq_bot
 
+/-! ## The descent isomorphism `F ≅ i_* i^* F`, affine heart
+
+The support-descent brick `F ≅ i_* N` of `lem:gamma_fiber_baseChange_field`
+realizes a finitely presented sheaf `F` on `Y` as the pushforward `i_* (i^* F)`
+of its restriction to the schematic-support closed immersion
+`i : Z = V(Ann F) ↪ Y`.  The comparison is the unit
+`η : F ⟶ i_* i^* F` of the pullback–pushforward adjunction, proved an
+isomorphism affine-locally on a basis.
+
+On an affine open `U = Spec R` of `Y` the closed immersion restricts to
+`Spec (R ⧸ I) ↪ Spec R`, where `I := (annihilator F).ideal U` is the section of
+the annihilator ideal sheaf.  The always-available `ofIdeals` direction
+`annihilator_ideal_le` gives `I ≤ Ann_R M` for `M := Γ(F, U)` — this inclusion
+(not the sharpness reverse, which is blocked on the QCoh localization bridge) is
+*all* the descent isomorphism needs.  Under the tilde/pullback section formula
+the closed-immersion restriction `Γ(i^* F, i⁻¹ U)` is `(R ⧸ I) ⊗_R M`, and the
+unit `η.app U` is the canonical map `m ↦ 1 ⊗ₜ m : M → (R ⧸ I) ⊗_R M`.  The two
+lemmas below package its inverse and bijectivity for `I ≤ Ann_R M`:
+
+* `quotTensorEquivOfLeAnnihilator` / `quotTensorEquivOfLeAnnihilator_apply` — the
+  `R`-linear equivalence `M ≃ₗ[R] (R ⧸ I) ⊗_R M` whose forward map is
+  `m ↦ 1 ⊗ₜ m`.  Since `I` kills `M`, `I • ⊤ = ⊥`, so Mathlib's
+  `TensorProduct.quotTensorEquivQuotSMul M I : (R ⧸ I) ⊗_R M ≃ₗ M ⧸ I • ⊤`
+  collapses to `M ⧸ ⊥ ≅ M` (`Submodule.quotEquivOfEqBot`);
+* `bijective_mk_one_of_le_annihilator` — the resulting bijectivity of the honest
+  unit map `(TensorProduct.mk R (R ⧸ I) M) 1`, in the `Function.Bijective` form
+  directly consumed by the section-wise iso criterion
+  (`Modules.isIso_of_isIso_app_of_isBasis`) when globalizing `η` to the scheme
+  isomorphism `F ≅ i_* i^* F`.
+
+Universe-monomorphic pure algebra, axiom-clean. -/
+
+/-- **The descent isomorphism, affine heart**: for an ideal `I ≤ Ann_R M` the
+`R`-linear map `m ↦ 1 ⊗ₜ m : M → (R ⧸ I) ⊗_R M` is an equivalence.
+
+`I ≤ Ann_R M` means `I • (⊤ : Submodule R M) = ⊥`, so
+`TensorProduct.quotTensorEquivQuotSMul M I : (R ⧸ I) ⊗_R M ≃ₗ M ⧸ (I • ⊤)`
+identifies the base change with `M ⧸ ⊥`, which is `M`
+(`Submodule.quotEquivOfEqBot`); composing gives `M ≃ₗ[R] (R ⧸ I) ⊗_R M`.
+
+This is the affine, sections-level content of the closed-immersion unit
+`F ⟶ i_* i^* F` being an isomorphism in the support-descent brick `F ≅ i_* N`:
+on `U = Spec R` the restriction `Γ(i^* F, i⁻¹ U)` is `(R ⧸ I) ⊗_R Γ(F, U)` and the
+unit is exactly `m ↦ 1 ⊗ₜ m`.  Only the inclusion `I ≤ Ann_R M`
+(`annihilator_ideal_le`, the always-available direction) is used — the reverse
+sharpness inclusion, blocked on the QCoh localization bridge, is *not* needed for
+the isomorphism, only for identifying `Z` as the honest (minimal) support. -/
+noncomputable def quotTensorEquivOfLeAnnihilator
+    {R : Type*} [CommRing R] {M : Type*} [AddCommGroup M] [Module R M]
+    (I : Ideal R) (hI : I ≤ Module.annihilator R M) :
+    M ≃ₗ[R] (R ⧸ I) ⊗[R] M :=
+  have hbot : I • (⊤ : Submodule R M) = ⊥ := by
+    rw [eq_bot_iff, Submodule.smul_le]
+    intro r hr n _
+    rw [Submodule.mem_bot]
+    exact (Module.mem_annihilator.mp (hI hr)) n
+  (Submodule.quotEquivOfEqBot (I • ⊤) hbot).symm.trans
+    (TensorProduct.quotTensorEquivQuotSMul M I).symm
+
+/-- The forward map of `quotTensorEquivOfLeAnnihilator` is the canonical unit
+`m ↦ 1 ⊗ₜ m` — i.e. it *is* the (sections of the) closed-immersion adjunction
+unit `F ⟶ i_* i^* F`, the load-bearing identification for globalizing the descent
+isomorphism `F ≅ i_* N`. -/
+theorem quotTensorEquivOfLeAnnihilator_apply
+    {R : Type*} [CommRing R] {M : Type*} [AddCommGroup M] [Module R M]
+    (I : Ideal R) (hI : I ≤ Module.annihilator R M) (m : M) :
+    quotTensorEquivOfLeAnnihilator I hI m = (1 : R ⧸ I) ⊗ₜ[R] m := by
+  have hcomp := TensorProduct.quotTensorEquivQuotSMul_symm_comp_mkQ (M := M) I
+  simp only [quotTensorEquivOfLeAnnihilator, LinearEquiv.trans_apply]
+  rw [show (Submodule.quotEquivOfEqBot (I • (⊤ : Submodule R M)) _).symm m
+        = (I • (⊤ : Submodule R M)).mkQ m from rfl]
+  exact congrArg (fun (f : _ →ₗ[R] _) => f m) hcomp
+
+/-- **Bijectivity of the closed-immersion unit (affine heart)**: for `I ≤ Ann_R M`
+the canonical map `(TensorProduct.mk R (R ⧸ I) M) 1 : M → (R ⧸ I) ⊗_R M`,
+`m ↦ 1 ⊗ₜ m`, is bijective.
+
+This is `quotTensorEquivOfLeAnnihilator` read as a `Function.Bijective`
+statement about the honest unit map, the form directly consumable by the
+section-wise isomorphism criterion `Modules.isIso_of_isIso_app_of_isBasis` when
+upgrading the closed-immersion adjunction unit `F ⟶ i_* i^* F` to the scheme
+isomorphism `F ≅ i_* N` of `lem:gamma_fiber_baseChange_field`. -/
+theorem bijective_mk_one_of_le_annihilator
+    {R : Type*} [CommRing R] {M : Type*} [AddCommGroup M] [Module R M]
+    (I : Ideal R) (hI : I ≤ Module.annihilator R M) :
+    Function.Bijective ((TensorProduct.mk R (R ⧸ I) M) 1) := by
+  have hfun : ((TensorProduct.mk R (R ⧸ I) M) 1) =
+      (quotTensorEquivOfLeAnnihilator I hI : M → (R ⧸ I) ⊗[R] M) := by
+    funext m
+    exact (quotTensorEquivOfLeAnnihilator_apply I hI m).symm
+  rw [hfun]
+  exact (quotTensorEquivOfLeAnnihilator I hI).bijective
+
 end AlgebraicGeometry
