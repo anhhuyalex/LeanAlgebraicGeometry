@@ -870,4 +870,160 @@ theorem span_pow_p1YSection_scaffold :
 
 end BaseChange
 
+/-! ## The overlap identities (route step 3) and the final assembly -/
+
+section Overlap
+
+open ProjectiveSpace HomogeneousLocalization
+
+/-- The coordinate fraction `Xⱼ/Xᵢ = p1CoordAway i j` is exactly the localization
+element `Away.isLocalizationElem` that mathlib uses to describe `Away 𝒜 (XᵢXⱼ)` as a
+localization of `Away 𝒜 Xᵢ` (both are `Xⱼ/Xᵢ`, differing only by `Xⱼ^1` vs `Xⱼ`). -/
+private lemma p1CoordAway_eq_isLocalizationElem (i j : ULift.{u} (Fin 2)) :
+    p1CoordAway (ULift.{u} (Fin 2)) i j
+      = Away.isLocalizationElem
+          (𝒜 := homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))
+          (ProjTwist.X_mem_deg_one (ULift.{u} (Fin 2)) i)
+          (ProjTwist.X_mem_deg_one (ULift.{u} (Fin 2)) j) := by
+  apply HomogeneousLocalization.val_injective
+  simp only [p1CoordAway, Away.isLocalizationElem, Away.val_mk, pow_one]
+
+set_option maxHeartbeats 1600000 in
+-- `maxHeartbeats`: the affine-chart iso chain (`basicOpenIsoSpec`/`awayι`) threads the whole
+-- `Proj` structure-sheaf machinery through several `Scheme.basicOpen`/image rewrites (fleet recipe).
+set_option backward.isDefEq.respectTransparency false in
+-- `respectTransparency false`: the proof repeatedly crosses the `Proj`/`Scheme.Opens`
+-- presheaf-carrier diamond (`X.presheaf` as `TopCat.Presheaf` vs functor); the fleet recipe.
+/-- **The Proj-side basic open of the coordinate section.**  The non-vanishing locus
+of the section `Xⱼ/Xᵢ = awayToSection (p1CoordAway i j)` inside the chart `D₊(Xᵢ)` is the
+overlap `D₊(Xᵢ) ⊓ D₊(Xⱼ)`.  Transport the affine-chart identity: on `D₊(Xᵢ) ≅ Spec(Away)`
+the section corresponds to `Xⱼ/Xᵢ`, whose basic open is `D(Xⱼ/Xᵢ) = awayι ⁻¹ D₊(Xⱼ)`
+(`awayι_preimage_basicOpen`), and the image under `awayι` is `D₊(Xᵢ) ⊓ D₊(Xⱼ)`. -/
+private lemma proj_basicOpen_awayToSection_coord (i j : ULift.{u} (Fin 2)) :
+    Scheme.basicOpen (Proj (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ)))
+        ((Proj.awayToSection (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) (X i)).hom
+          (p1CoordAway (ULift.{u} (Fin 2)) i j))
+      = Proj.basicOpen (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) (X i)
+        ⊓ Proj.basicOpen (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) (X j) := by
+  have hi : X i ∈ homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ) 1 :=
+    ProjTwist.X_mem_deg_one (ULift.{u} (Fin 2)) i
+  have hj : X j ∈ homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ) 1 :=
+    ProjTwist.X_mem_deg_one (ULift.{u} (Fin 2)) j
+  -- crux: on the affine chart `D₊(Xᵢ) ≅ Spec(Away)`, the section `awayToSection a`
+  -- restricts to the Spec section corresponding to `a` (from `basicOpenToSpec_app_top`).
+  have hcrux : (Proj.basicOpenIsoSpec (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))
+          (X i) hi one_pos).hom.app ⊤
+        ((Scheme.ΓSpecIso (CommRingCat.of (Away
+          (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) (X i)))).inv.hom
+          (p1CoordAway (ULift.{u} (Fin 2)) i j))
+      = (Proj.basicOpen (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))
+          (X i)).topIso.inv.hom
+          ((Proj.awayToSection (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) (X i)).hom
+            (p1CoordAway (ULift.{u} (Fin 2)) i j)) := by
+    rw [Proj.basicOpenIsoSpec_hom, Proj.basicOpenToSpec_app_top,
+        CommRingCat.comp_apply, Iso.inv_hom_id_apply, CommRingCat.comp_apply]
+    rfl
+  -- step B: on the affine chart, the basic open of that section is `φ.hom ⁻¹ᵁ D(a)`.
+  have hB : (Proj.basicOpen (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))
+          (X i)).toScheme.basicOpen
+        ((Proj.basicOpen (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))
+          (X i)).topIso.inv.hom
+          ((Proj.awayToSection (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) (X i)).hom
+            (p1CoordAway (ULift.{u} (Fin 2)) i j)))
+      = (Proj.basicOpenIsoSpec (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))
+          (X i) hi one_pos).hom ⁻¹ᵁ
+          PrimeSpectrum.basicOpen (p1CoordAway (ULift.{u} (Fin 2)) i j) := by
+    have hpre := Scheme.preimage_basicOpen
+      (Proj.basicOpenIsoSpec (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))
+        (X i) hi one_pos).hom
+      ((Scheme.ΓSpecIso (CommRingCat.of (Away
+        (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) (X i)))).inv.hom
+        (p1CoordAway (ULift.{u} (Fin 2)) i j))
+    rw [hcrux] at hpre
+    rw [← hpre]
+    congr 1
+    exact basicOpen_eq_of_affine
+      (R := CommRingCat.of (Away (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) (X i)))
+      (p1CoordAway (ULift.{u} (Fin 2)) i j)
+  -- step C: `ι = φ.hom ≫ awayι`.
+  have hιfac : (Proj.basicOpen (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) (X i)).ι
+      = (Proj.basicOpenIsoSpec (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))
+          (X i) hi one_pos).hom
+        ≫ Proj.awayι (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) (X i) hi one_pos := by
+    rw [← Proj.basicOpenIsoSpec_inv_ι (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))
+      (X i) hi one_pos, Iso.hom_inv_id_assoc]
+  rw [← (Proj.basicOpen (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))
+          (X i)).ι_image_basicOpen_topIso_inv
+        ((Proj.awayToSection (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) (X i)).hom
+          (p1CoordAway (ULift.{u} (Fin 2)) i j)),
+      hB]
+  -- `.ι ''ᵁ (φ.hom ⁻¹ᵁ W) = awayι ''ᵁ W` (rewrite `ι = φ.hom ≫ awayι` inside `conv`)
+  have himg : (Proj.basicOpen (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) (X i)).ι ''ᵁ
+        ((Proj.basicOpenIsoSpec (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))
+          (X i) hi one_pos).hom ⁻¹ᵁ PrimeSpectrum.basicOpen (p1CoordAway (ULift.{u} (Fin 2)) i j))
+      = Proj.awayι (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) (X i) hi one_pos ''ᵁ
+          PrimeSpectrum.basicOpen (p1CoordAway (ULift.{u} (Fin 2)) i j) := by
+    simp only [hιfac, Scheme.Hom.comp_image, Scheme.Hom.image_preimage_eq_opensRange_inf,
+        Scheme.Hom.opensRange_of_isIso, top_inf_eq]
+  rw [himg, p1CoordAway_eq_isLocalizationElem i j,
+      ← Proj.awayι_preimage_basicOpen (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))
+        hi one_pos hj one_pos,
+      Scheme.Hom.image_preimage_eq_opensRange_inf, Proj.opensRange_awayι]
+
+/-- **The overlap-as-basic-open identity (route step 3).**  The overlap of the two chart
+preimages `V_i ⊓ V_j = toProjInt ⁻¹ᵁ (D₊(Xᵢ) ⊓ D₊(Xⱼ))` is exactly the non-vanishing
+locus of the coordinate section `p1CoordSection i j` on `ℙ¹`; pull back the Proj-side
+identity `proj_basicOpen_awayToSection_coord` along `toProjInt`. -/
+private lemma p1Chart_inf_eq_basicOpen_coordSection (k : Type u) [Field k]
+    (i j : ULift.{u} (Fin 2)) :
+    p1Chart k i ⊓ p1Chart k j
+      = Scheme.basicOpen (ℙ(ULift.{u} (Fin 2); Spec (CommRingCat.of k)))
+          (((ProjectiveSpace.toProjInt (ULift.{u} (Fin 2)) (Spec (CommRingCat.of k))).app
+              (Proj.basicOpen (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))
+                (X i))).hom
+            ((Proj.awayToSection (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))
+                (X i)).hom
+              (p1CoordAway (ULift.{u} (Fin 2)) i j))) := by
+  rw [← Scheme.preimage_basicOpen
+        (ProjectiveSpace.toProjInt (ULift.{u} (Fin 2)) (Spec (CommRingCat.of k)))
+        ((Proj.awayToSection (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) (X i)).hom
+          (p1CoordAway (ULift.{u} (Fin 2)) i j)),
+      proj_basicOpen_awayToSection_coord i j, Scheme.Hom.preimage_inf]
+  rfl
+
+/-- The image of the coordinate `Xⱼ/Xᵢ` under the away-restriction `Away 𝒜 Xᵢ → Away 𝒜 (X₀X₁)`
+computed on the standard chart pair: `awayMap` of the two coordinate fractions multiply to `1`
+in `Away 𝒜 (X₀X₁)` (both are `X₀X₁`-fractions and mutually inverse, `awayFraction_mul_inv`). -/
+private lemma awayMap_coord_mul_eq_one :
+    HomogeneousLocalization.awayMap (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))
+        (ProjTwist.X_mem_deg_one (ULift.{u} (Fin 2)) ⟨1⟩)
+        (rfl : (X ⟨0⟩ * X ⟨1⟩ : MvPolynomial (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) = X ⟨0⟩ * X ⟨1⟩)
+        (p1CoordAway (ULift.{u} (Fin 2)) ⟨0⟩ ⟨1⟩)
+      * HomogeneousLocalization.awayMap (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))
+          (ProjTwist.X_mem_deg_one (ULift.{u} (Fin 2)) ⟨0⟩)
+          (mul_comm (X (⟨0⟩ : ULift.{u} (Fin 2))) (X ⟨1⟩))
+          (p1CoordAway (ULift.{u} (Fin 2)) ⟨1⟩ ⟨0⟩) = 1 := by
+  apply HomogeneousLocalization.val_injective
+  simp only [p1CoordAway, HomogeneousLocalization.awayMap_mk, HomogeneousLocalization.val_mul,
+    HomogeneousLocalization.val_one, HomogeneousLocalization.Away.val_mk, Localization.mk_mul]
+  rw [← Localization.mk_one, Localization.mk_eq_mk_iff, Localization.r_iff_exists]
+  refine ⟨1, ?_⟩
+  simp only [OneMemClass.coe_one, one_mul, mul_one, MulMemClass.coe_mul]
+  ring
+
+/- **REMAINING (route step 3, the `x · y = 1` unit relation, and step 4 the assembly).**
+The unit relation `res x · res y = 1` on `V₀ ⊓ V₁` is the pullback along the common overlap
+ring map `toProjInt.appLE D₊(X₀X₁)` of `awayMap (X₁/X₀) · awayMap (X₀/X₁) = 1` in
+`Away 𝒜 (X₀X₁)` — the algebraic core is `awayMap_coord_mul_eq_one` above.  Threading it through
+`Scheme.Hom.map_appLE` + `Proj.awayMap_awayToSection` currently hits the wave-8 unifier hang
+(ring homs into the concrete `ℙ¹`-chart `Γ` rings); the fleet recipe (explicit `Away`-index
+ascription, inlined transport) is needed here.  With that field in hand, `LaurentChartData`
+on `p1CoverSquare`'s geometry (`V₀ = p1Chart ⟨0⟩`, `V₁ = p1Chart ⟨1⟩`, `x = p1XSection`,
+`y = p1YSection`) is populated from `p1Chart_inf_eq_basicOpen_coordSection` (both
+`inf_eq_basicOpen_*` fields, via `inf_comm` for the `y`-side), `span_pow_p1XSection_scaffold`,
+`span_pow_p1YSection_scaffold`, and this unit relation, discharging
+`instance : P1HasLaurentChartData k`. -/
+
+end Overlap
+
 end AlgebraicGeometry.Adelic
