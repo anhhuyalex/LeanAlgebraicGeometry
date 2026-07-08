@@ -200,6 +200,19 @@ local instance moduleObjBridge (M : X.Modules) (V : X.Opens) :
       ↥(((toPresheafOfModules X).obj M).obj (op V)) :=
   (((toPresheafOfModules X).obj M).obj (op V)).isModule
 
+/-- Fully general form of `moduleObjBridge`: the same `ModuleCat`-carrier module
+structure over the objectwise ring, for an **arbitrary** presheaf of modules.  The
+rewrite motives of the linearity aux lemmas below mention the objectwise carriers of
+several presheaves that are only *defeq* to `(toPresheafOfModules X).obj M` spellings
+(the `𝟭`-applied and `sheafification ⋙ forget`-applied tensor presheaf from the
+adjunction unit, and the `.val`-spellings of the sheaf objects), so instance search
+needs the bridge keyed on a bare presheaf variable. -/
+local instance moduleObjBridgeGen
+    (P : _root_.PresheafOfModules.{u} (X.sheaf.obj ⋙ forget₂ CommRingCat RingCat))
+    (V : X.Opens) :
+    Module ↥((X.sheaf.obj ⋙ forget₂ CommRingCat RingCat).obj (op V)) ↥(P.obj (op V)) :=
+  (P.obj (op V)).isModule
+
 /-- The same `ModuleCat`-carrier module structure, keyed on the *section* spelling
 `Γ(M, V)` (the return spelling of `twistedSMul`), so that the outer scalar
 multiplications of the linearity aux lemmas over the objectwise ring elaborate. -/
@@ -211,7 +224,10 @@ local instance moduleObjBridge' (M : X.Modules) (V : X.Opens) :
 -carrier spelling: over the objectwise ring the action `twistedSMul U r` is the
 composite of the two objectwise module maps (sheafification unit, action
 comparison) with `r ⊗ₜ ·`, so linearity is `TensorProduct.tmul_smul` followed by
-`map_smul` of the two `ModuleCat` morphisms. -/
+`_root_.map_smul` of the two `ModuleCat` morphisms.  (The qualification matters:
+inside this namespace the bare name `map_smul` is `Scheme.Modules.map_smul`, whose
+`M.presheaf.map`-headed LHS sends `erw`'s defeq matcher into a `whnf` blowup
+against the categorical composite.) -/
 private lemma twistedSMul_smul_right_aux (F L : X.Modules) (i j : ℕ) (U : X.Opens)
     (a : ↥((X.sheaf.obj ⋙ forget₂ CommRingCat RingCat).obj (op U)))
     (r : ↥(((toPresheafOfModules X).obj (tensorPow L i)).obj (op U)))
@@ -220,7 +236,7 @@ private lemma twistedSMul_smul_right_aux (F L : X.Modules) (i j : ℕ) (U : X.Op
       = a • (twistedSMul F L i j U r x :
           ↥(((toPresheafOfModules X).obj (moduleTensorPow F L (i + j))).obj (op U))) := by
   unfold twistedSMul
-  erw [TensorProduct.tmul_smul, map_smul, map_smul]
+  erw [TensorProduct.tmul_smul, _root_.map_smul, _root_.map_smul]
   rfl
 
 /-- The local graded action is `Γ(X, U)`-linear in the module slot. -/
@@ -231,7 +247,8 @@ lemma twistedSMul_smul_right (F L : X.Modules) (i j : ℕ) (U : X.Opens)
   twistedSMul_smul_right_aux F L i j U a r x
 
 /-- `𝒪_X(U)`-linearity of the local graded action in the line-bundle slot,
-`ModuleCat`-carrier spelling. -/
+`ModuleCat`-carrier spelling.  (Same `_root_.map_smul` qualification as in
+`twistedSMul_smul_right_aux`.) -/
 private lemma twistedSMul_smul_left_aux (F L : X.Modules) (i j : ℕ) (U : X.Opens)
     (a : ↥((X.sheaf.obj ⋙ forget₂ CommRingCat RingCat).obj (op U)))
     (r : ↥(((toPresheafOfModules X).obj (tensorPow L i)).obj (op U)))
@@ -240,7 +257,7 @@ private lemma twistedSMul_smul_left_aux (F L : X.Modules) (i j : ℕ) (U : X.Ope
       = a • (twistedSMul F L i j U r x :
           ↥(((toPresheafOfModules X).obj (moduleTensorPow F L (i + j))).obj (op U))) := by
   unfold twistedSMul
-  erw [← TensorProduct.smul_tmul', map_smul, map_smul]
+  erw [← TensorProduct.smul_tmul', _root_.map_smul, _root_.map_smul]
   rfl
 
 /-- The local graded action is `Γ(X, U)`-linear in the line-bundle slot. -/
