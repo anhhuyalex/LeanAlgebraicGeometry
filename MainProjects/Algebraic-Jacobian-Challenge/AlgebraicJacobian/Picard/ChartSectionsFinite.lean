@@ -237,6 +237,44 @@ theorem finite_sections_chart (h : π.IsProjectiveWith L) (F : X.Modules)
   exact ⟨d, i, hi, hcomp, fun V hV =>
     Scheme.Modules.finite_sections_preimage_of_isAffineHom i F hV⟩
 
+/-! ## The section-localisation engine on a projective total space -/
+
+/-- **D2 on the projective total space** ([Hartshorne] II.5.14 (a), structure-sheaf
+form).  For a projective `π : X ⟶ S` over a quasi-compact quasi-separated base and a
+quasi-coherent sheaf `G` on `X`, every section `t ∈ Γ(X, D(g))` over the basic open of
+a global function `g ∈ Γ(X, ⊤)` becomes, after multiplication by a power `g^n`, the
+restriction of a **global** section of `G`.  `X` is quasi-compact and quasi-separated
+because `π` is proper (`compactSpace`, `quasiSeparatedSpace`), so the qcqs
+section-localisation engine `Scheme.Modules.exists_global_res_eq_pow_smul` runs
+directly on `X`.  This is the trivialised (`L`-untwisted) extension half of D2 on the
+projective total space itself; the scalar action of `g^n` on `Γ(X, D(g))` is through
+the restriction `Γ(X, ⊤) → Γ(X, D(g))`. -/
+theorem exists_global_res_eq_pow_smul [CompactSpace S] [QuasiSeparatedSpace S]
+    (h : π.IsProjectiveWith L) (G : X.Modules) [G.IsQuasicoherent] (g : Γ(X, ⊤)) :
+    letI : Module Γ(X, ⊤) Γ(G, X.basicOpen g) :=
+      Module.compHom _ (algebraMap Γ(X, ⊤) Γ(X, X.basicOpen g))
+    ∀ t : Γ(G, X.basicOpen g), ∃ (s : Γ(G, ⊤)) (n : ℕ),
+      G.presheaf.map (homOfLE (X.basicOpen_le g)).op s = g ^ n • t := by
+  haveI := h.compactSpace
+  haveI := h.quasiSeparatedSpace
+  exact Scheme.Modules.exists_global_res_eq_pow_smul G g
+
+/-- **D3 on the projective total space** ([Hartshorne] II.5.14 (b), structure-sheaf
+form).  For a projective `π : X ⟶ S` over a quasi-compact quasi-separated base and a
+quasi-coherent sheaf `G` on `X`, a global section `s` of `G` whose restriction to the
+basic open `D(g)` of a global function `g ∈ Γ(X, ⊤)` vanishes is annihilated by a power
+`g^n`.  As above `X` is qcqs because `π` is proper, so the qcqs vanishing engine
+`Scheme.Modules.exists_pow_smul_eq_zero_of_res_eq_zero` runs directly on `X` — the
+trivialised (`L`-untwisted) vanishing half of D3 on the projective total space. -/
+theorem exists_pow_smul_eq_zero_of_res_eq_zero [CompactSpace S] [QuasiSeparatedSpace S]
+    (h : π.IsProjectiveWith L) (G : X.Modules) [G.IsQuasicoherent]
+    (g : Γ(X, ⊤)) (s : Γ(G, ⊤))
+    (hs : G.presheaf.map (homOfLE (X.basicOpen_le g)).op s = 0) :
+    ∃ n : ℕ, g ^ n • s = 0 := by
+  haveI := h.compactSpace
+  haveI := h.quasiSeparatedSpace
+  exact Scheme.Modules.exists_pow_smul_eq_zero_of_res_eq_zero G g s hs
+
 end Scheme.Hom.IsProjectiveWith
 
 end AlgebraicGeometry
