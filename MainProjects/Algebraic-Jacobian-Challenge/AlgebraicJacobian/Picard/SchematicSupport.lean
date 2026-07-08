@@ -57,7 +57,7 @@ annihilator ideal sheaf `I := Ann F` this realizes `F ≅ i_* N` with
 `F` is (`Scheme.Modules.isFinitePresentation_pullback_schematicSupportι`).
 -/
 
-universe u
+universe u v
 
 open CategoryTheory
 
@@ -667,5 +667,193 @@ theorem hasProperSupport_moduleTensorPow {X S : Scheme.{u}} (f : X ⟶ S)
   hasProperSupport_sheafTensorObj f (Scheme.Modules.tensorPow L m) hF
 
 end Scheme.Modules
+
+/-! ## The Γ-fibre flat base change over a field, via the schematic support
+
+The scheme-level assembly of `lem:gamma_fiber_baseChange_field` for a single
+quasi-coherent module with proper support: for a cartesian square
+
+```
+Xt' ──b──→ Xt
+ │f'        │f
+ ↓          ↓
+Spec K' ──Spec.map φ──→ Spec K
+```
+
+over fields `K`, `K'` and a quasi-coherent `G` on `Xt` whose schematic support
+is proper over `K`, the `K'`-dimension of `Γ(Xt', b^* G)` equals the
+`K`-dimension of `Γ(Xt, G)` (each via the structural `ΓSpecIso`-composite
+scalar action, the shape of `Scheme.Hom.fiberSectionsModule`).
+
+Route: `Xt` is only locally of finite type over `K` — not qcqs — so Stacks
+02KH cannot be applied on `Xt` itself.  Descend to the schematic support
+`i : Z = V(Ann G) ↪ Xt` (proper over `K` by hypothesis, hence qcqs):
+
+1. `G ≅ i_* N` for `N := i^* G` (`isIso_unit_schematicSupportι`);
+2. `b^*(i_* N) ≅ j_* (w^* N)` for the base-changed closed immersion
+   `j : W = Z ×_{Xt} Xt' ↪ Xt'` (`flatBaseChangeCohomology` on the
+   closed-immersion square — `i` is qcqs, `b` is flat as the base change of
+   the field extension `Spec.map φ`);
+3. pushing forward to `Spec K'` and evaluating at `⊤` identifies
+   `Γ(Xt', b^* G)` with `Γ(Spec K', (j ≫ f')_* (w^* N))`,
+   `Γ(Spec K', ⊤)`-linearly (`finrank_eq_of_ringEquiv_addEquiv` transports the
+   dimension along `ΓSpecIso K'`), and similarly on the unprimed side;
+4. the pasted square `W → Z → Spec K ← Spec K' ← W` is cartesian
+   (`IsPullback.paste_vert`) with `i ≫ f` proper — qcqs — so the CLOSED
+   02KE heart `pullback_baseMap_sectionLinearEquiv_of_quasiCompact` at
+   `V = U = ⊤` yields `Γ(Spec K', ⊤) ⊗ Γ(Z, N) ≃ₗ Γ(W, w^* N)`, and
+   `finrank_eq_of_baseChange_linearEquiv` (with the field structures
+   transported along `ΓSpecIso` via `MulEquiv.isField`) closes the count. -/
+
+/-- **Dimension transport across a ring isomorphism**: a ring isomorphism
+`i : R ≃+* R'` together with an additive equivalence `j : M ≃+ M'`
+intertwining the scalar actions transports `Module.finrank`.  This is the
+`Cardinal.toNat` image of `rank_eq_of_equiv_equiv`; it is the bookkeeping
+device carrying `κ'`-dimensions across the `ΓSpecIso` identification
+`Γ(Spec κ', ⊤) ≃+* κ'` in the Γ-fibre base-change assembly. -/
+theorem finrank_eq_of_ringEquiv_addEquiv
+    {R R' : Type*} {M M' : Type v} [Semiring R] [Semiring R']
+    [AddCommMonoid M] [AddCommMonoid M'] [Module R M] [Module R' M']
+    (i : R ≃+* R') (j : M ≃+ M')
+    (hc : ∀ (r : R) (m : M), j (r • m) = i r • j m) :
+    Module.finrank R M = Module.finrank R' M' :=
+  congrArg Cardinal.toNat (rank_eq_of_equiv_equiv i j i.bijective hc)
+
+namespace Scheme
+
+open CategoryTheory.Limits in
+set_option backward.isDefEq.respectTransparency false in
+set_option maxHeartbeats 1600000 in
+-- pasted-square 02KE + flat-base-change exchange over the scheme-module stack
+/-- **Γ-fibre flat base change over a field extension, schematic-support form**
+([Stacks 02KH] `i = 0` via the support descent; the scheme-level heart of
+`lem:gamma_fiber_baseChange_field`): for a cartesian square
+`b : Xt' ⟶ Xt` over `Spec.map φ : Spec K' ⟶ Spec K` with `K`, `K'` fields, and
+a quasi-coherent `G` on `Xt` with schematic support proper over `K`, the
+`K'`-dimension of the global sections of `b^* G` equals the `K`-dimension of
+the global sections of `G` — the scalar actions being the structural
+`ΓSpecIso⁻¹ ≫ appTop` composites (the shape of
+`Scheme.Hom.fiberSectionsModule`/`fiberResidueMap` at residue fields).  See
+the section header for the proof route. -/
+theorem finrank_gammaTop_baseChange_of_hasProperSupport
+    {K K' : CommRingCat.{u}} (hK : IsField K) (hK' : IsField K')
+    {Xt Xt' : Scheme.{u}} {f : Xt ⟶ Spec K} {f' : Xt' ⟶ Spec K'}
+    {b : Xt' ⟶ Xt} {φ : K ⟶ K'}
+    (sq : IsPullback b f' f (Spec.map φ))
+    (G : Xt.Modules) [G.IsQuasicoherent]
+    (hps : Scheme.Modules.HasProperSupport f G) :
+    (letI := Module.compHom Γ((Scheme.Modules.pullback b).obj G, ⊤)
+        ((Scheme.ΓSpecIso K').inv ≫ f'.appTop).hom
+     Module.finrank K' Γ((Scheme.Modules.pullback b).obj G, ⊤))
+      = (letI := Module.compHom Γ(G, ⊤) ((Scheme.ΓSpecIso K).inv ≫ f.appTop).hom
+         Module.finrank K Γ(G, ⊤)) := by
+  letI := Module.compHom Γ((Scheme.Modules.pullback b).obj G, ⊤)
+      ((Scheme.ΓSpecIso K').inv ≫ f'.appTop).hom
+  letI := Module.compHom Γ(G, ⊤) ((Scheme.ΓSpecIso K).inv ≫ f.appTop).hom
+  -- field structures on the global sections of the two affine bases
+  letI : Field ↥Γ(Spec K, ⊤) :=
+    (MulEquiv.isField hK (Scheme.ΓSpecIso K).commRingCatIsoToRingEquiv.toMulEquiv).toField
+  letI : Field ↥Γ(Spec K', ⊤) :=
+    (MulEquiv.isField hK' (Scheme.ΓSpecIso K').commRingCatIsoToRingEquiv.toMulEquiv).toField
+  -- properness of the schematic support over `Spec K`, hence qcqs instances
+  haveI hproper : IsProper (Scheme.Modules.schematicSupportι G ≫ f) := hps
+  haveI : QuasiCompact (Scheme.Modules.schematicSupportι G) :=
+    inferInstanceAs (QuasiCompact ((Scheme.Modules.annihilator G).subschemeι))
+  haveI : IsSeparated (Scheme.Modules.schematicSupportι G) :=
+    inferInstanceAs (IsSeparated ((Scheme.Modules.annihilator G).subschemeι))
+  -- flatness of the field extension `Spec.map φ` and of its base change `b`
+  haveI hφflat : Flat (Spec.map φ) := by
+    rw [AlgebraicGeometry.Flat.SpecMap_iff]
+    letI : Field ↥K := hK.toField
+    letI := φ.hom.toAlgebra
+    change Module.Flat ↥K ↥K'
+    infer_instance
+  haveI hbflat : Flat b := MorphismProperty.of_isPullback sq.flip hφflat
+  -- quasi-coherence of the descended module `N := i^* G`
+  haveI hNqc : ((Scheme.Modules.pullback (Scheme.Modules.schematicSupportι G)).obj
+      G).IsQuasicoherent :=
+    pullback_isQuasicoherent_hom _ G ‹_›
+  -- the closed-immersion base-change square and its pasting over `Spec.map φ`
+  have sq1 : IsPullback (pullback.fst (Scheme.Modules.schematicSupportι G) b)
+      (pullback.snd (Scheme.Modules.schematicSupportι G) b)
+      (Scheme.Modules.schematicSupportι G) b :=
+    IsPullback.of_hasPullback _ _
+  have sqZ : IsPullback (pullback.fst (Scheme.Modules.schematicSupportι G) b)
+      (pullback.snd (Scheme.Modules.schematicSupportι G) b ≫ f')
+      (Scheme.Modules.schematicSupportι G ≫ f) (Spec.map φ) :=
+    sq1.paste_vert sq
+  -- support descent `G ≅ i_* N` and the flat-base-change exchange
+  haveI hunit := Scheme.Modules.isIso_unit_schematicSupportι G
+  obtain ⟨eEx⟩ := flatBaseChangeCohomology sq1
+    ((Scheme.Modules.pullback (Scheme.Modules.schematicSupportι G)).obj G)
+  -- assembled isos over the two affine bases, and their `⊤`-section equivalences
+  let EL : (Scheme.Modules.pushforward f').obj ((Scheme.Modules.pullback b).obj G)
+      ≅ (Scheme.Modules.pushforward
+            (pullback.snd (Scheme.Modules.schematicSupportι G) b ≫ f')).obj
+          ((Scheme.Modules.pullback
+            (pullback.fst (Scheme.Modules.schematicSupportι G) b)).obj
+            ((Scheme.Modules.pullback (Scheme.Modules.schematicSupportι G)).obj G)) :=
+    (Scheme.Modules.pushforward f').mapIso
+        ((Scheme.Modules.pullback b).mapIso
+          (asIso ((Scheme.Modules.pullbackPushforwardAdjunction
+            (Scheme.Modules.schematicSupportι G)).unit.app G)) ≪≫ eEx)
+      ≪≫ ((Scheme.Modules.pushforwardComp
+            (pullback.snd (Scheme.Modules.schematicSupportι G) b) f').app
+          ((Scheme.Modules.pullback
+            (pullback.fst (Scheme.Modules.schematicSupportι G) b)).obj
+            ((Scheme.Modules.pullback (Scheme.Modules.schematicSupportι G)).obj G))).symm
+  let ER : (Scheme.Modules.pushforward f).obj G
+      ≅ (Scheme.Modules.pushforward (Scheme.Modules.schematicSupportι G ≫ f)).obj
+          ((Scheme.Modules.pullback (Scheme.Modules.schematicSupportι G)).obj G) :=
+    (Scheme.Modules.pushforward f).mapIso
+        (asIso ((Scheme.Modules.pullbackPushforwardAdjunction
+          (Scheme.Modules.schematicSupportι G)).unit.app G))
+      ≪≫ ((Scheme.Modules.pushforwardComp (Scheme.Modules.schematicSupportι G) f).app
+          ((Scheme.Modules.pullback (Scheme.Modules.schematicSupportι G)).obj G)).symm
+  let γL := ((Scheme.Modules.toPresheafOfModules (Spec K') ⋙
+      PresheafOfModules.evaluation (Spec K').ringCatSheaf.obj (Opposite.op ⊤)).mapIso
+        EL).toLinearEquiv
+  let γR := ((Scheme.Modules.toPresheafOfModules (Spec K) ⋙
+      PresheafOfModules.evaluation (Spec K).ringCatSheaf.obj (Opposite.op ⊤)).mapIso
+        ER).toLinearEquiv
+  -- Step A: transport the `K'`-dimension along `ΓSpecIso K'` and `γL`
+  have stepA : (Module.finrank K' Γ((Scheme.Modules.pullback b).obj G, ⊤))
+      = Module.finrank ↥Γ(Spec K', ⊤)
+          Γ((Scheme.Modules.pushforward
+              (pullback.snd (Scheme.Modules.schematicSupportι G) b ≫ f')).obj
+            ((Scheme.Modules.pullback
+              (pullback.fst (Scheme.Modules.schematicSupportι G) b)).obj
+              ((Scheme.Modules.pullback (Scheme.Modules.schematicSupportι G)).obj G)), ⊤) :=
+    finrank_eq_of_ringEquiv_addEquiv
+      (Scheme.ΓSpecIso K').symm.commRingCatIsoToRingEquiv
+      γL.toAddEquiv
+      (fun c y => γL.map_smul ((Scheme.ΓSpecIso K').inv.hom c) y)
+  -- Step C: transport the `K`-dimension along `ΓSpecIso K` and `γR`
+  have stepC : (Module.finrank K Γ(G, ⊤))
+      = Module.finrank ↥Γ(Spec K, ⊤)
+          Γ((Scheme.Modules.pushforward (Scheme.Modules.schematicSupportι G ≫ f)).obj
+            ((Scheme.Modules.pullback (Scheme.Modules.schematicSupportι G)).obj G), ⊤) :=
+    finrank_eq_of_ringEquiv_addEquiv
+      (Scheme.ΓSpecIso K).symm.commRingCatIsoToRingEquiv
+      γR.toAddEquiv
+      (fun c y => γR.map_smul ((Scheme.ΓSpecIso K).inv.hom c) y)
+  -- Step B: the CLOSED 02KE heart on the pasted square, at `V = U = ⊤`
+  have hVaff : IsAffineOpen (⊤ : (Spec K).Opens) := isAffineOpen_top (Spec K)
+  have hUaff : IsAffineOpen (⊤ : (Spec K').Opens) := isAffineOpen_top (Spec K')
+  have e0 : (⊤ : (Spec K').Opens) ≤ (Spec.map φ) ⁻¹ᵁ (⊤ : (Spec K).Opens) :=
+    le_of_eq rfl
+  have e'' : (pullback.snd (Scheme.Modules.schematicSupportι G) b ≫ f')
+        ⁻¹ᵁ (⊤ : (Spec K').Opens)
+      ≤ (pullback.fst (Scheme.Modules.schematicSupportι G) b)
+        ⁻¹ᵁ ((Scheme.Modules.schematicSupportι G ≫ f) ⁻¹ᵁ (⊤ : (Spec K).Opens)) :=
+    le_of_eq rfl
+  letI : Algebra ↥Γ(Spec K, ⊤) ↥Γ(Spec K', ⊤) :=
+    ((Spec.map φ).appLE ⊤ ⊤ e0).hom.toAlgebra
+  obtain ⟨eqBC, -⟩ := (pullback_baseMap_sectionLinearEquiv_of_quasiCompact sqZ
+    ((Scheme.Modules.pullback (Scheme.Modules.schematicSupportι G)).obj G)
+    hVaff hUaff e0 e'').some
+  exact stepA.trans ((finrank_eq_of_baseChange_linearEquiv eqBC).trans stepC.symm)
+
+end Scheme
 
 end AlgebraicGeometry
