@@ -452,6 +452,12 @@ lemma restrict_map_self {U : TopologicalSpace.Opens X.toTopCat} (h : U ≤ U) :
   have h0 : (homOfLE h).op = 𝟙 (Opposite.op U) := Subsingleton.elim _ _
   rw [h0, F.obj.map_id]
 
+/-- Repackaging the linear section restriction as the `ModuleCat` morphism it came
+from. -/
+lemma ofHom_sectionRestrict {U V : TopologicalSpace.Opens X.toTopCat} (h : U ≤ V) :
+    ModuleCat.ofHom (sectionRestrict F h) = F.obj.map (homOfLE h).op :=
+  rfl
+
 end SectionRestrictCalculus
 
 /-! ## Node N5 — the small-index Čech products as concrete infima -/
@@ -594,6 +600,19 @@ lemma cechD12_π (x : Fin 3 → ι) :
         + Pi.π (cechTerm 𝒰 F 2) (x ∘ Fin.succAboveOrderEmb 2)
           ≫ F.obj.map (homOfLE (prodOpens_δ_le 𝒰 2 x)).op :=
   cechCochain_d12_π 𝒰 F x
+
+/-- `d⁰ ≫ d¹ = 0`, in the product-typed form. -/
+lemma cechD01_comp_cechD12 : cechD01 𝒰 F ≫ cechD12 𝒰 F = 0 :=
+  (Scheme.cechCochain C F 𝒰).d_comp_d 0 1 2
+
+/-- `d⁰`, corestricted to the degree-`1` cocycles: the concrete `toCycles` map of the
+short complex `(d⁰, d¹)` whose homology is the degree-`1` Čech cohomology. -/
+noncomputable def cechToCyclesD01 :
+    (∏ᶜ (cechTerm 𝒰 F 1) : ModuleCat.{u} k) →ₗ[k] LinearMap.ker (cechD12 𝒰 F).hom :=
+  (cechD01 𝒰 F).hom.codRestrict (LinearMap.ker (cechD12 𝒰 F).hom) fun m =>
+    LinearMap.mem_ker.mpr (by
+      have h := congrArg (fun t => t.hom m) (cechD01_comp_cechD12 𝒰 F)
+      simpa using h)
 
 end CechComponentFormulas
 
@@ -964,6 +983,263 @@ noncomputable def AffineCoverMVSquare.overlapKerEquiv :
       rw [h]
       change sectionRestrict F _ (sectionRestrict F _ q) = q
       rw [sectionRestrict_trans, sectionRestrict_self])
+
+/-! ### The range identification `κ (im sectionDiff) = im (toCycles)` (node N5) -/
+
+/-- The Čech single intersection at the multi-index `(0)` is the first cover member. -/
+lemma AffineCoverMVSquare.prodOpens_single₀ :
+    (∏ᶜ ((FormalCoproduct.mk _ S.coverFamily).obj ∘ ![⟨0⟩])
+        : TopologicalSpace.Opens C.left.toTopCat)
+      = S.coverFamily ⟨0⟩ := by
+  rw [prodOpens_fin_one, Matrix.cons_val_zero]
+
+/-- The Čech single intersection at the multi-index `(1)` is the second cover member. -/
+lemma AffineCoverMVSquare.prodOpens_single₁ :
+    (∏ᶜ ((FormalCoproduct.mk _ S.coverFamily).obj ∘ ![⟨1⟩])
+        : TopologicalSpace.Opens C.left.toTopCat)
+      = S.coverFamily ⟨1⟩ := by
+  rw [prodOpens_fin_one, Matrix.cons_val_zero]
+
+/-- Components of the pair lift: a pair of sections on the two cover members defines
+a degree-`0` Čech cochain. -/
+noncomputable def AffineCoverMVSquare.pairComponent (j : Fin 1 → ULift.{u} (Fin 2)) :
+    ModuleCat.of k
+        (F.obj.obj (op (S.coverFamily ⟨0⟩)) × F.obj.obj (op (S.coverFamily ⟨1⟩)))
+      ⟶ cechTerm S.coverFamily F 1 j :=
+  if h : j = ![⟨0⟩] then
+    ModuleCat.ofHom (LinearMap.fst k _ _)
+      ≫ F.obj.map (homOfLE (le_of_eq (by rw [h]; exact S.prodOpens_single₀))).op
+  else if h' : j = ![⟨1⟩] then
+    ModuleCat.ofHom (LinearMap.snd k _ _)
+      ≫ F.obj.map (homOfLE (le_of_eq (by rw [h']; exact S.prodOpens_single₁))).op
+  else 0
+
+/-- The pair lift `Γ(𝒰₀) × Γ(𝒰₁) ⟶ Č⁰`. -/
+noncomputable def AffineCoverMVSquare.pairLift :
+    ModuleCat.of k
+        (F.obj.obj (op (S.coverFamily ⟨0⟩)) × F.obj.obj (op (S.coverFamily ⟨1⟩)))
+      ⟶ ∏ᶜ (cechTerm S.coverFamily F 1) :=
+  Pi.lift (S.pairComponent F)
+
+@[reassoc]
+lemma AffineCoverMVSquare.pairLift_π (j : Fin 1 → ULift.{u} (Fin 2)) :
+    S.pairLift F ≫ Pi.π (cechTerm S.coverFamily F 1) j = S.pairComponent F j :=
+  Pi.lift_π _ _
+
+/-- The pair projection `Č⁰ ⟶ Γ(𝒰₀) × Γ(𝒰₁)` (the inverse of `pairLift`). -/
+noncomputable def AffineCoverMVSquare.pairProj :
+    (∏ᶜ (cechTerm S.coverFamily F 1) : ModuleCat.{u} k)
+      ⟶ ModuleCat.of k
+        (F.obj.obj (op (S.coverFamily ⟨0⟩)) × F.obj.obj (op (S.coverFamily ⟨1⟩))) :=
+  ModuleCat.ofHom (LinearMap.prod
+    ((sectionRestrict F S.prodOpens_single₀.ge) ∘ₗ
+      (Pi.π (cechTerm S.coverFamily F 1) ![⟨0⟩]).hom)
+    ((sectionRestrict F S.prodOpens_single₁.ge) ∘ₗ
+      (Pi.π (cechTerm S.coverFamily F 1) ![⟨1⟩]).hom))
+
+/-- The `(0)`-branch of the pair component, after a further restriction (stated with
+the index as a variable so the coface indices can be substituted). -/
+lemma AffineCoverMVSquare.pairComponent_comp_eq₀
+    {j : Fin 1 → ULift.{u} (Fin 2)} (h : j = ![⟨0⟩])
+    {W : TopologicalSpace.Opens C.left.toTopCat}
+    (hW : W ≤ ∏ᶜ ((FormalCoproduct.mk _ S.coverFamily).obj ∘ j)) :
+    S.pairComponent F j ≫ F.obj.map (homOfLE hW).op
+      = ModuleCat.ofHom (LinearMap.fst k _ _)
+          ≫ F.obj.map (homOfLE (hW.trans
+              (le_of_eq (by rw [h]; exact S.prodOpens_single₀)))).op := by
+  subst h
+  simp +decide only [pairComponent, dite_true, dite_false, Category.assoc,
+    restrict_map_comp]
+
+/-- The `(1)`-branch of the pair component, after a further restriction. -/
+lemma AffineCoverMVSquare.pairComponent_comp_eq₁
+    {j : Fin 1 → ULift.{u} (Fin 2)} (h : j = ![⟨1⟩])
+    {W : TopologicalSpace.Opens C.left.toTopCat}
+    (hW : W ≤ ∏ᶜ ((FormalCoproduct.mk _ S.coverFamily).obj ∘ j)) :
+    S.pairComponent F j ≫ F.obj.map (homOfLE hW).op
+      = ModuleCat.ofHom (LinearMap.snd k _ _)
+          ≫ F.obj.map (homOfLE (hW.trans
+              (le_of_eq (by rw [h]; exact S.prodOpens_single₁)))).op := by
+  subst h
+  simp +decide only [pairComponent, dite_true, dite_false, Category.assoc,
+    restrict_map_comp]
+
+/-- The `(0)`-component of the pair lift, uncomposed form. -/
+lemma AffineCoverMVSquare.pairComponent_eq₀' :
+    S.pairComponent F ![⟨0⟩]
+      = ModuleCat.ofHom (LinearMap.fst k _ _)
+          ≫ F.obj.map (homOfLE (le_of_eq S.prodOpens_single₀)).op := by
+  unfold pairComponent
+  rw [dif_pos rfl]
+
+/-- The `(1)`-component of the pair lift, uncomposed form. -/
+lemma AffineCoverMVSquare.pairComponent_eq₁' :
+    S.pairComponent F ![⟨1⟩]
+      = ModuleCat.ofHom (LinearMap.snd k _ _)
+          ≫ F.obj.map (homOfLE (le_of_eq S.prodOpens_single₁)).op := by
+  unfold pairComponent
+  rw [dif_neg (by decide), dif_pos rfl]
+
+/-- The first component of the pair projection is the restricted `(0)`-projection. -/
+lemma AffineCoverMVSquare.pairProj_fst :
+    S.pairProj F ≫ ModuleCat.ofHom (LinearMap.fst k _ _)
+      = Pi.π (cechTerm S.coverFamily F 1) ![⟨0⟩]
+          ≫ F.obj.map (homOfLE S.prodOpens_single₀.ge).op :=
+  ModuleCat.hom_ext (LinearMap.fst_prod _ _)
+
+/-- The second component of the pair projection is the restricted `(1)`-projection. -/
+lemma AffineCoverMVSquare.pairProj_snd :
+    S.pairProj F ≫ ModuleCat.ofHom (LinearMap.snd k _ _)
+      = Pi.π (cechTerm S.coverFamily F 1) ![⟨1⟩]
+          ≫ F.obj.map (homOfLE S.prodOpens_single₁.ge).op :=
+  ModuleCat.hom_ext (LinearMap.snd_prod _ _)
+
+/-- **The pair lift is a section of the pair projection**: rebuilding a degree-`0`
+cochain from its two components is the identity. -/
+lemma AffineCoverMVSquare.pairProj_comp_pairLift :
+    S.pairProj F ≫ S.pairLift F = 𝟙 _ := by
+  refine Pi.hom_ext _ _ fun j => ?_
+  obtain ⟨a, rfl⟩ : ∃ a : Fin 2, j = ![⟨a⟩] :=
+    ⟨(j 0).down, by funext i; fin_cases i; rfl⟩
+  have htwo : ∀ i : Fin 2, i = 0 ∨ i = 1 := by decide
+  rw [Category.assoc, pairLift_π, Category.id_comp]
+  rcases htwo a with rfl | rfl
+  · rw [S.pairComponent_eq₀' F, ← Category.assoc, S.pairProj_fst F, Category.assoc,
+      restrict_map_comp, restrict_map_self, Category.comp_id]
+  · rw [S.pairComponent_eq₁' F, ← Category.assoc, S.pairProj_snd F, Category.assoc,
+      restrict_map_comp, restrict_map_self, Category.comp_id]
+
+/-- The difference-of-restrictions map on the pair carrier, in its uniformly-typed
+`ModuleCat`-morphism form (definitionally `S.sectionDiff F`). -/
+noncomputable def AffineCoverMVSquare.pairDiff :
+    ModuleCat.of k
+        (F.obj.obj (op (S.coverFamily ⟨0⟩)) × F.obj.obj (op (S.coverFamily ⟨1⟩)))
+      ⟶ F.obj.obj (op S.overlapOpen) :=
+  ModuleCat.ofHom (LinearMap.fst k _ _)
+      ≫ F.obj.map (homOfLE (inf_le_left : S.overlapOpen ≤ S.coverFamily ⟨0⟩)).op
+    - ModuleCat.ofHom (LinearMap.snd k _ _)
+      ≫ F.obj.map (homOfLE (inf_le_right : S.overlapOpen ≤ S.coverFamily ⟨1⟩)).op
+
+/-- `pairDiff` is definitionally the difference-of-restrictions map `sectionDiff`. -/
+lemma AffineCoverMVSquare.pairDiff_hom :
+    (S.pairDiff F).hom = S.sectionDiff F :=
+  rfl
+
+/-- **`d⁰` on a lifted pair is the negated overlap cocycle of the section
+difference**: `d⁰ (a, b) = (0, b−a, a−b, 0) = −(0, (a−b), −(a−b), 0)`. -/
+lemma AffineCoverMVSquare.pairLift_comp_cechD01 :
+    S.pairLift F ≫ cechD01 S.coverFamily F
+      = -(S.pairDiff F ≫ S.overlapCocycle F) := by
+  refine Pi.hom_ext _ _ fun j => ?_
+  obtain ⟨a, b, rfl⟩ : ∃ a b : Fin 2, j = ![⟨a⟩, ⟨b⟩] :=
+    ⟨(j 0).down, (j 1).down, by funext i; fin_cases i <;> rfl⟩
+  have htwo : ∀ i : Fin 2, i = 0 ∨ i = 1 := by decide
+  rw [Category.assoc, cechD01_π, Preadditive.comp_sub, Preadditive.neg_comp,
+    Category.assoc, overlapCocycle_π, ← Category.assoc, ← Category.assoc,
+    pairLift_π, pairLift_π]
+  rcases htwo a with rfl | rfl <;> rcases htwo b with rfl | rfl
+  · -- (0,0): both cofaces hit the first member; the diagonal cocycle component is 0
+    rw [S.pairComponent_comp_eq₀ F (by funext i; fin_cases i; rfl),
+      S.pairComponent_comp_eq₀ F (by funext i; fin_cases i; rfl),
+      S.overlapCocycleComponent_eq_zero F (by decide) (by decide), comp_zero, neg_zero]
+    abel
+  · -- (0,1): `b|₀₁ − a|₀₁ = −(a−b)|₀₁`
+    rw [S.pairComponent_comp_eq₁ F (by funext i; fin_cases i; rfl),
+      S.pairComponent_comp_eq₀ F (by funext i; fin_cases i; rfl),
+      S.overlapCocycleComponent_zero_one F]
+    simp only [pairDiff, Preadditive.sub_comp, Category.assoc, restrict_map_comp]
+    abel
+  · -- (1,0): `a|₀₁ − b|₀₁ = −(−(a−b))|₀₁`
+    rw [S.pairComponent_comp_eq₀ F (by funext i; fin_cases i; rfl),
+      S.pairComponent_comp_eq₁ F (by funext i; fin_cases i; rfl),
+      S.overlapCocycleComponent_one_zero F]
+    simp only [pairDiff, Preadditive.sub_comp, Preadditive.comp_neg, Category.assoc,
+      restrict_map_comp, neg_neg]
+  · -- (1,1): both cofaces hit the second member
+    rw [S.pairComponent_comp_eq₁ F (by funext i; fin_cases i; rfl),
+      S.pairComponent_comp_eq₁ F (by funext i; fin_cases i; rfl),
+      S.overlapCocycleComponent_eq_zero F (by decide) (by decide), comp_zero, neg_zero]
+    abel
+
+/-- The value of the concrete `toCycles` is the value of `d⁰`. -/
+lemma AffineCoverMVSquare.cechToCyclesD01_coe
+    (m : (∏ᶜ (cechTerm S.coverFamily F 1) : ModuleCat.{u} k)) :
+    (cechToCyclesD01 S.coverFamily F m
+        : (∏ᶜ (cechTerm S.coverFamily F 2) : ModuleCat.{u} k))
+      = (cechD01 S.coverFamily F).hom m :=
+  rfl
+
+/-- The value of the kernel equivalence is the value of the overlap cocycle. -/
+lemma AffineCoverMVSquare.overlapKerEquiv_coe (q : F.obj.obj (op S.overlapOpen)) :
+    (S.overlapKerEquiv F q : (∏ᶜ (cechTerm S.coverFamily F 2) : ModuleCat.{u} k))
+      = (S.overlapCocycle F).hom q :=
+  rfl
+
+/-- **The range identification (node N5)**: under the kernel equivalence
+`overlapKerEquiv`, the coboundary subspace `im (sectionDiff)` of the overlap sections
+corresponds exactly to the image of `d⁰` inside the cocycles. -/
+lemma AffineCoverMVSquare.map_range_pairDiff :
+    (LinearMap.range (S.pairDiff F).hom).map (S.overlapKerEquiv F).toLinearMap
+      = LinearMap.range (cechToCyclesD01 S.coverFamily F) := by
+  apply le_antisymm
+  · rintro n hn
+    obtain ⟨q, ⟨p, rfl⟩, rfl⟩ := Submodule.mem_map.mp hn
+    refine ⟨(S.pairLift F).hom (-p), Subtype.ext ?_⟩
+    have h := congrArg (fun t => t.hom p) (S.pairLift_comp_cechD01 F)
+    simp only [ModuleCat.hom_comp, LinearMap.comp_apply, ModuleCat.hom_neg,
+      LinearMap.neg_apply] at h
+    rw [S.cechToCyclesD01_coe F, LinearEquiv.coe_coe, S.overlapKerEquiv_coe F,
+      map_neg, map_neg, h, neg_neg]
+  · rintro n ⟨m, rfl⟩
+    refine Submodule.mem_map.mpr
+      ⟨(S.pairDiff F).hom (-((S.pairProj F).hom m)), ⟨-((S.pairProj F).hom m), rfl⟩,
+        Subtype.ext ?_⟩
+    have hfact := congrArg (fun t => t.hom m) (S.pairProj_comp_pairLift F)
+    have h := congrArg (fun t => t.hom ((S.pairProj F).hom m)) (S.pairLift_comp_cechD01 F)
+    simp only [ModuleCat.hom_comp, LinearMap.comp_apply, ModuleCat.hom_neg,
+      LinearMap.neg_apply, ModuleCat.hom_id, LinearMap.id_coe, id_eq] at hfact h
+    rw [hfact] at h
+    rw [LinearEquiv.coe_coe, S.overlapKerEquiv_coe F, S.cechToCyclesD01_coe F,
+      map_neg, map_neg]
+    exact h.symm
+
+/-- The concrete `toCycles` is definitionally the `moduleCatToCycles` of the short
+complex `sc' 0 1 2` of the Čech cochain complex. -/
+lemma AffineCoverMVSquare.cechToCyclesD01_eq :
+    cechToCyclesD01 S.coverFamily F
+      = ((Scheme.cechCochain C F S.coverFamily).sc' 0 1 2).moduleCatToCycles :=
+  rfl
+
+/-- **Node N5 — the degree-`1` Čech cohomology of the 2-affine cover is the concrete
+cokernel `Ȟ¹ = Γ(U₁ ⊓ U₂, F) ⧸ im (sectionDiff)`.**  Unconditional: this is a pure
+homological-algebra fact about the 2-cover complex — no acyclicity or comparison
+hypothesis.  The chain is: homology of the complex at `1` ≅ homology of the short
+complex `(d⁰, d¹)` ≅ `ker d¹ ⧸ im (toCycles)` (the concrete `ModuleCat` homology),
+and the kernel equivalence `overlapKerEquiv` matches `im (sectionDiff)` with
+`im (toCycles)` (`map_range_sectionDiff`), so the quotients agree. -/
+noncomputable def AffineCoverMVSquare.cechCohomologyOneEquivH1Cok :
+    cechCohomology C F S.coverFamily 1 ≃ₗ[k] S.H1Cok F :=
+  ((ShortComplex.homologyMapIso
+      ((Scheme.cechCochain C F S.coverFamily).isoSc' 0 1 2
+        ((ComplexShape.up ℕ).prev_eq' rfl) ((ComplexShape.up ℕ).next_eq' rfl))).trans
+    ((Scheme.cechCochain C F S.coverFamily).sc' 0 1 2).moduleCatHomologyIso).toLinearEquiv.trans
+  ((Submodule.Quotient.equiv (LinearMap.range (S.sectionDiff F))
+      (LinearMap.range
+        ((Scheme.cechCochain C F S.coverFamily).sc' 0 1 2).moduleCatToCycles)
+      (S.overlapKerEquiv F)
+      ((S.map_range_pairDiff F).trans
+        (congrArg LinearMap.range (S.cechToCyclesD01_eq F)))).symm)
+
+/-- **The lane's consumable corollary (nodes N5 + N6)**: under the Čech-to-derived
+comparison gate on the 2-affine cover, the genus-degree cohomology `H¹(C, F)` is the
+concrete two-chart cokernel `Ȟ¹ = Γ(U₁ ⊓ U₂, F) ⧸ (Γ(U₁, F) + Γ(U₂, F))`. -/
+noncomputable def AffineCoverMVSquare.hModuleOneEquivH1Cok
+    [HasExt.{u} (Sheaf (Opens.grothendieckTopology C.left.toTopCat) (ModuleCat.{u} k))]
+    [HasExt.{u + 1} (Sheaf (Opens.grothendieckTopology C.left.toTopCat) (ModuleCat.{u} k))]
+    [HasCechToHModuleIso F S.coverFamily] :
+    HModule k F 1 ≃ₗ[k] S.H1Cok F :=
+  (S.hModuleOne_linearEquiv_cechCohomology_coverFamily F 1).trans
+    (S.cechCohomologyOneEquivH1Cok F)
 
 end OverlapCocycle
 
