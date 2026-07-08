@@ -124,6 +124,8 @@ import AlgebraicJacobian.RiemannRoch.Adelic.FinitenessP1
 import AlgebraicJacobian.RiemannRoch.Adelic.FiniteMapToP1
 import AlgebraicJacobian.RiemannRoch.Adelic.P1ChartData
 import AlgebraicJacobian.RiemannRoch.Adelic.ChiLedger
+import AlgebraicJacobian.RiemannRoch.Adelic.NonconstantToP1
+import AlgebraicJacobian.RiemannRoch.Adelic.GenusFiniteness
 import AlgebraicJacobian.Albanese.AlbaneseUP
 import AlgebraicJacobian.Albanese.AuslanderBuchsbaum
 import AlgebraicJacobian.Albanese.CodimOneExtension
