@@ -1111,6 +1111,38 @@ noncomputable def divisorOfList : List X.PrimeDivisor → X.WeilDivisor
   | [] => 0
   | P :: L => pointDivisor P + divisorOfList L
 
+/-- **Coordinatewise addition of Weil divisors.** `(D₁ + D₂)(P) = D₁(P) + D₂(P)`;
+the `X.WeilDivisor` group law is the pointwise `Finsupp` one. -/
+theorem weilDivisor_add_apply (D₁ D₂ : X.WeilDivisor) (Q : X.PrimeDivisor) :
+    (show X.PrimeDivisor →₀ ℤ from D₁ + D₂) Q =
+      (show X.PrimeDivisor →₀ ℤ from D₁) Q + (show X.PrimeDivisor →₀ ℤ from D₂) Q :=
+  Finsupp.add_apply _ _ _
+
+/-- **The one-point bump raises the coefficient at `P` by one** — the `hstep`
+hypothesis of `chi_add_eq_residueDeg` for the telescope step `E ↦ 1·P + E`. -/
+theorem add_pointDivisor_apply_self (E : X.WeilDivisor) (P : X.PrimeDivisor) :
+    (show X.PrimeDivisor →₀ ℤ from pointDivisor P + E) P =
+      (show X.PrimeDivisor →₀ ℤ from E) P + 1 := by
+  rw [weilDivisor_add_apply, pointDivisor, Finsupp.single_eq_same, add_comm]
+
+/-- **The one-point bump changes nothing off `P`** — the `hoff` hypothesis of
+`chi_add_eq_residueDeg` for the telescope step `E ↦ 1·P + E`. -/
+theorem add_pointDivisor_apply_of_ne (E : X.WeilDivisor) {P Q : X.PrimeDivisor}
+    (h : Q ≠ P) :
+    (show X.PrimeDivisor →₀ ℤ from pointDivisor P + E) Q =
+      (show X.PrimeDivisor →₀ ℤ from E) Q := by
+  rw [weilDivisor_add_apply, pointDivisor, Finsupp.single_eq_of_ne h, zero_add]
+
+/-- **The one-point bump is monotone** — the `hle` hypothesis of
+`chi_add_eq_residueDeg` for the telescope step `E ↦ 1·P + E`. -/
+theorem le_add_pointDivisor (E : X.WeilDivisor) (P Q : X.PrimeDivisor) :
+    (show X.PrimeDivisor →₀ ℤ from E) Q ≤
+      (show X.PrimeDivisor →₀ ℤ from pointDivisor P + E) Q := by
+  rw [weilDivisor_add_apply, pointDivisor]
+  rcases eq_or_ne Q P with rfl | hne
+  · rw [Finsupp.single_eq_same]; linarith
+  · rw [Finsupp.single_eq_of_ne hne]; linarith
+
 /-- **N16 — the χ-ledger telescopes over an effective divisor.**  Iterating the
 one-point χ-equality `χ(E + P) = χ(E) + deg P` (node N15/N16 `chi_add_eq_residueDeg`,
 supplied here as the per-step hypothesis `hbump`) along a list `L` of prime divisors
