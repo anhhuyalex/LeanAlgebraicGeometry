@@ -98,6 +98,8 @@ import AlgebraicJacobian.Picard.SerreTwist
 -- Option-B Phase 0 (Serre-finiteness lane): the glued-sheaf Γ-section API —
 -- Γ(glue D M g, ⊤) ≅ compatible families, instantiated at O(m).
 import AlgebraicJacobian.Picard.SerreTwistSections
+import AlgebraicJacobian.Picard.InvertibleGrBridge
+import AlgebraicJacobian.Picard.GradedPiecesFinite
 import AlgebraicJacobian.Picard.ProjectiveMorphism
 import AlgebraicJacobian.Picard.SerreFiniteness
 import AlgebraicJacobian.Picard.ZariskiDescentRepresentability
@@ -119,6 +121,9 @@ import AlgebraicJacobian.RiemannRoch.Adelic.Substrate
 import AlgebraicJacobian.RiemannRoch.Adelic.Cokernel
 import AlgebraicJacobian.RiemannRoch.Adelic.P1BaseCase
 import AlgebraicJacobian.RiemannRoch.Adelic.FinitenessP1
+import AlgebraicJacobian.RiemannRoch.Adelic.FiniteMapToP1
+import AlgebraicJacobian.RiemannRoch.Adelic.P1ChartData
+import AlgebraicJacobian.RiemannRoch.Adelic.ChiLedger
 import AlgebraicJacobian.Albanese.AlbaneseUP
 import AlgebraicJacobian.Albanese.AuslanderBuchsbaum
 import AlgebraicJacobian.Albanese.CodimOneExtension
