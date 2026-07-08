@@ -58,10 +58,11 @@ the representability sorry `instHasPicScheme` below is **conditional on
 statement. (Run-0008 memory `I-0061`: the same trap ruled out wiring
 `picSharp` to the *absolute* functor `PicSharp.presheaf`.)
 
-## Sorry accounting after the rewires (run 0008 `picSharp`, run 0010 fga-div)
+## Sorry accounting after the rewires (run 0008 `picSharp`, run 0010 fga-div,
+run 0011 Abel map)
 
-The file has exactly **two** remaining sorry sites, both `⟨sorry⟩` instance
-constructors of `Prop`-valued classes:
+The file has exactly **one** remaining sorry site, a `⟨sorry⟩` instance
+constructor of a `Prop`-valued class:
 
 1. `instHasPicScheme` — the single genuine **FGA sorry**: existence of a
    representing scheme for `picSharp C`, **locally of finite type over `k`**,
@@ -70,10 +71,13 @@ constructors of `Prop`-valued classes:
    also carry local finiteness — part (1) of the same Kleiman theorem, one
    existence package — absorbing the former separate
    `instPicSchemeLocallyOfFiniteType` sorry.
-2. `instHasAbelMap` — the `Nonempty` statement is true (the pointwise-zero
-   natural transformation into the group-valued target witnesses it), but
-   the extracted carrier stays opaque until the substantive Abel map
-   `D ↦ [O_{C ×_k T}(D)]` lands.
+
+`instHasAbelMap` is now **CLOSED** (run 0011): `HasAbelMap` is repinned from a
+`Prop`-valued `Nonempty (divFunctor C ⟶ picSharp C)` gate to a data-carrying
+class with field `abel`, and the instance supplies the **substantive** Abel map
+`abelMapWitness C = abelKernelNatTrans C ≫ picNeg C`, `[D] ↦ [O(D)] = -[ker q]`.
+`abelMap` therefore acquires a genuine defining property `abelMap_app_mk`
+(no longer an opaque `Classical.choice` of a `Nonempty`).
 
 Everything else is REAL or PROVED:
 
@@ -299,42 +303,187 @@ map**: a relative effective divisor `D ⊆ C ×_k T` over `T` determines a
 Blueprint reference: `lem:line_bundle_quot_correspondence` (Kleiman §3
 Def. `dfn:Abel` + Thm. `th:repDiv`). -/
 
-/-- Typeclass asserting existence of the Abel map `Div_{C/k} ⟶ Pic^♯_{C/k}`.
-The single `⟨sorry⟩` instance below is the unique sorry-carrying site for
-`abelMap`. (The bare `Nonempty` statement is true — the pointwise-zero
-natural transformation into the group-valued target witnesses it — but the
-carrier stays opaque until the substantive Abel map arrives with the
-Quot-scheme engine.) -/
+/-! ### The substantive Abel map (run-0011 closure)
+
+The former `⟨sorry⟩`-backed `Nonempty (divFunctor C ⟶ picSharp C)` carrier is
+replaced by the **explicit** natural transformation `abelMapWitness C`, and the
+class `HasAbelMap` is repinned to **carry the map itself** (a data field
+`abel`, no longer a bare `Prop`), so that `abelMap` acquires a genuine defining
+property (`abelMap_app_mk` below) rather than being an opaque `Classical.choice`
+of a `Nonempty`.
+
+Construction of `abelMapWitness C : Div_{C/k} ⟶ Pic^♯_{C/k}`, `[D] ↦ [O(D)]`:
+a relative effective divisor family `⟨F, q⟩` on `C ×_k T` has invertible ideal
+`I_D = ker q`; the Abel map sends its class to
+`[O(D)] = [I_D⁻¹] = -[I_D]`, the additive inverse (in the group-valued target
+`Pic^♯_{C/k}(T)`) of the class of the ideal sheaf.  It is assembled as the
+composite `abelKernelNatTrans C ≫ picNeg C`, where `abelKernelNatTrans` is the
+substantive `[D] ↦ [I_D]` transformation and `picNeg` is the (natural)
+negation on the group-valued functor.
+
+Naturality of `abelKernelNatTrans` is the mathematical heart: for a test map
+`g : T' ⟶ T` the base-change square is cartesian (`quotBaseSquare`), and the
+**kernel–pullback comparison** `g_C^*(ker q) ⟶ ker(g_C^* q)` is an isomorphism
+under the divisor conditions (`Modules.isIso_pullbackKernelComparison`, whose
+side hypotheses — epi `q`, quasi-coherent source, finitely-presented `F`,
+`T`-flat `F`, invertible kernel — are exactly the fields of `DivFamily`), so
+`ker` commutes with base change and the class `[ker q]` is natural.  Negation
+is natural because `Pic^♯`'s pullback maps are group homomorphisms.
+
+The `dual` route (`Modules.dual (ker q)` as an explicit inverse) is available
+for the *object-level* invertibility (`dual_isLocallyTrivial`) but is not used
+here: the group-inverse `-[ker q]` is the canonical `[I_D⁻¹]` and makes
+naturality rest only on the (landed) kernel–pullback comparison, avoiding the
+not-yet-formalised sheaf-level dual-pullback commutation.
+
+Blueprint reference: `lem:line_bundle_quot_correspondence` (Kleiman §3
+Def. `dfn:Abel`); this instance is the **natural-transformation half** — `Div`
+representability (Kleiman §3 Thm. `th:repDiv`) is NOT claimed here. -/
+
+/-- Well-definedness of the ideal-class assignment `⟨F, q⟩ ↦ [ker q]` on the
+divisor equivalence relation `DivFamily.Rel`: an equivalence `f : x.F ≅ y.F`
+with `x.q ≫ f.hom = y.q` gives `ker x.q ≅ ker y.q` (`kernelCompMono` at the
+iso `f.hom`), hence equal `H_T`-coset classes (`relPicRel_of_iso`). -/
+private theorem abelKernel_welldef {k : Type u} [Field k] (C : Over (Spec (.of k)))
+    (T : (Over (Spec (.of k)))ᵒᵖ) {x y : DivFamily C.hom T.unop} (h : x.Rel y) :
+    Quotient.mk (PicSharp.relPicSetoid C.hom T.unop.hom)
+        (⟨kernel x.q, x.kerLocallyTrivial⟩ : LineBundle.OnProduct C.hom T.unop.hom) =
+      Quotient.mk (PicSharp.relPicSetoid C.hom T.unop.hom)
+        (⟨kernel y.q, y.kerLocallyTrivial⟩ : LineBundle.OnProduct C.hom T.unop.hom) := by
+  obtain ⟨f, hf⟩ := h
+  exact Quotient.sound (PicSharp.relPicRel_of_iso
+    ⟨(kernelCompMono x.q f.hom).symm ≪≫ Limits.kernelIsoOfEq hf⟩)
+
+/-- **Kernel commutes with base change for a divisor family** (the mathematical
+heart of Abel-map naturality).  For a test map `g : T ⟶ T'` and a divisor family
+`x` over `T`, the ideal of the pulled-back family is the pullback of the ideal:
+`ker((g_C^* x).q) ≅ g_C^*(ker x.q)`.  Proof: `(pullbackAlong g.unop x).q` is
+`triangleIso.inv ≫ g_C^*(x.q)`, so its kernel agrees with `ker(g_C^* x.q)`
+(`kernelIsIsoComp`, precomposition by the iso `triangleIso.inv`); the
+**kernel–pullback comparison** `g_C^*(ker q) ⟶ ker(g_C^* q)` is an isomorphism
+under the divisor conditions (`Modules.isIso_pullbackKernelComparison`, whose
+side hypotheses are exactly the `DivFamily` fields `epi`, quasi-coherent source,
+`isFinitePresentation`, `flat`, `kerLocallyTrivial` over the cartesian
+`quotBaseSquare`). -/
+private noncomputable def abelKernelBaseChangeIso {k : Type u} [Field k]
+    (C : Over (Spec (.of k)))
+    {T T' : (Over (Spec (.of k)))ᵒᵖ} (g : T ⟶ T') (x : DivFamily C.hom T.unop) :
+    kernel ((DivFamily.pullbackAlong g.unop x).q) ≅
+      (Scheme.Modules.pullback (quotBaseMap C.hom g.unop)).obj (kernel x.q) := by
+  haveI hiso : IsIso (Modules.pullbackKernelComparison (quotBaseMap C.hom g.unop) x.q) :=
+    Modules.isIso_pullbackKernelComparison (quotBaseSquare C.hom g.unop) x.q x.epi
+      (pullback_isQuasicoherent_hom (pullback.fst C.hom T.unop.hom)
+        (SheafOfModules.unit C.left.ringCatSheaf) inferInstance)
+      x.isFinitePresentation x.flat x.kerLocallyTrivial
+  exact kernelIsIsoComp
+      (pullbackTriangleIso (quotBaseMap_fst C.hom g.unop)
+        (SheafOfModules.unit C.left.ringCatSheaf)).inv
+      ((Scheme.Modules.pullback (quotBaseMap C.hom g.unop)).map x.q) ≪≫
+    (asIso (Modules.pullbackKernelComparison (quotBaseMap C.hom g.unop) x.q)).symm
+
+/-- **The ideal-class transformation** `[D] ↦ [I_D] = [ker q]`
+(`Div_{C/k} ⟶ Pic^♯_{C/k}`), the additive negative of the Abel map.  On
+objects it is `⟦⟨F, q⟩⟧ ↦ ⟦ker q⟧`; naturality is the invertible
+kernel–pullback comparison over the cartesian base-change square
+(`abelKernelBaseChangeIso`, fed by the `DivFamily` fields).  Well-definedness on
+`DivFamily.Rel` is `abelKernel_welldef`. -/
+noncomputable def abelKernelNatTrans {k : Type u} [Field k] (C : Over (Spec (.of k)))
+    [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom] :
+    divFunctor C ⟶ picSharp C where
+  app T := TypeCat.ofHom (Quotient.lift
+    (fun x : DivFamily C.hom T.unop =>
+      Quotient.mk (PicSharp.relPicSetoid C.hom T.unop.hom)
+        (⟨kernel x.q, x.kerLocallyTrivial⟩ : LineBundle.OnProduct C.hom T.unop.hom))
+    (fun _ _ h => abelKernel_welldef C T h))
+  naturality {T T'} g := by
+    ext a
+    induction a using Quotient.ind with | _ x => ?_
+    apply Quotient.sound
+    apply PicSharp.relPicRel_of_iso
+    exact ⟨abelKernelBaseChangeIso C g x⟩
+
+/-- **Negation on the group-valued relative Picard presheaf**
+`PicSharp.relPresheaf C ⟶ PicSharp.relPresheaf C`.  Pointwise it is the group
+homomorphism `a ↦ -a` (`-AddMonoidHom.id`, valid since `Pic^♯_{C/k}(T)` is
+abelian); naturality is `map_neg` of the group-homomorphism pullback maps of
+`Pic^♯` (`PicSharp.relFunctorial`).  Building the negation at the
+`AddCommGrpCat`-valued level (rather than on the forgotten set-valued
+`picSharp`) keeps the group structure directly available — the forget-composite
+`(picSharp C).obj T` does not expose its `AddGroup` to instance search. -/
+noncomputable def relPresheafNeg {k : Type u} [Field k] (C : Over (Spec (.of k)))
+    [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom] :
+    PicSharp.relPresheaf C ⟶ PicSharp.relPresheaf C where
+  app T := AddCommGrpCat.ofHom (-AddMonoidHom.id _)
+  naturality {T T'} g := by
+    ext a
+    exact (map_neg (PicSharp.relFunctorial C.hom T.unop.hom T'.unop.hom
+      g.unop.left (Over.w g.unop).symm) a).symm
+
+/-- **Negation on the relative Picard functor**, as a natural transformation
+`Pic^♯_{C/k} ⟶ Pic^♯_{C/k}`.  Pointwise it is `a ↦ -a` in the group
+`Pic^♯_{C/k}(T)`; it is the set-valued shadow (`whiskerRight … (forget _)`) of
+the group-presheaf negation `relPresheafNeg`, so its naturality is inherited
+for free. -/
+noncomputable def picNeg {k : Type u} [Field k] (C : Over (Spec (.of k)))
+    [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom] :
+    picSharp C ⟶ picSharp C :=
+  Functor.whiskerRight (relPresheafNeg C) (CategoryTheory.forget AddCommGrpCat.{u+1})
+
+/-- **The Abel map witness** `A_{C/k} : Div_{C/k} ⟶ Pic^♯_{C/k}`,
+`[D] ↦ [O(D)] = [I_D⁻¹] = -[ker q]`, the substantive natural transformation
+underlying the line-bundle / Quot correspondence (Kleiman §3 Def. `dfn:Abel`).
+Assembled as `abelKernelNatTrans C ≫ picNeg C`. -/
+noncomputable def abelMapWitness {k : Type u} [Field k] (C : Over (Spec (.of k)))
+    [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom] :
+    divFunctor C ⟶ picSharp C :=
+  abelKernelNatTrans C ≫ picNeg C
+
+/-- Class **carrying the Abel map** `Div_{C/k} ⟶ Pic^♯_{C/k}` (repinned
+run-0011).  Formerly a `Prop`-valued `Nonempty` gate whose `Classical.choice`
+extraction had no defining property; now a data-carrying class with field
+`abel`, so `abelMap := HasAbelMap.abel` inherits the concrete construction and
+the defining property `abelMap_app_mk`.  The instance `instHasAbelMap` supplies
+the substantive witness `abelMapWitness C`. -/
 class HasAbelMap {k : Type u} [Field k] (C : Over (Spec (.of k)))
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
-    [GeometricallyIntegral C.hom] : Prop where
-  has_abel_map : Nonempty (divFunctor C ⟶ picSharp C)
+    [GeometricallyIntegral C.hom] where
+  /-- The Abel map itself (data). -/
+  abel : divFunctor C ⟶ picSharp C
 
 /-- The **Abel map** `A_{C/k} : Div_{C/k} ⟶ Pic^♯_{C/k}`, sending a relative
 effective Cartier divisor `D ⊆ C ×_k T` over `T` to its associated invertible
 sheaf `[O_{C ×_k T}(D)] = [I_D⁻¹]`.
 
-The run-0008 rewire made the TARGET the real relative Picard functor, and the
-run-0010 rewire made the SOURCE the real relative-divisor functor
-(`divFunctor C = Scheme.DivFunctor C.hom`), so both endpoints now have
-mathematical content; the natural transformation ITSELF is still extracted
-from `HasAbelMap.has_abel_map` via `Classical.choice` and remains without
-defining property until the substantive Abel map
-`⟨F, q⟩ ↦ [(ker q)⁻¹]` is constructed. -/
+Repinned run-0011: `abelMap` is now the concrete map carried by `HasAbelMap`
+(no longer an opaque `Classical.choice` of a `Nonempty`); the instance
+`instHasAbelMap` fixes it to `abelMapWitness C`, and its defining property is
+`abelMap_app_mk`. -/
 noncomputable def abelMap {k : Type u} [Field k]
     (C : Over (Spec (.of k)))
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
     [GeometricallyIntegral C.hom] [HasAbelMap C] :
     divFunctor C ⟶ picSharp C :=
-  Classical.choice (HasAbelMap.has_abel_map (C := C))
+  HasAbelMap.abel
 
-/-- Existence instance for `HasAbelMap`. This is the single sorry-carrying
-site for `abelMap`. -/
+/-- Existence instance for `HasAbelMap` — **PROVED** (run-0011): the substantive
+Abel map `abelMapWitness C` witnesses the carrier; no sorry remains. -/
 noncomputable instance instHasAbelMap {k : Type u} [Field k]
     (C : Over (Spec (.of k)))
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
     [GeometricallyIntegral C.hom] : HasAbelMap C :=
-  ⟨sorry⟩
+  ⟨abelMapWitness C⟩
+
+/-- **Defining property of the Abel map** (Kleiman §3 Def. `dfn:Abel`): on the
+class of a relative divisor family `⟨F, q⟩` it returns `[O(D)] = [I_D⁻¹]`, the
+additive inverse of the class of the ideal sheaf `I_D = ker q`. -/
+theorem abelMap_app_mk {k : Type u} [Field k] (C : Over (Spec (.of k)))
+    [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
+    [GeometricallyIntegral C.hom]
+    (T : (Over (Spec (.of k)))ᵒᵖ) (x : DivFamily C.hom T.unop) :
+    (abelMap C).app T (Quotient.mk (DivFamily.setoid C.hom T.unop) x) =
+      - Quotient.mk (PicSharp.relPicSetoid C.hom T.unop.hom)
+        (⟨kernel x.q, x.kerLocallyTrivial⟩ : LineBundle.OnProduct C.hom T.unop.hom) := by
+  rfl
 
 /-! ## §3. The smooth-proper quotient lemma — Altman–Kleiman descent
 
