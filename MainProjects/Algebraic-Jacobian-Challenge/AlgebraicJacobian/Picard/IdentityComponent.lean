@@ -22,17 +22,23 @@ substrate for a `k`-group scheme locally of finite type and specialises it to
    of `C` when `C/k` is a smooth proper geometrically integral curve of
    positive genus).
 
-## Status (run 0005, session 0011)
+## Status (run 0009, T6 session)
 
-The §1 group-scheme substrate is now fully proved: `IdentityComponent`,
+The §1 group-scheme substrate is fully proved: `IdentityComponent`,
 `isOpenSubgroupScheme`, `isSubgroupHomomorphism` (Yoneda subgroup-presheaf
-route) and `baseChangeIso` are sorry-free. Remaining sorries (6):
-`isFiniteTypeGeometricallyIrreducible`'s quasi-compactness/geometric-
-irreducibility conjunct (needs EGA IV₂ 4.6.1-type reduced-fiber-product
-input, not in Mathlib), and the five Pic⁰-specific declarations of §2–§4,
-which inherit the typed-sorry FGA representability foundation
-(`Picard/FGAPicRepresentability.lean`) and cannot be axiom-clean before
-`AJC.picrep` lands.
+route), `isFiniteTypeGeometricallyIrreducible` (run 0009: Kleiman's
+translation argument over the algebraic closure — closed-point translation
+via `GrpObj.mulRight` and `pointEquivClosedPoint`, Jacobson density,
+EGA I 6.1.10, then descent along the surjective base-change projection via
+`baseChangeIso`; the previous claim that this needed EGA IV₂ 4.6.1-type
+input absent from Mathlib was stale) and `baseChangeIso` are sorry-free.
+Remaining sorries (3): `degree` / `finrank_eq_genus` /
+`kPoints_iff_kerDegree` of §3–§4, which inherit the typed-sorry FGA
+representability foundation (`Picard/FGAPicRepresentability.lean`) and
+cannot be axiom-clean before `AJC.picrep` lands.
+`Pic0Scheme.isAbelianVariety` MOVED to sibling
+`Picard/Pic0AbelianVariety.lean` (run 0008), where it is assembled from
+the per-conjunct theorems of that chapter.
 
 The 5 blueprint-pinned declarations are:
 
@@ -334,9 +340,9 @@ PROVED project-side (run 0005 session 0007, T5) in the sibling module
 `geometricallyConnected_of_connected_of_section` below, so the
 geometric-connectedness substrate is axiom-clean. Built on top of it,
 `isSubgroupHomomorphism` (group-structure inheritance) and `baseChangeIso`
-(clopen-image identification) are now both axiom-clean; the only remaining
-sorry is the `GeometricallyIrreducible` conjunct of
-`isFiniteTypeGeometricallyIrreducible` (EGA IV₂ 4.6.1-type input).
+(clopen-image identification) are now both axiom-clean, and (run 0009, T6)
+`isFiniteTypeGeometricallyIrreducible` is closed as well — see the
+"Run 0009 (T6)" section below — so the §1 substrate is fully sorry-free.
 
 Below: `baseChangeIso` closes via
 `CategoryTheory.Over.grpObjMkPullbackSnd` together with the carrier
@@ -756,45 +762,344 @@ theorem IdentityComponent.isSubgroupHomomorphism {k : Type u} [Field k]
   ⟨GrpObj.ofRepresentableBy (IdentityComponent G) (identityComponentSubgroupFunctor G)
     (identityComponentRepresentableBy G)⟩
 
-/-- **The identity component is of finite type and geometrically irreducible.**
+/-! ### Run 0009 (T6): finite type + geometric irreducibility of `G⁰`
 
-Kleiman §5 Lem.~`lem:agps`~(3) conclusion (c): the open subgroup `G^0` of
-a `k`-group scheme `G` locally of finite type is itself
-locally-of-finite-type-plus-quasi-compact (i.e., of finite type) over `k`,
-and is geometrically irreducible. The proof reduces (after base change to
-`\bar k`) to picking a nonempty smooth affine open subset `U ⊆ G^0`; the
-translates `hg⁻¹U` give an open cover of `G^0` by smooth, hence irreducible,
-neighbourhoods, so `G^0` is locally irreducible at every closed point; with
-connectedness this gives irreducibility globally (EGA I 6.1.10). The image
-`α(U × U) = G^0` is the image of the affine, hence quasi-compact, scheme
-`U × U`, so `G^0` is quasi-compact.
+Kleiman §5 Lem.~`lem:agps`~(3) conclusion (c). The former header claim that
+this needs EGA IV₂ 4.6.1 reduced-fiber-product input absent from Mathlib was
+stale: Mathlib v4.31 templates Kleiman's translation argument (closed-point
+translation via `GrpObj.mulRight`, closed points ↔ rational points via
+`pointEquivClosedPoint`, Jacobson density of closed points) in
+`Mathlib/AlgebraicGeometry/Group/Smooth.lean`
+(`smooth_of_grpObj_of_isAlgClosed`), and we adapt that pattern here.
 
-iter-189 partial progress: the `LocallyOfFiniteType` conjunct closes
-axiom-clean via composition of an open immersion with `G.hom`. The
-remaining two conjuncts (`QuasiCompact`, `GeometricallyIrreducible`)
-require the group-structure argument and are bundled into the residual
-sorry. -/
-theorem IdentityComponent.isFiniteTypeGeometricallyIrreducible
-    {k : Type u} [Field k]
-    (G : Over (Spec (.of k)))
+Layer structure:
+1. `irreducibleSpace_of_connectedSpace_of_nhds` — EGA I 6.1.10 in topological
+   form: a connected space in which every point has an irreducible open
+   neighbourhood is irreducible.
+2. `identityComponent_irreducibleSpace_of_isAlgClosed` /
+   `identityComponent_compactSpace_of_isAlgClosed` — the geometric core over
+   an algebraically closed field: translate a nonempty irreducible (resp.
+   quasi-compact affine) open through every closed point using the inherited
+   group structure of `G⁰` (`isSubgroupHomomorphism`), then sweep up the
+   non-closed points by Jacobson density.
+3. `identityComponent_compactSpace` /
+   `identityComponent_geometricallyIrreducible` (placed after
+   `baseChangeIso` below) — descent to an arbitrary base field along the
+   surjective projection from the base change to the algebraic closure,
+   using `baseChangeIso` to identify `(G_K̄)⁰` with the base change of `G⁰`.
+
+The blueprint-pinned theorem `isFiniteTypeGeometricallyIrreducible` is
+assembled after `baseChangeIso` (its statement is unchanged). -/
+
+/-- **EGA I 6.1.10** (topological form): a connected topological space in
+which every point admits an irreducible open neighbourhood is irreducible.
+
+Proof: let `Z` be the irreducible component of some point. For `z ∈ Z` pick
+an irreducible open `V ∋ z`; then `Z ∩ V` is nonempty, so
+`Z ⊆ closure (Z ∩ V) ⊆ closure V` (a nonempty open subset of a
+preirreducible set is dense in it); `closure V` is irreducible, so
+maximality of `Z` forces `closure V = Z`, whence `V ⊆ Z` and `Z` is open.
+Components are always closed, so the nonempty clopen `Z` is everything by
+connectedness. -/
+private lemma irreducibleSpace_of_connectedSpace_of_nhds
+    {α : Type*} [TopologicalSpace α] [ConnectedSpace α]
+    (h : ∀ x : α, ∃ V : Set α, IsOpen V ∧ x ∈ V ∧ IsIrreducible V) :
+    IrreducibleSpace α := by
+  obtain ⟨x₀⟩ := (inferInstance : Nonempty α)
+  have hZmem : Maximal IsIrreducible (irreducibleComponent x₀) :=
+    irreducibleComponent_mem_irreducibleComponents x₀
+  have hZopen : IsOpen (irreducibleComponent x₀) := by
+    rw [isOpen_iff_mem_nhds]
+    intro z hz
+    obtain ⟨V, hVopen, hzV, hVirr⟩ := h z
+    have h1 : irreducibleComponent x₀ ⊆ closure V :=
+      (subset_closure_inter_of_isPreirreducible_of_isOpen hZmem.prop.2 hVopen
+        ⟨z, hz, hzV⟩).trans (closure_mono Set.inter_subset_right)
+    have h2 : closure V = irreducibleComponent x₀ :=
+      hZmem.eq_of_superset hVirr.closure h1
+    exact mem_nhds_iff.mpr ⟨V, h2 ▸ subset_closure, hVopen, hzV⟩
+  have hZuniv : irreducibleComponent x₀ = Set.univ :=
+    (isClopen_iff.mp ⟨isClosed_irreducibleComponent, hZopen⟩).resolve_left
+      (Set.Nonempty.ne_empty ⟨x₀, mem_irreducibleComponent⟩)
+  haveI : PreirreducibleSpace α := ⟨hZuniv ▸ hZmem.prop.2⟩
+  exact ⟨⟨x₀⟩⟩
+
+/-- The structural morphism of the identity component is locally of finite
+type: it is the composite of the open immersion `G⁰ ↪ G` with `G.hom`. -/
+private theorem identityComponent_locallyOfFiniteType
+    {k : Type u} [Field k] (G : Over (Spec (.of k)))
     [GrpObj G] [LocallyOfFiniteType G.hom] :
-    LocallyOfFiniteType (IdentityComponent G).hom ∧
-      QuasiCompact (IdentityComponent G).hom ∧
-      GeometricallyIrreducible (IdentityComponent G).hom := by
-  refine ⟨?_, ?_⟩
-  · -- `LocallyOfFiniteType`: `(IdentityComponent G).hom` unfolds to
-    -- `(identityComponentCarrier G).ι ≫ G.hom`. Open immersion ∘ LFT
-    -- is LFT (`locallyOfFiniteType_of_isOpenImmersion` +
-    -- `locallyOfFiniteType_comp`).
-    change LocallyOfFiniteType ((identityComponentCarrier G).ι ≫ G.hom)
-    infer_instance
-  · -- `QuasiCompact ∧ GeometricallyIrreducible`: Kleiman's group-theoretic
-    -- argument. `α(U × U) = G^0` quasi-compact via the affine `U × U`;
-    -- geometric irreducibility via base change to `\bar k`, picking a
-    -- smooth affine `U ⊆ G^0`, and translating `hg⁻¹U` to cover. Cannot
-    -- close axiom-clean without the substrate `isSubgroupHomomorphism`
-    -- + EGA IV₂ 4.5.8 / 4.6.1 / EGA I 6.1.10 (not yet in Mathlib).
-    sorry
+    LocallyOfFiniteType (IdentityComponent G).hom := by
+  change LocallyOfFiniteType ((identityComponentCarrier G).ι ≫ G.hom)
+  infer_instance
+
+/-- Existence of a nonempty irreducible open subset of `|G⁰|`: inside any
+affine open `W` (a Noetherian space, since `G⁰` is locally Noetherian over
+the field `k`), the complement of the union of the irreducible components of
+`W` other than a fixed one is open, nonempty, and contained in that fixed
+irreducible component (Stacks 0052 (3)); its image under the open embedding
+`W ↪ G⁰` is the required open. -/
+private lemma identityComponent_exists_isOpen_nonempty_isIrreducible
+    {k : Type u} [Field k] (G : Over (Spec (.of k)))
+    [GrpObj G] [LocallyOfFiniteType G.hom] :
+    ∃ U : Set (IdentityComponent G).left,
+      IsOpen U ∧ U.Nonempty ∧ IsIrreducible U := by
+  haveI : LocallyOfFiniteType (IdentityComponent G).hom :=
+    identityComponent_locallyOfFiniteType G
+  haveI : IsLocallyNoetherian (IdentityComponent G).left :=
+    LocallyOfFiniteType.isLocallyNoetherian (IdentityComponent G).hom
+  obtain ⟨x₀⟩ : Nonempty (IdentityComponent G).left := inferInstance
+  obtain ⟨W, hW, hx₀W, -⟩ := exists_isAffineOpen_mem_and_subset
+    (X := (IdentityComponent G).left) (U := ⊤)
+    (TopologicalSpace.Opens.mem_top x₀)
+  haveI : IsNoetherianRing Γ((IdentityComponent G).left, W) :=
+    IsLocallyNoetherian.component_noetherian ⟨W, hW⟩
+  haveI : TopologicalSpace.NoetherianSpace ↥W := noetherianSpace_of_isAffineOpen W hW
+  obtain ⟨o, hoopen, hone, hoZ⟩ :=
+    TopologicalSpace.NoetherianSpace.exists_isOpen_nonempty_subset_irreducibleComponent
+      (irreducibleComponent (⟨x₀, hx₀W⟩ : ↥W))
+      (irreducibleComponent_mem_irreducibleComponents _)
+  have hoirr : IsIrreducible o :=
+    ⟨hone, (isIrreducible_irreducibleComponent
+      (x := (⟨x₀, hx₀W⟩ : ↥W))).2.open_subset hoopen hoZ⟩
+  exact ⟨(Subtype.val : ↥W → (IdentityComponent G).left) '' o,
+    W.isOpen.isOpenMap_subtype_val _ hoopen, hone.image _,
+    hoirr.image _ continuous_subtype_val.continuousOn⟩
+
+/-- Composing a rational point with the right-translation isomorphism
+computes the Hom-group product: `p ≫ (· * q) = p * q` for
+`p q : 𝟙_ ⟶ A`. -/
+private lemma comp_mulRight_hom {k : Type u} [Field k]
+    {A : Over (Spec (.of k))} [GrpObj A]
+    (p q : 𝟙_ (Over (Spec (.of k))) ⟶ A) :
+    p ≫ (GrpObj.mulRight q).hom = p * q := by
+  rw [Hom.mul_def, GrpObj.mulRight_hom, comp_lift_assoc, Category.comp_id,
+    ← Category.assoc, toUnit_unique (p ≫ toUnit A) (𝟙 _), Category.id_comp]
+
+set_option backward.isDefEq.respectTransparency false in
+/-- **Kleiman §5 Lem.~`lem:agps`~(3)(c), irreducibility core over an
+algebraically closed field**: over `K = K̄` the identity component `G⁰` is
+irreducible. Translate one nonempty irreducible open `U` (which exists by
+`identityComponent_exists_isOpen_nonempty_isIrreducible`) through each
+closed point `z` via the translation isomorphism `x ↦ x·g⁻¹·z` (with `g` a
+closed point of `U`, so that the translate contains `z`); Jacobson density
+sweeps up the non-closed points; conclude by EGA I 6.1.10 and connectedness
+of `G⁰`. -/
+private theorem identityComponent_irreducibleSpace_of_isAlgClosed
+    {K : Type u} [Field K] [IsAlgClosed K]
+    (G : Over (Spec (.of K))) [GrpObj G] [LocallyOfFiniteType G.hom] :
+    IrreducibleSpace (IdentityComponent G).left := by
+  letI : GrpObj (IdentityComponent G) :=
+    Classical.choice (IdentityComponent.isSubgroupHomomorphism G)
+  haveI : LocallyOfFiniteType (IdentityComponent G).hom :=
+    identityComponent_locallyOfFiniteType G
+  haveI : JacobsonSpace (IdentityComponent G).left :=
+    LocallyOfFiniteType.jacobsonSpace (IdentityComponent G).hom
+  obtain ⟨U, hUopen, hUne, hUirr⟩ :=
+    identityComponent_exists_isOpen_nonempty_isIrreducible G
+  obtain ⟨g, hgU, hgc⟩ := nonempty_inter_closedPoints hUne hUopen.isLocallyClosed
+  let g' : 𝟙_ (Over (Spec (.of K))) ⟶ IdentityComponent G :=
+    Over.homMk _ ((pointEquivClosedPoint (IdentityComponent G).hom).symm ⟨g, hgc⟩).2
+  have hg' : ∀ a, g'.left a = g := fun a => by simp [g', pointEquivClosedPoint]
+  let pt : ↥(𝟙_ (Over (Spec (CommRingCat.of K)))).left :=
+    (default : ↥(Spec (CommRingCat.of K)))
+  have hcover : ∀ z ∈ closedPoints (IdentityComponent G).left,
+      ∃ V : Set (IdentityComponent G).left, IsOpen V ∧ z ∈ V ∧ IsIrreducible V := by
+    intro z hzc
+    let z' : 𝟙_ (Over (Spec (.of K))) ⟶ IdentityComponent G :=
+      Over.homMk _ ((pointEquivClosedPoint (IdentityComponent G).hom).symm ⟨z, hzc⟩).2
+    have hz' : ∀ a, z'.left a = z := fun a => by simp [z', pointEquivClosedPoint]
+    -- the right-translation `x ↦ x·(g⁻¹·z)`, an automorphism sending `g` to `z`
+    let τ : IdentityComponent G ⟶ IdentityComponent G :=
+      (GrpObj.mulRight (A := IdentityComponent G) (g'⁻¹ * z')).hom
+    haveI hτiso : IsIso τ :=
+      inferInstanceAs (IsIso (GrpObj.mulRight (A := IdentityComponent G) (g'⁻¹ * z')).hom)
+    haveI : IsIso τ.left :=
+      inferInstanceAs (IsIso ((Over.forget (Spec (.of K))).map τ))
+    have hτ : g' ≫ τ = z' := by
+      rw [show g' ≫ τ =
+          g' ≫ (GrpObj.mulRight (A := IdentityComponent G) (g'⁻¹ * z')).hom from rfl,
+        comp_mulRight_hom]
+      exact mul_inv_cancel_left g' z'
+    have hτl : g'.left ≫ τ.left = z'.left := by
+      simpa using
+        congrArg (fun q : 𝟙_ (Over (Spec (.of K))) ⟶ IdentityComponent G => q.left) hτ
+    have hτ' : τ.left g = z := by
+      calc τ.left g = τ.left (g'.left pt) := by rw [hg' pt]
+        _ = (g'.left ≫ τ.left) pt := (Scheme.Hom.comp_apply _ _ _).symm
+        _ = z'.left pt := by rw [hτl]
+        _ = z := hz' pt
+    exact ⟨⇑τ.left '' U, τ.left.isOpenEmbedding.isOpenMap _ hUopen,
+      ⟨g, hgU, hτ'⟩, hUirr.image _ (Scheme.Hom.continuous τ.left).continuousOn⟩
+  have hsUopen : IsOpen (⋃₀ {V : Set (IdentityComponent G).left |
+      IsOpen V ∧ IsIrreducible V}) :=
+    isOpen_sUnion fun _ hV => hV.1
+  have hsU : ⋃₀ {V : Set (IdentityComponent G).left | IsOpen V ∧ IsIrreducible V} =
+      Set.univ := by
+    by_contra hne
+    obtain ⟨w, hw, hwc⟩ := nonempty_inter_closedPoints (Set.nonempty_compl.mpr hne)
+      hsUopen.isClosed_compl.isLocallyClosed
+    obtain ⟨V, hV1, hV2, hV3⟩ := hcover w hwc
+    exact hw ⟨V, ⟨hV1, hV3⟩, hV2⟩
+  refine irreducibleSpace_of_connectedSpace_of_nhds fun x => ?_
+  have hx : x ∈ ⋃₀ {V : Set (IdentityComponent G).left |
+      IsOpen V ∧ IsIrreducible V} := by
+    rw [hsU]; trivial
+  obtain ⟨V, ⟨hV1, hV3⟩, hxV⟩ := hx
+  exact ⟨V, hV1, hxV, hV3⟩
+
+set_option backward.isDefEq.respectTransparency false in
+/-- **Kleiman §5 Lem.~`lem:agps`~(3)(c), quasi-compactness core over an
+algebraically closed field**: over `K = K̄` the identity component `G⁰` is
+quasi-compact. Let `W ∋ e` be an affine open. For a closed point `z`, the
+preimage `χ_z⁻¹(W)` of `W` under the "division" morphism `χ_z : x ↦ x⁻¹·z`
+contains `z` (because `χ_z(z) = e ∈ W`), so it meets `W` in a nonempty open
+(`G⁰` is irreducible by the previous lemma), which contains a closed point
+`g` by Jacobson density; then `u := g⁻¹·z` is a rational point landing in
+`W` and `z = g·u` lies in the image of the multiplication
+`m : W ×_K W ⟶ G⁰`. So the compact `m(W ×_K W)` contains all closed points;
+finitely many affine opens cover it, and by Jacobson density they cover
+everything. -/
+private theorem identityComponent_compactSpace_of_isAlgClosed
+    {K : Type u} [Field K] [IsAlgClosed K]
+    (G : Over (Spec (.of K))) [GrpObj G] [LocallyOfFiniteType G.hom] :
+    CompactSpace (IdentityComponent G).left := by
+  letI : GrpObj (IdentityComponent G) :=
+    Classical.choice (IdentityComponent.isSubgroupHomomorphism G)
+  haveI : LocallyOfFiniteType (IdentityComponent G).hom :=
+    identityComponent_locallyOfFiniteType G
+  haveI : JacobsonSpace (IdentityComponent G).left :=
+    LocallyOfFiniteType.jacobsonSpace (IdentityComponent G).hom
+  haveI : IrreducibleSpace (IdentityComponent G).left :=
+    identityComponent_irreducibleSpace_of_isAlgClosed G
+  -- an affine open around the identity point
+  obtain ⟨W, hW, heW, -⟩ := exists_isAffineOpen_mem_and_subset
+    (X := (IdentityComponent G).left) (U := ⊤)
+    (TopologicalSpace.Opens.mem_top (identitySectionPoint (IdentityComponent G)))
+  haveI hWc : CompactSpace W.toScheme := isCompact_iff_compactSpace.mp hW.isCompact
+  haveI : QuasiCompact (W.ι ≫ (IdentityComponent G).hom) :=
+    HasAffineProperty.iff_of_isAffine.mpr hWc
+  let UW : Over (Spec (.of K)) := Over.mk (W.ι ≫ (IdentityComponent G).hom)
+  let ιU : UW ⟶ IdentityComponent G := Over.homMk W.ι rfl
+  let m : UW ⊗ UW ⟶ IdentityComponent G :=
+    (ιU ⊗ₘ ιU) ≫ MonObj.mul (X := IdentityComponent G)
+  haveI : CompactSpace (UW ⊗ UW).left :=
+    inferInstanceAs (CompactSpace ↥(pullback (W.ι ≫ (IdentityComponent G).hom)
+      (W.ι ≫ (IdentityComponent G).hom)))
+  let pt : ↥(𝟙_ (Over (Spec (CommRingCat.of K)))).left :=
+    (default : ↥(Spec (CommRingCat.of K)))
+  -- all closed points lie in the image of `m`
+  have hmem : ∀ z ∈ closedPoints (IdentityComponent G).left,
+      z ∈ Set.range ⇑m.left := by
+    intro z hzc
+    let z' : 𝟙_ (Over (Spec (.of K))) ⟶ IdentityComponent G :=
+      Over.homMk _ ((pointEquivClosedPoint (IdentityComponent G).hom).symm ⟨z, hzc⟩).2
+    have hz' : ∀ a, z'.left a = z := fun a => by simp [z', pointEquivClosedPoint]
+    -- the "division" morphism `x ↦ x⁻¹·z`
+    let χ : IdentityComponent G ⟶ IdentityComponent G :=
+      GrpObj.inv (X := IdentityComponent G) ≫
+        (GrpObj.mulRight (A := IdentityComponent G) z').hom
+    have hχ : ∀ p : 𝟙_ (Over (Spec (.of K))) ⟶ IdentityComponent G,
+        p ≫ χ = p⁻¹ * z' := fun p => by
+      rw [show p ≫ χ = (p ≫ GrpObj.inv (X := IdentityComponent G)) ≫
+            (GrpObj.mulRight (A := IdentityComponent G) z').hom from
+          (Category.assoc _ _ _).symm,
+        ← Hom.inv_def, comp_mulRight_hom]
+    have hone : (1 : 𝟙_ (Over (Spec (.of K))) ⟶ IdentityComponent G) =
+        MonObj.one (X := IdentityComponent G) := by
+      rw [Hom.one_def, toUnit_unique (toUnit _) (𝟙 _), Category.id_comp]
+    -- `χ` sends `z` to the identity point, which lies in `W`
+    have hχz : χ.left z = identitySectionPoint (IdentityComponent G) := by
+      have h1 : z'.left ≫ χ.left = (MonObj.one (X := IdentityComponent G)).left := by
+        simpa using
+          congrArg (fun q : 𝟙_ (Over (Spec (.of K))) ⟶ IdentityComponent G => q.left)
+            ((hχ z').trans (by rw [inv_mul_cancel, hone]))
+      calc χ.left z = χ.left (z'.left pt) := by rw [hz' pt]
+        _ = (z'.left ≫ χ.left) pt := (Scheme.Hom.comp_apply _ _ _).symm
+        _ = (MonObj.one (X := IdentityComponent G)).left pt := by rw [h1]
+        _ = identitySectionPoint (IdentityComponent G) := rfl
+    have hχzW : χ.left z ∈ (W : Set (IdentityComponent G).left) := hχz ▸ heW
+    -- a closed point in `W ∩ χ⁻¹(W)`
+    have hinter : ((W : Set (IdentityComponent G).left) ∩
+        ⇑χ.left ⁻¹' (W : Set (IdentityComponent G).left)).Nonempty :=
+      nonempty_preirreducible_inter W.isOpen
+        (W.isOpen.preimage (Scheme.Hom.continuous χ.left)) ⟨_, heW⟩ ⟨z, hχzW⟩
+    obtain ⟨g, ⟨hgW, hgE⟩, hgc⟩ := nonempty_inter_closedPoints hinter
+      (W.isOpen.inter
+        (W.isOpen.preimage (Scheme.Hom.continuous χ.left))).isLocallyClosed
+    let g' : 𝟙_ (Over (Spec (.of K))) ⟶ IdentityComponent G :=
+      Over.homMk _ ((pointEquivClosedPoint (IdentityComponent G).hom).symm ⟨g, hgc⟩).2
+    have hg' : ∀ a, g'.left a = g := fun a => by simp [g', pointEquivClosedPoint]
+    -- `u := g⁻¹·z` is a rational point landing in `W`
+    have hu : ∀ a, (g'⁻¹ * z').left a = χ.left g := fun a => by
+      have h1 : g'.left ≫ χ.left = (g'⁻¹ * z').left := by
+        simpa using
+          congrArg (fun q : 𝟙_ (Over (Spec (.of K))) ⟶ IdentityComponent G => q.left)
+            (hχ g')
+      calc (g'⁻¹ * z').left a = (g'.left ≫ χ.left) a := by rw [h1]
+        _ = χ.left (g'.left a) := Scheme.Hom.comp_apply _ _ _
+        _ = χ.left g := by rw [hg' a]
+    -- factor `g'` and `u := g'⁻¹ * z'` through `W`
+    have hrg : Set.range ⇑g'.left ⊆ Set.range ⇑W.ι := by
+      rw [Scheme.Opens.range_ι]
+      rintro - ⟨a, rfl⟩
+      rw [hg' a]; exact hgW
+    have hru : Set.range ⇑(g'⁻¹ * z').left ⊆ Set.range ⇑W.ι := by
+      rw [Scheme.Opens.range_ι]
+      rintro - ⟨a, rfl⟩
+      rw [hu a]; exact hgE
+    let gW : 𝟙_ (Over (Spec (.of K))) ⟶ UW :=
+      Over.homMk (IsOpenImmersion.lift W.ι g'.left hrg) (by
+        show IsOpenImmersion.lift W.ι g'.left hrg ≫
+          W.ι ≫ (IdentityComponent G).hom = _
+        rw [← Category.assoc, IsOpenImmersion.lift_fac W.ι g'.left hrg]
+        exact Over.w g')
+    let uW : 𝟙_ (Over (Spec (.of K))) ⟶ UW :=
+      Over.homMk (IsOpenImmersion.lift W.ι (g'⁻¹ * z').left hru) (by
+        show IsOpenImmersion.lift W.ι (g'⁻¹ * z').left hru ≫
+          W.ι ≫ (IdentityComponent G).hom = _
+        rw [← Category.assoc, IsOpenImmersion.lift_fac W.ι (g'⁻¹ * z').left hru]
+        exact Over.w (g'⁻¹ * z'))
+    have hgWι : gW ≫ ιU = g' := by
+      apply Over.OverMorphism.ext
+      exact IsOpenImmersion.lift_fac W.ι g'.left hrg
+    have huWι : uW ≫ ιU = g'⁻¹ * z' := by
+      apply Over.OverMorphism.ext
+      exact IsOpenImmersion.lift_fac W.ι (g'⁻¹ * z').left hru
+    have hfin : lift gW uW ≫ m = z' := by
+      show lift gW uW ≫ (ιU ⊗ₘ ιU) ≫ MonObj.mul (X := IdentityComponent G) = z'
+      rw [← Category.assoc, lift_map, hgWι, huWι, ← Hom.mul_def]
+      exact mul_inv_cancel_left g' z'
+    refine ⟨(lift gW uW).left pt, ?_⟩
+    have h1 : (lift gW uW).left ≫ m.left = z'.left := by
+      simpa using
+        congrArg (fun q : 𝟙_ (Over (Spec (.of K))) ⟶ IdentityComponent G => q.left) hfin
+    calc m.left ((lift gW uW).left pt)
+        = ((lift gW uW).left ≫ m.left) pt := (Scheme.Hom.comp_apply _ _ _).symm
+      _ = z'.left pt := by rw [h1]
+      _ = z := hz' pt
+  -- finitely many affine opens cover the image of `m`, hence all closed
+  -- points; Jacobson density then covers everything
+  have hSc : IsCompact (Set.range ⇑m.left) :=
+    isCompact_range (Scheme.Hom.continuous m.left)
+  have haff : ∀ x : (IdentityComponent G).left,
+      ∃ V : (IdentityComponent G).left.Opens, IsAffineOpen V ∧ x ∈ V := fun x => by
+    obtain ⟨V, hV, hxV, -⟩ := exists_isAffineOpen_mem_and_subset
+      (X := (IdentityComponent G).left) (U := ⊤) (TopologicalSpace.Opens.mem_top x)
+    exact ⟨V, hV, hxV⟩
+  choose Vs hVaff hVmem using haff
+  have hcovU : Set.range ⇑m.left ⊆
+      ⋃ x : (IdentityComponent G).left, (Vs x : Set (IdentityComponent G).left) :=
+    fun y _ => Set.mem_iUnion.mpr ⟨y, hVmem y⟩
+  obtain ⟨t, ht⟩ := hSc.elim_finite_subcover
+    (fun x : (IdentityComponent G).left => (Vs x : Set (IdentityComponent G).left))
+    (fun x => (Vs x).isOpen) hcovU
+  have hVuniv : ⋃ x ∈ t, (Vs x : Set (IdentityComponent G).left) = Set.univ := by
+    by_contra hne
+    obtain ⟨w, hw, hwc⟩ := nonempty_inter_closedPoints (Set.nonempty_compl.mpr hne)
+      (isOpen_biUnion fun i _ => (Vs i).isOpen).isClosed_compl.isLocallyClosed
+    exact hw (ht (hmem w hwc))
+  exact ⟨hVuniv ▸ t.isCompact_biUnion fun i _ => (hVaff i).isCompact⟩
 
 set_option backward.isDefEq.respectTransparency false in
 /-- **Formation of the identity component commutes with base change.**
@@ -959,6 +1264,115 @@ theorem IdentityComponent.baseChangeIso {k : Type u} [Field k]
       (pullback.snd (identityComponentCarrier G).ι (pullback.fst G.hom φ)) hrangeEq ≪≫
     pullbackRightPullbackFstIso G.hom φ (identityComponentCarrier G).ι
 
+set_option backward.isDefEq.respectTransparency false in
+/-- Descent of quasi-compactness from the algebraic closure: `|G⁰|` is
+compact for any base field `k`, since the projection from the base change to
+`K̄ = AlgebraicClosure k` is surjective and `(G_K̄)⁰ ≅ (G⁰)_K̄` is compact by
+the algebraically closed core lemma
+`identityComponent_compactSpace_of_isAlgClosed` transported along
+`baseChangeIso`. -/
+private theorem identityComponent_compactSpace
+    {k : Type u} [Field k] (G : Over (Spec (.of k)))
+    [GrpObj G] [LocallyOfFiniteType G.hom] :
+    CompactSpace (IdentityComponent G).left := by
+  obtain ⟨⟨grpb, lftb, isob⟩⟩ := IdentityComponent.baseChangeIso G (AlgebraicClosure k)
+  letI := grpb
+  haveI := lftb
+  haveI h1 : CompactSpace ↥(pullback (IdentityComponent G).hom
+      (Spec.map (CommRingCat.ofHom (algebraMap k (AlgebraicClosure k))))) :=
+    @Homeomorph.compactSpace _ _ _ _
+      (identityComponent_compactSpace_of_isAlgClosed _) isob.hom.homeomorph
+  haveI : Subsingleton ↥(Spec (CommRingCat.of k)) :=
+    inferInstanceAs (Subsingleton (PrimeSpectrum k))
+  haveI : Nonempty ↥(Spec (CommRingCat.of (AlgebraicClosure k))) :=
+    inferInstanceAs (Nonempty (PrimeSpectrum (AlgebraicClosure k)))
+  constructor
+  rw [← range_eq_univ (pullback.fst (IdentityComponent G).hom
+    (Spec.map (CommRingCat.ofHom (algebraMap k (AlgebraicClosure k)))))]
+  exact isCompact_range (Scheme.Hom.continuous _)
+
+set_option backward.isDefEq.respectTransparency false in
+/-- Descent of irreducibility: `(IdentityComponent G).hom` is geometrically
+irreducible. For any field extension `K/k`, the base change `(G⁰)_K`
+receives a surjective projection from `(G⁰)_K̄` (`K̄ = AlgebraicClosure K`,
+via the pasting isomorphism for iterated pullbacks), and `(G⁰)_K̄ ≅ (G_K̄)⁰`
+is irreducible by the algebraically closed core lemma
+`identityComponent_irreducibleSpace_of_isAlgClosed` transported along
+`baseChangeIso`; irreducibility passes along surjective continuous maps. -/
+private theorem identityComponent_geometricallyIrreducible
+    {k : Type u} [Field k] (G : Over (Spec (.of k)))
+    [GrpObj G] [LocallyOfFiniteType G.hom] :
+    GeometricallyIrreducible (IdentityComponent G).hom := by
+  constructor
+  rw [geometrically_iff_of_commRing_of_isClosedUnderIsomorphisms]
+  intro K _ _
+  obtain ⟨⟨grpL, lftL, isoL⟩⟩ := IdentityComponent.baseChangeIso G (AlgebraicClosure K)
+  letI := grpL
+  haveI := lftL
+  have hφ : Spec.map (CommRingCat.ofHom (algebraMap k (AlgebraicClosure K))) =
+      Spec.map (CommRingCat.ofHom (algebraMap K (AlgebraicClosure K))) ≫
+        Spec.map (CommRingCat.ofHom (algebraMap k K)) := by
+    rw [← Spec.map_comp, ← CommRingCat.ofHom_comp,
+      ← IsScalarTower.algebraMap_eq k K (AlgebraicClosure K)]
+  haveI h1 : IrreducibleSpace ↥(pullback (IdentityComponent G).hom
+      (Spec.map (CommRingCat.ofHom (algebraMap K (AlgebraicClosure K))) ≫
+        Spec.map (CommRingCat.ofHom (algebraMap k K)))) := by
+    rw [← hφ]
+    exact isoL.hom.homeomorph.irreducibleSpace_iff.mp
+      (identityComponent_irreducibleSpace_of_isAlgClosed _)
+  haveI h2 : IrreducibleSpace ↥(pullback
+      (pullback.snd (IdentityComponent G).hom
+        (Spec.map (CommRingCat.ofHom (algebraMap k K))))
+      (Spec.map (CommRingCat.ofHom (algebraMap K (AlgebraicClosure K))))) :=
+    (pullbackLeftPullbackSndIso (IdentityComponent G).hom
+      (Spec.map (CommRingCat.ofHom (algebraMap k K)))
+      (Spec.map (CommRingCat.ofHom
+        (algebraMap K (AlgebraicClosure K))))).hom.homeomorph.irreducibleSpace_iff.mpr h1
+  haveI : Subsingleton ↥(Spec (CommRingCat.of K)) :=
+    inferInstanceAs (Subsingleton (PrimeSpectrum K))
+  haveI : Nonempty ↥(Spec (CommRingCat.of (AlgebraicClosure K))) :=
+    inferInstanceAs (Nonempty (PrimeSpectrum (AlgebraicClosure K)))
+  exact (pullback.fst (pullback.snd (IdentityComponent G).hom
+      (Spec.map (CommRingCat.ofHom (algebraMap k K))))
+      (Spec.map (CommRingCat.ofHom
+        (algebraMap K (AlgebraicClosure K))))).surjective.irreducibleSpace
+    (Scheme.Hom.continuous _)
+
+/-- **The identity component is of finite type and geometrically irreducible.**
+
+Kleiman §5 Lem.~`lem:agps`~(3) conclusion (c): the open subgroup `G^0` of
+a `k`-group scheme `G` locally of finite type is itself
+locally-of-finite-type-plus-quasi-compact (i.e., of finite type) over `k`,
+and is geometrically irreducible. The proof reduces (after base change to
+`\bar k`) to picking a nonempty irreducible open subset `U ⊆ G^0`; the
+translates `zg⁻¹U` give an open cover of the closed points of `G^0` by
+irreducible neighbourhoods, extended to all points by Jacobson density, so
+with connectedness this gives irreducibility globally (EGA I 6.1.10). The
+image `α(W × W) ⊆ G^0` of an affine open `W ∋ e` under the group law is
+quasi-compact and contains all closed points, so finitely many affine opens
+cover `G^0` and `G^0` is quasi-compact.
+
+CLOSED (run 0009, T6): `LocallyOfFiniteType` as before (open immersion
+composed with `G.hom`); `QuasiCompact` via `identityComponent_compactSpace`
+(Kleiman's product trick over the algebraic closure + Jacobson density +
+descent along the surjective base-change projection) together with the
+affine-target characterisation of quasi-compactness;
+`GeometricallyIrreducible` via `identityComponent_geometricallyIrreducible`
+(translation of an irreducible open through all closed points over the
+algebraic closure, EGA I 6.1.10, and descent along the surjective
+projection from the algebraic closure of each field extension). -/
+theorem IdentityComponent.isFiniteTypeGeometricallyIrreducible
+    {k : Type u} [Field k]
+    (G : Over (Spec (.of k)))
+    [GrpObj G] [LocallyOfFiniteType G.hom] :
+    LocallyOfFiniteType (IdentityComponent G).hom ∧
+      QuasiCompact (IdentityComponent G).hom ∧
+      GeometricallyIrreducible (IdentityComponent G).hom := by
+  refine ⟨identityComponent_locallyOfFiniteType G, ?_,
+    identityComponent_geometricallyIrreducible G⟩
+  haveI h : CompactSpace (IdentityComponent G).left := identityComponent_compactSpace G
+  exact HasAffineProperty.iff_of_isAffine.mpr h
+
 end GroupScheme
 
 /-! ## §2. The identity component of the Picard scheme
@@ -983,15 +1397,21 @@ open and closed subgroup scheme of `Pic_{C/k}` of finite type over `k`,
 geometrically irreducible, and its formation commutes with extension of the
 base field.
 
-iter-186+: the body unwinds to `GroupScheme.IdentityComponent (PicScheme C)`
-once the `[LocallyOfFiniteType (PicScheme C).hom]` instance lands on
-`PicScheme C` (it follows from the Kleiman §4 structure: `Pic_{C/k}` is
-locally of finite type as the disjoint union of open quasi-projective
-`k`-subschemes). For the iter-185 file-skeleton the body is a typed `sorry`. -/
+Run 0008: the body is REAL — it unwinds to
+`GroupScheme.IdentityComponent (PicScheme C)`, as the iter-186 docstring
+promised. The two ingredients landed with the run-0008 FGA rewire: the
+group structure `GrpObj (PicScheme C)` is genuinely proved (Yoneda
+transport, `PicScheme.groupSchemeStructure`), and local finiteness is the
+new typed-sorry carrier `PicSchemeLocallyOfFiniteType` (true by Kleiman §4
+Thm `th:main`(1)). Consequently all the §1 substrate theorems
+(`isOpenSubgroupScheme`, `isSubgroupHomomorphism`,
+`identityComponent_geometricallyConnected`, `baseChangeIso`) now apply to
+`Pic⁰_{C/k}` definitionally. -/
 noncomputable def Pic0Scheme {k : Type u} [Field k]
     (C : Over (Spec (.of k)))
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
-    [GeometricallyIntegral C.hom] :
+    [GeometricallyIntegral C.hom] [HasPicScheme C]
+    [PicScheme.PicSchemeLocallyOfFiniteType C] :
     Over (Spec (.of k)) :=
   -- (iter-current) closed: the long-promised value. `HasPicScheme C` is
   -- pinned as a local instance *before* `PicScheme C` is elaborated so the
@@ -1042,7 +1462,7 @@ the leading coefficient. For the iter-185 file-skeleton the body is a typed
 noncomputable def degree {k : Type u} [Field k]
     (C : Over (Spec (.of k)))
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
-    [GeometricallyIntegral C.hom] :
+    [GeometricallyIntegral C.hom] [HasPicScheme C] :
     (Spec (.of k) ⟶ (PicScheme C).left) → ℤ :=
   sorry
 
@@ -1062,42 +1482,11 @@ Ex.~`ex:jac` + Rmk.~`rmk:Jac`; cf. Milne §I.1, Rmk. III.1.4(e)). -/
 
 namespace Pic0Scheme
 
-/-- **`Pic⁰_{C/k}` is an abelian variety.**
-
-For `C/k` a smooth proper geometrically integral curve of genus `g = g(C)`
-over a field `k`, the identity component `Pic⁰_{C/k}` of the Picard scheme
-is an *abelian variety over* `k`: a smooth, proper, geometrically
-irreducible `k`-group scheme. (Commutativity follows automatically from
-Milne §I.1, Cor. 1.4, and is not separately stated here.)
-
-The bundled statement: the four pieces `[IsProper] ∧ [Smooth] ∧
-[GeometricallyIrreducible] ∧ Nonempty (GrpObj _)` hold on
-`(Pic0Scheme C).hom` and `(Pic0Scheme C)` respectively.
-
-Dimension `g = g(C)`: not stated separately at the file-skeleton level
-(it requires `dim_k (Pic0Scheme C).left = AlgebraicGeometry.genus C`, which
-involves the Krull-dimension API on the underlying scheme); iter-186+
-follow-up.
-
-iter-186+: the body assembles the four conjuncts from
-- `GroupScheme.IdentityComponent.isOpenSubgroupScheme` (clopen subscheme of
-  `PicScheme C`),
-- Kleiman §5 Thm.~`th:qpp&p` (`X/k` projective + geom. integral ⟹
-  `Pic⁰_{X/k}` quasi-projective; upgrade to projective when geom. normal,
-  which holds for smooth proper curves of positive genus),
-- Kleiman §5 Cor.~`cor:sm` + Ex.~`ex:jac` (smoothness of `Pic_{X/k}` at the
-  identity for smooth proper curves; hence smooth of dimension
-  `dim_k H¹(C, O_C) = g(C)` everywhere by uniform smoothness on the open
-  identity component).
-For the iter-185 file-skeleton the body is a typed `sorry`. -/
-theorem isAbelianVariety {k : Type u} [Field k]
-    (C : Over (Spec (.of k)))
-    [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
-    [GeometricallyIntegral C.hom] :
-    IsProper (Pic0Scheme C).hom ∧ Smooth (Pic0Scheme C).hom ∧
-      GeometricallyIrreducible (Pic0Scheme C).hom ∧
-      Nonempty (GrpObj (Pic0Scheme C)) :=
-  sorry
+/- `Pic0Scheme.isAbelianVariety` (blueprint pin
+`thm:pic_zero_is_abelian_variety`) MOVED (run 0008, T5) to sibling
+`Picard/Pic0AbelianVariety.lean`, where it is assembled sorry-free from the
+per-conjunct theorems `Pic0.proper` / `Pic0.smooth` /
+`Pic0.geometricallyIrreducible` / `Pic0.grpObj` of that chapter. -/
 
 /-- **Dimension of `Pic⁰_{C/k}` equals the genus of `C`.**
 
@@ -1113,7 +1502,8 @@ by `def:genus`. -/
 theorem finrank_eq_genus {k : Type u} [Field k]
     (C : Over (Spec (.of k)))
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
-    [GeometricallyIntegral C.hom] :
+    [GeometricallyIntegral C.hom] [HasPicScheme C]
+    [PicScheme.PicSchemeLocallyOfFiniteType C] :
     topologicalKrullDim (Pic0Scheme C).left = (AlgebraicGeometry.genus C : WithBot ℕ∞) :=
   sorry
 
@@ -1135,7 +1525,8 @@ zero. -/
 theorem kPoints_iff_kerDegree {k : Type u} [Field k]
     (C : Over (Spec (.of k)))
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
-    [GeometricallyIntegral C.hom] :
+    [GeometricallyIntegral C.hom] [HasPicScheme C]
+    [PicScheme.PicSchemeLocallyOfFiniteType C] :
     Nonempty (Σ' (inc : (Pic0Scheme C).left ⟶ (PicScheme C).left),
       ∀ (lambda : Spec (.of k) ⟶ (PicScheme C).left),
         (∃ mu : Spec (.of k) ⟶ (Pic0Scheme C).left, mu ≫ inc = lambda) ↔

@@ -1,0 +1,62 @@
+id: I-0092
+provider: local
+kind: memory
+body: '**Recipes: module-level dévissage in Lean v4.31 (landed in FlatteningStratification
+  GenericFreeness, run 0010 T12 r2) — reuse for any prime-filtration/SES argument.**
+
+
+  - **ModuleCat SES arguments need ONE universe**: `ModuleCat.ofHom {X Y : Type v}`
+  forces all modules of a `ShortComplex (ModuleCat R)` into the same universe. Binders
+  `{M₁ M₂ M₃ : Type*}` give distinct universes and produce baffling failures — instance
+  goals displayed as raw `Quot ⇑(OreLocalization.oreEqv ...)` (LocalizedModule unfolded
+  past its instance heads) plus universe-mismatched `Eq.{max u_1 u_4}` vs `Eq.{max
+  u_1 u_2}`. Pin `Type v`. The dévissage eliminator is single-universe anyway.
+
+  - **`set S := Submonoid.powers (f*g)` breaks instance unification** in localized-module
+  types (same family as the known let-fvar IsIso gotcha): instance search will not
+  zeta-unfold the set-fvar when unifying `Localization S''` heads. Write the submonoid
+  term explicitly everywhere; `let`-bound MAPS (data) are fine — only types/instances
+  mind.
+
+  - **Quantified-instance motive** for `IsNoetherianRing.induction_on_isQuotientEquivQuotientPrime`
+  when the property lives over a DIFFERENT ring A than the induction ring B: `motive
+  N _ iMB _ := ∀ (iA : Module A N), @IsScalarTower A B N Algebra.toSMul iMB.toDistribMulAction.toMulAction.toSMul
+  iA.toDistribMulAction.toMulAction.toSMul → @P A N _ _ iA`. Cases: subsingleton via
+  @-application; quotient case transports along `(e.restrictScalars A).symm` (canonical
+  tower on B⧸p is instance-found); exact case builds `letI iA₁ := Module.compHom N₁
+  (algebraMap A B)` + tower `⟨fun a b n => by change (a • b) • n = algebraMap A B
+  a • b • n; rw [Algebra.smul_def, mul_smul]⟩`; B-linear maps restrict via `LinearMap.restrictScalars
+  A` and inj/surj/Exact transfer definitionally. Final application `... ‹Module A
+  M› ‹IsScalarTower A B M›` unifies. Compiled essentially first-try.
+
+  - **Two-localization freeness transport** (`M_f` free ⟹ `M_{fg}` free) WITHOUT IsLocalizedModule-composition:
+  `(IsLocalization.Away.awayToAwayRight f g).toAlgebra` + `IsScalarTower.of_algebraMap_eq
+  (awayToAwayRight_eq ..).symm`, then equiv-chain `congr(refl, isBaseChange f) .symm
+  ≪≫ cancelBaseChange ≪≫ isBaseChange (f*g)` and `Module.Free.tensor` + `Module.Free.of_equiv''`.
+  Give every LinearEquiv a fully-typed `have` — `refine LinearEquiv.trans ?_ e` with
+  open source type sticks on RingHomCompTriple metavariables.
+
+  - **Localized SES**: `IsLocalizedModule.map/map_injective/map_surjective/map_exact`
+  at `mkLinearMap`s, upgrade R-linear→Loc-linear with `LinearMap.extendScalarsOfIsLocalization`
+  (coe unchanged, so Function.Exact/Injective/Surjective transfer by defeq); `ShortComplex.mk
+  (ofHom u'') (ofHom v'') (ModuleCat.hom_ext (LinearMap.ext fun x => hexact.apply_apply_eq_zero
+  x))`; ShortExact via `moduleCat_exact_iff` + `mono_iff_injective` + `epi_iff_surjective`;
+  finish `ModuleCat.free_shortExact`.
+
+  - **refine-under-binder**: `refine subsingleton_of_forall_eq 0 fun x => ?_` fails
+  (?_ under lambda); use `apply` + `intro` + `induction x using LocalizedModule.induction_on
+  with | _ m s => ...`. `Submonoid.mk_smul` bridges `(⟨c,hc⟩ : ↥S) • m` to `c • m`.'
+labels:
+- agent-ready
+status: open
+scope: {}
+audience: ''
+author: horizon
+source_ref: null
+created_at: '2026-07-03T17:17:42.927179+00:00'
+updated_at: '2026-07-03T17:17:42.927186+00:00'
+metadata:
+  provenance:
+    run: '0010'
+    session: 0023-horizon-T12
+    role: horizon

@@ -1,0 +1,23 @@
+## Summary
+
+The Grassmannian representability endgame of `AJC.picrep` (T12) moved from an unfaithful one-line `sorry` skeleton to a **real, kernel-checked proof** modulo two clean, reusable leaves. The old pinned statement quantified over an *arbitrary* sheaf of modules `V` — not the [Nitsure] §1 theorem and not known to be true — so, following the standing false-statement lesson, I first corrected the statement to the blueprint hypotheses (`V` locally free of rank `r`, `1 ≤ d ≤ r`, pinned to `Scheme.{0}` since the merged absolute chart construction lives at universe 0 where `Spec ℤ` is terminal). I then proved: the trivialised case (`Grass(V,d)` represented by `S ⨯ Gr(d,r)` via the `Over.forgetAdjStar` adjunction and the merged sorry-free absolute `Grassmannian.represents`), the base-restriction comparison `(Over.map j)^* Grass(V,d) ≅ Grass(j^*V, d)` (pure pseudofunctor coherence), and the final theorem by descent along a trivialising cover. The two remaining leaves are general-purpose: Zariski descent of representability (EGA 0_I 4.5.4 — will also serve the Quot and Pic endgames) and the Zariski sheaf axiom for the Grassmannian functor. I also identified and flagged that the sibling `QuotScheme` pinned statement is unprovable as stated (mere properness; Hironaka's example) — inbox `I-0118`.
+
+## Progress
+- AlgebraicJacobian/Picard/GrassmannianRepresentability.lean: NEW (~660 LOC, 2 typed-sorry leaves); `representable_of_iso_free` and `representable_restrict` verified axiom-clean `[propext, Classical.choice, Quot.sound]`; `representable` proved from the two leaves.
+- AlgebraicJacobian/Picard/QuotFunctorDef.lean: 6 → 5 sorries; unfaithful `Grassmannian.representable` skeleton removed with pointer note; rebuilt green.
+- AlgebraicJacobian.lean: new module registered; full `lake build` green (8649 jobs).
+- blueprint/src/chapters/Picard_QuotScheme.tex: new nodes `lem:grassmannian_representable_free`, `def:zariski_sheaf_over`, `thm:representability_zariski_descent`, `lem:grassmannian_zariski_sheaf` (complete paper proofs); `thm:grassmannian_representable` \uses and NOTE refreshed; DAG cache regenerated, node shows 9 direct deps / 208-node cone.
+- Ledger: committed as `0fb724352d`; roadmap comment on AJC.picrep; inbox issue I-0118; memory `grassmannian-representability-descent` + updated `quot-functor-real-def-recipe`.
+
+## Issues
+- `QuotScheme` (QuotFunctorDef.lean) is a **statement trap**: only `[IsProper π]`, no projectivity/very-ampleness — false-or-open by Hironaka-type examples. Filed as I-0118; needs an ampleness-vocabulary design before any proof attempt.
+- The two new leaves (`representable_of_openCover`, `Grassmannian.isZariskiSheaf`) are typed sorries with documented proof routes; each is realistically one focused session (scheme gluing with cocycle-from-uniqueness; module gluing along an open cover via the GlueDescent engine).
+- QuotScheme.lean's file-header prose still describes the old chapter layout (theorem locations); not fixed to avoid a 30+ min olean cascade over a 5400-line file — cosmetic only.
+
+## Why I stopped
+Task not complete: `Grassmannian.representable` is now a real proof but rests on the two new descent leaves, and the `QuotScheme` endgame remains (blocked on statement redesign, I-0118). All landed work is kernel-verified, committed, and the session budget is best cut here rather than opening a leaf that cannot land green.
+
+## Next
+- Prove `Scheme.representable_of_openCover` (Zariski descent, EGA 0_I 4.5.4): `Scheme.GlueData` from the local representing objects, cocycle via `RepresentableBy.uniqueUpToIso`, morphism gluing via `Scheme.OpenCover.glueMorphisms`. Reusable for Quot/Pic.
+- Prove `Grassmannian.isZariskiSheaf`: module gluing along an open cover (`Scheme.Modules.glue` at `𝒰.gluedCover`, `IsIso 𝒰.fromGlued`), quotient maps via `glueLift`, epi-locality via cover conservativity; uniqueness is cocycle-free (comparison isos between quotients are unique).
+- Design the projectivity/relative-very-ampleness encoding, then restate `QuotScheme` faithfully (I-0118) before touching its sorry.

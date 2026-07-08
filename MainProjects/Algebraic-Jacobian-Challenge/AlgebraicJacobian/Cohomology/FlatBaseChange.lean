@@ -13,8 +13,11 @@ import Mathlib
        `Algebra.Homology.SpectralObject.*` / `SpectralSequence.Basic` / `TotalComplex` scaffold; use its
        base-change functoriality to close `cech_flatBaseChange` (02KH), then Kleiman 4.8
        (`Scheme.PicScheme.representable`). Full plan + anchors: `.archon/USER_HINTS.md` temporary hint.
-   (B) Mate-calc chain deleted iter-312 in favor of the SS route; remaining `sorry`s are the two
-       canonical-mate stubs (`affineBaseChange_pushforward_iso`, `flatBaseChange_pushforward_isIso`). -/
+   (B) Mate-calc chain deleted iter-312 in favor of the SS route; the two canonical-mate stubs
+       (`affineBaseChange_pushforward_iso`, `flatBaseChange_pushforward_isIso`) were pruned in
+       run 0009 (superseded, zero consumers — the live route is the concrete-tilde
+       `affinePushforwardPullbackBaseChange` consumed by `cech_flatBaseChange`).
+       This file is now sorry-free. -/
 
 /-!
 # Flat base change for the pushforward of a quasi-coherent sheaf (`i = 0`)
@@ -33,16 +36,17 @@ Throughout we work with a (commutative, eventually cartesian) square of schemes
 recorded by morphisms `f : X ⟶ S`, `g : S' ⟶ S`, `f' : X' ⟶ S'`, `g' : X' ⟶ X`
 with `g' ≫ f = f' ≫ g`, and `F : X.Modules` a sheaf of modules on `X`.
 
-The three main declarations are:
+The main declarations are:
 
 * `AlgebraicGeometry.pushforwardBaseChangeMap` — the canonical base-change map
   `g^*(f_* F) ⟶ f'_*((g')^* F)`, built as the adjoint mate of the unit of the
-  `((g')^*, (g')_*)`-adjunction.
-* `AlgebraicGeometry.affineBaseChange_pushforward_iso` — for `f` affine and the
-  square cartesian, the base-change map is an isomorphism (affine case: tensor
-  associativity).
-* `AlgebraicGeometry.flatBaseChange_pushforward_isIso` — for `g` flat and `f`
-  quasi-compact quasi-separated, the base-change map is an isomorphism.
+  `((g')^*, (g')_*)`-adjunction (kept for reference; the live route never forms
+  this mate).
+* `AlgebraicGeometry.affinePushforwardPullbackBaseChange` — the concrete-tilde
+  affine base-change isomorphism for a ring pushout square, assembled from the
+  tilde dictionaries and `cancelBaseChange`; this is the brick consumed by the
+  Čech route to Stacks 02KH (`cech_flatBaseChange` in
+  `Cohomology/CechHigherDirectImageUnconditional.lean`).
 
 See `blueprint/src/chapters/Cohomology_FlatBaseChange.tex`.
 
@@ -808,84 +812,6 @@ noncomputable def affinePushforwardPullbackBaseChange {R A R' B : CommRingCat.{u
     ≪≫ (pushforward_spec_tilde_iso σ ((ModuleCat.extendScalars ρ.hom).obj M)).symm
     ≪≫ (Scheme.Modules.pushforward (Spec.map σ)).mapIso (pullback_spec_tilde_iso ρ M).symm
 
-/-- **Affine base change.** If `f` is an affine morphism and the square is
-cartesian, then the base-change map for the pushforward is an isomorphism. In the
-affine-local picture this is the associativity isomorphism
-`(R' ⊗_R A) ⊗_A M ≅ R' ⊗_R M`, which needs no flatness.
-
-Source: Stacks Project, Cohomology of Schemes, Lemma "Affine base change". -/
-/- USER: UPSTREAM gap for Stacks 02KG/02KH `cechComplex_baseChange_iso`
-   (`Cohomology/CechHigherDirectImageUnconditional.lean`) and a PREREQUISITE of Kleiman 4.8
-   Step-1 strata-openness. Close via the CONCRETE-TILDE dictionary, NOT the adjoint-mate
-   route (walled ~30 iters in FBC-B): the sorry-free `pushforward_spec_tilde_iso` /
-   `pullback_spec_tilde_iso` + `regroupEquiv` + `TensorProduct.AlgebraTensorModule.cancelBaseChange`
-   give the affine-local iso. Two obligations remain: (1) the affine reduction (locality on
-   S and S'), (2) the mate ↔ `cancelBaseChange` identification. Reference: Stacks Project,
-   "Affine base change" + Tag 02KH. -/
-theorem affineBaseChange_pushforward_iso (h : IsPullback g' f' f g) [IsAffineHom f]
-    (F : X.Modules) [F.IsQuasicoherent] :
-    IsIso (pushforwardBaseChangeMap f g f' g' h.w F) := by
-  -- A morphism of sheaves of modules is an isomorphism iff it is an isomorphism
-  -- on sections over every *affine* open of the base `S'` (locality criterion
-  -- `Modules.isIso_iff_isIso_app_affineOpens`; the affine opens form a basis).
-  -- This is the honest first reduction: over an affine open is exactly where the
-  -- tilde dictionary computes the section map.
-  rw [Modules.isIso_iff_isIso_app_affineOpens]
-  intro U
-  -- Remaining goal: `IsIso (Hom.app (pushforwardBaseChangeMap …) U)` for `U` affine.
-  --
-  -- STATUS (iter-242): BOTH affine dictionaries are now in place and axiom-clean:
-  --   • pushforward — `pushforward_spec_tilde_iso φ M : (Spec φ)_* (M̃) ≅ (restrictScalars φ M)~`
-  --     (closed iter-241);
-  --   • pullback — `pullback_spec_tilde_iso φ M : (Spec φ)^* (M̃) ≅ (extendScalars φ M)~`
-  --     (closed this iter, via the uniqueness-of-left-adjoints route
-  --     `conjugateIsoEquiv` over the right-adjoint natural iso `gammaPushforwardNatIso`).
-  --   • the pure ring-theoretic target `TensorProduct.AlgebraTensorModule.cancelBaseChange`
-  --     `(R' ⊗_R A) ⊗_A M ≃ R' ⊗_R M` (no flatness) is in Mathlib.
-  --
-  -- TWO obligations remain for the unconditional general theorem, both Mathlib-absent and each a
-  -- multi-hundred-LOC build (no quick axiom-clean sub-step — even an affine-affine version of the
-  -- statement still needs obligation (2)):
-  --
-  -- (1) THE AFFINE REDUCTION. The schemes `S, S', X, X'` here are ARBITRARY (only `f` is affine,
-  --     `F` quasi-coherent). The Stacks proof "the statement is local on `S` and `S'`" reduces to
-  --     `S = Spec R`, `S' = Spec R'`, `X = Spec A`, `F = M̃`. Carrying that reduction out in Lean
-  --     requires the naturality / base-change compatibility of `pushforwardBaseChangeMap` with
-  --     restriction to affine opens of `S'` (and a choice of affine `V = Spec R ⊆ S` containing the
-  --     image of `U = Spec R'` under `g`, over which `f`-affineness gives `X_V = Spec A`). This
-  --     base-change-of-the-base-change-map compatibility is itself not packaged in Mathlib.
-  -- (2) THE ADJOINT-MATE ↔ `cancelBaseChange` IDENTIFICATION. Once everything is affine, transporting
-  --     the abstract adjoint-mate `pushforwardBaseChangeMap` through the four dictionary isos must be
-  --     shown to equal `tilde (cancelBaseChange)`. This is a coherence computation unwinding the
-  --     mate of the `((g')^*, (g')_*)`-unit; it is the genuine crux named in the blueprint and has no
-  --     ready-made Mathlib counterpart.
-  --
-  -- Both are deferred (documented partial, per the iter-242 objective). The `#37189` bump
-  -- (`isIso_fromTildeΓ_pushforward`) is the recorded fallback if the in-tree affine close walls.
-  -- See `informal/affineBaseChange_pushforward_iso.md`.
-  sorry
-
-/-- **Flat base change, `i = 0` case.** If `g` is flat and `f` is quasi-compact
-and quasi-separated, then the base-change map for the pushforward is an
-isomorphism. Equivalently, in the affine situation `S = Spec A`, `S' = Spec B`
-with `A → B` flat, the comparison map `H⁰(X, F) ⊗_A B → H⁰(X_B, F_B)` is an
-isomorphism.
-
-Source: Stacks Project, Tag 02KH ("Flat base change"), the `i = 0` case. -/
-theorem flatBaseChange_pushforward_isIso (h : IsPullback g' f' f g) [Flat g]
-    [QuasiCompact f] [QuasiSeparated f] (F : X.Modules) [F.IsQuasicoherent] :
-    IsIso (pushforwardBaseChangeMap f g f' g' h.w F) := by
-  -- Proof strategy (Stacks 02KH, `i = 0`), deferred to a later iteration:
-  -- the statement is local on `S'`, so reduce to `S = Spec A`, `S' = Spec B`
-  -- with `A → B` flat.  Choose a finite affine open cover `𝒰` of `X`.  Since `f`
-  -- is quasi-compact and quasi-separated the Čech complex of `𝒰` computes
-  -- `H⁰(X, F)`, and base change identifies `Čech(𝒰_B, F_B) ≅ Čech(𝒰, F) ⊗_A B`
-  -- term by term via `affineBaseChange_pushforward_iso`.  Flatness of `A → B`
-  -- makes `- ⊗_A B` exact, so it commutes with `H⁰`, giving the isomorphism
-  -- `H⁰(X, F) ⊗_A B ≅ H⁰(X_B, F_B)`.  Needs the (missing) Čech-cohomology /
-  -- affine-cover infrastructure for `SheafOfModules`; see
-  -- `informal/affineBaseChange_pushforward_iso.md`.
-  sorry
 
 /-! ## Project-local Mathlib supplement — cancellation/localization compatibility
 

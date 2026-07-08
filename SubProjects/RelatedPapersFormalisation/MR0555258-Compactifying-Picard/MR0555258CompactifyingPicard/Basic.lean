@@ -164,6 +164,7 @@ noncomputable def tensorRight {X : Scheme.{u}} (L : X.Modules) : X.Modules ⥤ X
       ((PresheafOfModules.sheafification (R := X.ringCatSheaf)
         (𝟙 X.ringCatSheaf.obj)).map_comp _ _)
 
+set_option backward.isDefEq.respectTransparency false in
 /-- Project-local (general category theory, Mathlib gap in the `Type u`-valued form):
 for a fully faithful endofunctor `G : C ⥤ C` and an object `I`, the natural
 isomorphism `G ⋙ coyoneda(op (G.obj I)) ≅ coyoneda(op I)` reflecting the
@@ -176,7 +177,12 @@ noncomputable def coyonedaCompFF {C : Type*} [Category C] {G : C ⥤ C}
     G ⋙ coyoneda.obj (op (G.obj I)) ≅ coyoneda.obj (op I) :=
   NatIso.ofComponents
     (fun Z => (hG.homEquiv (X := I) (Y := Z)).symm.toIso)
-    (by aesop_cat)
+    (fun f => by
+      ext g
+      exact hG.map_injective (by
+        simp
+        show G.map (hG.preimage (g ≫ G.map f)) = G.map (hG.preimage g) ≫ G.map f
+        simp))
 
 /-! ## Project-local Mathlib supplement — symmetric-monoidal scaffolding for `tensorMod`
 
@@ -911,6 +917,7 @@ private noncomputable def assocIdxR₃ {X : Scheme.{u}} (F L : X.Modules) :
       PresheafOfModules.id_app]
     exact MonoidalCategory.id_tensor_comp _ _
 
+set_option backward.isDefEq.respectTransparency false in
 /-- **(1.1.2 naturality, last factor)** Naturality of the unconditional associator
 `tensorAssoc F L ·` in its last factor, packaged as a natural isomorphism of
 endofunctors `tensorLeft L ⋙ tensorLeft F ≅ tensorLeft (F ⊗ L)`
@@ -930,14 +937,12 @@ noncomputable def tensorAssocNatIso₃ {X : Scheme.{u}} (F L : X.Modules) :
             (PresheafOfModules.Monoidal.tensorObj F.val L.val, Y'.val))
       simp only [assocIdxL₃, sheafifyFst_map_eq, tensorLeft_map_eq, tensorThenSheafify_map_eq,
         Iso.app_hom, Functor.comp_map] at h ⊢
-      convert h using 4
-      exact congrArg
-        (fun a => (PresheafOfModules.sheafification (R := X.ringCatSheaf)
-          (𝟙 X.ringCatSheaf.obj)).map
-            (PresheafOfModules.Monoidal.tensorHom (R := X.presheaf) a φ.val))
-        (((congrArg (fun m => ((PresheafOfModules.sheafification (R := X.ringCatSheaf)
-          (𝟙 X.ringCatSheaf.obj)).map m).val) (presheaf_id_tensorHom_id F.val L.val)).trans
-            (sheafify_map_id_val _)).symm)) :
+      convert h using 4 <;>
+        first
+          | rfl
+          | exact (((congrArg (fun m => ((PresheafOfModules.sheafification (R := X.ringCatSheaf)
+                (𝟙 X.ringCatSheaf.obj)).map m).val) (presheaf_id_tensorHom_id F.val L.val)).trans
+                  (sheafify_map_id_val _)).symm)) :
     tensorLeft (tensorMod F L) ≅ assocIdxL₃ F L ⋙ tensorThenSheafify X) ≪≫
   (NatIso.ofComponents
     (fun Y => (PresheafOfModules.sheafification (R := X.ringCatSheaf)
@@ -2098,6 +2103,7 @@ private noncomputable def assocIdxR₁ {X : Scheme.{u}} (L L' : X.Modules) :
       (congrArg (· ≫ PresheafOfModules.Monoidal.tensorHom (𝟙 L.val) (𝟙 L'.val))
         (presheaf_id_tensorHom_id L.val L'.val).symm)
 
+set_option backward.isDefEq.respectTransparency false in
 /-- **(1.1.2 naturality, first factor)** Naturality of the unconditional associator
 `tensorAssoc · L L'` in its FIRST factor, packaged as a natural isomorphism of
 endofunctors `tensorRight (L ⊗ L') ≅ tensorRight L ⋙ tensorRight L'`
@@ -2150,14 +2156,12 @@ noncomputable def tensorAssocNatIso₁ {X : Scheme.{u}} (L L' : X.Modules) :
             (A'.val, PresheafOfModules.Monoidal.tensorObj L.val L'.val))
       simp only [assocIdxR₁, sheafifySnd_map_eq, tensorRight_map_eq, tensorThenSheafify_map_eq,
         Iso.app_inv, Iso.symm_hom, Functor.comp_map] at h ⊢
-      convert h using 4
-      exact congrArg
-        (fun a => (PresheafOfModules.sheafification (R := X.ringCatSheaf)
-          (𝟙 X.ringCatSheaf.obj)).map
-            (PresheafOfModules.Monoidal.tensorHom (R := X.presheaf) φ.val a))
-        (((congrArg (fun m => ((PresheafOfModules.sheafification (R := X.ringCatSheaf)
-          (𝟙 X.ringCatSheaf.obj)).map m).val) (presheaf_id_tensorHom_id L.val L'.val)).trans
-            (sheafify_map_id_val _)).symm)) :
+      convert h using 4 <;>
+        first
+          | rfl
+          | exact (((congrArg (fun m => ((PresheafOfModules.sheafification (R := X.ringCatSheaf)
+                (𝟙 X.ringCatSheaf.obj)).map m).val) (presheaf_id_tensorHom_id L.val L'.val)).trans
+                  (sheafify_map_id_val _)).symm)) :
     assocIdxR₁ L L' ⋙ tensorThenSheafify X ≅ tensorRight (tensorMod L L'))).symm
 
 /-- **(1.1.2 STEP D)** (`lem:tensorRight_invertible_equiv`): if `L` is invertible, the
@@ -3278,8 +3282,10 @@ name it. -/
 noncomputable def restrictionRingSheafHom :
     U.ringCatSheaf ⟶ (j.opensFunctor.sheafPushforwardContinuous RingCat.{u}
       (Opens.grothendieckTopology U) (Opens.grothendieckTopology X)).obj X.ringCatSheaf :=
-  ⟨Functor.whiskerRight ({ app V := (j.appIso V.unop).inv } :
-    U.presheaf ⟶ j.opensFunctor.op ⋙ X.presheaf) (forget₂ CommRingCat RingCat)⟩
+  ⟨Functor.whiskerRight
+    ({ app := fun V => (j.appIso V.unop).inv
+       naturality := fun _ _ f => j.appIso_inv_naturality f } :
+      U.presheaf ⟶ j.opensFunctor.op ⋙ X.presheaf) (forget₂ CommRingCat RingCat)⟩
 
 /-- `Scheme.Modules.restrictFunctor j` is, definitionally, the sheaf-of-modules
 pushforward along the continuous open-immersion site map with the restriction

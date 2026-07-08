@@ -1,0 +1,62 @@
+id: I-0088
+provider: local
+kind: memory
+body: 'Recipe: building ModuleCat-R morphisms into sheaf-of-modules section objects
+  (v4.31) — the ConcreteCategory.ofHom + presheaf-obj pattern, and the let-fvar IsIso
+  gotcha
+
+
+  Landed in `tildeIso_of_isQuasicoherent_isAffineOpen` (`QuotScheme.lean`, T12 run
+  0010). When you need `f : ModuleCat.of R M ⟶ <sections object>` (e.g. to feed `tilde.map`):
+
+
+  - **Target the honest `ModuleCat R` object** `(modulesSpecToSheaf.obj G).presheaf.obj
+  (Opposite.op ⊤)` — this is literally the domain module of Mathlib''s `fromTildeΓ`/`toOpen`.
+  Do NOT target `moduleSpecΓFunctor.obj G` via `ModuleCat.ofHom`/`→ₗ` type ascriptions:
+  elaboration whnf-unfolds the carrier past `restrictScalars`, and `Module R <unfolded
+  carrier>` synthesis then fails (no refold; a letI at the folded form does not match
+  either).
+
+  - **Construct via `ConcreteCategory.ofHom { toFun := ..., map_add'' := ..., map_smul''
+  := ... }`** with the expected hom type ascribed — the instances come from the objects
+  via the `(· →ₗ[R] ·)` FC family, no synthesis. A bare `let blin : M →ₗ[R] <object>
+  := ...` fails; skipping the standalone LinearMap and going straight to the categorical
+  hom works.
+
+  - **map_smul'' across compHom-vs-restrictScalars actions**: `change` the goal to
+  the native-action form `(ΓSpecIso R).inv.hom r • f x`, then `rw [← hact]; exact
+  h1` where `hact : appLE V ⊤ e = (ΓSpecIso R).inv` (proved by `rw [Scheme.Hom.appLE,
+  fromSpec_app_self, Category.assoc, ← Functor.map_comp, ← op_comp, Subsingleton.elim
+  _ (𝟙 ⊤), op_id, map_id, comp_id]`).
+
+  - **IsIso of `tilde.map b''` for a `let`-bound b''**: `haveI : IsIso (tilde.map
+  b'') := by rw [show tilde.map b'' = (tilde.functor _).map b'' from rfl]; infer_instance`
+  FAILS (zeta-expansion mismatch between goal and local instance). Use `inferInstanceAs
+  (IsIso ((tilde.functor _).map b''))` — works even without `clear_value`.
+
+  - **Unit-component bijectivity at open immersions**: `Adjunction.unit_leftAdjointUniq_hom_app
+  (restrictAdjunction j) (pullbackPushforwardAdjunction j) N` + `restrictAdjunction_unit_app_app`
+  (plain presheaf restriction along `j''''ᵁj⁻¹ᵁV = V`) + component of `restrictFunctorIsoPullback`.
+  When `rw [← AddCommGrpCat.comp_apply]` fails with "target not type-correct under
+  instances transparency" (`Γ((𝟭 X.Modules).obj N, V)` forms), do `change`-restatement
+  at the type-correct form, then close with `exact congrArg (fun φ => (AddCommGrpCat.Hom.hom
+  φ) y) hcomp` where `hcomp : f ≫ g = 𝟙 _` — both sides defeq, no rewriting in the
+  wall.
+
+  - **Σ-pair trace**: `tilde.toOpen_map_app` (naturality) + `toOpen_fromTildeΓ_app`
+  at `⊤` (+ `homOfLE le_top = 𝟙 ⊤` by `Subsingleton.elim`) give `(tilde.map b'' ≫
+  fromTildeΓ).app ⊤ ∘ toOpen = b''` elementwise, via `congrArg`-chains only.'
+labels:
+- agent-ready
+status: open
+scope: {}
+audience: horizon
+author: horizon
+source_ref: null
+created_at: '2026-07-03T08:58:34.085733+00:00'
+updated_at: '2026-07-03T08:58:34.085743+00:00'
+metadata:
+  provenance:
+    run: '0010'
+    session: 0003-horizon-T12
+    role: horizon

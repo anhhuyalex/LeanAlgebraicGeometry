@@ -75,7 +75,12 @@ functor's semantics is the prerequisite for all curve-specific content;
 translation-propagation step, reducing the smoothness pin to
 `GeometricallyReduced (Pic0Scheme C).hom` + the sibling `GrpObj` sorry.
 
-The 5 pinned declarations are:
+Remaining `sorry` bodies: `tangentSpaceIso` (Kleiman §5 Thm 5.11 — needs the
+`Pic(C_ε) ≅ H¹(C_ε, O^×)` cocycle classification and the truncated-exponential
+kernel computation; the algebra-level splitting is in sibling
+`Picard/DualNumberUnits.lean`), `smooth`, `proper`.
+
+The 5 blueprint-pinned declarations are:
 
 1. `AlgebraicGeometry.Scheme.Pic0.tangentSpaceIso` (theorem, A.3.iii) — the
    canonical isomorphism `T₀ Pic⁰_{C/k} ≅ H¹(C, 𝒪_C)` (Kleiman §5
@@ -481,8 +486,8 @@ blueprint's `\lean{}` tag pins. -/
 theorem tangentSpaceCotangentDual {k : Type u} [Field k]
     (C : Over (Spec (.of k)))
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
-    [GeometricallyIntegral C.hom]
-    (hgrp : Nonempty (GrpObj (Pic0Scheme C))) :
+    [GeometricallyIntegral C.hom] [HasPicScheme C]
+    [PicScheme.PicSchemeLocallyOfFiniteType C] :
     Nonempty (Σ' (e : Spec (.of k) ⟶ (Pic0Scheme C).left),
       (e ≫ (Pic0Scheme C).hom = 𝟙 (Spec (.of k))) ×'
       ({g : Spec (CommRingCat.of (DualNumber k)) ⟶ (Pic0Scheme C).left //
@@ -493,7 +498,7 @@ theorem tangentSpaceCotangentDual {k : Type u} [Field k]
           (IsLocalRing.ResidueField ((Pic0Scheme C).left.presheaf.stalk (e.base default)))
           (IsLocalRing.CotangentSpace
             ((Pic0Scheme C).left.presheaf.stalk (e.base default))))) := by
-  obtain ⟨i⟩ := hgrp
+  obtain ⟨i⟩ := grpObj C
   letI := i
   haveI : Subsingleton ↥(Spec (CommRingCat.of k)) :=
     inferInstanceAs (Subsingleton (PrimeSpectrum k))
@@ -950,7 +955,8 @@ Kleiman Thm.~5.11 content is isolated in `tangentSpaceEquiv` (typed-sorry). -/
 theorem tangentSpaceIso {k : Type u} [Field k]
     (C : Over (Spec (.of k)))
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
-    [GeometricallyIntegral C.hom] :
+    [GeometricallyIntegral C.hom] [HasPicScheme C]
+    [PicScheme.PicSchemeLocallyOfFiniteType C] :
     Nonempty (Σ' (e : Spec (.of k) ⟶ (Pic0Scheme C).left),
       IsLocalRing.CotangentSpace ((Pic0Scheme C).left.presheaf.stalk (e.base default))
         ≃+ Scheme.HModule k (Scheme.toModuleKSheaf C) 1) :=
@@ -979,7 +985,8 @@ translation-propagation step, typed-sorry). -/
 theorem smooth {k : Type u} [Field k]
     (C : Over (Spec (.of k)))
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
-    [GeometricallyIntegral C.hom] :
+    [GeometricallyIntegral C.hom] [HasPicScheme C]
+    [PicScheme.PicSchemeLocallyOfFiniteType C] :
     Smooth (Pic0Scheme C).hom :=
   smooth_of_smoothAtIdentity C (smoothAtIdentity C)
 
@@ -1004,7 +1011,8 @@ Chevalley–Rosenlicht half above) + `locallyOfFiniteType` (axiom-clean). -/
 theorem proper {k : Type u} [Field k]
     (C : Over (Spec (.of k)))
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
-    [GeometricallyIntegral C.hom] :
+    [GeometricallyIntegral C.hom] [HasPicScheme C]
+    [PicScheme.PicSchemeLocallyOfFiniteType C] :
     IsProper (Pic0Scheme C).hom :=
   (isProper_iff _).mpr ⟨isSeparated C, universallyClosed C, locallyOfFiniteType C⟩
 
@@ -1063,7 +1071,8 @@ entirely in the named upstream lemmas. -/
 theorem isAbelianVariety {k : Type u} [Field k]
     (C : Over (Spec (.of k)))
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
-    [GeometricallyIntegral C.hom] :
+    [GeometricallyIntegral C.hom] [HasPicScheme C]
+    [PicScheme.PicSchemeLocallyOfFiniteType C] :
     IsProper (Pic0Scheme C).hom ∧ Smooth (Pic0Scheme C).hom ∧
       GeometricallyIrreducible (Pic0Scheme C).hom ∧
       Nonempty (GrpObj (Pic0Scheme C)) := by
@@ -1075,6 +1084,25 @@ theorem isAbelianVariety {k : Type u} [Field k]
   exact GroupScheme.IdentityComponent.isSubgroupHomomorphism (PicScheme C)
 
 end Pic0
+
+namespace Pic0Scheme
+
+/-- **`Pic⁰_{C/k}` is an abelian variety** — the `Pic0Scheme`-namespace form
+pinned by the blueprint node `thm:pic_zero_is_abelian_variety`
+(`Picard_IdentityComponent.tex`). Moved here (run 0008) from sibling
+`Picard/IdentityComponent.lean` so it can consume the per-conjunct theorems
+of this chapter; it is literally `Pic0.isAbelianVariety`. -/
+theorem isAbelianVariety {k : Type u} [Field k]
+    (C : Over (Spec (.of k)))
+    [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
+    [GeometricallyIntegral C.hom] [HasPicScheme C]
+    [PicScheme.PicSchemeLocallyOfFiniteType C] :
+    IsProper (Pic0Scheme C).hom ∧ Smooth (Pic0Scheme C).hom ∧
+      GeometricallyIrreducible (Pic0Scheme C).hom ∧
+      Nonempty (GrpObj (Pic0Scheme C)) :=
+  Pic0.isAbelianVariety C
+
+end Pic0Scheme
 
 end Scheme
 

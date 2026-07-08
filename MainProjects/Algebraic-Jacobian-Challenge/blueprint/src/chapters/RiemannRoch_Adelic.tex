@@ -1,0 +1,1078 @@
+% archon:covers AlgebraicJacobian/RiemannRoch/Adelic/Substrate.lean
+% archon:covers AlgebraicJacobian/RiemannRoch/Adelic/Cokernel.lean
+% archon:covers AlgebraicJacobian/RiemannRoch/Adelic/FinitenessP1.lean
+% archon:covers AlgebraicJacobian/RiemannRoch/Adelic/ChiLedger.lean
+% archon:covers AlgebraicJacobian/RiemannRoch/Adelic/Duality.lean
+\chapter{Adelic Riemann--Roch: the repartition cokernel (RR.A)}
+\label{chap:RiemannRoch_Adelic}
+
+\section{Provenance and standing conventions}
+\label{sec:RiemannRoch_Adelic_intro}
+
+This chapter builds the \emph{adelic} (Weil-repartition) approach to
+Riemann--Roch for the smooth proper geometrically integral curve
+\(C / k\) of the challenge, over an \emph{arbitrary} base field \(k\)
+(not assumed algebraically closed). It reuses the divisor substrate of
+\Cref{chap:RiemannRoch_WeilDivisor} (\(\mathrm{PrimeDivisor}\), the
+valuation \(\mathrm{order}\), the degree map, the class
+\(\mathrm{IsRegularInCodimensionOne}\)) and the sheaf-cohomology
+substrate of \Cref{chap:Cohomology_MayerVietoris} and
+\Cref{chap:Genus} (the structure sheaf as a sheaf of \(k\)-modules
+\(\toModuleKSheaf C\), its cohomology \(\HModule\), the Mayer--Vietoris
+long exact sequence, and the Čech carriers
+\(\mathrm{IsCechAcyclicCover}\) / \(\HasCechToHModuleIso\)).
+
+\paragraph{The concrete-repartition idea.}
+Classically (Weil), for the function field \(K = k(C)\) one forms the
+\emph{adele} (repartition) space
+\(\mathbb{A}_K = \{(x_P)_P \in \prod_P K : v_P(x_P) \ge 0 \text{ for
+almost all } P\}\), its bounded subspaces
+\(\mathbb{A}_K(D) = \{(x_P) : v_P(x_P) \ge -D(P)\ \forall P\}\), and the
+two Riemann--Roch spaces
+\[
+  L(D) = K \cap \mathbb{A}_K(D)
+        = \{ f \in K : \operatorname{div} f + D \ge 0\},
+  \qquad
+  H^1(D) = \mathbb{A}_K / (\mathbb{A}_K(D) + K).
+\]
+The genus is \(g = \dim_k H^1(0)\); the index of specialty is
+\(i(D) = \dim_k H^1(D)\). We do \emph{not} build \(\mathbb{A}_K\): its
+Lean assembly is absent from mathlib in the function-field case, and the
+comparison of \(\mathbb{A}_K/K\) with sheaf cohomology re-introduces a
+surjectivity/existence gap. Instead we use the observation that for a
+\emph{fixed \(2\)-element affine cover} the ``adele-for-that-cover''
+first cohomology \emph{is} the Čech \(H^1\) definitionally --- a single
+cokernel, no colimit and no existence theorem.
+
+\paragraph{The \(2\)-affine-cover cokernel.}
+Fix an affine Mayer--Vietoris square
+\(S : C.\mathrm{left}.\AffineCoverMVSquare\) (\Cref{chap:Cohomology_MayerVietoris}):
+opens \(U_0, U_1 \subseteq C\) with \(U_0, U_1, U_0 \cap U_1\) all affine
+and \(U_0 \sqcup U_1 = \top\). Write, as \(k\)-subspaces of \(K\) via the
+fraction-field embedding,
+\[
+  A_i = \Gamma(U_i, \struct{C}), \qquad
+  A_{01} = \Gamma(U_0 \cap U_1, \struct{C}).
+\]
+The degree-\(1\) Čech cohomology of the two-element cover is the cokernel
+of the difference map \((f_0, f_1) \mapsto f_0|_{01} - f_1|_{01}\):
+\[
+  \check{H}^1 \;=\; A_{01} \big/ (A_0 + A_1).
+\]
+For a Weil divisor \(D\) the \emph{twisted} version replaces each ring of
+sections by the Riemann--Roch sheaf of sections
+\(\Gamma(U, \struct{C}(D)) = \{ f \in K : v_P(f) \ge -D(P) \text{ for all
+prime divisors } P \in U\}\), giving
+\[
+  L(D) = \Gamma(U_0, \struct{C}(D)) \cap \Gamma(U_1, \struct{C}(D)),
+  \qquad
+  \check{H}^1(D) = \Gamma(U_0 \cap U_1, \struct{C}(D)) \big/
+    \bigl(\Gamma(U_0, \struct{C}(D)) + \Gamma(U_1, \struct{C}(D))\bigr).
+\]
+These are the algebraic-geometry incarnations of Weil's \(L(D)\) and
+\(H^1(D)\), and the bridge of \Cref{sec:RiemannRoch_Adelic_cokernel}
+identifies \(\check{H}^1(0)\) with the project's
+\(\HModule\, k\, (\toModuleKSheaf C)\, 1 = H^1(C, \struct{C})\).
+
+\paragraph{Residue-degree bookkeeping.}
+Because \(k\) need not be algebraically closed, every place carries a
+\emph{residue degree}. For a prime divisor \(P\) with residue field
+\(\kappa(P) = \struct{C, P}/\mathfrak{m}_P\), set
+\[
+  \deg P \;=\; [\kappa(P) : k] \;=\; \dim_k \kappa(P) \;<\; \infty,
+  \qquad
+  \deg D \;=\; \sum_P D(P)\,\deg P .
+\]
+Over an algebraically closed \(k\) one has \(\deg P = 1\) and this
+recovers the classical count; the whole \(\chi\)-ledger below carries the
+residue degrees. This is the degree of
+\Cref{def:divisor_degree,thm:divisor_degree_hom}.
+
+\paragraph{Notation.} We write \(\ell(D) = \dim_k L(D)\),
+\(i(D) = \dim_k \check{H}^1(D)\), and
+\(\chi(D) = \ell(D) - i(D)\) for the Euler characteristic. The genus is
+\(g = i(0) = \dim_k \check{H}^1(0)\) (\Cref{def:genus}, once
+\Cref{thm:adelic_module_finite_genus} makes it a finite number).
+
+\paragraph{Tiering.} The development is layered so that the earlier tiers
+verify without the later ones.
+\emph{Tier 0} (\Cref{sec:RiemannRoch_Adelic_substrate}) records the
+Dedekind chart, the point valuation, the sheaf of sections, and the
+finite-support lemma.
+\emph{Tier 1} (\Cref{sec:RiemannRoch_Adelic_cokernel,sec:RiemannRoch_Adelic_finiteness})
+delivers the single live-tree payoff --- finite-dimensionality of
+\(H^1(C, \struct{C})\), hence an honest \(\genus C\) --- funnelling
+through the keystone
+\(\Cref{thm:adelic_finiteDimensional_cokernel_zero}\).
+\emph{Tier 2} (\Cref{sec:RiemannRoch_Adelic_chi}) is the
+\(\chi\)-ledger: the Riemann inequality and finiteness of every
+\(\check{H}^1(D)\), keystone
+\(\Cref{thm:adelic_chi_eq_chi_zero_add_degree}\).
+\emph{Tier 3} (\Cref{sec:RiemannRoch_Adelic_duality}) is residue-pairing
+Serre duality and the vanishing \(i(D) = 0\) for \(\deg D > 2g - 2\); its
+two deepest nodes are gated by single-field \(\mathrm{Prop}\)-classes, in
+the style of \(\mathrm{HasPicScheme}\), so the earlier tiers are
+unaffected.
+
+\medskip
+Throughout, \(C : \mathrm{Over}\,(\Spec (.of\ k))\) with
+\([\mathrm{IsProper}\ C.\hom]\),
+\([\mathrm{SmoothOfRelativeDimension}\ 1\ C.\hom]\) and
+\([\mathrm{GeometricallyIrreducible}\ C.\hom]\), matching the standing
+hypotheses of \Cref{def:genus}; \(K = C.\mathrm{left}.\mathrm{functionField}\).
+
+\section{Tier 0 --- the adelic substrate}
+\label{sec:RiemannRoch_Adelic_substrate}
+
+\begin{proposition}
+[Affine chart is a Dedekind domain with fraction field \(K\)]
+  \label{thm:adelic_chartRing_isDedekindDomain}
+  \lean{AlgebraicGeometry.Adelic.chartRing_isDedekindDomain}
+  \uses{def:isRegularInCodimensionOne}
+  % [scheidler] valuation rings / DVR foundations; [cff] Prop. 4.2 (DVR characterisation)
+  \source{scheidler-function-fields, cff-curves-function-fields}
+  Let \(U \subseteq C\) be a nonempty affine open with coordinate ring
+  \(A_U = \Gamma(U, \struct{C})\). Then \(A_U\) is a Dedekind domain and
+  the canonical map \(A_U \hookrightarrow K\) exhibits \(K\) as the field
+  of fractions of \(A_U\).
+\end{proposition}
+\begin{proof}
+  Since \(C\) is integral, \(A_U\) is an integral domain, and for a
+  nonempty affine open of an integral scheme the natural map to the
+  function field \(A_U \to K\) is injective with
+  \(\mathrm{IsFractionRing}\, A_U\, K\) (the localisation of \(A_U\) at
+  its generic point is \(K\)); this is the affine-chart fraction-field
+  statement used to build \(\texttt{functionFieldIso}\)
+  (\Cref{def:functionFieldIso}). It remains to verify the Dedekind
+  axioms. \(A_U\) is Noetherian: \(C\) is of finite type over the field
+  \(k\), hence locally Noetherian, so \(A_U\) is a finitely generated
+  \(k\)-algebra and Noetherian. \(A_U\) is a domain that is not a field
+  (a curve has closed points), of Krull dimension one: every nonzero
+  prime of \(A_U\) is maximal because the corresponding point of \(U\)
+  has codimension one in the one-dimensional \(C\). At each such
+  height-one prime \(\mathfrak p\), the localisation
+  \((A_U)_{\mathfrak p} = \struct{C, x}\) is the stalk at the
+  corresponding codimension-one point \(x\), which is a discrete
+  valuation ring by \(\mathrm{IsRegularInCodimensionOne}\)
+  (\Cref{def:isRegularInCodimensionOne}), automatic here from the
+  smoothness of \(C\). A one-dimensional Noetherian domain whose
+  localisations at height-one primes are discrete valuation rings is
+  integrally closed, hence Dedekind by the standard characterisation
+  (a Noetherian integrally closed domain of dimension \(\le 1\)).
+  \paragraph{Gate.} The one non-formal input is ``smooth curve chart
+  \(\Rightarrow\) regular chart'', supplied here by
+  \(\mathrm{IsRegularInCodimensionOne}\). Should the passage from
+  smoothness of \(C.\hom\) to that class be unavailable at a use site, it
+  is threaded as the single-field class
+  \(\mathrm{HasDedekindChart}\, C\), discharged by \(\texttt{inferInstance}\)
+  once the regularity instance is present.
+\end{proof}
+
+\begin{definition}
+\leanok
+[Point valuation and residue degree]
+  \label{def:adelic_pointValuation}
+  \lean{AlgebraicGeometry.Adelic.pointValuation}
+  \uses{thm:adelic_chartRing_isDedekindDomain, def:order_at_point, lem:order_eq_order_restrict}
+  % [scheidler] p. 24 (deg P = [F_P : K]); [cff] (C2) deg P = dim_K O_P/P
+  \source{scheidler-function-fields, cff-curves-function-fields}
+  Let \(P\) be a prime divisor whose point lies in a nonempty affine open
+  \(U\), with Dedekind chart \(A_U\)
+  (\Cref{thm:adelic_chartRing_isDedekindDomain}). The prime \(P\)
+  determines a height-one prime \(\mathfrak p_P\) of \(A_U\), and the
+  discrete valuation of the challenge,
+  \(v_P = \mathrm{order}\, P\) on \(K\) (\Cref{def:order_at_point}),
+  coincides with the \(\mathfrak p_P\)-adic valuation of \(A_U\) on
+  \(K = \operatorname{Frac} A_U\). Its residue field is
+  \(\kappa(P) = A_U/\mathfrak p_P = \struct{C, P}/\mathfrak m_P\), and the
+  \emph{degree} of \(P\) is the finite number
+  \(\deg P = \dim_k \kappa(P) = [\kappa(P) : k]\).
+\end{definition}
+\begin{proof}
+  The stalk \(\struct{C, P}\) is the localisation \((A_U)_{\mathfrak p_P}\)
+  because \(P\) lies in the affine \(U\); its normalised valuation, whose
+  \(\mathrm{WithZero.log}\) is \(\mathrm{order}\, P\)
+  (\Cref{def:order_at_point}), is by definition the
+  \(\mathfrak p_P\)-adic valuation. Independence of the chosen chart is
+  the naturality \Cref{lem:order_eq_order_restrict}: \(\mathrm{order}\)
+  is invariant under open-immersion restriction, so any two affine charts
+  containing \(P\) give the same valuation on \(K\). Finiteness of
+  \(\deg P\): \(\kappa(P)\) is the residue field of a closed point of the
+  finite-type \(k\)-scheme \(C\); choosing a nonconstant \(x \in K\)
+  bounds \([\kappa(P) : k] \le [K : k(x)] < \infty\).
+\end{proof}
+
+\begin{definition}
+\leanok
+[Sheaf of sections of a divisor; the Riemann--Roch space]
+  \label{def:adelic_sectionOfDivisor}
+  \lean{AlgebraicGeometry.Adelic.sectionOfDivisor}
+  \uses{def:adelic_pointValuation, def:codim1_cycles, lem:order_mul_of_ne_zero}
+  % [papaioannou] Def. 1.9 (L(D)); [cff] sec. 12 (L(A), Riemann-Roch space)
+  \source{papaioannou-algebraic-rr, cff-curves-function-fields}
+  For an open \(U \subseteq C\) and a Weil divisor \(D\)
+  (\Cref{def:codim1_cycles}) define the additive subgroup of \(K\)
+  \[
+    \Gamma(U, \struct{C}(D)) \;=\;
+      \{ f \in K : f = 0 \text{ or } v_P(f) \ge -D(P) \text{ for every
+         prime divisor } P \text{ with point in } U\}
+  \]
+  (the disjunct \(f = 0\) encodes \(v_P(0) = +\infty\)). It is in fact a
+  \(k\)-subspace, since scaling by \(c \in k^\times\) preserves every
+  order \(v_P(cf) = v_P(f)\). Its global instance for the fixed cover
+  gives the \emph{Riemann--Roch space}
+  \(L(D) = \Gamma(U_0, \struct{C}(D)) \cap \Gamma(U_1, \struct{C}(D))\),
+  equal to \(\{ f \in K : \operatorname{div} f + D \ge 0\}\) since
+  \(U_0 \cup U_1 = C\).
+\end{definition}
+\begin{proof}
+  The set is a \(k\)-submodule of \(K\). It contains \(0\)
+  (\(v_P(0) = +\infty \ge -D(P)\)). It is closed under addition by the
+  ultrametric inequality of the discrete valuation
+  \(v_P(f + h) \ge \min(v_P f, v_P h) \ge -D(P)\). It is closed under
+  scaling by \(c \in k^\times\): a nonzero constant is a unit in every
+  stalk, so \(v_P(c) = 0\) and \(v_P(cf) = v_P(c) + v_P(f) = v_P(f)\) by
+  \(\Cref{lem:order_mul_of_ne_zero}\) (with \(v_P(0\cdot f) = +\infty\)).
+  The intersection identity for \(L(D)\) holds because a prime divisor of
+  \(C\) has its point in \(U_0\) or in \(U_1\); imposing \(v_P(f) \ge
+  -D(P)\) on the union of the two chart conditions is imposing it at
+  every prime divisor, i.e.\ \(\operatorname{div} f + D \ge 0\).
+\end{proof}
+
+\begin{lemma}
+[Finiteness of the non-integral places on a Dedekind chart]
+  \label{thm:adelic_finite_support_order}
+  \lean{AlgebraicGeometry.Adelic.finite_places_ne_one}
+  \leanok
+  \uses{thm:adelic_chartRing_isDedekindDomain}
+  % [scheidler] p. 31 (finiteness of zeros/poles); [papaioannou] Cor. 1.12
+  \source{scheidler-function-fields, papaioannou-algebraic-rr}
+  Let \(R\) be a Dedekind domain with fraction field \(K\). For a nonzero
+  \(k \in K\) the set \(\{ v \in \operatorname{Spec}^1 R : v(k) \ne 1\}\) of
+  height-one places at which \(k\) is a zero or a pole is finite.
+
+  This is the affine-chart core of the finite-support statement: a curve is
+  covered by finitely many Dedekind charts, and applying the lemma on each
+  chart shows that for \(f \in K^\times\) only finitely many prime divisors
+  have \(v_P(f) \ne 0\), so \(\operatorname{div} f = \sum_P v_P(f)\,P\) is a
+  well-defined Weil divisor. The general scheme-level assembly (finite affine
+  cover plus the height-one/minimal-primes bound) is
+  \Cref{lem:rationalMap_order_finite_support}.
+\end{lemma}
+\begin{proof}
+  \leanok
+  Apply the finiteness of the support of a nonzero fractional ideal in a
+  Dedekind domain to both \(k\) and \(k^{-1}\). A place \(v\) with
+  \(v(k) \ne 1\) satisfies either \(v(k) > 1\) (a zero of \(k\)) or
+  \(v(k) < 1\), equivalently \(v(k^{-1}) > 1\) (a pole of \(k\)); each of
+  the two sets of such places is finite, and their union contains every
+  place with \(v(k) \ne 1\).
+\end{proof}
+
+\section{Tier 1a --- the cover cokernel and the bridge to \(H^1\)}
+\label{sec:RiemannRoch_Adelic_cokernel}
+
+\begin{definition}
+[The twisted cover cohomology]
+  \label{def:adelic_coverH1}
+  \lean{AlgebraicGeometry.Adelic.coverH1}
+  \uses{def:adelic_sectionOfDivisor, def:Scheme_AffineCoverMVSquare}
+  For a Weil divisor \(D\) and the fixed affine square \(S\), the
+  \emph{cover cohomology} is the cokernel of the difference map
+  \[
+    d_D \colon
+      \Gamma(U_0, \struct{C}(D)) \oplus \Gamma(U_1, \struct{C}(D))
+      \longrightarrow \Gamma(U_0 \cap U_1, \struct{C}(D)),
+    \qquad (f_0, f_1) \mapsto f_0 - f_1,
+  \]
+  (restrictions to \(U_0 \cap U_1\), all viewed inside \(K\)):
+  \[
+    \check{H}^1(D) \;=\;
+      \Gamma(U_0 \cap U_1, \struct{C}(D)) \big/
+      \bigl(\Gamma(U_0, \struct{C}(D)) + \Gamma(U_1, \struct{C}(D))\bigr).
+  \]
+  Its kernel is \(\ker d_D = L(D)\) (\Cref{def:adelic_sectionOfDivisor}).
+  We write \(\check{H}^1 = \check{H}^1(0)\), the untwisted cokernel
+  \(A_{01}/(A_0 + A_1)\).
+\end{definition}
+\begin{proof}
+  The two summands \(\Gamma(U_i, \struct{C}(D))\) and the target
+  \(\Gamma(U_0 \cap U_1, \struct{C}(D))\) are \(k\)-submodules of \(K\)
+  (\Cref{def:adelic_sectionOfDivisor}), and \(d_D\) is \(k\)-linear;
+  hence the image \(A_0(D) + A_1(D)\) is a submodule and the quotient is
+  a \(k\)-module. An element \((f_0, f_1)\) lies in \(\ker d_D\) iff
+  \(f_0 = f_1\) in \(K\) with \(f_0 \in \Gamma(U_0, \struct{C}(D))\) and
+  \(f_1 \in \Gamma(U_1, \struct{C}(D))\), i.e.\ iff the common value lies
+  in \(\Gamma(U_0, \struct{C}(D)) \cap \Gamma(U_1, \struct{C}(D)) =
+  L(D)\).
+\end{proof}
+
+\begin{lemma}
+[The unnormalized coface differential is the alternating coface sum]
+  \label{lem:adelic_alternatingCofaceMapComplex_objD}
+  \leanok
+  \lean{AlgebraicGeometry.Scheme.alternatingCofaceMapComplex_objD}
+  For a cosimplicial object \(Y\) in a preadditive category and \(n \ge
+  0\), the degree-\(n\) differential of the associated (unnormalized)
+  alternating coface cochain complex is the alternating sum of coface
+  maps,
+  \[
+    d^n \;=\; \sum_{i = 0}^{n+1} (-1)^i\, Y(\delta_i) \colon Y^n \to
+    Y^{n+1}.
+  \]
+\end{lemma}
+\begin{proof}
+  \leanok
+  This is the cosimplicial dual of the standard alternating-face-map
+  formula for the (co)chain complex of a simplicial object: the
+  differential of the alternating coface complex is defined as this
+  alternating sum, so the identity is definitional unfolding.
+\end{proof}
+
+\begin{definition}
+[The Čech cosimplicial object of a cover]
+  \label{def:adelic_cechCosimplicial}
+  \leanok
+  \lean{AlgebraicGeometry.Scheme.cechCosimplicial,
+    AlgebraicGeometry.Scheme.cechCochain_eq}
+  \uses{def:adelic_coverH1, def:Scheme_cechCohomology}
+  For a family of opens \(\mathcal{U} = (U_i)_{i \in \iota}\) of \(C\)
+  and a sheaf \(F\) of \(k\)-modules, the \emph{Čech cosimplicial object}
+  \(Y_{\mathcal{U}, F}\) sends \([n]\) to
+  \(\prod_{j \colon \mathrm{Fin}(n+1) \to \iota} \Gamma\bigl(\bigsqcap_a
+  U_{j(a)}, F\bigr)\), with coface maps \(\delta_{i_0} \colon Y^n \to
+  Y^{n+1}\) induced by restriction along the shrinking of the
+  intersection when an index is duplicated. The Čech cochain complex is
+  by definition the alternating coface complex of \(Y_{\mathcal{U},
+  F}\):
+  \(\mathrm{cechCochain}\, C\, F\, \mathcal{U} =\) the alternating coface
+  complex of \(Y_{\mathcal{U}, F}\)
+  (\Cref{lem:adelic_alternatingCofaceMapComplex_objD}).
+\end{definition}
+\begin{proof}
+  \leanok
+  Immediate from the definition of \(\mathrm{cechCochain}\) as the
+  alternating coface complex associated to the cosimplicial object
+  obtained by evaluating the Čech nerve of \(\mathcal{U}\) against \(F\).
+\end{proof}
+
+\begin{lemma}
+[Coface components are restriction maps]
+  \label{lem:adelic_cech_coface_restriction}
+  \leanok
+  \lean{AlgebraicGeometry.Scheme.cechCosimplicial_δ_π,
+    AlgebraicGeometry.Scheme.prodOpens_eq_iInf,
+    AlgebraicGeometry.Scheme.prodOpens_δ_le,
+    AlgebraicGeometry.Scheme.cechCosimplicial_δ_π_restrict}
+  \uses{def:adelic_cechCosimplicial}
+  For every finite index family \(j \colon \mathrm{Fin}\, m \to \iota\),
+  the categorical product \(\prod_a U_{j(a)}\) equals the intersection
+  \(\bigsqcap_a U_{j(a)}\) of opens of \(C\). Consequently, for
+  \(n \ge 0\), \(i_0 \in \mathrm{Fin}(n+2)\), and
+  \(j \colon \mathrm{Fin}(n+2) \to \iota\), the coface map \(\delta_{i_0}
+  \colon Y_{\mathcal{U},F}^n \to Y_{\mathcal{U},F}^{n+1}\), projected to
+  the \(j\)-indexed factor of the target, is the restriction map
+  \[
+    \Gamma\Bigl(\bigsqcap_a U_{j(a)}, F\Bigr) \longrightarrow
+    \Gamma\Bigl(\bigsqcap_a U_{j(\delta_{i_0}(a))}, F\Bigr)
+  \]
+  along the inclusion
+  \(\bigsqcap_a U_{j(a)} \subseteq \bigsqcap_a U_{j(\delta_{i_0}(a))}\)
+  (dropping the index \(i_0\) enlarges the intersection).
+\end{lemma}
+\begin{proof}
+  \leanok
+  The abstract categorical product of a finite family of opens, computed
+  in the poset \(\mathrm{Opens}\, C\), is its infimum, by the universal
+  property of both constructions. Under this identification the coface
+  map's action on the \(j\)-indexed factor --- reindexing the source
+  factor along \(j \circ \delta_{i_0}\) followed by the canonical
+  comparison map between the two products --- is exactly the restriction
+  map along the inclusion of the larger-index intersection into the
+  smaller-index one; since \(\mathrm{Opens}\, C\) is a poset, this
+  comparison map is the unique restriction along that inclusion.
+\end{proof}
+
+\begin{lemma}
+[The degree-\(0\) and degree-\(1\) Čech differentials]
+  \label{lem:adelic_cech_d01_d12_formula}
+  \leanok
+  \lean{AlgebraicGeometry.Scheme.cechCochain_d01_eq,
+    AlgebraicGeometry.Scheme.cechCochain_d12_eq}
+  \uses{lem:adelic_alternatingCofaceMapComplex_objD,
+    lem:adelic_cech_coface_restriction}
+  In terms of the coface maps of \(Y_{\mathcal{U}, F}\), the Čech
+  differentials in degrees \(0\) and \(1\) are
+  \[
+    d^0 = \delta_0 - \delta_1, \qquad\qquad
+    d^1 = \delta_0 - \delta_1 + \delta_2.
+  \]
+\end{lemma}
+\begin{proof}
+  \leanok
+  Immediate from \Cref{lem:adelic_alternatingCofaceMapComplex_objD} at
+  \(n = 0\) and \(n = 1\), expanding the alternating sum over
+  \(\mathrm{Fin}\, 2\) and \(\mathrm{Fin}\, 3\) respectively.
+\end{proof}
+
+\begin{proposition}
+[Two-element Čech \(H^1\) is the cokernel]
+  \label{thm:adelic_cechH1_eq_cokernel}
+  \lean{AlgebraicGeometry.Adelic.cechH1_eq_cokernel}
+  \uses{def:adelic_coverH1, def:Scheme_cechCohomology, def:Scheme_toModuleKSheaf}
+  There is a \(k\)-linear isomorphism
+  \[
+    \mathrm{cechCohomology}\, C\, (\toModuleKSheaf C)\, S.\cover\, 1
+    \;\simeq_k\; \check{H}^1 \;=\; A_{01}/(A_0 + A_1).
+  \]
+\end{proposition}
+\begin{proof}
+  \uses{lem:adelic_cech_d01_d12_formula, lem:adelic_cech_coface_restriction}
+  For the two-element cover \(\{U_0, U_1\}\) the (alternating) Čech
+  cochain complex of \(\toModuleKSheaf C\) is concentrated in degrees
+  \(0\) and \(1\): the \(0\)-cochains are
+  \(C^0 = \Gamma(U_0) \oplus \Gamma(U_1) = A_0 \oplus A_1\), the
+  \(1\)-cochains are \(C^1 = \Gamma(U_0 \cap U_1) = A_{01}\), and
+  \(C^{\ge 2} = 0\) since every triple index repeats a member of a
+  \(2\)-element set. The differential \(C^0 \to C^1\) is
+  \((f_0, f_1) \mapsto f_0|_{01} - f_1|_{01}\), so
+  \(H^1 = C^1/\operatorname{im} = A_{01}/(A_0 + A_1)\); the image is
+  \(A_0 + A_1\) because each \(A_i\) is a \(k\)-subspace closed under
+  negation, so
+  \(\{ f_0 - f_1 : f_i \in A_i\} = A_0 + A_1\) inside \(A_{01}\).
+\end{proof}
+
+\begin{proposition}
+[\(\mathrm{IsCechAcyclicCover}\) for the affine square]
+  \label{thm:adelic_instIsCechAcyclicCover}
+  \lean{AlgebraicGeometry.Adelic.instIsCechAcyclicCover}
+  \uses{def:Scheme_IsCechAcyclicCover, lem:affine_serre_vanishing, lem:affine_injective_acyclic}
+  The two-element affine cover \(S.\cover = \{U_0, U_1\}\) satisfies
+  \(\mathrm{IsCechAcyclicCover}\, (\toModuleKSheaf C)\, S.\cover\): the
+  higher Čech cohomology of the structure sheaf along the cover
+  vanishes.
+\end{proposition}
+\begin{proof}
+  Acyclicity of an affine cover for a quasi-coherent sheaf is the
+  Serre-vanishing seed of \Cref{lem:affine_serre_vanishing}: on an affine
+  open the higher cohomology of \(\toModuleKSheaf C\) vanishes, and the
+  injective-acyclic reduction \Cref{lem:affine_injective_acyclic}
+  propagates this to the Čech complex of the cover whose members and all
+  of whose finite intersections are affine. For the two-element square
+  the only nonempty intersections are \(U_0, U_1, U_0 \cap U_1\), all
+  affine by construction of \(\AffineCoverMVSquare\)
+  (\Cref{def:Scheme_AffineCoverMVSquare}); the vanishing seed applies to
+  each, giving \(\mathrm{IsCechAcyclicCover}\).
+\end{proof}
+
+\begin{proposition}
+[Čech-to-derived comparison for the affine square]
+  \label{thm:adelic_instHasCechToHModuleIso}
+  \lean{AlgebraicGeometry.Adelic.instHasCechToHModuleIso}
+  \uses{def:Scheme_HasCechToHModuleIso, thm:adelic_instIsCechAcyclicCover, thm:Scheme_AffineCoverMVSquare_HModule_prime_sequence_exact}
+  The affine square satisfies
+  \(\HasCechToHModuleIso\, (\toModuleKSheaf C)\, S.\cover\): the Čech
+  cohomology of the cover computes the sheaf cohomology of
+  \(\toModuleKSheaf C\).
+\end{proposition}
+\begin{proof}
+  The comparison is furnished by the Mayer--Vietoris presentation of the
+  affine square. The exact sequence
+  \Cref{thm:Scheme_AffineCoverMVSquare_HModule_prime_sequence_exact}
+  expresses \(\HModulePrime\) at the join \(U_0 \sqcup U_1 = \top\) as the
+  cohomology of the two-term complex
+  \(\HModulePrime(U_0) \oplus \HModulePrime(U_1) \to
+  \HModulePrime(U_0 \cap U_1)\); since the cover is Čech-acyclic
+  (\Cref{thm:adelic_instIsCechAcyclicCover}) the higher terms
+  \(H^{>0}(U_i)\) vanish, so this two-term complex is exactly the Čech
+  complex, and its cohomology agrees with the derived-functor cohomology
+  \(\HModulePrime\) degreewise. Packaging the degreewise isomorphisms is
+  \(\HasCechToHModuleIso\).
+  \paragraph{Gate.} This is the substantive Čech-to-derived comparison.
+  Where its Lean discharge is not yet available it is threaded as the
+  existing carrier class \(\HasCechToHModuleIso\), supplied at the use
+  site and later closed by \(\texttt{inferInstance}\); every downstream consumer
+  verifies against the hypothesis meanwhile.
+\end{proof}
+
+\begin{theorem}
+[Bridge: \(H^1(C, \struct{C})\) is the cover cokernel]
+  \label{thm:adelic_HModuleOne_linearEquiv_cokernel}
+  \lean{AlgebraicGeometry.Adelic.HModuleOne_linearEquiv_cokernel}
+  \uses{thm:adelic_cechH1_eq_cokernel, thm:adelic_instIsCechAcyclicCover, thm:adelic_instHasCechToHModuleIso, def:Scheme_HModule_prime_eq_HModule_linearEquiv, def:Scheme_cechToHModuleIso, def:Scheme_HModule}
+  There is a \(k\)-linear isomorphism
+  \[
+    \HModule\, k\, (\toModuleKSheaf C)\, 1
+    \;\simeq_k\; \check{H}^1 \;=\; A_{01}/(A_0 + A_1).
+  \]
+\end{theorem}
+\begin{proof}
+  Chain three isomorphisms.
+  \begin{enumerate}
+    \item The universe bridge
+      \Cref{def:Scheme_HModule_prime_eq_HModule_linearEquiv} identifies
+      \(\HModule\, k\, (\toModuleKSheaf C)\, 1\) with
+      \(\HModulePrime\, k\, (\toModuleKSheaf C)\, 1\) at the top open,
+      moving between the two universe levels at which the project's
+      cohomology is defined.
+    \item Under the discharged carriers
+      \(\mathrm{IsCechAcyclicCover}\)
+      (\Cref{thm:adelic_instIsCechAcyclicCover}) and
+      \(\HasCechToHModuleIso\)
+      (\Cref{thm:adelic_instHasCechToHModuleIso}), the comparison
+      \(\texttt{cechToHModuleIso}\) (\Cref{def:Scheme_cechToHModuleIso})
+      identifies \(\HModulePrime\, 1\) at
+      \(\bigsqcup S.\cover = \top\) with
+      \(\mathrm{cechCohomology}\, C\, (\toModuleKSheaf C)\, S.\cover\, 1\).
+    \item The two-element identification
+      \Cref{thm:adelic_cechH1_eq_cokernel} rewrites the Čech
+      \(H^1\) as the cokernel \(A_{01}/(A_0 + A_1)\).
+  \end{enumerate}
+  Composing the three \(k\)-linear isomorphisms gives the claim.
+\end{proof}
+
+\section{Tier 1b --- finiteness of the base cokernel via \(\mathbb{P}^1\)}
+\label{sec:RiemannRoch_Adelic_finiteness}
+
+The bridge \Cref{thm:adelic_HModuleOne_linearEquiv_cokernel} reduces
+finite-dimensionality of \(H^1(C, \struct{C})\) to that of the concrete
+cokernel \(\check{H}^1 = A_{01}/(A_0 + A_1)\). Unlike the
+differential-geometry sibling, which obtained base-case finiteness from
+compactness (finite-dimensional Dolbeault cohomology), we must prove it
+by hand. The route is reduction to \(\mathbb{P}^1\) through a finite
+morphism.
+
+\begin{proposition}
+[A finite map to \(\mathbb{P}^1\)]
+  \label{thm:adelic_exists_finiteMorphismToP1}
+  \notready  % gate class AlgebraicGeometry.Adelic.HasFiniteMapToP1
+  \lean{AlgebraicGeometry.Adelic.exists_finiteMorphismToP1}
+  % [papaioannou] Cor. 1.7-1.8 (a transcendental x has finitely many zeros/poles; [F:K(x)] finite); [cff] Thm. 12.6
+  \source{papaioannou-algebraic-rr, cff-curves-function-fields}
+  There is a nonconstant element \(x \in K \setminus k\) with
+  \([K : k(x)] = n < \infty\); equivalently a finite \(k\)-morphism
+  \(\pi \colon C \to \mathbb{P}^1_k\) of degree \(n\).
+\end{proposition}
+\begin{proof}
+  As \(C\) is a geometrically integral curve over \(k\), its function
+  field \(K/k\) has transcendence degree one. Choose any transcendental
+  \(x \in K \setminus k\). Then \(k(x) \subseteq K\) is a subfield with
+  \(K/k(x)\) algebraic; because \(K\) is a finitely generated field
+  extension of \(k\) of transcendence degree one, \(K/k(x)\) is a finite
+  extension, say of degree \(n = [K : k(x)]\)
+  (Papaioannou Cor.~1.7--1.8: a transcendental element has finitely many
+  zeros and poles and \(K/k(x)\) is finite). The inclusion
+  \(k(x) = k(\mathbb{P}^1) \hookrightarrow K\) is the function-field map
+  of a dominant, hence (properness of \(C\)) finite, morphism
+  \(\pi \colon C \to \mathbb{P}^1_k\) of degree \(n\).
+  \paragraph{Gate.} The existence of the finite map is packaged as the
+  single-field class \(\mathrm{HasFiniteMapToP1}\, C\), carrying the
+  witness \((x, hx : x \notin k, n, [K : k(x)] = n)\); a proved instance
+  (transcendence-degree-one \(\Rightarrow\) such an \(x\)) is deferred,
+  so Tier 1 finiteness verifies against the hypothesis.
+\end{proof}
+
+\begin{proposition}
+[Charts are module-finite over the \(\mathbb{P}^1\) charts]
+  \label{thm:adelic_chart_finite_over_P1}
+  \leanok
+  \lean{AlgebraicGeometry.Adelic.isAffineOpen_preimage_of_isFinite,
+    AlgebraicGeometry.Adelic.module_finite_app_of_isFinite,
+    AlgebraicGeometry.Adelic.LaurentChartData.pullbackSquare}
+  \uses{thm:adelic_exists_finiteMorphismToP1, thm:adelic_chartRing_isDedekindDomain}
+  % [papaioannou] sec. 1.3 (integrality of function fields); integral closure of k[x] in the finite extension K is module-finite
+  \source{papaioannou-algebraic-rr}
+  Take \(x\) as in \Cref{thm:adelic_exists_finiteMorphismToP1} and the
+  cover \(U_0 = \pi^{-1}(\mathbb{A}^1_x)\),
+  \(U_1 = \pi^{-1}(\mathbb{A}^1_{1/x})\); both are affine, since the
+  preimage of an affine open under a finite (hence affine) morphism is
+  affine. Then \(A_0 = \Gamma(U_0, \struct{C})\) is a finite module over
+  \(k[x]\), and \(A_1 = \Gamma(U_1, \struct{C})\) is a finite module over
+  \(k[1/x]\): for a finite morphism \(\rho\) and an affine open \(V\) of
+  its target \(Y\), \(\Gamma(\rho^{-1}V, \struct{X})\) is always a finite
+  module over \(\Gamma(V, \struct{Y})\) (the integral-closure finiteness
+  of a finite morphism, applied to \(\rho = \pi\), \(Y = \mathbb{P}^1_k\)).
+  Packaging \(U_0, U_1\) and their affine overlap as a
+  \(2\)-affine cover of \(C\) is the pulled-back cover square consumed by
+  the keystone (\Cref{thm:adelic_finiteDimensional_cokernel_zero}). (The
+  sharper classical description of \(A_0\), \(A_1\), \(A_{01}\) as
+  integral closures, free of rank \(n = [K:k(x)]\) after localising to
+  the generic point, remains true but is not needed by, and is not yet
+  formalised alongside, this route.)
+\end{proposition}
+\begin{proof}
+  \leanok
+  Affineness of \(U_0\) and \(U_1\) is preimage-stability of affine opens
+  under a finite morphism. Module-finiteness of \(A_0\) over \(k[x]\)
+  (and symmetrically of \(A_1\) over \(k[1/x]\)) is the general fact that
+  for a finite morphism \(\rho \colon X \to Y\) and an affine open \(V\)
+  of \(Y\), the induced ring map \(\Gamma(V, \struct{Y}) \to
+  \Gamma(\rho^{-1}V, \struct{X})\) makes the target a finite module over
+  the source.
+\end{proof}
+\begin{lemma}
+[The \(\mathbb{P}^1\) base cokernel vanishes]
+  \label{thm:adelic_cokernel_P1_zero}
+  \lean{AlgebraicGeometry.Adelic.cokernel_P1_zero}
+  % [papaioannou] p. 7-8 example (K(x) has genus 0); [cff] Example 14.5 (K(x) is of genus 0)
+  \source{papaioannou-algebraic-rr, cff-curves-function-fields}
+  The untwisted cokernel of the standard cover of \(\mathbb{P}^1_k\)
+  vanishes:
+  \[
+    k[x, x^{-1}] \big/ \bigl(k[x] + k[x^{-1}]\bigr) \;=\; 0,
+    \qquad\text{i.e.}\qquad H^1(\mathbb{P}^1_k, \struct{\mathbb{P}^1}) = 0.
+  \]
+\end{lemma}
+\begin{proof}
+  As a \(k\)-vector space \(k[x, x^{-1}]\) has basis the Laurent
+  monomials \(\{x^m : m \in \mathbb{Z}\}\). Every monomial \(x^m\) with
+  \(m \ge 0\) lies in \(k[x]\), and every monomial with \(m \le 0\) lies
+  in \(k[x^{-1}]\); since each integer is \(\ge 0\) or \(\le 0\), the sum
+  \(k[x] + k[x^{-1}]\) contains every basis monomial and hence equals
+  \(k[x, x^{-1}]\). Therefore the quotient is zero. This is the genus-zero
+  statement for \(\mathbb{P}^1_k\).
+\end{proof}
+
+\begin{theorem}
+[KEYSTONE: the two-cover cokernel of the curve is finite-dimensional]
+  \label{thm:adelic_finiteDimensional_cokernel_zero}
+  \lean{AlgebraicGeometry.Adelic.LaurentChartData,
+    AlgebraicGeometry.Adelic.LaurentChartData.pullbackSquare,
+    AlgebraicGeometry.Adelic.LaurentChartData.module_finite_H1Cok,
+    AlgebraicGeometry.Adelic.exists_affineCoverMVSquare_module_finite_H1Cok}
+  \leanok
+  \uses{thm:adelic_exists_finiteMorphismToP1, thm:adelic_chart_finite_over_P1,
+    thm:adelic_cokernel_P1_zero, def:adelic_coverH1}
+  % [papaioannou] Thm. 1.17-1.18 (finiteness of genus and of dim(A_F/(A_F(D)+F)))
+  \source{papaioannou-algebraic-rr}
+  Let \(\pi \colon C \to Y\) be a finite \(k\)-morphism of
+  \(\operatorname{Spec} k\)-schemes whose target carries \emph{Laurent
+  chart data}: affine opens \(V_0 \cup V_1 = Y\), coordinates
+  \(x \in \Gamma(V_0)\), \(y \in \Gamma(V_1)\) with
+  \(V_0 \cap V_1 = D(x) = D(y)\), \(x \cdot y = 1\) on the overlap, and
+  \(\Gamma(V_0) = \sum_n k\, x^n\), \(\Gamma(V_1) = \sum_n k\, y^n\) (for
+  \(Y = \mathbb{P}^1_k\): \(\Gamma(V_0) = k[x]\),
+  \(\Gamma(V_1) = k[x^{-1}]\)). Set \(U_i = \pi^{-1} V_i\),
+  \(A_i = \Gamma(U_i, \struct{C})\),
+  \(M = \Gamma(U_0 \cap U_1, \struct{C})\). Then the two-cover Čech
+  cokernel \(\check{H}^1 = M/(A_0 + A_1)\) is a finite-dimensional
+  \(k\)-vector space. In particular, under the gates
+  \(\mathrm{HasFiniteMapToP1}\, C\) and \(\mathrm{P1HasLaurentChartData}\,
+  k\), some \(2\)-affine cover of \(C\) (the pullback of the standard
+  charts) has finite-dimensional \(\check{H}^1\).
+\end{theorem}
+\begin{proof}
+  \leanok
+  Write \(t = \pi^{\sharp} x|_{U_0 \cap U_1}\),
+  \(u = \pi^{\sharp} y|_{U_0 \cap U_1}\); by naturality of \(\pi^{\sharp}\)
+  and \(x \cdot y = 1\) they satisfy \(t \cdot u = 1\) in \(M\) (an
+  abstract Laurent pair). Let \(N_0, N_1 \subseteq M\) be the images of
+  the restrictions \(A_0 \to M\), \(A_1 \to M\); \(N_0\) is stable under
+  multiplication by \(t\) and \(N_1\) under multiplication by \(u\),
+  since restriction is a ring map.
+
+  \emph{Extension.} \(U_0 \cap U_1 = \pi^{-1}(V_0 \cap V_1) =
+  \pi^{-1}(D(x)) = D(\pi^{\sharp} x)\) is the basic open of
+  \(\pi^{\sharp} x\) inside the affine \(U_0\), so \(M\) is the
+  localization \((A_0)_t\); hence for every \(m \in M\) there are \(n\)
+  and \(a \in A_0\) with \(t^n m = a|_{U_0 \cap U_1}\), and symmetrically
+  \(u^n m \in N_1\) for \(n \gg 0\).
+
+  \emph{Ladder spanning.} By finiteness of \(\pi\), \(A_0\) is a finite
+  \(\Gamma(V_0)\)-module; choose generators \(g_1, \dots, g_r\). Since
+  \(\Gamma(V_0)\) is the \(k\)-span of the powers of \(x\) (the geometric
+  source of the Laurent split of \Cref{thm:adelic_cokernel_P1_zero}),
+  \(A_0\) is the \(k\)-span of \(\{x_0^j g_i\}\) where
+  \(x_0 = \pi^{\sharp} x\); combining with the extension property and
+  \(tu = 1\), every \(m \in M\) lies in the \(k\)-span of the two-sided
+  ladder \(\{t^j \bar{g}_i\} \cup \{u^j \bar{g}_i\}\), \(j \in
+  \mathbb{N}\), with \(\bar{g}_i \in N_0\) the images of the generators.
+
+  \emph{Middle band.} The rungs \(t^j \bar{g}_i\) lie in \(N_0\)
+  (\(t\)-stability); choosing \(n_i\) with \(u^{n_i} \bar{g}_i \in N_1\)
+  and \(N = \max_i n_i\), all rungs \(u^j \bar{g}_i\) with \(j \ge N\) lie
+  in \(N_1\) (\(u\)-stability). Hence modulo \(N_0 + N_1\) the module
+  \(M\) is spanned by the finitely many middle rungs
+  \(\{u^j \bar{g}_i : i \le r,\ j < N\}\), so
+  \(\check{H}^1 = M/(N_0 + N_1)\) is finite-dimensional over \(k\).
+\end{proof}
+
+\begin{definition}
+[Gate: the \(\mathbb{P}^1\) chart-ring computation]
+  \label{def:adelic_P1HasLaurentChartData}
+  \leanok
+  \lean{AlgebraicGeometry.Adelic.P1HasLaurentChartData,
+    AlgebraicGeometry.Adelic.p1CoverSquare}
+  \uses{def:projective_space}
+  The class \(\mathrm{P1HasLaurentChartData}\, k\) asserts that the
+  concrete projective line \(\mathbb{P}(\mathrm{ULift}(\mathrm{Fin}\, 2);
+  \operatorname{Spec} k)\) carries Laurent chart data on its standard
+  two-chart affine cover (the preimages of \(D_+(X_0), D_+(X_1)\) under
+  the affine projection to the integral model, formalised
+  unconditionally as the cover square \(\mathrm{p1CoverSquare}\)); the
+  outstanding content is the chart-ring computation
+  \(\Gamma(V_0) = k \otimes_{\mathbb{Z}} (\mathrm{Away}\, X_0)_0 = k[x]\)
+  for the pullback model, dischargeable via the flat-base-change section
+  ladder of \Cref{thm:quot_pullback_baseMap_sectionEquiv_qc}. No instance
+  of the class is supplied here.
+\end{definition}
+
+\begin{theorem}
+[Tier 1 deliverable: \(\genus C\) is honest]
+  \label{thm:adelic_module_finite_genus}
+  \lean{AlgebraicGeometry.Adelic.module_finite_genus,
+    AlgebraicGeometry.Adelic.module_finite_hModule_one_of_finite_map}
+  \uses{thm:adelic_HModuleOne_linearEquiv_cokernel, thm:adelic_finiteDimensional_cokernel_zero, def:genus}
+  The first cohomology of the structure sheaf is finite over \(k\):
+  \[
+    \Module.\Finite\ k\ \bigl(\HModule\, k\, (\toModuleKSheaf C)\, 1\bigr).
+  \]
+  Consequently \(\genus C = \finrank_k
+  \bigl(\HModule\, k\, (\toModuleKSheaf C)\, 1\bigr)\) is a genuine
+  natural number.
+\end{theorem}
+\begin{proof}
+  The keystone \Cref{thm:adelic_finiteDimensional_cokernel_zero} gives
+  \(\mathrm{FiniteDimensional}\ k\ \check{H}^1(0)\); the bridge
+  \Cref{thm:adelic_HModuleOne_linearEquiv_cokernel} is a \(k\)-linear
+  isomorphism
+  \(\HModule\, k\, (\toModuleKSheaf C)\, 1 \simeq_k \check{H}^1(0)\).
+  Finite-dimensionality transports across a linear isomorphism, so
+  \(\HModule\, k\, (\toModuleKSheaf C)\, 1\) is finite over \(k\). As
+  \(\genus C\) is defined (\Cref{def:genus}) as the \(\finrank\) of this
+  module, its value is the honest dimension rather than the junk \(0\)
+  that \(\finrank\) returns on a module not known to be finite.
+\end{proof}
+
+\section{Tier 2 --- the \(\chi\)-ledger}
+\label{sec:RiemannRoch_Adelic_chi}
+
+\begin{proposition}
+[Twist exact sequence]
+  \label{thm:adelic_twist_exact_sequence}
+  \lean{AlgebraicGeometry.Adelic.twist_exact_sequence}
+  \uses{def:adelic_coverH1, thm:adelic_dim_adele_quotient_eq_degree}
+  % [papaioannou] Lemma 1.20 (0 -> L(D2)/L(D1) -> A(D2)/A(D1) -> (A(D2)+F)/(A(D1)+F) -> 0); [cff] Lemma 13.1(2)
+  \source{papaioannou-algebraic-rr, cff-curves-function-fields}
+  For Weil divisors \(D \le D'\) there is a four-term exact sequence of
+  \(k\)-vector spaces
+  \[
+    0 \longrightarrow L(D')/L(D)
+      \longrightarrow \mathcal{Q}(D, D')
+      \longrightarrow \check{H}^1(D)
+      \longrightarrow \check{H}^1(D')
+      \longrightarrow 0,
+  \]
+  where \(\mathcal{Q}(D, D') = H^0\bigl(C, \struct{C}(D')/\struct{C}(D)\bigr)\)
+  is the space of global sections of the skyscraper quotient sheaf.
+\end{proposition}
+\begin{proof}
+  Because \(D \le D'\), the section spaces enlarge:
+  \(\Gamma(U, \struct{C}(D)) \subseteq \Gamma(U, \struct{C}(D'))\) for
+  each of \(U \in \{U_0, U_1, U_0 \cap U_1\}\). The two-term Čech
+  complexes \(C^\bullet(D) \hookrightarrow C^\bullet(D')\) form a short
+  exact sequence of complexes
+  \(0 \to C^\bullet(D) \to C^\bullet(D') \to Q^\bullet \to 0\) with
+  quotient complex
+  \(Q^0 = C^0(D')/C^0(D)\), \(Q^1 = C^1(D')/C^1(D)\). The associated long
+  exact cohomology sequence (snake lemma) is the six-term
+  \[
+    0 \to L(D) \to L(D') \to H^0(Q^\bullet)
+      \to \check{H}^1(D) \to \check{H}^1(D') \to H^1(Q^\bullet) \to 0 .
+  \]
+  Now \(Q^\bullet\) is the Čech complex of the quotient sheaf
+  \(\mathcal{T} = \struct{C}(D')/\struct{C}(D)\), a torsion sheaf
+  supported on the finite set where \(D' \ne D\)
+  (\Cref{thm:adelic_finite_support_order}). A skyscraper (finite-support
+  torsion) sheaf on a curve is flasque, hence acyclic on every cover, so
+  \(H^1(Q^\bullet) = 0\); equivalently the map \(Q^0 \to Q^1\) is
+  surjective. Surjectivity is visible directly: an element
+  \(\alpha \in C^1(D') = \Gamma(U_0 \cap U_1, \struct{C}(D'))\) has, at
+  each of the finitely many points \(P \in U_0 \cap U_1\) where \(D'\)
+  allows a larger pole than \(D\), a principal part that can be absorbed
+  into whichever chart \(U_0\) or \(U_1\) contains \(P\) --- a section of
+  \(\struct{C}(D')\) on that affine chart realising the prescribed pole
+  (weak approximation on the affine chart) --- so
+  \(\alpha \equiv f_0 - f_1 \pmod{C^1(D)}\) with
+  \(f_i \in \Gamma(U_i, \struct{C}(D'))\). With \(H^1(Q^\bullet) = 0\) the
+  six-term sequence truncates to the asserted four-term sequence, and
+  \(H^0(Q^\bullet) = \ker(Q^0 \to Q^1) = H^0(C, \mathcal{T}) =
+  \mathcal{Q}(D, D')\).
+\end{proof}
+
+\begin{proposition}
+[Local computation: quotient dimension equals degree]
+  \label{thm:adelic_dim_adele_quotient_eq_degree}
+  \lean{AlgebraicGeometry.Adelic.dim_adele_quotient_eq_degree}
+  \uses{def:adelic_pointValuation, thm:adelic_finite_support_order, def:divisor_degree}
+  % [papaioannou] Lemma 1.19 (dim A(D2)/A(D1) = deg D2 - deg D1); [cff] Lemma 13.1(1) and (C1)-(C3); [scheidler] p. 24
+  \source{papaioannou-algebraic-rr, cff-curves-function-fields, scheidler-function-fields}
+  For \(D \le D'\) the skyscraper section space is finite-dimensional
+  with
+  \[
+    \dim_k \mathcal{Q}(D, D')
+      \;=\; \deg(D' - D)
+      \;=\; \sum_P \bigl(D'(P) - D(P)\bigr)\,\deg P .
+  \]
+\end{proposition}
+\begin{proof}
+  The quotient sheaf \(\mathcal{T} = \struct{C}(D')/\struct{C}(D)\) is
+  supported on the finite set \(\{P : D'(P) > D(P)\}\)
+  (\Cref{thm:adelic_finite_support_order}), and its global sections split
+  as the direct sum of stalks
+  \(\mathcal{Q}(D, D') = \bigoplus_P \mathcal{T}_P\) (independent local
+  conditions at distinct points). It therefore suffices to compute each
+  local length, and by additivity we reduce to a single unit step
+  \(D' = D + P_0\). Fix a uniformiser \(t\) at \(P_0\), i.e.\
+  \(v_{P_0}(t) = 1\). The map
+  \[
+    \varphi \colon \Gamma(U, \struct{C}(D + P_0)) \longrightarrow \kappa(P_0),
+    \qquad
+    f \longmapsto \bigl(t^{\,D(P_0) + 1} f\bigr)(P_0),
+  \]
+  (the leading Laurent coefficient at \(P_0\)) is \(k\)-linear with kernel
+  exactly \(\Gamma(U, \struct{C}(D))\): \(\varphi(f) = 0\) iff
+  \(v_{P_0}(t^{D(P_0)+1} f) \ge 1\) iff \(v_{P_0}(f) \ge -D(P_0)\). It is
+  surjective onto \(\kappa(P_0)\) because \(P_0 \in U\) affine, so the
+  evaluation \(\Gamma(U, \struct{C}) \to \kappa(P_0)\) is surjective and
+  multiplying representatives by \(t^{-(D(P_0)+1)}\) realises any residue
+  class. Hence
+  \(\mathcal{T}_{P_0} \cong \Gamma(U, \struct{C}(D + P_0))/
+  \Gamma(U, \struct{C}(D)) \cong \kappa(P_0)\), of \(k\)-dimension
+  \([\kappa(P_0) : k] = \deg P_0\)
+  (\Cref{def:adelic_pointValuation}; cf.\ the graded-piece computation
+  \(\dim_k \mathfrak p^{i}/\mathfrak p^{i+1} = \deg P\)). Summing the unit
+  steps over the finite support gives
+  \(\dim_k \mathcal{Q}(D, D') = \sum_P (D'(P) - D(P))\deg P = \deg(D' - D)\),
+  the degree of \Cref{def:divisor_degree}.
+\end{proof}
+
+\begin{theorem}
+[\(\chi\)-KEYSTONE: \(\chi(D) = \deg D + 1 - g\)]
+  \label{thm:adelic_chi_eq_chi_zero_add_degree}
+  \lean{AlgebraicGeometry.Adelic.chi_eq_chi_zero_add_degree}
+  \uses{thm:adelic_twist_exact_sequence, thm:adelic_dim_adele_quotient_eq_degree, thm:adelic_module_finite_genus, def:genus, inst:Scheme_instIsHModuleHomFinite_toModuleKSheaf}
+  % [papaioannou] Thm. 1.18 (dim D = deg D + 1 - g + i(D)); [cff] Cor. 12.11, Thm. 14.1
+  \source{papaioannou-algebraic-rr, cff-curves-function-fields}
+  The Euler characteristic \(\chi(D) = \ell(D) - i(D)\) is additive in the
+  degree:
+  \[
+    \chi(D') - \chi(D) = \deg(D' - D)
+    \quad\text{for } D \le D',
+    \qquad\text{hence}\qquad
+    \chi(D) = \deg D + 1 - g .
+  \]
+\end{theorem}
+\begin{proof}
+  By \Cref{thm:adelic_module_finite_genus} the base cohomology
+  \(\check{H}^1(0)\) is finite-dimensional; the twist sequences below
+  bound every \(\ell(D), i(D)\) by finite numbers, so all dimensions
+  occurring are finite and the alternating-sum identity for an exact
+  sequence of finite-dimensional spaces applies. Apply it to the
+  four-term sequence of \Cref{thm:adelic_twist_exact_sequence} for
+  \(D \le D'\):
+  \[
+    \dim\!\bigl(L(D')/L(D)\bigr) - \dim \mathcal{Q}(D, D')
+      + \dim \check{H}^1(D) - \dim \check{H}^1(D') = 0 .
+  \]
+  With \(\dim(L(D')/L(D)) = \ell(D') - \ell(D)\),
+  \(\dim \mathcal{Q}(D, D') = \deg(D' - D)\)
+  (\Cref{thm:adelic_dim_adele_quotient_eq_degree}), and
+  \(\dim \check{H}^1(D) = i(D)\), this rearranges to
+  \[
+    \bigl(\ell(D') - i(D')\bigr) - \bigl(\ell(D) - i(D)\bigr)
+      = \deg(D' - D),
+    \qquad\text{i.e.}\qquad \chi(D') - \chi(D) = \deg(D' - D).
+  \]
+  Every divisor \(D\) satisfies \(D - D_- \le D \le D_+\) with
+  \(0 \le D_+\); applying the additivity to \(0 \le D_+\) and to
+  \(D \le D + D_-\) and adding, one gets \(\chi(D) = \chi(0) + \deg D\)
+  for all \(D\) (additivity of \(\chi - \deg\) as a function on the free
+  group of divisors, which agrees at \(0\) and is additive on each unit
+  step, hence is \(\chi(0)\) plus the homomorphism \(\deg\)). Finally
+  \(\chi(0) = \ell(0) - i(0) = 1 - g\): the global sections
+  \(L(0) = \Gamma(U_0, \struct{C}) \cap \Gamma(U_1, \struct{C}) =
+  H^0(C, \struct{C})\) equal the constants \(k\), of dimension
+  \(\ell(0) = 1\), because \(C\) is geometrically integral and proper
+  (the finiteness/one-dimensionality of global sections is the input
+  \Cref{inst:Scheme_instIsHModuleHomFinite_toModuleKSheaf}); and
+  \(i(0) = \dim_k \check{H}^1(0) = g\) is the genus
+  (\Cref{def:genus,thm:adelic_HModuleOne_linearEquiv_cokernel}). Hence
+  \(\chi(D) = \deg D + 1 - g\).
+\end{proof}
+
+\begin{corollary}
+[Riemann inequality; all \(\check{H}^1(D)\) finite]
+  \label{thm:adelic_riemann_inequality}
+  \lean{AlgebraicGeometry.Adelic.riemann_inequality}
+  \uses{thm:adelic_chi_eq_chi_zero_add_degree, thm:adelic_module_finite_genus, thm:adelic_twist_exact_sequence, thm:adelic_dim_adele_quotient_eq_degree}
+  % [papaioannou] Thm. 1.17 (Riemann inequality deg D - dim D <= g - 1); [cff] Thm. 12.10
+  \source{papaioannou-algebraic-rr, cff-curves-function-fields}
+  For every Weil divisor \(D\), the space \(\check{H}^1(D)\) is
+  finite-dimensional and
+  \[
+    \deg D + 1 - g \;\le\; \ell(D) .
+  \]
+\end{corollary}
+\begin{proof}
+  Finiteness: for \(0 \le D''\) with \(D \le D''\) and \(0 \le D''\), the
+  last map of the twist sequence
+  (\Cref{thm:adelic_twist_exact_sequence}) makes
+  \(\check{H}^1(D) \to \check{H}^1(D'')\) surjective with kernel a
+  quotient of \(\mathcal{Q}(D, D'')\), which is finite
+  (\Cref{thm:adelic_dim_adele_quotient_eq_degree}); and
+  \(\check{H}^1(0) \to \check{H}^1(D'')\) is surjective, so
+  \(\dim \check{H}^1(D'') \le \dim \check{H}^1(0) = g\). Hence
+  \(\dim \check{H}^1(D) \le g + \deg(D'' - D) < \infty\). Inequality: from
+  \(\chi(D) = \ell(D) - i(D) = \deg D + 1 - g\)
+  (\Cref{thm:adelic_chi_eq_chi_zero_add_degree}) and
+  \(i(D) = \dim_k \check{H}^1(D) \ge 0\) we obtain
+  \(\ell(D) = \deg D + 1 - g + i(D) \ge \deg D + 1 - g\).
+\end{proof}
+
+\section{Tier 3 --- Serre duality and vanishing (gated)}
+\label{sec:RiemannRoch_Adelic_duality}
+
+This tier upgrades the Riemann inequality to the sharp Riemann--Roch
+theorem via a residue pairing, and derives the curve-level vanishing
+\(i(D) = 0\) for \(\deg D > 2g - 2\). Its two deepest nodes are gated by
+single-field \(\mathrm{Prop}\)-classes; the earlier tiers do not depend on
+them.
+
+\begin{definition}
+[Residue pairing on the cover cohomology]
+  \label{thm:adelic_residuePairing}
+  \notready  % gate class AlgebraicGeometry.Adelic.HasResiduePairing
+  \lean{AlgebraicGeometry.Adelic.residuePairing}
+  \uses{def:adelic_sectionOfDivisor, def:adelic_coverH1}
+  % [vater] Def. 1.58 / Thm. 1.59 (local components omega_P; omega(alpha) = sum_P omega_P(alpha_P)); Thm. 5.66 (residues res_{P}); [papaioannou] Def. 1.13
+  \source{vater-weil-differentials, papaioannou-algebraic-rr}
+  Let \(\Omega_K\) be the space of Weil differentials of \(K/k\)
+  (\(k\)-linear forms on the adeles vanishing on some
+  \(\mathbb{A}_K(D) + K\); locally the Kähler differentials
+  \(\Omega_{K/k}\), a one-dimensional \(K\)-vector space). There is a
+  perfect \(k\)-bilinear residue pairing
+  \[
+    \langle\,\cdot\,,\,\cdot\,\rangle \colon
+      \mathbb{A}_K \times \Omega_K \to k,
+    \qquad
+    (\alpha, \omega) \mapsto \sum_P \operatorname{Res}_P(\alpha_P\, \omega),
+  \]
+  where \(\operatorname{Res}_P\) is the local residue at \(P\). It
+  satisfies the residue theorem \(\sum_P \operatorname{Res}_P(f\omega) = 0\)
+  for \(f \in K\), and therefore descends to a pairing
+  \[
+    \check{H}^1(D) \times \Omega_K(K_C - D) \longrightarrow k,
+  \]
+  where \(\Omega_K(E) = \{\omega : \operatorname{div}\omega \ge E\}\) and
+  \(K_C\) is a canonical divisor.
+\end{definition}
+\begin{proof}
+  A Weil differential \(\omega\) has, at each place \(P\), a local
+  component \(\omega_P \colon K \to k\) (Vater Def.~1.58) and evaluates on
+  an adele by the finite sum
+  \(\omega(\alpha) = \sum_P \omega_P(\alpha_P)\) (Vater Thm.~1.59), which
+  is the residue sum \(\sum_P \operatorname{Res}_P(\alpha_P \omega)\)
+  under the identification of local components with residues (Vater
+  Thm.~5.66). Vanishing on principal adeles,
+  \(\omega(f, f, \dots) = \sum_P \operatorname{Res}_P(f\omega) = 0\), is
+  the definition of a Weil differential vanishing on \(K\), i.e.\ the
+  residue theorem. If \(\alpha \in \mathbb{A}_K(D)\) and
+  \(\operatorname{div}\omega \ge K_C - D\) then
+  \(v_P(\alpha_P) + v_P(\omega) \ge -D(P) + (K_C - D)(P) \ge 0\) fails to
+  contribute a pole, so \(\operatorname{Res}_P(\alpha_P\omega) = 0\) and
+  the pairing kills \(\mathbb{A}_K(D) + K\), descending to
+  \(\check{H}^1(D) \times \Omega_K(K_C - D) \to k\).
+  \paragraph{Gate.} The Weil-differential space \(\Omega_K\), the local
+  residues \(\operatorname{Res}_P\), and the residue theorem over an
+  arbitrary \(k\) require Kähler-differential and trace machinery not yet
+  assembled; they are threaded as the single-field class
+  \(\mathrm{HasResiduePairing}\, C\) bundling the pairing and its residue
+  theorem, discharged later by \(\texttt{inferInstance}\).
+\end{proof}
+
+\begin{theorem}
+[Serre duality: \(i(D) = \ell(K_C - D)\)]
+  \label{thm:adelic_serreDuality}
+  \notready  % gate class AlgebraicGeometry.Adelic.HasSerreDuality
+  \lean{AlgebraicGeometry.Adelic.serreDuality}
+  \uses{thm:adelic_residuePairing, thm:adelic_chi_eq_chi_zero_add_degree}
+  % [papaioannou] Thm. 1.23 (dim_F Omega_F = 1), Thm. 1.26 (mu: L(W-D) ~ Omega_F(D), i(D) = dim(W-D)); [cff] Thm. 13.5; [vater] Thm. 1.48, 1.55
+  \source{papaioannou-algebraic-rr, cff-curves-function-fields, vater-weil-differentials}
+  For a canonical divisor \(K_C = \operatorname{div}\omega\) of a nonzero
+  Weil differential \(\omega\), the map \(x \mapsto x\omega\) induces a
+  \(k\)-linear isomorphism
+  \[
+    \mu \colon L(K_C - D) \;\xrightarrow{\ \sim\ }\; \Omega_K(K_C - D)
+    \;\simeq_k\; \check{H}^1(D)^\ast,
+  \]
+  so that \(i(D) = \dim_k \check{H}^1(D) = \ell(K_C - D)\).
+\end{theorem}
+\begin{proof}
+  The residue pairing (\Cref{thm:adelic_residuePairing}) identifies
+  \(\Omega_K(K_C - D)\) with the annihilator of
+  \(\mathbb{A}_K(D) + K\), i.e.\ with
+  \((\mathbb{A}_K/(\mathbb{A}_K(D) + K))^\ast = \check{H}^1(D)^\ast\)
+  (Papaioannou Lemma 1.22; Vater Thm.~1.48), so
+  \(\dim_k \Omega_K(K_C - D) = i(D)\). For the first isomorphism, since
+  \(\dim_K \Omega_K = 1\) (Papaioannou Thm.~1.23; Vater Thm.~1.48) every
+  differential is \(x\omega\) for a unique \(x \in K\); and
+  \(\operatorname{div}(x\omega) = \operatorname{div} x + K_C\) (Papaioannou
+  Thm.~1.25; Vater Lemma 1.53), so \(x\omega\) lies in
+  \(\Omega_K(K_C - D)\) iff \(\operatorname{div} x + K_C \ge K_C - D\) iff
+  \(\operatorname{div} x + D \ge 0\) iff \(x \in L(D)\); replacing \(D\) by
+  \(K_C - D\) gives that \(\mu\) restricts to a bijection
+  \(L(K_C - D) \to \Omega_K(K_C - D)\) (Papaioannou Thm.~1.26; cff
+  Thm.~13.5). Composing, \(i(D) = \ell(K_C - D)\).
+  \paragraph{Gate.} The construction of \(\Omega_K\), the
+  one-dimensionality \(\dim_K \Omega_K = 1\), and the non-degeneracy of
+  the pairing are threaded as the single-field class
+  \(\mathrm{HasSerreDuality}\, C\) bundling the equivalence \(\mu\);
+  Tier 3 consumers verify against it and it is closed by
+  \(\texttt{inferInstance}\) once \(\mathrm{HasResiduePairing}\) is discharged.
+\end{proof}
+
+\begin{corollary}
+[Vanishing: \(i(D) = 0\) for \(\deg D > 2g - 2\)]
+  \label{thm:adelic_h1_vanishing}
+  \lean{AlgebraicGeometry.Adelic.h1_vanishing}
+  \uses{thm:adelic_serreDuality, thm:adelic_chi_eq_chi_zero_add_degree}
+  % [papaioannou] Cor. 1.28 (deg W = 2g-2), Cor. 1.29 (RR sharp for deg D >= 2g-1); [cff] Cor. 14.2, 14.3
+  \source{papaioannou-algebraic-rr, cff-curves-function-fields}
+  If \(\deg D > 2g - 2\) then \(\check{H}^1(\struct{C}(D))\) is a
+  subsingleton: \(i(D) = 0\). This is the curve-level replacement for
+  Castelnuovo--Mumford boundedness in the Quot endgame.
+\end{corollary}
+\begin{proof}
+  A canonical divisor has degree \(\deg K_C = 2g - 2\)
+  (from Riemann--Roch at \(D = 0\) and \(D = K_C\): Papaioannou Cor.~1.28;
+  cff Cor.~14.2). By Serre duality \Cref{thm:adelic_serreDuality},
+  \(i(D) = \ell(K_C - D)\). When \(\deg D > 2g - 2\) we have
+  \(\deg(K_C - D) = (2g - 2) - \deg D < 0\). A divisor of negative degree
+  has \(\ell = 0\): if \(\ell(E) > 0\) then some \(f \in L(E)\) makes
+  \(\operatorname{div} f + E \ge 0\) an effective divisor of degree
+  \(\deg E\) (principal divisors have degree \(0\),
+  \Cref{thm:adelic_finite_support_order}), forcing \(\deg E \ge 0\).
+  Hence \(\ell(K_C - D) = 0\), so \(i(D) = 0\) and
+  \(\check{H}^1(\struct{C}(D))\) is a subsingleton.
+\end{proof}
+
+\begin{theorem}
+[Riemann--Roch]
+  \label{thm:adelic_riemannRoch}
+  \lean{AlgebraicGeometry.Adelic.riemannRoch}
+  \uses{thm:adelic_chi_eq_chi_zero_add_degree, thm:adelic_serreDuality}
+  % [papaioannou] Thm. 1.27 (dim D = deg D + 1 - g + dim(W - D)); [cff] Thm. 14.1; [vater] Thm. 1.55
+  \source{papaioannou-algebraic-rr, cff-curves-function-fields, vater-weil-differentials}
+  For every Weil divisor \(D\) and canonical divisor \(K_C\),
+  \[
+    \ell(D) - \ell(K_C - D) \;=\; \deg D + 1 - g .
+  \]
+\end{theorem}
+\begin{proof}
+  Immediate from the two keystones: the \(\chi\)-ledger
+  \Cref{thm:adelic_chi_eq_chi_zero_add_degree} gives
+  \(\ell(D) - i(D) = \deg D + 1 - g\), and Serre duality
+  \Cref{thm:adelic_serreDuality} gives \(i(D) = \ell(K_C - D)\);
+  substituting the second into the first yields the identity.
+\end{proof}

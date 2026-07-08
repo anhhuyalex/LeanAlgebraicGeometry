@@ -37,6 +37,8 @@ import AlgebraicJacobian.Cohomology.CechToHigherDirectImage
 import AlgebraicJacobian.Cohomology.ModulesCoverConservativity
 -- Affine essential-image heart of the open-immersion Beck–Chevalley (Stacks 02KG)
 import AlgebraicJacobian.Cohomology.AffinePushPullEssImage
+-- Pullback of quasi-coherent modules along an arbitrary morphism (Stacks 01BG)
+import AlgebraicJacobian.Cohomology.PullbackQuasicoherent
 -- Target-local roadmap nodes preserved across the merge (unconditional Rⁱf_*
 -- packaging + Čech flat base change, Stacks 02KH) — see file header.
 import AlgebraicJacobian.Cohomology.CechHigherDirectImageUnconditional
@@ -70,8 +72,14 @@ import AlgebraicJacobian.Picard.TangentSpaceDualNumbers
 import AlgebraicJacobian.Picard.TangentSpaceSchemePoints
 import AlgebraicJacobian.Picard.TangentSpaceStalkAlgebra
 import AlgebraicJacobian.Picard.TangentSpaceIdentitySection
+import AlgebraicJacobian.Picard.DualNumberUnits
 import AlgebraicJacobian.Picard.Pic0AbelianVariety
 import AlgebraicJacobian.Picard.FlatteningStratification
+import AlgebraicJacobian.Picard.EntryIdeal
+import AlgebraicJacobian.Picard.EntryIdealStratum
+import AlgebraicJacobian.Picard.FlatteningStratificationUniversal
+import AlgebraicJacobian.Picard.GenericFlatnessGeometric
+import AlgebraicJacobian.Picard.HilbertPolynomial
 import AlgebraicJacobian.Picard.QuotScheme
 -- Grassmannian/Quot representability development merged from the
 -- GR-quot_closure subproject (union merge, 2026-06-22). Headline:
@@ -82,10 +90,45 @@ import AlgebraicJacobian.Picard.SectionGradedRing
 import AlgebraicJacobian.Picard.GrassmannianCells
 import AlgebraicJacobian.Picard.GlueDescent
 import AlgebraicJacobian.Picard.GrassmannianQuot
+import AlgebraicJacobian.Picard.QuotFunctorDef
+-- T14 ampleness / projective-morphism / Serre-finiteness foundation:
+-- relative projective space, Serre twist O(m), projective-with-L predicate.
+import AlgebraicJacobian.Picard.ProjectiveSpace
+import AlgebraicJacobian.Picard.SerreTwist
+-- Option-B Phase 0 (Serre-finiteness lane): the glued-sheaf Γ-section API —
+-- Γ(glue D M g, ⊤) ≅ compatible families, instantiated at O(m).
+import AlgebraicJacobian.Picard.SerreTwistSections
+import AlgebraicJacobian.Picard.ProjectiveMorphism
+import AlgebraicJacobian.Picard.SerreFiniteness
+import AlgebraicJacobian.Picard.ZariskiDescentRepresentability
+import AlgebraicJacobian.Picard.GrassmannianZariskiSheaf
+import AlgebraicJacobian.Picard.GrassmannianRepresentability
+-- I-0118 honest restatement of thm:quot_representable (projective π with
+-- very ample L via IsProjectiveWith, coherent E), split out of QuotFunctorDef.
+import AlgebraicJacobian.Picard.QuotRepresentability
+-- Wave-2 leaf bricks (2026-07-07): schematic-support / annihilator lane for
+-- gammaFiber, and the tensor section-comparison lane for pullbackTensorMap_isIso.
+import AlgebraicJacobian.Picard.SchematicSupport
+import AlgebraicJacobian.Picard.TensorSectionFormula
 import AlgebraicJacobian.Picard.LineBundleCoherence
 import AlgebraicJacobian.RiemannRoch.WeilDivisor
+-- Adelic Riemann-Roch lane (2026-07-07): Weil repartitions as the concrete
+-- 2-affine-cover cokernel; keystone = H^1(C, O_C) finiteness via a finite map
+-- to P^1 (design: RiemannRoch_Adelic blueprint chapter).
+import AlgebraicJacobian.RiemannRoch.Adelic.Substrate
+import AlgebraicJacobian.RiemannRoch.Adelic.Cokernel
+import AlgebraicJacobian.RiemannRoch.Adelic.P1BaseCase
+import AlgebraicJacobian.RiemannRoch.Adelic.FinitenessP1
 import AlgebraicJacobian.Albanese.AlbaneseUP
 import AlgebraicJacobian.Albanese.AuslanderBuchsbaum
 import AlgebraicJacobian.Albanese.CodimOneExtension
 import AlgebraicJacobian.Albanese.CoheightBridge
+import AlgebraicJacobian.Albanese.DifferenceMap
+import AlgebraicJacobian.Albanese.PolePurity
+import AlgebraicJacobian.Albanese.Milne33Substeps
+import AlgebraicJacobian.Albanese.RationalMapFunctionField
+import AlgebraicJacobian.Albanese.RationalMapPrecomp
+import AlgebraicJacobian.Albanese.RationalMapProd
+import AlgebraicJacobian.Albanese.SmoothPrimeRegularity
+import AlgebraicJacobian.Albanese.StandardSmoothDimension
 import AlgebraicJacobian.Albanese.Thm32RationalMapExtension

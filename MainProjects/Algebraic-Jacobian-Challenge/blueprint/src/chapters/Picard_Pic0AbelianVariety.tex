@@ -27,6 +27,18 @@
 % \texttt{AlgebraicJacobian/Picard/Pic0AbelianVariety.lean} does not
 % yet exist; this chapter is the authoritative informal specification,
 % and the Lean skeleton is owed in a follow-up iteration.
+%
+% NOTE (run-0008). After the FGA picSharp rewire, Pic0Scheme C is a REAL
+% definition (GroupScheme.IdentityComponent (PicScheme C)), and every Lean
+% statement of this chapter that mentions Pic0Scheme C now carries the
+% instance hypotheses [HasPicScheme C] [PicScheme.PicSchemeLocallyOfFiniteType C]
+% (supplied under a k-rational point via Scheme.HasRationalPoint; see
+% chap:Picard_FGAPicRepresentability, def:has_rational_point /
+% def:pic_scheme_lft). Mathematically: the chapter's statements hold for a
+% pointed curve, per the route-(b) convention of the FGA chapter. The
+% tangent-space isomorphism can now attach to the genuine bijection
+% (T -> Pic_{C/k}) ≃ Pic(C ×_k T)/π_T^* Pic(T) extracted from
+% PicScheme.representable at T = Spec k[ε].
 
 \section{Tangent space at the identity}
 \label{sec:pic0_tangent_space}
@@ -614,15 +626,41 @@ thread between \cref{cor:tangent_spec_dual_number_at} and
   \cref{cor:tangent_section_cotangent_dual} applies at \(x = e(*)\).
 \end{proof}
 
+\begin{theorem}[\(\Pic^0_{C/k}\) is a \(k\)-group scheme]\leanok
+  \label{thm:pic0_group_structure}
+  \lean{AlgebraicGeometry.Scheme.Pic0.grpObj}
+  \uses{def:pic_zero_subscheme,
+        thm:identity_component_is_subgroup_homomorphism}
+  Let \(C/k\) be a smooth proper geometrically integral curve over a
+  field \(k\). The identity component \(\Pic^0_{C/k}\)
+  (\cref{def:pic_zero_subscheme}) carries a \(k\)-group-scheme
+  structure, inherited from the group scheme \(\Pic_{C/k}\) via the
+  clopen inclusion \(\Pic^0_{C/k} \hookrightarrow \Pic_{C/k}\).
+\end{theorem}
+
+\begin{proof}\leanok
+  \uses{thm:identity_component_is_subgroup_homomorphism,
+        thm:pic_is_group_scheme,
+        thm:fga_pic_representability}
+  The Picard scheme \(\Pic_{C/k}\) is a \(k\)-group scheme
+  (\cref{thm:pic_is_group_scheme}) locally of finite type over \(k\)
+  (\cref{thm:fga_pic_representability}), and \(\Pic^0_{C/k}\) is by
+  definition its identity component. By
+  \cref{thm:identity_component_is_subgroup_homomorphism} the identity
+  component of a \(k\)-group scheme locally of finite type is a
+  subgroup scheme; in particular \(\Pic^0_{C/k}\) inherits a
+  \(k\)-group-scheme structure compatible with the inclusion.
+\end{proof}
+
 \begin{theorem}[Dual-number points of \(\Pic^0_{C/k}\) at the identity]\leanok
   \label{thm:pic0_tangent_cotangent_dual}
   \lean{AlgebraicGeometry.Scheme.Pic0.tangentSpaceCotangentDual}
   \uses{def:pic_zero_subscheme,
-        thm:identity_component_open_subgroup}
+        thm:pic0_group_structure}
   Let \(C/k\) be a smooth proper geometrically integral curve over a
-  field \(k\), and suppose \(\Pic^0_{C/k}\)
-  (\cref{def:pic_zero_subscheme}) carries its \(k\)-group-scheme
-  structure (\cref{thm:identity_component_open_subgroup}). Then there
+  field \(k\), and equip \(\Pic^0_{C/k}\)
+  (\cref{def:pic_zero_subscheme}) with its \(k\)-group-scheme
+  structure (\cref{thm:pic0_group_structure}). Then there
   is an identity section \(e : \operatorname{Spec} k \to
   \Pic^0_{C/k}\) of the structure morphism such that the dual-number
   points of \(\Pic^0_{C/k}\) at \(e(*)\) over \(\operatorname{Spec} k\)
@@ -643,8 +681,9 @@ thread between \cref{cor:tangent_spec_dual_number_at} and
 \end{theorem}
 
 \begin{proof}\leanok
-  \uses{thm:tangent_identity_cotangent_dual}
-  The group-scheme structure provides the identity section, and
+  \uses{thm:tangent_identity_cotangent_dual, thm:pic0_group_structure}
+  The group-scheme structure (\cref{thm:pic0_group_structure})
+  provides the identity section, and
   \cref{thm:tangent_identity_cotangent_dual} applied to
   \(G = \Pic^0_{C/k}\) gives the identification.
 \end{proof}
@@ -709,7 +748,10 @@ thread between \cref{cor:tangent_spec_dual_number_at} and
         lem:tangent_derivation_cotangent_dual,
         cor:tangent_dual_number_cotangent_dual,
         cor:tangent_spec_dual_number_at,
-        thm:pic0_tangent_cotangent_dual}
+        thm:pic0_tangent_cotangent_dual,
+        thm:dual_number_units_split,
+        lem:dual_number_trunc_exp_exact,
+        def:dual_number_map}
   We follow Kleiman~\S 5 Thm.~5.11. By
   \cref{thm:fga_pic_representability}, the Picard scheme
   \(\Pic_{C/k}\) exists and represents the étale-sheafified relative
@@ -800,6 +842,244 @@ thread between \cref{cor:tangent_spec_dual_number_at} and
   Finally, by the genus definition (Hartshorne~IV.1.1,
   \cref{def:genus}), \(\dim_k H^1(C, \mathcal{O}_C) = g(C)\); thus
   \(\dim_k \tu T_0 \Pic^0_{C/k} = g(C)\).
+\end{proof}
+
+\subsection{The truncated-exponential splitting, ring level}
+\label{sec:pic0_trunc_exp}
+
+The truncated-exponential sequence of sheaves used in the proof of
+\cref{thm:pic0_tangent_space_iso} is, on each ring of sections, the
+following split short exact sequence of groups attached to the dual
+numbers \(R[\varepsilon] := R[\varepsilon]/(\varepsilon^2)\) of a
+commutative ring \(R\):
+\[
+  1 \longrightarrow (R, +)
+    \xrightarrow{\ b \mapsto 1 + b\varepsilon\ }
+    (R[\varepsilon])^{\times}
+    \xrightarrow{\ \varepsilon \mapsto 0\ }
+    R^{\times} \longrightarrow 1,
+\]
+split by \(a \mapsto a + 0\cdot\varepsilon\). This subsection develops
+the sequence and its naturality in \(R\); the sheaf-level upgrade on the
+dual-number thickening \(C_\varepsilon\) is the remaining input to
+\cref{thm:pic0_tangent_space_iso}.
+
+\begin{lemma}[Reduction mod \(\varepsilon\) is a ring homomorphism]\leanok
+  \label{lem:dual_number_fst_ring_hom}
+  \lean{DualNumber.fstRingHom}
+  Let \(R\) be a commutative ring. The first-component projection
+  \(a + b\varepsilon \mapsto a\) is a ring homomorphism
+  \(R[\varepsilon] \to R\).
+\end{lemma}
+
+\begin{proof}\leanok
+  The projection is additive and unital, and multiplicative because
+  \((a + b\varepsilon)(a' + b'\varepsilon)
+  = aa' + (ab' + a'b)\varepsilon\) has first component \(aa'\).
+\end{proof}
+
+\begin{lemma}[The truncated exponential is a unit]\leanok
+  \label{lem:dual_number_trunc_exp_unit}
+  \lean{DualNumber.truncExpUnit}
+  Let \(R\) be a commutative ring and \(b \in R\). Then
+  \(1 + b\varepsilon\) is a unit of \(R[\varepsilon]\), with inverse
+  \(1 - b\varepsilon\).
+\end{lemma}
+
+\begin{proof}\leanok
+  \((1 + b\varepsilon)(1 - b\varepsilon) = 1 - b^2\varepsilon^2 = 1\)
+  since \(\varepsilon^2 = 0\).
+\end{proof}
+
+\begin{definition}[The truncated exponential]\leanok
+  \label{def:dual_number_trunc_exp}
+  \lean{DualNumber.truncExp}
+  \uses{lem:dual_number_trunc_exp_unit}
+  Let \(R\) be a commutative ring. The \emph{truncated exponential} is
+  the group homomorphism
+  \((R, +) \to (R[\varepsilon])^{\times}\), \(b \mapsto 1 + b\varepsilon\);
+  it is a homomorphism because
+  \((1 + b\varepsilon)(1 + c\varepsilon) = 1 + (b + c)\varepsilon\)
+  (\(\varepsilon^2 = 0\)).
+\end{definition}
+
+\begin{lemma}[The truncated exponential is injective]\leanok
+  \label{lem:dual_number_trunc_exp_injective}
+  \lean{DualNumber.truncExp_injective}
+  \uses{def:dual_number_trunc_exp}
+  The truncated exponential \(b \mapsto 1 + b\varepsilon\) is injective.
+\end{lemma}
+
+\begin{proof}\leanok
+  The \(\varepsilon\)-component of \(1 + b\varepsilon\) is \(b\).
+\end{proof}
+
+\begin{definition}[Reduction mod \(\varepsilon\) on unit groups]\leanok
+  \label{def:dual_number_units_fst}
+  \lean{DualNumber.unitsFst}
+  \uses{lem:dual_number_fst_ring_hom}
+  Let \(R\) be a commutative ring. Reduction mod \(\varepsilon\)
+  (\cref{lem:dual_number_fst_ring_hom}) induces a group homomorphism
+  \((R[\varepsilon])^{\times} \to R^{\times}\) on unit groups.
+\end{definition}
+
+\begin{definition}[The constant section of the unit groups]\leanok
+  \label{def:dual_number_units_inl}
+  \lean{DualNumber.unitsInl}
+  Let \(R\) be a commutative ring. The inclusion
+  \(a \mapsto a + 0 \cdot \varepsilon\) (a ring homomorphism
+  \(R \to R[\varepsilon]\)) induces a group homomorphism
+  \(R^{\times} \to (R[\varepsilon])^{\times}\) on unit groups.
+\end{definition}
+
+\begin{lemma}[The unit-group sequence is split]\leanok
+  \label{lem:dual_number_units_fst_split}
+  \lean{DualNumber.unitsFst_comp_unitsInl}
+  \uses{def:dual_number_units_fst, def:dual_number_units_inl}
+  The composite
+  \(R^{\times} \to (R[\varepsilon])^{\times} \to R^{\times}\)
+  of \cref{def:dual_number_units_inl} followed by
+  \cref{def:dual_number_units_fst} is the identity. In particular
+  reduction mod \(\varepsilon\) on unit groups is surjective.
+\end{lemma}
+
+\begin{proof}\leanok
+  The first component of \(a + 0\cdot\varepsilon\) is \(a\).
+\end{proof}
+
+\begin{lemma}[First component of an inverse unit]\leanok
+  \label{lem:dual_number_fst_unit_inv}
+  \lean{DualNumber.fst_inv_mul_fst}
+  \uses{lem:dual_number_fst_ring_hom}
+  For a unit \(u \in (R[\varepsilon])^{\times}\), the first components
+  of \(u^{-1}\) and of \(u\) multiply to \(1\); that is, reduction mod
+  \(\varepsilon\) carries \(u^{-1}\) to the inverse of the reduction of
+  \(u\).
+\end{lemma}
+
+\begin{proof}\leanok
+  Apply the ring homomorphism of
+  \cref{lem:dual_number_fst_ring_hom} to \(u^{-1} u = 1\).
+\end{proof}
+
+\begin{lemma}[Exactness of the truncated-exponential sequence]\leanok
+  \label{lem:dual_number_trunc_exp_exact}
+  \lean{DualNumber.truncExp_range_eq_ker_unitsFst}
+  \uses{def:dual_number_trunc_exp, def:dual_number_units_fst}
+  The range of the truncated exponential
+  \((R,+) \to (R[\varepsilon])^{\times}\) equals the kernel of
+  reduction mod \(\varepsilon\) on unit groups: a unit of
+  \(R[\varepsilon]\) reduces to \(1\) if and only if it is of the form
+  \(1 + b\varepsilon\) for a (unique) \(b \in R\).
+\end{lemma}
+
+\begin{proof}\leanok
+  \uses{lem:dual_number_trunc_exp_injective}
+  A unit \(1 + b\varepsilon\) visibly reduces to \(1\). Conversely a
+  unit \(u = a + m\varepsilon\) with \(a = 1\) equals
+  \(1 + m\varepsilon\), the truncated exponential of \(m\);
+  uniqueness of \(m\) is
+  \cref{lem:dual_number_trunc_exp_injective}.
+\end{proof}
+
+\begin{theorem}[Splitting of the dual-number unit group]\leanok
+  \label{thm:dual_number_units_split}
+  \lean{DualNumber.unitsEquivProd}
+  \uses{def:dual_number_trunc_exp, def:dual_number_units_fst,
+        def:dual_number_units_inl}
+  Let \(R\) be a commutative ring. There is a group isomorphism
+  \[
+    (R[\varepsilon])^{\times} \;\cong\; R^{\times} \times (R, +),
+  \]
+  sending a unit \(u = a + m\varepsilon\) (so \(a \in R^{\times}\)) to
+  \((a, a^{-1}m)\), with inverse
+  \((a, b) \mapsto a(1 + b\varepsilon) = a + ab\,\varepsilon\).
+\end{theorem}
+
+\begin{proof}\leanok
+  \uses{lem:dual_number_fst_unit_inv, lem:dual_number_units_fst_split,
+        lem:dual_number_trunc_exp_exact}
+  The two maps are mutually inverse: composing them in either order and
+  comparing components uses only
+  \(a^{-1}a = 1\) (\cref{lem:dual_number_fst_unit_inv}) and
+  \(\varepsilon^2 = 0\). Multiplicativity of the forward map: for
+  units \(u = a + m\varepsilon\) and \(v = a' + m'\varepsilon\),
+  \(uv = aa' + (am' + a'm)\varepsilon\), and
+  \((aa')^{-1}(am' + a'm) = a'^{-1}m' + a^{-1}m\), which in the target
+  \(R^{\times} \times (R,+)\) is exactly the product of the images
+  \((a, a^{-1}m)\) and \((a', a'^{-1}m')\); commutativity of \(R\) is
+  used here.
+\end{proof}
+
+\begin{definition}[Functoriality of the dual numbers]\leanok
+  \label{def:dual_number_map}
+  \lean{DualNumber.mapRingHom}
+  A ring homomorphism \(f : R \to S\) of commutative rings induces a
+  ring homomorphism
+  \(R[\varepsilon] \to S[\varepsilon]\),
+  \(a + b\varepsilon \mapsto f(a) + f(b)\varepsilon\).
+\end{definition}
+
+\begin{lemma}[Functoriality: identity]\leanok
+  \label{lem:dual_number_map_id}
+  \lean{DualNumber.mapRingHom_id}
+  \uses{def:dual_number_map}
+  The ring homomorphism \(R[\varepsilon] \to R[\varepsilon]\) induced
+  by the identity of \(R\) is the identity.
+\end{lemma}
+
+\begin{proof}\leanok
+  Immediate from the componentwise formula.
+\end{proof}
+
+\begin{lemma}[Functoriality: composition]\leanok
+  \label{lem:dual_number_map_comp}
+  \lean{DualNumber.mapRingHom_comp}
+  \uses{def:dual_number_map}
+  For ring homomorphisms \(f : R \to S\) and \(g : S \to T\) of
+  commutative rings, the map on dual numbers induced by
+  \(g \circ f\) is the composite of the maps induced by \(f\) and by
+  \(g\).
+\end{lemma}
+
+\begin{proof}\leanok
+  Immediate from the componentwise formula.
+\end{proof}
+
+\begin{lemma}[Naturality of the truncated exponential]\leanok
+  \label{lem:dual_number_map_trunc_exp}
+  \lean{DualNumber.map_mapRingHom_truncExpUnit}
+  \uses{def:dual_number_map, lem:dual_number_trunc_exp_unit}
+  For a ring homomorphism \(f : R \to S\) of commutative rings, the
+  induced map on dual-number units carries \(1 + b\varepsilon\) to
+  \(1 + f(b)\varepsilon\).
+\end{lemma}
+
+\begin{proof}\leanok
+  Immediate from the componentwise formula.
+\end{proof}
+
+\begin{lemma}[Naturality of reduction mod \(\varepsilon\)]\leanok
+  \label{lem:dual_number_units_fst_natural}
+  \lean{DualNumber.unitsFst_map_mapRingHom}
+  \uses{def:dual_number_map, def:dual_number_units_fst}
+  For a ring homomorphism \(f : R \to S\) of commutative rings, the
+  square
+  \[
+    \begin{array}{ccc}
+      (R[\varepsilon])^{\times} & \longrightarrow &
+        (S[\varepsilon])^{\times} \\
+      \downarrow & & \downarrow \\
+      R^{\times} & \longrightarrow & S^{\times}
+    \end{array}
+  \]
+  of reduction mod \(\varepsilon\) on unit groups against the maps
+  induced by \(f\) commutes.
+\end{lemma}
+
+\begin{proof}\leanok
+  Both composites send \(a + b\varepsilon\) to \(f(a)\), on first
+  components.
 \end{proof}
 
 \section{Smoothness of \(\Pic^0_{C/k}\)}
@@ -1098,7 +1378,7 @@ specialisation here for the assembly downstream.
   \((\Pic^0_{C/k})_{\bar k}\) is irreducible.
 \end{theorem}
 
-\begin{proof}
+\begin{proof}\leanok
   \uses{thm:identity_component_finite_type_geom_irreducible,
         thm:identity_component_base_change_commutes,
         thm:fga_pic_representability}
@@ -1171,10 +1451,11 @@ gate for Route~A.
   I.1, Cor.~1.4).
 \end{theorem}
 
-\begin{proof}
+\begin{proof}\leanok
   \uses{thm:pic0_smooth,
         thm:pic0_proper,
         thm:pic0_geom_irred,
+        thm:pic0_group_structure,
         thm:identity_component_is_subgroup_homomorphism,
         thm:identity_component_finite_type_geom_irreducible}
   We assemble Milne's defining axioms of an abelian variety from the

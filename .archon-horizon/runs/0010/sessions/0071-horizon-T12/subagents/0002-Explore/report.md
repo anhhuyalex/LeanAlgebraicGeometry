@@ -1,0 +1,14 @@
+You are scouting Mathlib source inside a Lean 4 project. Working directory: /home/Axel/LeanAlgebraicGeometry-Horizon/MainProjects/Algebraic-Jacobian-Challenge. Mathlib source: .lake/packages/mathlib/Mathlib/.
+
+Report EXACT signatures (verbatim source, file path + line number) for:
+
+1. `Module.rankAtStalk` — definition, and these lemmas: `Module.rankAtStalk_eq` (what does it state exactly?), `Module.isLocallyConstant_rankAtStalk`, `Module.rankAtStalk_eq_finrank_of_free`, `Module.rankAtStalk_eq_of_equiv`, and ANY lemma connecting rankAtStalk to the residue-field fiber dimension `finrank κ(p) (κ(p) ⊗[R] M)` (search for `rankAtStalk` across Mathlib and list every lemma whose statement mentions ResidueField or tensor/Fiber). Also `Ideal.Fiber` and `Ideal.ResidueField` definitions.
+2. Whether `Module.rankAtStalk` requires instances like `Module.Flat`/`Module.FinitePresentation` for the locally-constant lemma — copy the exact hypotheses.
+3. `IsLocalization.AtPrime` connection: how rankAtStalk is computed (finrank over Localization.AtPrime of LocalizedModule?), and any lemma `rankAtStalk_eq_fiberRank`-like even under different naming.
+4. Sheaf separatedness for schemes: the lemma(s) that let you conclude a section `s : Γ(X, U)` of the STRUCTURE sheaf is zero (or two sections are equal) given that its restrictions to every member of an open cover of U vanish. Search for things like `Scheme.section_ext`, `TopCat.Sheaf.eq_of_locally_eq`, `Sheaf.section_ext`, `eq_of_locally_eq₂`, or in `Mathlib/AlgebraicGeometry/` a scheme-level wrapper. Report exact names and signatures usable for `X : Scheme`, `s t : Γ(X, U)`, cover by opens `V i ≤ U`.
+5. `IsOpenImmersion.lift` — exact signature (the factorization of a morphism through an open immersion given range containment) and `IsOpenImmersion.lift_fac`, plus uniqueness lemma.
+6. Scheme coproducts: `Scheme.sigmaι` or `Sigma.ι` usage for schemes, `AlgebraicGeometry.disjoint_opensRange_sigmaι`, `Scheme.sigmaOpenCover`, any `nonempty_isColimit_cofanMk_of`-style lemma (disjoint open covers give colimit cofans) — exact file/names/signatures. Also `Scheme.hom_ext_of_forall` if it exists (or the actual name of the lemma extending morphism equality from an open cover), and `Scheme.emptyTo` / `isInitialOfIsEmpty`-style lemmas for empty schemes.
+7. `TopologicalSpace.Opens.ι` for schemes: `Scheme.Opens.ι`, `Scheme.Opens.toScheme`, `IsAffineOpen` transport under restriction `X ∣_ᵤ U` — how do affine opens of `↑U` (the open subscheme) relate to affine opens of `X` below `U`? Search for `affineOpensRestrict` or `Opens.ι ''ᵁ` API, `Scheme.Opens.ι_image` etc. Report what exists.
+8. `IsLocallyConstant` API: `IsLocallyConstant.isOpen_fiber` or how to extract that the level set of a locally constant function is open/clopen.
+
+Return raw data organized by item number. If something does not exist under the guessed name, search harder by concept (grep for keywords) and report the actual name.

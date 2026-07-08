@@ -224,10 +224,10 @@ Iter-201 Lane WD-A4a Sub-build 2 (HARD BAR + extras). Naturality of
 isomorphism `e : R ≃+* S` between commutative rings, lifted to a compatible
 fraction-field isomorphism `e_K : Frac R ≃+* Frac S`.
 
-This is the algebraic substrate consumed by iter-202+ Sub-build 3
-(scheme-level `Scheme.RationalMap.order` naturality across the iter-200
-`Scheme.PrimeDivisor.stalkIso` open-immersion bridge), which in turn closes
-the non-zero branch of `rationalMap_order_finite_support` (the L535 sorry).
+This is the algebraic substrate for the scheme-level
+`Scheme.RationalMap.order` naturality across the
+`Scheme.PrimeDivisor.stalkIso` open-immersion bridge (used by the
+function-field-iso naturality `order_eq_order_restrict`).
 
 References: Stacks 02RV (Hartshorne II.6.1), Stacks 02ME (DVR-of-stalk
 characterisation at codim-1 points), Stacks 02IZ (stalk under open
@@ -752,6 +752,178 @@ lemma _root_.AlgebraicGeometry.Scheme.RationalMap.order_pow_of_ne_zero
     push_cast
     ring
 
+/-! ### Finite-support closure substrate (Lane WD-A4a HARD BAR)
+
+The affine-chart minimal-primes core proving `rationalMap_order_finite_support`
+under the corrected `[IsNoetherian X]` hypothesis (wave-3 established the
+`[IsLocallyNoetherian X]` statement is FALSE: the line with infinitely many
+origins is integral, locally Noetherian and regular in codim 1 yet `t` has order
+one at infinitely many origins; global Noetherian = quasi-compact is Stacks 02RV).
+
+The argument: a finite affine cover (from quasi-compactness) reduces to the
+per-chart statement, where a codim-1 point of `X` inside an affine chart `U`
+corresponds to a **height-one prime** `p` of `R := Γ(X, U)` (via
+`ringKrullDim_stalk_eq_coheight` + `AtPrime.ringKrullDim_eq_height`); writing
+`f = a/b` in `K = Frac R`, a point where `ord_Y f ≠ 0` must have `a ∈ p` or
+`b ∈ p`, and a height-one prime containing a nonzero element is a minimal prime
+over it (`Ideal.finite_minimalPrimes_of_isNoetherianRing`). -/
+
+/-- **Height-one prime containing a nonzero element is minimal over it.** In a
+domain `R`, a height-one prime `p` with `a ∈ p` (`a ≠ 0`) is a minimal prime of
+the principal ideal `(a)`. Pure ring-theory substrate for the affine-chart
+finiteness core. -/
+private lemma mem_minimalPrimes_of_height_one {R : Type*} [CommRing R] [IsDomain R]
+    {p : Ideal R} [p.IsPrime] (hp1 : p.height = 1) {a : R} (ha : a ≠ 0)
+    (hap : a ∈ p) : p ∈ (Ideal.span {a}).minimalPrimes := by
+  have hle : Ideal.span {a} ≤ p := Ideal.span_le.mpr (Set.singleton_subset_iff.mpr hap)
+  obtain ⟨q, hq, hqp⟩ := Ideal.exists_minimalPrimes_le hle
+  haveI hqprime : q.IsPrime := hq.1.1
+  have haq : a ∈ q := hq.1.2 (Ideal.subset_span (Set.mem_singleton a))
+  have hqbot : q ≠ ⊥ := by
+    intro h; rw [h] at haq; exact ha (by simpa using haq)
+  have hqeqp : q = p := by
+    rcases eq_or_lt_of_le hqp with h | h
+    · exact h
+    · exfalso
+      haveI : (⊥ : Ideal R).IsPrime := Ideal.isPrime_bot
+      have hbotlt : (⊥ : Ideal R) < q := bot_lt_iff_ne_bot.mpr hqbot
+      have hh1 : (⊥ : Ideal R).height + 1 ≤ q.height :=
+        Ideal.height_add_one_le_of_lt_of_isPrime hbotlt
+      have hh2 : q.height + 1 ≤ p.height :=
+        Ideal.height_add_one_le_of_lt_of_isPrime h
+      rw [Ideal.height_bot, zero_add] at hh1
+      have hqle : q.height ≤ 1 := hp1 ▸ Ideal.height_mono hqp
+      have hqeq1 : q.height = 1 := le_antisymm hqle hh1
+      rw [hqeq1, hp1] at hh2
+      exact absurd hh2 (by decide)
+  rw [← hqeqp]; exact hq
+
+section FiniteSupport
+
+variable {X : Scheme.{u}} [IsIntegral X] [IsLocallyNoetherian X]
+    [Scheme.IsRegularInCodimensionOne X]
+
+/-- **Atomic vanishing.** A chart section `r : Γ(X, U)` that does not vanish at
+the codim-1 point `Y.point` (i.e. `r ∉ p_Y`, the prime of `R = Γ(X, U)` at `Y`)
+has order zero along `Y`: `ord_Y (r) = 0`. The stalk `O_{X,Y}` is the localization
+`R_{p_Y}` (`isLocalization_stalk`), `r` maps to a unit there, and `Ring.ordFrac`
+of a unit is `1`. -/
+private lemma order_algebraMap_eq_zero_of_notMem_primeIdealOf
+    {U : X.Opens} (hU : IsAffineOpen U) [Nonempty U]
+    (Y : X.PrimeDivisor) (hYU : Y.point ∈ U)
+    (r : Γ(X, U)) (hr : r ∉ (hU.primeIdealOf ⟨Y.point, hYU⟩).asIdeal) :
+    Scheme.RationalMap.order Y (algebraMap Γ(X, U) X.functionField r) = 0 := by
+  letI algSt : Algebra Γ(X, U) (X.presheaf.stalk Y.point) :=
+    TopCat.Presheaf.algebra_section_stalk X.presheaf ⟨Y.point, hYU⟩
+  haveI hloc : IsLocalization.AtPrime (X.presheaf.stalk Y.point)
+      (hU.primeIdealOf ⟨Y.point, hYU⟩).asIdeal := hU.isLocalization_stalk ⟨Y.point, hYU⟩
+  haveI hst : IsScalarTower Γ(X, U) (X.presheaf.stalk Y.point) X.functionField :=
+    functionField_isScalarTower X U ⟨Y.point, hYU⟩
+  have hunit : IsUnit (algebraMap Γ(X, U) (X.presheaf.stalk Y.point) r) :=
+    IsLocalization.map_units (X.presheaf.stalk Y.point)
+      (⟨r, hr⟩ : (hU.primeIdealOf ⟨Y.point, hYU⟩).asIdeal.primeCompl)
+  have hne : algebraMap Γ(X, U) (X.presheaf.stalk Y.point) r ≠ 0 := hunit.ne_zero
+  have hnzd : algebraMap Γ(X, U) (X.presheaf.stalk Y.point) r ∈
+      nonZeroDivisors (X.presheaf.stalk Y.point) := mem_nonZeroDivisors_of_ne_zero hne
+  unfold Scheme.RationalMap.order
+  rw [IsScalarTower.algebraMap_apply Γ(X, U) (X.presheaf.stalk Y.point) X.functionField r,
+      Ring.ordFrac_eq_ord (X.presheaf.stalk Y.point) hne,
+      Ring.ordMonoidWithZeroHom_eq_coe (X.presheaf.stalk Y.point) hnzd (n := 0)
+        (by rw [Ring.ord_of_isUnit hunit]; simp)]
+  simp
+
+/-- **Height of the chart prime is one.** For a prime divisor `Y` with generic
+point in an affine chart `U`, the corresponding prime `p_Y := primeIdealOf` of
+`R = Γ(X, U)` has height one. Combines `ringKrullDim_stalk_eq_coheight`
+(codim-1 witness) with `IsLocalization.AtPrime.ringKrullDim_eq_height`. -/
+private lemma primeIdealOf_height_eq_one {U : X.Opens} (hU : IsAffineOpen U)
+    (Y : X.PrimeDivisor) (hYU : Y.point ∈ U) :
+    (hU.primeIdealOf ⟨Y.point, hYU⟩).asIdeal.height = 1 := by
+  letI algSt : Algebra Γ(X, U) (X.presheaf.stalk Y.point) :=
+    TopCat.Presheaf.algebra_section_stalk X.presheaf ⟨Y.point, hYU⟩
+  haveI hloc : IsLocalization.AtPrime (X.presheaf.stalk Y.point)
+      (hU.primeIdealOf ⟨Y.point, hYU⟩).asIdeal := hU.isLocalization_stalk ⟨Y.point, hYU⟩
+  have h1 := Scheme.ringKrullDim_stalk_eq_coheight X Y.point
+  have h2 := IsLocalization.AtPrime.ringKrullDim_eq_height
+      (hU.primeIdealOf ⟨Y.point, hYU⟩).asIdeal (X.presheaf.stalk Y.point)
+  rw [Y.coheight] at h1
+  rw [h1] at h2
+  exact_mod_cast h2.symm
+
+/-- **Per-chart finiteness.** On a single affine chart `U`, the set of prime
+divisors meeting `U` at which a nonzero rational function `f` has nonzero order is
+finite. Writing `f = a/b`, such a prime `p_Y` (height one) contains `a` or `b`,
+hence lies in the finite union of minimal primes over `(a)` and `(b)`. -/
+private lemma finite_chart_support {U : X.Opens} (hU : IsAffineOpen U)
+    {f : X.functionField} (hf : f ≠ 0) :
+    {Y : X.PrimeDivisor | Y.point ∈ U ∧ Scheme.RationalMap.order Y f ≠ 0}.Finite := by
+  classical
+  haveI : IsNoetherianRing Γ(X, U) := IsLocallyNoetherian.component_noetherian ⟨U, hU⟩
+  by_cases hUe : Nonempty U
+  swap
+  · apply Set.Finite.subset Set.finite_empty
+    rintro Y ⟨hYU, -⟩
+    exact absurd ⟨⟨Y.point, hYU⟩⟩ hUe
+  haveI := hUe
+  haveI : IsFractionRing Γ(X, U) X.functionField :=
+    functionField_isFractionRing_of_isAffineOpen X U hU
+  obtain ⟨⟨a, b⟩, hab⟩ := IsLocalization.surj (nonZeroDivisors Γ(X, U)) f
+  have hinj : Function.Injective (algebraMap Γ(X, U) X.functionField) :=
+    IsFractionRing.injective _ _
+  have hbne : (b : Γ(X, U)) ≠ 0 := nonZeroDivisors.ne_zero b.2
+  have halgb : algebraMap Γ(X, U) X.functionField (b : Γ(X, U)) ≠ 0 := fun h =>
+    hbne (hinj (by rw [h, map_zero]))
+  have hane : a ≠ 0 := by
+    rintro rfl; rw [map_zero] at hab; exact (mul_ne_zero hf halgb) hab
+  have halga : algebraMap Γ(X, U) X.functionField a ≠ 0 := fun h =>
+    hane (hinj (by rw [h, map_zero]))
+  have hfeq : f = algebraMap Γ(X, U) X.functionField a *
+      (algebraMap Γ(X, U) X.functionField (b : Γ(X, U)))⁻¹ := by
+    rw [← hab, mul_inv_cancel_right₀ halgb]
+  -- the finite bounding set of primes
+  have hBfin :
+      ({q : PrimeSpectrum Γ(X, U) | q.asIdeal ∈ (Ideal.span {a}).minimalPrimes} ∪
+        {q : PrimeSpectrum Γ(X, U) |
+          q.asIdeal ∈ (Ideal.span {(b : Γ(X, U))}).minimalPrimes}).Finite := by
+    refine Set.Finite.union ?_ ?_
+    · exact (Ideal.finite_minimalPrimes_of_isNoetherianRing Γ(X, U)
+        (Ideal.span {a})).preimage (Set.injOn_of_injective (fun _ _ h => PrimeSpectrum.ext h))
+    · exact (Ideal.finite_minimalPrimes_of_isNoetherianRing Γ(X, U)
+        (Ideal.span {(b : Γ(X, U))})).preimage
+        (Set.injOn_of_injective (fun _ _ h => PrimeSpectrum.ext h))
+  -- total map with junk value into PrimeSpectrum
+  let junk : PrimeSpectrum Γ(X, U) := ⟨⊥, Ideal.isPrime_bot⟩
+  let Φ : X.PrimeDivisor → PrimeSpectrum Γ(X, U) :=
+    fun Y => if h : Y.point ∈ U then hU.primeIdealOf ⟨Y.point, h⟩ else junk
+  apply Set.Finite.of_finite_image (f := Φ)
+  · refine hBfin.subset ?_
+    rintro q ⟨Y, ⟨hYU, hord⟩, rfl⟩
+    simp only [Φ, dif_pos hYU]
+    have hheight := primeIdealOf_height_eq_one hU Y hYU
+    haveI : (hU.primeIdealOf ⟨Y.point, hYU⟩).asIdeal.IsPrime :=
+      (hU.primeIdealOf ⟨Y.point, hYU⟩).isPrime
+    have hmem : a ∈ (hU.primeIdealOf ⟨Y.point, hYU⟩).asIdeal ∨
+        (b : Γ(X, U)) ∈ (hU.primeIdealOf ⟨Y.point, hYU⟩).asIdeal := by
+      by_contra hcon
+      rw [not_or] at hcon
+      apply hord
+      rw [hfeq,
+        Scheme.RationalMap.order_mul_of_ne_zero Y halga (inv_ne_zero halgb),
+        Scheme.RationalMap.order_inv,
+        order_algebraMap_eq_zero_of_notMem_primeIdealOf hU Y hYU a hcon.1,
+        order_algebraMap_eq_zero_of_notMem_primeIdealOf hU Y hYU (b : Γ(X, U)) hcon.2]
+      ring
+    rcases hmem with hmem | hmem
+    · exact Or.inl (mem_minimalPrimes_of_height_one hheight hane hmem)
+    · exact Or.inr (mem_minimalPrimes_of_height_one hheight hbne hmem)
+  · rintro Y ⟨hYU, -⟩ Y' ⟨hY'U, -⟩ hΦ
+    simp only [Φ, dif_pos hYU, dif_pos hY'U] at hΦ
+    have := congrArg hU.fromSpec hΦ
+    rw [hU.fromSpec_primeIdealOf, hU.fromSpec_primeIdealOf] at this
+    exact Scheme.PrimeDivisor.ext this
+
+end FiniteSupport
+
 /-- **Hartshorne II.6.1**: for a nonzero rational function `f` on a Noetherian
 integral scheme `X` satisfying `(*)`, the order function `Y ↦ ord_Y(f)` is
 nonzero at only finitely many prime divisors `Y`. This is the well-definedness
@@ -770,7 +942,7 @@ The statement is generic in `f` (no `f ≠ 0` hypothesis is threaded): on
 `f = 0` the function `Y ↦ ord_Y(0) = WithZero.log 0 = 0` has empty support,
 which is finite, so the conclusion holds vacuously. -/
 private theorem rationalMap_order_finite_support {X : Scheme.{u}} [IsIntegral X]
-    [IsLocallyNoetherian X] [Scheme.IsRegularInCodimensionOne X]
+    [IsNoetherian X] [Scheme.IsRegularInCodimensionOne X]
     (f : X.functionField) :
     (Function.support (fun Y : X.PrimeDivisor =>
       Scheme.RationalMap.order Y f)).Finite := by
@@ -786,48 +958,20 @@ private theorem rationalMap_order_finite_support {X : Scheme.{u}} [IsIntegral X]
     ext Y
     simp only [Function.mem_support, ne_eq, Set.mem_empty_iff_false, iff_false,
       Decidable.not_not, Scheme.RationalMap.order_zero]
-  -- Case 2 (f ≠ 0): genuinely needs Hartshorne II.6.1 (Stacks 02RV).
-  --
-  -- **iter-198 structural-blocker note (Lane WD-A4a HARD BAR pause).**
-  -- The mathematical proof (Stacks 02RV / Hartshorne II.6.1 / Bourbaki AC VII.1)
-  -- requires **global** Noetherian-ness of `X` as a topological space, NOT only
-  -- locally Noetherian. The argument:
-  --   (a) Pick a nonempty affine open `U ⊂ X`. Then `R := Γ(U, O_X)` is a
-  --       Noetherian integral domain (by `[IsLocallyNoetherian X]` +
-  --       `[IsIntegral X]`); `K(X) = Frac(R)`; write `f = a/b`.
-  --   (b) Prime divisors `Y` with `Y.point ∈ U` and `ord_Y f ≠ 0` are bounded
-  --       by minimal primes of the ideal `(a·b) ⊂ R`, which is FINITE by
-  --       `Ideal.finite_minimalPrimes_of_isNoetherianRing`.
-  --   (c) Prime divisors `Y` with `Y.point ∉ U` correspond to irreducible
-  --       components of the closed set `X \ U` of codimension 1 in `X`. For
-  --       this to be finite, `X \ U` must be a Noetherian topological space —
-  --       which holds iff `X` is itself globally Noetherian (= locally
-  --       Noetherian + quasi-compact via `AlgebraicGeometry.isNoetherian_iff`).
-  --
-  -- The current signature has only `[IsLocallyNoetherian X]`; without
-  -- `[CompactSpace X]` (equivalently `[IsNoetherian X]`), case (c) cannot be
-  -- bounded — a counter-example is any non-quasi-compact integral locally
-  -- Noetherian scheme with infinitely many codim-1 irreducible components
-  -- disjoint from `U`.
-  --
-  -- The Mathlib analogue for the Dedekind-domain case is
-  -- `IsDedekindDomain.HeightOneSpectrum.Support.finite` (for `k ∈ Frac(R)`,
-  -- the height-1 primes with nonzero adic valuation form a finite set).
-  -- Adapting it to schemes requires the affine-chart bridge `ord_Y(f) ≠ 0
-  -- iff height-1 prime `(asIdeal Y) ⊂ R` is in the divisor of `(a·b)`'.
-  --
-  -- **Resolution path** (iter-199+): strengthen the typeclass to
-  -- `[IsNoetherian X]` (propagating to `principal`, `principal_apply`,
-  -- `principal_hom`, `LinearEquivalence`, `principal_degree_zero`,
-  -- `degree_positivePart_principal_eq_finrank`) and close (a)+(b)+(c) via
-  -- the affine-chart + Dedekind bridge above. The propagation is mechanical
-  -- — `Over.left` of a proper morphism is automatically `CompactSpace`, so
-  -- the curve-side consumers `principal_degree_zero` and
-  -- `degree_positivePart_principal_eq_finrank` derive `[IsNoetherian C.left]`
-  -- for free from `[IsProper C.hom]`. This pathway is gated by USER directive
-  -- Route C PAUSE on those declarations; the actual signature strengthening
-  -- is iter-199+ work after USER approval.
-  · sorry
+  -- Case 2 (f ≠ 0): Stacks 02RV. Global Noetherian = quasi-compact gives a
+  -- FINITE affine cover `X = ⋃ᵢ Uᵢ`; every prime divisor's generic point lies in
+  -- some `Uᵢ`, so the support is contained in the finite union of the per-chart
+  -- supports, each finite by `finite_chart_support` (the affine-chart
+  -- minimal-primes core).  Without `[CompactSpace X]` (equivalently
+  -- `[IsNoetherian X]`) this fails — the line with infinitely many origins is a
+  -- non-quasi-compact counterexample (wave-3).
+  · haveI : CompactSpace X := inferInstance
+    set 𝒰 := X.affineCover.finiteSubcover with h𝒰
+    refine Set.Finite.subset (Set.finite_iUnion fun i : 𝒰.I₀ =>
+      finite_chart_support (isAffineOpen_opensRange (𝒰.f i)) hf) ?_
+    intro Y hY
+    refine Set.mem_iUnion.mpr ⟨𝒰.idx Y.point, ?_, hY⟩
+    exact 𝒰.covers Y.point
 
 namespace Scheme.WeilDivisor
 
@@ -970,12 +1114,11 @@ On a smooth proper curve `C` over `k̄`, this specialises to
 Blueprint reference: `def:principal_divisor` (Hartshorne II §6 Lemma 6.1 +
 following definition, p. 131).
 
-iter-177 body: the construction uses `Finsupp.ofSupportFinite` with the
-finite-support witness `rationalMap_order_finite_support`. The latter is a
-private theorem packaging Hartshorne 6.1; its body is a Mathlib-pending gap
-(see chapter `RiemannRoch_WeilDivisor.tex` §5 sub-build note) and is left as
-a `sorry` for an iter-178+ Mathlib-upstream PR. -/
-noncomputable def principal [IsIntegral X] [IsLocallyNoetherian X]
+The construction uses `Finsupp.ofSupportFinite` with the finite-support
+witness `rationalMap_order_finite_support` (Hartshorne 6.1 / Stacks 02RV),
+which is proved under `[IsNoetherian X]` via a finite affine cover and the
+height-one/minimal-primes bound on each chart. -/
+noncomputable def principal [IsIntegral X] [IsNoetherian X]
     [Scheme.IsRegularInCodimensionOne X] (f : X.functionField)
     (_hf : f ≠ 0) : X.WeilDivisor :=
   Finsupp.ofSupportFinite
@@ -989,7 +1132,7 @@ noncomputable def principal [IsIntegral X] [IsLocallyNoetherian X]
 
 iter-193 substrate helper for the Lane I body close
 (`degree_positivePart_principal_eq_finrank`). -/
-lemma principal_apply [IsIntegral X] [IsLocallyNoetherian X]
+lemma principal_apply [IsIntegral X] [IsNoetherian X]
     [Scheme.IsRegularInCodimensionOne X] (f : X.functionField) (hf : f ≠ 0)
     (Y : X.PrimeDivisor) :
     (show (X.PrimeDivisor →₀ ℤ) from principal f hf) Y =
@@ -1017,7 +1160,7 @@ lemma _root_.AlgebraicGeometry.Scheme.RationalMap.order_one
 /-- **The principal divisor of the constant function `1` is the zero
 divisor.** A direct consequence of `Scheme.RationalMap.order_one`. -/
 @[simp]
-lemma principal_one [IsIntegral X] [IsLocallyNoetherian X]
+lemma principal_one [IsIntegral X] [IsNoetherian X]
     [Scheme.IsRegularInCodimensionOne X] :
     principal (1 : X.functionField) one_ne_zero = 0 := by
   change (_ : X.PrimeDivisor →₀ ℤ) = (0 : X.PrimeDivisor →₀ ℤ)
@@ -1038,7 +1181,7 @@ iter-177 body: closes coordinate-wise from the DVR identities
 `v_Y(fg) = v_Y(f) + v_Y(g)`, `v_Y(1) = 0`. The per-`Y` identities live in
 `Scheme.RationalMap.order` via `Ring.ordFrac` (a `K →*₀ ℤᵐ⁰` monoid-with-zero
 hom) and `WithZero.log_mul` / `WithZero.log_one`. -/
-noncomputable def principal_hom [IsIntegral X] [IsLocallyNoetherian X]
+noncomputable def principal_hom [IsIntegral X] [IsNoetherian X]
     [Scheme.IsRegularInCodimensionOne X] :
     (X.functionField)ˣ →* Multiplicative X.WeilDivisor where
   toFun u :=
@@ -1103,7 +1246,7 @@ iters of `RR.1`. -/
 theorem principal_degree_zero {kbar : Type u} [Field kbar] [IsAlgClosed kbar]
     (C : Over (Spec (.of kbar))) [IsProper C.hom]
     [SmoothOfRelativeDimension 1 C.hom] [GeometricallyIrreducible C.hom]
-    [IsIntegral C.left] [IsLocallyNoetherian C.left]
+    [IsIntegral C.left] [IsNoetherian C.left]
     [Scheme.IsRegularInCodimensionOne C.left]
     (f : C.left.functionField) (hf : f ≠ 0) :
     degree (principal f hf) = 0 := by
@@ -1234,7 +1377,7 @@ iter-193 substrate helper consumed by `degree_positivePart_principal_eq_finrank`
 it formalises Step 2 of the Hartshorne II.6.9 recipe (`hlp` produces
 the local-parameter prime divisor `Y₀` with coefficient `1`). -/
 lemma one_le_degree_positivePart_principal_of_order_one
-    [IsIntegral X] [IsLocallyNoetherian X]
+    [IsIntegral X] [IsNoetherian X]
     [Scheme.IsRegularInCodimensionOne X]
     (f : X.functionField) (hf : f ≠ 0) (Y₀ : X.PrimeDivisor)
     (h₀ : Scheme.RationalMap.order Y₀ f = 1) :
@@ -1325,7 +1468,7 @@ On a smooth proper curve `C` over `k̄`, `thm:principal_deg_zero` shows the
 degree map descends to `deg : Cl(C) → ℤ`.
 
 Blueprint reference: `def:linear_equivalence` (Hartshorne II §6 p. 131). -/
-def LinearEquivalence [IsIntegral X] [IsLocallyNoetherian X]
+def LinearEquivalence [IsIntegral X] [IsNoetherian X]
     [Scheme.IsRegularInCodimensionOne X] (D D' : X.WeilDivisor) : Prop :=
   ∃ (f : X.functionField) (hf : f ≠ 0), D - D' = principal f hf
 

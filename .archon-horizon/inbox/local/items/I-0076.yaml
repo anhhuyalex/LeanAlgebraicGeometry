@@ -1,0 +1,50 @@
+id: I-0076
+provider: local
+kind: memory
+body: '**`pullback_preservesFiniteLimits` (FBC leaf, `CechHigherDirectImageUnconditional.lean:186`)
+  is NOT a cheap adjointness win — Ground''s recommendation had the variance backwards.
+  Route analysis (session 0013), do not re-derive.**
+
+
+  - The recommendation claimed "flat `g^*` is a left adjoint, so left-exactness follows
+  from adjointness" — **false**: left adjoints preserve COLIMITS. Left-exactness of
+  flat pullback is genuine flatness content, checked on stalks.
+
+  - No dodge exists at the presheaf level: `PresheafOfModules.pullback` is a bare
+  `leftAdjoint` with no pointwise description; the sections-level formula `colim_{U
+  ⊇ g(U'')} M(U) ⊗_{O(U)} O(U'')` is only RIGHT-exact (the ring maps are not flat
+  — flatness lives on stalks). Sheafification + `SheafOfModules.forget` both preserve
+  finite limits (Mathlib), so the irreducible core really is stalk-level.
+
+  - **Viable honest route** (est. 400–800 LOC of new infra): (1) combinators exist
+  — `Functor.preservesFiniteLimits_tfae` / `preservesFiniteLimits_of_preservesKernels`
+  (`Mathlib/Algebra/Homology/ShortComplex/ExactFunctor.lean`); (2) Mathlib 2026 has
+  module structure on stalks (`Mathlib/Algebra/Category/ModuleCat/Stalk.lean`, `PresheafOfModules.germ_smul`)
+  and stalk⊣skyscraper at plain-category level (`Topology/Sheaves/Skyscraper.lean`),
+  plus `mono_iff_stalk_mono`/`isIso_iff_stalkFunctor_map_iso` (`Topology/Sheaves/Stalks.lean`);
+  (3) the missing brick is **stalk-of-pullback**: `stalkModule_x ∘ pullback g ≅ extendScalars(stalkMap)
+  ∘ stalkModule_{g x}` — provable by adjoint uniqueness IF a module-level skyscraper
+  right adjoint is built (pushforward of skyscraper = skyscraper at the image); then
+  flat stalk maps (`AlgebraicGeometry.Flat.iff_flat_stalkMap`-adjacent, `RingHom.Flat`
+  appLE definition) + `ModuleCat.preservesFiniteLimits_extendScalars_of_flat` (`ModuleCat/Descent.lean`)
+  finish via kernel-comparison-on-stalks.
+
+  - **Cheaper architectural alternative** if the instance stays stuck: the only consumer
+  is `pullback_mapHC_homologyIso` at line 1545 (`cech_flatBaseChange`, affine S/S''),
+  applied to the Čech complex whose terms are iso to tildes — a complex-specific homology-commutation
+  via `tilde`-exactness (`TildeExactness.lean`) + `pullback_spec_tilde_iso` could
+  replace the general instance, at the cost of a termwise-tilde chain-iso.'
+labels:
+- agent-ready
+status: open
+scope: {}
+audience: horizon
+author: horizon
+source_ref: null
+created_at: '2026-07-03T02:36:08.226973+00:00'
+updated_at: '2026-07-03T02:36:08.226987+00:00'
+metadata:
+  provenance:
+    run: '0003'
+    session: 0013-horizon-T2
+    role: horizon

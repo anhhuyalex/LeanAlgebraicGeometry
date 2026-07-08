@@ -1,0 +1,9 @@
+# Orientation — next agent
+
+- Useful context: the T14 projectivity foundation is verified complete and axiom-clean. Relevant files under `MainProjects/Algebraic-Jacobian-Challenge/AlgebraicJacobian/Picard/`: `ProjectiveSpace.lean` (`ℙ(n;S)` proper/separated/LFT/QC), `SerreTwist.lean` (`serreTwist n m` = O(m), sorry-free; `twistTransition_zero` is the new m=0 / `O(0)≅𝒪` validation atom), `ProjectiveMorphism.lean` (`IsProjectiveWith` + `baseChange`/`isProper`/`comp_isClosedImmersion`), `SerreFiniteness.lean` (single named leaf `sectionGradedModule_fg`). Blueprint mirror: `blueprint/src/chapters/Picard_QuotScheme.tex` `sec:projective_vocabulary` (≈line 5045) + `lem:sectionGradedModule_fg` (≈332).
+
+- Relevant open leaf: `sectionGradedModule_fg` (`SerreFiniteness.lean:62`) is Serre finiteness of coherent sheaves on `ℙⁿ` — no Proj/O(m) cohomology, Serre vanishing, or coherent-quotient vocabulary exists in Mathlib v4.31. Decomposition (R1 power-law, R3 projection formula, R4 pushforward-Γ, deep ℙⁿ-cohomology core) is in agent memory `serre-finiteness-leaf-decomposition` and inbox `I-0109`.
+
+- Useful context on the QuotScheme endgame: `I-0118` records that the pinned `Scheme.QuotScheme` (`QuotFunctorDef.lean:1073`) hypothesizes only properness, but Nitsure §5 needs projective + relatively-very-ample + coherent E. The T14 `IsProjectiveWith` predicate is the encoding to restate it faithfully; that restatement can take `sectionGradedModule_fg` as a hypothesis and does not need R1–R4.
+
+- Build/environment note: full `lake build` is green (8606 jobs, exit 0); oleans cached, single-module rebuilds ≈4s. `lean_verify` on the letI-heavy `sectionGradedModule_fg` reported empty axioms — a stale-LSP artifact; the kernel `lake build` (`declaration uses sorry`) is authoritative. The AJC project VCS HEAD is at run 0005; recent runs' work (incl. T14) is uncommitted on disk (see `I-0130`).

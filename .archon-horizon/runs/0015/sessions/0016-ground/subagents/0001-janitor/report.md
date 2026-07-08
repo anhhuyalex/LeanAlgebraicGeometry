@@ -1,0 +1,24 @@
+You are tidying the Archon Horizon inbox for the JacobianChallenge workspace. It has **131 open items** — massively over the target of roughly 10 open `memory` items and 3-4 open `info` items. Your job: archive stale/consumed/superseded items to bring it back toward that target, WITHOUT losing durable knowledge.
+
+Invoke the CLI via the `$HORIZON_BIN` env var, e.g. `"$HORIZON_BIN" inbox list --json`. Archive with `"$HORIZON_BIN" inbox archive <ID>` (one ID at a time). All actions you take are as author `ground`.
+
+## ARCHIVE these (they are consumed journal entries or superseded):
+- Every `info` item with `audience=human` (`to=human`) that is a per-run/per-session **reconcile-PASS or status notice** — these are consumed the moment the human has seen them; they are a progress log, not durable coordination. Examples in the list: I-0130, I-0129, I-0128, I-0125, I-0123, I-0122, I-0121, I-0119, I-0117, I-0115, I-0111, I-0110, I-0107, I-0105, I-0104, I-0103, I-0102, I-0101, I-0100, I-0099, I-0098, I-0097, I-0096, I-0095, I-0094, I-0091, I-0090, I-0085, I-0079, I-0077, I-0073, I-0071, I-0070, I-0067, I-0066, I-0064, I-0063, I-0060, I-0056, I-0054, I-0053, I-0050, I-0048, I-0046, I-0045, I-0043, I-0041, I-0038, I-0035, I-0033, I-0031, I-0030, I-0029, I-0028, I-0025, I-0024, I-0023, I-0022, I-0020, I-0019, I-0017, I-0014, I-0012, I-0011, I-0010, I-0009, I-0008, I-0007, I-0004. Read each briefly to confirm it is a consumed status/notice before archiving.
+- Every item whose body begins with `[temporary]` (regardless of audience).
+- Any item EXPLICITLY marked superseded/wrong/obsolete in its own body (e.g. I-0041 says "SUPERSEDED / WRONG"; I-0036 is superseded by I-0082; check for others like this).
+- Duplicate/consumed `hint`/`info` items addressed to `horizon`/`ground` whose described work is clearly long since landed (e.g. old T1/T2/T3/T5/T6 session hints: I-0058, I-0059, I-0049, I-0044, I-0031, I-0026, I-0011, I-0008 — confirm the work is old and landed before archiving).
+
+## KEEP (do NOT archive):
+- Open `issue` items describing live defects or unresolved problems: I-0118 (QuotScheme unprovable-as-pinned — LIVE, important), I-0116, I-0114, I-0087, I-0093, I-0062, I-0049(if a real open blueprint defect — check), I-0016, I-0006, I-0001, I-0018. Verify each is genuinely unresolved; if a described issue was clearly resolved by later work, you may archive it but ONLY if you are confident.
+- `memory` items that record durable recipes/conventions/dead-ends/cone-state that are NOT explicitly superseded: I-0126, I-0120, I-0113, I-0109, I-0108, I-0106, I-0092, I-0089, I-0088, I-0086, I-0083, I-0082, I-0080, I-0078, I-0076, I-0075, I-0074, I-0072, I-0068, I-0065, I-0061, I-0057, I-0051, I-0047, I-0042, I-0040, I-0039, I-0034, I-0032, I-0027, I-0021, I-0015, I-0013, I-0005, I-0003, I-0002. These are the project's durable brain — keep unless a body explicitly says it is superseded by a specific newer item.
+
+## Rules:
+- When two `memory` items cover the SAME recipe and one says it supersedes the other, archive the OLD one only.
+- Be CONSERVATIVE: if you are unsure whether something is durable knowledge or a live issue, KEEP it. It is far worse to lose a recipe than to leave one extra item open.
+- Do not create, comment on, or edit any items — ONLY archive. Do not touch roadmap, blueprints, or Lean files.
+- Work through the list methodically. Archive each qualifying item.
+
+## Report back:
+- The count of items archived and the count remaining open.
+- The final list of remaining OPEN items by ID+kind (so I can confirm the working set is sane).
+- Any item you were UNSURE about and chose to keep, with a one-line reason.

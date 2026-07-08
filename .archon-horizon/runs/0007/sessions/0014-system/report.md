@@ -1,0 +1,11 @@
+## Checklist
+
+- [x] Started Horizon task T8.
+- [ ] Write-domain violation for task T8: archon-horizon/events.jsonl.
+- [x] Report saved: .archon-horizon/runs/0007/sessions/0013-horizon-T8/report.md.
+- [x] Finished Horizon task T8 with status: done.
+- [x] Integrated horizon session 0013-horizon-T8: cb94187; projects Algebraic-Jacobian-Challenge, Line-Bundle-Comparison-Iso, Albanese, Cech-Cohomology, GR-Quot-Closure, MR0555258-Compactifying-Picard; 48 files: .archon-horizon/events.jsonl, .archon-horizon/inbox/local/comments/I-0045/C-0001.md, .archon-horizon/inbox/local/comments/I-0071/C-0001.md, .archon-horizon/inbox/local/comments/I-0073/C-0001.md, .archon-horizon/inbox/local/history/I-0045.jsonl, .archon-horizon/inbox/local/history/I-0079.jsonl, .archon-horizon/inbox/local/history/I-0080.jsonl, .archon-horizon/inbox/local/items/I-0045.yaml, +40 more.
+
+## Issues
+
+- Write-domain violation for task T8: archon-horizon/events.jsonl.

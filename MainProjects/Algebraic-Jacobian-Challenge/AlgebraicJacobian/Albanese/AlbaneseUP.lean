@@ -5,6 +5,8 @@ Authors: Christian Merten
 -/
 import Mathlib
 import AlgebraicJacobian.Genus
+import AlgebraicJacobian.Picard.Pic0AbelianVariety
+import AlgebraicJacobian.Albanese.CodimOneExtension
 
 /-!
 # The Albanese universal property of `Pic⁰_{C/k}` (A.4.d)
@@ -62,18 +64,28 @@ The 6 pinned declarations are:
 ## File-internal placeholder for `Pic⁰_{C/k̄}`
 
 The A.3 row of Route A (the identity-component refinement of the Picard
-scheme together with its degree map) has not yet been split out into a
-dedicated chapter or `.lean` file at the time of this file-skeleton
-landing. We supply a **single helper** here: a `Pic0.Bundle` structure
-bundling the underlying scheme together with its four abelian-variety
+scheme together with its degree map) is now split out in
+`Picard/Pic0AbelianVariety.lean`. We keep a thin `Pic0.Bundle` structure
+here bundling the underlying scheme together with its four abelian-variety
 instances (`GrpObj`, `IsProper`, `Smooth`, `GeometricallyIrreducible`),
-plus a typed-`sorry` carrier `Pic0.bundle C` and a derived definition
+plus the carrier `Pic0.bundle C` and a derived definition
 `Pic0.jacobianScheme C := (bundle C).scheme`. The four instances on
-`jacobianScheme C` are derived from the bundle's fields (no extra
-`sorry`). Once the A.3 chapter materialises this placeholder collapses to
-a one-line re-export.
+`jacobianScheme C` are derived from the bundle's fields. Once the A.3
+chapter's own `smooth`/`proper` gaps close, this placeholder collapses to a
+one-line re-export.
 
-Helper budget = 1: the single helper carrying a `sorry` is `Pic0.bundle`.
+Bundle wiring (this iter): `bundle C` is **no longer a typed `sorry`**. Its
+underlying scheme is `Scheme.Pic0Scheme C` and its four attributes are the
+tracked upstream theorems `Scheme.Pic0.{grpObj, proper, smooth,
+geometricallyIrreducible}`. The upstream hypotheses
+`[GeometricallyIntegral C.hom] [HasPicScheme C]
+[PicScheme.PicSchemeLocallyOfFiniteType C]` are discharged honestly over the
+algebraically closed base by the three axiom-clean bridges of §0.0
+(`geometricallyReduced_of_smooth`, `GeometricallyIntegral.of_…`,
+`hasRationalPoint_of_isAlgClosed`). Any residual `sorryAx` in `bundle` is
+inherited **only** from the still-open upstream `Scheme.Pic0.smooth` /
+`Scheme.Pic0.proper` and the FGA `instHasPicScheme`; no `sorry` is
+introduced here.
 
 ## Note on type expressivity
 
@@ -134,20 +146,107 @@ open CategoryTheory Limits MonoidalCategory CartesianMonoidalCategory MonObj
 
 namespace AlgebraicGeometry
 
+/-! ## §0.0. Substrate bridges: geometric integrality and rational points
+
+The A.3 upstream (`Picard/Pic0AbelianVariety.lean`) states `Pic⁰_{C/k}` smooth,
+proper and geometrically irreducible under the hypotheses
+`[GeometricallyIntegral C.hom] [HasPicScheme C]
+[PicScheme.PicSchemeLocallyOfFiniteType C]`, whereas the Albanese curve `C`
+enters here carrying only `[SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
+[GeometricallyIrreducible C.hom]` over an algebraically closed field `k̄`. The
+three bridging facts below discharge the missing hypotheses honestly, so that
+`Pic0.bundle` can be assembled from the tracked upstream declarations rather than
+from a typed `sorry`. -/
+
+/-- **Reducedness descends along a faithfully flat morphism.** If `π : Y ⟶ X` is
+flat and surjective (i.e. faithfully flat) and `Y` is reduced, then `X` is
+reduced: each stalk map `𝒪_{X,π(y)} → 𝒪_{Y,y}` is a flat local homomorphism of
+local rings, hence faithfully flat and in particular injective, so `𝒪_{X,π(y)}`
+embeds into the reduced ring `𝒪_{Y,y}`. -/
+theorem isReduced_of_flat_of_surjective {X Y : Scheme.{u}} (π : Y ⟶ X)
+    [Flat π] [Surjective π] [IsReduced Y] : IsReduced X := by
+  haveI hst : ∀ x : X, _root_.IsReduced (X.presheaf.stalk x) := by
+    intro x
+    obtain ⟨y, rfl⟩ := π.surjective x
+    have hlocal : IsLocalHom (π.stalkMap y).hom := inferInstance
+    have hflat : (π.stalkMap y).hom.Flat := Flat.stalkMap π y
+    have hinj : Function.Injective (π.stalkMap y).hom := by
+      algebraize [(π.stalkMap y).hom]
+      haveI : Module.Flat (X.presheaf.stalk (π.base y)) (Y.presheaf.stalk y) := hflat
+      haveI : IsLocalHom (algebraMap (X.presheaf.stalk (π.base y)) (Y.presheaf.stalk y)) := hlocal
+      haveI : Module.FaithfullyFlat (X.presheaf.stalk (π.base y)) (Y.presheaf.stalk y) :=
+        Module.FaithfullyFlat.of_flat_of_isLocalHom
+      exact FaithfulSMul.algebraMap_injective _ _
+    exact isReduced_of_injective (π.stalkMap y).hom hinj
+  exact isReduced_of_isReduced_stalk X
+
+/-- **A scheme smooth over an algebraically closed field is geometrically
+reduced.** For each test field `K/k̄`, the base change `X ×_{k̄} K` is smooth
+over `K`; its further base change to `K̄ = AlgebraicClosure K` is smooth over an
+algebraically closed field, hence reduced
+(`Scheme.isReduced_of_smooth_of_isAlgClosed`), and reducedness descends along the
+faithfully flat projection `X_{K̄} → X_K` (`isReduced_of_flat_of_surjective`). -/
+theorem geometricallyReduced_of_smooth {kbar : Type u} [Field kbar] [IsAlgClosed kbar]
+    {X : Scheme.{u}} (f : X ⟶ Spec (.of kbar)) [Smooth f] :
+    GeometricallyReduced f := by
+  refine ⟨?_⟩
+  rw [geometrically_iff_of_commRing_of_isClosedUnderIsomorphisms]
+  intro K _ _
+  have hfsurj : (CommRingCat.ofHom (algebraMap K (AlgebraicClosure K))).hom.FaithfullyFlat :=
+    RingHom.faithfullyFlat_algebraMap_iff.mpr inferInstance
+  have hFS := (flat_and_surjective_SpecMap_iff
+    (CommRingCat.ofHom (algebraMap K (AlgebraicClosure K)))).mpr hfsurj
+  haveI : Flat (Spec.map (CommRingCat.ofHom (algebraMap K (AlgebraicClosure K)))) := hFS.1
+  haveI : Surjective (Spec.map (CommRingCat.ofHom (algebraMap K (AlgebraicClosure K)))) := hFS.2
+  haveI hsm1 : Smooth (pullback.snd f (Spec.map (CommRingCat.ofHom (algebraMap kbar K)))) :=
+    inferInstance
+  haveI hsm2 : Smooth (pullback.snd
+      (pullback.snd f (Spec.map (CommRingCat.ofHom (algebraMap kbar K))))
+      (Spec.map (CommRingCat.ofHom (algebraMap K (AlgebraicClosure K))))) := inferInstance
+  haveI : Smooth (Over.mk (pullback.snd
+      (pullback.snd f (Spec.map (CommRingCat.ofHom (algebraMap kbar K))))
+      (Spec.map (CommRingCat.ofHom (algebraMap K (AlgebraicClosure K)))))).hom := hsm2
+  haveI : IsReduced (pullback (pullback.snd f (Spec.map (CommRingCat.ofHom (algebraMap kbar K))))
+      (Spec.map (CommRingCat.ofHom (algebraMap K (AlgebraicClosure K))))) :=
+    Scheme.isReduced_of_smooth_of_isAlgClosed (kbar := AlgebraicClosure K) (Over.mk (pullback.snd
+      (pullback.snd f (Spec.map (CommRingCat.ofHom (algebraMap kbar K))))
+      (Spec.map (CommRingCat.ofHom (algebraMap K (AlgebraicClosure K))))))
+  exact isReduced_of_flat_of_surjective
+    (pullback.fst (pullback.snd f (Spec.map (CommRingCat.ofHom (algebraMap kbar K))))
+      (Spec.map (CommRingCat.ofHom (algebraMap K (AlgebraicClosure K)))))
+
+/-- **A smooth, geometrically irreducible curve over an algebraically closed
+field has a rational point.** `C.left` is nonempty (geometric irreducibility over
+the one-point base `Spec k̄`), locally of finite type over `k̄` (smoothness) and
+therefore a Jacobson space, so it has a closed point `x`; over the algebraically
+closed field `k̄`, `pointOfClosedPoint`/`pointEquivClosedPoint` promote `x` to a
+`k̄`-rational section of `C.hom`. This discharges `[HasRationalPoint C]`. -/
+theorem hasRationalPoint_of_isAlgClosed {kbar : Type u} [Field kbar] [IsAlgClosed kbar]
+    (C : Over (Spec (.of kbar))) [Smooth C.hom] [GeometricallyIrreducible C.hom] :
+    Scheme.HasRationalPoint C := by
+  haveI : LocallyOfFiniteType C.hom := inferInstance
+  haveI : IrreducibleSpace C.left :=
+    GeometricallyIrreducible.irreducibleSpace_of_subsingleton C.hom
+  haveI : JacobsonSpace C.left := LocallyOfFiniteType.jacobsonSpace C.hom
+  obtain ⟨x, hx⟩ := nonempty_inter_closedPoints (X := C.left) (Z := Set.univ)
+    Set.univ_nonempty isClosed_univ.isLocallyClosed
+  exact ⟨⟨(pointEquivClosedPoint C.hom).symm ⟨x, hx.2⟩⟩⟩
+
 namespace Pic0
 
 /-! ## §0. File-internal placeholder for `Pic⁰_{C/k̄}`
 
 The A.3 row of Route A (identity component of the Picard scheme together
-with its degree map) is not yet split out into a dedicated chapter / file.
-The single helper below — a bundled structure carrying the Pic⁰ scheme
-together with its four abelian-variety instances, plus a typed-`sorry`
-carrier `bundle` — supplies the placeholder. Once the A.3 chapter
-materialises this collapses to a one-line re-export.
-
-This is the **only** helper in the file that consumes a `sorry`. The
-derived `jacobianScheme` def and the four typeclass instances below are
-projections from `bundle` and do not introduce additional `sorry`s. -/
+with its degree map) is split out in `Picard/Pic0AbelianVariety.lean`. The
+helper below — a bundled structure carrying the Pic⁰ scheme together with
+its four abelian-variety instances, plus the carrier `bundle` — supplies
+the interface. `bundle` is wired to the tracked upstream declarations
+(`Scheme.Pic0Scheme`, `Scheme.Pic0.{grpObj, proper, smooth,
+geometricallyIrreducible}`) via the axiom-clean §0.0 bridges, so it consumes
+**no** `sorry` of its own; the derived `jacobianScheme` def and the four
+typeclass carriers below are projections from `bundle`. Residual `sorryAx`
+in this section is inherited only from the still-open upstream
+`Scheme.Pic0.smooth` / `Scheme.Pic0.proper` and the FGA `instHasPicScheme`. -/
 
 /-- File-internal placeholder for `Pic⁰_{C/k̄}`: bundles the underlying
 `k̄`-scheme together with the four abelian-variety structural instances
@@ -176,11 +275,37 @@ variable (C : Over (Spec (.of kbar)))
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
     [GeometricallyIrreducible C.hom]
 
-/-- File-internal **placeholder carrier** for `Pic⁰_{C/k̄}` — a typed
-`sorry` pending the A.3 row chapter. iter-178+: replace with the
-`Bundle` produced by `Picard/FGAPicRepresentability.lean` (A.2.c) after
-its identity-component / degree-map refinement (A.3) lands. -/
-noncomputable def bundle : Bundle C := sorry
+/-- **The `Pic⁰_{C/k̄}` bundle, wired to the tracked A.3 upstream.** For a smooth
+proper geometrically irreducible curve `C` over an algebraically closed field
+`k̄`, the underlying scheme is `Scheme.Pic0Scheme C` and its four
+abelian-variety attributes are the identity-component theorems of
+`Picard/Pic0AbelianVariety.lean` (`Scheme.Pic0.{grpObj, proper, smooth,
+geometricallyIrreducible}`).
+
+The upstream declarations run under `[GeometricallyIntegral C.hom]`,
+`[HasPicScheme C]` and `[PicScheme.PicSchemeLocallyOfFiniteType C]`; over `k̄`
+these are discharged honestly here:
+`geometricallyReduced_of_smooth` + `GeometricallyIrreducible C.hom` give
+`GeometricallyIntegral C.hom`; `hasRationalPoint_of_isAlgClosed` gives
+`[HasRationalPoint C]`, whence `instHasPicScheme` supplies `[HasPicScheme C]` and
+`instPicSchemeLocallyOfFiniteType` the local-finiteness carrier.
+
+This removes the former opaque `sorry` token and makes the Albanese-cone DAG
+honest: any residual `sorryAx` taint is inherited only from the still-open
+upstream `Scheme.Pic0.smooth` / `Scheme.Pic0.proper` (and the FGA
+`instHasPicScheme`), never introduced here. -/
+noncomputable def bundle : Bundle C := by
+  haveI : Smooth C.hom := SmoothOfRelativeDimension.smooth 1 C.hom
+  haveI : GeometricallyReduced C.hom := geometricallyReduced_of_smooth C.hom
+  haveI : GeometricallyIntegral C.hom :=
+    GeometricallyIntegral.of_geometricallyReduced_of_geometricallyIrreducible C.hom
+  haveI : Scheme.HasRationalPoint C := hasRationalPoint_of_isAlgClosed C
+  exact
+    { scheme := Scheme.Pic0Scheme C
+      grpObj := (Scheme.Pic0.grpObj C).some
+      proper := Scheme.Pic0.proper C
+      smooth := Scheme.Pic0.smooth C
+      geomIrred := Scheme.Pic0.geometricallyIrreducible C }
 
 /-- The underlying `k̄`-scheme `Pic⁰_{C/k̄}` of a smooth proper
 geometrically irreducible curve `C` over an algebraically closed field
