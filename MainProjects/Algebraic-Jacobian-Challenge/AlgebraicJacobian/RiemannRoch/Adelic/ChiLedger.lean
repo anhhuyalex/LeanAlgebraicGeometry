@@ -599,5 +599,195 @@ theorem localStep_finrank_le_residueEmbedding {U : X.Opens} {P : X.PrimeDivisor}
 
 end BaseField
 
+/-! ## §N15 backbone. The 4-term exact-sequence alternating dimension identity
+
+The χ-additivity of the twist ledger is the alternating-dimension identity of the
+four-term exact sequence
+`0 → L(D')/L(D) → 𝒜(D')/𝒜(D) → Ȟ¹(D) → Ȟ¹(D') → 0`.  We isolate the pure
+linear-algebra content: for any exact sequence of four finite-dimensional
+`k`-vector spaces, the alternating sum of dimensions vanishes.  This is the engine
+that telescopes `χ(D) := ℓ(D) − h¹(D)`. -/
+
+section ExactDim
+
+variable {k A B C E : Type*} [DivisionRing k]
+    [AddCommGroup A] [Module k A] [AddCommGroup B] [Module k B]
+    [AddCommGroup C] [Module k C] [AddCommGroup E] [Module k E]
+    [FiniteDimensional k A] [FiniteDimensional k B] [FiniteDimensional k C]
+    [FiniteDimensional k E]
+
+/-- **Alternating dimension identity of a 4-term exact sequence.** For a four-term
+exact sequence of finite-dimensional `k`-vector spaces
+`0 → A --i--> B --p--> C --q--> E → 0`
+(`i` injective, exact at `B` and `C`, `q` surjective),
+`dim A − dim B + dim C − dim E = 0`.
+
+The proof is a double application of rank–nullity: `dim(ker p) = dim(range i) =
+dim A` and `dim(ker q) = dim C − dim E`, and exactness `range p = ker q` matches
+`dim B − dim A = dim C − dim E`.  This is the χ-ledger engine (design §3, node
+N15): applied to the ledger sequence it is exactly `χ(D+P) = χ(D) + deg P`. -/
+theorem finrank_alternating_of_exact4
+    (i : A →ₗ[k] B) (p : B →ₗ[k] C) (q : C →ₗ[k] E)
+    (hi : Function.Injective i)
+    (hB : LinearMap.range i = LinearMap.ker p)
+    (hC : LinearMap.range p = LinearMap.ker q)
+    (hq : Function.Surjective q) :
+    (Module.finrank k A : ℤ) - Module.finrank k B + Module.finrank k C
+      - Module.finrank k E = 0 := by
+  have hkerp : Module.finrank k (LinearMap.ker p) = Module.finrank k A := by
+    rw [← hB, LinearMap.finrank_range_of_inj hi]
+  have hrnp := LinearMap.finrank_range_add_finrank_ker p
+  have hrnq := LinearMap.finrank_range_add_finrank_ker q
+  have hrangeq : Module.finrank k (LinearMap.range q) = Module.finrank k E := by
+    rw [LinearMap.range_eq_top.mpr hq]; exact finrank_top k E
+  have hkerqp : Module.finrank k (LinearMap.range p) = Module.finrank k (LinearMap.ker q) := by
+    rw [hC]
+  rw [hkerp] at hrnp
+  rw [hrangeq] at hrnq
+  omega
+
+end ExactDim
+
+/-! ## §N15/N16. The `k`-dimension χ-ledger and the Riemann inequality
+
+We now assemble the numerical χ-ledger over a field of constants `k`.  With
+`ℓ(D) := dim_k Γ(⊤, 𝒪(D))` and `h¹(D) := dim_k Ȟ¹(D)`, the Euler characteristic
+`χ(D) := ℓ(D) − h¹(D)` telescopes along the twist ledger: `χ(D + P) = χ(D) +
+dim_k(𝒜(D')/𝒜(D))`, and the local dimension `dim_k(𝒜(D')/𝒜(D)) = deg P`
+(node N14).  The Riemann inequality `deg D + χ(0) ≤ ℓ(D)` is the elementary
+consequence `χ(D) ≤ ℓ(D)` (i.e. `h¹(D) = i(D) ≥ 0`) combined with the telescoped
+`χ(D) = χ(0) + deg D`. -/
+
+section ChiLedgerDim
+
+variable (k : Type u) [Field k] {X : Scheme.{u}} [IsIntegral X]
+    [IsLocallyNoetherian X] [Scheme.IsRegularInCodimensionOne X]
+    [Algebra k X.functionField] [IsConstantField k X]
+
+/-- **The relative-quotient dimension is the difference of dimensions.** For
+`Γ(U, 𝒪(D)) ⊆ Γ(U, 𝒪(D'))` finite-dimensional, `dim_k(Γ(U,𝒪(D'))/Γ(U,𝒪(D))) =
+ℓ_U(D') − ℓ_U(D)`.  Rank–nullity on the relative quotient. -/
+theorem finrank_localStepDom (U : X.Opens) {D D' : X.WeilDivisor}
+    (hDD' : sectionSub k U D ≤ sectionSub k U D')
+    [Module.Finite k (sectionSub k U D')] :
+    (Module.finrank k (localStepDom k U D D') : ℤ)
+      = Module.finrank k (sectionSub k U D') - Module.finrank k (sectionSub k U D) := by
+  have key : Module.finrank k (localStepDom k U D D')
+      + Module.finrank k (sectionSub k U D) = Module.finrank k (sectionSub k U D') := by
+    have h1 := Submodule.finrank_quotient_add_finrank
+      (Submodule.comap (sectionSub k U D').subtype (sectionSub k U D))
+    have h2 : Module.finrank k
+        (Submodule.comap (sectionSub k U D').subtype (sectionSub k U D))
+        = Module.finrank k (sectionSub k U D) :=
+      (Submodule.comapSubtypeEquivOfLe hDD').finrank_eq
+    rw [h2] at h1
+    exact h1
+  omega
+
+variable (U₀ U₁ : X.Opens)
+
+/-- **Antitonicity of `sectionSub` in the open.** -/
+theorem sectionSub_antitone_open {U U' : X.Opens} (h : U ≤ U') (D : X.WeilDivisor) :
+    sectionSub k U' D ≤ sectionSub k U D :=
+  fun _ hx => sectionOfDivisor_antitone_open h D hx
+
+/-- **The coboundary subspace `B(D) = Γ(U₀,𝒪(D)) + Γ(U₁,𝒪(D))` as a `k`-subspace.** -/
+noncomputable def coboundarySub (D : X.WeilDivisor) : Submodule k X.functionField :=
+  sectionSub k U₀ D ⊔ sectionSub k U₁ D
+
+/-- `B(D) ⊆ 𝒜(D) = Γ(U₀ ⊓ U₁, 𝒪(D))`. -/
+theorem coboundarySub_le_overlap (D : X.WeilDivisor) :
+    coboundarySub k U₀ U₁ D ≤ sectionSub k (U₀ ⊓ U₁) D :=
+  sup_le (sectionSub_antitone_open k inf_le_left D)
+    (sectionSub_antitone_open k inf_le_right D)
+
+/-- **The cover cohomology `Ȟ¹(D) = 𝒜(D) / B(D)` as a `k`-vector space.** The
+`k`-linear incarnation of `H1`. -/
+abbrev H1Mod (D : X.WeilDivisor) : Type u :=
+  ↥(sectionSub k (U₀ ⊓ U₁) D) ⧸
+    Submodule.comap (sectionSub k (U₀ ⊓ U₁) D).subtype (coboundarySub k U₀ U₁ D)
+
+/-- **`ℓ(D) := dim_k Γ(⊤, 𝒪(D))`**, the dimension of the global Riemann–Roch
+space (the linear system `L(D)`). -/
+noncomputable def ell (D : X.WeilDivisor) : ℕ := Module.finrank k (sectionSub k ⊤ D)
+
+/-- **`h¹(D) := dim_k Ȟ¹(D)`**, the dimension of the cover cohomology. -/
+noncomputable def h1dim (D : X.WeilDivisor) : ℕ := Module.finrank k (H1Mod k U₀ U₁ D)
+
+/-- **The Euler characteristic `χ(D) := ℓ(D) − h¹(D)`** of the χ-ledger. -/
+noncomputable def chi (D : X.WeilDivisor) : ℤ := (ell k D : ℤ) - h1dim k U₀ U₁ D
+
+/-- **N15 — the twist-ledger alternating dimension identity.** Given the four-term
+ledger exact sequence
+`0 → L(D')/L(D) → 𝒜(D')/𝒜(D) → Ȟ¹(D) → Ȟ¹(D') → 0`
+(as `k`-linear maps with the stated exactness — the window injectivity is
+`localStepMapₖ_injective`/`windowMap_injective`; the connecting map and the
+surjectivity at `Ȟ¹(D')` are the deferred Mittag-Leffler/affine-cover inputs,
+supplied here as hypotheses), the alternating sum of dimensions vanishes.  This is
+the numerical engine of χ-additivity. -/
+theorem ledger_alternating {D D' : X.WeilDivisor}
+    (window : localStepDom k ⊤ D D' →ₗ[k] localStepDom k (U₀ ⊓ U₁) D D')
+    (connect : localStepDom k (U₀ ⊓ U₁) D D' →ₗ[k] H1Mod k U₀ U₁ D)
+    (twist : H1Mod k U₀ U₁ D →ₗ[k] H1Mod k U₀ U₁ D')
+    (hwin : Function.Injective window)
+    (hexactB : LinearMap.range window = LinearMap.ker connect)
+    (hexactC : LinearMap.range connect = LinearMap.ker twist)
+    (htwist : Function.Surjective twist)
+    [Module.Finite k (localStepDom k ⊤ D D')]
+    [Module.Finite k (localStepDom k (U₀ ⊓ U₁) D D')]
+    [Module.Finite k (H1Mod k U₀ U₁ D)] [Module.Finite k (H1Mod k U₀ U₁ D')] :
+    (Module.finrank k (localStepDom k ⊤ D D') : ℤ)
+        - Module.finrank k (localStepDom k (U₀ ⊓ U₁) D D')
+        + h1dim k U₀ U₁ D - h1dim k U₀ U₁ D' = 0 :=
+  finrank_alternating_of_exact4 window connect twist hwin hexactB hexactC htwist
+
+/-- **N15 — χ-additivity (honest gated form).** Under the ledger exact sequence and
+`D ≤ D'`, the Euler characteristic bumps by the local dimension
+`dim_k(𝒜(D')/𝒜(D))`:
+`χ(D') = χ(D) + dim_k(𝒜(D')/𝒜(D))`.
+Combined with node N14 (`dim_k(𝒜(D')/𝒜(D)) = deg P` for a one-point bump
+`D' = D + P`), this is `χ(D + P) = χ(D) + deg P`. -/
+theorem chi_add {D D' : X.WeilDivisor}
+    (hDD' : ∀ P : X.PrimeDivisor, (show X.PrimeDivisor →₀ ℤ from D) P ≤
+      (show X.PrimeDivisor →₀ ℤ from D') P)
+    (window : localStepDom k ⊤ D D' →ₗ[k] localStepDom k (U₀ ⊓ U₁) D D')
+    (connect : localStepDom k (U₀ ⊓ U₁) D D' →ₗ[k] H1Mod k U₀ U₁ D)
+    (twist : H1Mod k U₀ U₁ D →ₗ[k] H1Mod k U₀ U₁ D')
+    (hwin : Function.Injective window)
+    (hexactB : LinearMap.range window = LinearMap.ker connect)
+    (hexactC : LinearMap.range connect = LinearMap.ker twist)
+    (htwist : Function.Surjective twist)
+    [Module.Finite k (sectionSub k ⊤ D')]
+    [Module.Finite k (localStepDom k (U₀ ⊓ U₁) D D')]
+    [Module.Finite k (H1Mod k U₀ U₁ D)] [Module.Finite k (H1Mod k U₀ U₁ D')] :
+    chi k U₀ U₁ D' = chi k U₀ U₁ D
+      + Module.finrank k (localStepDom k (U₀ ⊓ U₁) D D') := by
+  haveI : Module.Finite k (localStepDom k ⊤ D D') := inferInstance
+  have hwindow := finrank_localStepDom k ⊤ (sectionSub_mono k ⊤ hDD')
+  have halt := ledger_alternating k U₀ U₁ window connect twist hwin hexactB hexactC htwist
+  simp only [chi, ell, h1dim] at *
+  omega
+
+/-- **N16 — nonnegativity of the index of speciality: `χ(D) ≤ ℓ(D)`.** Immediate
+from `χ(D) = ℓ(D) − h¹(D)` and `h¹(D) = i(D) ≥ 0`.  This is the `i(D) ≥ 0` half of
+the Riemann inequality. -/
+theorem chi_le_ell (D : X.WeilDivisor) : chi k U₀ U₁ D ≤ (ell k D : ℤ) := by
+  have : (0 : ℤ) ≤ (h1dim k U₀ U₁ D : ℤ) := Int.natCast_nonneg _
+  simp only [chi]; linarith
+
+/-- **N16 — the Riemann inequality `deg D + χ(0) ≤ ℓ(D)`.** Given the telescoped
+Euler characteristic `χ(D) = χ(0) + deg D` (node N15 `chi_add` iterated along the
+divisor: `deg D = Σᵢ deg Pᵢ` the sum of the one-point local residue degrees, an
+honest hypothesis packaging the induction on the effective parts), the Riemann
+inequality is the elementary `χ(D) ≤ ℓ(D)` (`i(D) ≥ 0`):
+`deg D + χ(0) ≤ ℓ(D)`. -/
+theorem riemann_inequality {D : X.WeilDivisor} {degD : ℤ}
+    (htel : chi k U₀ U₁ D = chi k U₀ U₁ 0 + degD) :
+    degD + chi k U₀ U₁ 0 ≤ (ell k D : ℤ) := by
+  have h := chi_le_ell k U₀ U₁ D
+  rw [htel] at h; linarith
+
+end ChiLedgerDim
+
 end Adelic
 end AlgebraicGeometry
