@@ -28,13 +28,21 @@ discharge the gate `Adelic.P1HasLaurentChartData`.
 * `p1XSection`, `p1YSection` — the chart coordinates `x = X₁/X₀ ∈ Γ(V₀)`,
   `y = X₀/X₁ ∈ Γ(V₁)`, pulled back along `toProjInt`;
 * `p1Monomial a b` and `p1Monomial_eq_coordPow` — **the per-monomial span heart**:
-  the degree-`(a+b)` monomial fraction `X₀^a X₁^b / X₀^(a+b)` equals `(X₁/X₀)^b`.
+  the degree-`(a+b)` monomial fraction `X₀^a X₁^b / X₀^(a+b)` equals `(X₁/X₀)^b`;
+* `span_p1CoordAway_pow_top` — **the full chart-ring span core (`ℤ`-span, route
+  step 1)**: `⊤ ≤ Submodule.span (𝒜 0) {(X₁/X₀)^m}` in `(ℤ[X₀,X₁]_{X₀})₀`.  Every
+  degree-zero away element `p/X₀^N` (`Away.mk_surjective`) expands over the monomial
+  support of the homogeneous numerator `p ∈ 𝒜 N`; each occurring exponent vector `d`
+  has `d₀ + d₁ = N` (homogeneity, `IsHomogeneous.coeff_eq_zero`), so the per-monomial
+  helper `awayMk_monomial_mem_span` (built on `p1Monomial_eq_coordPow` and the
+  two-variable monomial expansion `monomial_eq_C_mul_pow`) rewrites each summand as a
+  constant `𝒜 0`-scalar times `(X₁/X₀)^{d₁}`, landing the whole fraction in the span.
 
-**Not yet landed (see the route map below):** the full chart-ring spanning
-`Γ(V₀) = k[x]` (needs `Away.mk` additivity/`𝒜 0`-linearity + the homogeneous-monomial
-decomposition of `𝒜 N`, then the `k ⊗_ℤ (−)` tensor identification of `Γ(V₀)`), the
-overlap identities `V₀ ⊓ V₁ = D(x) = D(y)` and `x·y = 1`, and the final
-`LaurentChartData`/`P1HasLaurentChartData` assembly.
+**Not yet landed (see the route map below):** the `k ⊗_ℤ (−)` tensor identification
+transporting the `ℤ`-span core to the `ℙ¹(k)` chart ring `Γ(V₀) = k[x]` (route step 2,
+the pullback-of-affines description — the char-free blocker), the overlap identities
+`V₀ ⊓ V₁ = D(x) = D(y)` and `x·y = 1` (step 3), and the final
+`LaurentChartData`/`P1HasLaurentChartData` assembly (step 4).
 
 ## The reduction (route map for a future wave)
 
@@ -188,6 +196,108 @@ lemma p1Monomial_eq_coordPow (a b : ℕ) :
   refine ⟨1, ?_⟩
   simp only [OneMemClass.coe_one, one_mul, SubmonoidClass.coe_pow]
   exact pow_mul_pow_identity _ _ a b
+
+/-- Two-variable monomial expansion: the monomial `X^d · c` in `ℤ[X₀, X₁]` is
+`c · X₀^{d₀} · X₁^{d₁}` (`Finsupp.prod` over the two-element index reduced with
+`Fin.prod_univ_two` through the `ULift (Fin 2) ≃ Fin 2` equivalence). -/
+private lemma monomial_eq_C_mul_pow (d : ULift.{u} (Fin 2) →₀ ℕ) (c : ULift.{u} ℤ) :
+    (monomial d c : MvPolynomial (ULift.{u} (Fin 2)) (ULift.{u} ℤ))
+      = C c * (X ⟨0⟩ ^ d ⟨0⟩ * X ⟨1⟩ ^ d ⟨1⟩) := by
+  rw [MvPolynomial.monomial_eq, Finsupp.prod_fintype _ _ (fun i => pow_zero _)]
+  congr 1
+  rw [← Equiv.prod_comp (Equiv.ulift.symm : Fin 2 ≃ ULift.{u} (Fin 2))
+        (fun i => X i ^ d i), Fin.prod_univ_two]
+  rfl
+
+/-- A monomial-fraction summand lies in the span of the coordinate powers: the
+degree-`N` monomial fraction `(monomial d c)/X₀^N` (with `d₀ + d₁ = N`) equals the
+degree-zero scalar `C c` times the coordinate power `(X₁/X₀)^{d₁}`. -/
+private lemma awayMk_monomial_mem_span (N : ℕ) (d : ULift.{u} (Fin 2) →₀ ℕ) (c : ULift.{u} ℤ)
+    (hN : d ⟨0⟩ + d ⟨1⟩ = N)
+    (hmem : (monomial d c : MvPolynomial (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) ∈
+      homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ) (N • 1)) :
+    Away.mk (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))
+        (ProjTwist.X_mem_deg_one (ULift.{u} (Fin 2)) ⟨0⟩) N (monomial d c) hmem ∈
+      Submodule.span (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ) 0)
+        (Set.range fun m : ℕ => p1CoordAway (ULift.{u} (Fin 2)) ⟨0⟩ ⟨1⟩ ^ m) := by
+  have hC0 : (C c : MvPolynomial (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) ∈
+      homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ) 0 :=
+    (mem_homogeneousSubmodule 0 _).mpr (isHomogeneous_C _ c)
+  have key : Away.mk (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))
+        (ProjTwist.X_mem_deg_one (ULift.{u} (Fin 2)) ⟨0⟩) N (monomial d c) hmem
+      = (⟨C c, hC0⟩ : homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ) 0)
+          • p1CoordAway (ULift.{u} (Fin 2)) ⟨0⟩ ⟨1⟩ ^ (d ⟨1⟩) := by
+    apply HomogeneousLocalization.val_injective
+    have hfz : (HomogeneousLocalization.fromZeroRingHom
+        (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))
+        (Submonoid.powers (X ⟨0⟩)) ⟨C c, hC0⟩).val
+        = Localization.mk (C c) 1 := rfl
+    rw [Algebra.smul_def, HomogeneousLocalization.algebraMap_eq,
+        HomogeneousLocalization.val_mul, HomogeneousLocalization.val_pow,
+        Away.val_mk, p1CoordAway, Away.val_mk, Localization.mk_pow, hfz,
+        Localization.mk_mul, Localization.mk_eq_mk_iff, Localization.r_iff_exists]
+    refine ⟨1, ?_⟩
+    simp only [OneMemClass.coe_one, one_mul, SubmonoidClass.coe_pow]
+    rw [monomial_eq_C_mul_pow d c, ← hN]
+    ring
+  rw [key]
+  exact Submodule.smul_mem _ _ (Submodule.subset_span ⟨d ⟨1⟩, rfl⟩)
+
+/-- **The chart-ring span core.**  The degree-zero away ring `(ℤ[X₀,X₁]_{X₀})₀`
+is spanned, over its constant subring `𝒜 0`, by the powers of the coordinate
+fraction `X₁/X₀ = p1CoordAway ⟨0⟩ ⟨1⟩`: every degree-zero away element is a
+`(𝒜 0)`-linear combination of `(X₁/X₀)^m`.  This is the mathematical heart of the
+chart-ring spanning `Γ(V₀) = k[x]`.
+
+The proof: every away element is `p / X₀^N` with `p` homogeneous of degree `N`
+(`Away.mk_surjective`); expanding `p` over its monomial support and using that
+each occurring exponent vector `d` satisfies `d₀ + d₁ = N` (homogeneity), the
+per-monomial identity `awayMk_monomial_mem_span` writes each summand as a
+constant times a coordinate power, so the whole fraction lands in the span. -/
+theorem span_p1CoordAway_pow_top :
+    (⊤ : Submodule (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ) 0)
+        (Away (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) (X ⟨0⟩)))
+      ≤ Submodule.span (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ) 0)
+          (Set.range fun m : ℕ => p1CoordAway (ULift.{u} (Fin 2)) ⟨0⟩ ⟨1⟩ ^ m) := by
+  intro w _
+  obtain ⟨N, a, ha, rfl⟩ := HomogeneousLocalization.Away.mk_surjective
+    (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))
+    (ProjTwist.X_mem_deg_one (ULift.{u} (Fin 2)) ⟨0⟩) w
+  have hhom := (mem_homogeneousSubmodule _ _).mp ha
+  -- each monomial summand of `a` is homogeneous of degree `N • 1`
+  have hmonoAll : ∀ d : ULift.{u} (Fin 2) →₀ ℕ,
+      (monomial d (coeff d a) : MvPolynomial (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) ∈
+        homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ) (N • 1) := by
+    intro d
+    rcases eq_or_ne (coeff d a) 0 with h0 | h0
+    · rw [h0, monomial_zero]; exact Submodule.zero_mem _
+    · refine (mem_homogeneousSubmodule _ _).mpr (isHomogeneous_monomial _ ?_)
+      by_contra hne
+      exact h0 (hhom.coeff_eq_zero hne)
+  -- every support exponent `d` has total degree `d₀ + d₁ = N`
+  have hdegN : ∀ d ∈ a.support, d ⟨0⟩ + d ⟨1⟩ = N := by
+    intro d hd
+    rw [mem_support_iff] at hd
+    have hdeg : Finsupp.degree d = N • 1 := by
+      by_contra hne
+      exact hd (hhom.coeff_eq_zero hne)
+    rw [Finsupp.degree_eq_sum,
+        ← Equiv.sum_comp (Equiv.ulift.symm : Fin 2 ≃ ULift.{u} (Fin 2)) (fun i => d i),
+        Fin.sum_univ_two] at hdeg
+    simpa using hdeg
+  -- monomial decomposition of the fraction over the support
+  have hsum : Away.mk (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))
+        (ProjTwist.X_mem_deg_one (ULift.{u} (Fin 2)) ⟨0⟩) N a ha
+      = ∑ d ∈ a.support, Away.mk (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))
+          (ProjTwist.X_mem_deg_one (ULift.{u} (Fin 2)) ⟨0⟩) N (monomial d (coeff d a))
+          (hmonoAll d) := by
+    apply HomogeneousLocalization.val_injective
+    rw [Away.val_mk, ← HomogeneousLocalization.algebraMap_apply, map_sum]
+    simp only [HomogeneousLocalization.algebraMap_apply, Away.val_mk]
+    rw [← Localization.mk_sum, ← MvPolynomial.as_sum]
+  rw [hsum]
+  refine Submodule.sum_mem _ (fun d hd => ?_)
+  exact awayMk_monomial_mem_span N d (coeff d a) (hdegN d hd) (hmonoAll d)
 
 end SpanCore
 
