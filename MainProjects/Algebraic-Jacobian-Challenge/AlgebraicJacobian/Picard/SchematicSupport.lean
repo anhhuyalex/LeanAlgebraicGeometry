@@ -4,6 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Christian Merten
 -/
 import Mathlib
+import AlgebraicJacobian.Picard.QuotScheme
+import AlgebraicJacobian.Picard.PullbackFinitePresentation
 
 /-!
 # Algebraic bricks for the Γ-fibre base-change over a residue field extension
@@ -40,7 +42,23 @@ flat-base-change core of the fibrewise Hilbert-function invariance
 
 Both are universe-monomorphic pure algebra and are axiom-clean
 (`propext, Classical.choice, Quot.sound`).
+
+On top of the algebra bricks, the file now also delivers the **scheme-level
+support-descent brick** itself (wave 8): for a quasi-coherent `F` on `Y` and any
+ideal sheaf `I` with `I(U) ⊆ Ann Γ(F, U)` on affines, the unit
+`F ⟶ i_* i^* F` of the pullback–pushforward adjunction along the closed
+immersion `i : V(I) ↪ Y` is an isomorphism
+(`Scheme.Modules.isIso_unit_subschemeι_of_le_annihilator`); instantiated at the
+annihilator ideal sheaf `I := Ann F` this realizes `F ≅ i_* N` with
+`N := i^* F` on the schematic support
+(`Scheme.Modules.schematicSupportDescentIso`), the geometric half of the
+`lem:gamma_fiber_baseChange_field` reduction, with `N` finitely presented when
+`F` is (`Scheme.Modules.isFinitePresentation_pullback_schematicSupportι`).
 -/
+
+universe u
+
+open CategoryTheory
 
 namespace AlgebraicGeometry
 
@@ -311,5 +329,173 @@ theorem bijective_mk_one_of_le_annihilator
     exact (quotTensorEquivOfLeAnnihilator_apply I hI m).symm
   rw [hfun]
   exact (quotTensorEquivOfLeAnnihilator I hI).bijective
+
+/-- **Bijectivity of the closed-immersion unit, quotient-model-free form**: for
+an `A`-algebra `B` whose structure map `algebraMap A B` is *surjective* with
+kernel contained in `Ann_A M`, the canonical map
+`(TensorProduct.mk A B M) 1 : M → B ⊗_A M`, `m ↦ 1 ⊗ₜ m`, is bijective.
+
+This generalizes `bijective_mk_one_of_le_annihilator` from the literal quotient
+`B = A ⧸ I` to any surjective presentation of `B`: the first isomorphism theorem
+(`Ideal.quotientKerAlgEquivOfSurjective`) identifies `B ≅ A ⧸ ker` as
+`A`-algebras, the identification transports the tensor factor
+(`TensorProduct.congr`) carrying `1 ⊗ₜ m` to `1 ⊗ₜ m`, and the quotient case
+applies.  It is the exact form consumed by the schematic-support descent: on an
+affine `U ⊆ Y` the coordinate ring of a closed subscheme `V(I)` is presented by
+the *surjection* `Γ(Y, U) → Γ(V(I), i⁻¹U)` with kernel `I(U)`
+(`Scheme.IdealSheafData.subschemeι_app_surjective` / `ker_subschemeι_app`), not
+as a literal quotient ring. -/
+theorem bijective_mk_one_of_surjective_of_ker_le_annihilator
+    {A B : Type*} [CommRing A] [CommRing B] [Algebra A B]
+    {M : Type*} [AddCommGroup M] [Module A M]
+    (hsurj : Function.Surjective (algebraMap A B))
+    (hker : RingHom.ker (algebraMap A B) ≤ Module.annihilator A M) :
+    Function.Bijective ((TensorProduct.mk A B M) 1) := by
+  classical
+  set f : A →ₐ[A] B := Algebra.ofId A B with hfdef
+  have hf : Function.Surjective f := fun b => by
+    obtain ⟨a, ha⟩ := hsurj b
+    exact ⟨a, by simpa [hfdef, Algebra.ofId_apply] using ha⟩
+  let e : (A ⧸ RingHom.ker f.toRingHom) ≃ₐ[A] B :=
+    Ideal.quotientKerAlgEquivOfSurjective hf
+  -- `ker (Algebra.ofId A B) = ker (algebraMap A B)` definitionally
+  have hquot : Function.Bijective
+      ((TensorProduct.mk A (A ⧸ RingHom.ker f.toRingHom) M) 1) :=
+    bijective_mk_one_of_le_annihilator (RingHom.ker f.toRingHom) hker
+  -- transport along `TensorProduct.congr e.toLinearEquiv (refl)`
+  let t : ((A ⧸ RingHom.ker f.toRingHom) ⊗[A] M) ≃ₗ[A] (B ⊗[A] M) :=
+    TensorProduct.congr e.toLinearEquiv (LinearEquiv.refl A M)
+  have hcomp : ∀ m : M, (TensorProduct.mk A B M) 1 m
+      = t ((TensorProduct.mk A (A ⧸ RingHom.ker f.toRingHom) M) 1 m) := by
+    intro m
+    change (1 : B) ⊗ₜ[A] m = t ((1 : A ⧸ RingHom.ker f.toRingHom) ⊗ₜ[A] m)
+    rw [show t ((1 : A ⧸ RingHom.ker f.toRingHom) ⊗ₜ[A] m)
+        = e.toLinearEquiv 1 ⊗ₜ[A] m from TensorProduct.congr_tmul _ _ _ _]
+    rw [show e.toLinearEquiv (1 : A ⧸ RingHom.ker f.toRingHom) = 1 from map_one e]
+  rw [show ⇑((TensorProduct.mk A B M) 1)
+      = ⇑t ∘ ⇑((TensorProduct.mk A (A ⧸ RingHom.ker f.toRingHom) M) 1)
+    from funext hcomp]
+  exact t.bijective.comp hquot
+
+/-! ## The scheme-level descent isomorphism `F ≅ i_* i^* F`
+
+The global assembly of the affine hearts above: for a quasi-coherent sheaf of
+modules `F` on a scheme `Y` and an ideal sheaf `I` whose affine sections are
+contained in the annihilators of the section modules of `F`, the adjunction
+unit `F ⟶ i_* i^* F` along the closed immersion `i : V(I) ↪ Y` is an
+isomorphism.
+
+The proof is affine-local (`Modules.isIso_iff_isIso_app_affineOpens`): on an
+affine `U ⊆ Y` the preimage `i⁻¹U` is affine (closed immersions are affine
+morphisms), the quasi-coherent section formula
+`pullback_app_isoTensor_baseMap_sectionLinearEquiv` identifies
+`Γ(i^* F, i⁻¹U) ≅ Γ(V(I), i⁻¹U) ⊗_{Γ(Y,U)} Γ(F, U)` carrying `1 ⊗ x` to the
+adjunction-unit image of `x`, and the unit section map becomes exactly
+`m ↦ 1 ⊗ₜ m`, bijective by `bijective_mk_one_of_surjective_of_ker_le_annihilator`
+(the coordinate ring of `V(I)` is the surjective image of `Γ(Y, U)` with kernel
+`I(U) ⊆ Ann Γ(F, U)`, Mathlib's `subschemeι_app_surjective` +
+`ker_subschemeι_app`). -/
+
+namespace Scheme.Modules
+
+open AlgebraicGeometry.Scheme
+
+/-- **The closed-immersion adjunction unit is an isomorphism over the
+annihilator** (the support-descent brick of `lem:gamma_fiber_baseChange_field`,
+general ideal-sheaf form): for a quasi-coherent `F` on `Y` and an ideal sheaf
+`I` with `I(U) ⊆ Ann_{Γ(Y,U)} Γ(F, U)` for every affine open `U`, the unit
+`F ⟶ i_* i^* F` of the pullback–pushforward adjunction along the closed
+immersion `i = I.subschemeι : V(I) ↪ Y` is an isomorphism.  Only the
+always-available `ofIdeals` inclusion direction is consumed at the annihilator
+instantiation, so no localization bridge is needed. -/
+theorem isIso_unit_subschemeι_of_le_annihilator
+    {Y : Scheme.{u}} (I : Y.IdealSheafData) (F : Y.Modules) [F.IsQuasicoherent]
+    (hI : ∀ U : Y.affineOpens, I.ideal U ≤ Module.annihilator Γ(Y, U.1) Γ(F, U.1)) :
+    IsIso ((Scheme.Modules.pullbackPushforwardAdjunction I.subschemeι).unit.app F) := by
+  refine (Modules.isIso_iff_isIso_app_affineOpens _).mpr fun U => ?_
+  -- the affine pair `(U ⊆ Y, i⁻¹U ⊆ V(I))` of the closed immersion
+  have hW : IsAffineOpen (I.subschemeι ⁻¹ᵁ U.1) := U.2.preimage I.subschemeι
+  letI algInst : Algebra Γ(Y, U.1) Γ(I.subscheme, I.subschemeι ⁻¹ᵁ U.1) :=
+    (I.subschemeι.appLE U.1 (I.subschemeι ⁻¹ᵁ U.1) le_rfl).hom.toAlgebra
+  letI modInst : Module Γ(Y, U.1)
+      Γ((Scheme.Modules.pullback I.subschemeι).obj F, I.subschemeι ⁻¹ᵁ U.1) :=
+    Module.compHom _ (I.subschemeι.appLE U.1 (I.subschemeι ⁻¹ᵁ U.1) le_rfl).hom
+  -- the quasi-coherent affine section formula for the pullback
+  obtain ⟨f, hf⟩ :=
+    (pullback_app_isoTensor_baseMap_sectionLinearEquiv I.subschemeι F hW U.2 le_rfl).some
+  -- the base map at `e = le_rfl` *is* the unit section map
+  have hbase : ∀ x : Γ(F, U.1),
+      pullback_app_isoTensor_baseMap I.subschemeι F le_rfl x
+        = (((Scheme.Modules.pullbackPushforwardAdjunction I.subschemeι).unit.app F).app
+            U.1).hom x := by
+    intro x
+    change ((((Scheme.Modules.pullback I.subschemeι).obj F).presheaf.map
+        (homOfLE le_rfl).op).hom)
+        ((((Scheme.Modules.pullbackPushforwardAdjunction I.subschemeι).unit.app F).val.app
+          (Opposite.op U.1)).hom x) = _
+    rw [show (homOfLE (le_refl (I.subschemeι ⁻¹ᵁ U.1))) = 𝟙 (I.subschemeι ⁻¹ᵁ U.1) from rfl,
+      op_id, CategoryTheory.Functor.map_id]
+    rfl
+  -- the algebra heart: `algebraMap = i.app U` is surjective with kernel `I(U)`
+  have hsurj : Function.Surjective
+      (algebraMap Γ(Y, U.1) Γ(I.subscheme, I.subschemeι ⁻¹ᵁ U.1)) := by
+    change Function.Surjective (I.subschemeι.appLE U.1 (I.subschemeι ⁻¹ᵁ U.1) le_rfl).hom
+    rw [Scheme.Hom.appLE_eq_app]
+    exact I.subschemeι_app_surjective U
+  have hkerle : RingHom.ker (algebraMap Γ(Y, U.1) Γ(I.subscheme, I.subschemeι ⁻¹ᵁ U.1))
+      ≤ Module.annihilator Γ(Y, U.1) Γ(F, U.1) := by
+    change RingHom.ker (I.subschemeι.appLE U.1 (I.subschemeι ⁻¹ᵁ U.1) le_rfl).hom ≤ _
+    rw [Scheme.Hom.appLE_eq_app, IdealSheafData.ker_subschemeι_app]
+    exact hI U
+  -- assemble: the unit section map is `f ∘ (m ↦ 1 ⊗ₜ m)`
+  have hcomp : ⇑((((Scheme.Modules.pullbackPushforwardAdjunction I.subschemeι).unit.app
+        F).app U.1).hom)
+      = ⇑f ∘ ⇑((TensorProduct.mk Γ(Y, U.1)
+          Γ(I.subscheme, I.subschemeι ⁻¹ᵁ U.1) Γ(F, U.1)) 1) := by
+    funext x
+    exact ((hf x).trans (hbase x)).symm
+  have hbij : Function.Bijective
+      ((((Scheme.Modules.pullbackPushforwardAdjunction I.subschemeι).unit.app F).app
+        U.1).hom) := by
+    rw [hcomp]
+    exact f.bijective.comp
+      (bijective_mk_one_of_surjective_of_ker_le_annihilator hsurj hkerle)
+  exact (ConcreteCategory.isIso_iff_bijective _).mpr hbij
+
+/-- **The schematic-support descent: the unit `F ⟶ i_* i^* F` is an
+isomorphism** at the annihilator ideal sheaf (the geometric half of the brick
+`F ≅ i_* N` of `lem:gamma_fiber_baseChange_field`): for a quasi-coherent `F`
+on `Y` with schematic-support immersion
+`i = schematicSupportι F : V(Ann F) ↪ Y`, the adjunction unit is invertible.
+Instantiation of `isIso_unit_subschemeι_of_le_annihilator` via the
+always-available `ofIdeals` direction `annihilator_ideal_le`. -/
+theorem isIso_unit_schematicSupportι
+    {Y : Scheme.{u}} (F : Y.Modules) [F.IsQuasicoherent] :
+    IsIso ((Scheme.Modules.pullbackPushforwardAdjunction
+      (Scheme.Modules.schematicSupportι F)).unit.app F) :=
+  isIso_unit_subschemeι_of_le_annihilator (Scheme.Modules.annihilator F) F
+    (fun U => Scheme.Modules.annihilator_ideal_le F U)
+
+/-- **The support-descent isomorphism `F ≅ i_* N`** with `N := i^* F` on the
+schematic support `Z = V(Ann F)` (`lem:gamma_fiber_baseChange_field`, brick
+(1)): packaging of `isIso_unit_schematicSupportι` as an `Iso`, the comparison
+being the adjunction unit itself. -/
+noncomputable def schematicSupportDescentIso
+    {Y : Scheme.{u}} (F : Y.Modules) [F.IsQuasicoherent] :
+    F ≅ (Scheme.Modules.pushforward (Scheme.Modules.schematicSupportι F)).obj
+      ((Scheme.Modules.pullback (Scheme.Modules.schematicSupportι F)).obj F) :=
+  @asIso _ _ _ _ _ (isIso_unit_schematicSupportι F)
+
+/-- **The descended module `N = i^* F` is finitely presented on the schematic
+support** (`lem:gamma_fiber_baseChange_field`, brick (2)): pullback along the
+schematic-support immersion preserves finite presentation
+(`Modules.pullback_isFinitePresentation`, valid for arbitrary morphisms). -/
+theorem isFinitePresentation_pullback_schematicSupportι
+    {Y : Scheme.{u}} (F : Y.Modules) (hfp : F.IsFinitePresentation) :
+    ((Scheme.Modules.pullback (Scheme.Modules.schematicSupportι F)).obj
+      F).IsFinitePresentation :=
+  Scheme.Modules.pullback_isFinitePresentation _ F hfp
+
+end Scheme.Modules
 
 end AlgebraicGeometry
