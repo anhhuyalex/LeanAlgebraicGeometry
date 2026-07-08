@@ -311,6 +311,94 @@ theorem span_p1CoordAway_pow_top :
   refine Submodule.sum_mem _ (fun d hd => ?_)
   exact awayMk_monomial_mem_span N d (coeff d a) (hdegN d hd) (hmonoAll d)
 
+/-! ### The `y`-chart mirror of the span core (`Γ(V₁) = k[y]`, `ℤ`-span step)
+
+The symmetric statement for the *second* chart `D₊(X₁)`: the degree-zero away ring
+`(ℤ[X₀,X₁]_{X₁})₀` is spanned over `𝒜 0` by the powers of the coordinate fraction
+`X₀/X₁ = p1CoordAway ⟨1⟩ ⟨0⟩`.  The two charts are symmetric under swapping the roles
+of `X₀` and `X₁`; the per-monomial expansion `monomial_eq_C_mul_pow` (which names both
+variables) and the homogeneity bookkeeping (`d₀ + d₁ = N`, chart-independent) are shared
+verbatim, and only the extracted coordinate exponent flips from `d₁` to `d₀`. -/
+
+/-- The `y`-chart mirror of `awayMk_monomial_mem_span`: the degree-`N` monomial fraction
+`(monomial d c)/X₁^N` (with `d₀ + d₁ = N`) equals the degree-zero scalar `C c` times the
+coordinate power `(X₀/X₁)^{d₀}`, hence lies in the span of the powers of `X₀/X₁`. -/
+private lemma awayMkY_monomial_mem_span (N : ℕ) (d : ULift.{u} (Fin 2) →₀ ℕ) (c : ULift.{u} ℤ)
+    (hN : d ⟨0⟩ + d ⟨1⟩ = N)
+    (hmem : (monomial d c : MvPolynomial (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) ∈
+      homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ) (N • 1)) :
+    Away.mk (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))
+        (ProjTwist.X_mem_deg_one (ULift.{u} (Fin 2)) ⟨1⟩) N (monomial d c) hmem ∈
+      Submodule.span (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ) 0)
+        (Set.range fun m : ℕ => p1CoordAway (ULift.{u} (Fin 2)) ⟨1⟩ ⟨0⟩ ^ m) := by
+  have hC0 : (C c : MvPolynomial (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) ∈
+      homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ) 0 :=
+    (mem_homogeneousSubmodule 0 _).mpr (isHomogeneous_C _ c)
+  have key : Away.mk (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))
+        (ProjTwist.X_mem_deg_one (ULift.{u} (Fin 2)) ⟨1⟩) N (monomial d c) hmem
+      = (⟨C c, hC0⟩ : homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ) 0)
+          • p1CoordAway (ULift.{u} (Fin 2)) ⟨1⟩ ⟨0⟩ ^ (d ⟨0⟩) := by
+    apply HomogeneousLocalization.val_injective
+    have hfz : (HomogeneousLocalization.fromZeroRingHom
+        (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))
+        (Submonoid.powers (X ⟨1⟩)) ⟨C c, hC0⟩).val
+        = Localization.mk (C c) 1 := rfl
+    rw [Algebra.smul_def, HomogeneousLocalization.algebraMap_eq,
+        HomogeneousLocalization.val_mul, HomogeneousLocalization.val_pow,
+        Away.val_mk, p1CoordAway, Away.val_mk, Localization.mk_pow, hfz,
+        Localization.mk_mul, Localization.mk_eq_mk_iff, Localization.r_iff_exists]
+    refine ⟨1, ?_⟩
+    simp only [OneMemClass.coe_one, one_mul, SubmonoidClass.coe_pow]
+    rw [monomial_eq_C_mul_pow d c, ← hN]
+    ring
+  rw [key]
+  exact Submodule.smul_mem _ _ (Submodule.subset_span ⟨d ⟨0⟩, rfl⟩)
+
+/-- **The `y`-chart span core.**  The degree-zero away ring `(ℤ[X₀,X₁]_{X₁})₀` is
+spanned, over its constant subring `𝒜 0`, by the powers of the coordinate fraction
+`X₀/X₁ = p1CoordAway ⟨1⟩ ⟨0⟩`.  The `X₀ ↔ X₁` mirror of `span_p1CoordAway_pow_top`. -/
+theorem span_p1CoordAwayY_pow_top :
+    (⊤ : Submodule (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ) 0)
+        (Away (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) (X ⟨1⟩)))
+      ≤ Submodule.span (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ) 0)
+          (Set.range fun m : ℕ => p1CoordAway (ULift.{u} (Fin 2)) ⟨1⟩ ⟨0⟩ ^ m) := by
+  intro w _
+  obtain ⟨N, a, ha, rfl⟩ := HomogeneousLocalization.Away.mk_surjective
+    (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))
+    (ProjTwist.X_mem_deg_one (ULift.{u} (Fin 2)) ⟨1⟩) w
+  have hhom := (mem_homogeneousSubmodule _ _).mp ha
+  have hmonoAll : ∀ d : ULift.{u} (Fin 2) →₀ ℕ,
+      (monomial d (coeff d a) : MvPolynomial (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) ∈
+        homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ) (N • 1) := by
+    intro d
+    rcases eq_or_ne (coeff d a) 0 with h0 | h0
+    · rw [h0, monomial_zero]; exact Submodule.zero_mem _
+    · refine (mem_homogeneousSubmodule _ _).mpr (isHomogeneous_monomial _ ?_)
+      by_contra hne
+      exact h0 (hhom.coeff_eq_zero hne)
+  have hdegN : ∀ d ∈ a.support, d ⟨0⟩ + d ⟨1⟩ = N := by
+    intro d hd
+    rw [mem_support_iff] at hd
+    have hdeg : Finsupp.degree d = N • 1 := by
+      by_contra hne
+      exact hd (hhom.coeff_eq_zero hne)
+    rw [Finsupp.degree_eq_sum,
+        ← Equiv.sum_comp (Equiv.ulift.symm : Fin 2 ≃ ULift.{u} (Fin 2)) (fun i => d i),
+        Fin.sum_univ_two] at hdeg
+    simpa using hdeg
+  have hsum : Away.mk (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))
+        (ProjTwist.X_mem_deg_one (ULift.{u} (Fin 2)) ⟨1⟩) N a ha
+      = ∑ d ∈ a.support, Away.mk (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))
+          (ProjTwist.X_mem_deg_one (ULift.{u} (Fin 2)) ⟨1⟩) N (monomial d (coeff d a))
+          (hmonoAll d) := by
+    apply HomogeneousLocalization.val_injective
+    rw [Away.val_mk, ← HomogeneousLocalization.algebraMap_apply, map_sum]
+    simp only [HomogeneousLocalization.algebraMap_apply, Away.val_mk]
+    rw [← Localization.mk_sum, ← MvPolynomial.as_sum]
+  rw [hsum]
+  refine Submodule.sum_mem _ (fun d hd => ?_)
+  exact awayMkY_monomial_mem_span N d (coeff d a) (hdegN d hd) (hmonoAll d)
+
 end SpanCore
 
 /-! ## Transporting the span core through a ring hom (route step 2, algebraic heart)
@@ -598,6 +686,182 @@ theorem span_pow_p1XSection_scaffold :
       rcases hx with ⟨s, rfl⟩ | ⟨t, rfl⟩
       · exact mem_span_appLE_toProjInt k s
       · exact mem_span_appLE_over k t
+  | zero => exact Submodule.zero_mem _
+  | one => exact Submodule.subset_span ⟨0, pow_zero _⟩
+  | add x y _ _ hx hy => exact Submodule.add_mem _ hx hy
+  | neg x _ hx => exact Submodule.neg_mem _ hx
+  | mul x y _ _ hx hy => exact mul_mem_span_range_pow _ hx hy
+
+/-! ### The `y`-chart mirror of the base change (`Γ(V₁) = k[y]`)
+
+The `X₀ ↔ X₁` mirror of `span_pow_p1XSection_scaffold`, over the second chart
+`V₁ = p1Chart ⟨1⟩ = toProjInt ⁻¹ᵁ D₊(X₁)` with coordinate `y = X₀/X₁ = p1YSection`.
+Every step is the swap of the corresponding `x`-chart step, transporting the `y`-chart
+span core `span_p1CoordAwayY_pow_top`. -/
+
+/-- The `algebraSection` `k`-module structure on `Γ(V₁)` (mirror of `instAlgebraΓV0`). -/
+noncomputable local instance instAlgebraΓV1 :
+    Algebra k Γ(ℙ(ULift.{u} (Fin 2); Spec (CommRingCat.of k)), p1Chart k ⟨1⟩) :=
+  Scheme.toModuleKSheaf.algebraSection
+    (Over.mk (ℙ(ULift.{u} (Fin 2); Spec (CommRingCat.of k)) ↘ Spec (CommRingCat.of k)))
+    (op (p1Chart k ⟨1⟩))
+
+set_option maxHeartbeats 3200000 in
+-- `maxHeartbeats`: mirror of `awayToSection_X0_surjective` (fleet recipe).
+/-- The affine-chart map `awayToSection : (ℤ[X]_{X₁})₀ → Γ(D₊(X₁))` is surjective
+(`X₁` is homogeneous of degree `1 > 0`); mirror of `awayToSection_X0_surjective`. -/
+private lemma awayToSection_X1_surjective :
+    Function.Surjective ⇑(Proj.awayToSection
+      (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) (X ⟨1⟩)) := by
+  haveI : IsIso (Proj.awayToSection
+      (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) (X ⟨1⟩)) := by
+    rw [← Proj.basicOpenIsoAway_hom (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))
+      (X ⟨1⟩) (ProjTwist.X_mem_deg_one (ULift.{u} (Fin 2)) ⟨1⟩) one_pos]
+    infer_instance
+  exact (ConcreteCategory.bijective_of_isIso _).2
+
+set_option maxHeartbeats 800000 in
+-- `maxHeartbeats`: mirror of `mem_span_appLE_toProjInt`; the composite ring hom `ρ`
+-- carries an *explicit source type with ascribed `X`-index* to keep the elaborator from
+-- unifying the `D₊(X₁)` basic-open predicates through the `ℙ¹` pullback (fleet recipe).
+/-- **`V₁`-generators of type (1): the `Proj`-side (mirror).**  The `toProjInt`-pullback
+of a section `s ∈ Γ(D₊(X₁))` lies in the `k`-span of the powers of `y = p1YSection`. -/
+private lemma mem_span_appLE_toProjInt_y
+    (s : Γ(Proj (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ)),
+        Proj.basicOpen (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) (X ⟨1⟩))) :
+    (Scheme.Hom.appLE (toProjInt (ULift.{u} (Fin 2)) (Spec (CommRingCat.of k)))
+        (Proj.basicOpen (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) (X ⟨1⟩))
+        (p1Chart k ⟨1⟩) (le_refl _)).hom s
+      ∈ Submodule.span k (Set.range fun n : ℕ => p1YSection k ^ n) := by
+  have hbridge : Scheme.Hom.appLE (toProjInt (ULift.{u} (Fin 2)) (Spec (CommRingCat.of k)))
+        (Proj.basicOpen (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) (X ⟨1⟩))
+        (p1Chart k ⟨1⟩) (le_refl _)
+      = (toProjInt (ULift.{u} (Fin 2)) (Spec (CommRingCat.of k))).app
+          (Proj.basicOpen (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) (X ⟨1⟩)) :=
+    Scheme.Hom.appLE_eq_app _
+  obtain ⟨a, rfl⟩ := awayToSection_X1_surjective s
+  let ρ : Away (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))
+        (X (⟨1⟩ : ULift.{u} (Fin 2))) →+*
+      Γ(ℙ(ULift.{u} (Fin 2); Spec (CommRingCat.of k)), p1Chart k ⟨1⟩) :=
+    (Scheme.Hom.appLE (toProjInt (ULift.{u} (Fin 2)) (Spec (CommRingCat.of k)))
+        (Proj.basicOpen (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))
+          (X (⟨1⟩ : ULift.{u} (Fin 2))))
+        (p1Chart k ⟨1⟩) (le_refl _)).hom.comp
+      (Proj.awayToSection (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))
+        (X (⟨1⟩ : ULift.{u} (Fin 2)))).hom
+  have hval : ρ (p1CoordAway (ULift.{u} (Fin 2)) ⟨1⟩ ⟨0⟩) = p1YSection k := by
+    show ((Scheme.Hom.appLE (toProjInt (ULift.{u} (Fin 2)) (Spec (CommRingCat.of k)))
+          (Proj.basicOpen (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))
+            (X (⟨1⟩ : ULift.{u} (Fin 2))))
+          (p1Chart k ⟨1⟩) (le_refl _)).hom.comp
+        (Proj.awayToSection (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))
+          (X (⟨1⟩ : ULift.{u} (Fin 2)))).hom)
+        (p1CoordAway (ULift.{u} (Fin 2)) ⟨1⟩ ⟨0⟩) = p1YSection k
+    rw [hbridge]; rfl
+  have hmem : a ∈ Submodule.span (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ) 0)
+      (Set.range fun m : ℕ => p1CoordAway (ULift.{u} (Fin 2)) ⟨1⟩ ⟨0⟩ ^ m) :=
+    span_p1CoordAwayY_pow_top Submodule.mem_top
+  show ρ a ∈ Submodule.span k (Set.range fun n : ℕ => p1YSection k ^ n)
+  induction hmem using Submodule.span_induction with
+  | mem z hz =>
+      obtain ⟨m, rfl⟩ := hz
+      rw [map_pow, hval]
+      exact Submodule.subset_span ⟨m, rfl⟩
+  | zero => rw [map_zero]; exact Submodule.zero_mem _
+  | add u v _ _ hu hv => rw [map_add]; exact Submodule.add_mem _ hu hv
+  | smul c u _ hu =>
+      obtain ⟨m, rfl⟩ := exists_intCast_eq_gradeZero c
+      rw [Int.cast_smul_eq_zsmul, map_zsmul, ← Int.cast_smul_eq_zsmul k]
+      exact Submodule.smul_mem _ _ hu
+
+set_option maxHeartbeats 800000 in
+-- `maxHeartbeats`: mirror of `mem_span_appLE_over` (fleet recipe).
+/-- **`V₁`-generators of type (2): the `Spec k`-side (mirror).**  The structure-morphism
+pullback of `t ∈ Γ(Spec k, ⊤)` is the `k`-scalar `ΓSpecIso t` times `1`, hence in the
+span; mirror of `mem_span_appLE_over`. -/
+private lemma mem_span_appLE_over_y
+    (t : Γ(Spec (CommRingCat.of k), (⊤ : (Spec (CommRingCat.of k)).Opens))) :
+    (Scheme.Hom.appLE (ℙ(ULift.{u} (Fin 2); Spec (CommRingCat.of k)) ↘ Spec (CommRingCat.of k))
+        ⊤ (p1Chart k ⟨1⟩) le_top).hom t
+      ∈ Submodule.span k (Set.range fun n : ℕ => p1YSection k ^ n) := by
+  have hcomp : Scheme.toModuleKSheaf.kToSection
+        (Over.mk (ℙ(ULift.{u} (Fin 2); Spec (CommRingCat.of k)) ↘ Spec (CommRingCat.of k)))
+        (op (p1Chart k ⟨1⟩))
+      = (Scheme.ΓSpecIso (CommRingCat.of k)).inv ≫
+          Scheme.Hom.appLE
+            (ℙ(ULift.{u} (Fin 2); Spec (CommRingCat.of k)) ↘ Spec (CommRingCat.of k))
+            ⊤ (p1Chart k ⟨1⟩) le_top := rfl
+  have hkTo : ∀ c : k,
+      algebraMap k Γ(ℙ(ULift.{u} (Fin 2); Spec (CommRingCat.of k)), p1Chart k ⟨1⟩) c
+      = (Scheme.Hom.appLE (ℙ(ULift.{u} (Fin 2); Spec (CommRingCat.of k)) ↘ Spec (CommRingCat.of k))
+          ⊤ (p1Chart k ⟨1⟩) le_top).hom
+          ((Scheme.ΓSpecIso (CommRingCat.of k)).inv.hom c) := by
+    intro c
+    have e1 : algebraMap k Γ(ℙ(ULift.{u} (Fin 2); Spec (CommRingCat.of k)), p1Chart k ⟨1⟩) c
+        = (Scheme.toModuleKSheaf.kToSection
+            (Over.mk (ℙ(ULift.{u} (Fin 2); Spec (CommRingCat.of k)) ↘ Spec (CommRingCat.of k)))
+            (op (p1Chart k ⟨1⟩))).hom c := rfl
+    rw [e1, hcomp]
+    rfl
+  have hinv : (Scheme.ΓSpecIso (CommRingCat.of k)).inv.hom
+      ((Scheme.ΓSpecIso (CommRingCat.of k)).hom.hom t) = t :=
+    (Scheme.ΓSpecIso (CommRingCat.of k)).hom_inv_id_apply t
+  have h1 : (Scheme.Hom.appLE
+        (ℙ(ULift.{u} (Fin 2); Spec (CommRingCat.of k)) ↘ Spec (CommRingCat.of k))
+        ⊤ (p1Chart k ⟨1⟩) le_top).hom t
+      = algebraMap k Γ(ℙ(ULift.{u} (Fin 2); Spec (CommRingCat.of k)), p1Chart k ⟨1⟩)
+          ((Scheme.ΓSpecIso (CommRingCat.of k)).hom.hom t) := by
+    rw [hkTo, hinv]
+  rw [h1, Algebra.algebraMap_eq_smul_one]
+  exact Submodule.smul_mem _ _ (Submodule.subset_span ⟨0, pow_zero _⟩)
+
+set_option maxHeartbeats 1600000 in
+-- `maxHeartbeats`: mirror of `span_pow_p1XSection_scaffold` (fleet recipe).
+/-- **Route step 2 (`y`-chart): `Γ(V₁) = k[y]`.**  The second chart `V₁ = p1Chart ⟨1⟩`
+of the `ℙ¹` model is the pullback of the affine `D₊(X₁)`; its section ring is the ring
+pushout `Γ(D₊(X₁)) ⊗_ℤ k`, whose two structural maps ring-generate it.  The `Proj`-side
+generators land in the `k`-span of the powers of `y = X₀/X₁` (`mem_span_appLE_toProjInt_y`);
+the `Spec k`-side generators are `k`-multiples of `1` (`mem_span_appLE_over_y`).  Mirror of
+`span_pow_p1XSection_scaffold`. -/
+theorem span_pow_p1YSection_scaffold :
+    (⊤ : Submodule k Γ(ℙ(ULift.{u} (Fin 2); Spec (CommRingCat.of k)), p1Chart k ⟨1⟩)) ≤
+      Submodule.span k (Set.range fun n : ℕ => p1YSection k ^ n) := by
+  have H : IsPullback
+      (toProjInt (ULift.{u} (Fin 2)) (Spec (CommRingCat.of k)))
+      (ℙ(ULift.{u} (Fin 2); Spec (CommRingCat.of k)) ↘ Spec (CommRingCat.of k))
+      (terminal.from (Proj (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))))
+      (terminal.from (Spec (CommRingCat.of k))) :=
+    (IsPullback.of_hasPullback (terminal.from (Spec (CommRingCat.of k)))
+      (terminal.from (Proj (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))))).flip
+  have hUY : p1Chart k ⟨1⟩
+      = toProjInt (ULift.{u} (Fin 2)) (Spec (CommRingCat.of k)) ⁻¹ᵁ
+          Proj.basicOpen (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) (X ⟨1⟩)
+        ⊓ (ℙ(ULift.{u} (Fin 2); Spec (CommRingCat.of k)) ↘ Spec (CommRingCat.of k)) ⁻¹ᵁ ⊤ := by
+    simp only [Scheme.Hom.preimage_top, inf_top_eq]
+    rfl
+  have hUST : (⊤ : (Spec (CommRingCat.of k)).Opens) ≤
+      terminal.from (Spec (CommRingCat.of k)) ⁻¹ᵁ ⊤ := (Scheme.Hom.preimage_top _).ge
+  have hUSX : Proj.basicOpen (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) (X ⟨1⟩) ≤
+      terminal.from (Proj (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))) ⁻¹ᵁ ⊤ :=
+    le_top
+  have hUS : IsAffineOpen (⊤ : (⊤_ Scheme.{u}).Opens) := isAffineOpen_top _
+  have hUT : IsAffineOpen (⊤ : (Spec (CommRingCat.of k)).Opens) := isAffineOpen_top _
+  have hUX : IsAffineOpen
+      (Proj.basicOpen (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) (X ⟨1⟩)) :=
+    Proj.isAffineOpen_basicOpen _ _
+      (ProjTwist.X_mem_deg_one (ULift.{u} (Fin 2)) ⟨1⟩) one_pos
+  have hIso : IsIso (pushoutSection H hUST hUSX hUY) :=
+    isIso_pushoutSection_of_isAffineOpen H hUST hUSX hUY hUS hUT hUX
+  have hpoCat := (isIso_pushoutSection_iff H hUST hUSX hUY).mp hIso
+  have hclos := CommRingCat.closure_range_union_range_eq_top_of_isPushout hpoCat
+  intro b hbtop
+  clear hbtop
+  have hb : b ∈ Subring.closure _ := hclos.ge (Subring.mem_top b)
+  induction hb using Subring.closure_induction with
+  | mem x hx =>
+      rcases hx with ⟨s, rfl⟩ | ⟨t, rfl⟩
+      · exact mem_span_appLE_toProjInt_y k s
+      · exact mem_span_appLE_over_y k t
   | zero => exact Submodule.zero_mem _
   | one => exact Submodule.subset_span ⟨0, pow_zero _⟩
   | add x y _ _ hx hy => exact Submodule.add_mem _ hx hy
