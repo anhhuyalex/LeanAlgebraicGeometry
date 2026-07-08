@@ -132,4 +132,50 @@ noncomputable def p1YSection :
 
 end CoordSection
 
+/-! ## The chart-ring span core (the `ℤ[X₁/X₀]` computation)
+
+The mathematical heart of `span_pow_x`: every element of the degree-zero away ring
+`(ℤ[X₀,X₁]_{X₀})₀` is a `(𝒜 0)`-combination of the powers of the coordinate fraction
+`X₁/X₀`.  The key algebraic step is that a degree-`(a+b)` monomial fraction
+`X₀^a X₁^b / X₀^(a+b)` equals `(X₁/X₀)^b`. -/
+
+section SpanCore
+
+/-- The pure monomial identity `(x₀¹)ᵇ (x₀ᵃ x₁ᵇ) = x₀^(a+b) x₁ᵇ`, proved in a generic
+commutative monoid so the certificate never touches the expensive `MvPolynomial`
+`ring` normalisation. -/
+private lemma pow_mul_pow_identity {A : Type*} [CommMonoid A] (x0 x1 : A) (a b : ℕ) :
+    (x0 ^ 1) ^ b * (x0 ^ a * x1 ^ b) = x0 ^ (a + b) * x1 ^ b := by
+  rw [pow_one, ← mul_assoc, ← pow_add, Nat.add_comm b a]
+
+/-- The degree-`(a+b)` monomial fraction `X₀^a X₁^b / X₀^(a+b)` as an element of the
+degree-zero away ring `(ℤ[X]_{X₀})₀`.  (Isolating the `Away.mk` inside a definition,
+with the homogeneity obligation discharged by a `by`-block rather than a pre-typed
+term, keeps the concrete graded-instance `isDefEq` from blowing up — cf. `p1CoordAway`.) -/
+noncomputable def p1Monomial (a b : ℕ) :
+    Away (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) (X ⟨0⟩) :=
+  Away.mk _ (ProjTwist.X_mem_deg_one (ULift.{u} (Fin 2)) ⟨0⟩) (a + b)
+    (X ⟨0⟩ ^ a * X ⟨1⟩ ^ b)
+    (by
+      rw [add_smul]
+      exact SetLike.mul_mem_graded
+        (SetLike.pow_mem_graded a (ProjTwist.X_mem_deg_one (ULift.{u} (Fin 2)) ⟨0⟩))
+        (SetLike.pow_mem_graded b (ProjTwist.X_mem_deg_one (ULift.{u} (Fin 2)) ⟨1⟩)))
+
+/-- **The monomial-to-power identity.**  The degree-`(a+b)` monomial fraction
+`X₀^a X₁^b / X₀^(a+b)` in `(ℤ[X]_{X₀})₀` equals `(X₁/X₀)^b`, the `b`-th power of the
+coordinate fraction.  This is the per-monomial step of the chart-ring spanning
+`Γ(V₀) = k[X₁/X₀]`. -/
+lemma p1Monomial_eq_coordPow (a b : ℕ) :
+    p1Monomial a b = p1CoordAway (ULift.{u} (Fin 2)) ⟨0⟩ ⟨1⟩ ^ b := by
+  apply HomogeneousLocalization.val_injective
+  rw [HomogeneousLocalization.val_pow]
+  simp only [p1Monomial, p1CoordAway, Away.val_mk, Localization.mk_pow]
+  rw [Localization.mk_eq_mk_iff, Localization.r_iff_exists]
+  refine ⟨1, ?_⟩
+  simp only [OneMemClass.coe_one, one_mul, SubmonoidClass.coe_pow]
+  exact pow_mul_pow_identity _ _ a b
+
+end SpanCore
+
 end AlgebraicGeometry.Adelic
