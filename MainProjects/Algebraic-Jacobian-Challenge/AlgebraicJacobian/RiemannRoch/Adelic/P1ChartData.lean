@@ -353,4 +353,245 @@ lemma awayRingHom_mem_span_pow {B : Type u} [CommRing B] [Algebra k B]
 
 end SpanTransport
 
+/-! ## Base change spans (route step 2, general algebra) -/
+
+section BaseChangeSpan
+
+/-- **Base change is spanned by the image.**  If `N` is the base change of the
+`R`-module `M` to `S` (`IsBaseChange S f` for `f : M →ₗ[R] N`), then `N` is
+spanned over `S` by the image of `f` — because `N ≃ S ⊗[R] M` and every pure
+tensor `s ⊗ m = s • f m` lies in the `S`-span of the range. -/
+theorem isBaseChange_span_range_eq_top {R S M N : Type*} [CommSemiring R]
+    [CommSemiring S] [AddCommMonoid M] [AddCommMonoid N] [Module R M] [Module R N]
+    [Algebra R S] [Module S N] [IsScalarTower R S N] {f : M →ₗ[R] N}
+    (hf : IsBaseChange S f) :
+    Submodule.span S (Set.range f) = ⊤ := by
+  rw [eq_top_iff]
+  rintro n -
+  obtain ⟨t, rfl⟩ := hf.equiv.surjective n
+  refine TensorProduct.induction_on t (by simp) (fun s m => ?_)
+    (fun x y hx hy => by rw [map_add]; exact Submodule.add_mem _ hx hy)
+  rw [hf.equiv_tmul]
+  exact Submodule.smul_mem _ _ (Submodule.subset_span ⟨m, rfl⟩)
+
+open scoped Pointwise in
+/-- The `k`-span of the powers of a single element `x` is closed under
+multiplication (`xᵃ · xᵇ = xᵃ⁺ᵇ` is again a power), hence a subring — the fact
+that makes it the target of a `Subring.closure` induction. -/
+theorem mul_mem_span_range_pow {k A : Type*} [CommRing k] [CommRing A] [Algebra k A]
+    (x : A) {a b : A}
+    (ha : a ∈ Submodule.span k (Set.range fun n : ℕ => x ^ n))
+    (hb : b ∈ Submodule.span k (Set.range fun n : ℕ => x ^ n)) :
+    a * b ∈ Submodule.span k (Set.range fun n : ℕ => x ^ n) := by
+  have hSS : (Set.range fun n : ℕ => x ^ n) * (Set.range fun n : ℕ => x ^ n)
+      ⊆ Set.range fun n : ℕ => x ^ n := by
+    rw [Set.mul_subset_iff]
+    rintro _ ⟨p, rfl⟩ _ ⟨q, rfl⟩
+    exact ⟨p + q, by simp only [pow_add]⟩
+  have hmul := Submodule.mul_mem_mul ha hb
+  rw [Submodule.span_mul_span] at hmul
+  exact Submodule.span_mono hSS hmul
+
+end BaseChangeSpan
+
+section BaseChange
+
+variable (k : Type u) [Field k]
+
+open ProjectiveSpace HomogeneousLocalization
+
+/-- The `algebraSection` `k`-module structure on `Γ(V₀)` (registered locally so
+the span statement uses the same module structure as `LaurentChartData.span_pow_x`
+will at the assembly site). -/
+noncomputable local instance instAlgebraΓV0 :
+    Algebra k Γ(ℙ(ULift.{u} (Fin 2); Spec (CommRingCat.of k)), p1Chart k ⟨0⟩) :=
+  Scheme.toModuleKSheaf.algebraSection
+    (Over.mk (ℙ(ULift.{u} (Fin 2); Spec (CommRingCat.of k)) ↘ Spec (CommRingCat.of k)))
+    (op (p1Chart k ⟨0⟩))
+
+set_option maxHeartbeats 3200000 in
+-- `maxHeartbeats`: constructing the affine-chart iso `basicOpenIsoAway` (its `IsIso`
+-- witness threads the whole `Proj` structure-sheaf machinery) is heavy (fleet recipe).
+/-- The affine-chart map `awayToSection : (ℤ[X]_{X₀})₀ → Γ(D₊(X₀))` is surjective:
+it is the isomorphism `basicOpenIsoAway` (`X₀` is homogeneous of degree `1 > 0`). -/
+private lemma awayToSection_X0_surjective :
+    Function.Surjective ⇑(Proj.awayToSection
+      (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) (X ⟨0⟩)) := by
+  haveI : IsIso (Proj.awayToSection
+      (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) (X ⟨0⟩)) := by
+    rw [← Proj.basicOpenIsoAway_hom (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))
+      (X ⟨0⟩) (ProjTwist.X_mem_deg_one (ULift.{u} (Fin 2)) ⟨0⟩) one_pos]
+    infer_instance
+  exact (ConcreteCategory.bijective_of_isIso _).2
+
+set_option maxHeartbeats 800000 in
+-- `maxHeartbeats`: the `p1Chart`/preimage `appLE`-vs-`app` bridge crosses the concrete
+-- `Proj`/`ℙ¹` model diamonds (fleet recipe).  The `ℤ`-span core is transported by an
+-- *inlined* `span_induction` (primitive `Submodule` steps only), and the composite ring
+-- hom `ρ` carries an *explicit source type* so the elaborator solves its `X`-index at the
+-- argument level — otherwise `RingHom.comp` defers it and unifies `D₊(X₀)` basic-open
+-- predicates through the `ℙ¹` pullback into `MvPolynomial`, which is astronomically slow.
+/-- **`V₀`-generators of type (1): the `Proj`-side.**  The `toProjInt`-pullback of a
+section `s ∈ Γ(D₊(X₀))` lies in the `k`-span of the powers of `x = p1XSection`.
+Writing `s = awayToSection a` (the affine chart iso, `awayToSection_X0_surjective`)
+and reducing `appLE` to `app` (the chart open is `toProjInt ⁻¹ᵁ D₊(X₀)`), the pullback
+is `ρ a` for the ring hom `ρ = appLE ∘ awayToSection`; every `a` is a `(𝒜 0)`-combination
+of the coordinate powers (`span_p1CoordAway_pow_top`), and `ρ` carries those to the powers
+of `x`, the `(𝒜 0) = ℤ`-scalars becoming `k`-scalars (`exists_intCast_eq_gradeZero`). -/
+private lemma mem_span_appLE_toProjInt
+    (s : Γ(Proj (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ)),
+        Proj.basicOpen (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) (X ⟨0⟩))) :
+    (Scheme.Hom.appLE (toProjInt (ULift.{u} (Fin 2)) (Spec (CommRingCat.of k)))
+        (Proj.basicOpen (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) (X ⟨0⟩))
+        (p1Chart k ⟨0⟩) (le_refl _)).hom s
+      ∈ Submodule.span k (Set.range fun n : ℕ => p1XSection k ^ n) := by
+  have hbridge : Scheme.Hom.appLE (toProjInt (ULift.{u} (Fin 2)) (Spec (CommRingCat.of k)))
+        (Proj.basicOpen (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) (X ⟨0⟩))
+        (p1Chart k ⟨0⟩) (le_refl _)
+      = (toProjInt (ULift.{u} (Fin 2)) (Spec (CommRingCat.of k))).app
+          (Proj.basicOpen (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) (X ⟨0⟩)) :=
+    Scheme.Hom.appLE_eq_app _
+  obtain ⟨a, rfl⟩ := awayToSection_X0_surjective s
+  -- `ρ = appLE ∘ awayToSection`, with an *explicit source type* (`let` for transparency)
+  let ρ : Away (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))
+        (X (⟨0⟩ : ULift.{u} (Fin 2))) →+*
+      Γ(ℙ(ULift.{u} (Fin 2); Spec (CommRingCat.of k)), p1Chart k ⟨0⟩) :=
+    (Scheme.Hom.appLE (toProjInt (ULift.{u} (Fin 2)) (Spec (CommRingCat.of k)))
+        (Proj.basicOpen (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))
+          (X (⟨0⟩ : ULift.{u} (Fin 2))))
+        (p1Chart k ⟨0⟩) (le_refl _)).hom.comp
+      (Proj.awayToSection (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))
+        (X (⟨0⟩ : ULift.{u} (Fin 2)))).hom
+  -- `ρ (X₁/X₀) = x = p1XSection`: rewrite `appLE = app` (`hbridge`), the rest is `rfl`.
+  have hval : ρ (p1CoordAway (ULift.{u} (Fin 2)) ⟨0⟩ ⟨1⟩) = p1XSection k := by
+    show ((Scheme.Hom.appLE (toProjInt (ULift.{u} (Fin 2)) (Spec (CommRingCat.of k)))
+          (Proj.basicOpen (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))
+            (X (⟨0⟩ : ULift.{u} (Fin 2))))
+          (p1Chart k ⟨0⟩) (le_refl _)).hom.comp
+        (Proj.awayToSection (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))
+          (X (⟨0⟩ : ULift.{u} (Fin 2)))).hom)
+        (p1CoordAway (ULift.{u} (Fin 2)) ⟨0⟩ ⟨1⟩) = p1XSection k
+    rw [hbridge]; rfl
+  -- every away element is a `(𝒜 0)`-combination of coordinate powers (the `ℤ`-span core)
+  have hmem : a ∈ Submodule.span (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ) 0)
+      (Set.range fun m : ℕ => p1CoordAway (ULift.{u} (Fin 2)) ⟨0⟩ ⟨1⟩ ^ m) :=
+    span_p1CoordAway_pow_top Submodule.mem_top
+  show ρ a ∈ Submodule.span k (Set.range fun n : ℕ => p1XSection k ^ n)
+  induction hmem using Submodule.span_induction with
+  | mem z hz =>
+      obtain ⟨m, rfl⟩ := hz
+      rw [map_pow, hval]
+      exact Submodule.subset_span ⟨m, rfl⟩
+  | zero => rw [map_zero]; exact Submodule.zero_mem _
+  | add u v _ _ hu hv => rw [map_add]; exact Submodule.add_mem _ hu hv
+  | smul c u _ hu =>
+      obtain ⟨m, rfl⟩ := exists_intCast_eq_gradeZero c
+      rw [Int.cast_smul_eq_zsmul, map_zsmul, ← Int.cast_smul_eq_zsmul k]
+      exact Submodule.smul_mem _ _ hu
+
+set_option maxHeartbeats 800000 in
+-- `maxHeartbeats`: `kToSection`/`appLE` share the structure-map section as a subterm,
+-- but recognising the algebra-instance unfolding crosses the `ℙ¹` model (fleet recipe).
+/-- **`V₀`-generators of type (2): the `Spec k`-side.**  The structure-morphism
+pullback of a section `t ∈ Γ(Spec k, ⊤)` is the `k`-scalar `ΓSpecIso t` times `1`
+(the structure-morphism algebra map factors as `iY.appLE ∘ ΓSpecIso.inv`), hence lies
+in the span (which contains `1 = x⁰`). -/
+private lemma mem_span_appLE_over
+    (t : Γ(Spec (CommRingCat.of k), (⊤ : (Spec (CommRingCat.of k)).Opens))) :
+    (Scheme.Hom.appLE (ℙ(ULift.{u} (Fin 2); Spec (CommRingCat.of k)) ↘ Spec (CommRingCat.of k))
+        ⊤ (p1Chart k ⟨0⟩) le_top).hom t
+      ∈ Submodule.span k (Set.range fun n : ℕ => p1XSection k ^ n) := by
+  -- `kToSection = ΓSpecIso.inv ≫ iY.appLE` (morphism level, `app ⊤` shared as subterm)
+  have hcomp : Scheme.toModuleKSheaf.kToSection
+        (Over.mk (ℙ(ULift.{u} (Fin 2); Spec (CommRingCat.of k)) ↘ Spec (CommRingCat.of k)))
+        (op (p1Chart k ⟨0⟩))
+      = (Scheme.ΓSpecIso (CommRingCat.of k)).inv ≫
+          Scheme.Hom.appLE
+            (ℙ(ULift.{u} (Fin 2); Spec (CommRingCat.of k)) ↘ Spec (CommRingCat.of k))
+            ⊤ (p1Chart k ⟨0⟩) le_top := rfl
+  have hkTo : ∀ c : k,
+      algebraMap k Γ(ℙ(ULift.{u} (Fin 2); Spec (CommRingCat.of k)), p1Chart k ⟨0⟩) c
+      = (Scheme.Hom.appLE (ℙ(ULift.{u} (Fin 2); Spec (CommRingCat.of k)) ↘ Spec (CommRingCat.of k))
+          ⊤ (p1Chart k ⟨0⟩) le_top).hom
+          ((Scheme.ΓSpecIso (CommRingCat.of k)).inv.hom c) := by
+    intro c
+    have e1 : algebraMap k Γ(ℙ(ULift.{u} (Fin 2); Spec (CommRingCat.of k)), p1Chart k ⟨0⟩) c
+        = (Scheme.toModuleKSheaf.kToSection
+            (Over.mk (ℙ(ULift.{u} (Fin 2); Spec (CommRingCat.of k)) ↘ Spec (CommRingCat.of k)))
+            (op (p1Chart k ⟨0⟩))).hom c := rfl
+    rw [e1, hcomp]
+    rfl
+  have hinv : (Scheme.ΓSpecIso (CommRingCat.of k)).inv.hom
+      ((Scheme.ΓSpecIso (CommRingCat.of k)).hom.hom t) = t :=
+    (Scheme.ΓSpecIso (CommRingCat.of k)).hom_inv_id_apply t
+  have h1 : (Scheme.Hom.appLE
+        (ℙ(ULift.{u} (Fin 2); Spec (CommRingCat.of k)) ↘ Spec (CommRingCat.of k))
+        ⊤ (p1Chart k ⟨0⟩) le_top).hom t
+      = algebraMap k Γ(ℙ(ULift.{u} (Fin 2); Spec (CommRingCat.of k)), p1Chart k ⟨0⟩)
+          ((Scheme.ΓSpecIso (CommRingCat.of k)).hom.hom t) := by
+    rw [hkTo, hinv]
+  rw [h1, Algebra.algebraMap_eq_smul_one]
+  exact Submodule.smul_mem _ _ (Submodule.subset_span ⟨0, pow_zero _⟩)
+
+set_option maxHeartbeats 1600000 in
+-- `maxHeartbeats`: the `pushoutSection` cover setup and the two `Subring.closure`
+-- generator matches each cross the concrete `ℙ¹` pullback model (fleet recipe).
+/-- **Route step 2 (the char-free base change): `Γ(V₀) = k[x]`.**  The first chart
+`V₀ = p1Chart ⟨0⟩ = toProjInt ⁻¹ᵁ D₊(X₀)` of the `ℙ¹` model is the pullback of the
+affine `D₊(X₀) ⊆ Proj ℤ[X₀,X₁]` along `Spec k → ⊤_Scheme`; as a fibre product of
+affines its section ring is the ring pushout `Γ(D₊(X₀)) ⊗_ℤ k`
+(`isIso_pushoutSection_of_isAffineOpen`), whose two structural maps ring-generate it
+(`closure_range_union_range_eq_top_of_isPushout`).  The `Proj`-side generators land
+in the `k`-span of the powers of `x = X₁/X₀` (`mem_span_appLE_toProjInt`); the
+`Spec k`-side generators are `k`-multiples of `1` (`mem_span_appLE_over`).  Hence
+`Γ(V₀)` is `k`-spanned by the powers of `x = p1XSection`. -/
+theorem span_pow_p1XSection_scaffold :
+    (⊤ : Submodule k Γ(ℙ(ULift.{u} (Fin 2); Spec (CommRingCat.of k)), p1Chart k ⟨0⟩)) ≤
+      Submodule.span k (Set.range fun n : ℕ => p1XSection k ^ n) := by
+  -- the defining pullback square of `ℙ¹`, in the `Scheme.Hom.pushoutSection` orientation
+  have H : IsPullback
+      (toProjInt (ULift.{u} (Fin 2)) (Spec (CommRingCat.of k)))
+      (ℙ(ULift.{u} (Fin 2); Spec (CommRingCat.of k)) ↘ Spec (CommRingCat.of k))
+      (terminal.from (Proj (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))))
+      (terminal.from (Spec (CommRingCat.of k))) :=
+    (IsPullback.of_hasPullback (terminal.from (Spec (CommRingCat.of k)))
+      (terminal.from (Proj (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))))).flip
+  have hUY : p1Chart k ⟨0⟩
+      = toProjInt (ULift.{u} (Fin 2)) (Spec (CommRingCat.of k)) ⁻¹ᵁ
+          Proj.basicOpen (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) (X ⟨0⟩)
+        ⊓ (ℙ(ULift.{u} (Fin 2); Spec (CommRingCat.of k)) ↘ Spec (CommRingCat.of k)) ⁻¹ᵁ ⊤ := by
+    simp only [Scheme.Hom.preimage_top, inf_top_eq]
+    rfl
+  have hUST : (⊤ : (Spec (CommRingCat.of k)).Opens) ≤
+      terminal.from (Spec (CommRingCat.of k)) ⁻¹ᵁ ⊤ := (Scheme.Hom.preimage_top _).ge
+  have hUSX : Proj.basicOpen (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) (X ⟨0⟩) ≤
+      terminal.from (Proj (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ))) ⁻¹ᵁ ⊤ :=
+    le_top
+  have hUS : IsAffineOpen (⊤ : (⊤_ Scheme.{u}).Opens) := isAffineOpen_top _
+  have hUT : IsAffineOpen (⊤ : (Spec (CommRingCat.of k)).Opens) := isAffineOpen_top _
+  have hUX : IsAffineOpen
+      (Proj.basicOpen (homogeneousSubmodule (ULift.{u} (Fin 2)) (ULift.{u} ℤ)) (X ⟨0⟩)) :=
+    Proj.isAffineOpen_basicOpen _ _
+      (ProjTwist.X_mem_deg_one (ULift.{u} (Fin 2)) ⟨0⟩) one_pos
+  have hIso : IsIso (pushoutSection H hUST hUSX hUY) :=
+    isIso_pushoutSection_of_isAffineOpen H hUST hUSX hUY hUS hUT hUX
+  have hpoCat := (isIso_pushoutSection_iff H hUST hUSX hUY).mp hIso
+  have hclos := CommRingCat.closure_range_union_range_eq_top_of_isPushout hpoCat
+  -- ### The two generating families ring-generate `Γ(V₀)`, so every section lies in the span.
+  intro b hbtop
+  clear hbtop
+  have hb : b ∈ Subring.closure _ := hclos.ge (Subring.mem_top b)
+  induction hb using Subring.closure_induction with
+  | mem x hx =>
+      rcases hx with ⟨s, rfl⟩ | ⟨t, rfl⟩
+      · exact mem_span_appLE_toProjInt k s
+      · exact mem_span_appLE_over k t
+  | zero => exact Submodule.zero_mem _
+  | one => exact Submodule.subset_span ⟨0, pow_zero _⟩
+  | add x y _ _ hx hy => exact Submodule.add_mem _ hx hy
+  | neg x _ hx => exact Submodule.neg_mem _ hx
+  | mul x y _ _ hx hy => exact mul_mem_span_range_pow _ hx hy
+
+end BaseChange
+
 end AlgebraicGeometry.Adelic
