@@ -1,3 +1,0 @@
-**Defining the Lean Goal**
-
-I'm now focusing on explaining the Lean goal state from `AlgebraicJacobian/Picard/Pic0AbelianVariety.lean`, particularly the `tangentSpaceEquiv` theorem. I'll translate the formal language into a more accessible natural language description, focusing on its implications within the context of Picard varieties and their tangent spaces. Then, I'll translate this into a KaTeX equation.
