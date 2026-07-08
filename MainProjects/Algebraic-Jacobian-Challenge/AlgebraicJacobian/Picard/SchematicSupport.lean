@@ -6,6 +6,7 @@ Authors: Christian Merten
 import Mathlib
 import AlgebraicJacobian.Picard.QuotScheme
 import AlgebraicJacobian.Picard.PullbackFinitePresentation
+import AlgebraicJacobian.Picard.TensorSectionFormula
 
 /-!
 # Algebraic bricks for the Γ-fibre base-change over a residue field extension
@@ -495,6 +496,175 @@ theorem isFinitePresentation_pullback_schematicSupportι
     ((Scheme.Modules.pullback (Scheme.Modules.schematicSupportι F)).obj
       F).IsFinitePresentation :=
   Scheme.Modules.pullback_isFinitePresentation _ F hfp
+
+end Scheme.Modules
+
+/-! ## Support monotonicity under the sheaf tensor product
+
+The twist `F ⊗ L^{⊗m}` (`Scheme.Modules.moduleTensorPow`) has schematic support
+contained in that of `F` — step (3) of the `lem:gamma_fiber_baseChange_field`
+reduction.  On an affine `U`, any scalar `r` in the annihilator ideal sheaf of
+the left factor kills every section `x` of the sheafified tensor product: by
+local surjectivity of the sheafification unit
+(`CategoryTheory.Presheaf.isLocallySurjective_toSheafify'` through the
+`PresheafOfModules` bridge), `x` is locally — on affine basis members `W` — the
+image of an honest presheaf-tensor element of `Γ(A, W) ⊗_{Γ(X, W)} Γ(B, W)`,
+which the restricted scalar `r|_W` kills
+(`annihilator_le_annihilator_tensorProduct`, valid since
+`r|_W ∈ (annihilator A).ideal W ≤ Ann Γ(A, W)` by the ideal-sheaf restriction
+compatibility `IdealSheafData.ideal_le_comap_ideal`); separatedness of the sheaf
+then forces `r • x = 0` globally on `U`.  Consequently
+`annihilator A ≤ annihilator (A ⊗ B)` (`ofIdeals` Galois property), the
+schematic support of the twist closed-immerses into that of `A`
+(`IdealSheafData.inclusion`), and proper support transfers to every twist. -/
+
+open TopologicalSpace in
+set_option backward.isDefEq.respectTransparency false in
+/-- **Annihilator sections kill the sheaf tensor product (affine heart)**: on an
+affine open `U`, the annihilator ideal sheaf of `A` is contained in the
+annihilator of the sections of `sheafTensorObj A B`.  Local surjectivity of the
+sheafification unit reduces this to the presheaf-tensor statement
+`annihilator_le_annihilator_tensorProduct` on an affine basis, and sheaf
+separatedness globalizes the vanishing back to `U`. -/
+theorem ideal_annihilator_le_annihilator_sheafTensorObj
+    {X : Scheme.{u}} (A B : X.Modules) (U : X.affineOpens) :
+    (Scheme.Modules.annihilator A).ideal U
+      ≤ Module.annihilator Γ(X, U.1) Γ(Scheme.Modules.sheafTensorObj A B, U.1) := by
+  classical
+  intro r hr
+  rw [Module.mem_annihilator]
+  intro x
+  -- the sheafification unit of the presheaf tensor is locally surjective
+  have hsurj : CategoryTheory.Presheaf.IsLocallySurjective
+      (Opens.grothendieckTopology X)
+      ((PresheafOfModules.toPresheaf _).map
+        ((PresheafOfModules.sheafificationAdjunction
+          (𝟙 X.ringCatSheaf.obj)).unit.app (Scheme.Modules.tensorPresheaf A B))) := by
+    rw [PresheafOfModules.toPresheaf_map_sheafificationAdjunction_unit_app]
+    exact ((Opens.grothendieckTopology ↥X).W_toSheafify _).isLocallySurjective
+  -- for every point of `U` there is an affine `W ∋ p`, `W ≤ U`, with
+  -- `(r • x)|_W = 0`
+  have key : ∀ p : U.1, ∃ W : X.Opens, ∃ _ : p.1 ∈ W, ∃ hWU : W ≤ U.1,
+      ((Scheme.Modules.sheafTensorObj A B).val.map (homOfLE hWU).op).hom (r • x) = 0 := by
+    intro p
+    obtain ⟨V, g, ⟨t, ht⟩, hpV⟩ := hsurj.imageSieve_mem (U := U.1) x p.1 p.2
+    -- refine to an affine basis member `W ∋ p` inside `V`
+    obtain ⟨W, hWaff, hpW, hWV⟩ :=
+      Opens.isBasis_iff_nbhd.mp X.isBasis_affineOpens hpV
+    have hWU : W ≤ U.1 := hWV.trans g.le
+    refine ⟨W, hpW, hWU, ?_⟩
+    -- the restricted scalar `r|_W` annihilates the presheaf tensor over `W`
+    have hrW : (X.presheaf.map (homOfLE hWU).op).hom r
+        ∈ (Scheme.Modules.annihilator A).ideal ⟨W, hWaff⟩ :=
+      Scheme.IdealSheafData.ideal_le_comap_ideal (Scheme.Modules.annihilator A)
+        (U := ⟨W, hWaff⟩) (V := U) hWU hr
+    have hkill : (X.presheaf.map (homOfLE hWU).op).hom r
+        ∈ Module.annihilator Γ(X, W) (TensorProduct Γ(X, W) Γ(A, W) Γ(B, W)) :=
+      annihilator_le_annihilator_tensorProduct
+        (Scheme.Modules.annihilator_ideal_le A ⟨W, hWaff⟩ hrW)
+    -- restrict the local presheaf-tensor preimage `t` of `x|_V` to `W`
+    have hnat := Scheme.Modules.tensorSectionHom_naturality_apply A B
+      (V := W) (W := V) (homOfLE hWV).op t
+    -- `(r • x)|_W = r|_W • x|_W` (semilinearity of restriction)
+    have hres : ((Scheme.Modules.sheafTensorObj A B).val.map (homOfLE hWU).op).hom (r • x)
+        = (X.presheaf.map (homOfLE hWU).op).hom r
+            • ((Scheme.Modules.sheafTensorObj A B).val.map (homOfLE hWU).op).hom x :=
+      PresheafOfModules.map_smul _ _ _ _
+    rw [hres]
+    -- `x|_W` is the image of the restricted presheaf tensor `t|_W`:
+    -- restrict in two steps `U ⊇ V ⊇ W` (`congr_map_apply` + `map_comp_apply`),
+    -- recognize `x|_V` as the unit image of `t` (`ht`), and pull the last
+    -- restriction through the unit (`tensorSectionHom` naturality)
+    have e1 : (Scheme.Modules.sheafTensorObj A B).val.map (homOfLE hWU).op x
+        = (Scheme.Modules.sheafTensorObj A B).val.map (homOfLE hWV).op
+            ((Scheme.Modules.sheafTensorObj A B).val.map g.op x) :=
+      (PresheafOfModules.congr_map_apply (Scheme.Modules.sheafTensorObj A B).val
+        (show (homOfLE hWU).op = g.op ≫ (homOfLE hWV).op by
+          rw [show (homOfLE hWU : W ⟶ U.1) = (homOfLE hWV : W ⟶ V) ≫ g from
+            Subsingleton.elim _ _, op_comp]) x).trans
+        (PresheafOfModules.map_comp_apply _ g.op (homOfLE hWV).op x)
+    have e2 : (Scheme.Modules.sheafTensorObj A B).val.map g.op x
+        = Scheme.Modules.tensorSectionHom A B V t := ht.symm
+    have e3 : (Scheme.Modules.sheafTensorObj A B).val.map (homOfLE hWV).op
+          (Scheme.Modules.tensorSectionHom A B V t)
+        = Scheme.Modules.tensorSectionHom A B W
+            ((Scheme.Modules.tensorPresheaf A B).map (homOfLE hWV).op t) := hnat.symm
+    have hxW : (Scheme.Modules.sheafTensorObj A B).val.map (homOfLE hWU).op x
+        = Scheme.Modules.tensorSectionHom A B W
+            ((Scheme.Modules.tensorPresheaf A B).map (homOfLE hWV).op t) := by
+      rw [e1, e2, e3]
+    rw [hxW]
+    -- pull the scalar through the (Γ(X, W)-linear) unit and kill it in the
+    -- presheaf tensor
+    have hlin : (X.presheaf.map (homOfLE hWU).op).hom r
+          • Scheme.Modules.tensorSectionHom A B W
+              ((Scheme.Modules.tensorPresheaf A B).map (homOfLE hWV).op t)
+        = Scheme.Modules.tensorSectionHom A B W
+            ((X.presheaf.map (homOfLE hWU).op).hom r
+              • (Scheme.Modules.tensorPresheaf A B).map (homOfLE hWV).op t) :=
+      (map_smul (Scheme.Modules.tensorSectionHom A B W).hom _ _).symm
+    rw [hlin, Module.mem_annihilator.mp hkill _, map_zero]
+  choose W hpW hWU hzero using key
+  -- separatedness of the sheaf over the pointwise affine cover of `U`
+  have hcov : U.1 ≤ iSup W := fun q hq =>
+    Opens.mem_iSup.mpr ⟨⟨q, hq⟩, hpW ⟨q, hq⟩⟩
+  refine TopCat.Sheaf.eq_of_locally_eq'
+    (⟨(Scheme.Modules.sheafTensorObj A B).presheaf,
+      (Scheme.Modules.sheafTensorObj A B).isSheaf⟩ : TopCat.Sheaf Ab X)
+    W U.1 (fun p => homOfLE (hWU p)) hcov (r • x) 0 (fun p => ?_)
+  rw [map_zero]
+  exact hzero p
+
+/-- **Annihilator monotonicity for the sheaf tensor product, ideal-sheaf form**:
+`annihilator A ≤ annihilator (A ⊗ B)` (`ofIdeals` Galois property applied to the
+affine heart `ideal_annihilator_le_annihilator_sheafTensorObj`). -/
+theorem annihilator_le_annihilator_sheafTensorObj
+    {X : Scheme.{u}} (A B : X.Modules) :
+    Scheme.Modules.annihilator A
+      ≤ Scheme.Modules.annihilator (Scheme.Modules.sheafTensorObj A B) :=
+  Scheme.IdealSheafData.le_ofIdeals_iff.mpr
+    (fun U => ideal_annihilator_le_annihilator_sheafTensorObj A B U)
+
+namespace Scheme.Modules
+
+/-- **Proper support descends along annihilator inclusions**: if
+`annihilator A ≤ annihilator C` then the schematic support of `C`
+closed-immerses into that of `A` (`IdealSheafData.inclusion`), so properness of
+the support of `A` over `S` transfers to `C` (closed immersions are proper,
+propers compose). -/
+theorem HasProperSupport.of_annihilator_le {X S : Scheme.{u}} (f : X ⟶ S)
+    {A C : X.Modules}
+    (h : Scheme.Modules.annihilator A ≤ Scheme.Modules.annihilator C)
+    (hA : Scheme.Modules.HasProperSupport f A) :
+    Scheme.Modules.HasProperSupport f C := by
+  haveI : IsProper ((Scheme.Modules.annihilator A).subschemeι ≫ f) := hA
+  have hfac : Scheme.IdealSheafData.inclusion h
+        ≫ ((Scheme.Modules.annihilator A).subschemeι ≫ f)
+      = (Scheme.Modules.annihilator C).subschemeι ≫ f := by
+    rw [← Category.assoc, Scheme.IdealSheafData.inclusion_subschemeι]
+  change IsProper ((Scheme.Modules.annihilator C).subschemeι ≫ f)
+  rw [← hfac]
+  infer_instance
+
+/-- **Proper support transfers to sheaf-tensor twists** (left factor): the
+schematic support of `A ⊗ B` sits inside that of `A`, so proper support of `A`
+over `S` gives proper support of the tensor. -/
+theorem hasProperSupport_sheafTensorObj {X S : Scheme.{u}} (f : X ⟶ S)
+    {A : X.Modules} (B : X.Modules)
+    (hA : Scheme.Modules.HasProperSupport f A) :
+    Scheme.Modules.HasProperSupport f (Scheme.Modules.sheafTensorObj A B) :=
+  HasProperSupport.of_annihilator_le f
+    (annihilator_le_annihilator_sheafTensorObj A B) hA
+
+/-- **Proper support transfers to the twists `F ⊗ L^{⊗m}`**
+(`Scheme.Modules.moduleTensorPow`), step (3) of the
+`lem:gamma_fiber_baseChange_field` reduction: `moduleTensorPow F L m` is by
+definition `sheafTensorObj F (tensorPow L m)`. -/
+theorem hasProperSupport_moduleTensorPow {X S : Scheme.{u}} (f : X ⟶ S)
+    {F : X.Modules} (L : X.Modules) (m : ℕ)
+    (hF : Scheme.Modules.HasProperSupport f F) :
+    Scheme.Modules.HasProperSupport f (Scheme.Modules.moduleTensorPow F L m) :=
+  hasProperSupport_sheafTensorObj f (Scheme.Modules.tensorPow L m) hF
 
 end Scheme.Modules
 
