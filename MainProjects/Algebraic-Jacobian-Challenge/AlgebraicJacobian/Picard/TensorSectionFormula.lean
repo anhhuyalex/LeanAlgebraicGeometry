@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 -/
 import AlgebraicJacobian.Picard.TensorObjSubstrate
 import AlgebraicJacobian.Picard.SectionGradedRing
+import AlgebraicJacobian.Picard.QuotScheme
 
 /-!
 # Affine tensor-section substrate (`TensorSectionFormula`)
@@ -140,5 +141,83 @@ lemma isIso_sheafification_tensorSectionUnit (A B : X.Modules) :
       ((PresheafOfModules.sheafificationAdjunction
         (𝟙 X.ringCatSheaf.obj)).unit.app (tensorPresheaf A B))) :=
   isIso_sheafification_map_unit _
+
+/-! ## Quasi-coherence from basic-open section localization (the reusable criterion)
+
+The affine tensor-section wiring pass (see the module docstring) will produce, for
+`A B : X.Modules` quasi-coherent and `V` affine, the fact that the section restriction
+`Γ(A ⊗ B, V) → Γ(A ⊗ B, D(f))` is `IsLocalizedModule (powers f)` (the affine tensor-section
+formula composed with the module-localization heart
+`(M ⊗_R N)_f ≅ M_f ⊗_{R_f} N_f`, `RingTheory.Localization.BaseChange`).  The lemma below
+packages the *converse* direction of `Scheme.Modules.isLocalizedModule_basicOpen`
+(`QuotScheme.lean`): a sheaf of modules whose section restrictions are localizations on all
+basic opens of all affine opens is quasi-coherent.  It is the general form of the
+pushforward-specialised assembly `pushforward_isQuasicoherent`/
+`pushforward_isQuasicoherent_over_affine`, and is exactly the criterion the 01CB
+(`tensorObj`/`sheafTensorObj`) instance feeds once the affine section-localization is in hand. -/
+
+open TopologicalSpace in
+/-- The family of all affine opens covers a scheme (for the opens Grothendieck topology).
+Reconstruction of the `private` `QuotScheme.coversTop_affineOpens`. -/
+private theorem coversTop_affineOpens' (S : Scheme.{u}) :
+    (Opens.grothendieckTopology ↥S).CoversTop
+      (fun U : S.affineOpens => U.1) := by
+  intro W y hy
+  obtain ⟨V, hVaff, hyV, hVW⟩ :=
+    TopologicalSpace.Opens.isBasis_iff_nbhd.mp (Scheme.isBasis_affineOpens S) hy
+  refine ⟨V, homOfLE hVW, ?_, hyV⟩
+  rw [CategoryTheory.Sieve.mem_ofObjects_iff]
+  exact ⟨⟨V, hVaff⟩, ⟨𝟙 V⟩⟩
+
+set_option maxHeartbeats 1600000 in
+-- The tilde-presentation transport + affine-cover `of_coversTop` assembly (mirroring
+-- `QuotScheme.pushforward_isQuasicoherent_over_affine`) needs heartbeat/instance headroom.
+set_option synthInstance.maxHeartbeats 800000 in
+/-- **Quasi-coherence from basic-open section localization** (the converse of
+`Scheme.Modules.isLocalizedModule_basicOpen`).  If for every affine open `U` and every
+`f : Γ(X, U)` the section restriction `restrictBasicOpenₗ M f : Γ(M, U) → Γ(M, X.basicOpen f)`
+exhibits the target as the localization of the source at `powers f`, then `M` is quasi-coherent.
+
+Quasi-coherence is local (`SheafOfModules.IsQuasicoherent.of_coversTop`) on the affine-opens
+cover; on each affine `U` the hypothesis feeds
+`isIso_fromTildeΓ_pullback_fromSpec_of_isLocalizedModule` to produce the P1 datum
+`IsIso (fromTildeΓ ((pullback hU.fromSpec).obj M))`, whose tilde presentation transports along
+`U.ι = isoSpec.hom ≫ fromSpec` back to the geometric slice (`overRestrictPresentationInv`).
+This is the pushforward-free form of `Scheme.Modules.pushforward_isQuasicoherent`. -/
+theorem isQuasicoherent_of_isLocalizedModule_basicOpen (M : X.Modules)
+    (H : ∀ (U : X.Opens), IsAffineOpen U → ∀ (f : Γ(X, U)),
+      letI : Module Γ(X, U) Γ(M, X.basicOpen f) :=
+        Module.compHom _ (algebraMap Γ(X, U) Γ(X, X.basicOpen f))
+      letI : IsScalarTower Γ(X, U) Γ(X, X.basicOpen f) Γ(M, X.basicOpen f) :=
+        IsScalarTower.of_algebraMap_smul (fun _ _ => rfl)
+      IsLocalizedModule (Submonoid.powers f) (Scheme.Modules.restrictBasicOpenₗ M f)) :
+    M.IsQuasicoherent := by
+  haveI hslice : ∀ U : X.affineOpens, (M.over U.1).IsQuasicoherent := by
+    intro U
+    haveI hP1 : IsIso (Scheme.Modules.fromTildeΓ
+        ((Scheme.Modules.pullback U.2.fromSpec).obj M)) :=
+      Scheme.Modules.isIso_fromTildeΓ_pullback_fromSpec_of_isLocalizedModule M U.2
+        (fun f' => H U.1 U.2 f')
+    -- global presentation of the `fromSpec`-pullback, via the tilde presentation
+    let eT' : tilde ((modulesSpecToSheaf.obj
+          ((Scheme.Modules.pullback U.2.fromSpec).obj M)).presheaf.obj (Opposite.op ⊤))
+        ≅ (Scheme.Modules.pullback U.2.fromSpec).obj M :=
+      @asIso _ _ _ _
+        (Scheme.Modules.fromTildeΓ ((Scheme.Modules.pullback U.2.fromSpec).obj M)) hP1
+    have P_M' : ((Scheme.Modules.pullback U.2.fromSpec).obj M).Presentation :=
+      SheafOfModules.Presentation.ofIsIso.{u} eT'.hom
+        (AlgebraicGeometry.presentationTilde.{u} _ Set.univ (by simp) _ (Submodule.span_eq _))
+    -- transport along `U.ι = isoSpec.hom ≫ fromSpec`
+    have hcomp : U.2.isoSpec.hom ≫ U.2.fromSpec = U.1.ι := by
+      rw [← U.2.isoSpec_inv_ι, Iso.hom_inv_id_assoc]
+    have P_ι : ((Scheme.Modules.pullback U.1.ι).obj M).Presentation :=
+      SheafOfModules.Presentation.ofIsIso.{u, u, u}
+        ((Scheme.Modules.pullbackComp U.2.isoSpec.hom U.2.fromSpec).app M ≪≫
+          (Scheme.Modules.pullbackCongr hcomp).app M).hom
+        (Scheme.Modules.presentationPullbackOfSchemeIso U.2.isoSpec.symm
+          ((Scheme.Modules.pullback U.2.fromSpec).obj M) P_M')
+    exact (Scheme.Modules.overRestrictPresentationInv U.1 M P_ι).isQuasicoherent
+  exact SheafOfModules.IsQuasicoherent.of_coversTop M
+    (fun U : X.affineOpens => U.1) (coversTop_affineOpens' X)
 
 end AlgebraicGeometry.Scheme.Modules
