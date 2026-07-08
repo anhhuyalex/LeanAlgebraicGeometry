@@ -100,6 +100,7 @@ import AlgebraicJacobian.Picard.SerreTwist
 import AlgebraicJacobian.Picard.SerreTwistSections
 import AlgebraicJacobian.Picard.InvertibleGrBridge
 import AlgebraicJacobian.Picard.GradedPiecesFinite
+import AlgebraicJacobian.Picard.ChartSectionsFinite
 import AlgebraicJacobian.Picard.ProjectiveMorphism
 import AlgebraicJacobian.Picard.SerreFiniteness
 import AlgebraicJacobian.Picard.ZariskiDescentRepresentability
