@@ -697,6 +697,49 @@ theorem residueShift_injective {P : X.PrimeDivisor} {m : ℤ}
     · rw [Scheme.RationalMap.order_mul_of_ne_zero P ht hg0, hc] at h0
       linarith
 
+/-- **The residue embedding is surjective** (node N14, `k`-linear residue form).
+Multiplication by the intrinsic uniformizer power `t` (order `1 - m` at `P`) is a
+bijection of `K(X)` — inverse multiplication by `t⁻¹` — carrying `orderGe P (m-1)`
+*onto* `orderGe P 0` and `orderGe P m` onto `orderGe P 1`.  Hence the descended map
+`residueShift` is surjective: an isomorphism
+`orderGe P (m-1)/orderGe P m ≅ κ(P) = orderGe P 0/orderGe P 1`. -/
+theorem residueShift_surjective {P : X.PrimeDivisor} {m : ℤ}
+    (t : X.functionField) (ht : t ≠ 0)
+    (hc : Scheme.RationalMap.order P t = 1 - m) :
+    Function.Surjective (residueShift k t ht hc) := by
+  intro z
+  obtain ⟨y, rfl⟩ := Submodule.Quotient.mk_surjective _ z
+  have hmem : t⁻¹ * (y : X.functionField) ∈ orderGe P (m - 1) := by
+    rcases eq_or_ne (y : X.functionField) 0 with hy0 | hy0
+    · rw [hy0, mul_zero]; exact (orderGe P (m - 1)).zero_mem
+    · refine (mem_orderGe_of_ne_zero (mul_ne_zero (inv_ne_zero ht) hy0)).mpr ?_
+      have hy : (1 - 1 : ℤ) ≤ Scheme.RationalMap.order P (y : X.functionField) :=
+        (mem_orderGe_of_ne_zero hy0).mp y.2
+      rw [Scheme.RationalMap.order_mul_of_ne_zero P (inv_ne_zero ht) hy0,
+        Scheme.RationalMap.order_inv, hc]
+      linarith
+  refine ⟨Submodule.Quotient.mk ⟨t⁻¹ * (y : X.functionField),
+    (mem_orderGeSub k).mpr hmem⟩, ?_⟩
+  rw [residueShift, Submodule.mapQ_apply]
+  congr 1
+  apply Subtype.ext
+  rw [LinearMap.coe_restrict_apply, LinearMap.mulLeft_apply]
+  exact mul_inv_cancel_left₀ ht _
+
+/-- **The single-point valuation quotient has dimension `deg P` for every shift.**
+Multiplication by an intrinsic uniformizer power intertwines the steps of the
+fractional-ideal filtration, so every one-step valuation quotient
+`orderGe P (m-1)/orderGe P m` is `k`-isomorphic to the residue field
+`κ(P) = orderGe P 0/orderGe P 1`; hence they all share the residue degree
+`deg P = [κ(P):k]`.  (`residueShift` is a bijection: injective by
+`residueShift_injective`, surjective by `residueShift_surjective`.) -/
+theorem finrank_localStepTgt (P : X.PrimeDivisor) (m : ℤ) :
+    Module.finrank k (localStepTgt k P m) = residueDeg k P := by
+  obtain ⟨t, ht, htord⟩ := exists_order_eq P (1 - m)
+  rw [residueDeg]
+  exact (LinearEquiv.ofBijective (residueShift k t ht htord)
+    ⟨residueShift_injective k t ht htord, residueShift_surjective k t ht htord⟩).finrank_eq
+
 /-- **N14 — the local step dimension is at most the residue degree.**  For the
 one-point twist `D' = D + P` (with `P ∈ U`, `D'(P) = D(P) + 1`, `D = D'` off `P`)
 the local step space `Γ(U, 𝒪(D')) / Γ(U, 𝒪(D))` has `k`-dimension at most the
@@ -720,6 +763,67 @@ theorem localStep_finrank_le {U : X.Opens} {P : X.PrimeDivisor}
     exists_order_eq P (1 - (-(show X.PrimeDivisor →₀ ℤ from D) P))
   exact localStep_finrank_le_residueEmbedding k hPU hstep hle hoff
     (residueShift k t ht htord) (residueShift_injective k t ht htord)
+
+/-! ### N14 (equality direction) — the residue map is onto: strong approximation
+
+The `≤` bound above is the elementary half.  The reverse — that the local step space
+`Γ(U,𝒪(D'))/Γ(U,𝒪(D))` fills *all* of the residue field `κ(P)` — is the surjectivity
+of the local residue map, i.e. the **strong/weak-approximation** input: any prescribed
+residue at `P` (any `y` with `ord_P y ≥ -n-1`) is realised, to residue precision at
+`P` (modulo `orderGe P (-n)`), by a global-on-`U` section of `𝒪(D')`.  We take this
+existence as the honest hypothesis `hsurj` (discharged at the use site from the
+Dedekind-chart CRT / weak approximation for the finitely many constraint places), and
+from it obtain the local isomorphism and the exact dimension count `= deg P`. -/
+
+/-- **N14 (equality direction) — the `k`-linear local step map is surjective.**  Given
+the strong-approximation existence hypothesis `hsurj` — every rational function of
+order `≥ -n-1` at `P` is matched, modulo `orderGe P (-n)` (to residue precision at
+`P`), by a section of `𝒪(D')` on `U` — the residue map
+`Γ(U,𝒪(D'))/Γ(U,𝒪(D)) → orderGe P (-n-1)/orderGe P (-n)` is onto. -/
+theorem localStepMapₖ_surjective {U : X.Opens} {P : X.PrimeDivisor}
+    (hPU : P.point ∈ U) {D D' : X.WeilDivisor}
+    (hstep : (show X.PrimeDivisor →₀ ℤ from D') P =
+      (show X.PrimeDivisor →₀ ℤ from D) P + 1)
+    (hsurj : ∀ y : X.functionField,
+        y ∈ orderGe P (-(show X.PrimeDivisor →₀ ℤ from D) P - 1) →
+        ∃ f ∈ sectionOfDivisor U D',
+          f - y ∈ orderGe P (-(show X.PrimeDivisor →₀ ℤ from D) P)) :
+    Function.Surjective (localStepMapₖ k hPU hstep) := by
+  intro z
+  obtain ⟨y, rfl⟩ := Submodule.Quotient.mk_surjective _ z
+  obtain ⟨f, hf, hfy⟩ := hsurj (y : X.functionField) ((mem_orderGeSub k).mp y.2)
+  refine ⟨Submodule.Quotient.mk ⟨f, (mem_sectionSub k).mpr hf⟩, ?_⟩
+  rw [localStepMapₖ, Submodule.mapQ_apply, Submodule.Quotient.eq, Submodule.mem_comap,
+    Submodule.subtype_apply, AddSubgroupClass.coe_sub, Submodule.coe_inclusion,
+    mem_orderGeSub]
+  exact hfy
+
+/-- **N14 (equality direction) — the local step has dimension exactly `deg P`.**  Under
+the strong-approximation surjectivity `hsurj`, the `k`-linear local step map
+`Γ(U,𝒪(D'))/Γ(U,𝒪(D)) → orderGe P (-n-1)/orderGe P (-n)` is bijective (injective by
+`localStepMapₖ_injective`, surjective by `localStepMapₖ_surjective`), so the local step
+space is `k`-isomorphic to the single-point valuation quotient, whose dimension is the
+residue degree (`finrank_localStepTgt`):
+`dim_k(Γ(U,𝒪(D'))/Γ(U,𝒪(D))) = deg P = [κ(P):k]`.  This is the exact one-point count
+underlying `χ(D+P) = χ(D) + deg P`; no finiteness gate is needed (a linear equivalence,
+whose `finrank` equality is unconditional). -/
+theorem localStep_finrank_eq {U : X.Opens} {P : X.PrimeDivisor}
+    (hPU : P.point ∈ U) {D D' : X.WeilDivisor}
+    (hstep : (show X.PrimeDivisor →₀ ℤ from D') P =
+      (show X.PrimeDivisor →₀ ℤ from D) P + 1)
+    (hle : ∀ Q : X.PrimeDivisor, (show X.PrimeDivisor →₀ ℤ from D) Q ≤
+      (show X.PrimeDivisor →₀ ℤ from D') Q)
+    (hoff : ∀ Q : X.PrimeDivisor, Q ≠ P →
+      (show X.PrimeDivisor →₀ ℤ from D) Q = (show X.PrimeDivisor →₀ ℤ from D') Q)
+    (hsurj : ∀ y : X.functionField,
+        y ∈ orderGe P (-(show X.PrimeDivisor →₀ ℤ from D) P - 1) →
+        ∃ f ∈ sectionOfDivisor U D',
+          f - y ∈ orderGe P (-(show X.PrimeDivisor →₀ ℤ from D) P)) :
+    Module.finrank k (localStepDom k U D D') = residueDeg k P := by
+  rw [(LinearEquiv.ofBijective (localStepMapₖ k hPU hstep)
+      ⟨localStepMapₖ_injective k hPU hstep hle hoff,
+        localStepMapₖ_surjective k hPU hstep hsurj⟩).finrank_eq,
+    finrank_localStepTgt]
 
 end BaseField
 
@@ -929,6 +1033,41 @@ theorem chi_add_le_residueDeg {D D' : X.WeilDivisor} {P : X.PrimeDivisor}
       ≤ (residueDeg k P : ℤ) := by exact_mod_cast hN14
   rw [hbump]; linarith
 
+/-- **N15/N16 — the one-step χ-ledger *equality* `χ(D + P) = χ(D) + deg P`.**  The
+Riemann–Roch χ-additivity in exact one-point form.  Combining the gated ledger exact
+sequence (χ-additivity `chi_add`: `χ(D') = χ(D) + dim_k(𝒜(D')/𝒜(D))`) with the
+equality direction of node N14 (`localStep_finrank_eq`: `dim_k(𝒜(D')/𝒜(D)) = deg P`),
+whose only extra input beyond the elementary `≤` is the strong-approximation
+surjectivity `hsurj` of the local residue map `𝒜(D')/𝒜(D) ↠ κ(P)`, the Euler
+characteristic increases by *exactly* the residue degree for a one-point twist
+`D' = D + P` with `P` in the overlap `V = U₀ ⊓ U₁`.  This closes the equality direction
+of the χ-ledger deferred at the `≤` bound `chi_add_le_residueDeg`. -/
+theorem chi_add_eq_residueDeg {D D' : X.WeilDivisor} {P : X.PrimeDivisor}
+    (hPV : P.point ∈ (U₀ ⊓ U₁ : X.Opens))
+    (hstep : (show X.PrimeDivisor →₀ ℤ from D') P =
+      (show X.PrimeDivisor →₀ ℤ from D) P + 1)
+    (hle : ∀ Q : X.PrimeDivisor, (show X.PrimeDivisor →₀ ℤ from D) Q ≤
+      (show X.PrimeDivisor →₀ ℤ from D') Q)
+    (hoff : ∀ Q : X.PrimeDivisor, Q ≠ P →
+      (show X.PrimeDivisor →₀ ℤ from D) Q = (show X.PrimeDivisor →₀ ℤ from D') Q)
+    (hsurj : ∀ y : X.functionField,
+        y ∈ orderGe P (-(show X.PrimeDivisor →₀ ℤ from D) P - 1) →
+        ∃ f ∈ sectionOfDivisor (U₀ ⊓ U₁) D',
+          f - y ∈ orderGe P (-(show X.PrimeDivisor →₀ ℤ from D) P))
+    (window : localStepDom k ⊤ D D' →ₗ[k] localStepDom k (U₀ ⊓ U₁) D D')
+    (connect : localStepDom k (U₀ ⊓ U₁) D D' →ₗ[k] H1Mod k U₀ U₁ D)
+    (twist : H1Mod k U₀ U₁ D →ₗ[k] H1Mod k U₀ U₁ D')
+    (hwin : Function.Injective window)
+    (hexactB : LinearMap.range window = LinearMap.ker connect)
+    (hexactC : LinearMap.range connect = LinearMap.ker twist)
+    (htwist : Function.Surjective twist)
+    [Module.Finite k (sectionSub k ⊤ D')]
+    [Module.Finite k (localStepDom k (U₀ ⊓ U₁) D D')]
+    [Module.Finite k (H1Mod k U₀ U₁ D)] [Module.Finite k (H1Mod k U₀ U₁ D')] :
+    chi k U₀ U₁ D' = chi k U₀ U₁ D + residueDeg k P := by
+  have hbump := chi_add k U₀ U₁ hle window connect twist hwin hexactB hexactC htwist
+  rw [hbump, localStep_finrank_eq k hPV hstep hle hoff hsurj]
+
 /-- **N16 — nonnegativity of the index of speciality: `χ(D) ≤ ℓ(D)`.** Immediate
 from `χ(D) = ℓ(D) − h¹(D)` and `h¹(D) = i(D) ≥ 0`.  This is the `i(D) ≥ 0` half of
 the Riemann inequality. -/
@@ -947,6 +1086,49 @@ theorem riemann_inequality {D : X.WeilDivisor} {degD : ℤ}
     degD + chi k U₀ U₁ 0 ≤ (ell k D : ℤ) := by
   have h := chi_le_ell k U₀ U₁ D
   rw [htel] at h; linarith
+
+/-! ### N16 — telescoping the one-step equality over an effective divisor
+
+The one-step equality `χ(E + P) = χ(E) + deg P` (`chi_add_eq_residueDeg`) telescopes:
+writing an effective divisor `D ≥ 0` as a sum of one-point divisors `D = Σ P∈L 1·P`
+(with multiplicity given by repetition in the list `L`), iteration gives the Riemann
+shape `χ(D) = χ(0) + Σ P∈L deg P`, the **adelic degree** `deg_k D = Σ nᵢ·[κ(Pᵢ):k]`
+weighted by residue degrees (the field-of-constants refinement of the geometric
+`degree`, which is this sum with every `[κ(Pᵢ):k] = 1` over `k̄`).  The per-step
+equality is supplied as the hypothesis `hbump` — each instance is exactly one
+application of `chi_add_eq_residueDeg` (the one-point twist `E ↦ 1·P + E` satisfies
+`hstep`/`hle`/`hoff` by `Finsupp.single`), so this is the honest reduction of N16 to
+the strong-approximation one-point count. -/
+
+/-- **The one-point effective divisor `1·P`** (`Finsupp.single P 1`), the unit building
+block of the effective-divisor telescope. -/
+noncomputable def pointDivisor (P : X.PrimeDivisor) : X.WeilDivisor := Finsupp.single P 1
+
+/-- **The effective divisor `Σ P∈L 1·P` of a list of prime divisors** — the generic
+effective divisor written as a sum of one-point divisors, with multiplicity encoded by
+repetition in the list. -/
+noncomputable def divisorOfList : List X.PrimeDivisor → X.WeilDivisor
+  | [] => 0
+  | P :: L => pointDivisor P + divisorOfList L
+
+/-- **N16 — the χ-ledger telescopes over an effective divisor.**  Iterating the
+one-point χ-equality `χ(E + P) = χ(E) + deg P` (node N15/N16 `chi_add_eq_residueDeg`,
+supplied here as the per-step hypothesis `hbump`) along a list `L` of prime divisors
+gives the Euler characteristic of the effective divisor `D = Σ P∈L 1·P` as
+`χ(D) = χ(0) + Σ P∈L deg P` — the telescoped Riemann shape `χ(D) = χ(0) + deg_k D`,
+with `deg_k D = Σ deg Pᵢ` the adelic degree (sum of residue degrees over `k`).  Feeding
+the resulting identity to `riemann_inequality` yields `deg_k D + χ(0) ≤ ℓ(D)`. -/
+theorem chi_telescope_list (L : List X.PrimeDivisor)
+    (hbump : ∀ (P : X.PrimeDivisor) (E : X.WeilDivisor),
+      chi k U₀ U₁ (pointDivisor P + E) = chi k U₀ U₁ E + residueDeg k P) :
+    chi k U₀ U₁ (divisorOfList L)
+      = chi k U₀ U₁ 0 + ((L.map (residueDeg k)).sum : ℤ) := by
+  induction L with
+  | nil => simp [divisorOfList]
+  | cons P L ih =>
+    rw [divisorOfList, hbump, ih, List.map_cons, List.sum_cons]
+    push_cast
+    ring
 
 end ChiLedgerDim
 
