@@ -387,4 +387,354 @@ theorem cechCochain_d12_eq :
 
 end CechDifferential
 
+/-! ## Node N5 — restriction-map calculus
+
+Every map in the degree-`1` identification is a section restriction
+`sectionRestrict F h = (F.obj.map (homOfLE h).op).hom` along an inequality of opens.
+Because `Opens X` is a poset, parallel restrictions agree, restrictions compose to
+restrictions, and a restriction between mutually included (i.e. equal) opens is an
+isomorphism.  These four lemmas are the entire calculus the kernel/cokernel analysis
+needs: all "cancellation", "round-trip" and "bridge-consistency" steps below reduce
+to them plus proof irrelevance of the `≤`-witnesses. -/
+
+section SectionRestrictCalculus
+
+variable {k : Type u} [Field k] {X : Scheme.{u}}
+  (F : Sheaf (Opens.grothendieckTopology X.toTopCat) (ModuleCat.{u} k))
+
+/-- Composition of section restrictions along `U ≤ V ≤ W` is the restriction along
+the composite inequality. -/
+lemma sectionRestrict_trans {U V W : TopologicalSpace.Opens X.toTopCat}
+    (h₁ : U ≤ V) (h₂ : V ≤ W) (x : F.obj.obj (Opposite.op W)) :
+    sectionRestrict F h₁ (sectionRestrict F h₂ x) = sectionRestrict F (h₁.trans h₂) x := by
+  have h : F.obj.map (homOfLE (h₁.trans h₂)).op
+      = F.obj.map (homOfLE h₂).op ≫ F.obj.map (homOfLE h₁).op := by
+    rw [← F.obj.map_comp]
+    exact congrArg F.obj.map (Subsingleton.elim _ _)
+  simp only [sectionRestrict, h, ModuleCat.hom_comp, LinearMap.comp_apply]
+
+/-- Restriction along `U ≤ U` is the identity. -/
+lemma sectionRestrict_self {U : TopologicalSpace.Opens X.toTopCat} (h : U ≤ U)
+    (x : F.obj.obj (Opposite.op U)) :
+    sectionRestrict F h x = x := by
+  have h' : (homOfLE h).op = 𝟙 (Opposite.op U) := Subsingleton.elim _ _
+  rw [sectionRestrict, h', F.obj.map_id]
+  rfl
+
+/-- A restriction map between mutually included (hence equal) opens is injective. -/
+lemma sectionRestrict_injective {U V : TopologicalSpace.Opens X.toTopCat}
+    (h : U ≤ V) (h' : V ≤ U) :
+    Function.Injective (sectionRestrict F h) := fun a b hab => by
+  have h2 := congrArg (sectionRestrict F h') hab
+  rwa [sectionRestrict_trans, sectionRestrict_trans, sectionRestrict_self, sectionRestrict_self]
+    at h2
+
+/-- Morphism-level composition of the restriction maps of `F` along `U ≤ V ≤ W`. -/
+lemma restrict_map_comp {U V W : TopologicalSpace.Opens X.toTopCat} (h₁ : U ≤ V) (h₂ : V ≤ W) :
+    F.obj.map (homOfLE h₂).op ≫ F.obj.map (homOfLE h₁).op
+      = F.obj.map (homOfLE (h₁.trans h₂)).op := by
+  rw [← F.obj.map_comp]
+  exact congrArg F.obj.map (Subsingleton.elim _ _)
+
+/-- The restriction map of `F` along mutually included (hence equal) opens is an
+isomorphism (it is `F.obj.map` of an identity up to `Subsingleton.elim`). -/
+lemma isIso_restrict_map {U V : TopologicalSpace.Opens X.toTopCat} (h : U ≤ V) (h' : V ≤ U) :
+    IsIso (F.obj.map (homOfLE h).op) := by
+  have heq : U = V := le_antisymm h h'
+  subst heq
+  have h0 : (homOfLE h).op = 𝟙 (Opposite.op U) := Subsingleton.elim _ _
+  rw [h0, F.obj.map_id]
+  infer_instance
+
+end SectionRestrictCalculus
+
+/-! ## Node N5 — the small-index Čech products as concrete infima -/
+
+section SmallProdOpens
+
+open AlgebraicTopology CategoryTheory CategoryTheory.Limits
+
+variable {k : Type u} [Field k] {C : Over (Spec (CommRingCat.of k))}
+  {ι : Type u} (𝒰 : ι → TopologicalSpace.Opens C.left.toTopCat)
+
+/-- The Čech product over a 1-element multi-index is the single open. -/
+theorem prodOpens_fin_one (j : Fin 1 → ι) :
+    (∏ᶜ ((FormalCoproduct.mk _ 𝒰).obj ∘ j) : TopologicalSpace.Opens C.left.toTopCat)
+      = 𝒰 (j 0) := by
+  rw [prodOpens_eq_iInf]
+  refine le_antisymm (iInf_le _ 0) (le_iInf fun a => ?_)
+  fin_cases a
+  exact le_rfl
+
+/-- The Čech product over a 2-element multi-index is the binary intersection. -/
+theorem prodOpens_fin_two (j : Fin 2 → ι) :
+    (∏ᶜ ((FormalCoproduct.mk _ 𝒰).obj ∘ j) : TopologicalSpace.Opens C.left.toTopCat)
+      = 𝒰 (j 0) ⊓ 𝒰 (j 1) := by
+  rw [prodOpens_eq_iInf]
+  refine le_antisymm (le_inf (iInf_le _ 0) (iInf_le _ 1)) (le_iInf fun a => ?_)
+  fin_cases a
+  · exact inf_le_left
+  · exact inf_le_right
+
+/-- If every open of the multi-index `j` occurs among the opens of the multi-index `x`,
+the Čech product of `x` is contained in the Čech product of `j`.  For concrete
+multi-indices the hypothesis is decidable, so this yields all the inclusion witnesses
+of the 8-index kernel analysis by `decide`. -/
+theorem prodOpens_le_of_forall_exists {m m' : ℕ} {j : Fin m → ι} {x : Fin m' → ι}
+    (h : ∀ a, ∃ b, x b = j a) :
+    (∏ᶜ ((FormalCoproduct.mk _ 𝒰).obj ∘ x) : TopologicalSpace.Opens C.left.toTopCat)
+      ≤ ∏ᶜ ((FormalCoproduct.mk _ 𝒰).obj ∘ j) := by
+  rw [prodOpens_eq_iInf, prodOpens_eq_iInf]
+  refine le_iInf fun a => ?_
+  obtain ⟨b, hb⟩ := h a
+  exact (iInf_le _ b).trans (le_of_eq (congrArg 𝒰 hb))
+
+end SmallProdOpens
+
+/-! ## Node N5 — componentwise form of the low-degree Čech differentials -/
+
+section CechComponentFormulas
+
+open AlgebraicTopology CategoryTheory CategoryTheory.Limits
+
+variable {k : Type u} [Field k] {C : Over (Spec (CommRingCat.of k))}
+  {ι : Type u} (𝒰 : ι → TopologicalSpace.Opens C.left.toTopCat)
+  (F : Sheaf (Opens.grothendieckTopology C.left.toTopCat) (ModuleCat.{u} k))
+
+/-- The factor of the degree-`(m-1)` Čech term indexed by the multi-index `j : Fin m → ι`:
+the sections of `F` on the `m`-fold intersection `∏ᶜ (𝒰 ∘ j) = ⨅ₐ 𝒰 (j a)`.  The degree-`n`
+Čech term `(cechCochain C F 𝒰).X n` is definitionally `∏ᶜ (cechTerm 𝒰 F (n + 1))`. -/
+noncomputable abbrev cechTerm (m : ℕ) (j : Fin m → ι) : ModuleCat.{u} k :=
+  F.obj.obj (Opposite.op (∏ᶜ ((FormalCoproduct.mk _ 𝒰).obj ∘ j)))
+
+/-- Projections composed with restrictions only depend on the multi-index up to
+propositional equality: the `sectionRestrict`-style wrapper reconciles the dependent
+types on both sides, and the `≤`-witnesses are proof-irrelevant.  This is the transport
+lemma that replaces the coface indices `x ∘ δᵢ` by their concrete `![…]` values in the
+8-index kernel analysis. -/
+lemma pi_π_restrict_congr {m m' : ℕ} {j j' : Fin m → ι} (h : j = j') {x : Fin m' → ι}
+    (hW : (∏ᶜ ((FormalCoproduct.mk _ 𝒰).obj ∘ x) : TopologicalSpace.Opens C.left.toTopCat)
+      ≤ ∏ᶜ ((FormalCoproduct.mk _ 𝒰).obj ∘ j))
+    (hW' : (∏ᶜ ((FormalCoproduct.mk _ 𝒰).obj ∘ x) : TopologicalSpace.Opens C.left.toTopCat)
+      ≤ ∏ᶜ ((FormalCoproduct.mk _ 𝒰).obj ∘ j')) :
+    Pi.π (cechTerm 𝒰 F m) j ≫ F.obj.map (homOfLE hW).op
+      = Pi.π (cechTerm 𝒰 F m) j' ≫ F.obj.map (homOfLE hW').op := by
+  subst h
+  rfl
+
+/-- The degree-`0` Čech differential of the cover, typed against the concrete products
+`∏ᶜ cechTerm` (definitionally `(cechCochain C F 𝒰).d 0 1`; the retyping keeps every
+term of the kernel/cokernel analysis type-correct at `instances` transparency). -/
+noncomputable def cechD01 : (∏ᶜ (cechTerm 𝒰 F 1) : ModuleCat.{u} k) ⟶ ∏ᶜ (cechTerm 𝒰 F 2) :=
+  (Scheme.cechCochain C F 𝒰).d 0 1
+
+/-- The degree-`1` Čech differential of the cover, typed against the concrete products
+`∏ᶜ cechTerm` (definitionally `(cechCochain C F 𝒰).d 1 2`). -/
+noncomputable def cechD12 : (∏ᶜ (cechTerm 𝒰 F 2) : ModuleCat.{u} k) ⟶ ∏ᶜ (cechTerm 𝒰 F 3) :=
+  (Scheme.cechCochain C F 𝒰).d 1 2
+
+/-- **Componentwise degree-`0` Čech differential.**  The `j`-component of `d⁰` is the
+difference of the two coface restrictions. -/
+lemma cechCochain_d01_π (j : Fin 2 → ι) :
+    (Scheme.cechCochain C F 𝒰).d 0 1 ≫ Pi.π (cechTerm 𝒰 F 2) j
+      = Pi.π (cechTerm 𝒰 F 1) (j ∘ Fin.succAboveOrderEmb 0)
+          ≫ F.obj.map (homOfLE (prodOpens_δ_le 𝒰 0 j)).op
+        - Pi.π (cechTerm 𝒰 F 1) (j ∘ Fin.succAboveOrderEmb 1)
+          ≫ F.obj.map (homOfLE (prodOpens_δ_le 𝒰 1 j)).op := by
+  have h0 := cechCosimplicial_δ_π_restrict 𝒰 F 0 0 j
+  have h1 := cechCosimplicial_δ_π_restrict 𝒰 F 0 1 j
+  have hd : (Scheme.cechCochain C F 𝒰).d 0 1 ≫ Pi.π (cechTerm 𝒰 F 2) j
+      = ((cechCosimplicial 𝒰 F).δ 0 - (cechCosimplicial 𝒰 F).δ 1)
+          ≫ Pi.π (cechTerm 𝒰 F 2) j :=
+    congrArg (· ≫ Pi.π (cechTerm 𝒰 F 2) j) (cechCochain_d01_eq 𝒰 F)
+  exact hd.trans ((Preadditive.sub_comp _ _ _).trans (congrArg₂ (· - ·) h0 h1))
+
+/-- **Componentwise degree-`1` Čech differential.**  The `x`-component of `d¹` is the
+alternating sum of the three coface restrictions. -/
+lemma cechCochain_d12_π (x : Fin 3 → ι) :
+    (Scheme.cechCochain C F 𝒰).d 1 2 ≫ Pi.π (cechTerm 𝒰 F 3) x
+      = Pi.π (cechTerm 𝒰 F 2) (x ∘ Fin.succAboveOrderEmb 0)
+          ≫ F.obj.map (homOfLE (prodOpens_δ_le 𝒰 0 x)).op
+        - Pi.π (cechTerm 𝒰 F 2) (x ∘ Fin.succAboveOrderEmb 1)
+          ≫ F.obj.map (homOfLE (prodOpens_δ_le 𝒰 1 x)).op
+        + Pi.π (cechTerm 𝒰 F 2) (x ∘ Fin.succAboveOrderEmb 2)
+          ≫ F.obj.map (homOfLE (prodOpens_δ_le 𝒰 2 x)).op := by
+  have h0 := cechCosimplicial_δ_π_restrict 𝒰 F 1 0 x
+  have h1 := cechCosimplicial_δ_π_restrict 𝒰 F 1 1 x
+  have h2 := cechCosimplicial_δ_π_restrict 𝒰 F 1 2 x
+  have hd : (Scheme.cechCochain C F 𝒰).d 1 2 ≫ Pi.π (cechTerm 𝒰 F 3) x
+      = ((cechCosimplicial 𝒰 F).δ 0 - (cechCosimplicial 𝒰 F).δ 1 + (cechCosimplicial 𝒰 F).δ 2)
+          ≫ Pi.π (cechTerm 𝒰 F 3) x :=
+    congrArg (· ≫ Pi.π (cechTerm 𝒰 F 3) x) (cechCochain_d12_eq 𝒰 F)
+  exact hd.trans ((Preadditive.add_comp _ _ _ _ _ _).trans
+    (congrArg₂ (· + ·) ((Preadditive.sub_comp _ _ _).trans (congrArg₂ (· - ·) h0 h1)) h2))
+
+/-- `cechCochain_d01_π`, restated for the product-typed differential `cechD01`. -/
+lemma cechD01_π (j : Fin 2 → ι) :
+    cechD01 𝒰 F ≫ Pi.π (cechTerm 𝒰 F 2) j
+      = Pi.π (cechTerm 𝒰 F 1) (j ∘ Fin.succAboveOrderEmb 0)
+          ≫ F.obj.map (homOfLE (prodOpens_δ_le 𝒰 0 j)).op
+        - Pi.π (cechTerm 𝒰 F 1) (j ∘ Fin.succAboveOrderEmb 1)
+          ≫ F.obj.map (homOfLE (prodOpens_δ_le 𝒰 1 j)).op :=
+  cechCochain_d01_π 𝒰 F j
+
+/-- `cechCochain_d12_π`, restated for the product-typed differential `cechD12`. -/
+lemma cechD12_π (x : Fin 3 → ι) :
+    cechD12 𝒰 F ≫ Pi.π (cechTerm 𝒰 F 3) x
+      = Pi.π (cechTerm 𝒰 F 2) (x ∘ Fin.succAboveOrderEmb 0)
+          ≫ F.obj.map (homOfLE (prodOpens_δ_le 𝒰 0 x)).op
+        - Pi.π (cechTerm 𝒰 F 2) (x ∘ Fin.succAboveOrderEmb 1)
+          ≫ F.obj.map (homOfLE (prodOpens_δ_le 𝒰 1 x)).op
+        + Pi.π (cechTerm 𝒰 F 2) (x ∘ Fin.succAboveOrderEmb 2)
+          ≫ F.obj.map (homOfLE (prodOpens_δ_le 𝒰 2 x)).op :=
+  cechCochain_d12_π 𝒰 F x
+
+end CechComponentFormulas
+
+/-! ## Node N5 — the overlap 1-cocycle `q ↦ (0, q, −q, 0)` of the 2-cover -/
+
+section OverlapCocycle
+
+open AlgebraicTopology CategoryTheory CategoryTheory.Limits Opposite
+
+variable {k : Type u} [Field k] {C : Over (Spec (CommRingCat.of k))}
+  (F : Sheaf (Opens.grothendieckTopology C.left.toTopCat) (ModuleCat.{u} k))
+  (S : C.left.AffineCoverMVSquare)
+
+/-- The overlap `U₁ ⊓ U₂` of the 2-cover, expressed through `coverFamily` — the
+`TopologicalSpace.Opens X.toTopCat`-typed form (definitionally `S.U₁ ⊓ S.U₂`, but
+uniformly typed so that all categorical rewriting below stays type-correct at
+`instances` transparency; the `S.U₁ ⊓ S.U₂` form mixes in the `Scheme.Opens`
+carrier of the `AffineCoverMVSquare` fields). -/
+noncomputable abbrev AffineCoverMVSquare.overlapOpen {X : Scheme.{u}}
+    (S : X.AffineCoverMVSquare) : TopologicalSpace.Opens X.toTopCat :=
+  S.coverFamily ⟨0⟩ ⊓ S.coverFamily ⟨1⟩
+
+/-- The Čech double intersection at the multi-index `(0,1)` is the overlap `U₁ ⊓ U₂`. -/
+lemma AffineCoverMVSquare.prodOpens_zero_one :
+    (∏ᶜ ((FormalCoproduct.mk _ S.coverFamily).obj ∘ ![⟨0⟩, ⟨1⟩])
+        : TopologicalSpace.Opens C.left.toTopCat)
+      = S.overlapOpen := by
+  rw [prodOpens_fin_two]
+  simp only [Matrix.cons_val_zero, Matrix.cons_val_one]
+
+/-- The Čech double intersection at the multi-index `(1,0)` is the overlap `U₁ ⊓ U₂`. -/
+lemma AffineCoverMVSquare.prodOpens_one_zero :
+    (∏ᶜ ((FormalCoproduct.mk _ S.coverFamily).obj ∘ ![⟨1⟩, ⟨0⟩])
+        : TopologicalSpace.Opens C.left.toTopCat)
+      = S.overlapOpen := by
+  rw [prodOpens_fin_two]
+  simp only [Matrix.cons_val_zero, Matrix.cons_val_one]
+  rw [inf_comm]
+
+/-- **Components of the overlap 1-cocycle.**  For a section on the overlap, the
+degree-`1` Čech cochain `(0, q, −q, 0)`: at the multi-index `(0,1)` the section
+itself (transported by restriction along the equality `prodOpens_zero_one` of opens),
+at `(1,0)` its negative, and `0` at the two diagonal indices. -/
+noncomputable def AffineCoverMVSquare.overlapCocycleComponent
+    (j : Fin 2 → ULift.{u} (Fin 2)) :
+    F.obj.obj (op S.overlapOpen) ⟶ cechTerm S.coverFamily F 2 j :=
+  if h : j = ![⟨0⟩, ⟨1⟩] then
+    F.obj.map (homOfLE (le_of_eq (by rw [h]; exact S.prodOpens_zero_one))).op
+  else if h' : j = ![⟨1⟩, ⟨0⟩] then
+    -F.obj.map (homOfLE (le_of_eq (by rw [h']; exact S.prodOpens_one_zero))).op
+  else 0
+
+/-- **The overlap 1-cocycle** `q ↦ (0, q, −q, 0)`, as a morphism from the overlap
+sections into the degree-`1` Čech term (in its concrete-product form) of the 2-cover. -/
+noncomputable def AffineCoverMVSquare.overlapCocycle :
+    F.obj.obj (op S.overlapOpen) ⟶ ∏ᶜ (cechTerm S.coverFamily F 2) :=
+  Pi.lift (S.overlapCocycleComponent F)
+
+@[reassoc]
+lemma AffineCoverMVSquare.overlapCocycle_π (j : Fin 2 → ULift.{u} (Fin 2)) :
+    S.overlapCocycle F ≫ Pi.π (cechTerm S.coverFamily F 2) j
+      = S.overlapCocycleComponent F j :=
+  Pi.lift_π _ _
+
+/-- Composition of the `(0,1)`-branch of the overlap cocycle with a further
+restriction: for `j = (0,1)` the component is the restriction along the composite
+inequality.  Stated with the index `j` as a variable so that the coface indices
+`x ∘ δᵢ` (which are only propositionally equal to `![⟨0⟩, ⟨1⟩]`) can be substituted. -/
+lemma AffineCoverMVSquare.overlapCocycleComponent_comp_eq₀₁
+    {j : Fin 2 → ULift.{u} (Fin 2)} (h : j = ![⟨0⟩, ⟨1⟩])
+    {W : TopologicalSpace.Opens C.left.toTopCat}
+    (hW : W ≤ ∏ᶜ ((FormalCoproduct.mk _ S.coverFamily).obj ∘ j)) :
+    S.overlapCocycleComponent F j ≫ F.obj.map (homOfLE hW).op
+      = F.obj.map (homOfLE (hW.trans
+          (le_of_eq (by rw [h]; exact S.prodOpens_zero_one)))).op := by
+  subst h
+  simp +decide only [overlapCocycleComponent, dite_true, dite_false, restrict_map_comp]
+
+/-- Composition of the `(1,0)`-branch of the overlap cocycle with a further
+restriction: for `j = (1,0)` the component is the negated restriction along the
+composite inequality. -/
+lemma AffineCoverMVSquare.overlapCocycleComponent_comp_eq₁₀
+    {j : Fin 2 → ULift.{u} (Fin 2)} (h : j = ![⟨1⟩, ⟨0⟩])
+    {W : TopologicalSpace.Opens C.left.toTopCat}
+    (hW : W ≤ ∏ᶜ ((FormalCoproduct.mk _ S.coverFamily).obj ∘ j)) :
+    S.overlapCocycleComponent F j ≫ F.obj.map (homOfLE hW).op
+      = -F.obj.map (homOfLE (hW.trans
+          (le_of_eq (by rw [h]; exact S.prodOpens_one_zero)))).op := by
+  subst h
+  simp +decide only [overlapCocycleComponent, dite_true, dite_false, restrict_map_comp,
+    Preadditive.neg_comp]
+
+/-- The diagonal components of the overlap cocycle vanish, also after composing with
+a further restriction. -/
+lemma AffineCoverMVSquare.overlapCocycleComponent_comp_ne
+    {j : Fin 2 → ULift.{u} (Fin 2)} (h1 : j ≠ ![⟨0⟩, ⟨1⟩]) (h2 : j ≠ ![⟨1⟩, ⟨0⟩])
+    {W : TopologicalSpace.Opens C.left.toTopCat}
+    (hW : W ≤ ∏ᶜ ((FormalCoproduct.mk _ S.coverFamily).obj ∘ j)) :
+    S.overlapCocycleComponent F j ≫ F.obj.map (homOfLE hW).op = 0 := by
+  simp only [overlapCocycleComponent, dif_neg h1, dif_neg h2, zero_comp]
+
+/-- **The overlap cochain is a 1-cocycle**: composing with the degree-`1` Čech
+differential gives zero.  Componentwise this is the 8-index cancellation: on the six
+"mixed" triple indices the two nonvanishing coface restrictions merge (parallel
+restrictions on the opens poset agree) and cancel, and on the diagonal indices all
+contributions vanish. -/
+lemma AffineCoverMVSquare.overlapCocycle_comp_d :
+    S.overlapCocycle F ≫ cechD12 S.coverFamily F = 0 := by
+  refine Pi.hom_ext _ _ fun x => ?_
+  obtain ⟨a, b, c, rfl⟩ : ∃ a b c : Fin 2, x = ![⟨a⟩, ⟨b⟩, ⟨c⟩] :=
+    ⟨(x 0).down, (x 1).down, (x 2).down, by funext i; fin_cases i <;> rfl⟩
+  simp only [Category.assoc, cechD12_π, zero_comp, Preadditive.comp_add,
+    Preadditive.comp_sub, overlapCocycle_π_assoc]
+  fin_cases a <;> fin_cases b <;> fin_cases c
+  · rw [S.overlapCocycleComponent_comp_ne F (by decide) (by decide),
+      S.overlapCocycleComponent_comp_ne F (by decide) (by decide),
+      S.overlapCocycleComponent_comp_ne F (by decide) (by decide)]
+    abel
+  · rw [S.overlapCocycleComponent_comp_eq₀₁ F (by funext i; fin_cases i <;> rfl),
+      S.overlapCocycleComponent_comp_eq₀₁ F (by funext i; fin_cases i <;> rfl),
+      S.overlapCocycleComponent_comp_ne F (by decide) (by decide)]
+    abel
+  · rw [S.overlapCocycleComponent_comp_eq₁₀ F (by funext i; fin_cases i <;> rfl),
+      S.overlapCocycleComponent_comp_ne F (by decide) (by decide),
+      S.overlapCocycleComponent_comp_eq₀₁ F (by funext i; fin_cases i <;> rfl)]
+    abel
+  · rw [S.overlapCocycleComponent_comp_ne F (by decide) (by decide),
+      S.overlapCocycleComponent_comp_eq₀₁ F (by funext i; fin_cases i <;> rfl),
+      S.overlapCocycleComponent_comp_eq₀₁ F (by funext i; fin_cases i <;> rfl)]
+    abel
+  · rw [S.overlapCocycleComponent_comp_ne F (by decide) (by decide),
+      S.overlapCocycleComponent_comp_eq₁₀ F (by funext i; fin_cases i <;> rfl),
+      S.overlapCocycleComponent_comp_eq₁₀ F (by funext i; fin_cases i <;> rfl)]
+    abel
+  · rw [S.overlapCocycleComponent_comp_eq₀₁ F (by funext i; fin_cases i <;> rfl),
+      S.overlapCocycleComponent_comp_ne F (by decide) (by decide),
+      S.overlapCocycleComponent_comp_eq₁₀ F (by funext i; fin_cases i <;> rfl)]
+    abel
+  · rw [S.overlapCocycleComponent_comp_eq₁₀ F (by funext i; fin_cases i <;> rfl),
+      S.overlapCocycleComponent_comp_eq₁₀ F (by funext i; fin_cases i <;> rfl),
+      S.overlapCocycleComponent_comp_ne F (by decide) (by decide)]
+    abel
+  · rw [S.overlapCocycleComponent_comp_ne F (by decide) (by decide),
+      S.overlapCocycleComponent_comp_ne F (by decide) (by decide),
+      S.overlapCocycleComponent_comp_ne F (by decide) (by decide)]
+    abel
+
+end OverlapCocycle
+
 end AlgebraicGeometry.Scheme
