@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Christian Merten
 -/
 import Mathlib
+import AlgebraicJacobian.Picard.FGAPicRepresentability
 import AlgebraicJacobian.Picard.IdentityComponent
+import AlgebraicJacobian.Picard.RelPicFunctor
 import AlgebraicJacobian.Picard.TangentSpaceDualNumbers
 import AlgebraicJacobian.Picard.TangentSpaceIdentitySection
 import AlgebraicJacobian.Genus
@@ -355,17 +357,13 @@ theorem universallyClosed_of_baseChange {k : Type u} [Field k]
     (Q := @Surjective ⊓ @Flat ⊓ @QuasiCompact)
     ⟨⟨inferInstance, inferInstance⟩, inferInstance⟩ h
 
-/-- **Dual-number points of `Pic⁰_{C/k}` at the identity are the cotangent
-dual** (Kleiman §5 Thm.~`thm:tgtsp`, LHS). Given the `k`-group-scheme
-structure on `Pic0Scheme C` (supplied by `Pic0.grpObj`), the identity section
-`e : Spec k ⟶ Pic⁰_{C/k}` hits a `k`-rational point, and the over-`Spec k`
-dual-number points of `Pic⁰_{C/k}` at `e` — the Zariski tangent space
-`T₀ Pic⁰_{C/k}` in its functor-of-points form — form the `κ(e)`-linear dual
-of the cotangent space `m_e/m_e²`.
+/-- **Compatibility wrapper.** Bundles the already-proved identity-point
+dual-number/cotangent dictionary into the older Σ'-shape used by some
+downstream callers.
 
-This is the geometric half of `tangentSpaceIso`; composing with the
-`H¹(C, 𝒪_C)`-identification of `Dual (m_e/m_e²)` (gated on the `AJC.picrep`
-representability cone) closes `thm:pic0_tangent_space_iso`. -/
+The mathematical core is
+`pointedDualNumberPoints_equiv_cotangentSpaceDual`; this theorem only repackages
+that result together with the distinguished identity-section witness. -/
 theorem tangentSpaceCotangentDual {k : Type u} [Field k]
     (C : Over (Spec (.of k)))
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
@@ -381,254 +379,125 @@ theorem tangentSpaceCotangentDual {k : Type u} [Field k]
           (IsLocalRing.ResidueField ((Pic0Scheme C).left.presheaf.stalk (e.base default)))
           (IsLocalRing.CotangentSpace
             ((Pic0Scheme C).left.presheaf.stalk (e.base default))))) := by
-  obtain ⟨i⟩ := grpObj C
-  letI := i
   haveI : Subsingleton ↥(Spec (CommRingCat.of k)) :=
     inferInstanceAs (Subsingleton (PrimeSpectrum k))
-  exact ⟨GroupScheme.identitySection (Pic0Scheme C),
-    GroupScheme.identitySection_comp (Pic0Scheme C),
-    overDualNumberSectionEquivCotangentSpaceDual (Pic0Scheme C)
-      (GroupScheme.identitySection_comp (Pic0Scheme C))
-      (congrArg _ (Subsingleton.elim _ _))⟩
+  exact ⟨identitySection C, identitySection_isSection C,
+    by
+      simpa [pointedDualNumberPoints] using
+        (Classical.choice (pointedDualNumberPoints_equiv_cotangentSpaceDual C))⟩
 
-/-- **Typed sorry: the Picard/deformation comparison from pointed dual-number
-points to `H¹(C, 𝒪_C)`.**
+/-- The dual-number thickening `Spec k[ε]` as an object of `Over (Spec k)`. -/
+noncomputable abbrev firstOrderPicardDualNumbers {k : Type u} [Field k] :
+    Over (Spec (.of k)) :=
+  Over.mk (Spec.map (CommRingCat.ofHom (algebraMap k (DualNumber k))))
 
-This is the genuinely missing geometric bridge behind
-`tangentSpaceDualEquivH1`: once the tangent space at the identity has been
-presented as pointed dual-number points of `Pic⁰_{C/k}`, this lemma turns that
-pointed first-order deformation space into `Scheme.HModule k
-(Scheme.toModuleKSheaf C) 1`.
+/-- The base point `Spec k` viewed as an object over itself. -/
+noncomputable abbrev firstOrderPicardBase {k : Type u} [Field k] :
+    Over (Spec (.of k)) :=
+  Over.mk (𝟙 (Spec (.of k)))
 
-The missing theorem, in natural-language form, is:
-"For a smooth proper geometrically integral curve `C/k`, the first-order
-deformations of the identity line bundle on `C` are classified by
-`H¹(C, 𝒪_C)`, functorially in the dual-number thickening." -/
-theorem pointedDualNumberPoints_addCommGroup {k : Type u} [Field k]
+/-- The augmentation morphism `Spec k → Spec k[ε]` in the over-category. -/
+noncomputable def firstOrderPicardAugmentHom {k : Type u} [Field k] :
+    firstOrderPicardBase (k := k) ⟶ firstOrderPicardDualNumbers (k := k) := by
+  refine Over.homMk (Spec.map (CommRingCat.ofHom (TrivSqZeroExt.fstHom k k k).toRingHom)) ?_
+  change
+    Spec.map (CommRingCat.ofHom (TrivSqZeroExt.fstHom k k k).toRingHom) ≫
+        Spec.map (CommRingCat.ofHom (algebraMap k (DualNumber k))) =
+      𝟙 (Spec (.of k))
+  have hcomp :
+      CommRingCat.ofHom (algebraMap k (DualNumber k)) ≫
+          CommRingCat.ofHom (TrivSqZeroExt.fstHom k k k).toRingHom =
+        𝟙 (CommRingCat.of k) := by
+    ext x
+    rfl
+  simpa using congrArg Spec.map hcomp
+
+/-- The restriction map `Pic(C_ε) → Pic(C)` induced by the augmentation
+`Spec k → Spec k[ε]`, expressed on the group-valued relative Picard functor
+`PicSharp.relPresheaf`. -/
+noncomputable def firstOrderPicardRestriction {k : Type u} [Field k]
     (C : Over (Spec (.of k)))
-    [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
-    [GeometricallyIntegral C.hom] [HasPicScheme C]
-    [PicScheme.PicSchemeLocallyOfFiniteType C]
-    (hPointsDual :
-      Nonempty
-        (pointedDualNumberPoints (Pic0Scheme C) (identitySection C) ≃
-          Module.Dual
-            (IsLocalRing.ResidueField
-              ((Pic0Scheme C).left.presheaf.stalk ((identitySection C).base default)))
-            (IsLocalRing.CotangentSpace
-              ((Pic0Scheme C).left.presheaf.stalk ((identitySection C).base default))))) :
-    Nonempty
-      (Σ' (_inst : AddCommGroup (pointedDualNumberPoints (Pic0Scheme C) (identitySection C))),
-        Module.Dual
-            (IsLocalRing.ResidueField
-              ((Pic0Scheme C).left.presheaf.stalk ((identitySection C).base default)))
-            (IsLocalRing.CotangentSpace
-              ((Pic0Scheme C).left.presheaf.stalk ((identitySection C).base default)))
-          ≃+ pointedDualNumberPoints (Pic0Scheme C) (identitySection C)) := by
-  /-
-  Intended proof:
-  - choose the equivalence packaged by `hPointsDual`;
-  - transport the additive-group structure from the displayed `Module.Dual`
-    onto `pointedDualNumberPoints (Pic0Scheme C) (identitySection C)`;
-  - upgrade the chosen equivalence to an `AddEquiv`.
-  -/
-  sorry
+    [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom] :
+    ((PicSharp.relPresheaf C).obj (Opposite.op (firstOrderPicardDualNumbers (k := k)))) →+
+      ((PicSharp.relPresheaf C).obj (Opposite.op (firstOrderPicardBase (k := k))) ) :=
+  ((PicSharp.relPresheaf C).map (firstOrderPicardAugmentHom (k := k)).op).hom
 
-/-- **Typed sorry: pointed dual-number points identify with the first-order
-Picard deformation carrier.**
+/-- The concrete first-order Picard deformation kernel
+`ker (Pic(C_ε) → Pic(C))`. This is the geometric object the tangent-space
+comparison should factor through, rather than an existentially packaged
+anonymous additive group. -/
+noncomputable abbrev firstOrderPicardKernel {k : Type u} [Field k]
+    (C : Over (Spec (.of k)))
+    [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom] :
+    Type (u + 1) :=
+  AddMonoidHom.ker (firstOrderPicardRestriction C)
 
-This is the representability/kernel half of the tangent-space comparison:
-evaluate the Picard representability equivalence at `Spec k[ε]`, restrict to
-the identity fiber, and package the resulting first-order deformation object as
-an additive group `K`. Concretely `K` should be the kernel of the restriction
-map `Pic(C_ε) → Pic(C)`. -/
-theorem pointedDualNumberPoints_equiv_firstOrderPicardDeformationCarrier {k : Type u} [Field k]
+/-- **Typed sorry: pointed dual-number points identify with the actual
+first-order Picard kernel.**
+
+This is the representability/kernel half of the tangent-space comparison.
+Unlike the old existential carrier packaging, the target is pinned to the real
+object
+
+`ker (Pic(C_ε) → Pic(C))`.
+
+Intended proof steps:
+1. evaluate `(representable C).homEquiv` at `Spec k[ε]`;
+2. restrict to the identity fiber using `identitySection C`;
+3. identify that fiber with the kernel of the restriction map induced by
+   `firstOrderPicardAugmentHom`. -/
+theorem pointedDualNumberPoints_equiv_firstOrderPicardKernel {k : Type u} [Field k]
     (C : Over (Spec (.of k)))
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
     [GeometricallyIntegral C.hom] [HasPicScheme C]
     [PicScheme.PicSchemeLocallyOfFiniteType C]
     [AddCommGroup (pointedDualNumberPoints (Pic0Scheme C) (identitySection C))] :
     Nonempty
-      (Σ' (K : Type (u + 1)), AddCommGroup K ×
-        Nonempty (pointedDualNumberPoints (Pic0Scheme C) (identitySection C) ≃+ K)) := by
+      (pointedDualNumberPoints (Pic0Scheme C) (identitySection C) ≃+
+        firstOrderPicardKernel C) := by
   /-
   Intended proof:
-  - evaluate `(representable C).homEquiv` at `Spec k[ε]`;
-  - identify the identity-pointed fiber with the first-order deformations of
-    the identity line bundle, i.e. the kernel of `Pic(C_ε) → Pic(C)`;
-  - let `K` be that kernel, equipped with its inherited additive group
-    structure from the Picard group law.
+  - evaluate `(representable C).homEquiv` on the dual-number object
+    `firstOrderPicardDualNumbers`;
+  - compare the pointed fiber over `identitySection C` with the zero fiber of
+    `firstOrderPicardRestriction C`;
+  - use the group law on the represented relative Picard functor to see that
+    this pointed fiber is exactly the displayed kernel.
   -/
   sorry
 
-/-- **Typed sorry: the Picard/deformation comparison from pointed dual-number
-points to `H¹(C, 𝒪_C)`.**
+/-- **Typed sorry: the actual first-order Picard kernel is `H¹(C, 𝒪_C)`.**
 
-This is the genuinely missing geometric bridge behind
-`tangentSpaceDualEquivH1`: once the tangent space at the identity has been
-presented as pointed dual-number points of `Pic⁰_{C/k}`, this lemma turns that
-pointed first-order deformation space into `Scheme.HModule k
-(Scheme.toModuleKSheaf C) 1`.
+This is the genuine geometric bridge behind `tangentSpaceDualEquivH1`. It
+identifies the concrete kernel
 
-The missing theorem, in natural-language form, is:
-"For a smooth proper geometrically integral curve `C/k`, the first-order
-deformations of the identity line bundle on `C` are classified by
-`H¹(C, 𝒪_C)`, functorially in the dual-number thickening." -/
-theorem firstOrderPicardDeformationCarrier {k : Type u} [Field k]
+`ker (Pic(C_ε) → Pic(C))`
+
+with `Scheme.HModule k (Scheme.toModuleKSheaf C) 1`.
+
+Intended proof steps:
+1. rewrite the relevant Picard groups as `H¹(-, 𝒪^×)` using the standard
+   identification `Pic(X) = H¹(X, 𝒪_X^*)` (Stacks 03P8);
+2. apply the split truncated exponential sequence on the dual-number
+   thickening `C_ε`;
+3. identify the resulting kernel with `H¹(C, 𝒪_C)`. -/
+theorem firstOrderPicardKernel_equiv_H1 {k : Type u} [Field k]
     (C : Over (Spec (.of k)))
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
     [GeometricallyIntegral C.hom] [HasPicScheme C]
-    [PicScheme.PicSchemeLocallyOfFiniteType C]
-    (hPointsDual :
-      Nonempty
-        (pointedDualNumberPoints (Pic0Scheme C) (identitySection C) ≃
-          Module.Dual
-            (IsLocalRing.ResidueField
-              ((Pic0Scheme C).left.presheaf.stalk ((identitySection C).base default)))
-            (IsLocalRing.CotangentSpace
-              ((Pic0Scheme C).left.presheaf.stalk ((identitySection C).base default))))) :
-      Nonempty
-        (Σ' (K : Type (u + 1)), AddCommGroup K ×
-        Nonempty
-          (Module.Dual
-              (IsLocalRing.ResidueField
-                ((Pic0Scheme C).left.presheaf.stalk ((identitySection C).base default)))
-              (IsLocalRing.CotangentSpace
-                ((Pic0Scheme C).left.presheaf.stalk ((identitySection C).base default)))
-            ≃+ K)) := by
-  obtain ⟨instPts, hDualPoints⟩ := pointedDualNumberPoints_addCommGroup C hPointsDual
-  letI := instPts
-  obtain ⟨K, hK, hPointsK⟩ :=
-    pointedDualNumberPoints_equiv_firstOrderPicardDeformationCarrier C
-  letI := hK
-  obtain ⟨hPointsK⟩ := hPointsK
-  exact ⟨⟨K, hK, ⟨hDualPoints.trans hPointsK⟩⟩⟩
-
-/-- **Typed sorry: the first-order Picard deformation group is `H¹(C, 𝒪_C)`.**
-
-This isolates the cohomological half of the tangent-space comparison. Starting
-from the first-order Picard deformation carrier `K` produced above, one
-computes `K ≃+ H¹(C, 𝒪_C)` by the truncated exponential sequence on the dual
-number thickening `C_ε`. -/
-theorem firstOrderPicardDeformationCarrier_equiv_H1 {k : Type u} [Field k]
-    (C : Over (Spec (.of k)))
-    [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
-    [GeometricallyIntegral C.hom] [HasPicScheme C]
-    [PicScheme.PicSchemeLocallyOfFiniteType C]
-    (hCarrier :
-      Nonempty
-        (Σ' (K : Type (u + 1)), AddCommGroup K ×
-          Nonempty
-            (Module.Dual
-                (IsLocalRing.ResidueField
-                  ((Pic0Scheme C).left.presheaf.stalk ((identitySection C).base default)))
-                (IsLocalRing.CotangentSpace
-                  ((Pic0Scheme C).left.presheaf.stalk ((identitySection C).base default)))
-              ≃+ K))) :
+    [PicScheme.PicSchemeLocallyOfFiniteType C] :
     Nonempty
-      (Σ' (K : Type (u + 1)), AddCommGroup K ×
-        Nonempty
-          (Module.Dual
-              (IsLocalRing.ResidueField
-                ((Pic0Scheme C).left.presheaf.stalk ((identitySection C).base default)))
-              (IsLocalRing.CotangentSpace
-                ((Pic0Scheme C).left.presheaf.stalk ((identitySection C).base default)))
-            ≃+ K) ×
-        Nonempty (K ≃+ Scheme.HModule k (Scheme.toModuleKSheaf C) 1)) := by
+      (firstOrderPicardKernel C ≃+ Scheme.HModule k (Scheme.toModuleKSheaf C) 1) := by
   /-
   Intended proof:
-  - unpack `hCarrier` as the additive group `K` of first-order deformations;
-  - compute `K ≃+ H¹(C, 𝒪_C)` using the split truncated exponential sequence
+  - identify `firstOrderPicardKernel C` with the kernel of the restriction
+    `H¹(C_ε, 𝒪^×) → H¹(C, 𝒪^×)` using `Pic(X) = H¹(X, 𝒪_X^*)` (Stacks 03P8);
+  - compute this kernel from the split exact sequence
     `0 → 𝒪_C → 𝒪^×_{C_ε} → 𝒪^×_C → 1`;
-  - repackage the original carrier data together with this `H¹`-comparison.
+  - transport the resulting additive equivalence to
+    `Scheme.HModule k (Scheme.toModuleKSheaf C) 1`.
   -/
   sorry
-
-/-- **Typed sorry: the Picard/deformation comparison from pointed dual-number
-points to `H¹(C, 𝒪_C)`.**
-
-This is the genuinely missing geometric bridge behind
-`tangentSpaceDualEquivH1`: once the tangent space at the identity has been
-presented as pointed dual-number points of `Pic⁰_{C/k}`, this lemma turns that
-pointed first-order deformation space into `Scheme.HModule k
-(Scheme.toModuleKSheaf C) 1`.
-
-The missing theorem, in natural-language form, is:
-"For a smooth proper geometrically integral curve `C/k`, the first-order
-deformations of the identity line bundle on `C` are classified by
-`H¹(C, 𝒪_C)`, functorially in the dual-number thickening." -/
-theorem firstOrderPicardDeformationGroup {k : Type u} [Field k]
-    (C : Over (Spec (.of k)))
-    [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
-    [GeometricallyIntegral C.hom] [HasPicScheme C]
-    [PicScheme.PicSchemeLocallyOfFiniteType C]
-    (hPointsDual :
-      Nonempty
-        (pointedDualNumberPoints (Pic0Scheme C) (identitySection C) ≃
-          Module.Dual
-            (IsLocalRing.ResidueField
-              ((Pic0Scheme C).left.presheaf.stalk ((identitySection C).base default)))
-            (IsLocalRing.CotangentSpace
-              ((Pic0Scheme C).left.presheaf.stalk ((identitySection C).base default))))) :
-    Nonempty
-      (Σ' (K : Type (u + 1)), AddCommGroup K ×
-        Nonempty
-          (Module.Dual
-              (IsLocalRing.ResidueField
-                ((Pic0Scheme C).left.presheaf.stalk ((identitySection C).base default)))
-              (IsLocalRing.CotangentSpace
-                ((Pic0Scheme C).left.presheaf.stalk ((identitySection C).base default)))
-            ≃+ K) ×
-        Nonempty (K ≃+ Scheme.HModule k (Scheme.toModuleKSheaf C) 1)) := by
-  obtain ⟨hCarrier⟩ := firstOrderPicardDeformationCarrier C hPointsDual
-  obtain ⟨hCarrierH1⟩ := firstOrderPicardDeformationCarrier_equiv_H1 C ⟨hCarrier⟩
-  exact ⟨hCarrierH1⟩
-
-/-- **Typed sorry: the Picard/deformation comparison from pointed dual-number
-points to `H¹(C, 𝒪_C)`.**
-
-This is the genuinely missing geometric bridge behind
-`tangentSpaceDualEquivH1`: once the tangent space at the identity has been
-presented as pointed dual-number points of `Pic⁰_{C/k}`, this lemma turns that
-pointed first-order deformation space into `Scheme.HModule k
-(Scheme.toModuleKSheaf C) 1`.
-
-The missing theorem, in natural-language form, is:
-"For a smooth proper geometrically integral curve `C/k`, the first-order
-deformations of the identity line bundle on `C` are classified by
-`H¹(C, 𝒪_C)`, functorially in the dual-number thickening." -/
-theorem tangentSpaceDualEquivH1_of_pointedDualNumberPoints {k : Type u} [Field k]
-    (C : Over (Spec (.of k)))
-    [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
-    [GeometricallyIntegral C.hom] [HasPicScheme C]
-    [PicScheme.PicSchemeLocallyOfFiniteType C]
-    (hPointsDual :
-      Nonempty
-        (pointedDualNumberPoints (Pic0Scheme C) (identitySection C) ≃
-          Module.Dual
-            (IsLocalRing.ResidueField
-              ((Pic0Scheme C).left.presheaf.stalk ((identitySection C).base default)))
-            (IsLocalRing.CotangentSpace
-              ((Pic0Scheme C).left.presheaf.stalk ((identitySection C).base default))))) :
-    Nonempty
-      (Module.Dual
-          (IsLocalRing.ResidueField
-            ((Pic0Scheme C).left.presheaf.stalk ((identitySection C).base default)))
-          (IsLocalRing.CotangentSpace
-            ((Pic0Scheme C).left.presheaf.stalk ((identitySection C).base default)))
-        ≃+ Scheme.HModule k (Scheme.toModuleKSheaf C) 1) := by
-  let T0Dual :=
-    Module.Dual
-      (IsLocalRing.ResidueField
-        ((Pic0Scheme C).left.presheaf.stalk ((identitySection C).base default)))
-      (IsLocalRing.CotangentSpace
-        ((Pic0Scheme C).left.presheaf.stalk ((identitySection C).base default)))
-  let H1 := Scheme.HModule k (Scheme.toModuleKSheaf C) 1
-  obtain ⟨⟨K, hK, hT0DualK, hKH1⟩⟩ := firstOrderPicardDeformationGroup C hPointsDual
-  letI := hK
-  obtain ⟨hT0DualK⟩ := hT0DualK
-  obtain ⟨hKH1⟩ := hKH1
-  exact ⟨(show T0Dual ≃+ H1 from hT0DualK.trans hKH1)⟩
 
 /-- **Typed sorry: the Kleiman §5 tangent/cohomology comparison at the
 identity section, in dual form.**
@@ -639,17 +508,18 @@ It packages the comparison
 `Dual (m_e/m_e²) ≃ H¹(C, 𝒪_C)`
 
 at the identity point `e = identitySection C`. The intended Lean proof uses
-only already-established generic tangent-space infrastructure plus one missing
-Picard/deformation bridge:
+the already-established generic tangent-space infrastructure together with the
+two explicit Picard/deformation steps named above:
 
 1. use `pointedDualNumberPoints_equiv_cotangentSpaceDual C` to identify
    pointed dual-number points of `Pic⁰_{C/k}` at the identity with
    `Dual (m_e/m_e²)`;
-2. evaluate the representability equivalence `(representable C).homEquiv` at
-   `Spec k[ε]` to identify those pointed dual-number points with
+2. use `pointedDualNumberPoints_equiv_firstOrderPicardKernel C` to identify
+   those pointed points with the concrete kernel
    `ker (Pic(C_ε) → Pic(C))`;
-3. compute that kernel as `H¹(C, 𝒪_C)` via the split truncated exponential
-   sequence from `Picard/DualNumberUnits.lean`.
+3. use `firstOrderPicardKernel_equiv_H1 C` to compute that kernel as
+   `H¹(C, 𝒪_C)` via the split truncated exponential sequence from
+   `Picard/DualNumberUnits.lean`.
 
 The missing Lean API is therefore the Picard-functor/cohomology comparison,
 not more tangent-space algebra. -/
@@ -671,24 +541,35 @@ theorem tangentSpaceDualEquivH1 {k : Type u} [Field k]
         ((Pic0Scheme C).left.presheaf.stalk ((identitySection C).base default)))
       (IsLocalRing.CotangentSpace
         ((Pic0Scheme C).left.presheaf.stalk ((identitySection C).base default)))
-  -- Step 1: reuse the already-built tangent-space dictionary at the identity.
-  -- This is the scheme-general input coming from dual numbers and cotangent
-  -- spaces, and it tells us that the functor-of-points tangent model of
-  -- `Pic⁰_{C/k}` lands in `T0Dual`.
-  have hPointsDual :
+  let H1 := Scheme.HModule k (Scheme.toModuleKSheaf C) 1
+  -- Step 1: scheme-general tangent algebra. Dual-number points at the
+  -- identity are the cotangent dual.
+  obtain ⟨hPointsDual⟩ :
       Nonempty (pointedDualNumberPoints (Pic0Scheme C) (identitySection C) ≃ T0Dual) := by
     simpa [T0Dual] using pointedDualNumberPoints_equiv_cotangentSpaceDual C
-  obtain ⟨hPicardDeformation⟩ := tangentSpaceDualEquivH1_of_pointedDualNumberPoints C hPointsDual
-  simpa [T0Dual] using hPicardDeformation
+  letI : AddCommGroup (pointedDualNumberPoints (Pic0Scheme C) (identitySection C)) :=
+    Equiv.addCommGroup hPointsDual
+  have hPointsDualAdd :
+      pointedDualNumberPoints (Pic0Scheme C) (identitySection C) ≃+ T0Dual :=
+    AddEquiv.mk hPointsDual (by
+      intro x y
+      rfl)
+  -- Step 2: Picard representability identifies the same pointed dual-number
+  -- points with the actual first-order deformation kernel.
+  obtain ⟨hPointsKernel⟩ := pointedDualNumberPoints_equiv_firstOrderPicardKernel C
+  -- Step 3: the genuine geometric bridge computes that kernel as `H¹(C, 𝒪_C)`.
+  obtain ⟨hKernelH1⟩ := firstOrderPicardKernel_equiv_H1 C
+  exact ⟨(show T0Dual ≃+ H1 from hPointsDualAdd.symm.trans hPointsKernel |>.trans hKernelH1)⟩
 
 /-- **Typed sorry: finite-dimensional self-duality for the cotangent space at
 the identity, once the local geometric inputs are supplied.**
 
-This separates the purely linear-algebraic remainder from the geometric
-bookkeeping in `cotangentSpaceEquivDual`. After proving that the cotangent
-space is finite-dimensional over the residue field and that the residue field
-comes from a `k`-rational point, only the standard noncanonical self-duality of
-a finite-dimensional vector space remains. -/
+This separates the purely linear-algebraic compatibility step from the actual
+Picard/deformation geometry. After proving that the cotangent space is
+finite-dimensional over the residue field and that the residue field comes from
+a `k`-rational point, only the standard noncanonical self-duality of a
+finite-dimensional vector space remains. It is needed only because the public
+theorem `tangentSpaceIso` is kept in undualized form. -/
 theorem cotangentSpaceEquivDual_of_finiteDimensional {k : Type u} [Field k]
     (C : Over (Spec (.of k)))
     [SmoothOfRelativeDimension 1 C.hom] [IsProper C.hom]
@@ -740,10 +621,10 @@ theorem cotangentSpaceEquivDual_of_finiteDimensional {k : Type u} [Field k]
 /-- **Typed sorry: finite-dimensional self-duality of the cotangent space at
 the identity.**
 
-The current theorem `tangentSpaceEquiv` is phrased on the cotangent space
-`m_e/m_e²` itself, while the tangent-space dictionary naturally lands on its
-dual. For the file skeleton we therefore package the noncanonical additive
-equivalence
+The current public theorem `tangentSpaceIso` is phrased on the cotangent space
+`m_e/m_e²` itself, while the geometric core theorem `tangentSpaceDualEquivH1`
+naturally lands on its dual. For compatibility with that public signature we
+therefore package the noncanonical additive equivalence
 
 `m_e/m_e² ≃ Dual (m_e/m_e²)`.
 
